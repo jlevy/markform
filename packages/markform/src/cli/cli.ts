@@ -15,6 +15,7 @@ import { registerInspectCommand } from "./commands/inspect.js";
 import { registerRenderCommand } from "./commands/render.js";
 import { registerRunCommand } from "./commands/run.js";
 import { registerServeCommand } from "./commands/serve.js";
+import { registerValidateCommand } from "./commands/validate.js";
 import { OUTPUT_FORMATS } from "./lib/shared.js";
 
 /**
@@ -50,6 +51,7 @@ function createProgram(): Command {
 
   // Register commands
   registerInspectCommand(program);
+  registerValidateCommand(program);
   registerApplyCommand(program);
   registerExportCommand(program);
   registerRenderCommand(program);

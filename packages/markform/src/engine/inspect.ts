@@ -206,7 +206,7 @@ function isRequiredField(fieldId: string, form: ParsedForm): boolean {
   for (const group of form.schema.groups) {
     for (const field of group.children) {
       if (field.id === fieldId) {
-        return field.required ?? false;
+        return field.required;
       }
     }
   }
@@ -333,7 +333,7 @@ return b._score - a._score;
 }
 
 /**
- * Get the priority level for a field (defaults to medium).
+ * Get the priority level for a field.
  */
 function getFieldPriority(ref: string, form: ParsedForm): FieldPriorityLevel {
   // Handle option refs (fieldId.optionId)
@@ -342,9 +342,9 @@ function getFieldPriority(ref: string, form: ParsedForm): FieldPriorityLevel {
   for (const group of form.schema.groups) {
     for (const field of group.children) {
       if (field.id === fieldId) {
-        return field.priority ?? "medium";
+        return field.priority;
       }
     }
   }
-  return "medium";
+  return "medium"; // Fallback for non-field refs (groups, form)
 }

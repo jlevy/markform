@@ -340,6 +340,17 @@ function extractFenceValue(node: Node): string | null {
 // =============================================================================
 
 /**
+ * Get priority attribute value or default to 'medium'.
+ */
+function getPriorityAttr(node: Node): "high" | "medium" | "low" {
+  const value = getStringAttr(node, "priority");
+  if (value === "high" || value === "medium" || value === "low") {
+    return value;
+  }
+  return "medium";
+}
+
+/**
  * Parse a string-field tag.
  */
 function parseStringField(node: Node): { field: StringField; value: StringValue } {
@@ -357,7 +368,8 @@ function parseStringField(node: Node): { field: StringField; value: StringValue 
     kind: "string",
     id,
     label,
-    required: getBooleanAttr(node, "required"),
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
     multiline: getBooleanAttr(node, "multiline"),
     pattern: getStringAttr(node, "pattern"),
     minLength: getNumberAttr(node, "minLength"),
@@ -392,7 +404,8 @@ function parseNumberField(node: Node): { field: NumberField; value: NumberValue 
     kind: "number",
     id,
     label,
-    required: getBooleanAttr(node, "required"),
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
     min: getNumberAttr(node, "min"),
     max: getNumberAttr(node, "max"),
     integer: getBooleanAttr(node, "integer"),
@@ -438,7 +451,8 @@ function parseStringListField(node: Node): { field: StringListField; value: Stri
     kind: "string_list",
     id,
     label,
-    required: getBooleanAttr(node, "required"),
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
     minItems: getNumberAttr(node, "minItems"),
     maxItems: getNumberAttr(node, "maxItems"),
     itemMinLength: getNumberAttr(node, "itemMinLength"),
@@ -530,7 +544,8 @@ function parseSingleSelectField(node: Node): { field: SingleSelectField; value: 
     kind: "single_select",
     id,
     label,
-    required: getBooleanAttr(node, "required"),
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
     options,
     validate: getValidateAttr(node),
   };
@@ -572,7 +587,8 @@ function parseMultiSelectField(node: Node): { field: MultiSelectField; value: Mu
     kind: "multi_select",
     id,
     label,
-    required: getBooleanAttr(node, "required"),
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
     options,
     minSelections: getNumberAttr(node, "minSelections"),
     maxSelections: getNumberAttr(node, "maxSelections"),
@@ -612,7 +628,7 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; value: Chec
   const { options, selected } = parseOptions(node, id);
 
   const checkboxModeStr = getStringAttr(node, "checkboxMode");
-  let checkboxMode: CheckboxMode | undefined;
+  let checkboxMode: CheckboxMode = "multi"; // default
   if (checkboxModeStr === "multi" || checkboxModeStr === "simple" || checkboxModeStr === "explicit") {
     checkboxMode = checkboxModeStr;
   }
@@ -621,7 +637,8 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; value: Chec
     kind: "checkboxes",
     id,
     label,
-    required: getBooleanAttr(node, "required"),
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
     checkboxMode,
     minDone: getNumberAttr(node, "minDone"),
     options,

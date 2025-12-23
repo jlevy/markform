@@ -121,6 +121,9 @@ function serializeStringField(
   if (field.required) {
     attrs.required = field.required;
   }
+  if (field.priority !== "medium") {
+    attrs.priority = field.priority;
+  }
   if (field.multiline) {
     attrs.multiline = field.multiline;
   }
@@ -158,6 +161,9 @@ function serializeNumberField(
   if (field.required) {
     attrs.required = field.required;
   }
+  if (field.priority !== "medium") {
+    attrs.priority = field.priority;
+  }
   if (field.min !== undefined) {
     attrs.min = field.min;
   }
@@ -191,6 +197,9 @@ function serializeStringListField(
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
+  }
+  if (field.priority !== "medium") {
+    attrs.priority = field.priority;
   }
   if (field.minItems !== undefined) {
     attrs.minItems = field.minItems;
@@ -250,6 +259,9 @@ function serializeSingleSelectField(
   if (field.required) {
     attrs.required = field.required;
   }
+  if (field.priority !== "medium") {
+    attrs.priority = field.priority;
+  }
   if (field.validate) {
     attrs.validate = field.validate;
   }
@@ -276,6 +288,9 @@ function serializeMultiSelectField(
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
+  }
+  if (field.priority !== "medium") {
+    attrs.priority = field.priority;
   }
   if (field.minSelections !== undefined) {
     attrs.minSelections = field.minSelections;
@@ -311,7 +326,10 @@ function serializeCheckboxesField(
   if (field.required) {
     attrs.required = field.required;
   }
-  if (field.checkboxMode) {
+  if (field.priority !== "medium") {
+    attrs.priority = field.priority;
+  }
+  if (field.checkboxMode !== "multi") {
     attrs.checkboxMode = field.checkboxMode;
   }
   if (field.minDone !== undefined) {

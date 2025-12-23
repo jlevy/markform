@@ -15,7 +15,11 @@ import pc from "picocolors";
 
 import { inspect } from "../../engine/inspect.js";
 import { parseForm } from "../../engine/parse.js";
-import type { InspectIssue, ProgressState } from "../../engine/types.js";
+import type {
+  FieldValue,
+  InspectIssue,
+  ProgressState,
+} from "../../engine/types.js";
 import {
   formatOutput,
   getCommandContext,
@@ -82,31 +86,94 @@ function formatSeverity(
 }
 
 /**
- * Format inspect report for console output.
+ * Format a field value for console display.
  */
-function formatConsoleReport(
-  report: {
-    structure: unknown;
-    progress: unknown;
-    form_state: ProgressState;
-    issues: {
-      ref: string;
-      scope: string;
-      reason: string;
-      message: string;
-      priority: number;
-      severity: "required" | "recommended";
-    }[];
-  },
+function formatFieldValue(
+  value: FieldValue | undefined,
   useColors: boolean
 ): string {
+  const dim = useColors ? pc.dim : (s: string) => s;
+  const green = useColors ? pc.green : (s: string) => s;
+
+  if (!value) {
+    return dim("(empty)");
+  }
+
+  switch (value.kind) {
+    case "string":
+      return value.value ? green(`"${value.value}"`) : dim("(empty)");
+    case "number":
+      return value.value !== null ? green(String(value.value)) : dim("(empty)");
+    case "string_list":
+      return value.items.length > 0
+        ? green(`[${value.items.map((i) => `"${i}"`).join(", ")}]`)
+        : dim("(empty)");
+    case "single_select":
+      return value.selected ? green(value.selected) : dim("(none selected)");
+    case "multi_select":
+      return value.selected.length > 0
+        ? green(`[${value.selected.join(", ")}]`)
+        : dim("(none selected)");
+    case "checkboxes": {
+      const entries = Object.entries(value.values);
+      if (entries.length === 0) {
+        return dim("(no entries)");
+      }
+      return entries.map(([k, v]) => `${k}:${v}`).join(", ");
+    }
+    default:
+      return dim("(unknown)");
+  }
+}
+
+/** Field info for console report */
+interface ReportField {
+  id: string;
+  kind: string;
+  label: string;
+  required: boolean;
+}
+
+/** Group info for console report */
+interface ReportGroup {
+  id: string;
+  title?: string;
+  children: ReportField[];
+}
+
+/** Report structure for console/JSON output */
+interface InspectReport {
+  title?: string;
+  structure: unknown;
+  progress: unknown;
+  form_state: ProgressState;
+  groups: ReportGroup[];
+  values: Record<string, FieldValue>;
+  issues: {
+    ref: string;
+    scope: string;
+    reason: string;
+    message: string;
+    priority: number;
+    severity: "required" | "recommended";
+  }[];
+}
+
+/**
+ * Format inspect report for console output.
+ */
+function formatConsoleReport(report: InspectReport, useColors: boolean): string {
   const lines: string[] = [];
   const bold = useColors ? pc.bold : (s: string) => s;
   const dim = useColors ? pc.dim : (s: string) => s;
   const cyan = useColors ? pc.cyan : (s: string) => s;
+  const yellow = useColors ? pc.yellow : (s: string) => s;
 
   // Header
   lines.push(bold(cyan("Form Inspection Report")));
+  if (report.title) {
+    lines.push(`${bold("Title:")} ${report.title}`);
+  }
   lines.push("");
 
   // Form state
@@ -149,6 +216,20 @@ function formatConsoleReport(
   lines.push(`  Empty (optional): ${progress.counts.emptyOptionalFields}`);
   lines.push("");
 
+  // Form content (groups and fields with values)
+  lines.push(bold("Form Content:"));
+  for (const group of report.groups) {
+    lines.push(`  ${bold(group.title ?? group.id)}`);
+    for (const field of group.children) {
+      const reqBadge = field.required ? yellow("[required]") : dim("[optional]");
+      const value = report.values[field.id];
+      const valueStr = formatFieldValue(value, useColors);
+      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge}`);
+      lines.push(`      ${dim("→")} ${valueStr}`);
+    }
+  }
+  lines.push("");
+
   // Issues
   if (report.issues.length > 0) {
     lines.push(bold(`Issues (${report.issues.length}):`));
@@ -187,10 +268,22 @@ export function registerInspectCommand(program: Command): void {
         const result = inspect(form);
 
         // Build the report structure
-        const report = {
+        const report: InspectReport = {
+          title: form.schema.title,
           structure: result.structureSummary,
           progress: result.progressSummary,
           form_state: result.formState,
+          groups: form.schema.groups.map((group) => ({
+            id: group.id,
+            title: group.title,
+            children: group.children.map((field) => ({
+              id: field.id,
+              kind: field.kind,
+              label: field.label,
+              required: field.required,
+            })),
+          })),
+          values: form.valuesByFieldId,
           issues: result.issues.map((issue: InspectIssue) => ({
             ref: issue.ref,
             scope: issue.scope,
