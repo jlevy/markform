@@ -242,7 +242,7 @@ markform/
       examples/
         simple/           # Simple test form (TDD iteration)
           simple.form.md
-          simple.mock.filled.form.md
+          simple-mock-filled.form.md
           simple.session.yaml
         company-quarterly-analysis/  # Complex form (golden tests)
           company-quarterly-analysis.form.md
@@ -497,8 +497,8 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
 - [x] Documentation block extraction
 
-- [x] Implement `markformMarkdocConfig` with tag definitions and attribute schemas
-  for `form`, `field-group`, all field tags, and `doc`
+- [x] Implement `markformMarkdocConfig` with tag definitions and attribute schemas for
+  `form`, `field-group`, all field tags, and `doc`
 
 - [x] Doc body raw slice preservation (capture exact source text for round-trip)
 
@@ -614,7 +614,8 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
 - [x] Implement `inspect(form: ParsedForm): InspectResult`
 
-- [x] Issue prioritization logic (tiered P1-P5 system based on field priority + issue type)
+- [x] Issue prioritization logic (tiered P1-P5 system based on field priority + issue
+  type)
 
 - [x] Mapping from ValidationIssue to InspectIssue
 
@@ -628,7 +629,7 @@ The simple form is already created at `examples/simple/`. Use it throughout Phas
 
 - [x] `examples/simple/simple.form.md` (template) - already created
 
-- [x] `examples/simple/simple.mock.filled.form.md` (completed mock) - already created
+- [x] `examples/simple/simple-mock-filled.form.md` (completed mock) - already created
 
 - [x] Verify parse/serialize round-trip with simple form
 
@@ -646,7 +647,7 @@ The simple form is already created at `examples/simple/`. Use it throughout Phas
 
 - Parse `simple.form.md` → structure summary matches expected counts
 
-- Parse `simple.mock.filled.form.md` → all fields report as complete
+- Parse `simple-mock-filled.form.md` → all fields report as complete
 
 - Round-trip test: parse → serialize → parse produces identical `ParsedForm`
 
@@ -723,8 +724,8 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 - [x] Add colored help text
 
-**Implementation Note:** Added global `--format` flag with options: `console`, `plaintext`,
-`yaml`, `json`. Default is `console` for human-readable colored output.
+**Implementation Note:** Added global `--format` flag with options: `console`,
+`plaintext`, `yaml`, `json`. Default is `console` for human-readable colored output.
 
 #### 2.2 Inspect Command (`cli/commands/inspect.ts`)
 
@@ -816,7 +817,7 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 - `markform inspect examples/simple/simple.form.md` outputs valid YAML
 
-- `markform inspect examples/simple/simple.mock.filled.form.md` shows form_state:
+- `markform inspect examples/simple/simple-mock-filled.form.md` shows form_state:
   complete
 
 - `markform export examples/simple/simple.form.md --format=json` outputs valid JSON
@@ -855,8 +856,8 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 - **Complex form** (`company-quarterly-analysis.form.md`): Comprehensive golden tests
 
-At this phase, use the existing `company-quarterly-analysis.form.md` - a
-comprehensive real-world form with many fields, field groups, and code validators.
+At this phase, use the existing `company-quarterly-analysis.form.md` - a comprehensive
+real-world form with many fields, field groups, and code validators.
 
 #### 3.1 Apply Command (`cli/commands/apply.ts`)
 
@@ -916,7 +917,7 @@ comprehensive real-world form with many fields, field groups, and code validator
 
   - Load template form
 
-  - Replay each turn's patches
+  - Replay each turn’s patches
 
   - Verify issues match expected
 
@@ -946,7 +947,7 @@ comprehensive real-world form with many fields, field groups, and code validator
 
   - All turns replay with matching issues
 
-  - Final form matches `simple.mock.filled.form.md`
+  - Final form matches `simple-mock-filled.form.md`
 
 - Golden test replay for `company-quarterly-analysis.session.yaml` passes:
 
@@ -968,9 +969,9 @@ comprehensive real-world form with many fields, field groups, and code validator
 
 **Goal**: Research and validate AI SDK tool integration for live agent mode.
 
-**Packaging**: Use optional peer dependencies for AI SDK adapters. Users who don't use
-AI features shouldn't need to install AI SDK packages. Use subpath exports pattern:
-`markform/ai-sdk` for optional integrations.
+**Packaging**: Use optional peer dependencies for AI SDK adapters.
+Users who don’t use AI features shouldn’t need to install AI SDK packages.
+Use subpath exports pattern: `markform/ai-sdk` for optional integrations.
 
 #### 4.1 AI SDK Tool Definitions (`integrations/ai-sdk.ts`)
 
@@ -1177,19 +1178,30 @@ Agent should pause and ask user to verify:
 > The `fill` command adds live agent support with `--agent` and `--model` flags.
 
 - **225 tests** across 14 test files, all passing
+
 - **7 CLI commands**: inspect, validate, apply, export, render, serve, run
+
 - **Core engine**: parsing, serialization, validation, patch application, summaries
+
 - **Harness system**: mock agent, session transcripts, golden tests
+
 - **AI SDK integration**: tools for AI agent form-filling
 
 ### Key Changes from Original Plan
 
 1. **New `validate` command** - Lightweight validation without full form content output
+
 2. **New `render` command** - Static HTML output for archival/sharing
+
 3. **Global `--format` flag** - Unified format control (console/plaintext/yaml/json)
-4. **Tiered priority system** - P1-P5 issue priority based on field importance + issue type
+
+4. **Tiered priority system** - P1-P5 issue priority based on field importance + issue
+   type
+
 5. **Interactive form elements** - Serve renders real HTML form inputs, not just display
+
 6. **Auto-open browser** - Serve auto-opens browser (use `--no-open` to disable)
+
 7. **Export `--markdown` flag** - Include canonical markdown in structured export
 
 ### Test Coverage by Module
@@ -1213,5 +1225,6 @@ Agent should pause and ask user to verify:
 
 ### Remaining Manual Validation
 
-See [valid-2025-12-22-markform-v01-implementation.md](valid-2025-12-22-markform-v01-implementation.md)
+See
+[valid-2025-12-22-markform-v01-implementation.md](valid-2025-12-22-markform-v01-implementation.md)
 for manual validation checklist.

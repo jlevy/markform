@@ -3,7 +3,7 @@
  *
  * This test file validates Phase 1 checkpoint requirements:
  * - Parse simple.form.md → structure summary matches expected counts
- * - Parse simple.mock.filled.form.md → all fields report as complete
+ * - Parse simple-mock-filled.form.md → all fields report as complete
  * - Round-trip test: parse → serialize → parse produces identical ParsedForm
  * - Validation tests: empty required fields produce correct issues
  * - Patch tests: valid patches apply, invalid patches reject batch
@@ -35,7 +35,7 @@ async function loadSimpleForm() {
 async function loadFilledForm() {
   const formPath = join(
     import.meta.dirname,
-    "../../../examples/simple/simple.mock.filled.form.md"
+    "../../../examples/simple/simple-mock-filled.form.md"
   );
   const content = await readFile(formPath, "utf-8");
   return parseForm(content);
@@ -90,7 +90,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
   });
 
   describe("Filled Form Completion", () => {
-    it("parses simple.mock.filled.form.md as complete", async () => {
+    it("parses simple-mock-filled.form.md as complete", async () => {
       const form = await loadFilledForm();
       const result = inspect(form);
 

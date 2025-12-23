@@ -100,7 +100,7 @@ pnpm markform inspect packages/markform/examples/simple/simple.form.md
 # Run fill with mock agent
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
   --agent=mock \
-  --mock-source packages/markform/examples/simple/simple.completed.mock.form.md \
+  --mock-source packages/markform/examples/simple/simple-mock-filled.form.md \
   -o /tmp/simple-filled.form.md
 
 # Verify output
@@ -246,7 +246,7 @@ Global Options:
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
     --agent=mock \
-    --mock-source packages/markform/examples/simple/simple.mock.filled.form.md
+    --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
 
 Filling form: simple.form.md
 Form completed in 1 turn(s)

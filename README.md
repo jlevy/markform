@@ -45,7 +45,7 @@ markform serve examples/simple/simple.form.md
 markform fill examples/simple/simple.form.md --agent=live
 
 # Fill a form with mock agent (for testing)
-markform fill examples/simple/simple.form.md --agent=mock --mock-source examples/simple/simple.mock.filled.form.md
+markform fill examples/simple/simple.form.md --agent=mock --mock-source examples/simple/simple-mock-filled.form.md
 ```
 
 ## Example Form

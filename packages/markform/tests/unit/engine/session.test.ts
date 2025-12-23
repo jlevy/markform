@@ -17,7 +17,7 @@ mode: mock
 form:
   path: examples/simple/simple.form.md
 mock:
-  completed_mock: examples/simple/simple.mock.filled.form.md
+  completed_mock: examples/simple/simple-mock-filled.form.md
 harness:
   max_issues: 5
   max_patches_per_turn: 3
@@ -42,7 +42,7 @@ turns:
       markdown_sha256: abc123def456
 final:
   expect_complete: true
-  expected_completed_form: examples/simple/simple.mock.filled.form.md
+  expected_completed_form: examples/simple/simple-mock-filled.form.md
 `;
 
 const MINIMAL_SESSION = `session_version: "0.1.0"
@@ -96,11 +96,11 @@ describe("session module", () => {
       expect(session.harness.maxPatchesPerTurn).toBe(3);
       expect(session.harness.maxTurns).toBe(10);
       expect(session.mock?.completedMock).toBe(
-        "examples/simple/simple.mock.filled.form.md"
+        "examples/simple/simple-mock-filled.form.md"
       );
       expect(session.final.expectComplete).toBe(true);
       expect(session.final.expectedCompletedForm).toBe(
-        "examples/simple/simple.mock.filled.form.md"
+        "examples/simple/simple-mock-filled.form.md"
       );
     });
 
