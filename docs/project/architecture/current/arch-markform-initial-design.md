@@ -292,7 +292,7 @@ compatibility:
 | --- | --- | --- | --- |
 | `checkboxes` | `[ ]` | Unchecked / todo / unfilled | `- [ ] Item {% #item_id %}` |
 | `checkboxes` | `[x]` | Checked / done | `- [x] Item {% #item_id %}` |
-| `checkboxes` | `[/]` | In progress (multi only) | `- [/] Item {% #item_id %}` |
+| `checkboxes` | `[/]` | Incomplete (multi only) | `- [/] Item {% #item_id %}` |
 | `checkboxes` | `[*]` | Active (multi only) | `- [*] Item {% #item_id %}` |
 | `checkboxes` | `[-]` | Not applicable (multi only) | `- [-] Item {% #item_id %}` |
 | `checkboxes` | `[y]` | Yes (explicit only) | `- [y] Item {% #item_id %}` |
@@ -704,7 +704,7 @@ Notes:
 
 - Reference options externally using qualified form: `{fieldId}.{optionId}` (e.g., `docs_reviewed.ten_k`)
 
-- Checkbox states: `[ ]` todo, `[x]` done, `[/]` in progress, `[-]` n/a
+- Checkbox states: `[ ]` todo, `[x]` done, `[/]` incomplete, `[*]` active, `[-]` n/a
 
 #### Parsing Strategy
 
@@ -726,7 +726,7 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
    - Globally-unique IDs for form/group/field (option IDs are field-scoped only)
    - `ref` resolution (doc blocks reference valid targets)
    - Checkbox mode enforcement (`checkboxMode="simple"` restricts to 2 states)
-   - Option marker parsing (`[ ]`, `[x]`, `[-]`, `[/]`, `[~]`, `[y]`, `[n]`, etc.)
+   - Option marker parsing (`[ ]`, `[x]`, `[/]`, `[*]`, `[-]`, `[y]`, `[n]`, etc.)
    - **Label requirement** (*required*): All fields must have a `label` attribute;
      missing label is a parse error
    - **Option ID annotation** (*required*): All options in select/checkbox fields must
@@ -1736,7 +1736,7 @@ scope. For example:
   - **multi_select field:** Reset all markers to `[ ]` (no selections)
   - **checkboxes field:** Reset to default state based on mode:
     - simple mode: all `[ ]`
-    - multi mode: all `[-]` (todo)
+    - multi mode: all `[ ]` (todo)
     - explicit mode: all `[ ]` (unfilled)
 
 - `set_checkboxes`: Merges provided values with existing state (only specified options
