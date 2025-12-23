@@ -767,6 +767,9 @@ To ensure deterministic round-tripping without building a full markdown serializ
 ```ts
 type Id = string; // validated snake_case, e.g., /^[a-z][a-z0-9_]*$/
 
+// Validator reference: simple string ID or parameterized object
+type ValidatorRef = string | { id: string; [key: string]: unknown };
+
 // Multi-checkbox states (checkboxMode="multi", default)
 type MultiCheckboxState = 'todo' | 'done' | 'incomplete' | 'active' | 'na';
 
@@ -798,15 +801,15 @@ interface FieldGroup {
   id: Id;
   title?: string;
   // Note: `required` on groups is not supported in v0.1 (ignored with warning)
-  validate?: string[];       // validator IDs
-  children: Field[];         // v0.1/v0.2: fields only; nested groups deferred (future)
+  validate?: ValidatorRef[];  // validator references (string IDs or parameterized objects)
+  children: Field[];          // v0.1/v0.2: fields only; nested groups deferred (future)
 }
 
 interface FieldBase {
   id: Id;
   label: string;
   required?: boolean;
-  validate?: string[];       // validator IDs
+  validate?: ValidatorRef[];  // validator references (string IDs or parameterized objects)
 }
 
 interface StringField extends FieldBase {
@@ -1406,7 +1409,8 @@ Validators are referenced by **ID** from fields/groups/form via `validate=[...]`
 
 **Validate attribute syntax:**
 
-The `validate` attribute accepts an array of validator references. Each reference can be:
+The `validate` attribute accepts an array of validator references.
+Each reference can be:
 
 1. **String** — Simple validator ID with no parameters:
    ```md
@@ -2266,9 +2270,10 @@ Specified in this document but deferred from v0.1 proof of concept:
 
   - Item-level patch operations (insert/remove/reorder)
 
-- **`allowOther` attribute for select fields** — Enable "Other: ____" free-text option
-  for `single-select` and `multi-select` fields. When `allowOther=true`, users can
-  provide a custom value not in the predefined option list.
+- **`allowOther` attribute for select fields** — Enable “Other: ____” free-text option
+  for `single-select` and `multi-select` fields.
+  When `allowOther=true`, users can provide a custom value not in the predefined option
+  list.
 
   ```md
   {% single-select id="delivery_type" label="Delivery type" allowOther=true %}
@@ -2279,15 +2284,18 @@ Specified in this document but deferred from v0.1 proof of concept:
   ```
 
   Schema additions:
+
   - `SingleSelectField.allowOther?: boolean`
+
   - `MultiSelectField.allowOther?: boolean`
+
   - `FieldValue` gains `otherValue?: string` property for select types
 
-  The reserved option ID `_other` is used when the user selects "Other".
+  The reserved option ID `_other` is used when the user selects “Other”.
   Serialization: `- [x] Other: Custom value here {% #_other %}`
 
-- **`date-field` type** — Dedicated field type for date values with built-in parsing
-  and validation. Supports ISO 8601 format by default.
+- **`date-field` type** — Dedicated field type for date values with built-in parsing and
+  validation. Supports ISO 8601 format by default.
 
   ```md
   {% date-field id="deadline" label="Deadline" required=true %}{% /date-field %}
@@ -2295,8 +2303,11 @@ Specified in this document but deferred from v0.1 proof of concept:
   ```
 
   Attributes:
+
   - `format`: Date format string (default: `YYYY-MM-DD` / ISO 8601)
+
   - `min`: Minimum date constraint
+
   - `max`: Maximum date constraint
 
   TypeScript types:
@@ -2307,10 +2318,10 @@ Specified in this document but deferred from v0.1 proof of concept:
     min?: string;              // minimum date in same format
     max?: string;              // maximum date in same format
   }
-
+  
   // FieldValue
   | { kind: 'date'; value: string | null }  // stored in normalized ISO format
-
+  
   // Patch
   | { op: 'set_date'; fieldId: Id; value: string | null }
   ```
@@ -2322,14 +2333,16 @@ Specified in this document but deferred from v0.1 proof of concept:
 Documented but not required for v0.1 or v0.2:
 
 - **Nested field groups** — v0.1/v0.2 support only flat field groups (groups contain
-  fields, not other groups). Nested groups for hierarchical organization deferred
-  to a future version. Use flat groups with descriptive IDs like `pricing_structure`,
-  `pricing_margin_cost` for now.
+  fields, not other groups).
+  Nested groups for hierarchical organization deferred to a future version.
+  Use flat groups with descriptive IDs like `pricing_structure`, `pricing_margin_cost`
+  for now.
 
 - **`requiredIf` conditional validation** — Declarative attribute to make a field
-  required based on another field's value. For now, use code validators for
-  conditional requirements (see Custom Validator Patterns section). A declarative
-  `requiredIf` attribute may be added later for common patterns.
+  required based on another field’s value.
+  For now, use code validators for conditional requirements (see Custom Validator
+  Patterns section). A declarative `requiredIf` attribute may be added later for common
+  patterns.
 
 - Conditional enable/disable of groups/fields based on earlier answers
 
@@ -2337,7 +2350,7 @@ Documented but not required for v0.1 or v0.2:
 
 - Rich numeric types (currency, percent, units, precision, tolerances)
 
-- "Report-quality rendering" (templates, charts), PDF export
+- “Report-quality rendering” (templates, charts), PDF export
 
 - More advanced UI schema/layout options
 
@@ -2664,15 +2677,16 @@ this is not needed for typical local workflows.
 
 - Offer a “Browse Forms” view with quick filter and recent files list.
 
-- Provide "Save As Completed" shortcut that validates completion before enabling save.
+- Provide “Save As Completed” shortcut that validates completion before enabling save.
 
 * * *
 
 ## Enhancements Identified from Company Analysis Form
 
 This section documents enhancements identified while converting the complex
-`company-quarterly-analysis-draft-form.md` to proper Markform syntax. The form exercises
-many advanced patterns and serves as a comprehensive test case for the framework.
+`company-quarterly-analysis-draft-form.md` to proper Markform syntax.
+The form exercises many advanced patterns and serves as a comprehensive test case for
+the framework.
 
 ### Framework-Level Enhancements (v0.1 or v0.2)
 
@@ -2680,10 +2694,10 @@ These require changes to the Markform schema, parser, or serializer:
 
 #### 1. `allowOther` Attribute for Select Fields
 
-**Problem:** Many real forms include "Other: ____" options where users can specify a
+**Problem:** Many real forms include “Other: ____” options where users can specify a
 custom value not in the predefined list.
 
-**Current workaround:** Add a separate `string-field` sibling for "Other" values.
+**Current workaround:** Add a separate `string-field` sibling for “Other” values.
 
 **Proposed solution:** Add `allowOther` attribute to `single-select` and `multi-select`:
 
@@ -2729,17 +2743,17 @@ interface MultiSelectField extends FieldBase {
 | { op: 'set_multi_select'; fieldId: Id; selected: OptionId[]; otherValue?: string }
 ```
 
-**Serialization:** When `allowOther=true`, an "Other" option is implicitly available.
+**Serialization:** When `allowOther=true`, an “Other” option is implicitly available.
 If `otherValue` is set, serialize as:
 
 ```md
 - [x] Other: Custom value here {% #_other %}
 ```
 
-The `#_other` ID is reserved for the "Other" option when `allowOther=true`.
+The `#_other` ID is reserved for the “Other” option when `allowOther=true`.
 
-**Naming rationale:** `allowOther` aligns with common form library conventions
-(e.g., Ant Design's `allowOther`, Google Forms' "Other" option pattern).
+**Naming rationale:** `allowOther` aligns with common form library conventions (e.g.,
+Ant Design’s `allowOther`, Google Forms’ “Other” option pattern).
 
 #### 2. Date/Time Field Types (v0.2+)
 
@@ -2754,21 +2768,24 @@ The `#_other` ID is reserved for the "Other" option when `allowOther=true`.
 ```
 
 **Attributes:**
-- `format`: Date format string (ISO 8601 default)
-- `min`, `max`: Date range constraints
-- `allowRelative`: Allow relative dates like "next quarter" (optional, v0.3+)
 
-**Alternative:** Keep as `string-field` with well-documented patterns. Date parsing
-is complex and may not warrant a dedicated type in v0.1.
+- `format`: Date format string (ISO 8601 default)
+
+- `min`, `max`: Date range constraints
+
+- `allowRelative`: Allow relative dates like “next quarter” (optional, v0.3+)
+
+**Alternative:** Keep as `string-field` with well-documented patterns.
+Date parsing is complex and may not warrant a dedicated type in v0.1.
 
 ### Custom Validator Patterns
 
 These patterns should be implemented as code validators (`.valid.ts`), not as
-framework-level features. This keeps the core framework simple while enabling
-rich validation through code.
+framework-level features.
+This keeps the core framework simple while enabling rich validation through code.
 
-All validators receive parameters via `ctx.params`, allowing reusable validators
-with configurable thresholds.
+All validators receive parameters via `ctx.params`, allowing reusable validators with
+configurable thresholds.
 
 #### 1. Word Count Validation
 
@@ -2994,16 +3011,16 @@ export const validators = {
 
 ### Patterns Requiring Repeating Groups (v0.2)
 
-The following patterns from the company analysis form require repeating groups,
-already specified for v0.2:
+The following patterns from the company analysis form require repeating groups, already
+specified for v0.2:
 
-1. **Offering families** — Each offering has: name, value prop, delivery type,
-   revenue type, KPIs. Currently modeled as a single instance with note to add more.
+1. **Offering families** — Each offering has: name, value prop, delivery type, revenue
+   type, KPIs. Currently modeled as a single instance with note to add more.
 
 2. **Pricing structures** — Per-offering pricing details.
 
-3. **Driver model** — Multiple drivers with the same structure. Currently modeled
-   as Driver 1, Driver 2, Driver 3 with optional third.
+3. **Driver model** — Multiple drivers with the same structure.
+   Currently modeled as Driver 1, Driver 2, Driver 3 with optional third.
 
 4. **Expert/analyst table** — Structured rows with multiple columns.
 
@@ -3031,7 +3048,7 @@ When repeating groups are implemented, these will be converted to:
 The `company-analysis.form.md` exercises the following Markform features:
 
 | Feature | Coverage |
-|---------|----------|
+| --- | --- |
 | `string-field` with `required` | ✅ Extensive |
 | `string-field` with `pattern` | ✅ Dates, fiscal periods |
 | `string-field` with `minLength`/`maxLength` | ✅ Word count proxies |
@@ -3055,6 +3072,7 @@ The `company-analysis.form.md` exercises the following Markform features:
 
 4. **v0.2:** Add `date-field` type for date values with built-in validation.
 
-Note: Conditional validation (e.g., "field X required if field Y has value") is
-handled via code validators. See the Custom Validator Patterns section for examples
-of `moat_explanation_required`, `whisper_evidence_required`, etc.
+Note: Conditional validation (e.g., “field X required if field Y has value”) is handled
+via code validators.
+See the Custom Validator Patterns section for examples of `moat_explanation_required`,
+`whisper_evidence_required`, etc.
