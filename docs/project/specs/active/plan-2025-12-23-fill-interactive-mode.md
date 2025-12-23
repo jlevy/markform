@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This plan implements `fill --interactive` mode, providing a console-based interactive UI for
-users to fill form fields directly in the terminal using `@clack/prompts`.
+This plan implements `fill --interactive` mode, providing a console-based interactive UI
+for users to fill form fields directly in the terminal using `@clack/prompts`.
 
 **Related Docs:**
 
@@ -17,13 +17,15 @@ users to fill form fields directly in the terminal using `@clack/prompts`.
 
 ## Background
 
-The current `fill` command runs an AI agent to autonomously fill forms. However, users often
-need to provide initial context (company name, person name, etc.) before the agent runs.
+The current `fill` command runs an AI agent to autonomously fill forms.
+However, users often need to provide initial context (company name, person name, etc.)
+before the agent runs.
 The role system separates fields into `user` and `agent` roles for this purpose.
 
-To complete the workflow, users need a way to interactively fill their assigned fields in
-the console. The `serve` command already provides a web-based UI for form filling, but
-launching a browser isn't always convenient—especially for quick workflows or when
+To complete the workflow, users need a way to interactively fill their assigned fields
+in the console.
+The `serve` command already provides a web-based UI for form filling, but
+launching a browser isn’t always convenient—especially for quick workflows or when
 scaffolding examples.
 
 **Workflow with roles:**
@@ -54,7 +56,7 @@ markform fill form-v1.form.md
 
 **Fully backward compatible.** This is additive:
 
-- New `--interactive` flag doesn't change existing behavior
+- New `--interactive` flag doesn’t change existing behavior
 
 - Default fill behavior (agent mode) unchanged
 
@@ -76,15 +78,14 @@ markform fill form-v1.form.md
 
 - Field type mappings to clack prompts:
 
-  | Field Type | Clack Prompt |
-  | --- | --- |
-  | `string` | `text()` |
-  | `number` | `text()` with validation |
-  | `string_list` | `text()` (one item per line) |
-  | `single_select` | `select()` |
-  | `multi_select` | `multiselect()` |
-  | `checkboxes` | varies by mode (see below) |
-
+| Field Type | Clack Prompt |
+| --- | --- |
+| `string` | `text()` |
+| `number` | `text()` with validation |
+| `string_list` | `text()` (one item per line) |
+| `single_select` | `select()` |
+| `multi_select` | `multiselect()` |
+| `checkboxes` | varies by mode (see below) |
 - Show field label and description in prompts
 
 - Skip fields that already have values
@@ -262,7 +263,8 @@ Once the role system (plan-2025-12-23-role-system.md) is implemented:
 
 3. Interactive fill respects blocking checkpoints (approval gates)
 
-**Before role system is implemented:** Interactive mode fills all fields (no role filtering).
+**Before role system is implemented:** Interactive mode fills all fields (no role
+filtering).
 
 * * *
 
@@ -390,18 +392,19 @@ Once the role system (plan-2025-12-23-role-system.md) is implemented:
 
 2. **Show current value:** Should we show current value for partially filled forms?
 
-   - **Decision:** Yes, show in placeholder/hint if field has value but we're in overwrite
-     mode.
+   - **Decision:** Yes, show in placeholder/hint if field has value but we’re in
+     overwrite mode.
 
 3. **Multi-line string fields:** How to handle multi-line text in console?
 
-   - **Decision:** Use `p.text()` with hint "Press Enter twice to finish" or accept single
-     line for now. Full multi-line can be added later.
+   - **Decision:** Use `p.text()` with hint “Press Enter twice to finish” or accept
+     single line for now.
+     Full multi-line can be added later.
 
 4. **Dependent on role system:** Should this wait for role system implementation?
 
-   - **Decision:** Can implement basic interactive fill without roles (fills all fields).
-     Role filtering added when role system lands.
+   - **Decision:** Can implement basic interactive fill without roles (fills all
+     fields). Role filtering added when role system lands.
 
 * * *
 

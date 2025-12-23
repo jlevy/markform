@@ -258,8 +258,9 @@ Expected: ✓ complete
 
 ### Live Agent - .env Loading - PASS
 
-The .env file in the project root is correctly loaded. Testing showed an API credit error
-(not missing key error), confirming dotenv integration works:
+The .env file in the project root is correctly loaded.
+Testing showed an API credit error (not missing key error), confirming dotenv
+integration works:
 
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
@@ -308,4 +309,5 @@ to a file. Use `--record` to save the session transcript instead.
 ## Revision History
 
 - 2025-12-23: Added agent testing results section with pass/fail status
+
 - 2025-12-23: Initial validation spec created
