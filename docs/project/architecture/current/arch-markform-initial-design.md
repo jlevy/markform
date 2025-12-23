@@ -2255,24 +2255,14 @@ Specified in this document but deferred from v0.1 proof of concept:
 
   FieldKind enum gains `'date'` value.
 
-- **`requiredIf` conditional validation** — Declarative attribute to make a field
-  required based on another field's value.
-
-  ```md
-  {% string-field id="moat_explanation" label="Moat explanation" requiredIf="moat_diagnosis" %}{% /string-field %}
-  ```
-
-  Semantics:
-  - Simple field reference: `requiredIf="fieldId"` — required if field has truthy value
-  - For selects: truthy means `selected !== null` or `selected.length > 0`
-  - For checkboxes: truthy means any option changed from initial state
-  - For string/number: truthy means non-null, non-empty value
-
-  Complex conditions should use code validators instead.
-
 ### Later Versions
 
 Documented but not required for v0.1 or v0.2:
+
+- **`requiredIf` conditional validation** — Declarative attribute to make a field
+  required based on another field's value. For now, use code validators for
+  conditional requirements (see Custom Validator Patterns section). A declarative
+  `requiredIf` attribute may be added later for common patterns.
 
 - Conditional enable/disable of groups/fields based on earlier answers
 
@@ -2684,32 +2674,7 @@ The `#_other` ID is reserved for the "Other" option when `allowOther=true`.
 **Naming rationale:** `allowOther` aligns with common form library conventions
 (e.g., Ant Design's `allowOther`, Google Forms' "Other" option pattern).
 
-#### 2. `requiredIf` Conditional Validation (v0.2+)
-
-**Problem:** Some fields are conditionally required based on other field values
-(e.g., "Moat explanation required if any moat is checked").
-
-**Current workaround:** Document in instructions and use code validators.
-
-**Proposed solution:** Add `requiredIf` attribute for declarative conditional requirements:
-
-```md
-{% string-field
-  id="moat_explanation"
-  label="Moat explanation"
-  requiredIf="moat_diagnosis.selected.length > 0"
-%}{% /string-field %}
-```
-
-**Implementation consideration:** The expression syntax needs design. Options:
-- Simple field reference: `requiredIf="moat_diagnosis"` (truthy check)
-- JSONPath-like: `requiredIf="moat_diagnosis.selected[*]"` (has any selection)
-- Expression language subset (deferred complexity)
-
-**Recommendation:** Start with simple truthy references in v0.2; complex expressions
-via code validators.
-
-#### 3. Date/Time Field Types (v0.2+)
+#### 2. Date/Time Field Types (v0.2+)
 
 **Problem:** Dates appear frequently (deadlines, as-of dates, fiscal periods).
 
@@ -2940,7 +2905,8 @@ The `company-analysis.form.md` exercises the following Markform features:
 
 3. **v0.2:** Implement repeating groups—unlocks offering families, driver model.
 
-4. **v0.2:** Add `requiredIf` for declarative conditional validation.
+4. **v0.2:** Add `date-field` type for date values with built-in validation.
 
-5. **v0.3+:** Consider `date-field` type if pattern-based validation proves
-   insufficient.
+Note: Conditional validation (e.g., "field X required if field Y has value") is
+handled via code validators. See the Custom Validator Patterns section for examples
+of `moat_explanation_required`, `whisper_evidence_required`, etc.
