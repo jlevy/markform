@@ -237,7 +237,7 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       const priority = formatPriority(issue.priority, useColors);
       const severity = formatSeverity(issue.severity, useColors);
       lines.push(
-        `  ${priority} ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message} ${dim(`(${severity})`)}`
+        `  ${priority} (${severity}) ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message}`
       );
     }
   } else {
