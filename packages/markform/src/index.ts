@@ -176,3 +176,11 @@ export {
 export { parseForm, ParseError } from "./engine/parse.js";
 export { serialize } from "./engine/serialize.js";
 export type { SerializeOptions } from "./engine/serialize.js";
+export {
+  computeStructureSummary,
+  computeProgressSummary,
+  computeFormState,
+  isFormComplete,
+  computeAllSummaries,
+} from "./engine/summaries.js";
+export type { ComputedSummaries } from "./engine/summaries.js";
