@@ -2073,11 +2073,18 @@ Thin wrapper around the tool contract:
 
 - `markform export <file.form.md> --format=json` — print `{schema, values}`
 
-- `markform serve [<file.form.md>]` — start a local web UI to view/browse any form
-  (template/incomplete/completed) and save the canonicalized form to disk with versioned
-  filenames:
+- `markform render <file.form.md> [-o <file.html>]` — render form as static HTML output:
 
-  - Save always writes to a new versioned filename (never overwrites the source)
+  - Default output: same stem with `.form.html` extension (e.g., `simple.form.md` → `simple.form.html`)
+  - Use `-o` / `--output` to specify custom output path
+  - Shares rendering logic with serve command
+  - Useful for sharing/archiving forms without running a server
+
+- `markform serve [<file.form.md>]` — start a local web UI for interactive form editing:
+
+  - Opens browser automatically (use `--no-open` to disable)
+  - Interactive HTML form elements for all field types
+  - Save writes to a new versioned filename (never overwrites the source)
 
   - Version naming: if the stem ends with a version pattern (e.g., `-v1`, `_v2`, ` v3`),
     extract and increment the number; otherwise append `-v1`
@@ -2090,18 +2097,14 @@ Thin wrapper around the tool contract:
 
     - `draft v12.form.md` → `draft v13.form.md`
 
-  - A confirmation page shows the proposed path and allows override before writing
-
 - `markform run <file.form.md> --mock --completed-mock <file>` — run harness end-to-end,
   write session transcript
 
 **Deferred to v0.2:**
 
-- **Validation in serve** — Run engine validation from the UI with a “Validate” button.
+- **Validation in serve** — Run engine validation from the UI with a "Validate" button.
   Requires deciding on validator execution strategy (see Future Considerations for
   research on server-executed vs baked validators).
-
-- **Interactive editing** — Apply patches from the UI; reflect issues as the user edits.
 
 - **JSON endpoints** — Expose inspect/apply/export as HTTP endpoints for programmatic
   clients.
@@ -2342,9 +2345,6 @@ Full specification included above.
 ### v0.2 Targets
 
 Specified in this document but deferred from v0.1 proof of concept:
-
-- **Static HTML render** — `markform render <file.form.md> --out <file.html>` to produce
-  a clean static HTML/CSS file for sharing/archiving without running a server
 
 - **MCP server integration** — Full spec included above; deferred to reduce v0.1 scope
 
