@@ -118,17 +118,23 @@ function formatConsoleReport(
     counts: {
       totalFields: number;
       requiredFields: number;
+      submittedFields: number;
       completeFields: number;
       incompleteFields: number;
+      invalidFields: number;
       emptyRequiredFields: number;
+      emptyOptionalFields: number;
     };
   };
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
+  lines.push(`  Submitted: ${progress.counts.submittedFields}`);
   lines.push(`  Complete: ${progress.counts.completeFields}`);
   lines.push(`  Incomplete: ${progress.counts.incompleteFields}`);
+  lines.push(`  Invalid: ${progress.counts.invalidFields}`);
   lines.push(`  Empty (required): ${progress.counts.emptyRequiredFields}`);
+  lines.push(`  Empty (optional): ${progress.counts.emptyOptionalFields}`);
   lines.push("");
 
   // Issues
@@ -155,14 +161,8 @@ export function registerInspectCommand(program: Command): void {
   program
     .command("inspect <file>")
     .description("Inspect a form and display its structure, progress, and issues")
-    .option("--json", "Output as JSON (shortcut for --format json)")
-    .action(async (file: string, options: { json?: boolean }, cmd: Command) => {
+    .action(async (file: string, _options: Record<string, unknown>, cmd: Command) => {
       const ctx = getCommandContext(cmd);
-
-      // Handle --json shortcut
-      if (options.json) {
-        ctx.format = "json";
-      }
 
       try {
         logVerbose(ctx, `Reading file: ${file}`);

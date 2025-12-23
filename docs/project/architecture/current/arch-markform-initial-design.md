@@ -1727,7 +1727,7 @@ interface ApplyResult {
 | --- | --- | --- | --- |
 | inspect | `markform inspect` (prints YAML report) | `markform_inspect` | `markform.inspect` |
 | apply | `markform apply` | `markform_apply` | `markform.apply` |
-| export | `markform export --json` | `markform_export` | `markform.export` |
+| export | `markform export --format=json` | `markform_export` | `markform.export` |
 | getMarkdown | `markform apply` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
 | serve | `markform serve` (v0.1: view/save only) | — | — |
 
@@ -2071,7 +2071,7 @@ Thin wrapper around the tool contract:
 
 - `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
 
-- `markform export <file.form.md> --json` — print `{schema, values}`
+- `markform export <file.form.md> --format=json` — print `{schema, values}`
 
 - `markform serve [<file.form.md>]` — start a local web UI to view/browse any form
   (template/incomplete/completed) and save the canonicalized form to disk with versioned

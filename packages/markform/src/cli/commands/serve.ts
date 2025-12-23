@@ -1,7 +1,7 @@
 /**
  * Serve command - Serve a form as a web page for browsing.
  *
- * Starts an HTTP server that renders the form as HTML.
+ * Starts an HTTP server that renders the form as interactive HTML.
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -12,6 +12,7 @@ import { resolve } from "node:path";
 
 import pc from "picocolors";
 
+import { applyPatches } from "../../engine/apply.js";
 import { parseForm } from "../../engine/parse.js";
 import { serialize } from "../../engine/serialize.js";
 import type {
@@ -22,9 +23,13 @@ import type {
   FieldValue,
   MultiSelectField,
   MultiSelectValue,
+  NumberField,
+  Patch,
   ParsedForm,
   SingleSelectField,
   SingleSelectValue,
+  StringField,
+  StringListField,
 } from "../../engine/types.js";
 import {
   type CommandContext,
@@ -60,14 +65,14 @@ export function registerServeCommand(program: Command): void {
         try {
           logVerbose(ctx, `Reading file: ${filePath}`);
           const content = await readFile(filePath);
-
-          logVerbose(ctx, "Parsing form...");
-          const form = parseForm(content);
+          let form = parseForm(content);
 
           // Start the server
           const server = createServer(
             (req: IncomingMessage, res: ServerResponse) => {
-              handleRequest(req, res, form, filePath, ctx).catch((err) => {
+              handleRequest(req, res, form, filePath, ctx, (updatedForm) => {
+                form = updatedForm;
+              }).catch((err) => {
                 console.error("Request error:", err);
                 res.writeHead(500);
                 res.end("Internal Server Error");
@@ -104,7 +109,8 @@ async function handleRequest(
   res: ServerResponse,
   form: ParsedForm,
   filePath: string,
-  ctx: CommandContext
+  ctx: CommandContext,
+  updateForm: (form: ParsedForm) => void
 ): Promise<void> {
   const url = req.url ?? "/";
 
@@ -115,7 +121,7 @@ async function handleRequest(
     res.end(html);
   } else if (req.method === "POST" && url === "/save") {
     // Save the form to a new versioned file
-    await handleSave(req, res, form, filePath, ctx);
+    await handleSave(req, res, form, filePath, ctx, updateForm);
   } else if (url === "/api/form") {
     // API endpoint for form data
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -127,16 +133,192 @@ async function handleRequest(
 }
 
 /**
+ * Parse form body data.
+ */
+function parseFormBody(body: string): Record<string, string | string[]> {
+  const result: Record<string, string | string[]> = {};
+  const params = new URLSearchParams(body);
+
+  for (const [key, value] of params) {
+    const existing = result[key];
+    if (existing !== undefined) {
+      if (Array.isArray(existing)) {
+        existing.push(value);
+      } else {
+        result[key] = [existing, value];
+      }
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Convert form data to patches.
+ */
+function formDataToPatches(
+  formData: Record<string, string | string[]>,
+  form: ParsedForm
+): Patch[] {
+  const patches: Patch[] = [];
+  const fields = form.schema.groups.flatMap((g) => g.children);
+
+  for (const field of fields) {
+    const fieldId = field.id;
+
+    switch (field.kind) {
+      case "string": {
+        const value = formData[fieldId];
+        if (typeof value === "string" && value.trim() !== "") {
+          patches.push({ op: "set_string", fieldId, value: value.trim() });
+        } else if (!value || (typeof value === "string" && value.trim() === "")) {
+          patches.push({ op: "clear_field", fieldId });
+        }
+        break;
+      }
+
+      case "number": {
+        const value = formData[fieldId];
+        if (typeof value === "string" && value.trim() !== "") {
+          const num = parseFloat(value);
+          if (!isNaN(num)) {
+            patches.push({ op: "set_number", fieldId, value: num });
+          }
+        } else {
+          patches.push({ op: "clear_field", fieldId });
+        }
+        break;
+      }
+
+      case "string_list": {
+        const value = formData[fieldId];
+        if (typeof value === "string" && value.trim() !== "") {
+          const items = value
+            .split("\n")
+            .map((s) => s.trim())
+            .filter((s) => s !== "");
+          if (items.length > 0) {
+            patches.push({ op: "set_string_list", fieldId, items });
+          } else {
+            patches.push({ op: "clear_field", fieldId });
+          }
+        } else {
+          patches.push({ op: "clear_field", fieldId });
+        }
+        break;
+      }
+
+      case "single_select": {
+        const value = formData[fieldId];
+        if (typeof value === "string" && value !== "") {
+          patches.push({ op: "set_single_select", fieldId, selected: value });
+        } else {
+          patches.push({ op: "clear_field", fieldId });
+        }
+        break;
+      }
+
+      case "multi_select": {
+        const value = formData[fieldId];
+        const selected = Array.isArray(value)
+          ? value
+          : value
+            ? [value]
+            : [];
+        if (selected.length > 0 && selected[0] !== "") {
+          patches.push({ op: "set_multi_select", fieldId, selected });
+        } else {
+          patches.push({ op: "clear_field", fieldId });
+        }
+        break;
+      }
+
+      case "checkboxes": {
+        const mode = field.checkboxMode ?? "multi";
+
+        if (mode === "simple") {
+          // Simple mode: checkboxes send their value when checked
+          const value = formData[fieldId];
+          const checked = Array.isArray(value)
+            ? value
+            : value
+              ? [value]
+              : [];
+
+          const values: Record<string, "done" | "todo"> = {};
+          for (const opt of field.options) {
+            values[opt.id] = checked.includes(opt.id) ? "done" : "todo";
+          }
+          patches.push({ op: "set_checkboxes", fieldId, values });
+        } else {
+          // Multi or explicit mode: each option has its own select
+          const values: Record<string, string> = {};
+          for (const opt of field.options) {
+            const selectName = `${fieldId}.${opt.id}`;
+            const selectValue = formData[selectName];
+            if (typeof selectValue === "string" && selectValue !== "") {
+              values[opt.id] = selectValue;
+            }
+          }
+          if (Object.keys(values).length > 0) {
+            patches.push({
+              op: "set_checkboxes",
+              fieldId,
+              values: values as Record<
+                string,
+                | "todo"
+                | "done"
+                | "active"
+                | "incomplete"
+                | "na"
+                | "yes"
+                | "no"
+                | "unfilled"
+              >,
+            });
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  return patches;
+}
+
+/**
  * Handle form save request.
  */
 async function handleSave(
-  _req: IncomingMessage,
+  req: IncomingMessage,
   res: ServerResponse,
   form: ParsedForm,
   filePath: string,
-  ctx: CommandContext
+  ctx: CommandContext,
+  updateForm: (form: ParsedForm) => void
 ): Promise<void> {
   try {
+    // Read request body
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(chunk as Buffer);
+    }
+    const body = Buffer.concat(chunks).toString("utf-8");
+
+    // Parse form data
+    const formData = parseFormBody(body);
+
+    // Convert to patches
+    const patches = formDataToPatches(formData, form);
+
+    // Apply patches (mutates form in place)
+    applyPatches(form, patches);
+
+    // Update the in-memory form reference
+    updateForm(form);
+
     // Generate versioned filename
     const newPath = generateVersionedPath(filePath);
 
@@ -191,8 +373,9 @@ function generateVersionedPath(filePath: string): string {
 
 /**
  * Render the form as HTML.
+ * @public Exported for testing.
  */
-function renderFormHtml(form: ParsedForm): string {
+export function renderFormHtml(form: ParsedForm): string {
   const { schema, valuesByFieldId } = form;
   const formTitle = schema.title ?? schema.id;
 
@@ -218,7 +401,7 @@ function renderFormHtml(form: ParsedForm): string {
       color: #212529;
     }
     h1 { color: #495057; border-bottom: 2px solid #dee2e6; padding-bottom: 0.5rem; }
-    h2 { color: #6c757d; margin-top: 2rem; }
+    h2 { color: #6c757d; margin-top: 2rem; font-size: 1.25rem; }
     .group {
       background: white;
       border-radius: 8px;
@@ -235,43 +418,75 @@ function renderFormHtml(form: ParsedForm): string {
     .field-label {
       font-weight: 600;
       color: #495057;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      display: block;
+      margin-bottom: 0.5rem;
     }
     .required { color: #dc3545; }
-    .field-value {
-      margin-top: 0.5rem;
-      padding: 0.75rem;
-      background: #f8f9fa;
-      border-radius: 4px;
-      font-family: 'SFMono-Regular', Menlo, Monaco, monospace;
-      font-size: 0.9rem;
-      white-space: pre-wrap;
-    }
-    .field-value.empty {
+    .type-badge {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.3rem;
+      background: #e9ecef;
+      border-radius: 3px;
       color: #6c757d;
-      font-style: italic;
+      margin-left: 0.5rem;
+      font-weight: normal;
     }
-    .options { list-style: none; padding: 0; margin: 0.5rem 0 0 0; }
-    .option {
-      padding: 0.25rem 0;
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      background: #fff;
+      transition: border-color 0.15s ease-in-out;
+    }
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #80bdff;
+      box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .checkbox-item {
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
-    .option-marker {
-      font-family: monospace;
-      width: 2rem;
-      text-align: center;
+    .checkbox-item input[type="checkbox"] {
+      width: auto;
+      margin: 0;
     }
-    .option-marker.selected { color: #28a745; font-weight: bold; }
-    .doc-block {
-      background: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 1rem;
-      margin: 1rem 0;
-      border-radius: 0 4px 4px 0;
+    .checkbox-item label {
+      margin: 0;
+      font-weight: normal;
+      cursor: pointer;
+    }
+    .checkbox-item select {
+      width: auto;
+      min-width: 120px;
+    }
+    .option-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .option-row:last-child { margin-bottom: 0; }
+    .option-label {
+      flex: 1;
     }
     .toolbar {
       position: fixed;
@@ -293,35 +508,46 @@ function renderFormHtml(form: ParsedForm): string {
       color: white;
     }
     .btn-primary:hover { background: #0b5ed7; }
-    .type-badge {
-      font-size: 0.75rem;
-      padding: 0.15rem 0.4rem;
-      background: #e9ecef;
-      border-radius: 3px;
+    .field-help {
+      font-size: 0.85rem;
       color: #6c757d;
+      margin-top: 0.25rem;
     }
   </style>
 </head>
 <body>
   <h1>${escapeHtml(formTitle)}</h1>
-  ${groupsHtml}
-  <div class="toolbar">
-    <button class="btn btn-primary" onclick="saveForm()">Save</button>
-  </div>
+  <form method="POST" action="/save" id="markform">
+    ${groupsHtml}
+    <div class="toolbar">
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
   <script>
-    async function saveForm() {
+    document.getElementById('markform').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const params = new URLSearchParams();
+      for (const [key, value] of formData) {
+        params.append(key, value);
+      }
       try {
-        const res = await fetch('/save', { method: 'POST' });
+        const res = await fetch('/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        });
         const data = await res.json();
         if (data.success) {
           alert('Saved to: ' + data.path);
+          location.reload();
         } else {
           alert('Error: ' + data.error);
         }
       } catch (err) {
         alert('Save failed: ' + err.message);
       }
-    }
+    });
   </script>
 </body>
 </html>`;
@@ -336,7 +562,7 @@ function renderGroup(
 ): string {
   const groupTitle = group.title ?? group.id;
   const fieldsHtml = group.children
-    .map((field) => renderField(field, values[field.id]))
+    .map((field) => renderFieldHtml(field, values[field.id]))
     .join("\n");
 
   return `
@@ -348,181 +574,239 @@ function renderGroup(
 
 /**
  * Render a field as HTML.
+ * @public Exported for testing.
  */
-function renderField(field: Field, value: FieldValue | undefined): string {
+export function renderFieldHtml(field: Field, value: FieldValue | undefined): string {
   const requiredMark = field.required ? '<span class="required">*</span>' : "";
   const typeLabel = `<span class="type-badge">${field.kind}</span>`;
 
-  let valueHtml: string;
+  let inputHtml: string;
 
   switch (field.kind) {
     case "string":
+      inputHtml = renderStringInput(field, value);
+      break;
     case "number":
-      valueHtml = renderScalarValue(value);
+      inputHtml = renderNumberInput(field, value);
       break;
     case "string_list":
-      valueHtml = renderListValue(value);
+      inputHtml = renderStringListInput(field, value);
       break;
     case "single_select":
-      valueHtml = renderSingleSelectValue(
+      inputHtml = renderSingleSelectInput(
         field,
         value as SingleSelectValue | undefined
       );
       break;
     case "multi_select":
-      valueHtml = renderMultiSelectValue(
+      inputHtml = renderMultiSelectInput(
         field,
         value as MultiSelectValue | undefined
       );
       break;
     case "checkboxes":
-      valueHtml = renderCheckboxesValue(
+      inputHtml = renderCheckboxesInput(
         field,
         value as CheckboxesValue | undefined
       );
       break;
     default:
-      valueHtml = '<div class="field-value empty">(unknown type)</div>';
+      inputHtml = '<div class="field-help">(unknown field type)</div>';
   }
 
   return `
     <div class="field">
-      <div class="field-label">
+      <label class="field-label" for="field-${field.id}">
         ${escapeHtml(field.label)} ${requiredMark} ${typeLabel}
-      </div>
-      ${valueHtml}
+      </label>
+      ${inputHtml}
     </div>`;
 }
 
 /**
- * Render a scalar value (string or number).
+ * Render a string field as text input.
  */
-function renderScalarValue(value: FieldValue | undefined): string {
-  if (!value) {
-    return '<div class="field-value empty">(empty)</div>';
-  }
-  if (value.kind === "string") {
-    if (value.value === null || value.value === "") {
-      return '<div class="field-value empty">(empty)</div>';
-    }
-    return `<div class="field-value">${escapeHtml(value.value)}</div>`;
-  }
-  if (value.kind === "number") {
-    if (value.value === null) {
-      return '<div class="field-value empty">(empty)</div>';
-    }
-    return `<div class="field-value">${value.value}</div>`;
-  }
-  return '<div class="field-value empty">(empty)</div>';
+function renderStringInput(
+  field: StringField,
+  value: FieldValue | undefined
+): string {
+  const currentValue =
+    value?.kind === "string" && value.value !== null ? value.value : "";
+  const requiredAttr = field.required ? " required" : "";
+  const minLengthAttr =
+    field.minLength !== undefined ? ` minlength="${field.minLength}"` : "";
+  const maxLengthAttr =
+    field.maxLength !== undefined ? ` maxlength="${field.maxLength}"` : "";
+
+  return `<input type="text" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minLengthAttr}${maxLengthAttr}>`;
 }
 
 /**
- * Render a list value (string_list).
+ * Render a number field as number input.
  */
-function renderListValue(value: FieldValue | undefined): string {
-  if (value?.kind !== "string_list" || value.items.length === 0) {
-    return '<div class="field-value empty">(empty)</div>';
-  }
-  const items = value.items.map((v) => `• ${escapeHtml(v)}`).join("\n");
-  return `<div class="field-value">${items}</div>`;
+function renderNumberInput(
+  field: NumberField,
+  value: FieldValue | undefined
+): string {
+  const currentValue =
+    value?.kind === "number" && value.value !== null ? String(value.value) : "";
+  const requiredAttr = field.required ? " required" : "";
+  const minAttr = field.min !== undefined ? ` min="${field.min}"` : "";
+  const maxAttr = field.max !== undefined ? ` max="${field.max}"` : "";
+  const stepAttr = field.integer ? ' step="1"' : "";
+
+  return `<input type="number" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minAttr}${maxAttr}${stepAttr}>`;
 }
 
 /**
- * Render a single-select value.
+ * Render a string list field as textarea.
  */
-function renderSingleSelectValue(
+function renderStringListInput(
+  field: StringListField,
+  value: FieldValue | undefined
+): string {
+  const items =
+    value?.kind === "string_list" ? value.items : [];
+  const currentValue = items.join("\n");
+  const requiredAttr = field.required ? " required" : "";
+
+  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one item per line"${requiredAttr}>${escapeHtml(currentValue)}</textarea>`;
+}
+
+/**
+ * Render a single-select field as select element.
+ */
+function renderSingleSelectInput(
   field: SingleSelectField,
   value: SingleSelectValue | undefined
 ): string {
   const selected = value?.selected ?? null;
+  const requiredAttr = field.required ? " required" : "";
+
   const options = field.options
     .map((opt) => {
       const isSelected = selected === opt.id;
-      const marker = isSelected ? "(x)" : "( )";
-      const markerClass = isSelected ? "selected" : "";
-      return `<li class="option"><span class="option-marker ${markerClass}">${marker}</span> ${escapeHtml(opt.label)}</li>`;
+      const selectedAttr = isSelected ? " selected" : "";
+      return `<option value="${escapeHtml(opt.id)}"${selectedAttr}>${escapeHtml(opt.label)}</option>`;
     })
-    .join("\n");
-  return `<ul class="options">${options}</ul>`;
+    .join("\n      ");
+
+  return `<select id="field-${field.id}" name="${field.id}"${requiredAttr}>
+      <option value="">-- Select --</option>
+      ${options}
+    </select>`;
 }
 
 /**
- * Render a multi-select value.
+ * Render a multi-select field as checkboxes.
  */
-function renderMultiSelectValue(
+function renderMultiSelectInput(
   field: MultiSelectField,
   value: MultiSelectValue | undefined
 ): string {
   const selected = value?.selected ?? [];
-  const options = field.options
+
+  const checkboxes = field.options
     .map((opt) => {
-      const isSelected = selected.includes(opt.id);
-      const marker = isSelected ? "[x]" : "[ ]";
-      const markerClass = isSelected ? "selected" : "";
-      return `<li class="option"><span class="option-marker ${markerClass}">${marker}</span> ${escapeHtml(opt.label)}</li>`;
+      const isChecked = selected.includes(opt.id);
+      const checkedAttr = isChecked ? " checked" : "";
+      const checkboxId = `field-${field.id}-${opt.id}`;
+      return `<div class="checkbox-item">
+        <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}>
+        <label for="${checkboxId}">${escapeHtml(opt.label)}</label>
+      </div>`;
     })
-    .join("\n");
-  return `<ul class="options">${options}</ul>`;
+    .join("\n      ");
+
+  return `<div class="checkbox-group">
+      ${checkboxes}
+    </div>`;
 }
 
 /**
- * Render checkboxes value.
+ * Render checkboxes field based on mode.
  */
-function renderCheckboxesValue(
+function renderCheckboxesInput(
   field: CheckboxesField,
   value: CheckboxesValue | undefined
 ): string {
   const checkboxValues = value?.values ?? {};
   const mode = field.checkboxMode ?? "multi";
-  const options = field.options
+
+  if (mode === "simple") {
+    // Simple mode: render as HTML checkboxes
+    const checkboxes = field.options
+      .map((opt) => {
+        const state = checkboxValues[opt.id];
+        const isChecked = state === "done";
+        const checkedAttr = isChecked ? " checked" : "";
+        const checkboxId = `field-${field.id}-${opt.id}`;
+        return `<div class="checkbox-item">
+        <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}>
+        <label for="${checkboxId}">${escapeHtml(opt.label)}</label>
+      </div>`;
+      })
+      .join("\n      ");
+
+    return `<div class="checkbox-group">
+      ${checkboxes}
+    </div>`;
+  }
+
+  if (mode === "explicit") {
+    // Explicit mode: render as select with yes/no/unfilled options
+    const rows = field.options
+      .map((opt) => {
+        const state = checkboxValues[opt.id] ?? "unfilled";
+        const selectId = `field-${field.id}-${opt.id}`;
+        const selectName = `${field.id}.${opt.id}`;
+
+        return `<div class="option-row">
+        <span class="option-label">${escapeHtml(opt.label)}</span>
+        <select id="${selectId}" name="${selectName}">
+          <option value="unfilled"${state === "unfilled" ? " selected" : ""}>-- Select --</option>
+          <option value="yes"${state === "yes" ? " selected" : ""}>Yes</option>
+          <option value="no"${state === "no" ? " selected" : ""}>No</option>
+        </select>
+      </div>`;
+      })
+      .join("\n      ");
+
+    return `<div class="checkbox-group">
+      ${rows}
+    </div>`;
+  }
+
+  // Multi mode: render as select with multiple state options
+  const rows = field.options
     .map((opt) => {
-      const state = checkboxValues[opt.id];
-      let marker: string;
-      let markerClass = "";
+      const state = checkboxValues[opt.id] ?? "todo";
+      const selectId = `field-${field.id}-${opt.id}`;
+      const selectName = `${field.id}.${opt.id}`;
 
-      if (mode === "explicit") {
-        if (state === "yes") {
-          marker = "[y]";
-          markerClass = "selected";
-        } else if (state === "no") {
-          marker = "[n]";
-        } else {
-          marker = "[_]";
-        }
-      } else if (mode === "multi") {
-        if (state === "done") {
-          marker = "[x]";
-          markerClass = "selected";
-        } else if (state === "active") {
-          marker = "[*]";
-          markerClass = "selected";
-        } else if (state === "incomplete") {
-          marker = "[~]";
-        } else if (state === "na") {
-          marker = "[-]";
-        } else {
-          marker = "[ ]";
-        }
-      } else {
-        // simple mode
-        if (state === "done") {
-          marker = "[x]";
-          markerClass = "selected";
-        } else {
-          marker = "[ ]";
-        }
-      }
-
-      return `<li class="option"><span class="option-marker ${markerClass}">${marker}</span> ${escapeHtml(opt.label)}</li>`;
+      return `<div class="option-row">
+        <span class="option-label">${escapeHtml(opt.label)}</span>
+        <select id="${selectId}" name="${selectName}">
+          <option value="todo"${state === "todo" ? " selected" : ""}>To Do</option>
+          <option value="active"${state === "active" ? " selected" : ""}>Active</option>
+          <option value="done"${state === "done" ? " selected" : ""}>Done</option>
+          <option value="incomplete"${state === "incomplete" ? " selected" : ""}>Incomplete</option>
+          <option value="na"${state === "na" ? " selected" : ""}>N/A</option>
+        </select>
+      </div>`;
     })
-    .join("\n");
-  return `<ul class="options">${options}</ul>`;
+    .join("\n      ");
+
+  return `<div class="checkbox-group">
+      ${rows}
+    </div>`;
 }
 
 /**
  * Escape HTML special characters.
+ * @public Exported for testing.
  */
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

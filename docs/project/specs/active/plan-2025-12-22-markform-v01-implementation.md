@@ -780,7 +780,7 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 - `markform inspect examples/simple/simple.mock.filled.form.md` shows form_state:
   complete
 
-- `markform export examples/simple/simple.form.md --json` outputs valid JSON
+- `markform export examples/simple/simple.form.md --format=json` outputs valid JSON
 
 - CLI integration tests pass
 
@@ -1038,7 +1038,7 @@ These tests are run by the coding agent and must all pass:
 
 - [ ] `markform inspect` outputs valid YAML for both forms
 
-- [ ] `markform export --json` outputs valid JSON
+- [ ] `markform export --format=json` outputs valid JSON
 
 - [ ] `markform apply` with valid patches succeeds
 

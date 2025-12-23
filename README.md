@@ -34,7 +34,7 @@ pnpm test
 
 # CLI usage
 markform inspect examples/simple/simple.form.md
-markform export examples/simple/simple.form.md --json
+markform export examples/simple/simple.form.md --format=json
 markform serve examples/simple/simple.form.md
 ```
 

@@ -116,7 +116,7 @@ cat packages/markform/tests/golden/sessions/company-quarterly-analysis.session.y
 pnpm markform inspect packages/markform/examples/simple/simple.form.md
 
 # Inspect with JSON output
-pnpm markform inspect packages/markform/examples/simple/simple.form.md --json
+pnpm markform inspect packages/markform/examples/simple/simple.form.md --format=json
 ```
 
 - [x] YAML output shows structure, progress, form_state, and issues
