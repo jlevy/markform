@@ -1,7 +1,7 @@
 /**
  * Model Resolver - Parse and resolve AI SDK model identifiers.
  *
- * Parses model IDs in the format `provider:model-id` and dynamically
+ * Parses model IDs in the format `provider/model-id` and dynamically
  * imports the corresponding AI SDK provider.
  */
 
@@ -65,20 +65,20 @@ const PROVIDERS: Record<
 /**
  * Parse a model ID string into provider and model components.
  *
- * @param modelIdString - Model ID in format `provider:model-id`
+ * @param modelIdString - Model ID in format `provider/model-id`
  * @returns Parsed model identifier
  * @throws Error if format is invalid
  */
 export function parseModelId(modelIdString: string): ParsedModelId {
-  const colonIndex = modelIdString.indexOf(":");
-  if (colonIndex === -1) {
+  const slashIndex = modelIdString.indexOf("/");
+  if (slashIndex === -1) {
     throw new Error(
-      `Invalid model ID format: "${modelIdString}". Expected format: provider:model-id (e.g., anthropic:claude-sonnet-4-5)`
+      `Invalid model ID format: "${modelIdString}". Expected format: provider/model-id (e.g., anthropic/claude-sonnet-4-5)`
     );
   }
 
-  const provider = modelIdString.slice(0, colonIndex);
-  const modelId = modelIdString.slice(colonIndex + 1);
+  const provider = modelIdString.slice(0, slashIndex);
+  const modelId = modelIdString.slice(slashIndex + 1);
 
   if (!provider || !modelId) {
     throw new Error(
@@ -104,7 +104,7 @@ export function parseModelId(modelIdString: string): ParsedModelId {
  *
  * Dynamically imports the provider package and creates the model instance.
  *
- * @param modelIdString - Model ID in format `provider:model-id`
+ * @param modelIdString - Model ID in format `provider/model-id`
  * @returns Resolved model with provider info
  * @throws Error if provider not installed or API key missing
  */

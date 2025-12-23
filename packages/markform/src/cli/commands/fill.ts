@@ -41,7 +41,7 @@ const AGENT_TYPES = ["mock", "live"] as const;
 type AgentType = (typeof AGENT_TYPES)[number];
 
 /** Default model for live agent */
-const DEFAULT_MODEL = "anthropic:claude-sonnet-4-5";
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4-5";
 
 /**
  * Format session transcript for console output.
@@ -111,7 +111,7 @@ export function registerFillCommand(program: Command): void {
     )
     .option(
       "--model <id>",
-      `Model ID for live agent (format: provider:model-id, default: ${DEFAULT_MODEL})`,
+      `Model ID for live agent (format: provider/model-id, default: ${DEFAULT_MODEL})`,
       DEFAULT_MODEL
     )
     .option("--mock-source <file>", "Path to completed form for mock agent")
