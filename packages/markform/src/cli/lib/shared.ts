@@ -7,6 +7,8 @@ import type { Command } from "commander";
 import pc from "picocolors";
 import YAML from "yaml";
 
+import { convertKeysToSnakeCase } from "./naming.js";
+
 /**
  * Output format options for CLI commands.
  * - console: auto-detect TTY, use ANSI colors if available (default)
@@ -68,6 +70,8 @@ export function shouldUseColors(ctx: CommandContext): boolean {
 
 /**
  * Format structured data according to output format.
+ *
+ * JSON and YAML outputs are converted to snake_case keys for consistency.
  */
 export function formatOutput(
   ctx: CommandContext,
@@ -76,9 +80,9 @@ export function formatOutput(
 ): string {
   switch (ctx.format) {
     case "json":
-      return JSON.stringify(data, null, 2);
+      return JSON.stringify(convertKeysToSnakeCase(data), null, 2);
     case "yaml":
-      return YAML.stringify(data);
+      return YAML.stringify(convertKeysToSnakeCase(data));
     case "plaintext":
     case "console":
     default:
@@ -86,7 +90,7 @@ export function formatOutput(
         return consoleFormatter(data, shouldUseColors(ctx));
       }
       // Default: use YAML for readable console output
-      return YAML.stringify(data);
+      return YAML.stringify(convertKeysToSnakeCase(data));
   }
 }
 
