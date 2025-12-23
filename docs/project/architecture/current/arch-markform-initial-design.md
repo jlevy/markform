@@ -462,7 +462,8 @@ ACME Corp
 
 ##### Single-Select Fields
 
-Values are encoded **inline** via `[x]` marker—exactly one option must be selected:
+Values are encoded **inline** via `[x]` marker—at most one option may be selected (if
+`required=true`, exactly one must be selected):
 ```md
 {% single-select id="rating" label="Rating" %}
 - [ ] Bullish {% #bullish %}
@@ -734,6 +735,20 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
    - **Option ID uniqueness** (*required*): Option IDs must be unique within their
      containing field; duplicates are a parse error
 
+**Non-Markform content policy (*required*):**
+
+Markform files may contain content outside of Markform tags. This content is handled as follows:
+
+| Content Type | Policy |
+|--------------|--------|
+| HTML comments (`<!-- ... -->`) | Allowed, preserved verbatim on round-trip |
+| Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
+| Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
+
+**v0.1 scope:** Only HTML comments are guaranteed to be preserved. Do not rely on
+non-Markform content surviving serialization. Future versions may support full
+content preservation via raw slicing.
+
 #### Serialization Strategy
 
 Generate markdown string directly (not using `Markdoc.format()` due to canonicalization
@@ -756,7 +771,7 @@ To ensure deterministic round-tripping without building a full markdown serializ
 |------|---------------|
 | Attribute ordering | Alphabetical within each tag |
 | Indentation | 0 spaces for top-level, no nested indentation |
-| Blank lines | One blank line between field-groups, none between fields |
+| Blank lines | One blank line between adjacent blocks (fields, groups, doc blocks) for readability |
 | Value fences | Omit entirely for empty fields |
 | `process=false` | Emit only when value contains Markdoc tag syntax (`/\{%/`) |
 | Option ordering | Preserved as authored (order is significant) |
@@ -1110,6 +1125,19 @@ else:
   form_state = 'complete'
 ```
 
+**Implicit requiredness (*required*):**
+
+For form completion purposes, fields with constraints are treated as implicitly required:
+
+| Field Type | Implicit Required When |
+|------------|------------------------|
+| `string-list` | `minItems > 0` |
+| `multi-select` | `minSelections > 0` |
+| `checkboxes` | `minDone > 0` (simple mode) |
+
+These fields contribute to `emptyRequiredFields` count even without explicit `required=true`.
+This ensures `form_state` accurately reflects whether all constraints are satisfied.
+
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
 alignment with JSON Schema keywords reduces translation complexity.
@@ -1195,12 +1223,18 @@ const ProgressSummarySchema = z.object({
   fields: z.record(z.string(), FieldProgressSchema),
 });
 
-// Frontmatter schema (internal TS representation)
+// Frontmatter schema for INPUT forms (templates)
+const MarkformInputFrontmatterSchema = z.object({
+  markformVersion: z.string(),  // Required: e.g., "0.1.0"
+  // User metadata allowed but not validated
+});
+
+// Frontmatter schema for OUTPUT forms (after processing/serialization)
 const MarkformFrontmatterSchema = z.object({
   markformVersion: z.string(),
-  formSummary: StructureSummarySchema,
-  formProgress: ProgressSummarySchema,
-  formState: ProgressStateSchema,
+  formSummary: StructureSummarySchema.optional(),   // Derived on serialize
+  formProgress: ProgressSummarySchema.optional(),   // Derived on serialize
+  formState: ProgressStateSchema.optional(),        // Derived on serialize
 });
 ```
 
@@ -1362,7 +1396,7 @@ Schema checks (always available, deterministic):
 | Min/max selections | `multi-select` | `minSelections`, `maxSelections` (see [JSON Schema array][json-schema-array]) |
 | Exactly one selected | `single-select` | `required=true` |
 | Valid checkbox states | `checkboxes` | `checkboxMode` attribute (multi: 5 states, simple: 2 states, explicit: yes/no) |
-| All options answered | `checkboxes` | `checkboxMode="explicit"` requires no `unfilled` values |
+| Valid explicit states | `checkboxes` | `checkboxMode="explicit"` validates markers are `unfilled`, `yes`, or `no` |
 
 Output: `ValidationIssue[]`
 
