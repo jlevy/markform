@@ -15,26 +15,43 @@ Note: `npm install -g @beads/bd` and `go install` methods exist but typically fa
 cloud environments (Claude Code web, containers) due to network restrictions.
 Use the direct download method:
 
+**Quick install (Linux x86_64 / amd64):**
+
 ```bash
-# Detect platform
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-[ "$ARCH" = "x86_64" ] && ARCH="amd64"
-[ "$ARCH" = "aarch64" ] && ARCH="arm64"
-
-# Get latest version from GitHub API
-BD_VERSION=$(curl -sI https://github.com/steveyegge/beads/releases/latest | \
-  grep -i "^location:" | sed 's/.*tag\///' | tr -d '\r\n')
-
-# Download and install the binary
-curl -fsSL -o /tmp/beads.tar.gz \
-  "https://github.com/steveyegge/beads/releases/download/${BD_VERSION}/beads_${BD_VERSION#v}_${OS}_${ARCH}.tar.gz"
+# Get latest version, download, and install
+curl -sI https://github.com/steveyegge/beads/releases/latest | grep -i "^location:"
+# Note the version (e.g., v0.35.0), then:
+curl -fsSL -o /tmp/beads.tar.gz "https://github.com/steveyegge/beads/releases/download/v0.35.0/beads_0.35.0_linux_amd64.tar.gz"
 tar -xzf /tmp/beads.tar.gz -C /tmp
 mkdir -p ~/.local/bin
 cp /tmp/bd ~/.local/bin/
 chmod +x ~/.local/bin/bd
 export PATH="$HOME/.local/bin:$PATH"
 bd prime   # Get workflow context
+```
+
+**For other platforms**, run each step separately:
+
+```bash
+# Step 1: Detect platform
+uname -s | tr '[:upper:]' '[:lower:]'   # OS: linux, darwin
+uname -m                                  # ARCH: x86_64->amd64, aarch64->arm64
+
+# Step 2: Get latest version
+curl -sI https://github.com/steveyegge/beads/releases/latest | grep -i "^location:"
+# Extract version from URL (e.g., v0.35.0)
+
+# Step 3: Download (substitute OS, ARCH, VERSION)
+# Example: beads_0.35.0_linux_amd64.tar.gz or beads_0.35.0_darwin_arm64.tar.gz
+curl -fsSL -o /tmp/beads.tar.gz "https://github.com/steveyegge/beads/releases/download/VERSION/beads_VERSION_OS_ARCH.tar.gz"
+
+# Step 4: Install
+tar -xzf /tmp/beads.tar.gz -C /tmp
+mkdir -p ~/.local/bin
+cp /tmp/bd ~/.local/bin/
+chmod +x ~/.local/bin/bd
+export PATH="$HOME/.local/bin:$PATH"
+bd prime
 ```
 
 For troubleshooting, see: https://github.com/steveyegge/beads/releases

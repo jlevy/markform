@@ -6,9 +6,62 @@
 
 ## Prerequisites
 
-- **Node.js 24** (LTS “Krypton”) — [nodejs.org](https://nodejs.org/)
+- **Node.js 24** (LTS "Krypton") — [nodejs.org](https://nodejs.org/)
 
 - **pnpm 10.x** — Install via `corepack enable` or `npm install -g pnpm`
+
+### Node 24 Setup
+
+This project requires Node.js 24+. Setup depends on your environment:
+
+#### Claude Code on the Web (Automatic)
+
+A session-start hook (`.claude/hooks/session-start.sh`) automatically:
+
+1. Downloads and installs Node 24 if not present
+2. Configures PATH for the session
+3. Runs `pnpm install`
+
+No manual setup needed—the hook runs on session start.
+
+#### Local Development
+
+**Option 1: Direct installation**
+
+Download from [nodejs.org](https://nodejs.org/) and install Node 24.
+
+**Option 2: Using a version manager**
+
+```bash
+# Using nvm
+nvm install 24
+nvm use 24
+
+# Using fnm
+fnm install 24
+fnm use 24
+
+# Using mise
+mise use node@24
+```
+
+**Option 3: Manual binary installation** (useful in containers/CI)
+
+```bash
+NODE_VERSION="v24.12.0"
+mkdir -p ~/.local
+curl -fsSL "https://nodejs.org/dist/latest-v24.x/node-${NODE_VERSION}-linux-x64.tar.xz" \
+  -o /tmp/node24.tar.xz
+tar -xJf /tmp/node24.tar.xz -C ~/.local
+export PATH="$HOME/.local/node-${NODE_VERSION}-linux-x64/bin:$PATH"
+```
+
+#### Verify Installation
+
+```bash
+node --version   # Should show v24.x.x
+pnpm --version   # Should show 10.x.x
+```
 
 ## Project Structure
 
