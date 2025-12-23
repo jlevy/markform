@@ -43,6 +43,8 @@ export default [
       "eslint.config.*",
       // Temporarily ignore examples until types are fully defined
       "**/examples/**/*.ts",
+      // Scripts use optional dependencies (ai, @ai-sdk/anthropic)
+      "**/scripts/**/*.ts",
     ],
   },
 

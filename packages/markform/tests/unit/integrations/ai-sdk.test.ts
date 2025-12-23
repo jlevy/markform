@@ -232,6 +232,7 @@ describe("markform_apply tool", () => {
     await tools.markform_apply.execute({ patches });
 
     const updatedForm = store.getForm();
+    // eslint-disable-next-line @typescript-eslint/dot-notation
     const nameValue = updatedForm.valuesByFieldId["name"];
     expect(nameValue).toBeDefined();
     expect(nameValue?.kind).toBe("string");
@@ -312,6 +313,7 @@ describe("markform_export tool", () => {
     const result = await tools.markform_export.execute({});
 
     expect(result.success).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/dot-notation
     expect(result.data.values["name"]).toBeDefined();
   });
 
@@ -399,8 +401,10 @@ describe("AI SDK tools workflow", () => {
 
     // 4. Export final form
     const exportResult = await tools.markform_export.execute({});
+    /* eslint-disable @typescript-eslint/dot-notation */
     expect(exportResult.data.values["name"]).toBeDefined();
     expect(exportResult.data.values["age"]).toBeDefined();
+    /* eslint-enable @typescript-eslint/dot-notation */
 
     // 5. Get final markdown
     const markdownResult = await tools.markform_get_markdown!.execute({});

@@ -1,4 +1,5 @@
 #!/usr/bin/env -S npx tsx
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/consistent-type-imports, no-restricted-syntax, @typescript-eslint/prefer-nullish-coalescing */
 /**
  * Live Agent Test Script
  *
@@ -29,7 +30,6 @@ import { fileURLToPath } from "node:url";
 
 // Markform imports
 import { parseForm } from "../src/engine/parse.js";
-import { serialize } from "../src/engine/serialize.js";
 import { serializeSession } from "../src/engine/session.js";
 import type { SessionTranscript, SessionTurn, Patch } from "../src/engine/types.js";
 import {
@@ -119,7 +119,9 @@ async function runMockAgent(config: Config): Promise<void> {
         .flatMap((g) => g.children)
         .find((f) => f.id === fieldId);
 
-      if (!field) continue;
+      if (!field) {
+        continue;
+      }
 
       switch (field.kind) {
         case "string":
@@ -254,7 +256,7 @@ async function runLiveAgent(config: Config): Promise<void> {
   }
 
   // Check for API key
-  if (!process.env["ANTHROPIC_API_KEY"]) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     console.log("ANTHROPIC_API_KEY not set. Running mock agent.");
     return runMockAgent(config);
   }

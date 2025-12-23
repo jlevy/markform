@@ -258,7 +258,7 @@ export function createMarkformTools(
       "and completion status. Use this to understand what fields need to be filled and what issues exist. " +
       "Issues are sorted by priority (1 = highest). Focus on 'required' severity issues first.",
     inputSchema: InspectInputSchema,
-    execute: async () => {
+    execute: () => {
       const form = sessionStore.getForm();
       const result = inspect(form);
 
@@ -269,11 +269,11 @@ export function createMarkformTools(
         ? "Form is complete. All required fields are filled."
         : `Form has ${requiredCount} required issue(s) to resolve.`;
 
-      return {
+      return Promise.resolve({
         success: true,
         data: result,
         message,
-      };
+      });
     },
   };
 
@@ -285,7 +285,7 @@ export function createMarkformTools(
       "Returns the updated form state and any remaining issues. " +
       "Patch operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, set_checkboxes, clear_field.",
     inputSchema: ApplyInputSchema,
-    execute: async ({ patches }) => {
+    execute: ({ patches }) => {
       const form = sessionStore.getForm();
       const result = applyPatches(form, patches);
 
@@ -301,11 +301,11 @@ export function createMarkformTools(
             }`
           : `Patches rejected. Check field IDs and value types.`;
 
-      return {
+      return Promise.resolve({
         success: result.applyStatus === "applied",
         data: result,
         message,
-      };
+      });
     },
   };
 
@@ -316,17 +316,17 @@ export function createMarkformTools(
         "Export the form schema and current values as JSON. Use this to get a machine-readable " +
         "representation of the form structure and all field values. Useful for processing or analysis.",
       inputSchema: ExportInputSchema,
-      execute: async () => {
+      execute: () => {
         const form = sessionStore.getForm();
 
-        return {
+        return Promise.resolve({
           success: true,
           data: {
             schema: form.schema,
             values: form.valuesByFieldId,
           },
           message: `Exported form with ${form.schema.groups.length} group(s) and ${Object.keys(form.valuesByFieldId).length} value(s).`,
-        };
+        });
       },
     };
 
@@ -348,17 +348,17 @@ export function createMarkformTools(
         "Use this to see the complete form with all current values in Markform format. " +
         "The output is deterministic and round-trip safe.",
       inputSchema: GetMarkdownInputSchema,
-      execute: async () => {
+      execute: () => {
         const form = sessionStore.getForm();
         const markdown = serialize(form);
 
-        return {
+        return Promise.resolve({
           success: true,
           data: {
             markdown,
           },
           message: `Generated Markdown (${markdown.length} characters).`,
-        };
+        });
       },
     };
 
