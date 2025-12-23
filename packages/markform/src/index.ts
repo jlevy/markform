@@ -188,3 +188,5 @@ export {
 export type { ComputedSummaries } from "./engine/summaries.js";
 export { validate } from "./engine/validate.js";
 export type { ValidateOptions, ValidateResult } from "./engine/validate.js";
+export { inspect } from "./engine/inspect.js";
+export type { InspectOptions } from "./engine/inspect.js";
