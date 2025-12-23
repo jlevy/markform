@@ -322,19 +322,19 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 **Deliverables**:
 
-- [ ] Initialize pnpm workspace structure
+- [x] Initialize pnpm workspace structure
 
-- [ ] Create root `package.json` with workspace scripts
+- [x] Create root `package.json` with workspace scripts
 
-- [ ] Create `pnpm-workspace.yaml`
+- [x] Create `pnpm-workspace.yaml`
 
-- [ ] Create `.npmrc` with workspace settings
+- [x] Create `.npmrc` with workspace settings
 
-- [ ] Create `tsconfig.base.json` with shared TypeScript config
+- [x] Create `tsconfig.base.json` with shared TypeScript config
 
-- [ ] Create `packages/markform/` directory structure
+- [x] Create `packages/markform/` directory structure
 
-- [ ] Create package `package.json` with:
+- [x] Create package `package.json` with:
 
   - Proper exports configuration (ESM/CJS dual)
 
@@ -342,25 +342,25 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
   - Build/test/lint scripts
 
-- [ ] Create `tsdown.config.ts` for build
+- [x] Create `tsdown.config.ts` for build
 
-- [ ] Create `tsconfig.json` extending base
+- [x] Create `tsconfig.json` extending base
 
-- [ ] Create `eslint.config.js` (flat config)
+- [x] Create `eslint.config.js` (flat config)
 
-- [ ] Set up `.changeset/` for versioning
+- [x] Set up `.changeset/` for versioning
 
-- [ ] Create `.github/workflows/ci.yml`
+- [x] Create `.github/workflows/ci.yml`
 
-- [ ] Create placeholder `src/index.ts` that exports version
+- [x] Create placeholder `src/index.ts` that exports version
 
-- [ ] Create initial test file `tests/unit/index.test.ts` with placeholder test
+- [x] Create initial test file `tests/unit/index.test.ts` with placeholder test
 
-- [ ] Verify `pnpm build`, `pnpm test`, `pnpm lint` all pass
+- [x] Verify `pnpm build`, `pnpm test`, `pnpm lint` all pass
 
-- [ ] Verify `examples/simple/simple.form.md` is in place (already created)
+- [x] Verify `examples/simple/simple.form.md` is in place (already created)
 
-- [ ] Review and update `docs/development.md` with any scaffolding changes
+- [x] Review and update `docs/development.md` with any scaffolding changes
 
 **Phase 0 Checkpoints**:
 
