@@ -9,7 +9,7 @@ supports both mock and live agent modes for autonomous form filling.
 
 - [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
 
-- [v0.1 Implementation Plan](plan-2025-12-22-markform-v01-implementation.md)
+- [v0.1 Implementation Plan](../done/plan-2025-12-22-markform-v01-implementation.md)
 
 - [AI SDK Provider Management](https://ai-sdk.dev/docs/ai-sdk-core/provider-management)
 

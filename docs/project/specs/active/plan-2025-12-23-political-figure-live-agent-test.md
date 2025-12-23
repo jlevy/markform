@@ -14,7 +14,8 @@ president infobox structure.
 
 - [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
 
-- [v0.1 Implementation Plan](plan-2025-12-22-markform-v01-implementation.md) - Base implementation
+- [v0.1 Implementation Plan](../done/plan-2025-12-22-markform-v01-implementation.md) - Base
+  implementation (complete)
 
 ## Background
 
