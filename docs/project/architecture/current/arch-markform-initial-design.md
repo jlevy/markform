@@ -63,6 +63,13 @@ workflows:
 
 ### Terminology
 
+**Specification keywords:**
+
+| Term | Definition |
+| --- | --- |
+| *required* | A constraint that MUST be satisfied. Enforced by engine validation; violations produce errors. |
+| *recommended* | A convention that SHOULD be followed for consistency and best practices. Not enforced by the engine; violations do not produce errors. |
+
 **Form states:**
 
 | Term | Definition |
@@ -76,7 +83,7 @@ workflows:
 | Term | Definition |
 | --- | --- |
 | **Simple checkbox** | Checkbox mode with 2 states: `todo` and `done`. GFM-compatible. |
-| **Multi checkbox** | Checkbox mode with 5 states: `todo`, `done`, `in_progress`, `active`, `na`. Default mode. |
+| **Multi checkbox** | Checkbox mode with 5 states: `todo`, `done`, `incomplete`, `active`, `na`. Default mode. |
 | **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit "unchecked = no". |
 
 **Execution concepts:**
@@ -120,7 +127,7 @@ workflows:
 
 - **Golden session tests**: record/replay multi-turn sessions with ops + snapshots
 
-### Explicit Non-Goals
+### Explicit Non-Goals for v0.1 (Proof of Concept)
 
 - Security hardening for sensitive/PII content (explicitly deferred)
 
@@ -135,7 +142,7 @@ workflows:
 
 * * *
 
-## Core Architecture: The Shared Engine
+## Core Architecture
 
 Everything (CLI, MCP, AI SDK, web, tests) uses **one shared engine**:
 
@@ -166,23 +173,86 @@ Built on [Markdoc’s tag syntax specification][markdoc-spec] and
 
 #### File Format
 
-- **Extension:** `.form.md`
+- **Extension:** `.form.md` (*required*)
 
-- **Frontmatter:** YAML with `markform_version: "0.1"` (see
-  [Markdoc Frontmatter][markdoc-frontmatter])
+- **Frontmatter:** (*required*) YAML with a top-level `markform` object containing
+  version and derived metadata (see [Markdoc Frontmatter][markdoc-frontmatter]).
+
+**Frontmatter structure (v0.1):**
+
+```yaml
+---
+markform:
+  markform_version: "0.1.0"
+  form_summary: { ... }    # derived: structure summary
+  form_progress: { ... }   # derived: progress summary
+---
+```
+
+**Behavioral rules (*required*):**
+
+- *required:* `form_summary` and `form_progress` are derived, engine-owned metadata
+
+- *required:* The engine recomputes and overwrites these on every serialize/canonicalize
+
+- *required:* They are not authoritative—the source of truth is the body schema + values
+
+- *required:* On parse, existing `form_summary`/`form_progress` values are ignored;
+  fresh summaries are computed from the parsed body
+
+See [StructureSummary and ProgressSummary](#structuresummary-and-progresssummary) in the
+Data Model section for complete type definitions.
 
 #### ID Conventions
 
-- **IDs are globally unique** across the entire document (fields, groups, fields,
-  options, documentation blocks).
-  Enforced by engine validation.
+IDs are organized into **two scoping levels** with different uniqueness requirements:
 
-- IDs use **snake_case** (recommended convention)
+**1. Structural IDs** (form, field-group, field):
 
-- Tag names use **kebab-case** (Markdoc convention)
+- *required:* Must be globally unique across the entire document
 
-- Option IDs use [Markdoc’s annotation shorthand][markdoc-attributes] `{% #my_id %}`
-  after list items
+- *required:* Enforced by engine validation at parse time (duplicate = error)
+
+- *recommended:* Use `snake_case` (e.g., `company_info`, `revenue_m`)
+
+**2. Option IDs** (within single-select, multi-select, checkboxes):
+
+- *required:* Must be unique within the containing field (field-scoped)
+
+- *required:* Enforced by engine validation at parse time
+
+- *recommended:* Use a slugified version of the option label (e.g., `ten_k`, `bullish`)
+
+- Use [Markdoc’s annotation shorthand][markdoc-attributes] `{% #my_id %}` after list
+  items
+
+- This allows reusing common option patterns across multiple fields without renaming
+  (e.g., `[ ] 10-K {% #ten_k %}` can appear in multiple checkbox fields)
+
+- When referencing an option externally (patches, doc blocks), use qualified form:
+  `{fieldId}.{optionId}` (e.g., `docs_reviewed.ten_k`)
+
+**Markdoc compatibility:** Markdoc’s `{% #id %}` shorthand simply sets an `id` attribute
+on the element—Markdoc itself does not enforce uniqueness (see [Markdoc Attributes]).
+Markform defines its own scoping rules where option IDs are field-scoped.
+
+**3. Documentation blocks:**
+
+- Doc blocks do not have their own IDs
+
+- *required:* Identified by `(ref, kind)` combination, which must be unique
+
+- Duplicate `(ref, kind)` pairs are an error
+
+- Multiple doc blocks can reference the same target with different `kind` values
+
+- To reference an option, use qualified form: `ref="{fieldId}.{optionId}"`
+
+**General conventions (*recommended*, not enforced):**
+
+- IDs use `snake_case` (e.g., `company_info`, `ten_k`)
+
+- Tag names use `kebab-case` (Markdoc convention, e.g., `string-field`)
 
 #### Structural Tags
 
@@ -250,7 +320,7 @@ Markform supports three checkbox modes:
 | --- | --- | --- |
 | `[ ]` | todo | Not started. Standard GFM ([spec][gfm-tasklists], [GitHub docs][github-tasklists]) |
 | `[x]` | done | Completed. Standard GFM |
-| `[/]` | in_progress | Work started but not finished. Obsidian convention ([discussion][obsidian-tasks-discussion]) |
+| `[/]` | incomplete | Work started but not finished. Obsidian convention ([discussion][obsidian-tasks-discussion]) |
 | `[*]` | active | Currently being worked on (current focus). Useful for agents to indicate which step they're executing |
 | `[-]` | na | Not applicable / skipped. Obsidian convention ([guide][obsidian-tasks-guide]) |
 
@@ -278,9 +348,9 @@ Use `checkboxMode` attribute to select mode:
 
 - `checkboxMode="explicit"` — Requires explicit yes/no, validates all options answered
 
-**Distinction between `in_progress` and `active`:**
+**Distinction between `incomplete` and `active`:**
 
-- `in_progress` (`[/]`): Work has started on this item (may be paused)
+- `incomplete` (`[/]`): Work has started on this item (may be paused)
 
 - `active` (`[*]`): This item is the current focus right now (useful for showing where
   an agent is in a multi-step workflow)
@@ -295,13 +365,29 @@ Markdown content here...
 {% /doc %}
 ```
 
-- `ref` (required): References the ID of a form, group, field, or option
+- `ref` (*required*): References the ID of a form, group, field, or option
 
 - `kind` (optional): Categorizes the documentation type
 
-**Note:** Documentation blocks themselves do **not** require unique IDs—they are
-identified by their `ref` + `kind` combination.
-Multiple doc blocks with different `kind` values can reference the same target.
+**Placement rules (v0.1):**
+
+- *required:* Doc blocks must be siblings of the referenced element, not nested inside
+  it
+
+- *required:* Parser will reject doc blocks that appear inside field tag bodies
+
+- Canonical serialization places doc blocks immediately after the referenced element
+
+This keeps parsing simple: field value extraction only needs to find the `value` fence
+without filtering out nested doc blocks.
+
+**Identification:**
+
+- Doc blocks do not have their own IDs
+
+- *required:* `(ref, kind)` combination must be unique
+
+- Multiple doc blocks with different `kind` values can reference the same target
 
 #### Field Values
 
@@ -352,6 +438,8 @@ Values are encoded **inline** via `[x]` marker—exactly one option must be sele
 {% /single-select %}
 ```
 
+Option IDs are scoped to the field—reference as `rating.bullish`, `rating.neutral`, etc.
+
 ##### Multi-Select Fields
 
 Values are encoded **inline** via `[x]` markers—no separate value fence:
@@ -387,14 +475,15 @@ For simple two-state checkboxes:
 For explicit yes/no checkboxes (requires answer for each):
 ```md
 {% checkboxes id="risk_factors" label="Risk Assessment" checkboxMode="explicit" required=true %}
-- [y] Market volatility risk assessed {% #market_risk %}
-- [n] Regulatory risk assessed {% #regulatory_risk %}
-- [ ] Currency risk assessed {% #currency_risk %}
+- [y] Market volatility risk assessed {% #market %}
+- [n] Regulatory risk assessed {% #regulatory %}
+- [ ] Currency risk assessed {% #currency %}
 {% /checkboxes %}
 ```
 
-In this example, `currency_risk` is unfilled (`[ ]`) and will fail validation because
-`checkboxMode="explicit"` requires all options to have explicit `[y]` or `[n]` answers.
+In this example, `risk_factors.currency` is unfilled (`[ ]`) and will fail validation
+because `checkboxMode="explicit"` requires all options to have explicit `[y]` or `[n]`
+answers.
 
 ##### String-List Fields
 
@@ -436,12 +525,6 @@ Migrate legacy users to new platform
   minItems=5
   itemMinLength=10
 %}
-
-{% doc ref="top_risks" kind="instructions" %}
-One risk per line. Be specific (company- or product-specific), not generic.
-Minimum 5; include more if needed.
-{% /doc %}
-
 ```value {% process=false %}
 Supply chain disruption from single-source vendor
 Key engineer departure risk (bus factor = 1)
@@ -450,12 +533,22 @@ Competitor launching similar feature in Q2
 Customer concentration risk (top 3 = 60% revenue)
 ```
 {% /string-list %}
+
+{% doc ref="top_risks" kind="instructions" %} One risk per line.
+Be specific (company- or product-specific), not generic.
+Minimum 5; include more if needed.
+{% /doc %}
 ```
+
+**Note:** The doc block is a sibling placed after the field, not nested inside it.
 
 ##### The `process=false` Attribute
 
-Only required when the value contains Markdoc syntax (e.g., `{% ... %}` or `{# ... #}`).
-See [GitHub Discussion #261][markdoc-process-false] for implementation details:
+**v0.1 rule:** Always emit `process=false` on all value fences for consistency.
+
+While technically only required when the value contains Markdoc syntax (e.g., `{% ... %}`
+or `{# ... #}`), v0.1 always emits it to ensure deterministic serialization and avoid
+edge cases. See [GitHub Discussion #261][markdoc-process-false] for background.
 
 ```md
 {% string-field id="notes" label="Notes" %}
@@ -467,9 +560,12 @@ Use {% tag %} for special formatting.
 
 #### Example: Template Form
 
+**Minimal frontmatter (hand-authored):**
+
 ```md
 ---
-markform_version: 0.1
+markform:
+  markform_version: "0.1.0"
 ---
 
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
@@ -511,6 +607,10 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 {% /form %}
 ```
 
+**Note:** When the engine serializes this form, it will add `form_summary` and
+`form_progress` to the `markform` block automatically.
+Hand-authored forms only need the `markform_version`.
+
 #### Example: Incomplete Form
 
 ```md
@@ -541,7 +641,9 @@ id="docs_reviewed" label="Documents reviewed" required=true %}
 
 Notes:
 
-- Option IDs use Markdoc annotation shorthand `#id`
+- Option IDs use Markdoc annotation shorthand `#id` (field-scoped, slugified from label)
+
+- Reference options externally using qualified form: `{fieldId}.{optionId}` (e.g., `docs_reviewed.ten_k`)
 
 - Checkbox states: `[ ]` todo, `[x]` done, `[/]` in progress, `[-]` n/a
 
@@ -572,7 +674,18 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
 Generate markdown string directly (not using `Markdoc.format()` due to canonicalization
 requirements beyond what it provides—see [Formatting][markdoc-format]):
 
-**Canonical formatting rules:**
+**v0.1 content restrictions for canonical serialization (*required*):**
+
+To ensure deterministic round-tripping without building a full markdown serializer:
+
+| Content type | Restriction |
+|--------------|-------------|
+| Option labels | Plain text only—no inline markdown, no nested tags. Validated at parse time. |
+| Doc block bodies | Preserved verbatim—stored as raw text slice, re-emitted without reformatting. |
+| Field labels | Plain text only—no inline markdown. |
+| Group/form titles | Plain text only—no inline markdown. |
+
+**Canonical formatting rules (*required*):**
 
 | Rule | Specification |
 |------|---------------|
@@ -580,9 +693,14 @@ requirements beyond what it provides—see [Formatting][markdoc-format]):
 | Indentation | 0 spaces for top-level, no nested indentation |
 | Blank lines | One blank line between field-groups, none between fields |
 | Value fences | Omit entirely for empty fields |
-| `process=false` | Only emit when value contains `{% ... %}` or `{# ... #}` |
+| `process=false` | Always emit on all `value` fences (see note below) |
 | Option ordering | Preserved as authored (order is significant) |
 | Line endings | Unix (`\n`) only |
+| Doc block placement | Immediately after the referenced element |
+
+**Note on `process=false`:** For v0.1 consistency, always emit `{% process=false %}` on
+all value fences. This avoids edge cases where content might be interpreted as Markdoc
+syntax and ensures deterministic output regardless of value content.
 
 * * *
 
@@ -594,7 +712,7 @@ requirements beyond what it provides—see [Formatting][markdoc-format]):
 type Id = string; // validated snake_case, e.g., /^[a-z][a-z0-9_]*$/
 
 // Multi-checkbox states (checkboxMode="multi", default)
-type MultiCheckboxState = 'todo' | 'done' | 'in_progress' | 'active' | 'na';
+type MultiCheckboxState = 'todo' | 'done' | 'incomplete' | 'active' | 'na';
 
 // Simple checkbox states (checkboxMode="simple")
 type SimpleCheckboxState = 'todo' | 'done';
@@ -623,7 +741,7 @@ interface FieldGroup {
   kind: 'field_group';
   id: Id;
   title?: string;
-  required?: boolean;
+  // Note: `required` on groups is not supported in v0.1 (ignored with warning)
   validate?: string[];       // validator IDs
   children: Array<FieldGroup | Field>;
 }
@@ -684,19 +802,214 @@ interface MultiSelectField extends FieldBase {
   maxSelections?: number;
 }
 
+// OptionId is local to the containing field (e.g., "ten_k", "bullish")
+type OptionId = string;
+
 type FieldValue =
   | { kind: 'string'; value: string | null }
   | { kind: 'number'; value: number | null }
   | { kind: 'string_list'; items: string[] }
-  | { kind: 'checkboxes'; values: Record<Id, CheckboxValue> }
-  | { kind: 'single_select'; selected: Id | null }
-  | { kind: 'multi_select'; selected: Id[] };
+  | { kind: 'checkboxes'; values: Record<OptionId, CheckboxValue> }  // keys are local option IDs
+  | { kind: 'single_select'; selected: OptionId | null }             // local option ID
+  | { kind: 'multi_select'; selected: OptionId[] };                  // local option IDs
+
+// QualifiedOptionRef is used when referencing options externally (e.g., in doc blocks)
+type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
 
 interface DocumentationBlock {
-  ref: Id;                   // references a form/group/field/option ID
+  ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
   kind?: 'description' | 'instructions' | 'notes' | 'examples';
   bodyMarkdown: string;
 }
+
+// InspectIssue: unified type for inspect/apply API results
+// Derived from ValidationIssue[] but simplified for agent/UI consumption
+// Returned as a single list sorted by priority (descending)
+interface InspectIssue {
+  fieldId: Id;               // field this issue relates to
+  reason: IssueReason;       // machine-readable reason code
+  message: string;           // human-readable description
+  severity: 'required' | 'recommended';  // *required* = must fix; *recommended* = suggested
+  priority: number;          // 1 = highest; *required* items always have lower numbers
+}
+
+// Standard reason codes (keep stable for golden tests)
+type IssueReason =
+  // Severity: *required* (must be resolved for form completion)
+  | 'validation_error'       // Field has validation errors (pattern, range, etc.)
+  | 'required_missing'       // Required field with no value
+  | 'checkbox_incomplete'    // Required checkboxes with non-terminal states
+  | 'min_items_not_met'      // String-list or multi-select below minimum
+  // Severity: *recommended* (optional improvements)
+  | 'optional_empty';        // Optional field with no value
+
+// Mapping from ValidationIssue to InspectIssue:
+// - ValidationIssue.severity='error' → InspectIssue.severity='required'
+// - ValidationIssue.severity='warning'/'info' → InspectIssue.severity='recommended'
+// - Missing optional fields → severity='recommended', reason='optional_empty'
+```
+
+#### StructureSummary and ProgressSummary
+
+These types model the derived metadata stored in frontmatter and exposed via
+tool/harness APIs. They provide a quick overview of form structure and filling progress
+without exposing actual field values.
+
+##### StructureSummary (form_summary)
+
+Describes the static structure of the form schema:
+
+```ts
+// FieldKind matches the 'kind' discriminant on Field types
+type FieldKind = 'string' | 'number' | 'string_list' | 'checkboxes' | 'single_select' | 'multi_select';
+
+interface StructureSummary {
+  groupCount: number;           // total field-groups
+  fieldCount: number;           // total fields (all types)
+  optionCount: number;          // total options across all select/checkbox fields
+
+  fieldCountByKind: Record<FieldKind, number>;  // breakdown by field type
+
+  /** Map of group ID -> 'field_group' (for completeness; groups have one kind) */
+  groupsById: Record<Id, 'field_group'>;
+
+  /** Map of field ID -> field kind */
+  fieldsById: Record<Id, FieldKind>;
+
+  /**
+   * Map of qualified option ref -> parent field info.
+   * Keys use qualified form: "{fieldId}.{optionId}" (e.g., "docs_reviewed.ten_k")
+   * This allows relating options back to their parent field.
+   */
+  optionsById: Record<QualifiedOptionRef, {
+    parentFieldId: Id;
+    parentFieldKind: FieldKind;
+  }>;
+}
+```
+
+**Notes:**
+
+- This is **schema-only**; it does not include values
+
+- All ID maps are sorted alphabetically in YAML output for deterministic serialization
+
+- `optionsById` uses qualified refs to avoid ambiguity between fields with same option
+  IDs
+
+##### ProgressSummary (form_progress)
+
+Tracks filling progress per field without exposing actual values:
+
+```ts
+// Progress state for a single field
+type FieldProgressState = 'empty' | 'incomplete' | 'invalid' | 'complete';
+
+interface FieldProgress {
+  kind: FieldKind;             // field type
+  required: boolean;           // whether field has required=true
+
+  submitted: boolean;          // whether any value has been provided
+  state: FieldProgressState;   // computed progress state
+  valid: boolean;              // true iff no validation issues for this field
+  issueCount: number;          // count of ValidationIssues referencing this field
+
+  /**
+   * Checkbox state rollup (only present for checkboxes fields).
+   * Provides counts without exposing which specific options are in each state.
+   */
+  checkboxProgress?: CheckboxProgressCounts;
+}
+
+/**
+ * Checkbox progress counts, generalized for all checkbox modes.
+ * Only the states valid for the field's checkboxMode will have non-zero values.
+ */
+interface CheckboxProgressCounts {
+  total: number;               // total options in this checkbox field
+
+  // Multi mode states (checkboxMode="multi")
+  todo: number;
+  done: number;
+  incomplete: number;          // camelCase in TS, snake_case in YAML
+  active: number;
+  na: number;
+
+  // Explicit mode states (checkboxMode="explicit")
+  unfilled: number;
+  yes: number;
+  no: number;
+}
+
+interface ProgressSummary {
+  counts: ProgressCounts;
+
+  /** Map of field ID -> field progress */
+  fields: Record<Id, FieldProgress>;
+}
+
+interface ProgressCounts {
+  totalFields: number;           // all fields in the form
+  requiredFields: number;        // fields with required=true
+
+  submittedFields: number;       // fields that have been submitted (have values)
+
+  completeFields: number;        // fields in 'complete' state
+  incompleteFields: number;      // fields in 'incomplete' state
+  invalidFields: number;         // fields in 'invalid' state
+
+  emptyRequiredFields: number;   // required fields with no value
+  emptyOptionalFields: number;   // optional fields with no value
+}
+```
+
+##### Field Progress State Definitions
+
+The `FieldProgressState` is computed deterministically based on submission status,
+validation result, and completeness rules:
+
+| State | Meaning |
+| --- | --- |
+| `empty` | Not submitted (no value provided) |
+| `incomplete` | Submitted but fails completeness rules (e.g., minItems not met, required checkbox not terminal) |
+| `invalid` | Submitted but fails validation (type/pattern/range errors or hook issues) |
+| `complete` | Satisfies completeness rules and passes validation |
+
+**Submission rules (deterministic, per field kind):**
+
+| Field Kind | Submitted when |
+| --- | --- |
+| `string` | `value !== null && value.trim().length > 0` |
+| `number` | `value !== null` |
+| `single_select` | `selected !== null` |
+| `multi_select` | `selected.length > 0` |
+| `string_list` | `items.length > 0` |
+| `checkboxes` | At least one option state differs from initial (`todo` for multi/simple, `unfilled` for explicit) |
+
+**Completeness rules (for required fields):**
+
+Completeness is relevant only when `required=true`. A submitted field is complete if:
+
+| Field Kind | Complete when |
+| --- | --- |
+| `string` | Submitted (non-empty after trim) |
+| `number` | Submitted (non-null) |
+| `single_select` | Submitted (exactly one selected) |
+| `multi_select` | `selected.length >= max(1, minSelections)` |
+| `string_list` | `items.length >= max(1, minItems)` |
+| `checkboxes` | All options in terminal state (see checkbox completion rules above) |
+
+**State computation logic:**
+
+```
+if not submitted:
+  state = 'empty'
+elif has validation errors:
+  state = 'invalid'
+elif required and not complete:
+  state = 'incomplete'
+else:
+  state = 'complete'
 ```
 
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
@@ -720,6 +1033,93 @@ tool inputs. Zod is used for:
 **Note:** The `zod-to-json-schema` library has a deprecation notice for some APIs—use
 the updated patterns documented in its README.
 
+##### Summary Zod Schemas
+
+Zod schemas for the frontmatter summary types:
+
+```ts
+const FieldKindSchema = z.enum([
+  'string', 'number', 'string_list', 'checkboxes', 'single_select', 'multi_select'
+]);
+
+const StructureSummarySchema = z.object({
+  groupCount: z.number().int().nonnegative(),
+  fieldCount: z.number().int().nonnegative(),
+  optionCount: z.number().int().nonnegative(),
+  fieldCountByKind: z.record(FieldKindSchema, z.number().int().nonnegative()),
+  groupsById: z.record(z.string(), z.literal('field_group')),
+  fieldsById: z.record(z.string(), FieldKindSchema),
+  optionsById: z.record(z.string(), z.object({
+    parentFieldId: z.string(),
+    parentFieldKind: FieldKindSchema,
+  })),
+});
+
+const FieldProgressStateSchema = z.enum(['empty', 'incomplete', 'invalid', 'complete']);
+
+const CheckboxProgressCountsSchema = z.object({
+  total: z.number().int().nonnegative(),
+  // Multi mode
+  todo: z.number().int().nonnegative(),
+  done: z.number().int().nonnegative(),
+  incomplete: z.number().int().nonnegative(),
+  active: z.number().int().nonnegative(),
+  na: z.number().int().nonnegative(),
+  // Explicit mode
+  unfilled: z.number().int().nonnegative(),
+  yes: z.number().int().nonnegative(),
+  no: z.number().int().nonnegative(),
+});
+
+const FieldProgressSchema = z.object({
+  kind: FieldKindSchema,
+  required: z.boolean(),
+  submitted: z.boolean(),
+  state: FieldProgressStateSchema,
+  valid: z.boolean(),
+  issueCount: z.number().int().nonnegative(),
+  checkboxProgress: CheckboxProgressCountsSchema.optional(),
+});
+
+const ProgressCountsSchema = z.object({
+  totalFields: z.number().int().nonnegative(),
+  requiredFields: z.number().int().nonnegative(),
+  submittedFields: z.number().int().nonnegative(),
+  completeFields: z.number().int().nonnegative(),
+  incompleteFields: z.number().int().nonnegative(),
+  invalidFields: z.number().int().nonnegative(),
+  emptyRequiredFields: z.number().int().nonnegative(),
+  emptyOptionalFields: z.number().int().nonnegative(),
+});
+
+const ProgressSummarySchema = z.object({
+  counts: ProgressCountsSchema,
+  fields: z.record(z.string(), FieldProgressSchema),
+});
+
+// Frontmatter schema (internal TS representation)
+const MarkformFrontmatterSchema = z.object({
+  markformVersion: z.string(),
+  formSummary: StructureSummarySchema,
+  formProgress: ProgressSummarySchema,
+});
+```
+
+**YAML serialization:** When writing frontmatter, convert camelCase keys to snake_case:
+
+- `markformVersion` → `markform_version`
+
+- `formSummary` → `form_summary`
+
+- `formProgress` → `form_progress`
+
+- `fieldCountByKind` → `field_count_by_kind`
+
+- etc.
+
+Use a `toSnakeCaseDeep()` helper for deterministic conversion at the frontmatter
+boundary.
+
 #### Comprehensive Field Type Reference
 
 This section provides a complete mapping between Markdoc syntax, TypeScript types, and
@@ -731,16 +1131,18 @@ schema representations for all field types.
 | --- | --- | --- |
 | Markdoc tag names | kebab-case | `string-field`, `multi-select` |
 | Markdoc attributes | camelCase | `minLength`, `checkboxMode`, `minItems` |
-| IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
 | TypeScript interfaces | PascalCase | `StringField`, `MultiSelectField` |
 | TypeScript properties | camelCase | `minLength`, `checkboxMode` |
+| JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
+| IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
+| YAML keys (frontmatter, session transcripts) | snake_case | `markform_version`, `form_summary`, `field_count_by_kind` |
 | TypeScript kind values | snake_case | `'string'`, `'single_select'` |
 | Patch operations | snake_case | `set_string`, `set_single_select` |
-| JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
 
 **Rationale:** Using camelCase for Markdoc attributes aligns with JSON Schema keywords
 and TypeScript conventions, eliminating translation overhead.
 IDs remain snake_case as they are data values, not code identifiers.
+YAML keys use snake_case for readability and consistency with common YAML conventions.
 
 ##### Field Type Mappings
 
@@ -791,8 +1193,8 @@ IDs remain snake_case as they are data values, not code identifiers.
 | TypeScript interface | `SingleSelectField` |
 | TypeScript kind | `'single_select'` |
 | Attributes | `id`, `label`, `required` + inline `options` via list syntax |
-| FieldValue | `{ kind: 'single_select'; selected: Id \| null }` |
-| Patch operation | `{ op: 'set_single_select'; fieldId: Id; selected: Id \| null }` |
+| FieldValue | `{ kind: 'single_select'; selected: OptionId \| null }` |
+| Patch operation | `{ op: 'set_single_select'; fieldId: Id; selected: OptionId \| null }` |
 | Zod | `z.enum([...optionIds])` |
 | JSON Schema | `{ type: "string", enum: [...optionIds] }` |
 
@@ -804,8 +1206,8 @@ IDs remain snake_case as they are data values, not code identifiers.
 | TypeScript interface | `MultiSelectField` |
 | TypeScript kind | `'multi_select'` |
 | Attributes | `id`, `label`, `required`, `minSelections`, `maxSelections` + inline `options` |
-| FieldValue | `{ kind: 'multi_select'; selected: Id[] }` |
-| Patch operation | `{ op: 'set_multi_select'; fieldId: Id; selected: Id[] }` |
+| FieldValue | `{ kind: 'multi_select'; selected: OptionId[] }` |
+| Patch operation | `{ op: 'set_multi_select'; fieldId: Id; selected: OptionId[] }` |
 | Zod | `z.array(z.enum([...optionIds])).min(n).max(m)` |
 | JSON Schema | `{ type: "array", items: { enum: [...optionIds] }, minItems, maxItems }` |
 
@@ -817,16 +1219,20 @@ IDs remain snake_case as they are data values, not code identifiers.
 | TypeScript interface | `CheckboxesField` |
 | TypeScript kind | `'checkboxes'` |
 | Attributes | `id`, `label`, `required`, `checkboxMode` (`multi`/`simple`/`explicit`) + inline `options` |
-| FieldValue | `{ kind: 'checkboxes'; values: Record<Id, CheckboxValue> }` |
-| Patch operation | `{ op: 'set_checkboxes'; fieldId: Id; values: Record<Id, CheckboxValue> }` |
+| FieldValue | `{ kind: 'checkboxes'; values: Record<OptionId, CheckboxValue> }` |
+| Patch operation | `{ op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }` |
 | Zod | `z.record(z.enum([...states]))` |
 | JSON Schema | `{ type: "object", additionalProperties: { enum: [...states] } }` |
+
+**Note:** `OptionId` values are local to the field (e.g., `"ten_k"`, `"bullish"`). They
+are NOT qualified with the field ID in patches or FieldValue—the field context is
+implicit.
 
 ##### Checkbox Mode State Values
 
 | Mode | States | Zod Enum |
 | --- | --- | --- |
-| `multi` (default) | `todo`, `done`, `in_progress`, `active`, `na` | `z.enum(['todo', 'done', 'in_progress', 'active', 'na'])` |
+| `multi` (default) | `todo`, `done`, `incomplete`, `active`, `na` | `z.enum(['todo', 'done', 'incomplete', 'active', 'na'])` |
 | `simple` | `todo`, `done` | `z.enum(['todo', 'done'])` |
 | `explicit` | `unfilled`, `yes`, `no` | `z.enum(['unfilled', 'yes', 'no'])` |
 
@@ -858,6 +1264,40 @@ Schema checks (always available, deterministic):
 | All options answered | `checkboxes` | `checkboxMode="explicit"` requires no `unfilled` values |
 
 Output: `ValidationIssue[]`
+
+#### Required Field Semantics
+
+The `required` attribute has specific semantics for each field type.
+This section provides normative definitions:
+
+| Field Type | `required=true` means | `required=false` (or omitted) means |
+| --- | --- | --- |
+| `string-field` | `value !== null && value.trim() !== ""` | Value may be null or empty |
+| `number-field` | `value !== null` (and parseable as number) | Value may be null |
+| `string-list` | `items.length >= max(1, minItems)` | Empty array is valid (unless `minItems` constraint) |
+| `single-select` | Exactly one option must be selected | Zero or one option selected (never >1) |
+| `multi-select` | `selected.length >= max(1, minSelections)` | Empty selection valid (unless `minSelections` constraint) |
+| `checkboxes` | See checkbox completion rules below | No completion requirement |
+
+**Checkbox completion rules by mode:**
+
+When `required=true`, checkboxes must reach a “completion state” based on mode:
+
+| Mode | Completion state | Non-terminal states (invalid when required) |
+| --- | --- | --- |
+| `simple` | All options in `{done}` | `todo` |
+| `multi` | All options in `{done, na}` | `todo`, `incomplete`, `active` |
+| `explicit` | All options in `{yes, no}` (no `unfilled`) | `unfilled` |
+
+**Note:** For `multi` mode, `incomplete` and `active` are valid workflow states during
+form filling but are **not** terminal states.
+A completed form must have all checkbox options resolved to either `done` or `na`.
+
+**Field group `required` attribute:**
+
+The `required` attribute on `field-group` is **not supported in v0.1**. Groups may have
+`validate` references for custom validation, but the `required` attribute should not be
+used on groups. If present, it is ignored with a warning.
 
 #### Hook Validators
 
@@ -943,11 +1383,42 @@ The tool layer is the public API contract for agents and CLI. Tool definitions f
 
 | Operation | Description | Returns |
 | --- | --- | --- |
-| **Inspect** | Get form state summary | Completion stats, ordered issues, next recommendations, optional schema |
-| **Apply** | Apply patches to form values | Updated form state, new issues, new recommendations |
-| **Validate** | Run all validators (including hooks) | `ValidationIssue[]` |
+| **Inspect** | Get form state summary | `InspectResult` with summaries and unified issues list |
+| **Apply** | Apply patches to form values | `ApplyResult` with updated summaries and issues |
 | **Export** | Get structured data | `{ schema: FormSchemaJson, values: FormValuesJson }` |
 | **GetMarkdown** | Get canonical form source | Markdown string |
+
+#### Inspect and Apply Result Types
+
+```ts
+interface InspectResult {
+  structureSummary: StructureSummary;   // form structure overview
+  progressSummary: ProgressSummary;     // filling progress per field
+  issues: InspectIssue[];               // unified list sorted by priority (descending)
+  isComplete: boolean;                  // true when no issues with severity: 'required'
+}
+
+interface ApplyResult {
+  applyStatus: 'applied' | 'rejected';  // 'rejected' if structural validation failed
+  structureSummary: StructureSummary;
+  progressSummary: ProgressSummary;
+  issues: InspectIssue[];               // unified list sorted by priority (descending)
+  isComplete: boolean;                  // true when no issues with severity: 'required'
+}
+```
+
+**Notes:**
+
+- Both operations return the full summaries for client convenience
+
+- `issues` is a single sorted list; filter by `severity: 'required'` to get blockers
+
+- `structureSummary` is static (doesn’t change after patches) but included for
+  consistency
+
+- `progressSummary` is recomputed after each patch application
+
+- Summaries are serialized to frontmatter on every form write
 
 **Operation availability by interface:**
 
@@ -958,8 +1429,8 @@ The tool layer is the public API contract for agents and CLI. Tool definitions f
 | validate | `markform validate` | via inspect | via inspect |
 | export | `markform export --json` | `markform_export` | `markform.export` |
 | getMarkdown | `markform apply` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
-| render | `markform render` | — | — |
-| serve | `markform serve` | — | — |
+| render | `markform render` (optional) | — | — |
+| serve | v0.2 | — | — |
 
 #### Patch Schema
 
@@ -968,11 +1439,26 @@ type Patch =
   | { op: 'set_string'; fieldId: Id; value: string | null }
   | { op: 'set_number'; fieldId: Id; value: number | null }
   | { op: 'set_string_list'; fieldId: Id; items: string[] }
-  | { op: 'set_checkboxes'; fieldId: Id; values: Record<Id, CheckboxValue> }
-  | { op: 'set_single_select'; fieldId: Id; selected: Id | null }
-  | { op: 'set_multi_select'; fieldId: Id; selected: Id[] }
+  | { op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }
+  | { op: 'set_single_select'; fieldId: Id; selected: OptionId | null }
+  | { op: 'set_multi_select'; fieldId: Id; selected: OptionId[] }
   | { op: 'clear_field'; fieldId: Id };
+
+// OptionId is just the local ID within the field (e.g., "ten_k", "bullish")
+// NOT the qualified form—the fieldId provides the scope
+type OptionId = string;
 ```
+
+**Option ID scoping in patches:**
+
+Option IDs in patches are **local to the field** specified by `fieldId`. You do NOT use
+the qualified `{fieldId}.{optionId}` form in patches—the `fieldId` already provides the
+scope. For example:
+
+- `{ op: 'set_checkboxes', fieldId: 'docs_reviewed', values: { ten_k: 'done', ten_q:
+  'done' } }`
+
+- `{ op: 'set_single_select', fieldId: 'rating', selected: 'bullish' }`
 
 **Patch semantics:**
 
@@ -985,36 +1471,63 @@ type Patch =
 
 - `set_multi_select`: Replaces entire selection array (not additive)
 
+**Patch validation layers (*required*):**
+
+Patches go through two distinct validation phases:
+
+**1. Structural validation (pre-apply):** Checked before any patches are applied:
+
+- `fieldId` exists in schema
+
+- `optionId` exists for the referenced field (for select/checkbox patches)
+
+- Value shape matches expected type (e.g., `number` for `set_number`)
+
+If *any* patch fails structural validation:
+
+- *required:* Entire batch is rejected (transaction semantics)
+
+- *required:* Form state is unchanged
+
+- *required:* Response includes `applyStatus: "rejected"` and structural issues
+
+**2. Semantic validation (post-apply):** Checked after all patches are applied:
+
+- Required field constraints
+
+- Pattern/range validation
+
+- Selection count constraints
+
+Semantic issues do **not** prevent patch application—they are returned as
+`ValidationIssue[]` for the caller to address.
+This is the normal inspect/apply/fix workflow.
+
 **Patch conflict handling:**
 
 - Patches are applied in array order within a single `apply` call
 
 - Later patches to the same field overwrite earlier ones (last-write-wins)
 
-- Invalid `fieldId` or `optionId` produces a validation error in the response
+#### Inspect Results
 
-- Patches are atomic: all succeed or all fail (transaction semantics)
+When `inspect` runs, it returns a **single list of `InspectIssue` objects** sorted by
+priority (descending).
+Issues with severity `required` always have higher priority (lower numbers) than issues
+with severity `recommended`.
 
-#### “Next Steps” Heuristic
+| Priority | Severity | Reason code | Description |
+| --- | --- | --- | --- |
+| 1 | *required* | `validation_error` | Fields with validation errors (pattern, range, etc.) |
+| 2 | *required* | `required_missing` | Required fields with no value |
+| 3 | *required* | `checkbox_incomplete` | Required checkboxes with non-terminal states |
+| 4 | *required* | `min_items_not_met` | String-lists or multi-selects below minimum count |
+| 5 | *recommended* | `optional_empty` | Optional fields with no value |
 
-When `inspect` runs, it computes recommended next actions (in priority order):
+The harness config controls how many issues to return (`max_issues`).
 
-1. **Validation errors** — Fields with errors that must be fixed
-
-2. **Missing required fields** — Required fields with no value
-
-3. **Incomplete checkbox sets** — Required checkboxes with items in `todo` state
-
-4. **Underfilled string-lists** — Required string-lists with `items.length < minItems`
-
-5. **Optional-but-empty fields** — Lowest priority, suggested for completeness
-
-Returns a list of `{ fieldId, reason, priority }` recommendations.
-The harness config controls how many to return (`max_recommended`).
-
-**Reason codes for string-list fields:**
-
-- `minItemsNotMet` — List has fewer items than `minItems` requires
+**Completion check:** A form is complete when there are no issues with `severity:
+'required'`.
 
 * * *
 
@@ -1030,10 +1543,10 @@ The harness wraps the engine with a stable “step” protocol for bite-sized ac
 └────┬────┘
      │ load form
      ▼
-┌─────────┐    all valid   ┌──────────┐
+┌─────────┐  no required   ┌──────────┐
 │  STEP   │───────────────►│ COMPLETE │
-└────┬────┘                └──────────┘
-     │ has recommendations
+└────┬────┘    issues      └──────────┘
+     │ has required issues
      ▼
 ┌─────────┐
 │  WAIT   │◄───────────────┐
@@ -1046,27 +1559,34 @@ The harness wraps the engine with a stable “step” protocol for bite-sized ac
 ```
 
 **Note:** v0.1 runs until completion (all required fields valid, no errors).
-Max iteration limits for safety/cost control are a v0.2+ consideration.
+A default `max_turns` safety limit (e.g., 100) should be enforced to prevent runaway
+loops during development and testing.
+Exceeding `max_turns` results in an error state.
 
 #### Harness Contract
 
 ```ts
 interface StepResult {
-  issues: ValidationIssue[];
-  recommendations: Array<{ fieldId: Id; reason: string; priority: number }>;
-  stepBudget: number;        // suggested patches this turn (from config)
-  isComplete: boolean;
+  structureSummary: StructureSummary;   // form structure overview (static)
+  progressSummary: ProgressSummary;     // current filling progress
+  issues: InspectIssue[];               // unified list sorted by priority (descending)
+  stepBudget: number;                   // suggested patches this turn (from config)
+  isComplete: boolean;                  // true when no issues with severity: 'required'
   turnNumber: number;
 }
 ```
 
-- `harness.step()` returns current state + recommendations
+- `harness.step()` returns current state including summaries + issues
+
+- `issues` is a single sorted list; filter by `severity: 'required'` to get blockers
 
 - `stepBudget` comes from config (`max_patches_per_turn`), not computed dynamically
 
 - Agent/user applies patches via `harness.apply(patches)`
 
-- Harness revalidates and returns next `StepResult`
+- Harness revalidates and returns next `StepResult` with updated `progressSummary`
+
+- Summaries allow agents/UIs to quickly display progress without parsing the full form
 
 This keeps turns short and controlled for long-lived sessions.
 
@@ -1112,8 +1632,7 @@ A golden test is a YAML file containing:
 
 - Initial artifacts (`.form.md` and validators)
 
-- Sequence of steps/turns with operations, validation issues, “next fields”
-  recommendations, and resulting form snapshot/diff
+- Sequence of steps/turns with operations, issues, and resulting form snapshot/diff
 
 #### Session Transcript Schema
 
@@ -1129,23 +1648,24 @@ mock:
   completed_mock: examples/quarterly/quarterly.mock.filled.form.md
 
 harness:
-  max_recommended: 5         # max fields to suggest per turn
+  max_issues: 5              # max issues to return per turn
   max_patches_per_turn: 3    # stepBudget value
-  prioritize_errors: true    # errors before missing fields
-  # max_turns: 50            # v0.2+: optional safety limit
+  max_turns: 100             # safety limit (default: 100)
 
 turns:
   - turn: 1
     inspect:
-      issues: []
-      next:
-        - id: company_name
+      issues:
+        - fieldId: company_name
           reason: required_missing
+          message: "Required field 'Company name' has no value"
+          severity: required
+          priority: 2
     apply:
       patches:
         - { op: set_string, fieldId: company_name, value: "ACME Corp" }
     after:
-      issue_count: 0
+      required_issue_count: 0
       markdown_sha256: "..."
 
 final:
@@ -1190,9 +1710,11 @@ for replay. Live sessions are useful for debugging but not for CI assertions.
 
 Thin wrapper around the tool contract:
 
+**Core commands (required for v0.1):**
+
 - `markform validate <file.form.md>` — parse + run validators, print issues
 
-- `markform inspect <file.form.md>` — print summary + next recommended IDs
+- `markform inspect <file.form.md>` — print summary + prioritized issues
 
 - `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
 
@@ -1201,9 +1723,15 @@ Thin wrapper around the tool contract:
 - `markform run <file.form.md> --mock --completed-mock <file>` — run harness end-to-end,
   write session transcript
 
-- `markform render <file.form.md> --out <file.html>` — produce clean HTML/CSS
+**Optional commands (implement if time permits):**
+
+- `markform render <file.form.md> --out <file.html>` — produce clean HTML/CSS (minimal
+  renderer for demos)
+
+**Deferred to v0.2:**
 
 - `markform serve <file.form.md>` — local web UI with JSON endpoints for inspect/apply
+  (significant scope; defer until engine + tool contract is stable)
 
 ### AI SDK Integration
 
@@ -1294,7 +1822,7 @@ parsing, tool patches, harness logic.
 ### 1) Core Zod schemas + TypeScript types
 
 `FormSchema`, `Field`, `Values`, `DocumentationBlock`, `Patch`, `ValidationIssue`,
-`SessionYaml`
+`SessionYaml`, `StructureSummary`, `ProgressSummary`, `MarkformFrontmatter`
 
 Deliverable: `engine/types.ts` + `engine/schemas.ts`
 
@@ -1306,15 +1834,18 @@ Deliverable: `engine/parse.ts`
 
 ### 3) Canonical serialization
 
-Deterministic output, omit empty value fences, `#id` annotations
+Deterministic output, omit empty value fences, `#id` annotations.
+Include `form_summary` and `form_progress` in frontmatter (computed during serialize).
 
 Deliverable: `engine/serialize.ts`
 
-### 4) Built-in validation + inspect heuristic
+### 4) Built-in validation + inspect heuristic + summaries
 
-Required, numeric, select constraints, completion stats, next recommendations
+Required, numeric, select constraints, completion stats, issue prioritization.
+Implement `computeStructureSummary(schema)` and `computeProgressSummary(schema, values,
+issues)`.
 
-Deliverable: `engine/validate.ts` + `engine/inspect.ts`
+Deliverable: `engine/validate.ts` + `engine/inspect.ts` + `engine/summaries.ts`
 
 ### 5) Patch application
 
@@ -1624,3 +2155,94 @@ Type system and validation vocabulary:
 6. **Patch operations for repeating groups** — Full array replacement initially, with
    item-level operations (insert/remove/reorder) and field-level patches within
    instances as potential future enhancements.
+
+### Implementation Recommendations (v0.1)
+
+The following are high-priority implementation recommendations to address during v0.1
+development:
+
+7. **Define `ParsedForm` internal shape explicitly** — The engine boundary references
+   types that aren’t fully defined.
+   Suggested canonical internal shape:
+
+   - `schema: FormSchema`
+
+   - `valuesByFieldId: Record<Id, FieldValue>`
+
+   - `docs: DocumentationBlock[]`
+
+   - `orderIndex: Id[]` — array of fieldIds in document order for deterministic
+     recommendation ordering
+
+   - `idIndex: Map<Id, { kind: 'form'|'group'|'field'|'option', parentId?, fieldId?
+     }>` — for fast lookup/validation
+
+8. **Add source location data to validation issues** — For CLI and tool integration,
+   include best-effort source locations:
+
+   - `path?: string` — field/group ID path
+
+   - `range?: { start: { line, col }, end: { line, col } }` — if Markdoc provides it
+
+   - The existing `ref` field already provides field ID reference
+
+9. **Handle unknown option IDs strictly** — For checkbox/select values:
+
+   - Missing option ID annotation in markdown → parse error
+
+   - Values record contains ID not in schema → `INVALID_OPTION_ID` error, drop unknown
+     keys
+
+   - Treat as error and normalize by dropping unknown keys in the model
+
+10. **Labels are required** — In TypeScript types, `label: string` is required on
+    fields. Group/form titles remain optional.
+    Validate this at parse time.
+
+### Resolved Design Decisions
+
+11. **Option ID scoping** — Option IDs are **field-scoped** (unique within field, not
+    globally). This allows reusing common patterns like `[ ] 10-K {% #ten_k %}` across
+    multiple fields. When referencing options externally (doc blocks), use qualified form
+    `{fieldId}.{optionId}`. In patches and FieldValue, options are already scoped by the
+    field context. This is compatible with Markdoc since `{% #id %}` just sets an
+    attribute—Markdoc doesn’t enforce uniqueness.
+
+### Open Design Questions
+
+12. **Checkbox `simple` mode completion semantics** — Currently defined as "all options
+    in `{done}`". An alternative is "at least one `done`". The stricter “all done”
+    interpretation is currently specified but may need user feedback.
+
+13. **String field whitespace-only values** — Currently `required` means `value.trim()
+    !== ""`. Consider whether whitespace-only should ever be valid for non-required
+    fields (current answer: yes, it’s valid for optional fields).
+
+### Summary Enhancement Questions (v0.1)
+
+14. **CheckboxProgressCounts overlap between modes** — The `CheckboxProgressCounts`
+    interface includes fields for both multi mode (`todo`, `done`, `incomplete`,
+    `active`, `na`) and explicit mode (`unfilled`, `yes`, `no`). At runtime, only the
+    states valid for the field’s `checkboxMode` will have non-zero values.
+    Consider whether to split this into mode-specific types or use a discriminated
+    union. Current decision: single unified type for simplicity, with unused fields set
+    to zero.
+
+15. **Group-level progress tracking** — The current `ProgressSummary` only tracks field
+    progress. Group-level validation issues (from hook validators) that don’t reference a
+    specific field ID need a home.
+    Current decision: such issues appear in `ValidationIssue[]` but don’t increment any
+    field’s `issueCount`. May need `ProgressSummary.groupIssueCount` or similar in
+    future.
+
+16. **Golden test frontmatter handling** — Since `form_summary` and `form_progress` are
+    recomputed on every serialize, golden test fixtures will include these summaries.
+    The test runner should either: (a) compare the full serialized file including
+    summaries, or (b) strip summaries before comparison.
+    Current recommendation: compare full file including summaries to validate summary
+    computation is deterministic.
+
+17. **FieldKind type location** — `FieldKind` is now used in both `Field` types (as the
+    `kind` discriminant) and in summary types.
+    Consider whether to define it once and reuse, or keep separate definitions.
+    Current decision: define once, export from types module.
