@@ -18,9 +18,7 @@ Update as needed but expect most content to persist quarter-to-quarter.
 Complete fresh each quarter.
 {% /doc %}
 
-{# ========================================================================== #}
-{# PART 1: COMPANY PROFILE                                                    #}
-{# ========================================================================== #}
+{# PART 1: COMPANY PROFILE #}
 
 {% field-group id="identity_structure" title="1. Identity and Structure" %}
 
@@ -376,9 +374,7 @@ Enter a date (YYYY-MM-DD format) or descriptive text (e.g., "Before Q2 earnings"
 
 {% /field-group %}
 
-{# ========================================================================== #}
-{# PART 2: QUARTERLY ANALYSIS                                                 #}
-{# ========================================================================== #}
+{# PART 2: QUARTERLY ANALYSIS #}
 
 {% field-group id="quarterly_cover" title="Q1. Cover Sheet" %}
 
