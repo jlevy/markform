@@ -184,3 +184,5 @@ export {
   computeAllSummaries,
 } from "./engine/summaries.js";
 export type { ComputedSummaries } from "./engine/summaries.js";
+export { validate } from "./engine/validate.js";
+export type { ValidateOptions, ValidateResult } from "./engine/validate.js";

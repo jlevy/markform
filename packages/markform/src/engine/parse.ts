@@ -191,13 +191,24 @@ function getBooleanAttr(node: Node, name: string): boolean | undefined {
 
 /**
  * Get validator references from validate attribute.
+ * Handles both single string and array formats.
  */
 function getValidateAttr(node: Node): ValidatorRef[] | undefined {
   const value: unknown = node.attributes?.validate;
-  if (!Array.isArray(value)) {
+  if (value === undefined || value === null) {
     return undefined;
   }
-  return value as ValidatorRef[];
+  if (Array.isArray(value)) {
+    return value as ValidatorRef[];
+  }
+  if (typeof value === "string") {
+    return [value];
+  }
+  if (typeof value === "object") {
+    // Single object validator ref like { id: "foo", param: 1 }
+    return [value as ValidatorRef];
+  }
+  return undefined;
 }
 
 /**
