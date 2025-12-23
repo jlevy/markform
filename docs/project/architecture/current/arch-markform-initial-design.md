@@ -799,7 +799,7 @@ interface FieldGroup {
   title?: string;
   // Note: `required` on groups is not supported in v0.1 (ignored with warning)
   validate?: string[];       // validator IDs
-  children: Array<FieldGroup | Field>;
+  children: Field[];         // v0.1/v0.2: fields only; nested groups deferred (future)
 }
 
 interface FieldBase {
@@ -1402,7 +1402,27 @@ used on groups. If present, it is ignored with a warning.
 
 #### Hook Validators
 
-Validators are referenced by **ID** from fields/groups/form via `validate=["..."]`.
+Validators are referenced by **ID** from fields/groups/form via `validate=[...]`.
+
+**Validate attribute syntax:**
+
+The `validate` attribute accepts an array of validator references. Each reference can be:
+
+1. **String** — Simple validator ID with no parameters:
+   ```md
+   validate=["thesis_quality"]
+   ```
+
+2. **Object** — Validator ID with parameters (Markdoc supports JSON object syntax):
+   ```md
+   validate=[{id: "min_words", min: 50}]
+   validate=[{id: "sum_to", target: 100, tolerance: 0.1}]
+   ```
+
+3. **Mixed** — Combine both in one array:
+   ```md
+   validate=["format_check", {id: "min_words", min: 25}]
+   ```
 
 **Code validators (`.valid.ts`):**
 
@@ -1418,18 +1438,47 @@ Validators are referenced by **ID** from fields/groups/form via `validate=["..."
 import type { ValidatorContext, ValidationIssue } from 'markform';
 
 /**
+ * A single validator reference from the validate attribute.
+ */
+type ValidatorRef = string | { id: string; [key: string]: unknown };
+
+/**
  * Context passed to each validator function.
  */
 interface ValidatorContext {
   schema: FormSchema;
   values: Record<Id, FieldValue>;
   targetId: Id;              // field/group/form ID that referenced this validator
+  targetSchema: Field | FieldGroup | Form;  // schema of the target (for reading custom attrs)
+  params: Record<string, unknown>;          // parameters from validate ref (empty if string ref)
 }
 
 /**
  * Sidecar file exports a validators registry.
  */
 export const validators: Record<string, (ctx: ValidatorContext) => ValidationIssue[]> = {
+  // Parameterized validator: min word count from params
+  min_words: (ctx) => {
+    const min = ctx.params.min as number;
+    if (typeof min !== 'number') {
+      return [{ severity: 'error', message: 'min_words requires "min" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string' && value.value) {
+      const wordCount = value.value.trim().split(/\s+/).length;
+      if (wordCount < min) {
+        return [{
+          severity: 'error',
+          message: `Field requires at least ${min} words (currently ${wordCount})`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+
+  // Simple validator with no params
   thesis_quality: (ctx) => {
     const thesis = ctx.values.thesis;
     if (thesis?.kind === 'string' && thesis.value && thesis.value.length < 50) {
@@ -1443,6 +1492,19 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
     return [];
   },
 };
+```
+
+**Usage examples:**
+
+```md
+{# Parameterized: pass min word count as parameter #}
+{% string-field id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+
+{# Multiple validators with different params #}
+{% string-field id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+
+{# Sum-to validator with configurable target #}
+{% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_prob", "bull_prob", "bear_prob"], target: 100}] %}
 ```
 
 **Runtime loading (engine):**
@@ -2204,9 +2266,70 @@ Specified in this document but deferred from v0.1 proof of concept:
 
   - Item-level patch operations (insert/remove/reorder)
 
+- **`allowOther` attribute for select fields** — Enable "Other: ____" free-text option
+  for `single-select` and `multi-select` fields. When `allowOther=true`, users can
+  provide a custom value not in the predefined option list.
+
+  ```md
+  {% single-select id="delivery_type" label="Delivery type" allowOther=true %}
+  - [ ] Physical {% #physical %}
+  - [ ] Digital {% #digital %}
+  - [ ] Hybrid {% #hybrid %}
+  {% /single-select %}
+  ```
+
+  Schema additions:
+  - `SingleSelectField.allowOther?: boolean`
+  - `MultiSelectField.allowOther?: boolean`
+  - `FieldValue` gains `otherValue?: string` property for select types
+
+  The reserved option ID `_other` is used when the user selects "Other".
+  Serialization: `- [x] Other: Custom value here {% #_other %}`
+
+- **`date-field` type** — Dedicated field type for date values with built-in parsing
+  and validation. Supports ISO 8601 format by default.
+
+  ```md
+  {% date-field id="deadline" label="Deadline" required=true %}{% /date-field %}
+  {% date-field id="fiscal_year_end" label="Fiscal year end" format="MM-DD" %}{% /date-field %}
+  ```
+
+  Attributes:
+  - `format`: Date format string (default: `YYYY-MM-DD` / ISO 8601)
+  - `min`: Minimum date constraint
+  - `max`: Maximum date constraint
+
+  TypeScript types:
+  ```ts
+  interface DateField extends FieldBase {
+    kind: 'date';
+    format?: string;           // default: 'YYYY-MM-DD'
+    min?: string;              // minimum date in same format
+    max?: string;              // maximum date in same format
+  }
+
+  // FieldValue
+  | { kind: 'date'; value: string | null }  // stored in normalized ISO format
+
+  // Patch
+  | { op: 'set_date'; fieldId: Id; value: string | null }
+  ```
+
+  FieldKind enum gains `'date'` value.
+
 ### Later Versions
 
 Documented but not required for v0.1 or v0.2:
+
+- **Nested field groups** — v0.1/v0.2 support only flat field groups (groups contain
+  fields, not other groups). Nested groups for hierarchical organization deferred
+  to a future version. Use flat groups with descriptive IDs like `pricing_structure`,
+  `pricing_margin_cost` for now.
+
+- **`requiredIf` conditional validation** — Declarative attribute to make a field
+  required based on another field's value. For now, use code validators for
+  conditional requirements (see Custom Validator Patterns section). A declarative
+  `requiredIf` attribute may be added later for common patterns.
 
 - Conditional enable/disable of groups/fields based on earlier answers
 
@@ -2214,7 +2337,7 @@ Documented but not required for v0.1 or v0.2:
 
 - Rich numeric types (currency, percent, units, precision, tolerances)
 
-- “Report-quality rendering” (templates, charts), PDF export
+- "Report-quality rendering" (templates, charts), PDF export
 
 - More advanced UI schema/layout options
 
@@ -2541,4 +2664,397 @@ this is not needed for typical local workflows.
 
 - Offer a “Browse Forms” view with quick filter and recent files list.
 
-- Provide “Save As Completed” shortcut that validates completion before enabling save.
+- Provide "Save As Completed" shortcut that validates completion before enabling save.
+
+* * *
+
+## Enhancements Identified from Company Analysis Form
+
+This section documents enhancements identified while converting the complex
+`company-quarterly-analysis-draft-form.md` to proper Markform syntax. The form exercises
+many advanced patterns and serves as a comprehensive test case for the framework.
+
+### Framework-Level Enhancements (v0.1 or v0.2)
+
+These require changes to the Markform schema, parser, or serializer:
+
+#### 1. `allowOther` Attribute for Select Fields
+
+**Problem:** Many real forms include "Other: ____" options where users can specify a
+custom value not in the predefined list.
+
+**Current workaround:** Add a separate `string-field` sibling for "Other" values.
+
+**Proposed solution:** Add `allowOther` attribute to `single-select` and `multi-select`:
+
+```md
+{% single-select id="delivery_type" label="Delivery type" allowOther=true %}
+- [ ] Physical {% #physical %}
+- [ ] Digital {% #digital %}
+- [ ] Hybrid {% #hybrid %}
+{% /single-select %}
+```
+
+**Schema changes:**
+
+```ts
+interface SingleSelectField extends FieldBase {
+  kind: 'single_select';
+  options: Option[];
+  allowOther?: boolean;        // NEW: enables "Other" free-text option
+}
+
+interface MultiSelectField extends FieldBase {
+  kind: 'multi_select';
+  options: Option[];
+  minSelections?: number;
+  maxSelections?: number;
+  allowOther?: boolean;        // NEW: enables "Other" free-text option
+}
+```
+
+**FieldValue changes:**
+
+```ts
+// Updated FieldValue for single_select when allowOther=true
+| { kind: 'single_select'; selected: OptionId | null; otherValue?: string }
+// Updated FieldValue for multi_select when allowOther=true
+| { kind: 'multi_select'; selected: OptionId[]; otherValue?: string }
+```
+
+**Patch operation changes:**
+
+```ts
+| { op: 'set_single_select'; fieldId: Id; selected: OptionId | null; otherValue?: string }
+| { op: 'set_multi_select'; fieldId: Id; selected: OptionId[]; otherValue?: string }
+```
+
+**Serialization:** When `allowOther=true`, an "Other" option is implicitly available.
+If `otherValue` is set, serialize as:
+
+```md
+- [x] Other: Custom value here {% #_other %}
+```
+
+The `#_other` ID is reserved for the "Other" option when `allowOther=true`.
+
+**Naming rationale:** `allowOther` aligns with common form library conventions
+(e.g., Ant Design's `allowOther`, Google Forms' "Other" option pattern).
+
+#### 2. Date/Time Field Types (v0.2+)
+
+**Problem:** Dates appear frequently (deadlines, as-of dates, fiscal periods).
+
+**Current workaround:** Use `string-field` with `pattern` for validation.
+
+**Proposed solution:** Add `date-field` with built-in parsing and format options:
+
+```md
+{% date-field id="deadline" label="Deadline" format="YYYY-MM-DD" %}{% /date-field %}
+```
+
+**Attributes:**
+- `format`: Date format string (ISO 8601 default)
+- `min`, `max`: Date range constraints
+- `allowRelative`: Allow relative dates like "next quarter" (optional, v0.3+)
+
+**Alternative:** Keep as `string-field` with well-documented patterns. Date parsing
+is complex and may not warrant a dedicated type in v0.1.
+
+### Custom Validator Patterns
+
+These patterns should be implemented as code validators (`.valid.ts`), not as
+framework-level features. This keeps the core framework simple while enabling
+rich validation through code.
+
+All validators receive parameters via `ctx.params`, allowing reusable validators
+with configurable thresholds.
+
+#### 1. Word Count Validation
+
+Validate minimum/maximum word counts for text fields using parameterized validators:
+
+```ts
+// In X.valid.ts
+export const validators = {
+  // Parameterized: reads min/max from ctx.params
+  min_words: (ctx) => {
+    const min = ctx.params.min as number;
+    if (typeof min !== 'number') {
+      return [{ severity: 'error', message: 'min_words requires "min" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string' && value.value) {
+      const wordCount = value.value.trim().split(/\s+/).length;
+      if (wordCount < min) {
+        return [{
+          severity: 'error',
+          message: `Field requires at least ${min} words (currently ${wordCount})`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+
+  max_words: (ctx) => {
+    const max = ctx.params.max as number;
+    if (typeof max !== 'number') {
+      return [{ severity: 'error', message: 'max_words requires "max" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string' && value.value) {
+      const wordCount = value.value.trim().split(/\s+/).length;
+      if (wordCount > max) {
+        return [{
+          severity: 'error',
+          message: `Field exceeds ${max} word limit (currently ${wordCount})`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+};
+```
+
+**Usage in form:**
+
+```md
+{% string-field id="thesis" label="Investment thesis" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+
+{% string-field id="summary" label="Brief summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+```
+
+#### 2. Sum-To Validation for Percentage Fields
+
+Validate that a group of fields sums to a target using parameterized validators:
+
+```ts
+export const validators = {
+  // Generic sum-to validator with configurable fields and target
+  sum_to: (ctx) => {
+    const fields = ctx.params.fields as string[];
+    const target = (ctx.params.target as number) ?? 100;
+    const tolerance = (ctx.params.tolerance as number) ?? 0.1;
+
+    if (!Array.isArray(fields)) {
+      return [{ severity: 'error', message: 'sum_to requires "fields" array parameter', ref: ctx.targetId, source: 'code' }];
+    }
+
+    const values = fields.map(fieldId => {
+      const val = ctx.values[fieldId];
+      return val?.kind === 'number' ? (val.value ?? 0) : 0;
+    });
+    const sum = values.reduce((a, b) => a + b, 0);
+
+    if (sum > 0 && Math.abs(sum - target) > tolerance) {
+      return [{
+        severity: 'error',
+        message: `Fields must sum to ${target}% (currently ${sum.toFixed(1)}%)`,
+        ref: fields[0],
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+
+  // Sum-to for string-list with "Label: XX%" format
+  sum_to_percent_list: (ctx) => {
+    const target = (ctx.params.target as number) ?? 100;
+    const value = ctx.values[ctx.targetId];
+
+    if (value?.kind === 'string_list' && value.items.length > 0) {
+      const percentages = value.items.map(item => {
+        const match = item.match(/:\s*(\d+(?:\.\d+)?)\s*%/);
+        return match ? parseFloat(match[1]) : 0;
+      });
+      const sum = percentages.reduce((a, b) => a + b, 0);
+
+      if (Math.abs(sum - target) > 0.1) {
+        return [{
+          severity: 'warning',
+          message: `Items should sum to ${target}% (currently ${sum.toFixed(1)}%)`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+};
+```
+
+**Usage in form:**
+
+```md
+{# Validate three number fields sum to 100% #}
+{% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
+
+{# Validate string-list entries sum to 100% #}
+{% string-list id="revenue_segments" label="Revenue segments (Name: X%)" validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
+```
+
+#### 3. Conditional Requirement Validation
+
+Validate that a field has a value when another field meets a condition:
+
+```ts
+export const validators = {
+  // Generic: require target field when trigger field has value
+  required_if: (ctx) => {
+    const triggerField = ctx.params.when as string;
+    const targetField = ctx.params.then as string ?? ctx.targetId;
+
+    if (!triggerField) {
+      return [{ severity: 'error', message: 'required_if requires "when" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+
+    const trigger = ctx.values[triggerField];
+    const target = ctx.values[targetField];
+
+    const triggerHasValue =
+      (trigger?.kind === 'string' && trigger.value?.trim()) ||
+      (trigger?.kind === 'number' && trigger.value != null) ||
+      (trigger?.kind === 'multi_select' && trigger.selected.length > 0);
+
+    const targetEmpty =
+      !target ||
+      (target.kind === 'string' && !target.value?.trim()) ||
+      (target.kind === 'number' && target.value == null);
+
+    if (triggerHasValue && targetEmpty) {
+      return [{
+        severity: 'error',
+        message: `This field is required when ${triggerField} has a value`,
+        ref: targetField,
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+};
+```
+
+**Usage in form:**
+
+```md
+{# Require explanation when moat factors are selected #}
+{% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
+
+{# Require evidence when whisper values provided #}
+{% string-field id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
+```
+
+#### 4. Format Validation
+
+Validate that list items match expected formats:
+
+```ts
+export const validators = {
+  // Validate each item matches a pattern
+  item_format: (ctx) => {
+    const pattern = ctx.params.pattern as string;
+    const example = ctx.params.example as string ?? '';
+
+    if (!pattern) {
+      return [{ severity: 'error', message: 'item_format requires "pattern" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string_list') {
+      const regex = new RegExp(pattern);
+      const malformed = value.items.filter(item => !regex.test(item));
+      if (malformed.length > 0) {
+        const hint = example ? ` Expected format: "${example}"` : '';
+        return [{
+          severity: 'warning',
+          message: `${malformed.length} item(s) don't match expected format.${hint}`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+};
+```
+
+**Usage in form:**
+
+```md
+{# Validate KPIs have "Name: reason" format #}
+{% string-list id="key_kpis" label="Key KPIs" validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
+
+{# Validate sources have expected format #}
+{% string-list id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /string-list %}
+```
+
+### Patterns Requiring Repeating Groups (v0.2)
+
+The following patterns from the company analysis form require repeating groups,
+already specified for v0.2:
+
+1. **Offering families** — Each offering has: name, value prop, delivery type,
+   revenue type, KPIs. Currently modeled as a single instance with note to add more.
+
+2. **Pricing structures** — Per-offering pricing details.
+
+3. **Driver model** — Multiple drivers with the same structure. Currently modeled
+   as Driver 1, Driver 2, Driver 3 with optional third.
+
+4. **Expert/analyst table** — Structured rows with multiple columns.
+
+5. **Sourcing log** — Date, source, type, link, takeaways per entry.
+
+When repeating groups are implemented, these will be converted to:
+
+```md
+{% repeat id="offering_families" label="Offering Families" minItems=1 %}
+  {% field-group id="offering_family" title="Offering Family" %}
+    {% string-field id="name" label="Offering family name" required=true %}{% /string-field %}
+    {% string-field id="value_prop" label="Value proposition" required=true %}{% /string-field %}
+    {% single-select id="delivery" label="Delivery type" required=true %}
+      - [ ] Physical {% #physical %}
+      - [ ] Digital {% #digital %}
+      - [ ] Hybrid {% #hybrid %}
+    {% /single-select %}
+    ...
+  {% /field-group %}
+{% /repeat %}
+```
+
+### Test Coverage from Company Analysis Form
+
+The `company-analysis.form.md` exercises the following Markform features:
+
+| Feature | Coverage |
+|---------|----------|
+| `string-field` with `required` | ✅ Extensive |
+| `string-field` with `pattern` | ✅ Dates, fiscal periods |
+| `string-field` with `minLength`/`maxLength` | ✅ Word count proxies |
+| `number-field` with `min`/`max` | ✅ Percentages 0-100 |
+| `number-field` for currency | ✅ Financial metrics |
+| `string-list` with `minItems`/`maxItems` | ✅ Ranked lists, KPIs |
+| `single-select` basic | ✅ Many instances |
+| `multi-select` with `minSelections` | ✅ Business model, moats |
+| `checkboxes` with `checkboxMode="simple"` | ✅ Source checklists |
+| `field-group` (flat) | ✅ Many groups |
+| `doc` blocks with `kind` | ✅ Instructions throughout |
+| Code validators | ⏳ Planned in `.valid.ts` |
+
+### Recommended Implementation Order
+
+1. **v0.1 Core:** Implement all current spec features—sufficient for basic form.
+
+2. **v0.1 Enhancement:** Add `allowOther` attribute (high value, moderate effort).
+
+3. **v0.2:** Implement repeating groups—unlocks offering families, driver model.
+
+4. **v0.2:** Add `date-field` type for date values with built-in validation.
+
+Note: Conditional validation (e.g., "field X required if field Y has value") is
+handled via code validators. See the Custom Validator Patterns section for examples
+of `moat_explanation_required`, `whisper_evidence_required`, etc.
