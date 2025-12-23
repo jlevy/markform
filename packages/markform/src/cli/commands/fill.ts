@@ -7,7 +7,7 @@
 
 import type { Command } from "commander";
 
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 
 import pc from "picocolors";
 
@@ -198,43 +198,48 @@ export function registerFillCommand(program: Command): void {
             logVerbose(ctx, `Using live agent with model: ${modelId}`);
           }
 
-          logInfo(ctx, pc.cyan(`Filling form: ${basename(filePath)}`));
-          logVerbose(ctx, `Agent: ${agentType}`);
+          logInfo(ctx, pc.cyan(`Filling form: ${filePath}`));
+          logInfo(ctx, `Agent: ${agentType}${options.model ? ` (${options.model})` : ""}`);
           logVerbose(ctx, `Max turns: ${harnessConfig.maxTurns}`);
           logVerbose(ctx, `Max patches per turn: ${harnessConfig.maxPatchesPerTurn}`);
           logVerbose(ctx, `Max issues per step: ${harnessConfig.maxIssues}`);
 
           // Run harness loop
           let stepResult = harness.step();
-          logVerbose(
+          logInfo(
             ctx,
-            `Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issues`
+            pc.dim(`Turn ${stepResult.turnNumber}: Found ${stepResult.issues.length} issues`)
           );
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
             // Generate patches from agent
+            logInfo(ctx, pc.dim(`  Generating patches...`));
             const patches = await agent.generatePatches(
               stepResult.issues,
               harness.getForm(),
               harnessConfig.maxPatchesPerTurn!
             );
 
-            logVerbose(ctx, `  Applying ${patches.length} patches...`);
+            logInfo(ctx, pc.dim(`  Applying ${patches.length} patches...`));
 
             // Apply patches
             stepResult = harness.apply(patches, stepResult.issues);
 
-            logVerbose(
-              ctx,
-              `  After apply: ${stepResult.isComplete ? "complete" : `${stepResult.issues.length} issues remaining`}`
-            );
+            if (stepResult.isComplete) {
+              logInfo(ctx, pc.green(`  ✓ Form complete`));
+            } else {
+              logInfo(
+                ctx,
+                pc.dim(`  ${stepResult.issues.length} issues remaining`)
+              );
+            }
 
             // Step for next turn if not complete
             if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
               stepResult = harness.step();
-              logVerbose(
+              logInfo(
                 ctx,
-                `Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issues`
+                pc.dim(`Turn ${stepResult.turnNumber}: Found ${stepResult.issues.length} issues`)
               );
             }
           }
@@ -263,7 +268,7 @@ export function registerFillCommand(program: Command): void {
             logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
           } else {
             await writeFile(outputPath, formMarkdown);
-            logSuccess(ctx, `Form written to: ${basename(outputPath)}`);
+            logSuccess(ctx, `Form written to: ${outputPath}`);
           }
 
           // Build session transcript
@@ -275,7 +280,7 @@ export function registerFillCommand(program: Command): void {
             harnessConfig as HarnessConfig,
             harness.getTurns(),
             stepResult.isComplete,
-            basename(outputPath)
+            outputPath
           );
 
           // Output or record session
@@ -320,23 +325,19 @@ function buildSessionTranscript(
   harnessConfig: HarnessConfig,
   turns: SessionTranscript["turns"],
   expectComplete: boolean,
-  outputFilename: string
+  outputPath: string
 ): SessionTranscript {
-  // Make paths relative for portability
-  const relativeFormPath = basename(formPath);
-  const relativeMockPath = mockPath ? basename(mockPath) : undefined;
-
   const final: SessionFinal = {
     expectComplete,
     // For mock mode, use the mock source as expected; otherwise use actual output
-    expectedCompletedForm: agentType === "mock" ? (relativeMockPath ?? outputFilename) : outputFilename,
+    expectedCompletedForm: agentType === "mock" ? (mockPath ?? outputPath) : outputPath,
   };
 
   const transcript: SessionTranscript = {
     sessionVersion: "0.1.0",
     mode: agentType,
     form: {
-      path: relativeFormPath,
+      path: formPath,
     },
     harness: harnessConfig,
     turns,
@@ -344,9 +345,9 @@ function buildSessionTranscript(
   };
 
   // Add mode-specific fields
-  if (agentType === "mock" && relativeMockPath) {
+  if (agentType === "mock" && mockPath) {
     transcript.mock = {
-      completedMock: relativeMockPath,
+      completedMock: mockPath,
     };
   } else if (agentType === "live" && modelId) {
     transcript.live = {
