@@ -9,13 +9,15 @@ president infobox structure.
 
 **Related Docs:**
 
-- [Fill Command Plan](plan-2025-12-23-fill-command-live-agent.md) - **Prerequisite** (must be
-  implemented first)
+- [Fill Command Plan](plan-2025-12-23-fill-command-live-agent.md) - **Prerequisite**
+  (must be implemented first)
+
+- [Role System Plan](plan-2025-12-23-role-system.md) - Role-based field assignment
 
 - [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
 
-- [v0.1 Implementation Plan](../done/plan-2025-12-22-markform-v01-implementation.md) - Base
-  implementation (complete)
+- [v0.1 Implementation Plan](../done/plan-2025-12-22-markform-v01-implementation.md) -
+  Base implementation (complete)
 
 ## Background
 
@@ -51,10 +53,13 @@ None required. This is a new example form and documentation.
 
 ## Prerequisites
 
-This plan depends on the fill command plan being implemented first:
+This plan depends on the following being implemented first:
 
 - **markform-100**: dotenv support (enables API key loading)
+
 - **Fill Command Plan**: `markform fill --agent=live` command with model selection
+
+- **Role System Plan**: Role-based field assignment (`role="user"` for name field)
 
 * * *
 
@@ -76,7 +81,8 @@ This plan depends on the fill command plan being implemented first:
 
 **Basic Info:**
 
-- `name` (string, required) - Full name
+- `name` (string, required, **role="user"**) - Full name (user provides this to seed
+  agent)
 
 - `portrait_description` (string, optional) - Description of official portrait
 
@@ -148,10 +154,10 @@ This plan depends on the fill command plan being implemented first:
 
 ```
 political-figure.form.md
-├── Frontmatter (markform config)
+├── Frontmatter (markform config with roles and role_instructions)
 ├── Agent Instructions (doc block with research guidance)
 ├── Basic Information (field-group)
-│   ├── name (string, required)
+│   ├── name (string, required, role="user")
 │   ├── birth_date (string, required)
 │   ├── birth_place (string, required)
 │   ├── death_date (string, optional)
@@ -180,44 +186,67 @@ political-figure.form.md
         └── ... (same structure)
 ```
 
-### Agent Instructions Pattern
+### Frontmatter with Role Configuration
 
-The form will include a documentation block at the top with agent instructions:
+The form will include roles and per-role instructions in the frontmatter:
+
+```yaml
+---
+markform:
+  markform_version: "0.1.0"
+  roles:
+    - user
+    - agent
+  role_instructions:
+    user: "Enter the full name of the political figure you want to research."
+    agent: |
+      Research and fill in all biographical fields for the specified political figure.
+      Guidelines:
+      1. Start with Wikipedia - The subject's Wikipedia page is the primary source
+      2. Verify with multiple sources - Cross-reference dates and facts
+      3. Use official formats - Dates as YYYY-MM-DD, places as "City, State/Country"
+      4. Fill offices chronologically - Most recent first
+      5. Include predecessors/successors - These provide historical context
+      6. Leave unknown fields empty - Don't guess or fabricate information
+---
+```
+
+### Agent Instructions Doc Block
+
+Additionally, a documentation block provides in-form guidance:
 
 ```markdown
-{% doc ref="agent_instructions" %}
+{% doc ref="political_figure" kind="instructions" %}
 ## Research Instructions
 
 Use web search to research and fill in all fields on this form for the specified
-political figure. Follow these guidelines:
-
-1. **Start with Wikipedia** - The subject's Wikipedia page is the primary source
-2. **Verify with multiple sources** - Cross-reference dates and facts
-3. **Use official formats** - Dates as YYYY-MM-DD, places as "City, State/Country"
-4. **Fill offices chronologically** - Most recent first
-5. **Include predecessors/successors** - These provide historical context
-6. **Leave unknown fields empty** - Don't guess or fabricate information
+political figure. The `name` field (role="user") should be filled first by the user,
+then the agent fills all remaining fields.
 {% /doc %}
 ```
 
 ### Test Workflow
 
+The workflow demonstrates the two-stage role-based filling:
+
 ```bash
-# 1. Inspect empty form
+# 1. Inspect empty form (shows name as user-role field, rest as agent-role)
 markform inspect examples/political-figure/political-figure.form.md
 
-# 2. Manually fill in the name (to seed the agent)
-markform apply examples/political-figure/political-figure.form.md \
-  --patch '[{"op":"set_string","fieldId":"name","value":"Abraham Lincoln"}]' \
+# 2. Stage 1: User fills their role fields (name) interactively
+#    --interactive defaults to role="user"
+markform fill examples/political-figure/political-figure.form.md \
+  --interactive \
   -o /tmp/lincoln-seeded.form.md
+# User enters: "Abraham Lincoln"
 
-# 3. Verify partial state
+# 3. Verify partial state (name filled, agent fields empty)
 markform inspect /tmp/lincoln-seeded.form.md
 
-# 4. Run live agent to complete the form
+# 4. Stage 2: Agent fills remaining fields (default role="agent")
 markform fill /tmp/lincoln-seeded.form.md \
   --agent=live \
-  --model=openai/gpt-5.2 \
+  --model=openai/gpt-4.1 \
   -o /tmp/lincoln-completed.form.md \
   --record /tmp/lincoln-session.yaml
 
@@ -233,12 +262,27 @@ markform dump /tmp/lincoln-completed.form.md --format=json    # JSON for program
 markform dump /tmp/lincoln-completed.form.md --format=plaintext | grep birth
 ```
 
-**Note:** The `dump` command extracts only field values without structure/progress/issues,
-making it ideal for:
+**Alternative: Single-stage with all roles**
+
+For testing or when user provides name via patch:
+
+```bash
+# Fill all roles at once (user skipped, agent fills everything)
+markform fill examples/political-figure/political-figure.form.md \
+  --roles=* \
+  --agent=live \
+  -o /tmp/lincoln-completed.form.md
+```
+
+**Note:** The `dump` command extracts only field values without
+structure/progress/issues, making it ideal for:
 
 - Quick value verification after form completion
+
 - Piping to other tools (use `--format=plaintext` or `--format=json`)
+
 - Integration with external systems
+
 - Comparing values between form versions
 
 * * *
@@ -253,11 +297,11 @@ making it ideal for:
 
 - [ ] Create `political-figure.form.md` with:
 
-  - [ ] Frontmatter with markform config
+  - [ ] Frontmatter with markform config, `roles`, and `role_instructions`
 
   - [ ] Agent instructions doc block
 
-  - [ ] Basic Information field group
+  - [ ] Basic Information field group (`name` field with `role="user"`)
 
   - [ ] Political Affiliation field group
 
@@ -325,7 +369,11 @@ making it ideal for:
 
 ### Manual Tests
 
-- [ ] Run full test workflow from docs/examples.md
+- [ ] Run two-stage workflow: `fill --interactive` (user), then `fill` (agent)
+
+- [ ] Verify `--interactive` only prompts for `name` field (role="user")
+
+- [ ] Verify default `fill` skips `name` field (already filled by user role)
 
 - [ ] Verify live agent researches Abraham Lincoln correctly
 
@@ -337,15 +385,19 @@ making it ideal for:
 
 ### Definition of Done
 
-1. `political-figure.form.md` created and validates
+1. `political-figure.form.md` created with `role="user"` on name field
 
-2. Mock Lincoln form created for testing
+2. Form frontmatter includes `roles` and `role_instructions`
 
-3. Test workflow documented in `docs/examples.md`
+3. Mock Lincoln form created for testing
 
-4. Live agent successfully fills form with accurate data
+4. Two-stage workflow works: `--interactive` (user) then default (agent)
 
-5. All dates and facts verified against Wikipedia
+5. Test workflow documented in `docs/examples.md`
+
+6. Live agent successfully fills form with accurate data
+
+7. All dates and facts verified against Wikipedia
 
 * * *
 
@@ -367,5 +419,9 @@ making it ideal for:
 
 ## Revision History
 
+- 2025-12-23: Updated to use role system (`role="user"` for name field, frontmatter
+  roles)
+
 - 2025-12-23: Added `dump` command usage in test workflow for value extraction
+
 - 2025-12-23: Initial plan created
