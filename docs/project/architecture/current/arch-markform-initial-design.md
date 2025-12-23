@@ -2110,27 +2110,40 @@ Thin wrapper around the tool contract:
 
 ### Web UI (serve)
 
-The v0.1 “serve” experience is intentionally read-only and focused on browsing and
-saving:
+The v0.1 "serve" command provides an interactive web UI for editing and saving forms:
 
-- Open any `.form.md` (argument or via file picker) and render groups/fields/options,
-  documentation blocks, and current values
+- Opens browser automatically (use `--no-open` to disable)
 
-- “Save” button that:
+- Renders all field types as interactive HTML form elements:
 
-  - Canonicalizes and writes the form to a new versioned filename (never overwrites)
+  - String fields → `<input type="text">` with minLength/maxLength
+  - Number fields → `<input type="number">` with min/max/step
+  - String list fields → `<textarea>` with one item per line
+  - Single-select → `<select>` dropdown with options
+  - Multi-select → checkboxes for each option
+  - Checkboxes (simple mode) → HTML checkboxes (checked/unchecked)
+  - Checkboxes (multi mode) → select dropdowns with 5 states (todo/done/active/incomplete/na)
+  - Checkboxes (explicit mode) → select dropdowns with yes/no/unfilled
 
-  - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise
-    append `-v1`
+- Pre-fills current values from the form file
 
-  - A confirmation screen shows the proposed path and allows override
+- Form submission via POST /save:
 
-  - Emits derived frontmatter summaries on save (`form_summary`, `form_progress`,
-    `form_state`)
+  - Applies patches from form data to the in-memory form state
+  - Canonicalizes and writes to a new versioned filename (never overwrites original)
+  - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise append `-v1`
+  - Returns JSON response with success status and output path
 
-- No validation, patch application, or harness controls in v0.1 serve (those arrive with
-  v0.2). Use `markform inspect <file>` from the CLI at any time to get a full report
-  (YAML with summaries, form state, and prioritized issues).
+- CSS styling provides clean, readable form layout
+
+**Deferred to v0.2:**
+
+- Validation in serve (run engine validation from UI with a "Validate" button)
+- JSON endpoints for programmatic access
+- Harness controls (step through the harness loop from the UI)
+
+Use `markform inspect <file>` from the CLI at any time to get a full report
+(YAML with summaries, form state, and prioritized issues).
 
 ### AI SDK Integration
 
