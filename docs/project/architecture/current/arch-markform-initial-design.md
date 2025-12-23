@@ -9,8 +9,8 @@ Version: v0.1 (proof of concept)
 **Markform** is a system for **agent-friendly, human-readable, editable forms** stored
 (`.form.md`) that support:
 
-- **Structured schema + form values in the same file** (template, incomplete, or
-  completed), which makes for easy and efficient context engineering
+- **Structured context, schema, and form values in one text file** makes for easy and
+  efficient context engineering for agents that must fill in forms
 
 - **Incremental filling** (field-by-field or batch) to allow incrementally assembling
   and validating structured data via multiple channels or input modes (such as a tool or
@@ -25,7 +25,7 @@ Version: v0.1 (proof of concept)
   output in a given structure)
 
 - A **golden session testing framework** that validates end-to-end behavior across modes
-  so that Markfrom itself is easily tested end to end via agentic coding
+  Markfrom tooling is itself easily tested end to end by agents
 
 > **Why Markdoc?** Markdoc treats documents as structured data with an AST-first
 > approach, enabling reliable programmatic manipulation while preserving human
@@ -186,19 +186,21 @@ markform:
   markform_version: "0.1.0"
   form_summary: { ... }    # derived: structure summary
   form_progress: { ... }   # derived: progress summary
+  form_state: complete|incomplete|invalid|empty   # derived: overall progress state
 ---
 ```
 
 **Behavioral rules (*required*):**
 
-- *required:* `form_summary` and `form_progress` are derived, engine-owned metadata
+- *required:* `form_summary`, `form_progress`, and `form_state` are derived,
+  engine-owned metadata
 
 - *required:* The engine recomputes and overwrites these on every serialize/canonicalize
 
 - *required:* They are not authoritative—the source of truth is the body schema + values
 
-- *required:* On parse, existing `form_summary`/`form_progress` values are ignored;
-  fresh summaries are computed from the parsed body
+- *required:* On parse, existing `form_summary`/`form_progress`/`form_state` values are
+  ignored; fresh summaries are computed from the parsed body
 
 See [StructureSummary and ProgressSummary](#structuresummary-and-progresssummary) in the
 Data Model section for complete type definitions.
@@ -272,7 +274,7 @@ Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 | `string-list` | Array of strings (open-ended list); supports `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
 | `single-select` | Select one option from enumerated list |
 | `multi-select` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
-| `checkboxes` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no) |
+| `checkboxes` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no); optional `minDone` for completion threshold |
 
 **Note on `pattern`:** The `pattern` attribute accepts a JavaScript-compatible regular
 expression string (without delimiters).
@@ -344,9 +346,37 @@ Use `checkboxMode` attribute to select mode:
 
 - `checkboxMode="multi"` (default) — 5 states for workflow tracking
 
-- `checkboxMode="simple"` — 2 states for GFM compatibility
+- `checkboxMode="simple"` — 2 states for GFM compatibility; use `minDone` to control
+  completion threshold
 
 - `checkboxMode="explicit"` — Requires explicit yes/no, validates all options answered
+
+**The `minDone` attribute (for `simple` mode):**
+
+Controls how many options must be `done` for a required checkbox field to be complete.
+Type: `integer`, default: `-1` (require all).
+
+- **`minDone=-1` (default):** All options must be `done` (strict completion)
+
+- **`minDone=0`:** No minimum; any state is valid (effectively optional even when
+  `required`)
+
+- **`minDone=1`:** At least one option must be `done`
+
+- **`minDone=N`:** At least N options must be `done`
+
+Example with partial completion allowed:
+```md
+{% checkboxes id="optional_tasks" label="Optional tasks" required=true minDone=1 %}
+- [ ] Task A {% #task_a %}
+- [ ] Task B {% #task_b %}
+- [ ] Task C {% #task_c %}
+{% /checkboxes %}
+```
+
+**Note:** `minDone` only applies to `simple` mode.
+For `multi` mode, completion requires all options in terminal states (`done` or `na`).
+For `explicit` mode, all options must have explicit `yes` or `no` answers.
 
 **Distinction between `incomplete` and `active`:**
 
@@ -607,8 +637,8 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 {% /form %}
 ```
 
-**Note:** When the engine serializes this form, it will add `form_summary` and
-`form_progress` to the `markform` block automatically.
+**Note:** When the engine serializes this form, it will add `form_summary`,
+`form_progress`, and `form_state` to the `markform` block automatically.
 Hand-authored forms only need the `markform_version`.
 
 #### Example: Incomplete Form
@@ -668,6 +698,12 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
    - `ref` resolution (doc blocks reference valid targets)
    - Checkbox mode enforcement (`checkboxMode="simple"` restricts to 2 states)
    - Option marker parsing (`[ ]`, `( )`, etc.)
+   - **Label requirement** (*required*): All fields must have a `label` attribute;
+     missing label is a parse error
+   - **Option ID annotation** (*required*): All options in select/checkbox fields must
+     have `{% #id %}` annotation; missing annotation is a parse error
+   - **Option ID uniqueness** (*required*): Option IDs must be unique within their
+     containing field; duplicates are a parse error
 
 #### Serialization Strategy
 
@@ -787,6 +823,7 @@ type CheckboxMode = 'multi' | 'simple' | 'explicit';
 interface CheckboxesField extends FieldBase {
   kind: 'checkboxes';
   checkboxMode?: CheckboxMode;  // default: 'multi'
+  minDone?: number;             // simple mode only: integer, default -1 (all)
   options: Option[];
 }
 
@@ -820,6 +857,22 @@ interface DocumentationBlock {
   ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
   kind?: 'description' | 'instructions' | 'notes' | 'examples';
   bodyMarkdown: string;
+}
+
+// IdIndexEntry: lookup entry for fast ID resolution and validation
+interface IdIndexEntry {
+  kind: 'form' | 'group' | 'field' | 'option';
+  parentId?: Id;           // parent group/form ID (undefined for form)
+  fieldId?: Id;            // containing field ID (only for options)
+}
+
+// ParsedForm: canonical internal representation returned by parseForm()
+interface ParsedForm {
+  schema: FormSchema;
+  valuesByFieldId: Record<Id, FieldValue>;
+  docs: DocumentationBlock[];
+  orderIndex: Id[];                       // fieldIds in document order (deterministic)
+  idIndex: Map<Id, IdIndexEntry>;         // fast lookup for validation/traversal
 }
 
 // InspectIssue: unified type for inspect/apply API results
@@ -902,15 +955,15 @@ interface StructureSummary {
 Tracks filling progress per field without exposing actual values:
 
 ```ts
-// Progress state for a single field
-type FieldProgressState = 'empty' | 'incomplete' | 'invalid' | 'complete';
+// Progress state for a field or the whole form
+type ProgressState = 'empty' | 'incomplete' | 'invalid' | 'complete';
 
 interface FieldProgress {
   kind: FieldKind;             // field type
   required: boolean;           // whether field has required=true
 
   submitted: boolean;          // whether any value has been provided
-  state: FieldProgressState;   // computed progress state
+  state: ProgressState;        // computed progress state
   valid: boolean;              // true iff no validation issues for this field
   issueCount: number;          // count of ValidationIssues referencing this field
 
@@ -963,10 +1016,10 @@ interface ProgressCounts {
 }
 ```
 
-##### Field Progress State Definitions
+##### ProgressState Definitions
 
-The `FieldProgressState` is computed deterministically based on submission status,
-validation result, and completeness rules:
+The `ProgressState` is computed deterministically based on submission status, validation
+result, and completeness rules:
 
 | State | Meaning |
 | --- | --- |
@@ -1012,6 +1065,21 @@ else:
   state = 'complete'
 ```
 
+**Form state computation (`form_state` in frontmatter):**
+
+The overall `form_state: ProgressState` is derived from `ProgressSummary.counts`:
+
+```
+if counts.submittedFields == 0:
+  form_state = 'empty'
+elif counts.invalidFields > 0:
+  form_state = 'invalid'
+elif counts.incompleteFields > 0 or counts.emptyRequiredFields > 0:
+  form_state = 'incomplete'
+else:
+  form_state = 'complete'
+```
+
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
 alignment with JSON Schema keywords reduces translation complexity.
@@ -1055,7 +1123,7 @@ const StructureSummarySchema = z.object({
   })),
 });
 
-const FieldProgressStateSchema = z.enum(['empty', 'incomplete', 'invalid', 'complete']);
+const ProgressStateSchema = z.enum(['empty', 'incomplete', 'invalid', 'complete']);
 
 const CheckboxProgressCountsSchema = z.object({
   total: z.number().int().nonnegative(),
@@ -1075,7 +1143,7 @@ const FieldProgressSchema = z.object({
   kind: FieldKindSchema,
   required: z.boolean(),
   submitted: z.boolean(),
-  state: FieldProgressStateSchema,
+  state: ProgressStateSchema,
   valid: z.boolean(),
   issueCount: z.number().int().nonnegative(),
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
@@ -1102,6 +1170,7 @@ const MarkformFrontmatterSchema = z.object({
   markformVersion: z.string(),
   formSummary: StructureSummarySchema,
   formProgress: ProgressSummarySchema,
+  formState: ProgressStateSchema,
 });
 ```
 
@@ -1112,6 +1181,8 @@ const MarkformFrontmatterSchema = z.object({
 - `formSummary` → `form_summary`
 
 - `formProgress` → `form_progress`
+
+- `formState` → `form_state`
 
 - `fieldCountByKind` → `field_count_by_kind`
 
@@ -1218,7 +1289,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | Markdoc tag | `checkboxes` |
 | TypeScript interface | `CheckboxesField` |
 | TypeScript kind | `'checkboxes'` |
-| Attributes | `id`, `label`, `required`, `checkboxMode` (`multi`/`simple`/`explicit`) + inline `options` |
+| Attributes | `id`, `label`, `required`, `checkboxMode` (`multi`/`simple`/`explicit`), `minDone` (simple only) + inline `options` |
 | FieldValue | `{ kind: 'checkboxes'; values: Record<OptionId, CheckboxValue> }` |
 | Patch operation | `{ op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }` |
 | Zod | `z.record(z.enum([...states]))` |
@@ -1285,9 +1356,19 @@ When `required=true`, checkboxes must reach a “completion state” based on mo
 
 | Mode | Completion state | Non-terminal states (invalid when required) |
 | --- | --- | --- |
-| `simple` | All options in `{done}` | `todo` |
+| `simple` | Done count ≥ `minDone` (default `-1` = all) | `todo` (if below threshold) |
 | `multi` | All options in `{done, na}` | `todo`, `incomplete`, `active` |
 | `explicit` | All options in `{yes, no}` (no `unfilled`) | `unfilled` |
+
+**`simple` mode completion with `minDone`:**
+
+- If `minDone=-1` (default): All options must be `done` (strict completion)
+
+- If `minDone=0`: Always complete (no minimum threshold)
+
+- If `minDone=N` (where N > 0): At least N options must be `done`
+
+- If `minDone` exceeds option count, it’s clamped to the option count
 
 **Note:** For `multi` mode, `incomplete` and `active` are valid workflow states during
 form filling but are **not** terminal states.
@@ -1334,11 +1415,24 @@ Validators are referenced by **ID** from fields/groups/form via `validate=["..."
 ```ts
 type Severity = 'error' | 'warning' | 'info';
 
+// Source location types for CLI/tool integration
+interface SourcePosition {
+  line: number;              // 1-indexed line number
+  col: number;               // 1-indexed column number
+}
+
+interface SourceRange {
+  start: SourcePosition;
+  end: SourcePosition;
+}
+
 interface ValidationIssue {
   severity: Severity;
   message: string;           // Human-readable, suitable for display
   code?: string;             // Machine-readable error code (e.g., 'REQUIRED_MISSING')
   ref?: Id;                  // Field/group ID this issue relates to
+  path?: string;             // Field/group ID path (e.g., "company_info.ticker")
+  range?: SourceRange;       // Source location if available from Markdoc AST
   validatorId?: string;      // Which validator produced this (for hook validators)
   source: 'builtin' | 'code' | 'llm';
 }
@@ -1396,6 +1490,7 @@ interface InspectResult {
   progressSummary: ProgressSummary;     // filling progress per field
   issues: InspectIssue[];               // unified list sorted by priority (descending)
   isComplete: boolean;                  // true when no issues with severity: 'required'
+  formState: ProgressState;             // overall progress state; mirrors frontmatter form_state
 }
 
 interface ApplyResult {
@@ -1404,6 +1499,7 @@ interface ApplyResult {
   progressSummary: ProgressSummary;
   issues: InspectIssue[];               // unified list sorted by priority (descending)
   isComplete: boolean;                  // true when no issues with severity: 'required'
+  formState: ProgressState;             // overall progress state; mirrors frontmatter form_state
 }
 ```
 
@@ -1420,17 +1516,17 @@ interface ApplyResult {
 
 - Summaries are serialized to frontmatter on every form write
 
+- `formState` is derived from `progressSummary.counts` (see ProgressState definitions)
+
 **Operation availability by interface:**
 
 | Operation | CLI | AI SDK | MCP (v0.2) |
 | --- | --- | --- | --- |
-| inspect | `markform inspect` | `markform_inspect` | `markform.inspect` |
+| inspect | `markform inspect` (prints YAML report) | `markform_inspect` | `markform.inspect` |
 | apply | `markform apply` | `markform_apply` | `markform.apply` |
-| validate | `markform validate` | via inspect | via inspect |
 | export | `markform export --json` | `markform_export` | `markform.export` |
 | getMarkdown | `markform apply` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
-| render | `markform render` (optional) | — | — |
-| serve | v0.2 | — | — |
+| serve | `markform serve` (v0.1: view/save only) | — | — |
 
 #### Patch Schema
 
@@ -1482,6 +1578,11 @@ Patches go through two distinct validation phases:
 - `optionId` exists for the referenced field (for select/checkbox patches)
 
 - Value shape matches expected type (e.g., `number` for `set_number`)
+
+- **Unknown option IDs** (*required*): For `set_checkboxes`, `set_single_select`, and
+  `set_multi_select` patches, any option ID not defined in the field’s schema produces
+  an `INVALID_OPTION_ID` error.
+  The entire patch batch is rejected—unknown keys are never silently dropped.
 
 If *any* patch fails structural validation:
 
@@ -1712,26 +1813,72 @@ Thin wrapper around the tool contract:
 
 **Core commands (required for v0.1):**
 
-- `markform validate <file.form.md>` — parse + run validators, print issues
-
-- `markform inspect <file.form.md>` — print summary + prioritized issues
+- `markform inspect <file.form.md>` — parse + run validators, print full report as YAML
+  (structure summary, progress summary, form state, and all issues in priority order).
+  This is the canonical way to check form status at any time.
 
 - `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
 
 - `markform export <file.form.md> --json` — print `{schema, values}`
 
+- `markform serve [<file.form.md>]` — start a local web UI to view/browse any form
+  (template/incomplete/completed) and save the canonicalized form to disk with versioned
+  filenames:
+
+  - Save always writes to a new versioned filename (never overwrites the source)
+
+  - Version naming: if the stem ends with a version pattern (e.g., `-v1`, `_v2`, ` v3`),
+    extract and increment the number; otherwise append `-v1`
+
+  - Examples:
+
+    - `quarterly.form.md` → `quarterly-v1.form.md` → `quarterly-v2.form.md`
+
+    - `report_v5.form.md` → `report_v6.form.md`
+
+    - `draft v12.form.md` → `draft v13.form.md`
+
+  - A confirmation page shows the proposed path and allows override before writing
+
 - `markform run <file.form.md> --mock --completed-mock <file>` — run harness end-to-end,
   write session transcript
 
-**Optional commands (implement if time permits):**
-
-- `markform render <file.form.md> --out <file.html>` — produce clean HTML/CSS (minimal
-  renderer for demos)
-
 **Deferred to v0.2:**
 
-- `markform serve <file.form.md>` — local web UI with JSON endpoints for inspect/apply
-  (significant scope; defer until engine + tool contract is stable)
+- **Validation in serve** — Run engine validation from the UI with a “Validate” button.
+  Requires deciding on validator execution strategy (see Future Considerations for
+  research on server-executed vs baked validators).
+
+- **Interactive editing** — Apply patches from the UI; reflect issues as the user edits.
+
+- **JSON endpoints** — Expose inspect/apply/export as HTTP endpoints for programmatic
+  clients.
+
+- **Harness controls** — Step through the harness loop from the UI.
+
+### Web UI (serve)
+
+The v0.1 “serve” experience is intentionally read-only and focused on browsing and
+saving:
+
+- Open any `.form.md` (argument or via file picker) and render groups/fields/options,
+  documentation blocks, and current values
+
+- “Save” button that:
+
+  - Canonicalizes and writes the form to a new versioned filename (never overwrites)
+
+  - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise
+    append `-v1`
+
+  - A confirmation screen shows the proposed path and allows override
+
+  - Emits derived frontmatter summaries on save (`form_summary`, `form_progress`,
+    `form_state`)
+
+- No validation, patch application, or harness controls in v0.1 serve (those arrive with
+  v0.2). Use `markform inspect <file>` from the CLI at any time to get a full report
+  (YAML with summaries, form state, and prioritized issues).
 
 ### AI SDK Integration
 
@@ -1868,7 +2015,7 @@ Deliverable: `tests/goldenRunner.ts`
 
 ### 8) CLI
 
-`validate`, `inspect`, `apply`, `export`, `render`, `run --mock`
+`inspect`, `apply`, `export`, `serve`, `run --mock`
 
 Deliverable: `cli/commands/*`
 
@@ -1896,9 +2043,12 @@ Full specification included above.
 
 2. Run:
 
-   - `markform validate examples/quarterly/quarterly.form.md`
+   - `markform inspect examples/quarterly/quarterly.form.md` — prints YAML report with
+     structure summary, progress summary, form state, and all issues in priority order
 
-   - `markform inspect examples/quarterly/quarterly.form.md`
+   - `markform serve examples/quarterly/quarterly.form.md` — open the browser, browse
+     the form; Save to confirm output path (defaults to `quarterly-v1.form.md`); run
+     `markform inspect` separately at any time to check status
 
    - `markform run examples/quarterly/quarterly.form.md --mock --completed-mock
      examples/quarterly/quarterly.mock.filled.form.md --record
@@ -1919,6 +2069,9 @@ Full specification included above.
 ### v0.2 Targets
 
 Specified in this document but deferred from v0.1 proof of concept:
+
+- **Static HTML render** — `markform render <file.form.md> --out <file.html>` to produce
+  a clean static HTML/CSS file for sharing/archiving without running a server
 
 - **MCP server integration** — Full spec included above; deferred to reduce v0.1 scope
 
@@ -2128,7 +2281,7 @@ Type system and validation vocabulary:
 
 * * *
 
-## Outstanding Questions
+## Decisions and Outstanding Questions
 
 ### string-list Design Decisions (v0.1)
 
@@ -2156,50 +2309,32 @@ Type system and validation vocabulary:
    item-level operations (insert/remove/reorder) and field-level patches within
    instances as potential future enhancements.
 
-### Implementation Recommendations (v0.1)
-
-The following are high-priority implementation recommendations to address during v0.1
-development:
-
-7. **Define `ParsedForm` internal shape explicitly** — The engine boundary references
-   types that aren’t fully defined.
-   Suggested canonical internal shape:
-
-   - `schema: FormSchema`
-
-   - `valuesByFieldId: Record<Id, FieldValue>`
-
-   - `docs: DocumentationBlock[]`
-
-   - `orderIndex: Id[]` — array of fieldIds in document order for deterministic
-     recommendation ordering
-
-   - `idIndex: Map<Id, { kind: 'form'|'group'|'field'|'option', parentId?, fieldId?
-     }>` — for fast lookup/validation
-
-8. **Add source location data to validation issues** — For CLI and tool integration,
-   include best-effort source locations:
-
-   - `path?: string` — field/group ID path
-
-   - `range?: { start: { line, col }, end: { line, col } }` — if Markdoc provides it
-
-   - The existing `ref` field already provides field ID reference
-
-9. **Handle unknown option IDs strictly** — For checkbox/select values:
-
-   - Missing option ID annotation in markdown → parse error
-
-   - Values record contains ID not in schema → `INVALID_OPTION_ID` error, drop unknown
-     keys
-
-   - Treat as error and normalize by dropping unknown keys in the model
-
-10. **Labels are required** — In TypeScript types, `label: string` is required on
-    fields. Group/form titles remain optional.
-    Validate this at parse time.
-
 ### Resolved Design Decisions
+
+7. **`ParsedForm` internal shape defined** — The canonical internal representation
+   returned by `parseForm()` is now explicitly defined (see `ParsedForm` interface in
+   Layer 2: Data Model).
+   Includes `schema`, `valuesByFieldId`, `docs`, `orderIndex` (for deterministic
+   ordering), and `idIndex` (for fast lookup/validation).
+
+8. **Source location data in validation issues** — `ValidationIssue` now includes
+   optional `path` (field/group ID path) and `range` (source position from Markdoc AST)
+   fields for CLI and tool integration.
+   See `SourcePosition` and `SourceRange` types.
+
+9. **Unknown option IDs handled strictly** — Option ID handling is now fully specified:
+
+   - Parse time: Missing `{% #id %}` annotation on options → parse error
+
+   - Parse time: Duplicate option IDs within a field → parse error
+
+   - Patch time: Unknown option ID in patch → `INVALID_OPTION_ID` error, batch rejected
+     See Parsing Strategy (semantic validation) and Patch validation layers sections.
+
+10. **Labels required on fields** — The `label` attribute is required on all field types
+    (`label: string` in `FieldBase`). Missing label produces a parse error.
+    Group/form titles remain optional.
+    See Parsing Strategy (semantic validation).
 
 11. **Option ID scoping** — Option IDs are **field-scoped** (unique within field, not
     globally). This allows reusing common patterns like `[ ] 10-K {% #ten_k %}` across
@@ -2208,11 +2343,14 @@ development:
     field context. This is compatible with Markdoc since `{% #id %}` just sets an
     attribute—Markdoc doesn’t enforce uniqueness.
 
-### Open Design Questions
+12. **Checkbox `simple` mode completion semantics** — Added `minDone` attribute
+    (integer, default `-1`) to control completion threshold.
+    When `minDone=-1` (default), all options must be `done`. Setting `minDone=1` allows
+    “at least one done” semantics, and `minDone=0` makes the field effectively optional.
+    This flexible approach avoids needing separate modes like `simple_strict` vs
+    `simple_optional`.
 
-12. **Checkbox `simple` mode completion semantics** — Currently defined as "all options
-    in `{done}`". An alternative is "at least one `done`". The stricter “all done”
-    interpretation is currently specified but may need user feedback.
+### Open Design Questions
 
 13. **String field whitespace-only values** — Currently `required` means `value.trim()
     !== ""`. Consider whether whitespace-only should ever be valid for non-required
@@ -2246,3 +2384,70 @@ development:
     `kind` discriminant) and in summary types.
     Consider whether to define it once and reuse, or keep separate definitions.
     Current decision: define once, export from types module.
+
+* * *
+
+## Future Considerations
+
+### Resolved Clarifications (serve)
+
+- Filesystem scope: Default saves go to the same directory as the opened file.
+
+- Save always canonicalizes: “Save” always rewrites canonical form and derived
+  summaries.
+
+- No auto-reload: The server does not watch files for changes or auto-reload.
+
+- Local defaults: Bind to localhost with typical local CLI defaults; no directory
+  listing; minimal security posture consistent with local dev CLIs.
+
+- Versioned save naming: Always save to a new versioned filename.
+  If stem ends with a version pattern (`-vN`, `_vN`, ` vN`), increment the number;
+  otherwise append `-v1`.
+
+### Validator Execution in Serve (v0.2 research)
+
+When validation is added to serve in v0.2, two viable approaches for running code
+validators (`.valid.ts`):
+
+1. **Server-executed validators** (recommended baseline)
+
+   - The CLI/server loads and executes the TypeScript validators in Node at validate
+     time (e.g., using `ts-node`/`tsx` or a one-shot esbuild transpile to a temp ESM
+     file).
+
+   - Pros: No client bundling; consistent with CLI behavior; simpler DX.
+
+   - Cons: Requires Node at runtime; not portable to static hosting.
+
+   - UX: “Validate” triggers server-side run; errors surfaced in the UI panel.
+
+2. **Bake validators for client execution** (optional command)
+
+   - Add a command (e.g., `markform build-validators <file.form.md> --out <dir>`) that
+     compiles `X.valid.ts` to JS via esbuild/tsup and generates a static bundle the UI
+     can import. `serve` can optionally run this step before browsing.
+
+   - Pros: Enables offline/static demo pages; faster subsequent validates.
+
+   - Cons: More plumbing; must manage bundling and sandboxing; not needed for most local
+     workflows.
+
+   - UX: Run “build-validators” once, then `serve` loads baked JS for validation.
+
+Recommendation: Start with approach (1) for v0.2. Approach (2) can be added later
+without changing the engine contract.
+
+### Potential Improvements (v0.2+)
+
+- Add validation to serve (see Validator Execution research above).
+
+- Add inline editing and patch application in the UI; reflect issues as the user edits.
+
+- Expose harness controls in serve (step/apply/validate loop).
+
+- Render documentation blocks with a toggle/accordion for better readability.
+
+- Offer a “Browse Forms” view with quick filter and recent files list.
+
+- Provide “Save As Completed” shortcut that validates completion before enabling save.
