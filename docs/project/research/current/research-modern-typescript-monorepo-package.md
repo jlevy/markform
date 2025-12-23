@@ -1,6 +1,6 @@
 # Research Brief: Modern TypeScript Monorepo Package Architecture
 
-**Last Updated**: 2025-12-22
+**Last Updated**: 2025-12-22 (ESLint section expanded)
 
 **Status**: Complete
 
@@ -943,6 +943,12 @@ experience.
 10. **Keep the monorepo root private**: The root `package.json` should have `"private":
     true` and only contain workspace tooling.
 
+11. **Use type-aware ESLint**: Configure `recommendedTypeChecked` for comprehensive bug
+    detection, especially promise safety rules. See Appendix C for detailed configuration.
+
+12. **Enforce code style consistency**: Use `curly: 'all'` and `brace-style: '1tbs'` to
+    prevent subtle bugs and improve readability.
+
 * * *
 
 ## Open Research Questions
@@ -1171,6 +1177,10 @@ for public release.
 
 ### Appendix C: ESLint Flat Config Example
 
+#### Minimal Configuration
+
+For projects just getting started, a minimal configuration:
+
 ```javascript
 // eslint.config.js
 import js from "@eslint/js";
@@ -1180,13 +1190,268 @@ export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    ignores: ["**/dist/**", "**/node_modules/**", "**/.pnpm-store/**"],
+  },
+];
+```
+
+#### Strict Type-Aware Configuration (Recommended)
+
+For production projects, use type-aware linting with strict rules. This catches more bugs
+but requires tsconfig integration:
+
+```javascript
+// eslint.config.js
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
+
+// Type-aware ESLint configuration using flat config.
+// Uses TypeScript's project service for precise, cross-project type information.
+
+// Apply type-checked configs only to TypeScript files
+const typedRecommended = tseslint.configs.recommendedTypeChecked.map((cfg) => ({
+  ...cfg,
+  files: ["**/*.ts", "**/*.tsx"],
+  languageOptions: {
+    ...(cfg.languageOptions ?? {}),
+    parserOptions: {
+      ...(cfg.languageOptions?.parserOptions ?? {}),
+      projectService: true,
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+}));
+
+const typedStylistic = tseslint.configs.stylisticTypeChecked.map((cfg) => ({
+  ...cfg,
+  files: ["**/*.ts", "**/*.tsx"],
+  languageOptions: {
+    ...(cfg.languageOptions ?? {}),
+    parserOptions: {
+      ...(cfg.languageOptions?.parserOptions ?? {}),
+      projectService: true,
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+}));
+
+export default [
+  // Global ignores
+  {
     ignores: [
       "**/dist/**",
       "**/node_modules/**",
-      "**/.pnpm-store/**"
-    ]
-  }
+      "**/.pnpm-store/**",
+      "eslint.config.*",
+    ],
+  },
+
+  // Base JS rules
+  js.configs.recommended,
+
+  // Type-aware TypeScript rules
+  ...typedRecommended,
+  ...typedStylistic,
+
+  // TypeScript-specific rules
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      // === Code Style ===
+      // Enforce curly braces for all control statements (prevents bugs)
+      curly: ["error", "all"],
+      // Consistent brace style: opening on same line, closing on new line
+      "brace-style": ["error", "1tbs", { allowSingleLine: false }],
+
+      // === Unused Variables ===
+      // Allow underscore prefix for intentionally unused vars/args
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+
+      // === Promise Safety (Critical for Node.js) ===
+      // Catch unhandled promises (common source of silent failures)
+      "@typescript-eslint/no-floating-promises": "error",
+      // Prevent passing promises where void is expected (e.g., event handlers)
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { attributes: false } },
+      ],
+      // Catch awaiting non-promise values
+      "@typescript-eslint/await-thenable": "error",
+      // Prevent confusing void expressions in unexpected places
+      "@typescript-eslint/no-confusing-void-expression": "error",
+
+      // === Type Import Consistency ===
+      // Enforce `import type` for type-only imports (better tree-shaking)
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "separate-type-imports",
+          disallowTypeAnnotations: true,
+        },
+      ],
+      // Prevent side effects in type-only imports
+      "@typescript-eslint/no-import-type-side-effects": "error",
+
+      // === Restricted Patterns ===
+      // Forbid inline import() type expressions (prefer proper imports)
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "TSImportType",
+          message:
+            "Inline import() type expressions are not allowed. Use a proper import statement at the top of the file instead.",
+        },
+      ],
+    },
+  },
+
+  // === File-Specific Overrides ===
+  // Relax rules for test files where dynamic behavior is expected
+  {
+    files: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+    },
+  },
+
+  // Relax rules for scripts/tooling
+  {
+    files: ["**/scripts/**/*.ts", "**/tools/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "no-console": "off",
+    },
+  },
 ];
+```
+
+#### ESLint Best Practices
+
+**Type-Aware vs Basic Linting**:
+
+| Aspect | `recommended` | `recommendedTypeChecked` |
+| --- | --- | --- |
+| Setup complexity | Simple | Requires tsconfig |
+| Performance | Fast | Slower (type analysis) |
+| Bug detection | Basic | Comprehensive |
+| Promise safety | Limited | Full coverage |
+| Best for | Quick setup, small projects | Production code |
+
+**Key Rules Explained**:
+
+1. **`no-floating-promises`**: Catches unhandled promises—a common source of silent
+   failures in Node.js:
+   ```typescript
+   // Bad: Promise result ignored, errors swallowed
+   saveData();
+   // Good: Explicitly handle or void
+   await saveData();
+   void saveData(); // Intentionally fire-and-forget
+   ```
+
+2. **`consistent-type-imports`**: Enforces `import type` for type-only imports, enabling
+   better tree-shaking and clearer intent:
+   ```typescript
+   // Bad: Runtime import for type-only usage
+   import { SomeType } from "./types";
+   // Good: Explicit type import
+   import type { SomeType } from "./types";
+   ```
+
+3. **`curly: ['error', 'all']`**: Prevents bugs from missing braces:
+   ```typescript
+   // Bad: Easy to introduce bugs when adding lines
+   if (condition) doSomething();
+   // Good: Always use braces
+   if (condition) {
+     doSomething();
+   }
+   ```
+
+4. **Underscore prefix for unused vars**: Convention for intentionally unused parameters:
+   ```typescript
+   // Clear intent: we don't use the error parameter
+   .catch((_error) => handleDefaultCase())
+   ```
+
+**Common Gotcha with `noUncheckedIndexedAccess`**:
+
+When using `noUncheckedIndexedAccess: true` in tsconfig (recommended for safety), ESLint's
+`no-unnecessary-type-assertion` may incorrectly flag necessary assertions:
+
+```typescript
+// With noUncheckedIndexedAccess, array[0] returns T | undefined
+const first = array[0]!; // ESLint may wrongly flag this as unnecessary
+```
+
+If you encounter false positives, consider disabling the rule:
+```javascript
+rules: {
+  "@typescript-eslint/no-unnecessary-type-assertion": "off",
+}
+```
+
+**Naming Convention Rules (Optional)**:
+
+For teams wanting consistent naming, add naming convention rules:
+
+```javascript
+"@typescript-eslint/naming-convention": [
+  "error",
+  {
+    selector: "parameter",
+    format: ["camelCase", "PascalCase"],
+    leadingUnderscore: "forbid",
+    filter: { regex: "^_", match: false }, // Allow _ prefix for unused
+  },
+  {
+    selector: "parameter",
+    format: ["camelCase", "PascalCase"],
+    leadingUnderscore: "allow",
+    modifiers: ["unused"],
+  },
+  {
+    selector: "variable",
+    format: ["camelCase", "PascalCase", "UPPER_CASE"],
+    leadingUnderscore: "forbid",
+    filter: { regex: "^(__filename|__dirname)$", match: false },
+  },
+],
+```
+
+**CLI-Specific Rules**:
+
+For CLI packages, consider restricting console usage to centralized output functions:
+
+```javascript
+{
+  files: ["**/cli/**/*.ts"],
+  rules: {
+    "no-console": ["warn", { allow: ["error"] }],
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["chalk"],
+            message: "Use picocolors for CLI output (smaller, faster).",
+          },
+        ],
+      },
+    ],
+  },
+}
 ```
 
 ### Appendix D: tsdown Config Example
