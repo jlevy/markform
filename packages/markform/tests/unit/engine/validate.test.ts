@@ -1,0 +1,695 @@
+import { describe, expect, it } from "vitest";
+
+import { parseForm } from "../../../src/engine/parse.js";
+import { validate } from "../../../src/engine/validate.js";
+import type { ValidatorRegistry } from "../../../src/engine/types.js";
+
+describe("engine/validate", () => {
+  describe("string field validation", () => {
+    it("validates required string field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0]?.severity).toBe("error");
+      expect(result.issues[0]?.ref).toBe("name");
+      expect(result.issues[0]?.message).toContain("empty");
+    });
+
+    it("passes when required string field has value", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John Doe
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+      expect(result.issues).toHaveLength(0);
+    });
+
+    it("validates minLength constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" minLength=5 %}
+\`\`\`value
+abc
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at least 5 characters");
+    });
+
+    it("validates maxLength constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" maxLength=5 %}
+\`\`\`value
+hello world
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at most 5 characters");
+    });
+
+    it("validates pattern constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="email" label="Email" pattern="^[^@]+@[^@]+$" %}
+\`\`\`value
+not-an-email
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("pattern");
+    });
+
+    it("passes when pattern matches", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="email" label="Email" pattern="^[^@]+@[^@]+$" %}
+\`\`\`value
+test@example.com
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe("number field validation", () => {
+    it("validates required number field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="age" label="Age" required=true %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.ref).toBe("age");
+    });
+
+    it("validates min constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="age" label="Age" min=18 %}
+\`\`\`value
+15
+\`\`\`
+{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at least 18");
+    });
+
+    it("validates max constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="age" label="Age" max=120 %}
+\`\`\`value
+150
+\`\`\`
+{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at most 120");
+    });
+
+    it("validates integer constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="count" label="Count" integer=true %}
+\`\`\`value
+5.5
+\`\`\`
+{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("integer");
+    });
+  });
+
+  describe("string-list field validation", () => {
+    it("validates required string-list field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="tags" label="Tags" required=true %}{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.ref).toBe("tags");
+    });
+
+    it("validates minItems constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="tags" label="Tags" minItems=3 %}
+\`\`\`value
+one
+two
+\`\`\`
+{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at least 3 items");
+    });
+
+    it("validates maxItems constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="tags" label="Tags" maxItems=2 %}
+\`\`\`value
+one
+two
+three
+\`\`\`
+{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at most 2 items");
+    });
+
+    it("validates uniqueItems constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="tags" label="Tags" uniqueItems=true %}
+\`\`\`value
+one
+two
+one
+\`\`\`
+{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("Duplicate");
+    });
+  });
+
+  describe("single-select field validation", () => {
+    it("validates required single-select field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% single-select id="priority" label="Priority" required=true %}
+- [ ] High {% #high %}
+- [ ] Medium {% #medium %}
+- [ ] Low {% #low %}
+{% /single-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.ref).toBe("priority");
+    });
+
+    it("passes when single-select has selection", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% single-select id="priority" label="Priority" required=true %}
+- [x] High {% #high %}
+- [ ] Medium {% #medium %}
+- [ ] Low {% #low %}
+{% /single-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe("multi-select field validation", () => {
+    it("validates required multi-select field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% multi-select id="categories" label="Categories" required=true %}
+- [ ] Tech {% #tech %}
+- [ ] Finance {% #finance %}
+{% /multi-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+    });
+
+    it("validates minSelections constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% multi-select id="categories" label="Categories" minSelections=2 %}
+- [x] Tech {% #tech %}
+- [ ] Finance {% #finance %}
+- [ ] Health {% #health %}
+{% /multi-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at least 2 selections");
+    });
+
+    it("validates maxSelections constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% multi-select id="categories" label="Categories" maxSelections=1 %}
+- [x] Tech {% #tech %}
+- [x] Finance {% #finance %}
+{% /multi-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at most 1 selections");
+    });
+  });
+
+  describe("checkboxes field validation", () => {
+    it("validates required checkboxes in explicit mode", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="confirms" label="Confirms" checkboxMode="explicit" required=true %}
+- [y] First {% #first %}
+- [ ] Second {% #second %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("unfilled");
+    });
+
+    it("passes when all checkboxes answered in explicit mode", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="confirms" label="Confirms" checkboxMode="explicit" required=true %}
+- [y] First {% #first %}
+- [n] Second {% #second %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it("validates minDone constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" checkboxMode="multi" minDone=2 %}
+- [x] First {% #first %}
+- [ ] Second {% #second %}
+- [ ] Third {% #third %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at least 2 items done");
+    });
+  });
+
+  describe("code validators", () => {
+    it("runs code validators from registry", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" validate="myValidator" %}
+\`\`\`value
+test
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const registry: ValidatorRegistry = {
+        myValidator: () => [
+          {
+            severity: "error",
+            message: "Custom validation failed",
+            ref: "name",
+            source: "code",
+          },
+        ],
+      };
+
+      const result = validate(form, { validatorRegistry: registry });
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some((i) => i.message === "Custom validation failed")).toBe(true);
+    });
+
+    it("reports missing validators", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" validate="missingValidator" %}
+\`\`\`value
+test
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form, { validatorRegistry: {} });
+
+      expect(result.isValid).toBe(true); // Missing validator is "recommended" not "required"
+      expect(result.issues.some((i) => i.message.includes("not found"))).toBe(true);
+    });
+
+    it("skips code validators when option set", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" validate="myValidator" %}
+\`\`\`value
+test
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const registry: ValidatorRegistry = {
+        myValidator: () => [
+          {
+            severity: "error",
+            message: "Custom validation failed",
+            ref: "name",
+            source: "code",
+          },
+        ],
+      };
+
+      const result = validate(form, {
+        validatorRegistry: registry,
+        skipCodeValidators: true,
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.issues).toHaveLength(0);
+    });
+  });
+
+  describe("complete form validation", () => {
+    it("validates a form with multiple field types", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% number-field id="age" label="Age" required=true min=0 max=150 %}
+\`\`\`value
+25
+\`\`\`
+{% /number-field %}
+{% single-select id="priority" label="Priority" required=true %}
+- [x] High {% #high %}
+- [ ] Low {% #low %}
+{% /single-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+      expect(result.issues).toHaveLength(0);
+    });
+  });
+});

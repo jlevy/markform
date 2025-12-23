@@ -76,9 +76,9 @@ We use two test forms for progressive validation:
 
 2. **Complex form**
    (`examples/company-quarterly-analysis/company-quarterly-analysis.form.md`) -
-   Comprehensive real-world form with many fields, nested groups, validators.
+   Comprehensive real-world form with many fields, field groups, and validators.
    Used in Phase 3+ for golden session tests and comprehensive validation.
-   To be provided.
+   Already exists in examples directory.
 
 This approach allows fast iteration during core development while ensuring comprehensive
 coverage before completion.
@@ -322,19 +322,19 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 **Deliverables**:
 
-- [ ] Initialize pnpm workspace structure
+- [x] Initialize pnpm workspace structure
 
-- [ ] Create root `package.json` with workspace scripts
+- [x] Create root `package.json` with workspace scripts
 
-- [ ] Create `pnpm-workspace.yaml`
+- [x] Create `pnpm-workspace.yaml`
 
-- [ ] Create `.npmrc` with workspace settings
+- [x] Create `.npmrc` with workspace settings
 
-- [ ] Create `tsconfig.base.json` with shared TypeScript config
+- [x] Create `tsconfig.base.json` with shared TypeScript config
 
-- [ ] Create `packages/markform/` directory structure
+- [x] Create `packages/markform/` directory structure
 
-- [ ] Create package `package.json` with:
+- [x] Create package `package.json` with:
 
   - Proper exports configuration (ESM/CJS dual)
 
@@ -342,25 +342,25 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
   - Build/test/lint scripts
 
-- [ ] Create `tsdown.config.ts` for build
+- [x] Create `tsdown.config.ts` for build
 
-- [ ] Create `tsconfig.json` extending base
+- [x] Create `tsconfig.json` extending base
 
-- [ ] Create `eslint.config.js` (flat config)
+- [x] Create `eslint.config.js` (flat config)
 
-- [ ] Set up `.changeset/` for versioning
+- [x] Set up `.changeset/` for versioning
 
-- [ ] Create `.github/workflows/ci.yml`
+- [x] Create `.github/workflows/ci.yml`
 
-- [ ] Create placeholder `src/index.ts` that exports version
+- [x] Create placeholder `src/index.ts` that exports version
 
-- [ ] Create initial test file `tests/unit/index.test.ts` with placeholder test
+- [x] Create initial test file `tests/unit/index.test.ts` with placeholder test
 
-- [ ] Verify `pnpm build`, `pnpm test`, `pnpm lint` all pass
+- [x] Verify `pnpm build`, `pnpm test`, `pnpm lint` all pass
 
-- [ ] Verify `examples/simple/simple.form.md` is in place (already created)
+- [x] Verify `examples/simple/simple.form.md` is in place (already created)
 
-- [ ] Review and update `docs/development.md` with any scaffolding changes
+- [x] Review and update `docs/development.md` with any scaffolding changes
 
 **Phase 0 Checkpoints**:
 
@@ -497,6 +497,11 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
 - [ ] Documentation block extraction
 
+- [ ] Implement `markformMarkdocConfig` with tag definitions and attribute schemas
+  for `form`, `field-group`, all field tags, and `doc`
+
+- [ ] Doc body raw slice preservation (capture exact source text for round-trip)
+
 - [ ] Semantic validation:
 
   - Global ID uniqueness
@@ -541,7 +546,7 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
 - [ ] Doc block placement
 
-- [ ] Ensure `process=false` on all value fences
+- [ ] Emit `process=false` only when value contains Markdoc syntax (`{%` pattern)
 
 - [ ] Round-trip tests: parse -> serialize -> parse -> compare
 
@@ -724,7 +729,7 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 - [ ] Run validation
 
-- [ ] Output YAML report:
+- [ ] Output YAML report (machine-readable, no ANSI codes):
 
   - Structure summary
 
@@ -734,7 +739,7 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
   - Issues (sorted by priority)
 
-- [ ] Colored output for terminal
+- [ ] Colored output for human-readable messages only (not in YAML output)
 
 #### 2.3 Export Command (`cli/commands/export.ts`)
 
@@ -811,8 +816,8 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 - **Complex form** (`company-quarterly-analysis.form.md`): Comprehensive golden tests
 
-At this phase, you will be provided with `company-quarterly-analysis.form.md` - a
-comprehensive real-world form with many fields, nested groups, and code validators.
+At this phase, use the existing `company-quarterly-analysis.form.md` - a
+comprehensive real-world form with many fields, field groups, and code validators.
 
 #### 3.1 Apply Command (`cli/commands/apply.ts`)
 
@@ -921,6 +926,10 @@ comprehensive real-world form with many fields, nested groups, and code validato
 ### Phase 4: Vercel AI SDK Integration
 
 **Goal**: Research and validate AI SDK tool integration for live agent mode.
+
+**Packaging**: Use optional peer dependencies for AI SDK adapters. Users who don't use
+AI features shouldn't need to install AI SDK packages. Use subpath exports pattern:
+`markform/ai-sdk` for optional integrations.
 
 #### 4.1 AI SDK Tool Definitions (`integrations/ai-sdk.ts`)
 

@@ -28,7 +28,7 @@ Enter your full name (2-50 characters).
 
 {% field-group id="list_fields" title="List Fields" %}
 
-{% string-list id="tags" label="Tags" minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}{% /string-list %}
+{% string-list id="tags" label="Tags" required=true minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}{% /string-list %}
 
 {% doc ref="tags" kind="instructions" %}
 Add 1-5 unique tags (each at least 2 characters).
@@ -44,7 +44,7 @@ Add 1-5 unique tags (each at least 2 characters).
 - [ ] High {% #high %}
 {% /single-select %}
 
-{% multi-select id="categories" label="Categories" minSelections=1 maxSelections=3 %}
+{% multi-select id="categories" label="Categories" required=true minSelections=1 maxSelections=3 %}
 - [ ] Frontend {% #frontend %}
 - [ ] Backend {% #backend %}
 - [ ] Database {% #database %}

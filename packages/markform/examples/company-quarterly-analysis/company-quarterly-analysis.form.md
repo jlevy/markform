@@ -18,7 +18,7 @@ Update as needed but expect most content to persist quarter-to-quarter.
 Complete fresh each quarter.
 {% /doc %}
 
-{# PART 1: COMPANY PROFILE #}
+<!-- PART 1: COMPANY PROFILE -->
 
 {% field-group id="identity_structure" title="1. Identity and Structure" %}
 
@@ -32,7 +32,7 @@ List at least one ticker symbol. Add multiple if the company trades on different
 
 {% string-field id="hq_regions" label="HQ / key operating regions" required=true %}{% /string-field %}
 
-{% string-field id="fiscal_year_end" label="Fiscal year end" required=true pattern="^(0[1-9]|1[0-2])(-[0-3][0-9])?$|^(January|February|March|April|May|June|July|August|September|October|November|December)$" %}{% /string-field %}
+{% string-field id="fiscal_year_end" label="Fiscal year end" required=true pattern="^(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$|^(January|February|March|April|May|June|July|August|September|October|November|December)$" %}{% /string-field %}
 
 {% doc ref="fiscal_year_end" kind="instructions" %}
 Enter month name (e.g., December) or MM-DD format (e.g., 12-31).
@@ -374,7 +374,7 @@ Enter a date (YYYY-MM-DD format) or descriptive text (e.g., "Before Q2 earnings"
 
 {% /field-group %}
 
-{# PART 2: QUARTERLY ANALYSIS #}
+<!-- PART 2: QUARTERLY ANALYSIS -->
 
 {% field-group id="quarterly_cover" title="Q1. Cover Sheet" %}
 
@@ -412,7 +412,7 @@ Check what you actually used. Fill the log as you go.
 Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tier, Link or file path, Key takeaways. At least 3 sources required.
 {% /doc %}
 
-{% string-list id="sources_accessed" label="Sources accessed (Date | Source | Type | Link | Takeaways)" required=true minItems=3 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+", example: "2024-01-15 | SEC Filing | 10-K | https://... | Key takeaway"}] %}{% /string-list %}
+{% string-list id="sources_accessed" label="Sources accessed (Date | Source | Type | Link | Takeaways)" required=true minItems=3 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+\\|.+\\|.+", example: "2024-01-15 | SEC Filing | 10-K | https://... | Key takeaway"}] %}{% /string-list %}
 
 {% /field-group %}
 
@@ -491,7 +491,7 @@ Format each entry as: Name | Angle | Typical lead time | Hit rate assessment | T
 
 {% field-group id="business_snapshot" title="Q3. Business Model Snapshot" %}
 
-{% string-field id="how_makes_money" label="How the company makes money" required=true minLength=100 maxLength=300 %}{% /string-field %}
+{% string-field id="how_makes_money" label="How the company makes money" required=true validate=[{id: "min_words", min: 25}, {id: "max_words", max: 75}] %}{% /string-field %}
 
 {% doc ref="how_makes_money" kind="instructions" %}
 2-4 sentences; 25-75 words explaining how the company generates revenue.

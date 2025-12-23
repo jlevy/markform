@@ -292,7 +292,7 @@ compatibility:
 | --- | --- | --- | --- |
 | `checkboxes` | `[ ]` | Unchecked / todo / unfilled | `- [ ] Item {% #item_id %}` |
 | `checkboxes` | `[x]` | Checked / done | `- [x] Item {% #item_id %}` |
-| `checkboxes` | `[/]` | In progress (multi only) | `- [/] Item {% #item_id %}` |
+| `checkboxes` | `[/]` | Incomplete (multi only) | `- [/] Item {% #item_id %}` |
 | `checkboxes` | `[*]` | Active (multi only) | `- [*] Item {% #item_id %}` |
 | `checkboxes` | `[-]` | Not applicable (multi only) | `- [-] Item {% #item_id %}` |
 | `checkboxes` | `[y]` | Yes (explicit only) | `- [y] Item {% #item_id %}` |
@@ -401,10 +401,13 @@ Markdown content here...
 
 **Placement rules (v0.1):**
 
-- *required:* Doc blocks must be siblings of the referenced element, not nested inside
-  it
+- Doc blocks MAY appear inside `form` and `field-group` as direct children
 
 - *required:* Parser will reject doc blocks that appear inside field tag bodies
+  (doc blocks MUST NOT be nested inside a field tag)
+
+- For field-level docs: place immediately after the field block (as a sibling
+  within the group)
 
 - Canonical serialization places doc blocks immediately after the referenced element
 
@@ -459,7 +462,8 @@ ACME Corp
 
 ##### Single-Select Fields
 
-Values are encoded **inline** via `[x]` marker—exactly one option must be selected:
+Values are encoded **inline** via `[x]` marker—at most one option may be selected (if
+`required=true`, exactly one must be selected):
 ```md
 {% single-select id="rating" label="Rating" %}
 - [ ] Bullish {% #bullish %}
@@ -576,19 +580,21 @@ Minimum 5; include more if needed.
 
 **Rule:** Only emit `process=false` when the value contains Markdoc syntax.
 
-The `process=false` attribute prevents Markdoc from interpreting content as tags or
-comments. It is only required when the value contains Markdoc syntax:
+The `process=false` attribute prevents Markdoc from interpreting content as tags.
+It is only required when the value contains Markdoc tag syntax:
 
 - Tag syntax: `{% ... %}`
-- Comment syntax: `{# ... #}`
 
-**Detection:** Check if the value matches the pattern `/\{[%#]/`. A simple regex check
+> **Note:** Markdoc uses HTML comments (`<!-- ... -->`), not `{# ... #}`. HTML comments
+> in form values are plain text and don't require `process=false`.
+
+**Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check
 is sufficient since false positives are harmless (adding `process=false` when not needed
 has no effect, but we prefer not to clutter the output).
 
 ```ts
 function containsMarkdocSyntax(value: string): boolean {
-  return /\{[%#]/.test(value);
+  return /\{%/.test(value);
 }
 ```
 
@@ -699,7 +705,7 @@ Notes:
 
 - Reference options externally using qualified form: `{fieldId}.{optionId}` (e.g., `docs_reviewed.ten_k`)
 
-- Checkbox states: `[ ]` todo, `[x]` done, `[/]` in progress, `[-]` n/a
+- Checkbox states: `[ ]` todo, `[x]` done, `[/]` incomplete, `[*]` active, `[-]` n/a
 
 #### Parsing Strategy
 
@@ -718,16 +724,30 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
    - Documentation blocks
 
 5. Run **semantic** validation (Markform-specific, not Markdoc built-in):
-   - Globally-unique IDs across all elements
+   - Globally-unique IDs for form/group/field (option IDs are field-scoped only)
    - `ref` resolution (doc blocks reference valid targets)
    - Checkbox mode enforcement (`checkboxMode="simple"` restricts to 2 states)
-   - Option marker parsing (`[ ]`, `( )`, etc.)
+   - Option marker parsing (`[ ]`, `[x]`, `[/]`, `[*]`, `[-]`, `[y]`, `[n]`, etc.)
    - **Label requirement** (*required*): All fields must have a `label` attribute;
      missing label is a parse error
    - **Option ID annotation** (*required*): All options in select/checkbox fields must
      have `{% #id %}` annotation; missing annotation is a parse error
    - **Option ID uniqueness** (*required*): Option IDs must be unique within their
      containing field; duplicates are a parse error
+
+**Non-Markform content policy (*required*):**
+
+Markform files may contain content outside of Markform tags. This content is handled as follows:
+
+| Content Type | Policy |
+|--------------|--------|
+| HTML comments (`<!-- ... -->`) | Allowed, preserved verbatim on round-trip |
+| Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
+| Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
+
+**v0.1 scope:** Only HTML comments are guaranteed to be preserved. Do not rely on
+non-Markform content surviving serialization. Future versions may support full
+content preservation via raw slicing.
 
 #### Serialization Strategy
 
@@ -751,9 +771,9 @@ To ensure deterministic round-tripping without building a full markdown serializ
 |------|---------------|
 | Attribute ordering | Alphabetical within each tag |
 | Indentation | 0 spaces for top-level, no nested indentation |
-| Blank lines | One blank line between field-groups, none between fields |
+| Blank lines | One blank line between adjacent blocks (fields, groups, doc blocks) for readability |
 | Value fences | Omit entirely for empty fields |
-| `process=false` | Emit only when value contains Markdoc syntax (`/\{[%#]/`) |
+| `process=false` | Emit only when value contains Markdoc tag syntax (`/\{%/`) |
 | Option ordering | Preserved as authored (order is significant) |
 | Line endings | Unix (`\n`) only |
 | Doc block placement | Immediately after the referenced element |
@@ -883,10 +903,11 @@ interface DocumentationBlock {
 }
 
 // IdIndexEntry: lookup entry for fast ID resolution and validation
+// NOTE: Options are NOT indexed here (they are field-scoped, not globally unique)
+// Use StructureSummary.optionsById for option lookup via QualifiedOptionRef
 interface IdIndexEntry {
-  kind: 'form' | 'group' | 'field' | 'option';
+  kind: 'form' | 'group' | 'field';
   parentId?: Id;           // parent group/form ID (undefined for form)
-  fieldId?: Id;            // containing field ID (only for options)
 }
 
 // ParsedForm: canonical internal representation returned by parseForm()
@@ -895,14 +916,15 @@ interface ParsedForm {
   valuesByFieldId: Record<Id, FieldValue>;
   docs: DocumentationBlock[];
   orderIndex: Id[];                       // fieldIds in document order (deterministic)
-  idIndex: Map<Id, IdIndexEntry>;         // fast lookup for validation/traversal
+  idIndex: Map<Id, IdIndexEntry>;         // fast lookup for form/group/field (NOT options)
 }
 
 // InspectIssue: unified type for inspect/apply API results
 // Derived from ValidationIssue[] but simplified for agent/UI consumption
-// Returned as a single list sorted by priority (descending)
+// Returned as a single list sorted by priority (ascending, 1 = highest)
 interface InspectIssue {
-  fieldId: Id;               // field this issue relates to
+  ref: Id | QualifiedOptionRef;  // target this issue relates to (field, group, or qualified option)
+  scope: 'form' | 'group' | 'field' | 'option';  // scope of the issue target
   reason: IssueReason;       // machine-readable reason code
   message: string;           // human-readable description
   severity: 'required' | 'recommended';  // *required* = must fix; *recommended* = suggested
@@ -1103,6 +1125,19 @@ else:
   form_state = 'complete'
 ```
 
+**Implicit requiredness (*required*):**
+
+For form completion purposes, fields with constraints are treated as implicitly required:
+
+| Field Type | Implicit Required When |
+|------------|------------------------|
+| `string-list` | `minItems > 0` |
+| `multi-select` | `minSelections > 0` |
+| `checkboxes` | `minDone > 0` (simple mode) |
+
+These fields contribute to `emptyRequiredFields` count even without explicit `required=true`.
+This ensures `form_state` accurately reflects whether all constraints are satisfied.
+
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
 alignment with JSON Schema keywords reduces translation complexity.
@@ -1188,12 +1223,18 @@ const ProgressSummarySchema = z.object({
   fields: z.record(z.string(), FieldProgressSchema),
 });
 
-// Frontmatter schema (internal TS representation)
+// Frontmatter schema for INPUT forms (templates)
+const MarkformInputFrontmatterSchema = z.object({
+  markformVersion: z.string(),  // Required: e.g., "0.1.0"
+  // User metadata allowed but not validated
+});
+
+// Frontmatter schema for OUTPUT forms (after processing/serialization)
 const MarkformFrontmatterSchema = z.object({
   markformVersion: z.string(),
-  formSummary: StructureSummarySchema,
-  formProgress: ProgressSummarySchema,
-  formState: ProgressStateSchema,
+  formSummary: StructureSummarySchema.optional(),   // Derived on serialize
+  formProgress: ProgressSummarySchema.optional(),   // Derived on serialize
+  formState: ProgressStateSchema.optional(),        // Derived on serialize
 });
 ```
 
@@ -1355,7 +1396,7 @@ Schema checks (always available, deterministic):
 | Min/max selections | `multi-select` | `minSelections`, `maxSelections` (see [JSON Schema array][json-schema-array]) |
 | Exactly one selected | `single-select` | `required=true` |
 | Valid checkbox states | `checkboxes` | `checkboxMode` attribute (multi: 5 states, simple: 2 states, explicit: yes/no) |
-| All options answered | `checkboxes` | `checkboxMode="explicit"` requires no `unfilled` values |
+| Valid explicit states | `checkboxes` | `checkboxMode="explicit"` validates markers are `unfilled`, `yes`, or `no` |
 
 Output: `ValidationIssue[]`
 
@@ -1501,13 +1542,13 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
 **Usage examples:**
 
 ```md
-{# Parameterized: pass min word count as parameter #}
+<!-- Parameterized: pass min word count as parameter -->
 {% string-field id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /string-field %}
 
-{# Multiple validators with different params #}
+<!-- Multiple validators with different params -->
 {% string-field id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
 
-{# Sum-to validator with configurable target #}
+<!-- Sum-to validator with configurable target -->
 {% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_prob", "bull_prob", "bear_prob"], target: 100}] %}
 ```
 
@@ -1650,7 +1691,7 @@ The tool layer is the public API contract for agents and CLI. Tool definitions f
 interface InspectResult {
   structureSummary: StructureSummary;   // form structure overview
   progressSummary: ProgressSummary;     // filling progress per field
-  issues: InspectIssue[];               // unified list sorted by priority (descending)
+  issues: InspectIssue[];               // unified list sorted by priority (ascending, 1 = highest)
   isComplete: boolean;                  // true when no issues with severity: 'required'
   formState: ProgressState;             // overall progress state; mirrors frontmatter form_state
 }
@@ -1659,7 +1700,7 @@ interface ApplyResult {
   applyStatus: 'applied' | 'rejected';  // 'rejected' if structural validation failed
   structureSummary: StructureSummary;
   progressSummary: ProgressSummary;
-  issues: InspectIssue[];               // unified list sorted by priority (descending)
+  issues: InspectIssue[];               // unified list sorted by priority (ascending, 1 = highest)
   isComplete: boolean;                  // true when no issues with severity: 'required'
   formState: ProgressState;             // overall progress state; mirrors frontmatter form_state
 }
@@ -1722,7 +1763,15 @@ scope. For example:
 
 - `set_*` with `null` value: Clears the field (equivalent to `clear_field`)
 
-- `clear_field`: Removes all values; serializes as empty tag (no value fence)
+- `clear_field`: Removes all values; behavior varies by field kind:
+  - **string/number fields:** Clear the value fence entirely
+  - **string_list field:** Clear to empty list (no value fence)
+  - **single_select field:** Reset all markers to `[ ]` (no selection)
+  - **multi_select field:** Reset all markers to `[ ]` (no selections)
+  - **checkboxes field:** Reset to default state based on mode:
+    - simple mode: all `[ ]`
+    - multi mode: all `[ ]` (todo)
+    - explicit mode: all `[ ]` (unfilled)
 
 - `set_checkboxes`: Merges provided values with existing state (only specified options
   are updated)
@@ -1775,7 +1824,7 @@ This is the normal inspect/apply/fix workflow.
 #### Inspect Results
 
 When `inspect` runs, it returns a **single list of `InspectIssue` objects** sorted by
-priority (descending).
+priority (ascending, where 1 = highest priority).
 Issues with severity `required` always have higher priority (lower numbers) than issues
 with severity `recommended`.
 
@@ -1832,7 +1881,7 @@ Exceeding `max_turns` results in an error state.
 interface StepResult {
   structureSummary: StructureSummary;   // form structure overview (static)
   progressSummary: ProgressSummary;     // current filling progress
-  issues: InspectIssue[];               // unified list sorted by priority (descending)
+  issues: InspectIssue[];               // unified list sorted by priority (ascending, 1 = highest)
   stepBudget: number;                   // suggested patches this turn (from config)
   isComplete: boolean;                  // true when no issues with severity: 'required'
   turnNumber: number;
@@ -2907,10 +2956,10 @@ export const validators = {
 **Usage in form:**
 
 ```md
-{# Validate three number fields sum to 100% #}
+<!-- Validate three number fields sum to 100% -->
 {% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
 
-{# Validate string-list entries sum to 100% #}
+<!-- Validate string-list entries sum to 100% -->
 {% string-list id="revenue_segments" label="Revenue segments (Name: X%)" validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
 ```
 
@@ -2958,11 +3007,58 @@ export const validators = {
 **Usage in form:**
 
 ```md
-{# Require explanation when moat factors are selected #}
+<!-- Require explanation when moat factors are selected -->
 {% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
 
-{# Require evidence when whisper values provided #}
+<!-- Require evidence when whisper values provided -->
 {% string-field id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
+```
+
+**Variant: `required_if_equals`**
+
+Require field when another field equals a specific value:
+
+```ts
+export const validators = {
+  required_if_equals: (ctx) => {
+    const triggerField = ctx.params.when as string;
+    const expectedValue = ctx.params.equals as string;
+
+    if (!triggerField || expectedValue === undefined) {
+      return [{ severity: 'error', message: 'required_if_equals requires "when" and "equals" parameters', ref: ctx.targetId, source: 'code' }];
+    }
+
+    const trigger = ctx.values[triggerField];
+    const target = ctx.values[ctx.targetId];
+
+    // Check if trigger equals expected value
+    const triggerMatches =
+      (trigger?.kind === 'single_select' && trigger.selected === expectedValue) ||
+      (trigger?.kind === 'string' && trigger.value === expectedValue);
+
+    const targetEmpty =
+      !target ||
+      (target.kind === 'string' && !target.value?.trim()) ||
+      (target.kind === 'number' && target.value == null);
+
+    if (triggerMatches && targetEmpty) {
+      return [{
+        severity: 'error',
+        message: `This field is required when ${triggerField} is "${expectedValue}"`,
+        ref: ctx.targetId,
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+};
+```
+
+**Usage:**
+
+```md
+<!-- Require details when "Yes" is selected -->
+{% string-field id="price_change_details" label="Price change details" validate=[{id: "required_if_equals", when: "price_changes_recently", equals: "yes"}] %}{% /string-field %}
 ```
 
 #### 4. Format Validation
@@ -3002,10 +3098,10 @@ export const validators = {
 **Usage in form:**
 
 ```md
-{# Validate KPIs have "Name: reason" format #}
+<!-- Validate KPIs have "Name: reason" format -->
 {% string-list id="key_kpis" label="Key KPIs" validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
 
-{# Validate sources have expected format #}
+<!-- Validate sources have expected format -->
 {% string-list id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /string-list %}
 ```
 
