@@ -1388,11 +1388,85 @@ Validators are referenced by **ID** from fields/groups/form via `validate=["..."
 
 - Sidecar file with same basename: `X.form.md` → `X.valid.ts`
 
-- Exports a registry mapping `validatorId -> function`
+- Loaded at runtime via [jiti](https://github.com/unjs/jiti) (~150KB, zero dependencies)
 
-- Functions receive context: `{ schema, values, targetId }`
+- Exports a `validators` registry mapping `validatorId -> function`
 
-**LLM validators (`.valid.md`):**
+**Validator contract:**
+
+```ts
+import type { ValidatorContext, ValidationIssue } from 'markform';
+
+/**
+ * Context passed to each validator function.
+ */
+interface ValidatorContext {
+  schema: FormSchema;
+  values: Record<Id, FieldValue>;
+  targetId: Id;              // field/group/form ID that referenced this validator
+}
+
+/**
+ * Sidecar file exports a validators registry.
+ */
+export const validators: Record<string, (ctx: ValidatorContext) => ValidationIssue[]> = {
+  thesis_quality: (ctx) => {
+    const thesis = ctx.values.thesis;
+    if (thesis?.kind === 'string' && thesis.value && thesis.value.length < 50) {
+      return [{
+        severity: 'warning',
+        message: 'Investment thesis should be more detailed',
+        ref: 'thesis',
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+};
+```
+
+**Runtime loading (engine):**
+
+```ts
+import { createJiti } from 'jiti';
+
+const jiti = createJiti(import.meta.url);
+
+export async function loadValidators(formPath: string): Promise<ValidatorRegistry> {
+  const basePath = formPath.replace(/\.form\.md$/, '');
+
+  for (const ext of ['.valid.ts', '.valid.js']) {
+    const validatorPath = basePath + ext;
+    if (await fileExists(validatorPath)) {
+      try {
+        const mod = await jiti.import(validatorPath);
+        return mod.validators ?? {};
+      } catch (err) {
+        // Return error as validation issue, don't crash
+        return { __load_error__: () => [{
+          severity: 'error',
+          message: `Failed to load validators: ${err.message}`,
+          source: 'code',
+        }]};
+      }
+    }
+  }
+  return {};
+}
+```
+
+**Caching:** Jiti caches transpiled files in `node_modules/.cache/jiti`. First load
+transpiles (~~50-100ms); subsequent loads read from cache (~~5ms).
+
+**Error handling:**
+
+- Syntax errors in `.valid.ts` → reported as validation issue, form still loads
+
+- Missing `validators` export → warning, continue with empty registry
+
+- Validator throws at runtime → catch and convert to validation issue
+
+**LLM validators (`.valid.md`) — v0.2:**
 
 - Sidecar file: `X.valid.md`
 
@@ -1402,13 +1476,15 @@ Validators are referenced by **ID** from fields/groups/form via `validate=["..."
 
 - Output as structured JSON issues
 
+- Deferred to v0.2 to reduce scope
+
 #### Validation Pipeline
 
 1. Built-ins first (fast, deterministic)
 
-2. Code validators
+2. Code validators (via jiti)
 
-3. LLM validators (optional; may be slow/costly)
+3. LLM validators (optional; v0.2)
 
 #### Validation Result Model
 
@@ -1743,8 +1819,7 @@ mode: mock  # mock | live (see explanation below)
 form:
   path: examples/quarterly/quarterly.form.md
 validators:
-  code: examples/quarterly/quarterly.valid.ts
-  llm: examples/quarterly/quarterly.valid.md
+  code: examples/quarterly/quarterly.valid.ts  # optional
 mock:
   completed_mock: examples/quarterly/quarterly.mock.filled.form.md
 
@@ -1929,6 +2004,16 @@ v0.1 includes:
 
 - Golden test runner
 
+**Key dependencies:**
+
+- `@markdoc/markdoc` — parsing and AST
+
+- `zod` — schema validation
+
+- `jiti` — runtime TypeScript loading for `.valid.ts` validators
+
+- `yaml` — YAML parsing/serialization for frontmatter and CLI output
+
 Future split into `markform-cli`, `markform-ai-sdk`, etc.
 is optional later.
 
@@ -1945,9 +2030,7 @@ Files:
 - `examples/quarterly/quarterly.mock.filled.form.md` (completed mock with checkbox
   states and values)
 
-- `examples/quarterly/quarterly.valid.ts` (deterministic checks)
-
-- `examples/quarterly/quarterly.valid.md` (LLM validator prompt)
+- `examples/quarterly/quarterly.valid.ts` (code validators)
 
 - `examples/quarterly/quarterly.session.yaml` (session transcript)
 
@@ -2281,109 +2364,114 @@ Type system and validation vocabulary:
 
 * * *
 
-## Decisions and Outstanding Questions
+## Design Decisions
 
-### string-list Design Decisions (v0.1)
+This section documents design decisions made during architecture planning.
+All items are resolved unless explicitly marked as open questions in the final
+subsection.
 
-1. **Empty string handling** — Empty strings (after trimming) are silently discarded.
-   If users need explicit empty entries, that’s a different data modeling need.
+### Core Field Behavior (v0.1)
 
-2. **Whitespace handling** — Always trim leading/trailing whitespace from items;
-   preserve internal whitespace.
-   A `trimMode` attribute to customize this behavior is deferred to v0.2+.
+1. **String field whitespace handling** — Whitespace-only values are equivalent to empty
+   values for all purposes: `value.trim() === ""` means “no value provided.”
+   For required fields, this means whitespace-only fails validation.
+   For optional fields, whitespace-only is treated as empty (valid but unfilled).
+   A `trimMode` attribute to customize this behavior is deferred to post-v0.2.
 
-3. **Item-level patterns** — `itemPattern` (regex validation per item) is deferred to
-   v0.2+. v0.1 focuses on cardinality constraints only.
+2. **Labels required on fields** — The `label` attribute is required on all field types
+   (`label: string` in `FieldBase`). Missing label produces a parse error.
+   Group/form titles remain optional.
+   See Parsing Strategy (semantic validation).
 
-4. **Patch operations** — `set_string_list` performs full array replacement.
-   Item-level insert/remove/reorder operations are deferred to v0.2+.
+3. **Option ID scoping** — Option IDs are **field-scoped** (unique within field, not
+   globally). This allows reusing common patterns like `[ ] 10-K {% #ten_k %}` across
+   multiple fields. When referencing options externally (doc blocks), use qualified form
+   `{fieldId}.{optionId}`. In patches and FieldValue, options are already scoped by the
+   field context. This is compatible with Markdoc since `{% #id %}` just sets an
+   attribute—Markdoc doesn’t enforce uniqueness.
 
-### Repeating Groups (v0.2+)
-
-5. **Instance ID generation** — Repeating group instances will use auto-generated
-   sequential suffixes: `{base_id}_1`, `{base_id}_2`, etc.
-   This keeps IDs predictable and readable while maintaining uniqueness.
-   Reordering may cause ID reassignment (acceptable for v0.2 scope).
-
-6. **Patch operations for repeating groups** — Full array replacement initially, with
-   item-level operations (insert/remove/reorder) and field-level patches within
-   instances as potential future enhancements.
-
-### Resolved Design Decisions
-
-7. **`ParsedForm` internal shape defined** — The canonical internal representation
-   returned by `parseForm()` is now explicitly defined (see `ParsedForm` interface in
-   Layer 2: Data Model).
-   Includes `schema`, `valuesByFieldId`, `docs`, `orderIndex` (for deterministic
-   ordering), and `idIndex` (for fast lookup/validation).
-
-8. **Source location data in validation issues** — `ValidationIssue` now includes
-   optional `path` (field/group ID path) and `range` (source position from Markdoc AST)
-   fields for CLI and tool integration.
-   See `SourcePosition` and `SourceRange` types.
-
-9. **Unknown option IDs handled strictly** — Option ID handling is now fully specified:
+4. **Unknown option IDs handled strictly** — Option ID handling is fully specified:
 
    - Parse time: Missing `{% #id %}` annotation on options → parse error
 
    - Parse time: Duplicate option IDs within a field → parse error
 
    - Patch time: Unknown option ID in patch → `INVALID_OPTION_ID` error, batch rejected
-     See Parsing Strategy (semantic validation) and Patch validation layers sections.
 
-10. **Labels required on fields** — The `label` attribute is required on all field types
-    (`label: string` in `FieldBase`). Missing label produces a parse error.
-    Group/form titles remain optional.
-    See Parsing Strategy (semantic validation).
+   See Parsing Strategy (semantic validation) and Patch validation layers sections.
 
-11. **Option ID scoping** — Option IDs are **field-scoped** (unique within field, not
-    globally). This allows reusing common patterns like `[ ] 10-K {% #ten_k %}` across
-    multiple fields. When referencing options externally (doc blocks), use qualified form
-    `{fieldId}.{optionId}`. In patches and FieldValue, options are already scoped by the
-    field context. This is compatible with Markdoc since `{% #id %}` just sets an
-    attribute—Markdoc doesn’t enforce uniqueness.
+5. **Checkbox `simple` mode completion semantics** — The `minDone` attribute (integer,
+   default `-1`) controls completion threshold.
+   When `minDone=-1` (default), all options must be `done`. Setting `minDone=1` allows
+   “at least one done” semantics, and `minDone=0` makes the field effectively optional.
+   This flexible approach avoids needing separate modes like `simple_strict` vs
+   `simple_optional`.
 
-12. **Checkbox `simple` mode completion semantics** — Added `minDone` attribute
-    (integer, default `-1`) to control completion threshold.
-    When `minDone=-1` (default), all options must be `done`. Setting `minDone=1` allows
-    “at least one done” semantics, and `minDone=0` makes the field effectively optional.
-    This flexible approach avoids needing separate modes like `simple_strict` vs
-    `simple_optional`.
+### string-list Field (v0.1)
 
-### Open Design Questions
+6. **Empty string handling** — Empty strings (after trimming) are silently discarded.
+   If users need explicit empty entries, that’s a different data modeling need.
 
-13. **String field whitespace-only values** — Currently `required` means `value.trim()
-    !== ""`. Consider whether whitespace-only should ever be valid for non-required
-    fields (current answer: yes, it’s valid for optional fields).
+7. **Whitespace handling** — Always trim leading/trailing whitespace from items;
+   preserve internal whitespace.
+   A `trimMode` attribute to customize this behavior is deferred to v0.2+.
 
-### Summary Enhancement Questions (v0.1)
+8. **Item-level patterns** — `itemPattern` (regex validation per item) is deferred to
+   v0.2+. v0.1 focuses on cardinality constraints only.
 
-14. **CheckboxProgressCounts overlap between modes** — The `CheckboxProgressCounts`
-    interface includes fields for both multi mode (`todo`, `done`, `incomplete`,
-    `active`, `na`) and explicit mode (`unfilled`, `yes`, `no`). At runtime, only the
-    states valid for the field’s `checkboxMode` will have non-zero values.
-    Consider whether to split this into mode-specific types or use a discriminated
-    union. Current decision: single unified type for simplicity, with unused fields set
-    to zero.
+9. **Patch operations** — `set_string_list` performs full array replacement.
+   Item-level insert/remove/reorder operations are deferred to v0.2+.
 
-15. **Group-level progress tracking** — The current `ProgressSummary` only tracks field
-    progress. Group-level validation issues (from hook validators) that don’t reference a
-    specific field ID need a home.
-    Current decision: such issues appear in `ValidationIssue[]` but don’t increment any
-    field’s `issueCount`. May need `ProgressSummary.groupIssueCount` or similar in
-    future.
+### Internal Representation (v0.1)
 
-16. **Golden test frontmatter handling** — Since `form_summary` and `form_progress` are
-    recomputed on every serialize, golden test fixtures will include these summaries.
-    The test runner should either: (a) compare the full serialized file including
-    summaries, or (b) strip summaries before comparison.
-    Current recommendation: compare full file including summaries to validate summary
-    computation is deterministic.
+10. **`ParsedForm` internal shape** — The canonical internal representation returned by
+    `parseForm()` is explicitly defined (see `ParsedForm` interface in Layer 2: Data
+    Model). Includes `schema`, `valuesByFieldId`, `docs`, `orderIndex` (for deterministic
+    ordering), and `idIndex` (for fast lookup/validation).
 
-17. **FieldKind type location** — `FieldKind` is now used in both `Field` types (as the
+11. **Source location data in validation issues** — `ValidationIssue` includes optional
+    `path` (field/group ID path) and `range` (source position from Markdoc AST) fields
+    for CLI and tool integration.
+    See `SourcePosition` and `SourceRange` types.
+
+12. **FieldKind type location** — `FieldKind` is used in both `Field` types (as the
     `kind` discriminant) and in summary types.
-    Consider whether to define it once and reuse, or keep separate definitions.
-    Current decision: define once, export from types module.
+    Define once, export from types module.
+
+### Summary Types (v0.1)
+
+13. **CheckboxProgressCounts unified type** — The `CheckboxProgressCounts` interface
+    includes fields for both multi mode (`todo`, `done`, `incomplete`, `active`, `na`)
+    and explicit mode (`unfilled`, `yes`, `no`). At runtime, only the states valid for
+    the field’s `checkboxMode` will have non-zero values.
+    Using a single unified type for simplicity, with unused fields set to zero.
+
+14. **Group-level progress tracking** — The `ProgressSummary` tracks field progress
+    only. Group-level validation issues (from hook validators) that don’t reference a
+    specific field ID appear in `ValidationIssue[]` but don’t increment any field’s
+    `issueCount`. May need `ProgressSummary.groupIssueCount` or similar in future
+    versions.
+
+15. **Golden test frontmatter handling** — Since `form_summary` and `form_progress` are
+    recomputed on every serialize, golden test fixtures include these summaries.
+    The test runner compares the full serialized file including summaries to validate
+    that summary computation is deterministic.
+
+### Repeating Groups (v0.2+)
+
+16. **Instance ID generation** — Repeating group instances will use auto-generated
+    sequential suffixes: `{base_id}_1`, `{base_id}_2`, etc.
+    This keeps IDs predictable and readable while maintaining uniqueness.
+    Reordering may cause ID reassignment (acceptable for v0.2 scope).
+
+17. **Patch operations for repeating groups** — Full array replacement initially, with
+    item-level operations (insert/remove/reorder) and field-level patches within
+    instances as potential future enhancements.
+
+### Open Questions
+
+*No open questions at this time.
+All design decisions for v0.1 have been resolved.*
 
 * * *
 
@@ -2405,38 +2493,21 @@ Type system and validation vocabulary:
   If stem ends with a version pattern (`-vN`, `_vN`, ` vN`), increment the number;
   otherwise append `-v1`.
 
-### Validator Execution in Serve (v0.2 research)
+### Resolved: Code Validator Execution
 
-When validation is added to serve in v0.2, two viable approaches for running code
-validators (`.valid.ts`):
+Code validators (`.valid.ts`) are loaded at runtime via **jiti** (~150KB, zero
+dependencies). This provides:
 
-1. **Server-executed validators** (recommended baseline)
+- Seamless TypeScript execution without bundling `tsx` or `ts-node`
 
-   - The CLI/server loads and executes the TypeScript validators in Node at validate
-     time (e.g., using `ts-node`/`tsx` or a one-shot esbuild transpile to a temp ESM
-     file).
+- Caching of transpiled files for fast subsequent loads
 
-   - Pros: No client bundling; consistent with CLI behavior; simpler DX.
+- Works in CLI (`markform inspect`) and will work in serve when validation is added
 
-   - Cons: Requires Node at runtime; not portable to static hosting.
-
-   - UX: “Validate” triggers server-side run; errors surfaced in the UI panel.
-
-2. **Bake validators for client execution** (optional command)
-
-   - Add a command (e.g., `markform build-validators <file.form.md> --out <dir>`) that
-     compiles `X.valid.ts` to JS via esbuild/tsup and generates a static bundle the UI
-     can import. `serve` can optionally run this step before browsing.
-
-   - Pros: Enables offline/static demo pages; faster subsequent validates.
-
-   - Cons: More plumbing; must manage bundling and sandboxing; not needed for most local
-     workflows.
-
-   - UX: Run “build-validators” once, then `serve` loads baked JS for validation.
-
-Recommendation: Start with approach (1) for v0.2. Approach (2) can be added later
-without changing the engine contract.
+When validation is added to serve in v0.2, the same jiti-based loading will be used
+server-side.
+A future “bake validators” command could pre-compile for static hosting, but
+this is not needed for typical local workflows.
 
 ### Potential Improvements (v0.2+)
 
