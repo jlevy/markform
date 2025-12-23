@@ -19,13 +19,14 @@ import { registerValidateCommand } from "./commands/validate.js";
 import { OUTPUT_FORMATS } from "./lib/shared.js";
 
 /**
- * Configure Commander with colored help text.
+ * Configure Commander with colored help text and global options display.
  */
 function withColoredHelp<T extends Command>(cmd: T): T {
   cmd.configureHelp({
     styleTitle: (str) => pc.bold(pc.cyan(str)),
     styleCommandText: (str) => pc.green(str),
     styleOptionText: (str) => pc.yellow(str),
+    showGlobalOptions: true,
   });
   return cmd;
 }
