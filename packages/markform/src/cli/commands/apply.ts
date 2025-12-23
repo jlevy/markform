@@ -7,13 +7,15 @@
 
 import type { Command } from "commander";
 
-import YAML from "yaml";
+import pc from "picocolors";
 
 import { applyPatches } from "../../engine/apply.js";
 import { parseForm } from "../../engine/parse.js";
 import { serialize } from "../../engine/serialize.js";
+import type { ApplyResult, InspectIssue, ProgressState } from "../../engine/types.js";
 import { PatchSchema } from "../../engine/types.js";
 import {
+  formatOutput,
   getCommandContext,
   logDryRun,
   logError,
@@ -22,6 +24,74 @@ import {
   readFile,
   writeFile,
 } from "../lib/shared.js";
+
+interface ApplyReport {
+  apply_status: "applied" | "rejected";
+  form_state: ProgressState;
+  is_complete: boolean;
+  structure: ApplyResult["structureSummary"];
+  progress: ApplyResult["progressSummary"];
+  issues: InspectIssue[];
+}
+
+/**
+ * Format state badge for console output.
+ */
+function formatState(state: ProgressState, useColors: boolean): string {
+  const badges: Record<ProgressState, [string, (s: string) => string]> = {
+    complete: ["✓ complete", pc.green],
+    incomplete: ["○ incomplete", pc.yellow],
+    empty: ["◌ empty", pc.dim],
+    invalid: ["✗ invalid", pc.red],
+  };
+  const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
+  return useColors ? colorFn(text) : text;
+}
+
+/**
+ * Format apply report for console output.
+ */
+function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
+  const lines: string[] = [];
+  const bold = useColors ? pc.bold : (s: string) => s;
+  const dim = useColors ? pc.dim : (s: string) => s;
+  const cyan = useColors ? pc.cyan : (s: string) => s;
+  const green = useColors ? pc.green : (s: string) => s;
+  const red = useColors ? pc.red : (s: string) => s;
+
+  // Header
+  lines.push(bold(cyan("Apply Result")));
+  lines.push("");
+
+  // Status
+  const statusColor = report.apply_status === "applied" ? green : red;
+  lines.push(`${bold("Status:")} ${statusColor(report.apply_status)}`);
+  lines.push(`${bold("Form State:")} ${formatState(report.form_state, useColors)}`);
+  lines.push(`${bold("Complete:")} ${report.is_complete ? green("yes") : dim("no")}`);
+  lines.push("");
+
+  // Progress summary
+  const counts = report.progress.counts;
+  lines.push(bold("Progress:"));
+  lines.push(`  Total fields: ${counts.totalFields}`);
+  lines.push(`  Complete: ${counts.completeFields}`);
+  lines.push(`  Incomplete: ${counts.incompleteFields}`);
+  lines.push(`  Empty (required): ${counts.emptyRequiredFields}`);
+  lines.push("");
+
+  // Issues
+  if (report.issues.length > 0) {
+    lines.push(bold(`Issues (${report.issues.length}):`));
+    for (const issue of report.issues) {
+      const priority = `P${issue.priority}`;
+      lines.push(`  ${dim(priority)} ${dim(issue.ref)}: ${issue.message}`);
+    }
+  } else {
+    lines.push(dim("No issues."));
+  }
+
+  return lines.join("\n");
+}
 
 /**
  * Register the apply command.
@@ -94,14 +164,25 @@ export function registerApplyCommand(program: Command): void {
 
           if (result.applyStatus === "rejected") {
             logError("Patches rejected - structural validation failed");
-            console.error(YAML.stringify({ issues: result.issues }));
+            const report: ApplyReport = {
+              apply_status: result.applyStatus,
+              form_state: result.formState,
+              is_complete: result.isComplete,
+              structure: result.structureSummary,
+              progress: result.progressSummary,
+              issues: result.issues,
+            };
+            const output = formatOutput(ctx, report, (data, useColors) =>
+              formatConsoleReport(data as ApplyReport, useColors)
+            );
+            console.error(output);
             process.exit(1);
           }
 
           // Output result
           if (options.report) {
             // Output apply result report
-            const report = {
+            const report: ApplyReport = {
               apply_status: result.applyStatus,
               form_state: result.formState,
               is_complete: result.isComplete,
@@ -110,7 +191,9 @@ export function registerApplyCommand(program: Command): void {
               issues: result.issues,
             };
 
-            const output = YAML.stringify(report);
+            const output = formatOutput(ctx, report, (data, useColors) =>
+              formatConsoleReport(data as ApplyReport, useColors)
+            );
             if (options.output) {
               await writeFile(options.output, output);
               logSuccess(ctx, `Report written to ${options.output}`);
@@ -118,7 +201,7 @@ export function registerApplyCommand(program: Command): void {
               console.log(output);
             }
           } else {
-            // Output modified form
+            // Output modified form (always markdown)
             const output = serialize(form);
             if (options.output) {
               await writeFile(options.output, output);

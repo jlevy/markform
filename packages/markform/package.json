@@ -52,7 +52,9 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@ai-sdk/anthropic": "^3.0.1",
     "@types/node": "^24.0.0",
+    "ai": "^6.0.3",
     "publint": "^0.3.0",
     "tsdown": "^0.16.0",
     "typescript": "^5.0.0",

@@ -14,6 +14,7 @@ import { registerExportCommand } from "./commands/export.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerRunCommand } from "./commands/run.js";
 import { registerServeCommand } from "./commands/serve.js";
+import { OUTPUT_FORMATS } from "./lib/shared.js";
 
 /**
  * Configure Commander with colored help text.
@@ -39,7 +40,12 @@ function createProgram(): Command {
     .version(VERSION)
     .option("--verbose", "Enable verbose output")
     .option("--quiet", "Suppress non-essential output")
-    .option("--dry-run", "Show what would be done without making changes");
+    .option("--dry-run", "Show what would be done without making changes")
+    .option(
+      "-f, --format <format>",
+      `Output format: ${OUTPUT_FORMATS.join(", ")}`,
+      "console"
+    );
 
   // Register commands
   registerInspectCommand(program);

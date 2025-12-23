@@ -1841,6 +1841,48 @@ The harness config controls how many issues to return (`max_issues`).
 **Completion check:** A form is complete when there are no issues with `severity:
 'required'`.
 
+#### Export Schema
+
+The `export` operation returns a JSON object with `schema` and `values` properties.
+
+**Schema format:**
+
+```ts
+interface ExportedSchema {
+  id: string;
+  title?: string;
+  groups: ExportedGroup[];
+}
+
+interface ExportedGroup {
+  id: string;
+  title?: string;
+  children: ExportedField[];
+}
+
+interface ExportedField {
+  id: string;
+  kind: FieldKind;
+  label: string;
+  required: boolean;           // Always explicit: true or false
+  options?: ExportedOption[];  // For single_select, multi_select, checkboxes
+}
+
+interface ExportedOption {
+  id: string;
+  label: string;
+}
+```
+
+**Key design decisions:**
+
+- **`required` is always explicit:** The `required` field is always present as `true` or
+  `false`, never omitted. This makes the schema self-documenting for external consumers
+  without requiring knowledge of default values.
+
+- **Values are typed by kind:** The `values` object maps field IDs to typed value
+  objects matching the field's `kind`.
+
 * * *
 
 ### Layer 5: Execution (Harness Loop)

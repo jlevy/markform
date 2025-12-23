@@ -5,6 +5,26 @@
 import type { Command } from "commander";
 
 import pc from "picocolors";
+import YAML from "yaml";
+
+/**
+ * Output format options for CLI commands.
+ * - console: auto-detect TTY, use ANSI colors if available (default)
+ * - plaintext: same as console but no ANSI colors
+ * - yaml: structured YAML output
+ * - json: structured JSON output
+ */
+export type OutputFormat = "console" | "plaintext" | "yaml" | "json";
+
+/**
+ * Valid format options for Commander choice validation.
+ */
+export const OUTPUT_FORMATS: OutputFormat[] = [
+  "console",
+  "plaintext",
+  "yaml",
+  "json",
+];
 
 /**
  * Context available to all commands.
@@ -13,6 +33,7 @@ export interface CommandContext {
   dryRun: boolean;
   verbose: boolean;
   quiet: boolean;
+  format: OutputFormat;
 }
 
 /**
@@ -23,12 +44,50 @@ export function getCommandContext(command: Command): CommandContext {
     dryRun?: boolean;
     verbose?: boolean;
     quiet?: boolean;
+    format?: OutputFormat;
   }>();
   return {
     dryRun: opts.dryRun ?? false,
     verbose: opts.verbose ?? false,
     quiet: opts.quiet ?? false,
+    format: opts.format ?? "console",
   };
+}
+
+/**
+ * Check if output should use colors.
+ * Returns true for console format when stdout is a TTY.
+ */
+export function shouldUseColors(ctx: CommandContext): boolean {
+  if (ctx.format === "plaintext" || ctx.format === "yaml" || ctx.format === "json") {
+    return false;
+  }
+  // console format: use colors if stdout is a TTY and NO_COLOR is not set
+  return process.stdout.isTTY && !process.env.NO_COLOR;
+}
+
+/**
+ * Format structured data according to output format.
+ */
+export function formatOutput(
+  ctx: CommandContext,
+  data: unknown,
+  consoleFormatter?: (data: unknown, useColors: boolean) => string
+): string {
+  switch (ctx.format) {
+    case "json":
+      return JSON.stringify(data, null, 2);
+    case "yaml":
+      return YAML.stringify(data);
+    case "plaintext":
+    case "console":
+    default:
+      if (consoleFormatter) {
+        return consoleFormatter(data, shouldUseColors(ctx));
+      }
+      // Default: use YAML for readable console output
+      return YAML.stringify(data);
+  }
 }
 
 /**
