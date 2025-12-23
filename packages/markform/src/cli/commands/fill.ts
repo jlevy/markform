@@ -12,6 +12,7 @@ import { basename, resolve } from "node:path";
 import pc from "picocolors";
 
 import { parseForm } from "../../engine/parse.js";
+import { serialize } from "../../engine/serialize.js";
 import { serializeSession } from "../../engine/session.js";
 import type {
   HarnessConfig,
@@ -35,6 +36,7 @@ import {
   readFile,
   writeFile,
 } from "../lib/shared.js";
+import { generateVersionedPath } from "../lib/versioning.js";
 
 /** Supported agent types */
 const AGENT_TYPES = ["mock", "live"] as const;
@@ -247,6 +249,19 @@ export function registerFillCommand(program: Command): void {
 
           logTiming(ctx, "Fill time", durationMs);
 
+          // Write output file
+          const outputPath = options.output
+            ? resolve(options.output)
+            : generateVersionedPath(filePath);
+          const formMarkdown = serialize(harness.getForm());
+
+          if (ctx.dryRun) {
+            logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
+          } else {
+            await writeFile(outputPath, formMarkdown);
+            logSuccess(ctx, `Form written to: ${basename(outputPath)}`);
+          }
+
           // Build session transcript
           const transcript = buildSessionTranscript(
             filePath,
@@ -255,7 +270,8 @@ export function registerFillCommand(program: Command): void {
             options.model ?? DEFAULT_MODEL,
             harnessConfig as HarnessConfig,
             harness.getTurns(),
-            stepResult.isComplete
+            stepResult.isComplete,
+            basename(outputPath)
           );
 
           // Output or record session
@@ -299,7 +315,8 @@ function buildSessionTranscript(
   modelId: string,
   harnessConfig: HarnessConfig,
   turns: SessionTranscript["turns"],
-  expectComplete: boolean
+  expectComplete: boolean,
+  outputFilename: string
 ): SessionTranscript {
   // Make paths relative for portability
   const relativeFormPath = basename(formPath);
@@ -307,7 +324,8 @@ function buildSessionTranscript(
 
   const final: SessionFinal = {
     expectComplete,
-    expectedCompletedForm: relativeMockPath ?? relativeFormPath,
+    // For mock mode, use the mock source as expected; otherwise use actual output
+    expectedCompletedForm: agentType === "mock" ? (relativeMockPath ?? outputFilename) : outputFilename,
   };
 
   const transcript: SessionTranscript = {

@@ -175,6 +175,7 @@ pnpm build
 pnpm markform --help
 pnpm markform inspect <file>
 pnpm markform export <file>
+pnpm markform dump <file>
 pnpm markform apply <file> --patch '<json>'
 pnpm markform serve <file>
 pnpm markform fill <file> --agent=mock --mock-source <mock-file>
@@ -187,6 +188,7 @@ pnpm markform fill <file> --agent=live --model=anthropic/claude-sonnet-4-5
 | --- | --- |
 | `inspect <file>` | Display form structure, progress, and issues (YAML or JSON) |
 | `export <file>` | Export form schema and values as JSON |
+| `dump <file>` | Extract and display form values only (lightweight inspect) |
 | `apply <file>` | Apply JSON patches to update field values |
 | `serve <file>` | Start a web server to browse/edit the form |
 | `fill <file>` | Fill a form using an agent (mock or live LLM) |
