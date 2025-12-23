@@ -1,5 +1,7 @@
 attic/
 
+examples/*/*.form.html
+
 # Logs
 logs
 *.log

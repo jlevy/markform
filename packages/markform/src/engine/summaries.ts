@@ -263,7 +263,7 @@ function computeFieldProgress(
 
   const progress: FieldProgress = {
     kind: field.kind,
-    required: field.required ?? false,
+    required: field.required,
     submitted,
     state,
     valid,

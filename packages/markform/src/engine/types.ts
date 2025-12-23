@@ -60,11 +60,15 @@ export type FieldKind =
   | "single_select"
   | "multi_select";
 
+/** Field priority level for issue scoring */
+export type FieldPriorityLevel = "high" | "medium" | "low";
+
 /** Base interface for all field types */
 export interface FieldBase {
   id: Id;
   label: string;
-  required?: boolean;
+  required: boolean;            // explicit: parser defaults to false if not specified
+  priority: FieldPriorityLevel; // explicit: parser defaults to 'medium' if not specified
   validate?: ValidatorRef[];
 }
 
@@ -104,7 +108,7 @@ export interface Option {
 /** Checkboxes field - stateful checklist with configurable modes */
 export interface CheckboxesField extends FieldBase {
   kind: "checkboxes";
-  checkboxMode?: CheckboxMode;
+  checkboxMode: CheckboxMode; // explicit: parser defaults to 'multi' if not specified
   minDone?: number;
   options: Option[];
 }
@@ -580,6 +584,8 @@ export const FieldKindSchema = z.enum([
   "multi_select",
 ]);
 
+export const FieldPriorityLevelSchema = z.enum(["high", "medium", "low"]);
+
 // Option schema
 export const OptionSchema = z.object({
   id: IdSchema,
@@ -587,10 +593,12 @@ export const OptionSchema = z.object({
 });
 
 // Field base schema (partial, used for extension)
+// NOTE: required and priority are explicit (not optional) - parser assigns defaults
 const FieldBaseSchemaPartial = {
   id: IdSchema,
   label: z.string(),
-  required: z.boolean().optional(),
+  required: z.boolean(),
+  priority: FieldPriorityLevelSchema,
   validate: z.array(ValidatorRefSchema).optional(),
 };
 
@@ -625,7 +633,7 @@ export const StringListFieldSchema = z.object({
 export const CheckboxesFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
   kind: z.literal("checkboxes"),
-  checkboxMode: CheckboxModeSchema.optional(),
+  checkboxMode: CheckboxModeSchema, // explicit: parser defaults to 'multi'
   minDone: z.number().int().optional(),
   options: z.array(OptionSchema),
 });

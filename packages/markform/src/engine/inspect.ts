@@ -11,6 +11,7 @@ import type {
   ValidationIssue,
   IssueScope,
   IssueReason,
+  FieldPriorityLevel,
 } from "./types";
 import { validate } from "./validate";
 import {
@@ -75,7 +76,7 @@ export function inspect(
   );
 
   // Sort and assign priorities
-  const sortedIssues = sortAndAssignPriorities(allIssues);
+  const sortedIssues = sortAndAssignPriorities(allIssues, form);
 
   // Check if complete (no required issues)
   const isComplete = !sortedIssues.some((i) => i.severity === "required");
@@ -205,7 +206,7 @@ function isRequiredField(fieldId: string, form: ParsedForm): boolean {
   for (const group of form.schema.groups) {
     for (const field of group.children) {
       if (field.id === fieldId) {
-        return field.required ?? false;
+        return field.required;
       }
     }
   }
@@ -213,31 +214,137 @@ function isRequiredField(fieldId: string, form: ParsedForm): boolean {
 }
 
 /**
- * Sort issues by severity and assign priority numbers.
+ * Priority scoring constants.
  *
- * Required issues get lower priority numbers (1, 2, 3...)
- * Recommended issues get higher priority numbers (continuing from required)
+ * Field priority weights:
+ * - high: 3
+ * - medium: 2 (default)
+ * - low: 1
+ *
+ * Issue type scores:
+ * - required_missing: 3
+ * - validation_error: 2
+ * - checkbox_incomplete: 3 (when required), 2 (when recommended)
+ * - min_items_not_met: 2
+ * - optional_empty: 1
+ *
+ * Total score = field_priority_weight + issue_type_score
+ *
+ * Priority tiers:
+ * - P1: score >= 5
+ * - P2: score >= 4
+ * - P3: score >= 3
+ * - P4: score >= 2
+ * - P5: score >= 1
  */
-function sortAndAssignPriorities(issues: InspectIssue[]): InspectIssue[] {
-  // Separate by severity
-  const requiredIssues = issues.filter((i) => i.severity === "required");
-  const recommendedIssues = issues.filter((i) => i.severity === "recommended");
+const FIELD_PRIORITY_WEIGHTS: Record<FieldPriorityLevel, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
 
-  // Sort each group by ref for deterministic ordering
-  requiredIssues.sort((a, b) => a.ref.localeCompare(b.ref));
-  recommendedIssues.sort((a, b) => a.ref.localeCompare(b.ref));
+const ISSUE_TYPE_SCORES: Record<IssueReason, number> = {
+  required_missing: 3,
+  validation_error: 2,
+  checkbox_incomplete: 2, // Base score, adjusted by severity
+  min_items_not_met: 2,
+  optional_empty: 1,
+};
 
-  // Assign priorities
-  let priority = 1;
+/**
+ * Calculate the priority tier (1-5) from a score.
+ */
+function scoreToTier(score: number): number {
+  if (score >= 5) {
+return 1;
+}
+  if (score >= 4) {
+return 2;
+}
+  if (score >= 3) {
+return 3;
+}
+  if (score >= 2) {
+return 4;
+}
+  return 5;
+}
 
-  for (const issue of requiredIssues) {
-    issue.priority = priority++;
+/**
+ * Get the issue type score, potentially adjusted by severity.
+ */
+function getIssueTypeScore(reason: IssueReason, severity: "required" | "recommended"): number {
+  const baseScore = ISSUE_TYPE_SCORES[reason];
+  // checkbox_incomplete gets +1 when required
+  if (reason === "checkbox_incomplete" && severity === "required") {
+    return baseScore + 1;
   }
+  return baseScore;
+}
 
-  for (const issue of recommendedIssues) {
-    issue.priority = priority++;
+/**
+ * Sort issues by priority tier and assign priority numbers.
+ *
+ * Priority is computed as a tier (1-5, P1-P5) based on:
+ * - Field priority weight (high=3, medium=2, low=1)
+ * - Issue type score (required_missing=3, validation_error=2, optional_empty=1)
+ *
+ * Within each tier, issues are sorted by severity (required first) then by ref.
+ */
+function sortAndAssignPriorities(
+  issues: InspectIssue[],
+  form: ParsedForm
+): InspectIssue[] {
+  // Calculate scores and assign tier-based priorities
+  const scoredIssues = issues.map((issue) => {
+    const fieldPriority = getFieldPriority(issue.ref, form);
+    const fieldWeight = FIELD_PRIORITY_WEIGHTS[fieldPriority];
+    const issueScore = getIssueTypeScore(issue.reason, issue.severity);
+    const totalScore = fieldWeight + issueScore;
+    const tier = scoreToTier(totalScore);
+
+    return {
+      ...issue,
+      priority: tier,
+      _score: totalScore, // For sorting within tier
+    };
+  });
+
+  // Sort by:
+  // 1. Priority tier (ascending, P1 first)
+  // 2. Severity (required before recommended)
+  // 3. Score (descending, higher scores first within tier)
+  // 4. Ref (alphabetically for deterministic output)
+  scoredIssues.sort((a, b) => {
+    if (a.priority !== b.priority) {
+return a.priority - b.priority;
+}
+    if (a.severity !== b.severity) {
+      return a.severity === "required" ? -1 : 1;
+    }
+    if (a._score !== b._score) {
+return b._score - a._score;
+}
+    return a.ref.localeCompare(b.ref);
+  });
+
+  // Remove internal _score field
+  return scoredIssues.map(({ _score, ...issue }) => issue);
+}
+
+/**
+ * Get the priority level for a field.
+ */
+function getFieldPriority(ref: string, form: ParsedForm): FieldPriorityLevel {
+  // Handle option refs (fieldId.optionId)
+  const fieldId = ref.includes(".") ? ref.split(".")[0] : ref;
+
+  for (const group of form.schema.groups) {
+    for (const field of group.children) {
+      if (field.id === fieldId) {
+        return field.priority;
+      }
+    }
   }
-
-  // Return combined sorted list
-  return [...requiredIssues, ...recommendedIssues];
+  return "medium"; // Fallback for non-field refs (groups, form)
 }

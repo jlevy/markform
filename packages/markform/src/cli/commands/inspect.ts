@@ -1,9 +1,11 @@
 /**
  * Inspect command - Display form structure, progress, and issues.
  *
- * Outputs a report with:
+ * Outputs a comprehensive report with:
+ * - Form state and title
  * - Structure summary (field counts, types)
- * - Progress summary (filled/empty counts, form state)
+ * - Progress summary (filled/empty counts)
+ * - Full form content (groups, fields, current values)
  * - Issues sorted by priority
  */
 
@@ -13,7 +15,11 @@ import pc from "picocolors";
 
 import { inspect } from "../../engine/inspect.js";
 import { parseForm } from "../../engine/parse.js";
-import type { InspectIssue, ProgressState } from "../../engine/types.js";
+import type {
+  FieldValue,
+  InspectIssue,
+  ProgressState,
+} from "../../engine/types.js";
 import {
   formatOutput,
   getCommandContext,
@@ -38,12 +44,19 @@ function formatState(state: ProgressState, useColors: boolean): string {
 
 /**
  * Format priority badge for console output.
+ *
+ * Priority tiers and colors:
+ * - P1: bold red (critical)
+ * - P2: yellow (high)
+ * - P3: cyan (medium)
+ * - P4: blue (low)
+ * - P5: dim/gray (minimal)
  */
 function formatPriority(priority: number, useColors: boolean): string {
   const label = `P${priority}`;
   if (!useColors) {
-return label;
-}
+    return label;
+  }
   switch (priority) {
     case 1:
       return pc.red(pc.bold(label));
@@ -51,6 +64,9 @@ return label;
       return pc.yellow(label);
     case 3:
       return pc.cyan(label);
+    case 4:
+      return pc.blue(label);
+    case 5:
     default:
       return pc.dim(label);
   }
@@ -64,37 +80,100 @@ function formatSeverity(
   useColors: boolean
 ): string {
   if (!useColors) {
-return severity;
-}
+    return severity;
+  }
   return severity === "required" ? pc.red(severity) : pc.yellow(severity);
+}
+
+/**
+ * Format a field value for console display.
+ */
+function formatFieldValue(
+  value: FieldValue | undefined,
+  useColors: boolean
+): string {
+  const dim = useColors ? pc.dim : (s: string) => s;
+  const green = useColors ? pc.green : (s: string) => s;
+
+  if (!value) {
+    return dim("(empty)");
+  }
+
+  switch (value.kind) {
+    case "string":
+      return value.value ? green(`"${value.value}"`) : dim("(empty)");
+    case "number":
+      return value.value !== null ? green(String(value.value)) : dim("(empty)");
+    case "string_list":
+      return value.items.length > 0
+        ? green(`[${value.items.map((i) => `"${i}"`).join(", ")}]`)
+        : dim("(empty)");
+    case "single_select":
+      return value.selected ? green(value.selected) : dim("(none selected)");
+    case "multi_select":
+      return value.selected.length > 0
+        ? green(`[${value.selected.join(", ")}]`)
+        : dim("(none selected)");
+    case "checkboxes": {
+      const entries = Object.entries(value.values);
+      if (entries.length === 0) {
+        return dim("(no entries)");
+      }
+      return entries.map(([k, v]) => `${k}:${v}`).join(", ");
+    }
+    default:
+      return dim("(unknown)");
+  }
+}
+
+/** Field info for console report */
+interface ReportField {
+  id: string;
+  kind: string;
+  label: string;
+  required: boolean;
+}
+
+/** Group info for console report */
+interface ReportGroup {
+  id: string;
+  title?: string;
+  children: ReportField[];
+}
+
+/** Report structure for console/JSON output */
+interface InspectReport {
+  title?: string;
+  structure: unknown;
+  progress: unknown;
+  form_state: ProgressState;
+  groups: ReportGroup[];
+  values: Record<string, FieldValue>;
+  issues: {
+    ref: string;
+    scope: string;
+    reason: string;
+    message: string;
+    priority: number;
+    severity: "required" | "recommended";
+  }[];
 }
 
 /**
  * Format inspect report for console output.
  */
-function formatConsoleReport(
-  report: {
-    structure: unknown;
-    progress: unknown;
-    form_state: ProgressState;
-    issues: {
-      ref: string;
-      scope: string;
-      reason: string;
-      message: string;
-      priority: number;
-      severity: "required" | "recommended";
-    }[];
-  },
-  useColors: boolean
-): string {
+function formatConsoleReport(report: InspectReport, useColors: boolean): string {
   const lines: string[] = [];
   const bold = useColors ? pc.bold : (s: string) => s;
   const dim = useColors ? pc.dim : (s: string) => s;
   const cyan = useColors ? pc.cyan : (s: string) => s;
+  const yellow = useColors ? pc.yellow : (s: string) => s;
 
   // Header
   lines.push(bold(cyan("Form Inspection Report")));
+  if (report.title) {
+    lines.push(`${bold("Title:")} ${report.title}`);
+  }
   lines.push("");
 
   // Form state
@@ -118,17 +197,37 @@ function formatConsoleReport(
     counts: {
       totalFields: number;
       requiredFields: number;
+      submittedFields: number;
       completeFields: number;
       incompleteFields: number;
+      invalidFields: number;
       emptyRequiredFields: number;
+      emptyOptionalFields: number;
     };
   };
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
+  lines.push(`  Submitted: ${progress.counts.submittedFields}`);
   lines.push(`  Complete: ${progress.counts.completeFields}`);
   lines.push(`  Incomplete: ${progress.counts.incompleteFields}`);
+  lines.push(`  Invalid: ${progress.counts.invalidFields}`);
   lines.push(`  Empty (required): ${progress.counts.emptyRequiredFields}`);
+  lines.push(`  Empty (optional): ${progress.counts.emptyOptionalFields}`);
+  lines.push("");
+
+  // Form content (groups and fields with values)
+  lines.push(bold("Form Content:"));
+  for (const group of report.groups) {
+    lines.push(`  ${bold(group.title ?? group.id)}`);
+    for (const field of group.children) {
+      const reqBadge = field.required ? yellow("[required]") : dim("[optional]");
+      const value = report.values[field.id];
+      const valueStr = formatFieldValue(value, useColors);
+      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge}`);
+      lines.push(`      ${dim("→")} ${valueStr}`);
+    }
+  }
   lines.push("");
 
   // Issues
@@ -138,7 +237,7 @@ function formatConsoleReport(
       const priority = formatPriority(issue.priority, useColors);
       const severity = formatSeverity(issue.severity, useColors);
       lines.push(
-        `  ${priority} ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message} ${dim(`(${severity})`)}`
+        `  ${priority} (${severity}) ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message}`
       );
     }
   } else {
@@ -155,14 +254,8 @@ export function registerInspectCommand(program: Command): void {
   program
     .command("inspect <file>")
     .description("Inspect a form and display its structure, progress, and issues")
-    .option("--json", "Output as JSON (shortcut for --format json)")
-    .action(async (file: string, options: { json?: boolean }, cmd: Command) => {
+    .action(async (file: string, _options: Record<string, unknown>, cmd: Command) => {
       const ctx = getCommandContext(cmd);
-
-      // Handle --json shortcut
-      if (options.json) {
-        ctx.format = "json";
-      }
 
       try {
         logVerbose(ctx, `Reading file: ${file}`);
@@ -175,10 +268,22 @@ export function registerInspectCommand(program: Command): void {
         const result = inspect(form);
 
         // Build the report structure
-        const report = {
+        const report: InspectReport = {
+          title: form.schema.title,
           structure: result.structureSummary,
           progress: result.progressSummary,
           form_state: result.formState,
+          groups: form.schema.groups.map((group) => ({
+            id: group.id,
+            title: group.title,
+            children: group.children.map((field) => ({
+              id: field.id,
+              kind: field.kind,
+              label: field.label,
+              required: field.required,
+            })),
+          })),
+          values: form.valuesByFieldId,
           issues: result.issues.map((issue: InspectIssue) => ({
             ref: issue.ref,
             scope: issue.scope,

@@ -1,24 +1,21 @@
 /**
- * Export command - Export form schema and values.
+ * Export command - Export form as canonical markdown or structured data.
  *
- * Outputs an object with:
+ * Default output is canonical markdown.
+ * With --format=json or --format=yaml, outputs structured data with:
  * - schema: Form structure and field definitions
  * - values: Current field values
+ * - markdown: Canonical markdown string
  */
 
 import type { Command } from "commander";
 
-import pc from "picocolors";
+import YAML from "yaml";
 
 import { parseForm } from "../../engine/parse.js";
+import { serialize } from "../../engine/serialize.js";
 import type { FieldValue, Id } from "../../engine/types.js";
-import {
-  formatOutput,
-  getCommandContext,
-  logError,
-  logVerbose,
-  readFile,
-} from "../lib/shared.js";
+import { getCommandContext, logError, logVerbose, readFile } from "../lib/shared.js";
 
 interface ExportField {
   id: string;
@@ -43,82 +40,11 @@ interface ExportSchema {
 interface ExportOutput {
   schema: ExportSchema;
   values: Record<Id, FieldValue>;
+  markdown: string;
 }
 
-/**
- * Format export output for console display.
- */
-function formatConsoleExport(data: ExportOutput, useColors: boolean): string {
-  const lines: string[] = [];
-  const bold = useColors ? pc.bold : (s: string) => s;
-  const dim = useColors ? pc.dim : (s: string) => s;
-  const cyan = useColors ? pc.cyan : (s: string) => s;
-  const yellow = useColors ? pc.yellow : (s: string) => s;
-
-  // Header
-  lines.push(bold(cyan("Form Export")));
-  lines.push("");
-
-  // Schema info
-  lines.push(`${bold("Form:")} ${data.schema.title ?? data.schema.id}`);
-  lines.push(`${dim("ID:")} ${data.schema.id}`);
-  lines.push("");
-
-  // Groups and fields
-  for (const group of data.schema.groups) {
-    lines.push(bold(`${group.title ?? group.id}`));
-
-    for (const field of group.children) {
-      const reqBadge = field.required ? yellow("[required]") : dim("[optional]");
-      const value = data.values[field.id];
-      const valueStr = formatFieldValue(value, useColors);
-
-      lines.push(`  ${field.label} ${dim(`(${field.kind})`)} ${reqBadge}`);
-      lines.push(`    ${dim("→")} ${valueStr}`);
-    }
-    lines.push("");
-  }
-
-  return lines.join("\n");
-}
-
-/**
- * Format a field value for console display.
- */
-function formatFieldValue(value: FieldValue | undefined, useColors: boolean): string {
-  const dim = useColors ? pc.dim : (s: string) => s;
-  const green = useColors ? pc.green : (s: string) => s;
-
-  if (!value) {
-    return dim("(empty)");
-  }
-
-  switch (value.kind) {
-    case "string":
-      return value.value ? green(`"${value.value}"`) : dim("(empty)");
-    case "number":
-      return value.value !== null ? green(String(value.value)) : dim("(empty)");
-    case "string_list":
-      return value.items.length > 0
-        ? green(`[${value.items.map((i) => `"${i}"`).join(", ")}]`)
-        : dim("(empty)");
-    case "single_select":
-      return value.selected ? green(value.selected) : dim("(none selected)");
-    case "multi_select":
-      return value.selected.length > 0
-        ? green(`[${value.selected.join(", ")}]`)
-        : dim("(none selected)");
-    case "checkboxes": {
-      const entries = Object.entries(value.values);
-      if (entries.length === 0) {
-        return dim("(no entries)");
-      }
-      return entries.map(([k, v]) => `${k}:${v}`).join(", ");
-    }
-    default:
-      return dim("(unknown)");
-  }
-}
+/** Export format options (markdown is unique to export command) */
+type ExportFormat = "markdown" | "json" | "yaml";
 
 /**
  * Register the export command.
@@ -126,7 +52,9 @@ function formatFieldValue(value: FieldValue | undefined, useColors: boolean): st
 export function registerExportCommand(program: Command): void {
   program
     .command("export <file>")
-    .description("Export form schema and values")
+    .description(
+      "Export form as canonical markdown (default), or use --format=json/yaml for structured data"
+    )
     .option("--compact", "Output compact JSON (no formatting, only for JSON format)")
     .action(
       async (
@@ -136,6 +64,17 @@ export function registerExportCommand(program: Command): void {
       ) => {
         const ctx = getCommandContext(cmd);
 
+        // Determine format: map global format to export format
+        // json/yaml from global --format work for export
+        // console/plaintext from global map to markdown (export's default)
+        let format: ExportFormat = "markdown";
+        if (ctx.format === "json") {
+          format = "json";
+        } else if (ctx.format === "yaml") {
+          format = "yaml";
+        }
+        // "console" and "plaintext" default to "markdown" for export
+
         try {
           logVerbose(ctx, `Reading file: ${file}`);
           const content = await readFile(file);
@@ -143,7 +82,13 @@ export function registerExportCommand(program: Command): void {
           logVerbose(ctx, "Parsing form...");
           const form = parseForm(content);
 
-          // Extract schema and values
+          // For markdown format, just output the serialized form
+          if (format === "markdown") {
+            console.log(serialize(form));
+            return;
+          }
+
+          // For JSON/YAML, build the full structured output
           const schema: ExportSchema = {
             id: form.schema.id,
             title: form.schema.title,
@@ -154,7 +99,7 @@ export function registerExportCommand(program: Command): void {
                 id: field.id,
                 kind: field.kind,
                 label: field.label,
-                required: field.required ?? false,
+                required: field.required,
                 ...(field.kind === "single_select" ||
                 field.kind === "multi_select" ||
                 field.kind === "checkboxes"
@@ -169,21 +114,23 @@ export function registerExportCommand(program: Command): void {
             })),
           };
 
-          // Extract current values from valuesByFieldId
-          const values = form.valuesByFieldId;
-          const output: ExportOutput = { schema, values };
+          const output: ExportOutput = {
+            schema,
+            values: form.valuesByFieldId,
+            markdown: serialize(form),
+          };
 
-          // Handle compact JSON specially
-          if (options.compact && ctx.format === "json") {
-            console.log(JSON.stringify(output));
-            return;
+          // Output in JSON or YAML format
+          if (format === "json") {
+            if (options.compact) {
+              console.log(JSON.stringify(output));
+            } else {
+              console.log(JSON.stringify(output, null, 2));
+            }
+          } else {
+            // YAML format
+            console.log(YAML.stringify(output));
           }
-
-          // Output in requested format
-          const formatted = formatOutput(ctx, output, (data, useColors) =>
-            formatConsoleExport(data as ExportOutput, useColors)
-          );
-          console.log(formatted);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           logError(message);

@@ -403,11 +403,11 @@ Markdown content here...
 
 - Doc blocks MAY appear inside `form` and `field-group` as direct children
 
-- *required:* Parser will reject doc blocks that appear inside field tag bodies
-  (doc blocks MUST NOT be nested inside a field tag)
+- *required:* Parser will reject doc blocks that appear inside field tag bodies (doc
+  blocks MUST NOT be nested inside a field tag)
 
-- For field-level docs: place immediately after the field block (as a sibling
-  within the group)
+- For field-level docs: place immediately after the field block (as a sibling within the
+  group)
 
 - Canonical serialization places doc blocks immediately after the referenced element
 
@@ -585,7 +585,11 @@ It is only required when the value contains Markdoc tag syntax:
 
 - Tag syntax: `{% ... %}`
 
-> **Note:** Markdoc uses HTML comments (`<!-- ... -->`), not `{# ... #}`. HTML comments
+> **Note:** Markdoc uses HTML comments (`
+
+<!-- ... -->
+
+`), not `{# ... #}`. HTML comments
 > in form values are plain text and don't require `process=false`.
 
 **Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check
@@ -741,7 +745,11 @@ Markform files may contain content outside of Markform tags. This content is han
 
 | Content Type | Policy |
 |--------------|--------|
-| HTML comments (`<!-- ... -->`) | Allowed, preserved verbatim on round-trip |
+| HTML comments (`
+
+<!-- ... -->
+
+`) | Allowed, preserved verbatim on round-trip |
 | Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
 | Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
 
@@ -825,12 +833,21 @@ interface FieldGroup {
   children: Field[];          // v0.1/v0.2: fields only; nested groups deferred (future)
 }
 
+type FieldPriorityLevel = 'high' | 'medium' | 'low';
+
 interface FieldBase {
   id: Id;
   label: string;
-  required?: boolean;
-  validate?: ValidatorRef[];  // validator references (string IDs or parameterized objects)
+  required: boolean;             // explicit: parser defaults to false if not specified
+  priority: FieldPriorityLevel;  // explicit: parser defaults to 'medium' if not specified
+  validate?: ValidatorRef[];     // validator references (string IDs or parameterized objects)
 }
+
+// NOTE: `required` and `priority` are explicit (not optional) in the data model.
+// The parser assigns defaults when not specified in markup. This ensures:
+// 1. Consumers don't need null/undefined checks or ?? fallbacks
+// 2. Intent is always explicit in parsed data - no silent "undefined means false" behavior
+// 3. Serialization can always emit these values for clarity
 
 interface StringField extends FieldBase {
   kind: 'string';
@@ -865,7 +882,7 @@ type CheckboxMode = 'multi' | 'simple' | 'explicit';
 
 interface CheckboxesField extends FieldBase {
   kind: 'checkboxes';
-  checkboxMode?: CheckboxMode;  // default: 'multi'
+  checkboxMode: CheckboxMode;   // explicit: parser defaults to 'multi' if not specified
   minDone?: number;             // simple mode only: integer, default -1 (all)
   options: Option[];
 }
@@ -921,14 +938,14 @@ interface ParsedForm {
 
 // InspectIssue: unified type for inspect/apply API results
 // Derived from ValidationIssue[] but simplified for agent/UI consumption
-// Returned as a single list sorted by priority (ascending, 1 = highest)
+// Returned as a single list sorted by priority tier (ascending, P1 = highest)
 interface InspectIssue {
   ref: Id | QualifiedOptionRef;  // target this issue relates to (field, group, or qualified option)
   scope: 'form' | 'group' | 'field' | 'option';  // scope of the issue target
   reason: IssueReason;       // machine-readable reason code
   message: string;           // human-readable description
   severity: 'required' | 'recommended';  // *required* = must fix; *recommended* = suggested
-  priority: number;          // 1 = highest; *required* items always have lower numbers
+  priority: number;          // tier 1-5 (P1-P5); computed from field priority + issue type score
 }
 
 // Standard reason codes (keep stable for golden tests)
@@ -1127,16 +1144,18 @@ else:
 
 **Implicit requiredness (*required*):**
 
-For form completion purposes, fields with constraints are treated as implicitly required:
+For form completion purposes, fields with constraints are treated as implicitly
+required:
 
 | Field Type | Implicit Required When |
-|------------|------------------------|
+| --- | --- |
 | `string-list` | `minItems > 0` |
 | `multi-select` | `minSelections > 0` |
 | `checkboxes` | `minDone > 0` (simple mode) |
 
-These fields contribute to `emptyRequiredFields` count even without explicit `required=true`.
-This ensures `form_state` accurately reflects whether all constraints are satisfied.
+These fields contribute to `emptyRequiredFields` count even without explicit
+`required=true`. This ensures `form_state` accurately reflects whether all constraints
+are satisfied.
 
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
@@ -1542,13 +1561,17 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
 **Usage examples:**
 
 ```md
+
 <!-- Parameterized: pass min word count as parameter -->
+
 {% string-field id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /string-field %}
 
 <!-- Multiple validators with different params -->
+
 {% string-field id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
 
 <!-- Sum-to validator with configurable target -->
+
 {% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_prob", "bull_prob", "bear_prob"], target: 100}] %}
 ```
 
@@ -1727,9 +1750,10 @@ interface ApplyResult {
 | --- | --- | --- | --- |
 | inspect | `markform inspect` (prints YAML report) | `markform_inspect` | `markform.inspect` |
 | apply | `markform apply` | `markform_apply` | `markform.apply` |
-| export | `markform export --json` | `markform_export` | `markform.export` |
+| export | `markform export --format=json` | `markform_export` | `markform.export` |
 | getMarkdown | `markform apply` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
-| serve | `markform serve` (v0.1: view/save only) | — | — |
+| render | `markform render` (static HTML output) | — | — |
+| serve | `markform serve` (interactive web UI) | — | — |
 
 #### Patch Schema
 
@@ -1764,13 +1788,21 @@ scope. For example:
 - `set_*` with `null` value: Clears the field (equivalent to `clear_field`)
 
 - `clear_field`: Removes all values; behavior varies by field kind:
+
   - **string/number fields:** Clear the value fence entirely
+
   - **string_list field:** Clear to empty list (no value fence)
+
   - **single_select field:** Reset all markers to `[ ]` (no selection)
+
   - **multi_select field:** Reset all markers to `[ ]` (no selections)
+
   - **checkboxes field:** Reset to default state based on mode:
+
     - simple mode: all `[ ]`
+
     - multi mode: all `[ ]` (todo)
+
     - explicit mode: all `[ ]` (unfilled)
 
 - `set_checkboxes`: Merges provided values with existing state (only specified options
@@ -1824,17 +1856,60 @@ This is the normal inspect/apply/fix workflow.
 #### Inspect Results
 
 When `inspect` runs, it returns a **single list of `InspectIssue` objects** sorted by
-priority (ascending, where 1 = highest priority).
-Issues with severity `required` always have higher priority (lower numbers) than issues
-with severity `recommended`.
+priority tier (ascending, where P1 = highest priority).
+Priority is computed using a tiered scoring system based on field importance and issue
+type.
 
-| Priority | Severity | Reason code | Description |
+##### Priority Scoring System
+
+**Field Priority Weight** (optional schema attribute, defaults to `medium`):
+
+| Field Priority | Weight |
+| --- | --- |
+| `high` | 3 |
+| `medium` | 2 (default) |
+| `low` | 1 |
+
+**Issue Type Score:**
+
+| Issue Reason | Score |
+| --- | --- |
+| `required_missing` | 3 |
+| `checkbox_incomplete` | 3 (required) / 2 (recommended) |
+| `validation_error` | 2 |
+| `min_items_not_met` | 2 |
+| `optional_empty` | 1 |
+
+**Total Score** = Field Priority Weight + Issue Type Score
+
+**Priority Tier** mapping from total score:
+
+| Tier | Score Threshold | Console Color |
+| --- | --- | --- |
+| P1 | ≥ 5 | Bold red |
+| P2 | ≥ 4 | Yellow |
+| P3 | ≥ 3 | Cyan |
+| P4 | ≥ 2 | Blue |
+| P5 | ≥ 1 | Dim/gray |
+
+**Examples** (assuming default `medium` field priority):
+
+| Issue Type | Field Priority | Total Score | Tier |
 | --- | --- | --- | --- |
-| 1 | *required* | `validation_error` | Fields with validation errors (pattern, range, etc.) |
-| 2 | *required* | `required_missing` | Required fields with no value |
-| 3 | *required* | `checkbox_incomplete` | Required checkboxes with non-terminal states |
-| 4 | *required* | `min_items_not_met` | String-lists or multi-selects below minimum count |
-| 5 | *recommended* | `optional_empty` | Optional fields with no value |
+| Required field missing | medium (2) | 2 + 3 = 5 | P1 |
+| Validation error | medium (2) | 2 + 2 = 4 | P2 |
+| Optional field empty | medium (2) | 2 + 1 = 3 | P3 |
+| Required field missing | low (1) | 1 + 3 = 4 | P2 |
+| Validation error | low (1) | 1 + 2 = 3 | P3 |
+| Optional field empty | low (1) | 1 + 1 = 2 | P4 |
+
+Within each tier, issues are sorted by:
+
+1. Severity (`required` before `recommended`)
+
+2. Score (higher scores first)
+
+3. Ref (alphabetically for deterministic output)
 
 The harness config controls how many issues to return (`max_issues`).
 
@@ -1877,11 +1952,12 @@ interface ExportedOption {
 **Key design decisions:**
 
 - **`required` is always explicit:** The `required` field is always present as `true` or
-  `false`, never omitted. This makes the schema self-documenting for external consumers
-  without requiring knowledge of default values.
+  `false`, never omitted.
+  This makes the schema self-documenting for external consumers without requiring
+  knowledge of default values.
 
 - **Values are typed by kind:** The `values` object maps field IDs to typed value
-  objects matching the field's `kind`.
+  objects matching the field’s `kind`.
 
 * * *
 
@@ -2071,13 +2147,26 @@ Thin wrapper around the tool contract:
 
 - `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
 
-- `markform export <file.form.md> --json` — print `{schema, values}`
+- `markform export <file.form.md> --format=json` — print `{schema, values}`
 
-- `markform serve [<file.form.md>]` — start a local web UI to view/browse any form
-  (template/incomplete/completed) and save the canonicalized form to disk with versioned
-  filenames:
+- `markform render <file.form.md> [-o <file.html>]` — render form as static HTML output:
 
-  - Save always writes to a new versioned filename (never overwrites the source)
+  - Default output: same stem with `.form.html` extension (e.g., `simple.form.md` →
+    `simple.form.html`)
+
+  - Use `-o` / `--output` to specify custom output path
+
+  - Shares rendering logic with serve command
+
+  - Useful for sharing/archiving forms without running a server
+
+- `markform serve [<file.form.md>]` — start a local web UI for interactive form editing:
+
+  - Opens browser automatically (use `--no-open` to disable)
+
+  - Interactive HTML form elements for all field types
+
+  - Save writes to a new versioned filename (never overwrites the source)
 
   - Version naming: if the stem ends with a version pattern (e.g., `-v1`, `_v2`, ` v3`),
     extract and increment the number; otherwise append `-v1`
@@ -2090,8 +2179,6 @@ Thin wrapper around the tool contract:
 
     - `draft v12.form.md` → `draft v13.form.md`
 
-  - A confirmation page shows the proposed path and allows override before writing
-
 - `markform run <file.form.md> --mock --completed-mock <file>` — run harness end-to-end,
   write session transcript
 
@@ -2101,8 +2188,6 @@ Thin wrapper around the tool contract:
   Requires deciding on validator execution strategy (see Future Considerations for
   research on server-executed vs baked validators).
 
-- **Interactive editing** — Apply patches from the UI; reflect issues as the user edits.
-
 - **JSON endpoints** — Expose inspect/apply/export as HTTP endpoints for programmatic
   clients.
 
@@ -2110,27 +2195,54 @@ Thin wrapper around the tool contract:
 
 ### Web UI (serve)
 
-The v0.1 “serve” experience is intentionally read-only and focused on browsing and
-saving:
+The v0.1 “serve” command provides an interactive web UI for editing and saving forms:
 
-- Open any `.form.md` (argument or via file picker) and render groups/fields/options,
-  documentation blocks, and current values
+- Opens browser automatically (use `--no-open` to disable)
 
-- “Save” button that:
+- Renders all field types as interactive HTML form elements:
 
-  - Canonicalizes and writes the form to a new versioned filename (never overwrites)
+  - String fields → `<input type="text">` with minLength/maxLength
+
+  - Number fields → `<input type="number">` with min/max/step
+
+  - String list fields → `<textarea>` with one item per line
+
+  - Single-select → `<select>` dropdown with options
+
+  - Multi-select → checkboxes for each option
+
+  - Checkboxes (simple mode) → HTML checkboxes (checked/unchecked)
+
+  - Checkboxes (multi mode) → select dropdowns with 5 states
+    (todo/done/active/incomplete/na)
+
+  - Checkboxes (explicit mode) → select dropdowns with yes/no/unfilled
+
+- Pre-fills current values from the form file
+
+- Form submission via POST /save:
+
+  - Applies patches from form data to the in-memory form state
+
+  - Canonicalizes and writes to a new versioned filename (never overwrites original)
 
   - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise
     append `-v1`
 
-  - A confirmation screen shows the proposed path and allows override
+  - Returns JSON response with success status and output path
 
-  - Emits derived frontmatter summaries on save (`form_summary`, `form_progress`,
-    `form_state`)
+- CSS styling provides clean, readable form layout
 
-- No validation, patch application, or harness controls in v0.1 serve (those arrive with
-  v0.2). Use `markform inspect <file>` from the CLI at any time to get a full report
-  (YAML with summaries, form state, and prioritized issues).
+**Deferred to v0.2:**
+
+- Validation in serve (run engine validation from UI with a “Validate” button)
+
+- JSON endpoints for programmatic access
+
+- Harness controls (step through the harness loop from the UI)
+
+Use `markform inspect <file>` from the CLI at any time to get a full report (YAML with
+summaries, form state, and prioritized issues).
 
 ### AI SDK Integration
 
@@ -2275,7 +2387,7 @@ Deliverable: `tests/goldenRunner.ts`
 
 ### 8) CLI
 
-`inspect`, `apply`, `export`, `serve`, `run --mock`
+`inspect`, `apply`, `export`, `render`, `serve`, `run --mock`
 
 Deliverable: `cli/commands/*`
 
@@ -2329,9 +2441,6 @@ Full specification included above.
 ### v0.2 Targets
 
 Specified in this document but deferred from v0.1 proof of concept:
-
-- **Static HTML render** — `markform render <file.form.md> --out <file.html>` to produce
-  a clean static HTML/CSS file for sharing/archiving without running a server
 
 - **MCP server integration** — Full spec included above; deferred to reduce v0.1 scope
 
@@ -2998,10 +3107,13 @@ export const validators = {
 **Usage in form:**
 
 ```md
+
 <!-- Validate three number fields sum to 100% -->
+
 {% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
 
 <!-- Validate string-list entries sum to 100% -->
+
 {% string-list id="revenue_segments" label="Revenue segments (Name: X%)" validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
 ```
 
@@ -3049,10 +3161,13 @@ export const validators = {
 **Usage in form:**
 
 ```md
+
 <!-- Require explanation when moat factors are selected -->
+
 {% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
 
 <!-- Require evidence when whisper values provided -->
+
 {% string-field id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
 ```
 
@@ -3099,7 +3214,9 @@ export const validators = {
 **Usage:**
 
 ```md
+
 <!-- Require details when "Yes" is selected -->
+
 {% string-field id="price_change_details" label="Price change details" validate=[{id: "required_if_equals", when: "price_changes_recently", equals: "yes"}] %}{% /string-field %}
 ```
 
@@ -3140,10 +3257,13 @@ export const validators = {
 **Usage in form:**
 
 ```md
+
 <!-- Validate KPIs have "Name: reason" format -->
+
 {% string-list id="key_kpis" label="Key KPIs" validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
 
 <!-- Validate sources have expected format -->
+
 {% string-list id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /string-list %}
 ```
 
