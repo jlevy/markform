@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- **Node.js 24** (LTS "Krypton") — [nodejs.org](https://nodejs.org/)
+- **Node.js 24** (LTS “Krypton”) — [nodejs.org](https://nodejs.org/)
 
 - **pnpm 10.x** — Install via `corepack enable` or `npm install -g pnpm`
 
@@ -19,7 +19,9 @@ This project requires Node.js 24+. Setup depends on your environment:
 A session-start hook (`.claude/hooks/session-start.sh`) automatically:
 
 1. Downloads and installs Node 24 if not present
+
 2. Configures PATH for the session
+
 3. Runs `pnpm install`
 
 No manual setup needed—the hook runs on session start.
@@ -175,25 +177,28 @@ pnpm markform inspect <file>
 pnpm markform export <file>
 pnpm markform apply <file> --patch '<json>'
 pnpm markform serve <file>
-pnpm markform run <file> --mock
+pnpm markform fill <file> --agent=mock --mock-source <mock-file>
+pnpm markform fill <file> --agent=live --model=anthropic/claude-sonnet-4-5
 ```
 
 ### CLI Commands
 
 | Command | Description |
-| ------- | ----------- |
+| --- | --- |
 | `inspect <file>` | Display form structure, progress, and issues (YAML or JSON) |
 | `export <file>` | Export form schema and values as JSON |
 | `apply <file>` | Apply JSON patches to update field values |
 | `serve <file>` | Start a web server to browse/edit the form |
-| `run <file>` | Run the harness loop to fill a form (with `--mock` or live agent) |
+| `fill <file>` | Fill a form using an agent (mock or live LLM) |
 
 ### CLI Development
 
 The CLI is built with Commander and uses these conventions:
 
 - **picocolors** for terminal colors (never hardcoded ANSI)
+
 - **@clack/prompts** for interactive UI
+
 - Support `--verbose`, `--quiet`, `--dry-run` flags
 
 ## Testing
@@ -228,8 +233,8 @@ pnpm test:unit
 pnpm test:golden
 ```
 
-Golden tests replay recorded agent sessions to validate form filling works
-correctly. Session files are in `tests/golden/sessions/`.
+Golden tests replay recorded agent sessions to validate form filling works correctly.
+Session files are in `tests/golden/sessions/`.
 
 ### Watch Mode
 
@@ -243,14 +248,18 @@ pnpm --filter markform test:watch
 The CI workflow (`.github/workflows/ci.yml`) runs these commands in order:
 
 1. `pnpm install`
+
 2. `pnpm lint`
+
 3. `pnpm typecheck`
+
 4. `pnpm build`
+
 5. `pnpm publint`
+
 6. `pnpm test`
 
-To match CI behavior locally, run `pnpm precommit` which executes the same
-checks.
+To match CI behavior locally, run `pnpm precommit` which executes the same checks.
 
 ## AI SDK Integration
 

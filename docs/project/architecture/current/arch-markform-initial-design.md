@@ -2179,8 +2179,11 @@ Thin wrapper around the tool contract:
 
     - `draft v12.form.md` → `draft v13.form.md`
 
-- `markform run <file.form.md> --mock --completed-mock <file>` — run harness end-to-end,
-  write session transcript
+- `markform fill <file.form.md> --agent=mock --mock-source <file>` — fill form using
+  mock agent, write session transcript
+
+- `markform fill <file.form.md> --agent=live --model=anthropic/claude-sonnet-4-5` — fill
+  form using live LLM agent
 
 **Deferred to v0.2:**
 
@@ -2387,7 +2390,7 @@ Deliverable: `tests/goldenRunner.ts`
 
 ### 8) CLI
 
-`inspect`, `apply`, `export`, `render`, `serve`, `run --mock`
+`inspect`, `apply`, `export`, `render`, `serve`, `fill`
 
 Deliverable: `cli/commands/*`
 
@@ -2422,7 +2425,7 @@ Full specification included above.
      the form; Save to confirm output path (defaults to `quarterly-v1.form.md`); run
      `markform inspect` separately at any time to check status
 
-   - `markform run examples/quarterly/quarterly.form.md --mock --completed-mock
+   - `markform fill examples/quarterly/quarterly.form.md --agent=mock --mock-source
      examples/quarterly/quarterly.mock.filled.form.md --record
      examples/quarterly/quarterly.session.yaml`
 

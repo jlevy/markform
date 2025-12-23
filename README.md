@@ -18,7 +18,7 @@ form source in human-readable Markdown.
 ```
 packages/markform/     # Main package
   src/engine/          # Core: parsing, validation, serialization
-  src/cli/             # CLI commands (inspect, export, serve, run)
+  src/cli/             # CLI commands (inspect, export, serve, fill)
   src/harness/         # Execution harness for agents
   src/integrations/    # AI SDK tools
   examples/            # Example forms
@@ -40,6 +40,12 @@ pnpm test
 markform inspect examples/simple/simple.form.md
 markform export examples/simple/simple.form.md --format=json
 markform serve examples/simple/simple.form.md
+
+# Fill a form with live agent (requires ANTHROPIC_API_KEY)
+markform fill examples/simple/simple.form.md --agent=live
+
+# Fill a form with mock agent (for testing)
+markform fill examples/simple/simple.form.md --agent=mock --mock-source examples/simple/simple.mock.filled.form.md
 ```
 
 ## Example Form
