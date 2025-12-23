@@ -2204,6 +2204,72 @@ Specified in this document but deferred from v0.1 proof of concept:
 
   - Item-level patch operations (insert/remove/reorder)
 
+- **`allowOther` attribute for select fields** — Enable "Other: ____" free-text option
+  for `single-select` and `multi-select` fields. When `allowOther=true`, users can
+  provide a custom value not in the predefined option list.
+
+  ```md
+  {% single-select id="delivery_type" label="Delivery type" allowOther=true %}
+  - [ ] Physical {% #physical %}
+  - [ ] Digital {% #digital %}
+  - [ ] Hybrid {% #hybrid %}
+  {% /single-select %}
+  ```
+
+  Schema additions:
+  - `SingleSelectField.allowOther?: boolean`
+  - `MultiSelectField.allowOther?: boolean`
+  - `FieldValue` gains `otherValue?: string` property for select types
+
+  The reserved option ID `_other` is used when the user selects "Other".
+  Serialization: `- [x] Other: Custom value here {% #_other %}`
+
+- **`date-field` type** — Dedicated field type for date values with built-in parsing
+  and validation. Supports ISO 8601 format by default.
+
+  ```md
+  {% date-field id="deadline" label="Deadline" required=true %}{% /date-field %}
+  {% date-field id="fiscal_year_end" label="Fiscal year end" format="MM-DD" %}{% /date-field %}
+  ```
+
+  Attributes:
+  - `format`: Date format string (default: `YYYY-MM-DD` / ISO 8601)
+  - `min`: Minimum date constraint
+  - `max`: Maximum date constraint
+
+  TypeScript types:
+  ```ts
+  interface DateField extends FieldBase {
+    kind: 'date';
+    format?: string;           // default: 'YYYY-MM-DD'
+    min?: string;              // minimum date in same format
+    max?: string;              // maximum date in same format
+  }
+
+  // FieldValue
+  | { kind: 'date'; value: string | null }  // stored in normalized ISO format
+
+  // Patch
+  | { op: 'set_date'; fieldId: Id; value: string | null }
+  ```
+
+  FieldKind enum gains `'date'` value.
+
+- **`requiredIf` conditional validation** — Declarative attribute to make a field
+  required based on another field's value.
+
+  ```md
+  {% string-field id="moat_explanation" label="Moat explanation" requiredIf="moat_diagnosis" %}{% /string-field %}
+  ```
+
+  Semantics:
+  - Simple field reference: `requiredIf="fieldId"` — required if field has truthy value
+  - For selects: truthy means `selected !== null` or `selected.length > 0`
+  - For checkboxes: truthy means any option changed from initial state
+  - For string/number: truthy means non-null, non-empty value
+
+  Complex conditions should use code validators instead.
+
 ### Later Versions
 
 Documented but not required for v0.1 or v0.2:
@@ -2214,7 +2280,7 @@ Documented but not required for v0.1 or v0.2:
 
 - Rich numeric types (currency, percent, units, precision, tolerances)
 
-- “Report-quality rendering” (templates, charts), PDF export
+- "Report-quality rendering" (templates, charts), PDF export
 
 - More advanced UI schema/layout options
 
@@ -2541,4 +2607,340 @@ this is not needed for typical local workflows.
 
 - Offer a “Browse Forms” view with quick filter and recent files list.
 
-- Provide “Save As Completed” shortcut that validates completion before enabling save.
+- Provide "Save As Completed" shortcut that validates completion before enabling save.
+
+* * *
+
+## Enhancements Identified from Company Analysis Form
+
+This section documents enhancements identified while converting the complex
+`company-quarterly-analysis-draft-form.md` to proper Markform syntax. The form exercises
+many advanced patterns and serves as a comprehensive test case for the framework.
+
+### Framework-Level Enhancements (v0.1 or v0.2)
+
+These require changes to the Markform schema, parser, or serializer:
+
+#### 1. `allowOther` Attribute for Select Fields
+
+**Problem:** Many real forms include "Other: ____" options where users can specify a
+custom value not in the predefined list.
+
+**Current workaround:** Add a separate `string-field` sibling for "Other" values.
+
+**Proposed solution:** Add `allowOther` attribute to `single-select` and `multi-select`:
+
+```md
+{% single-select id="delivery_type" label="Delivery type" allowOther=true %}
+- [ ] Physical {% #physical %}
+- [ ] Digital {% #digital %}
+- [ ] Hybrid {% #hybrid %}
+{% /single-select %}
+```
+
+**Schema changes:**
+
+```ts
+interface SingleSelectField extends FieldBase {
+  kind: 'single_select';
+  options: Option[];
+  allowOther?: boolean;        // NEW: enables "Other" free-text option
+}
+
+interface MultiSelectField extends FieldBase {
+  kind: 'multi_select';
+  options: Option[];
+  minSelections?: number;
+  maxSelections?: number;
+  allowOther?: boolean;        // NEW: enables "Other" free-text option
+}
+```
+
+**FieldValue changes:**
+
+```ts
+// Updated FieldValue for single_select when allowOther=true
+| { kind: 'single_select'; selected: OptionId | null; otherValue?: string }
+// Updated FieldValue for multi_select when allowOther=true
+| { kind: 'multi_select'; selected: OptionId[]; otherValue?: string }
+```
+
+**Patch operation changes:**
+
+```ts
+| { op: 'set_single_select'; fieldId: Id; selected: OptionId | null; otherValue?: string }
+| { op: 'set_multi_select'; fieldId: Id; selected: OptionId[]; otherValue?: string }
+```
+
+**Serialization:** When `allowOther=true`, an "Other" option is implicitly available.
+If `otherValue` is set, serialize as:
+
+```md
+- [x] Other: Custom value here {% #_other %}
+```
+
+The `#_other` ID is reserved for the "Other" option when `allowOther=true`.
+
+**Naming rationale:** `allowOther` aligns with common form library conventions
+(e.g., Ant Design's `allowOther`, Google Forms' "Other" option pattern).
+
+#### 2. `requiredIf` Conditional Validation (v0.2+)
+
+**Problem:** Some fields are conditionally required based on other field values
+(e.g., "Moat explanation required if any moat is checked").
+
+**Current workaround:** Document in instructions and use code validators.
+
+**Proposed solution:** Add `requiredIf` attribute for declarative conditional requirements:
+
+```md
+{% string-field
+  id="moat_explanation"
+  label="Moat explanation"
+  requiredIf="moat_diagnosis.selected.length > 0"
+%}{% /string-field %}
+```
+
+**Implementation consideration:** The expression syntax needs design. Options:
+- Simple field reference: `requiredIf="moat_diagnosis"` (truthy check)
+- JSONPath-like: `requiredIf="moat_diagnosis.selected[*]"` (has any selection)
+- Expression language subset (deferred complexity)
+
+**Recommendation:** Start with simple truthy references in v0.2; complex expressions
+via code validators.
+
+#### 3. Date/Time Field Types (v0.2+)
+
+**Problem:** Dates appear frequently (deadlines, as-of dates, fiscal periods).
+
+**Current workaround:** Use `string-field` with `pattern` for validation.
+
+**Proposed solution:** Add `date-field` with built-in parsing and format options:
+
+```md
+{% date-field id="deadline" label="Deadline" format="YYYY-MM-DD" %}{% /date-field %}
+```
+
+**Attributes:**
+- `format`: Date format string (ISO 8601 default)
+- `min`, `max`: Date range constraints
+- `allowRelative`: Allow relative dates like "next quarter" (optional, v0.3+)
+
+**Alternative:** Keep as `string-field` with well-documented patterns. Date parsing
+is complex and may not warrant a dedicated type in v0.1.
+
+### Custom Validator Patterns
+
+These patterns should be implemented as code validators (`.valid.ts`), not as
+framework-level features. This keeps the core framework simple while enabling
+rich validation through code.
+
+#### 1. Word Count Validation
+
+Validate minimum/maximum word counts for text fields:
+
+```ts
+// In X.valid.ts
+export const validators = {
+  min_words_50: (ctx) => {
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string' && value.value) {
+      const wordCount = value.value.trim().split(/\s+/).length;
+      if (wordCount < 50) {
+        return [{
+          severity: 'error',
+          message: `Field requires at least 50 words (currently ${wordCount})`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+};
+```
+
+**Usage in form:**
+
+```md
+{% string-field id="thesis" label="Investment thesis" required=true validate=["min_words_50"] %}{% /string-field %}
+```
+
+#### 2. Sum-To Validation for Percentage Fields
+
+Validate that a group of percentage fields sums to a target (typically 100%):
+
+```ts
+export const validators = {
+  segments_sum_100: (ctx) => {
+    // Access string-list field and parse percentages
+    const segments = ctx.values['revenue_segments'];
+    if (segments?.kind === 'string_list' && segments.items.length > 0) {
+      const percentages = segments.items
+        .map(item => {
+          const match = item.match(/:\s*(\d+(?:\.\d+)?)\s*%/);
+          return match ? parseFloat(match[1]) : 0;
+        });
+      const sum = percentages.reduce((a, b) => a + b, 0);
+      if (Math.abs(sum - 100) > 0.1) {
+        return [{
+          severity: 'warning',
+          message: `Revenue segments should sum to 100% (currently ${sum.toFixed(1)}%)`,
+          ref: 'revenue_segments',
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+
+  scenario_probs_sum_100: (ctx) => {
+    const base = ctx.values['base_probability']?.value ?? 0;
+    const bull = ctx.values['bull_probability']?.value ?? 0;
+    const bear = ctx.values['bear_probability']?.value ?? 0;
+    const sum = base + bull + bear;
+    if (sum > 0 && Math.abs(sum - 100) > 0.1) {
+      return [{
+        severity: 'error',
+        message: `Scenario probabilities must sum to 100% (currently ${sum}%)`,
+        ref: 'base_probability',
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+};
+```
+
+#### 3. Conditional Requirement Validation
+
+Validate that a field has a value when another field meets a condition:
+
+```ts
+export const validators = {
+  moat_explanation_required: (ctx) => {
+    const moatField = ctx.values['moat_diagnosis'];
+    const explanation = ctx.values['moat_explanation'];
+
+    if (moatField?.kind === 'multi_select' && moatField.selected.length > 0) {
+      if (!explanation?.value || explanation.value.trim().length === 0) {
+        return [{
+          severity: 'error',
+          message: 'Moat explanation is required when moat factors are selected',
+          ref: 'moat_explanation',
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+
+  whisper_evidence_required: (ctx) => {
+    const whisperRevenue = ctx.values['whisper_revenue'];
+    const whisperEps = ctx.values['whisper_eps'];
+    const evidence = ctx.values['whisper_evidence'];
+
+    const hasWhisper = (whisperRevenue?.value != null) || (whisperEps?.value != null);
+    if (hasWhisper && (!evidence?.value || evidence.value.trim().length === 0)) {
+      return [{
+        severity: 'error',
+        message: 'Whisper evidence is required when whisper estimates are provided',
+        ref: 'whisper_evidence',
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+};
+```
+
+#### 4. Cross-Field Consistency Validation
+
+Validate logical relationships between fields:
+
+```ts
+export const validators = {
+  kpi_count_reasonable: (ctx) => {
+    const kpis = ctx.values['key_kpis_quarterly'];
+    if (kpis?.kind === 'string_list') {
+      // Check each KPI has the expected format "Name: reason"
+      const malformed = kpis.items.filter(item => !item.includes(':'));
+      if (malformed.length > 0) {
+        return [{
+          severity: 'warning',
+          message: `${malformed.length} KPI(s) missing explanation. Format: "KPI Name: Why it matters"`,
+          ref: 'key_kpis_quarterly',
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+};
+```
+
+### Patterns Requiring Repeating Groups (v0.2)
+
+The following patterns from the company analysis form require repeating groups,
+already specified for v0.2:
+
+1. **Offering families** — Each offering has: name, value prop, delivery type,
+   revenue type, KPIs. Currently modeled as a single instance with note to add more.
+
+2. **Pricing structures** — Per-offering pricing details.
+
+3. **Driver model** — Multiple drivers with the same structure. Currently modeled
+   as Driver 1, Driver 2, Driver 3 with optional third.
+
+4. **Expert/analyst table** — Structured rows with multiple columns.
+
+5. **Sourcing log** — Date, source, type, link, takeaways per entry.
+
+When repeating groups are implemented, these will be converted to:
+
+```md
+{% repeat id="offering_families" label="Offering Families" minItems=1 %}
+  {% field-group id="offering_family" title="Offering Family" %}
+    {% string-field id="name" label="Offering family name" required=true %}{% /string-field %}
+    {% string-field id="value_prop" label="Value proposition" required=true %}{% /string-field %}
+    {% single-select id="delivery" label="Delivery type" required=true %}
+      - [ ] Physical {% #physical %}
+      - [ ] Digital {% #digital %}
+      - [ ] Hybrid {% #hybrid %}
+    {% /single-select %}
+    ...
+  {% /field-group %}
+{% /repeat %}
+```
+
+### Test Coverage from Company Analysis Form
+
+The `company-analysis.form.md` exercises the following Markform features:
+
+| Feature | Coverage |
+|---------|----------|
+| `string-field` with `required` | ✅ Extensive |
+| `string-field` with `pattern` | ✅ Dates, fiscal periods |
+| `string-field` with `minLength`/`maxLength` | ✅ Word count proxies |
+| `number-field` with `min`/`max` | ✅ Percentages 0-100 |
+| `number-field` for currency | ✅ Financial metrics |
+| `string-list` with `minItems`/`maxItems` | ✅ Ranked lists, KPIs |
+| `single-select` basic | ✅ Many instances |
+| `multi-select` with `minSelections` | ✅ Business model, moats |
+| `checkboxes` with `checkboxMode="simple"` | ✅ Source checklists |
+| Nested `field-group` | ✅ Multi-level nesting |
+| `doc` blocks with `kind` | ✅ Instructions throughout |
+| Code validators | ⏳ Planned in `.valid.ts` |
+
+### Recommended Implementation Order
+
+1. **v0.1 Core:** Implement all current spec features—sufficient for basic form.
+
+2. **v0.1 Enhancement:** Add `allowOther` attribute (high value, moderate effort).
+
+3. **v0.2:** Implement repeating groups—unlocks offering families, driver model.
+
+4. **v0.2:** Add `requiredIf` for declarative conditional validation.
+
+5. **v0.3+:** Consider `date-field` type if pattern-based validation proves
+   insufficient.
