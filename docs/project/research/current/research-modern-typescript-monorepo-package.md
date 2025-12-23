@@ -1,6 +1,6 @@
 # Research Brief: Modern TypeScript Monorepo Package Architecture
 
-**Last Updated**: 2025-12-22 (ESLint section expanded)
+**Last Updated**: 2025-12-23 (Added git hooks/lefthook section)
 
 **Status**: Complete
 
@@ -33,6 +33,7 @@
 | **actions/setup-node** | v6 | [github.com/actions/setup-node/releases](https://github.com/actions/setup-node/releases) |
 | **pnpm/action-setup** | v4 | [github.com/pnpm/action-setup/releases](https://github.com/pnpm/action-setup/releases) |
 | **changesets/action** | v1 | [github.com/changesets/action](https://github.com/changesets/action) |
+| **lefthook** | ^1.11.0 | [github.com/evilmartians/lefthook/releases](https://github.com/evilmartians/lefthook/releases) |
 
 ### Reminders When Updating
 
@@ -70,9 +71,10 @@ clear path to split packages later without breaking changes.
 
 The recommended stack uses **pnpm workspaces** for dependency management, **tsdown** for
 building ESM/CJS dual outputs with TypeScript declarations, **Changesets** for
-versioning and release automation, and **publint** for validating package
-publishability. This approach supports private development via GitHub Packages or direct
-GitHub installs, with a seamless transition to public npm publishing when ready.
+versioning and release automation, **publint** for validating package publishability,
+and **lefthook** for fast local git hooks.
+This approach supports private development via GitHub Packages or direct GitHub
+installs, with a seamless transition to public npm publishing when ready.
 
 **Research Questions**:
 
@@ -759,7 +761,220 @@ jobs:
 
 * * *
 
-### 9. Private Package Distribution
+### 9. Git Hooks & Local Validation
+
+#### Lefthook
+
+**Status**: Recommended
+
+**Details**:
+
+Lefthook is a fast, cross-platform Git hooks manager written in Go.
+It provides a better developer experience than Husky + lint-staged while being faster
+and having no Node.js runtime dependency for the hook runner itself.
+
+**Why Lefthook over Husky + lint-staged**:
+
+| Aspect | Lefthook | Husky + lint-staged |
+| --- | --- | --- |
+| Runtime | Go binary (fast) | Node.js (slower startup) |
+| Configuration | Single YAML file | Multiple config files |
+| Parallel execution | Built-in | Requires configuration |
+| Staged files | Native support | Via lint-staged |
+| Monorepo support | Excellent (`root:` option) | Requires workarounds |
+
+**Installation**:
+```bash
+pnpm add -Dw lefthook
+npx lefthook install
+```
+
+**References**:
+
+- [Lefthook Documentation](https://github.com/evilmartians/lefthook)
+
+- [Lefthook vs Husky](https://evilmartians.com/chronicles/lefthook-knock-your-teams-code-back-into-shape)
+
+* * *
+
+#### Pre-commit Hooks Strategy
+
+**Status**: Recommended
+
+**Details**:
+
+Pre-commit hooks should be **fast** (target: 2-5 seconds) to avoid disrupting developer
+flow.
+Run checks in parallel, operate only on staged files, and use caching aggressively.
+
+**Key principles**:
+
+1. **Parallel execution**: Run independent checks simultaneously
+
+2. **Staged files only**: Don’t waste time checking unchanged code
+
+3. **Auto-fix and re-stage**: Fix formatting/linting issues automatically
+
+4. **Incremental type checking**: Use TypeScript’s `--incremental` flag
+
+5. **Cache everything**: ESLint cache, TypeScript build info, etc.
+
+**Example `lefthook.yml` (pre-commit)**:
+```yaml
+pre-commit:
+  parallel: true
+
+  commands:
+    # Auto-format with prettier (~500ms)
+    format:
+      glob: "*.{js,ts,tsx,json}"
+      run: npx prettier --write --log-level warn {staged_files}
+      stage_fixed: true
+      priority: 1
+
+    # Lint with auto-fix and caching (~1s first, ~200ms cached)
+    lint:
+      glob: "*.{js,ts,tsx}"
+      run: >
+        npx eslint
+        --cache
+        --cache-location node_modules/.cache/eslint
+        --fix {staged_files}
+      stage_fixed: true
+      priority: 2
+
+    # Type check with incremental mode (~2s)
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: npx tsc --noEmit --incremental
+      priority: 3
+```
+
+**Monorepo considerations**: Use `root:` to scope commands to specific packages:
+```yaml
+commands:
+  lint:
+    root: "packages/core/"
+    glob: "*.{ts,tsx}"
+    run: npx eslint --fix {staged_files}
+```
+
+**Assessment**: Fast pre-commit hooks catch issues early without slowing down commits.
+The auto-fix pattern reduces friction—developers don’t need to manually format code.
+
+* * *
+
+#### Pre-push Hooks Strategy
+
+**Status**: Recommended
+
+**Details**:
+
+Pre-push hooks can be **slower** (target: 3-5s with cache, <30s without) since pushes
+are less frequent. Use these for comprehensive validation that would be too slow for
+pre-commit.
+
+**Key principles**:
+
+1. **Run full test suite**: Not just changed files
+
+2. **Use commit-hash caching**: Skip tests if already passed for this commit
+
+3. **Detect uncommitted changes**: Re-run tests if working tree is dirty
+
+4. **Provide clear escape hatch**: Document `--no-verify` for emergencies
+
+**Example `lefthook.yml` (pre-push)**:
+```yaml
+pre-push:
+  commands:
+    verify-tests:
+      run: |
+        echo "🔍 Checking test status for push..."
+
+        COMMIT_HASH=$(git rev-parse HEAD)
+        CACHE_DIR="node_modules/.test-cache"
+        CACHE_FILE="$CACHE_DIR/$COMMIT_HASH"
+
+        # Check for uncommitted changes
+        if ! git diff --quiet || ! git diff --cached --quiet; then
+          echo "⚠️  Uncommitted changes detected"
+          echo "📊 Running test suite..."
+          pnpm test
+          exit $?
+        fi
+
+        # Check cache
+        if [ -f "$CACHE_FILE" ]; then
+          SHORT_HASH=$(echo "$COMMIT_HASH" | cut -c1-8)
+          echo "✓ Tests already passed for commit $SHORT_HASH"
+          exit 0
+        fi
+
+        # No cache, run tests
+        echo "📊 Running test suite..."
+        pnpm test
+
+        # Cache on success
+        if [ $? -eq 0 ]; then
+          mkdir -p "$CACHE_DIR"
+          touch "$CACHE_FILE"
+          echo "✅ Tests cached for commit $(echo $COMMIT_HASH | cut -c1-8)"
+        else
+          echo "❌ Tests failed - push blocked"
+          echo "Bypass with: git push --no-verify"
+          exit 1
+        fi
+```
+
+**Assessment**: Commit-hash caching ensures tests only run once per commit, making
+repeated push attempts instant.
+This is especially valuable when rebasing or when a push fails for non-test reasons.
+
+* * *
+
+#### CI vs Local Hook Relationship
+
+**Status**: Best Practice
+
+**Details**:
+
+Local hooks and CI should complement each other:
+
+| Check | Pre-commit | Pre-push | CI |
+| --- | --- | --- | --- |
+| Format | ✅ Auto-fix | — | ✅ Verify |
+| Lint | ✅ Auto-fix | — | ✅ Verify |
+| Typecheck | ✅ Incremental | — | ✅ Full |
+| Unit tests | ⚠️ Changed only | ✅ Full | ✅ Full |
+| Integration tests | — | ⚠️ Optional | ✅ Full |
+| Build | — | — | ✅ Full |
+| publint | — | — | ✅ Full |
+
+**Key insight**: Pre-commit hooks fix issues, CI verifies correctness.
+Never skip CI because hooks passed—hooks can be bypassed with `--no-verify`.
+
+**Root `package.json` integration**:
+```json
+{
+  "scripts": {
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "lefthook": "^1.11.0"
+  }
+}
+```
+
+**References**:
+
+- [Lefthook Configuration](https://github.com/evilmartians/lefthook/blob/master/docs/configuration.md)
+
+- [Git Hooks Best Practices](https://pre-commit.com/#introduction)
+
+* * *
+
+### 10. Private Package Distribution
 
 #### Option A: GitHub Packages (Recommended)
 
@@ -944,10 +1159,19 @@ experience.
     true` and only contain workspace tooling.
 
 11. **Use type-aware ESLint**: Configure `recommendedTypeChecked` for comprehensive bug
-    detection, especially promise safety rules. See Appendix C for detailed configuration.
+    detection, especially promise safety rules.
+    See Appendix C for detailed configuration.
 
 12. **Enforce code style consistency**: Use `curly: 'all'` and `brace-style: '1tbs'` to
     prevent subtle bugs and improve readability.
+
+13. **Use fast pre-commit hooks**: Run formatting and linting with auto-fix on staged
+    files only. Target 2-5 seconds total.
+    Use lefthook for better monorepo support.
+
+14. **Cache test results by commit hash**: In pre-push hooks, skip test runs if the
+    current commit has already passed tests.
+    This makes repeated pushes instant.
 
 * * *
 
@@ -971,11 +1195,12 @@ experience.
 
 ### Summary
 
-Use a pnpm monorepo with tsdown for building, Changesets for versioning, and publint for
-validation. Structure code internally for future splits while exposing a stable API
-through subpath exports.
-Start with GitHub Packages for private distribution, then transition to npm when ready
-for public release.
+Use a pnpm monorepo with tsdown for building, Changesets for versioning, publint for
+validation, and lefthook for fast local git hooks.
+Structure code internally for future splits while exposing a stable API through subpath
+exports.
+Start with GitHub Packages for private distribution, then transition to npm when
+ready for public release.
 
 ### Recommended Approach
 
@@ -987,11 +1212,13 @@ for public release.
 
 4. **Add Changesets** for version management
 
-5. **Configure CI** with lint, typecheck, build, publint, and test
+5. **Configure lefthook** for pre-commit (format, lint, typecheck) and pre-push (tests)
 
-6. **Configure release workflow** with Changesets GitHub Action
+6. **Configure CI** with lint, typecheck, build, publint, and test
 
-7. **Validate with publint** before every release
+7. **Configure release workflow** with Changesets GitHub Action
+
+8. **Validate with publint** before every release
 
 **Rationale**:
 
@@ -1159,6 +1386,7 @@ for public release.
     "publint": "pnpm -r publint",
     "lint": "eslint .",
     "format": "prettier -w .",
+    "prepare": "lefthook install",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && pnpm publint && changeset publish"
@@ -1168,6 +1396,7 @@ for public release.
     "@changesets/changelog-github": "^0.5.0",
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
+    "lefthook": "^1.11.0",
     "prettier": "^3.0.0",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.0.0"
@@ -1197,8 +1426,8 @@ export default [
 
 #### Strict Type-Aware Configuration (Recommended)
 
-For production projects, use type-aware linting with strict rules. This catches more bugs
-but requires tsconfig integration:
+For production projects, use type-aware linting with strict rules.
+This catches more bugs but requires tsconfig integration:
 
 ```javascript
 // eslint.config.js
@@ -1379,7 +1608,8 @@ export default [
    }
    ```
 
-4. **Underscore prefix for unused vars**: Convention for intentionally unused parameters:
+4. **Underscore prefix for unused vars**: Convention for intentionally unused
+   parameters:
    ```typescript
    // Clear intent: we don't use the error parameter
    .catch((_error) => handleDefaultCase())
@@ -1387,8 +1617,8 @@ export default [
 
 **Common Gotcha with `noUncheckedIndexedAccess`**:
 
-When using `noUncheckedIndexedAccess: true` in tsconfig (recommended for safety), ESLint's
-`no-unnecessary-type-assertion` may incorrectly flag necessary assertions:
+When using `noUncheckedIndexedAccess: true` in tsconfig (recommended for safety),
+ESLint’s `no-unnecessary-type-assertion` may incorrectly flag necessary assertions:
 
 ```typescript
 // With noUncheckedIndexedAccess, array[0] returns T | undefined
@@ -1475,4 +1705,116 @@ export default defineConfig({
   banner: ({ fileName }) =>
     fileName.startsWith("bin.") ? "#!/usr/bin/env node\n" : ""
 });
+```
+
+### Appendix E: Complete lefthook.yml Example
+
+```yaml
+# lefthook.yml
+# Git hooks for code quality
+# Pre-commit: Fast checks with auto-fix (target: 2-5 seconds)
+# Pre-push: Full test validation with caching (target: 3-5s cached, <30s uncached)
+
+# PHASE 1: Fast pre-commit checks
+pre-commit:
+  parallel: true
+
+  commands:
+    # Auto-format with prettier (~500ms)
+    format:
+      glob: "*.{js,ts,tsx,json,yaml,yml}"
+      run: npx prettier --write --log-level warn {staged_files}
+      stage_fixed: true
+      priority: 1
+
+    # Lint with auto-fix and caching (~1s first, ~200ms cached)
+    lint:
+      glob: "*.{js,ts,tsx}"
+      run: >
+        npx eslint
+        --cache
+        --cache-location node_modules/.cache/eslint
+        --fix {staged_files}
+      stage_fixed: true
+      priority: 2
+
+    # Type check with incremental mode (~2s)
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: npx tsc --noEmit --incremental
+      priority: 3
+
+    # Test only changed files (optional, ~1-3s)
+    # test-changed:
+    #   glob: "*.{test,spec}.{ts,tsx}"
+    #   run: npx vitest --changed --run
+    #   priority: 4
+
+# PHASE 2: Pre-push validation with test caching
+pre-push:
+  commands:
+    verify-tests:
+      run: |
+        echo "🔍 Checking test status for push..."
+
+        # Get current commit hash
+        COMMIT_HASH=$(git rev-parse HEAD)
+        CACHE_DIR="node_modules/.test-cache"
+        CACHE_FILE="$CACHE_DIR/$COMMIT_HASH"
+
+        # Check for uncommitted changes
+        if ! git diff --quiet || ! git diff --cached --quiet; then
+          echo "⚠️  Uncommitted changes detected"
+          echo "📊 Running test suite..."
+          pnpm test
+          exit $?
+        fi
+
+        # Check cache
+        if [ -f "$CACHE_FILE" ]; then
+          SHORT_HASH=$(echo "$COMMIT_HASH" | cut -c1-8)
+          echo "✓ Tests already passed for commit $SHORT_HASH"
+          exit 0
+        fi
+
+        # No cache, run tests
+        echo "📊 Running test suite..."
+        pnpm test
+
+        # Cache on success
+        if [ $? -eq 0 ]; then
+          mkdir -p "$CACHE_DIR"
+          touch "$CACHE_FILE"
+          SHORT_HASH=$(echo "$COMMIT_HASH" | cut -c1-8)
+          echo "✅ Tests passed and cached for commit $SHORT_HASH"
+          exit 0
+        else
+          echo "❌ Tests failed - push blocked"
+          echo "Fix tests and try again, or bypass with: git push --no-verify"
+          exit 1
+        fi
+```
+
+**Monorepo variant** (scope commands to packages):
+```yaml
+pre-commit:
+  parallel: true
+
+  commands:
+    format-core:
+      root: "packages/core/"
+      glob: "*.{ts,tsx}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+
+    lint-core:
+      root: "packages/core/"
+      glob: "*.{ts,tsx}"
+      run: npx eslint --cache --fix {staged_files}
+      stage_fixed: true
+
+    typecheck-core:
+      root: "packages/core/"
+      glob: "*.{ts,tsx}"
+      run: npx tsc -p tsconfig.json --noEmit --incremental
 ```

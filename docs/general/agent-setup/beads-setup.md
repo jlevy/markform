@@ -9,12 +9,50 @@ Do NOT use markdown TODOs or other ad-hoc issue tracking methods.
 bd status || echo "bd not installed"
 ```
 
-**If bd is not installed:**
+**If bd is not installed, try these methods in order:**
+
+**Method 1: npm (recommended for most environments)**
+```bash
+npm install -g @beads/bd
+bd prime   # Get workflow context
+```
+
+**Method 2: Go install**
 ```bash
 go install github.com/steveyegge/beads/cmd/bd@latest
 export PATH="$PATH:$HOME/go/bin" # Required each session
 bd prime   # Get workflow context
 ```
+
+**Method 3: Manual download (fallback for network-restricted environments)**
+
+If npm/go fail with DNS or network errors (e.g., `getaddrinfo EAI_AGAIN`,
+`dial tcp: lookup storage.googleapis.com`), download the binary directly:
+
+```bash
+# Detect platform
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+[ "$ARCH" = "x86_64" ] && ARCH="amd64"
+[ "$ARCH" = "aarch64" ] && ARCH="arm64"
+
+# Get latest version from GitHub API
+BD_VERSION=$(curl -sI https://github.com/steveyegge/beads/releases/latest | \
+  grep -i "^location:" | sed 's/.*tag\///' | tr -d '\r\n')
+
+# Download and install the binary
+curl -fsSL -o /tmp/beads.tar.gz \
+  "https://github.com/steveyegge/beads/releases/download/${BD_VERSION}/beads_${BD_VERSION#v}_${OS}_${ARCH}.tar.gz"
+tar -xzf /tmp/beads.tar.gz -C /tmp
+mkdir -p ~/.local/bin
+cp /tmp/bd ~/.local/bin/
+chmod +x ~/.local/bin/bd
+export PATH="$HOME/.local/bin:$PATH"  # Add to PATH
+bd prime   # Get workflow context
+```
+
+The script auto-detects your platform. For troubleshooting, see:
+https://github.com/steveyegge/beads/releases
 
 **If bd says `Error: no beads database found` it requires one-time setup:**
 ```bash
@@ -27,6 +65,27 @@ bd prime  # Get workflow context
 bd doctor  # Check installation health
 bd doctor --fix  # Fix any setup issues
 ```
+
+**SQLite WAL mode errors (common in containers/VMs):**
+
+If you see `failed to enable WAL mode: sqlite3: locking protocol`, the
+filesystem doesn't support proper file locking (common with 9p, NFS, or
+container-mounted filesystems). Use JSONL-only (`--no-db`) mode:
+
+```bash
+# Option 1: Add to config permanently (recommended)
+echo "no-db: true" >> .beads/config.yaml
+
+# Option 2: Use --no-db flag for each command
+bd --no-db status
+bd --no-db ready
+```
+
+`--no-db` mode reads/writes directly to `.beads/issues.jsonl` (the git-committed
+source of truth) without SQLite. This is fully functional for all workflows.
+
+Note: `--sandbox` mode is different—it disables daemon and auto-sync but still
+uses SQLite. Use `--no-db` specifically for filesystem locking issues.
 
 ### Issue Types
 
