@@ -3,39 +3,59 @@
 ## Purpose
 
 This plan creates a comprehensive test case for validating the live agent form-filling
-workflow end-to-end. It uses a real-world use case: a political figure biographical form
-based on Wikipedia's president infobox structure.
+workflow end-to-end.
+It uses a real-world use case: a political figure biographical form based on Wikipedia’s
+president infobox structure.
 
 **Related Docs:**
 
-- [Fill Command Plan](plan-2025-12-23-fill-command-live-agent.md) - Prerequisite
+- [Fill Command Plan](plan-2025-12-23-fill-command-live-agent.md) - **Prerequisite** (must be
+  implemented first)
+
 - [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
+
+- [v0.1 Implementation Plan](plan-2025-12-22-markform-v01-implementation.md) - Base implementation
 
 ## Background
 
 To validate the live agent implementation, we need a realistic, complex form that:
 
 1. Has multiple field types (strings, numbers, dates, lists, selections)
+
 2. Includes repeating groups (offices held)
+
 3. Requires web research to fill correctly
+
 4. Can be verified against a known source (Wikipedia)
 
-The Wikipedia president infobox provides an ideal template - it's standardized, publicly
-accessible, and contains structured biographical data that an agent must research to fill.
+The Wikipedia president infobox provides an ideal template - it’s standardized, publicly
+accessible, and contains structured biographical data that an agent must research to
+fill.
 
 ## Summary of Task
 
-1. Create `political-figure.form.md` based on Wikipedia's president infobox structure
-2. Handle repeating "offices held" with role, dates, and predecessor/successor
+1. Create `political-figure.form.md` based on Wikipedia’s president infobox structure
+
+2. Handle repeating “offices held” with role, dates, and predecessor/successor
+
 3. Create a documented test workflow for manual validation
+
 4. Add example to `docs/examples.md`
+
 5. Define agent instructions pattern for web research tasks
 
 ## Backward Compatibility
 
 None required. This is a new example form and documentation.
 
----
+## Prerequisites
+
+This plan depends on the fill command plan being implemented first:
+
+- **markform-100**: dotenv support (enables API key loading)
+- **Fill Command Plan**: `markform fill --agent=live` command with model selection
+
+* * *
 
 ## Stage 1: Planning Stage
 
@@ -44,53 +64,82 @@ None required. This is a new example form and documentation.
 **Must Have:**
 
 - `political-figure.form.md` with all standard infobox fields
-- Repeating group for "offices held" (multiple positions)
+
+- Repeating group for “offices held” (multiple positions)
+
 - Test workflow documentation
+
 - Agent instructions field for research guidance
 
 **Form Fields (based on Wikipedia president infobox):**
 
 **Basic Info:**
+
 - `name` (string, required) - Full name
+
 - `portrait_description` (string, optional) - Description of official portrait
+
 - `birth_date` (string, required) - Format: YYYY-MM-DD
+
 - `birth_place` (string, required) - City, State/Country
+
 - `death_date` (string, optional) - Format: YYYY-MM-DD (if deceased)
+
 - `death_place` (string, optional) - City, State/Country
+
 - `cause_of_death` (string, optional) - If applicable
+
 - `resting_place` (string, optional) - Burial location
 
 **Political Info:**
+
 - `political_party` (string, required) - Primary party affiliation
+
 - `other_parties` (string_list, optional) - Previous party affiliations
 
 **Personal Life:**
+
 - `spouse` (string, optional) - Name and years married
+
 - `children` (string_list, optional) - Names of children
+
 - `parents` (string_list, optional) - Names of parents
+
 - `education` (string_list, optional) - Schools/degrees
 
 **Offices Held (repeating group):**
-- `office_title` (string, required) - e.g., "16th President of the United States"
+
+- `office_title` (string, required) - e.g., “16th President of the United States”
+
 - `term_start` (string, required) - YYYY-MM-DD
-- `term_end` (string, required) - YYYY-MM-DD or "Incumbent"
+
+- `term_end` (string, required) - YYYY-MM-DD or “Incumbent”
+
 - `preceded_by` (string, optional, priority=medium) - Previous office holder
+
 - `succeeded_by` (string, optional, priority=medium) - Next office holder
+
 - `running_mate` (string, optional) - For presidential terms
 
 **Agent Instructions:**
+
 - `research_instructions` (string, optional) - Instructions for agent on how to research
 
 ### Acceptance Criteria
 
 1. Form parses and validates correctly with `markform inspect`
+
 2. Empty form shows appropriate required field issues
+
 3. Partially filled form (name only) shows remaining issues
+
 4. Live agent can research and fill remaining fields using web search
+
 5. Completed form passes validation
+
 6. Test workflow is documented and reproducible
 
----
+* * *
 
 ## Stage 2: Architecture Stage
 
@@ -178,7 +227,7 @@ markform inspect /tmp/lincoln-completed.form.md
 markform export /tmp/lincoln-completed.form.md --format=json
 ```
 
----
+* * *
 
 ## Stage 3: Implementation Stage
 
@@ -187,14 +236,23 @@ markform export /tmp/lincoln-completed.form.md --format=json
 **Goal:** Create the political-figure.form.md with all fields.
 
 - [ ] Create `examples/political-figure/` directory
+
 - [ ] Create `political-figure.form.md` with:
+
   - [ ] Frontmatter with markform config
+
   - [ ] Agent instructions doc block
+
   - [ ] Basic Information field group
+
   - [ ] Political Affiliation field group
+
   - [ ] Personal Life field group
+
   - [ ] Offices Held field groups (3 slots for offices)
+
 - [ ] Verify form parses: `markform inspect`
+
 - [ ] Verify required fields show as issues
 
 ### Phase 2: Create Mock Completed Form
@@ -202,15 +260,25 @@ markform export /tmp/lincoln-completed.form.md --format=json
 **Goal:** Create a pre-filled version for mock agent testing.
 
 - [ ] Create `political-figure.mock.lincoln.form.md` with Abraham Lincoln data:
+
   - Name: Abraham Lincoln
+
   - Birth: 1809-02-12, Hodgenville, Kentucky
+
   - Death: 1865-04-15, Washington, D.C., Assassination
+
   - Party: Republican (Whig previously)
+
   - Spouse: Mary Todd Lincoln (1842-1865)
+
   - Children: Robert, Edward, William, Thomas
+
   - Office 1: 16th President (1861-1865), Buchanan/Johnson
+
   - Office 2: US Representative IL-7 (1847-1849)
+
   - Office 3: Illinois State Representative (1834-1842)
+
 - [ ] Verify mock form is complete: `markform inspect` shows no required issues
 
 ### Phase 3: Document Test Workflow
@@ -218,52 +286,70 @@ markform export /tmp/lincoln-completed.form.md --format=json
 **Goal:** Add example to docs/examples.md.
 
 - [ ] Create or update `docs/examples.md`
-- [ ] Add "Political Figure - Live Agent Test" section
+
+- [ ] Add “Political Figure - Live Agent Test” section
+
 - [ ] Document step-by-step workflow
+
 - [ ] Include expected outputs at each step
+
 - [ ] Add troubleshooting notes
 
----
+* * *
 
 ## Stage 4: Validation Stage
 
 ### Automated Tests
 
 - [ ] `markform inspect political-figure.form.md` succeeds
+
 - [ ] Empty form shows expected required field count
+
 - [ ] Mock form parses and validates as complete
+
 - [ ] `markform fill --agent=mock` completes successfully
 
 ### Manual Tests
 
 - [ ] Run full test workflow from docs/examples.md
+
 - [ ] Verify live agent researches Abraham Lincoln correctly
+
 - [ ] Verify all offices filled with correct dates
+
 - [ ] Verify predecessors/successors are accurate
+
 - [ ] Session transcript captures all turns
 
 ### Definition of Done
 
 1. `political-figure.form.md` created and validates
+
 2. Mock Lincoln form created for testing
+
 3. Test workflow documented in `docs/examples.md`
+
 4. Live agent successfully fills form with accurate data
+
 5. All dates and facts verified against Wikipedia
 
----
+* * *
 
 ## Open Questions
 
 1. **Number of office slots:** Should we have 3, 5, or configurable?
+
    - **Decision:** Start with 3 slots (covers most cases)
 
 2. **Date format validation:** Should we add pattern validation for YYYY-MM-DD?
+
    - **Decision:** Yes, add pattern for date fields
 
 3. **Portrait field:** Include image URL or just description?
+
    - **Decision:** Description only (no image URLs in v0.1)
 
----
+* * *
 
 ## Revision History
 

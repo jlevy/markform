@@ -1172,6 +1172,10 @@ Agent should pause and ask user to verify:
 
 **All automated implementation tasks are complete.** The v0.1 implementation includes:
 
+> **Note:** The `run` command documented in this plan is being replaced by `fill` in
+> [plan-2025-12-23-fill-command-live-agent.md](plan-2025-12-23-fill-command-live-agent.md).
+> The `fill` command adds live agent support with `--agent` and `--model` flags.
+
 - **225 tests** across 14 test files, all passing
 - **7 CLI commands**: inspect, validate, apply, export, render, serve, run
 - **Core engine**: parsing, serialization, validation, patch application, summaries

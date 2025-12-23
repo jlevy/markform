@@ -238,7 +238,7 @@ packages/markform/src/harness/
 
 - [ ] Add `--model` flag (string, default: `anthropic/claude-sonnet-4-5`)
 
-- [ ] Rename `--completed-mock` to `--mock-source` (clearer name)
+- [ ] Keep `--completed-mock` flag name (consistent with current `run` command)
 
 - [ ] Update CLI registration in `cli.ts`
 
@@ -258,7 +258,7 @@ packages/markform/src/harness/
 
 - [ ] Existing mock mode tests pass with `fill --agent=mock`
 
-- [ ] `--agent=mock` without `--mock-source` shows helpful error
+- [ ] `--agent=mock` without `--completed-mock` shows helpful error
 
 - [ ] Invalid `--agent` value shows error with valid options
 
@@ -428,7 +428,7 @@ class LiveAgent implements Agent {
 
 - [ ] `markform fill --help` shows correct options
 
-- [ ] `markform fill <file> --agent=mock --mock-source <mock>` completes form
+- [ ] `markform fill <file> --agent=mock --completed-mock <mock>` completes form
 
 - [ ] Mock mode session transcripts match expected format
 
