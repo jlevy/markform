@@ -127,17 +127,12 @@ Enter percentages that should sum to 100% (e.g., "Direct: 60%, Indirect: 40%").
 
 {% /field-group %}
 
-{% field-group id="offerings_catalog" title="4. Offerings Catalog" %}
+{% field-group id="offerings_primary" title="4.1 Offerings - Primary Family" %}
 
-{% doc ref="offerings_catalog" kind="description" %}
+{% doc ref="offerings_primary" kind="description" %}
 Tie every revenue line to something someone buys. Use "families," not SKUs.
+This section ideally uses repeating groups (future feature). For now, model one offering family.
 {% /doc %}
-
-{# NOTE: This section ideally uses repeating groups (v0.2 feature).
-   For v0.1, we model a single offering family. Additional families
-   would need to be added manually or via templating. #}
-
-{% field-group id="offering_family_1" title="4.1 Primary Offering Family" %}
 
 {% string-field id="offering_1_name" label="Offering family name" required=true %}{% /string-field %}
 
@@ -165,7 +160,7 @@ Maximum 50 words. Describe the core value in one sentence.
 
 {% /field-group %}
 
-{% field-group id="bundles_cross_sell" title="4.2 Bundles and Cross-Sell" %}
+{% field-group id="offerings_bundles" title="4.2 Offerings - Bundles and Cross-Sell" %}
 
 {% string-field id="what_is_bundled" label="What is bundled?" %}{% /string-field %}
 
@@ -175,15 +170,11 @@ Maximum 50 words. Describe the core value in one sentence.
 
 {% /field-group %}
 
-{% /field-group %}
+{% field-group id="pricing_structure" title="5.1 Pricing Structure" %}
 
-{% field-group id="pricing_unit_economics" title="5. Pricing and Unit Economics" %}
-
-{% doc ref="pricing_unit_economics" kind="description" %}
+{% doc ref="pricing_structure" kind="description" %}
 Make "pricing power" concrete.
 {% /doc %}
-
-{% field-group id="pricing_structure" title="5.1 Pricing Structure" %}
 
 {% string-field id="pricing_offering_name" label="Offering family" required=true %}{% /string-field %}
 
@@ -215,7 +206,7 @@ Include currency and range (e.g., "$99-$499 USD" or "€50/month").
 
 {% /field-group %}
 
-{% field-group id="margin_cost_structure" title="5.2 Margin and Cost Structure" %}
+{% field-group id="pricing_margins" title="5.2 Margin and Cost Structure" %}
 
 {% string-field id="primary_cost_drivers" label="Primary cost drivers (COGS, hosting, labor, content, etc.)" required=true %}{% /string-field %}
 
@@ -237,11 +228,7 @@ Include currency and range (e.g., "$99-$499 USD" or "€50/month").
 
 {% /field-group %}
 
-{% /field-group %}
-
-{% field-group id="customers_demand" title="6. Customers and Demand" %}
-
-{% field-group id="customer_segmentation" title="6.1 Customer Segmentation" %}
+{% field-group id="customers_segmentation" title="6.1 Customer Segmentation" %}
 
 {% string-field id="segment_1" label="Segment 1 (size, needs, willingness to pay)" required=true %}{% /string-field %}
 
@@ -259,7 +246,7 @@ Enter percentages that should sum to 100% (e.g., "Americas: 55%, EMEA: 30%, APAC
 
 {% /field-group %}
 
-{% field-group id="buying_motion" title="6.2 Buying Motion" %}
+{% field-group id="customers_buying" title="6.2 Buying Motion" %}
 
 {% string-field id="purchase_trigger" label="What triggers purchase?" required=true %}{% /string-field %}
 
@@ -271,15 +258,13 @@ Enter percentages that should sum to 100% (e.g., "Americas: 55%, EMEA: 30%, APAC
 
 {% /field-group %}
 
-{% field-group id="concentration_customers" title="6.3 Concentration and Notable Customers" %}
+{% field-group id="customers_concentration" title="6.3 Concentration and Notable Customers" %}
 
 {% number-field id="top_customer_concentration" label="Customer concentration risk (top customer %)" min=0 max=100 %}{% /number-field %}
 
 {% string-field id="notable_customers" label="Notable customers / logos (B2B)" %}{% /string-field %}
 
 {% string-field id="channel_dependencies" label="Channel partner dependencies" %}{% /string-field %}
-
-{% /field-group %}
 
 {% /field-group %}
 
@@ -325,8 +310,6 @@ Required if any moat is checked above. Explain why these moats apply. Minimum 25
 
 {% /field-group %}
 
-{% field-group id="supply_chain_risks" title="8. Supply Chain and External Risks" %}
-
 {% field-group id="supply_constraints" title="8.1 Supply Constraints" %}
 
 {% string-field id="key_inputs_suppliers" label="Key inputs / suppliers / single-source dependencies" required=true %}{% /string-field %}
@@ -358,8 +341,6 @@ Minimum 50 words. Explain how each macro variable impacts the business.
 {% string-field id="historical_episodes" label="Historical episodes (recession/inflation/FX/supply shock)" %}{% /string-field %}
 
 {% string-field id="leading_indicators" label="Leading indicators to monitor pre-earnings" %}{% /string-field %}
-
-{% /field-group %}
 
 {% /field-group %}
 
@@ -399,13 +380,13 @@ Enter a date (YYYY-MM-DD format) or descriptive text (e.g., "Before Q2 earnings"
 {# PART 2: QUARTERLY ANALYSIS                                                 #}
 {# ========================================================================== #}
 
-{% field-group id="quarterly_analysis" title="Part 2: Quarterly Analysis" %}
+{% field-group id="quarterly_cover" title="Q1. Cover Sheet" %}
 
-{% doc ref="quarterly_analysis" kind="description" %}
+{% doc ref="quarterly_cover" kind="description" %}
 This section is period-specific. Complete fresh each quarter.
 {% /doc %}
 
-{% doc ref="quarterly_analysis" kind="instructions" %}
+{% doc ref="quarterly_cover" kind="instructions" %}
 **Recommended Operating Cadence:**
 - **T-21 to T-14:** Refresh model + read filings; pick "what matters this quarter"
 - **T-14 to T-7:** Build expectations stack; peer read-across; gather alt data / checks
@@ -414,8 +395,6 @@ This section is period-specific. Complete fresh each quarter.
 - **Earnings day:** Watchlist + rapid interpretation plan
 - **T+1 to T+2:** Post-mortem; update model; document learnings
 {% /doc %}
-
-{% field-group id="cover_sheet" title="1. Cover Sheet" %}
 
 {% string-field id="pre_earnings_thesis" label="One-sentence thesis (pre-earnings)" required=true maxLength=250 %}{% /string-field %}
 
@@ -427,15 +406,13 @@ Maximum 50 words. State your core thesis before the earnings release.
 
 {% /field-group %}
 
-{% field-group id="source_checklist" title="2. Source Checklist" %}
+{% field-group id="sources_log" title="Q2.1 Sourcing Log" %}
 
-{% doc ref="source_checklist" kind="description" %}
+{% doc ref="sources_log" kind="description" %}
 Check what you actually used. Fill the log as you go.
 {% /doc %}
 
-{% field-group id="sourcing_log" title="2.1 Sourcing Log" %}
-
-{% doc ref="sourcing_log" kind="instructions" %}
+{% doc ref="sources_log" kind="instructions" %}
 Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tier, Link or file path, Key takeaways. At least 3 sources required.
 {% /doc %}
 
@@ -443,7 +420,7 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% /field-group %}
 
-{% field-group id="sec_regulatory" title="2.2 SEC / Regulatory" %}
+{% field-group id="sources_sec" title="Q2.2 SEC / Regulatory Documents" %}
 
 {% checkboxes id="sec_docs_reviewed" label="SEC documents reviewed" checkboxMode="simple" %}
 - [ ] 10-K (latest) {% #ten_k %}
@@ -459,7 +436,7 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% /field-group %}
 
-{% field-group id="company_communications" title="2.3 Company Communications" %}
+{% field-group id="sources_company" title="Q2.3 Company Communications" %}
 
 {% checkboxes id="company_comms_reviewed" label="Company communications reviewed" checkboxMode="simple" %}
 - [ ] Earnings press release {% #earnings_pr %}
@@ -473,7 +450,7 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% /field-group %}
 
-{% field-group id="external_market" title="2.4 External / Market" %}
+{% field-group id="sources_external" title="Q2.4 External / Market Sources" %}
 
 {% checkboxes id="external_sources_reviewed" label="External sources reviewed" checkboxMode="simple" %}
 - [ ] Sell-side consensus snapshot {% #sellside_consensus %}
@@ -506,7 +483,7 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% /field-group %}
 
-{% field-group id="key_experts" title="2.5 Key Experts and Analysts" %}
+{% field-group id="sources_experts" title="Q2.5 Key Experts and Analysts" %}
 
 {% string-list id="experts_list" label="Key experts (Name | Angle | Lead time | Hit rate | Tier)" minItems=0 validate=["experts_format"] %}{% /string-list %}
 
@@ -516,9 +493,7 @@ Format each entry as: Name | Angle | Typical lead time | Hit rate assessment | T
 
 {% /field-group %}
 
-{% /field-group %}
-
-{% field-group id="business_model_snapshot" title="3. Business Model Snapshot" %}
+{% field-group id="business_snapshot" title="Q3. Business Model Snapshot" %}
 
 {% string-field id="how_makes_money" label="How the company makes money" required=true minLength=100 maxLength=300 %}{% /string-field %}
 
@@ -551,9 +526,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% field-group id="quantitative_snapshot" title="4. Quantitative Snapshot" %}
-
-{% field-group id="income_statement" title="4.1 Income Statement" %}
+{% field-group id="quant_income" title="Q4.1 Income Statement" %}
 
 {% number-field id="revenue" label="Revenue" required=true %}{% /number-field %}
 
@@ -577,7 +550,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% field-group id="balance_sheet" title="4.2 Balance Sheet / Liquidity" %}
+{% field-group id="quant_balance" title="Q4.2 Balance Sheet / Liquidity" %}
 
 {% number-field id="cash_equivalents" label="Cash & equivalents" %}{% /number-field %}
 
@@ -589,7 +562,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% field-group id="cash_flow" title="4.3 Cash Flow and Capital Return" %}
+{% field-group id="quant_cashflow" title="Q4.3 Cash Flow and Capital Return" %}
 
 {% number-field id="operating_cash_flow" label="Operating cash flow" %}{% /number-field %}
 
@@ -605,7 +578,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% field-group id="quality_checks" title="4.4 Quality Checks" %}
+{% field-group id="quant_quality" title="Q4.4 Quality Checks" %}
 
 {% single-select id="unusual_accruals" label="Unusual accruals / reserve releases?" required=true %}
 - [ ] Yes {% #yes %}
@@ -628,11 +601,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% /field-group %}
-
-{% field-group id="expectations_stack" title="5. Expectations Stack" %}
-
-{% field-group id="company_guidance" title="Company Guidance (if given)" %}
+{% field-group id="expect_guidance" title="Q5.1 Company Guidance" %}
 
 {% string-field id="guidance_revenue" label="Revenue guidance" %}{% /string-field %}
 
@@ -646,7 +615,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% field-group id="street_consensus" title="Street Consensus" %}
+{% field-group id="expect_consensus" title="Q5.2 Street Consensus" %}
 
 {% string-field id="consensus_as_of" label="Consensus as-of date" required=true pattern="^\\d{4}-\\d{2}-\\d{2}$" %}{% /string-field %}
 
@@ -660,7 +629,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% field-group id="your_estimate" title="Your Estimate (Base)" %}
+{% field-group id="expect_estimate" title="Q5.3 Your Estimate (Base)" %}
 
 {% number-field id="estimate_revenue" label="Your revenue estimate" required=true %}{% /number-field %}
 
@@ -672,7 +641,11 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% /field-group %}
 
-{% field-group id="whisper" title="Whisper / Buyside Bar (if evidence-based)" %}
+{% field-group id="expect_whisper" title="Q5.4 Whisper / Buyside Bar" %}
+
+{% doc ref="expect_whisper" kind="instructions" %}
+Only fill if evidence-based.
+{% /doc %}
 
 {% number-field id="whisper_revenue" label="Whisper revenue" %}{% /number-field %}
 
@@ -686,7 +659,7 @@ Required if whisper values are provided. Explain the source of whisper estimates
 
 {% /field-group %}
 
-{% field-group id="market_implied" title="Market-Implied" %}
+{% field-group id="expect_market" title="Q5.5 Market-Implied" %}
 
 {% number-field id="options_implied_move" label="Options implied move 1-day (%)" %}{% /number-field %}
 
@@ -700,15 +673,11 @@ Required if whisper values are provided. Explain the source of whisper estimates
 
 {% /field-group %}
 
-{% /field-group %}
+{% field-group id="driver_1" title="Q6.1 Driver Model - Driver 1" %}
 
-{% field-group id="driver_model" title="6. Driver Model" %}
-
-{% doc ref="driver_model" kind="description" %}
+{% doc ref="driver_1" kind="description" %}
 Simple, explicit, testable assumptions. At least 2 drivers required.
 {% /doc %}
-
-{% field-group id="driver_1" title="Driver 1" %}
 
 {% string-field id="driver_1_name" label="Driver name" required=true %}{% /string-field %}
 
@@ -722,7 +691,7 @@ Simple, explicit, testable assumptions. At least 2 drivers required.
 
 {% /field-group %}
 
-{% field-group id="driver_2" title="Driver 2" %}
+{% field-group id="driver_2" title="Q6.2 Driver Model - Driver 2" %}
 
 {% string-field id="driver_2_name" label="Driver name" required=true %}{% /string-field %}
 
@@ -736,7 +705,7 @@ Simple, explicit, testable assumptions. At least 2 drivers required.
 
 {% /field-group %}
 
-{% field-group id="driver_3" title="Driver 3 (optional)" %}
+{% field-group id="driver_3" title="Q6.3 Driver Model - Driver 3 (optional)" %}
 
 {% string-field id="driver_3_name" label="Driver name" %}{% /string-field %}
 
@@ -750,7 +719,11 @@ Simple, explicit, testable assumptions. At least 2 drivers required.
 
 {% /field-group %}
 
-{% field-group id="margin_bridge" title="Margin Bridge (if relevant)" %}
+{% field-group id="driver_margin_bridge" title="Q6.4 Margin Bridge" %}
+
+{% doc ref="driver_margin_bridge" kind="instructions" %}
+All margin impacts should sum to total margin change.
+{% /doc %}
 
 {% number-field id="margin_mix_bps" label="Mix impact (bps)" %}{% /number-field %}
 
@@ -762,21 +735,13 @@ Simple, explicit, testable assumptions. At least 2 drivers required.
 
 {% number-field id="margin_one_offs_bps" label="One-offs impact (bps)" %}{% /number-field %}
 
-{% doc ref="margin_one_offs_bps" kind="instructions" %}
-All margin impacts should sum to total margin change.
-{% /doc %}
-
 {% /field-group %}
 
-{% /field-group %}
+{% field-group id="scenario_base" title="Q7.1 Scenarios - Base Case" validate=["scenario_probs_sum_100"] %}
 
-{% field-group id="scenarios" title="7. Scenarios" validate=["scenario_probs_sum_100"] %}
-
-{% doc ref="scenarios" kind="instructions" %}
+{% doc ref="scenario_base" kind="instructions" %}
 Probabilities across Base/Bull/Bear should sum to 100%.
 {% /doc %}
-
-{% field-group id="base_scenario" title="Base Case" %}
 
 {% number-field id="base_probability" label="Probability (%)" required=true min=0 max=100 %}{% /number-field %}
 
@@ -792,7 +757,7 @@ Probabilities across Base/Bull/Bear should sum to 100%.
 
 {% /field-group %}
 
-{% field-group id="bull_scenario" title="Bull Case" %}
+{% field-group id="scenario_bull" title="Q7.2 Scenarios - Bull Case" %}
 
 {% number-field id="bull_probability" label="Probability (%)" required=true min=0 max=100 %}{% /number-field %}
 
@@ -808,7 +773,7 @@ Probabilities across Base/Bull/Bear should sum to 100%.
 
 {% /field-group %}
 
-{% field-group id="bear_scenario" title="Bear Case" %}
+{% field-group id="scenario_bear" title="Q7.3 Scenarios - Bear Case" %}
 
 {% number-field id="bear_probability" label="Probability (%)" required=true min=0 max=100 %}{% /number-field %}
 
@@ -824,11 +789,13 @@ Probabilities across Base/Bull/Bear should sum to 100%.
 
 {% /field-group %}
 
+{% field-group id="scenario_triggers" title="Q7.4 Surprise Triggers" %}
+
 {% string-list id="surprise_triggers" label="Key surprise triggers (ranked)" required=true minItems=2 %}{% /string-list %}
 
 {% /field-group %}
 
-{% field-group id="management_risks" title="8. Management and Risks" %}
+{% field-group id="mgmt_risks" title="Q8. Management and Risks" %}
 
 {% single-select id="management_tone" label="Management tone last quarter" required=true %}
 - [ ] Confident {% #confident %}
@@ -849,7 +816,7 @@ Probabilities across Base/Bull/Bear should sum to 100%.
 
 {% /field-group %}
 
-{% field-group id="valuation_reaction" title="9. Valuation and Reaction" %}
+{% field-group id="valuation" title="Q9. Valuation and Reaction" %}
 
 {% multi-select id="valuation_metrics" label="Valuation metrics used" required=true minSelections=1 %}
 - [ ] P/E {% #pe %}
@@ -890,8 +857,6 @@ Required. Explain your valuation assessment. Minimum 15 words.
 {% string-field id="flow_sentiment" label="Flow / sentiment" %}{% /string-field %}
 
 {% string-field id="crowded_factor" label="Crowded factor exposure" %}{% /string-field %}
-
-{% /field-group %}
 
 {% /field-group %}
 

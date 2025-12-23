@@ -799,7 +799,7 @@ interface FieldGroup {
   title?: string;
   // Note: `required` on groups is not supported in v0.1 (ignored with warning)
   validate?: string[];       // validator IDs
-  children: Array<FieldGroup | Field>;
+  children: Field[];         // v0.1/v0.2: fields only; nested groups deferred (future)
 }
 
 interface FieldBase {
@@ -2259,6 +2259,11 @@ Specified in this document but deferred from v0.1 proof of concept:
 
 Documented but not required for v0.1 or v0.2:
 
+- **Nested field groups** — v0.1/v0.2 support only flat field groups (groups contain
+  fields, not other groups). Nested groups for hierarchical organization deferred
+  to a future version. Use flat groups with descriptive IDs like `pricing_structure`,
+  `pricing_margin_cost` for now.
+
 - **`requiredIf` conditional validation** — Declarative attribute to make a field
   required based on another field's value. For now, use code validators for
   conditional requirements (see Custom Validator Patterns section). A declarative
@@ -2893,7 +2898,7 @@ The `company-analysis.form.md` exercises the following Markform features:
 | `single-select` basic | ✅ Many instances |
 | `multi-select` with `minSelections` | ✅ Business model, moats |
 | `checkboxes` with `checkboxMode="simple"` | ✅ Source checklists |
-| Nested `field-group` | ✅ Multi-level nesting |
+| `field-group` (flat) | ✅ Many groups |
 | `doc` blocks with `kind` | ✅ Instructions throughout |
 | Code validators | ⏳ Planned in `.valid.ts` |
 
