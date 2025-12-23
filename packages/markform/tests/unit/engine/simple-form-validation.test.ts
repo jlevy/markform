@@ -16,11 +16,7 @@ import { serialize } from "../../../src/engine/serialize";
 import { validate } from "../../../src/engine/validate";
 import { inspect } from "../../../src/engine/inspect";
 import { applyPatches } from "../../../src/engine/apply";
-import {
-  computeStructureSummary,
-  computeProgressSummary,
-  computeFormState,
-} from "../../../src/engine/summaries";
+import { computeStructureSummary } from "../../../src/engine/summaries";
 import type { Patch } from "../../../src/engine/types";
 
 // =============================================================================
@@ -96,27 +92,16 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
   describe("Filled Form Completion", () => {
     it("parses simple.mock.filled.form.md as complete", async () => {
       const form = await loadFilledForm();
-      const validationResult = await validate(form);
-      const summary = computeProgressSummary(
-        form.schema,
-        form.valuesByFieldId,
-        validationResult.issues
-      );
-      const formState = computeFormState(summary);
+      const result = inspect(form);
 
-      expect(formState).toBe("complete");
-      expect(summary.counts.invalidFields).toBe(0);
-      expect(summary.counts.emptyRequiredFields).toBe(0);
+      expect(result.formState).toBe("complete");
+      expect(result.progressSummary.counts.invalidFields).toBe(0);
+      expect(result.progressSummary.counts.emptyRequiredFields).toBe(0);
     });
 
     it("has required fields in complete state", async () => {
       const form = await loadFilledForm();
-      const validationResult = await validate(form);
-      const summary = computeProgressSummary(
-        form.schema,
-        form.valuesByFieldId,
-        validationResult.issues
-      );
+      const result = inspect(form);
 
       // Check specific required fields are complete
       // Optional fields may be empty, which is fine
@@ -124,9 +109,9 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
         "categories", "tasks_multi", "tasks_simple", "confirmations"];
 
       for (const fieldId of requiredFieldIds) {
-        const progress = summary.fields[fieldId];
+        const progress = result.progressSummary.fields[fieldId];
         expect(progress, `Field ${fieldId} should have progress`).toBeDefined();
-        expect(progress.state, `Field ${fieldId} should be complete`).toBe("complete");
+        expect(progress!.state, `Field ${fieldId} should be complete`).toBe("complete");
       }
     });
   });
@@ -179,7 +164,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
   describe("Validation Issue Detection", () => {
     it("detects empty required fields in empty form", async () => {
       const form = await loadSimpleForm();
-      const result = await validate(form);
+      const result = validate(form);
 
       // Should have issues for required fields that are empty
       const requiredIssues = result.issues.filter((i) => i.severity === "error");
@@ -192,7 +177,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
 
     it("reports no issues for filled form", async () => {
       const form = await loadFilledForm();
-      const result = await validate(form);
+      const result = validate(form);
 
       // Should have no error issues
       const errorIssues = result.issues.filter((i) => i.severity === "error");
@@ -203,7 +188,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
   describe("Inspect Integration", () => {
     it("inspect returns complete result for filled form", async () => {
       const form = await loadFilledForm();
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.isComplete).toBe(true);
       expect(result.formState).toBe("complete");
@@ -214,7 +199,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
 
     it("inspect returns incomplete result for empty form", async () => {
       const form = await loadSimpleForm();
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.isComplete).toBe(false);
       expect(result.formState).toBe("empty");
@@ -237,10 +222,10 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
 
       expect(result.applyStatus).toBe("applied");
       // applyPatches mutates the form on success
-      expect(form.valuesByFieldId["name"]?.kind).toBe("string");
+      expect(form.valuesByFieldId.name?.kind).toBe("string");
       expect(
-        form.valuesByFieldId["name"]?.kind === "string"
-          ? form.valuesByFieldId["name"].value
+        form.valuesByFieldId.name?.kind === "string"
+          ? form.valuesByFieldId.name.value
           : null
       ).toBe("John Doe");
     });
@@ -261,7 +246,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       const form = await loadSimpleForm();
 
       // Get initial state of name field (may be null or undefined)
-      const initialNameValue = form.valuesByFieldId["name"];
+      const initialNameValue = form.valuesByFieldId.name;
 
       const patches: Patch[] = [
         { op: "set_string", fieldId: "name", value: "John Doe" }, // valid
@@ -274,9 +259,9 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       // Form should remain unchanged - name should still have original value
       // (could be null/undefined or the parsed initial value)
       if (initialNameValue === undefined) {
-        expect(form.valuesByFieldId["name"]).toBeUndefined();
+        expect(form.valuesByFieldId.name).toBeUndefined();
       } else {
-        expect(form.valuesByFieldId["name"]).toEqual(initialNameValue);
+        expect(form.valuesByFieldId.name).toEqual(initialNameValue);
       }
     });
   });

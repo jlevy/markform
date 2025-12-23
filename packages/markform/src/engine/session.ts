@@ -70,7 +70,9 @@ export function serializeSession(session: SessionTranscript): string {
  * Convert a string from snake_case to camelCase.
  */
 function snakeToCamel(str: string): string {
-  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  return str.replace(/_([a-z])/g, (_match, letter: string) =>
+    letter.toUpperCase()
+  );
 }
 
 /**

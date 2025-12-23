@@ -28,7 +28,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId["name"]).toEqual({
+      expect(form.valuesByFieldId.name).toEqual({
         kind: "string",
         value: "John Doe",
       });
@@ -80,7 +80,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId["age"]).toEqual({
+      expect(form.valuesByFieldId.age).toEqual({
         kind: "number",
         value: 25,
       });
@@ -110,7 +110,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId["tags"]).toEqual({
+      expect(form.valuesByFieldId.tags).toEqual({
         kind: "string_list",
         items: ["a", "b", "c"],
       });
@@ -143,7 +143,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId["priority"]).toEqual({
+      expect(form.valuesByFieldId.priority).toEqual({
         kind: "single_select",
         selected: "high",
       });
@@ -204,7 +204,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId["categories"]).toEqual({
+      expect(form.valuesByFieldId.categories).toEqual({
         kind: "multi_select",
         selected: ["tech", "health"],
       });
@@ -243,13 +243,13 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      const value = form.valuesByFieldId["tasks"];
+      const value = form.valuesByFieldId.tasks;
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
         // First should still be done (from original)
-        expect(value.values["first"]).toBe("done");
+        expect(value.values.first).toBe("done");
         // Second should now be done (from patch)
-        expect(value.values["second"]).toBe("done");
+        expect(value.values.second).toBe("done");
       }
     });
   });
@@ -279,7 +279,7 @@ John
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId["name"]).toEqual({
+      expect(form.valuesByFieldId.name).toEqual({
         kind: "string",
         value: null,
       });
@@ -313,7 +313,7 @@ markform:
       expect(result.applyStatus).toBe("rejected");
       // Name should NOT be updated due to transaction rollback
       // The value should remain undefined (not set to "John")
-      const nameValue = form.valuesByFieldId["name"];
+      const nameValue = form.valuesByFieldId.name;
       expect(nameValue === undefined || (nameValue.kind === "string" && nameValue.value === null)).toBe(true);
     });
 

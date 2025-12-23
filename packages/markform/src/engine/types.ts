@@ -284,7 +284,7 @@ export type IssueScope = "form" | "group" | "field" | "option";
 
 /** Inspect issue - unified type for agent/UI consumption */
 export interface InspectIssue {
-  ref: Id | QualifiedOptionRef;
+  ref: string;
   scope: IssueScope;
   reason: IssueReason;
   message: string;

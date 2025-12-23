@@ -6,7 +6,6 @@
 
 import type {
   ApplyResult,
-  CheckboxesField,
   CheckboxesValue,
   CheckboxValue,
   ClearFieldPatch,
@@ -14,7 +13,6 @@ import type {
   FieldValue,
   Id,
   InspectIssue,
-  MultiSelectField,
   MultiSelectValue,
   NumberValue,
   OptionId,
@@ -26,7 +24,6 @@ import type {
   SetSingleSelectPatch,
   SetStringListPatch,
   SetStringPatch,
-  SingleSelectField,
   SingleSelectValue,
   StringListValue,
   StringValue,
@@ -113,7 +110,7 @@ function validatePatch(
           message: `Cannot apply set_single_select to ${field.kind} field "${field.id}"`,
         };
       }
-      const selectField = field as SingleSelectField;
+      const selectField = field;
       if (patch.selected !== null) {
         const validOptions = new Set(selectField.options.map((o) => o.id));
         if (!validOptions.has(patch.selected)) {
@@ -133,7 +130,7 @@ function validatePatch(
           message: `Cannot apply set_multi_select to ${field.kind} field "${field.id}"`,
         };
       }
-      const multiField = field as MultiSelectField;
+      const multiField = field;
       const validOptions = new Set(multiField.options.map((o) => o.id));
       for (const optId of patch.selected) {
         if (!validOptions.has(optId)) {
@@ -153,7 +150,7 @@ function validatePatch(
           message: `Cannot apply set_checkboxes to ${field.kind} field "${field.id}"`,
         };
       }
-      const checkboxField = field as CheckboxesField;
+      const checkboxField = field;
       const validOptions = new Set(checkboxField.options.map((o) => o.id));
       for (const optId of Object.keys(patch.values)) {
         if (!validOptions.has(optId)) {
@@ -291,7 +288,9 @@ function applyClearField(
   patch: ClearFieldPatch,
 ): void {
   const field = findField(form, patch.fieldId);
-  if (!field) return;
+  if (!field) {
+return;
+}
 
   // Create empty value based on field kind
   switch (field.kind) {

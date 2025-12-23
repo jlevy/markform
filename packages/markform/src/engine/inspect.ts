@@ -10,6 +10,7 @@ import type {
   InspectIssue,
   ValidationIssue,
   IssueScope,
+  IssueReason,
 } from "./types";
 import { validate } from "./validate";
 import {
@@ -22,8 +23,6 @@ import {
  * Inspect options for customizing behavior.
  */
 export interface InspectOptions {
-  /** Path to the form file (used for code validator loading) */
-  formPath?: string;
   /** Skip code validators */
   skipCodeValidators?: boolean;
 }
@@ -33,8 +32,8 @@ export interface InspectOptions {
  *
  * This is the main entry point for form inspection. It:
  * 1. Runs validation to get all issues
- * 2. Computes structure and progress summaries
- * 3. Converts ValidationIssues to InspectIssues
+ * 2. Converts ValidationIssues to InspectIssues
+ * 3. Computes structure and progress summaries
  * 4. Adds issues for empty optional fields
  * 5. Sorts all issues by priority (ascending, 1 = highest)
  *
@@ -42,96 +41,89 @@ export interface InspectOptions {
  * @param options - Optional inspection options
  * @returns InspectResult with summaries and prioritized issues
  */
-export async function inspect(
+export function inspect(
   form: ParsedForm,
   options: InspectOptions = {}
-): Promise<InspectResult> {
-  // Run validation
-  const validationResult = await validate(form, {
-    formPath: options.formPath,
+): InspectResult {
+  // Run validation (synchronous)
+  const validationResult = validate(form, {
     skipCodeValidators: options.skipCodeValidators,
   });
 
-  // Compute summaries
+  // Convert validation issues to inspect issues first
+  const validationInspectIssues = convertValidationIssues(
+    validationResult.issues,
+    form
+  );
+
+  // Compute structure summary
   const structureSummary = computeStructureSummary(form.schema);
+
+  // Compute progress summary with the converted issues
   const progressSummary = computeProgressSummary(
     form.schema,
     form.valuesByFieldId,
-    validationResult.issues
+    validationInspectIssues
   );
   const formState = computeFormState(progressSummary);
 
-  // Convert validation issues to inspect issues
-  const inspectIssues = convertToInspectIssues(
-    validationResult.issues,
+  // Add issues for empty optional fields
+  const allIssues = addOptionalEmptyIssues(
+    validationInspectIssues,
     form,
-    progressSummary
+    progressSummary.fields
   );
 
+  // Sort and assign priorities
+  const sortedIssues = sortAndAssignPriorities(allIssues);
+
   // Check if complete (no required issues)
-  const isComplete = !inspectIssues.some((i) => i.severity === "required");
+  const isComplete = !sortedIssues.some((i) => i.severity === "required");
 
   return {
     structureSummary,
     progressSummary,
-    issues: inspectIssues,
+    issues: sortedIssues,
     isComplete,
     formState,
   };
 }
 
 /**
- * Convert ValidationIssues to InspectIssues and add optional empty field issues.
- *
- * The conversion follows these rules:
- * - ValidationIssue.severity='error' → InspectIssue.severity='required'
- * - ValidationIssue.severity='warning'/'info' → InspectIssue.severity='recommended'
- * - Empty optional fields get severity='recommended', reason='optional_empty'
- *
- * Issues are sorted by priority (ascending, 1 = highest):
- * - Required issues get lower priority numbers (higher priority)
- * - Recommended issues get higher priority numbers (lower priority)
+ * Convert ValidationIssues to InspectIssues.
  */
-function convertToInspectIssues(
+function convertValidationIssues(
   validationIssues: ValidationIssue[],
-  form: ParsedForm,
-  progressSummary: { fields: Record<string, { state: string }> }
+  form: ParsedForm
 ): InspectIssue[] {
-  const inspectIssues: InspectIssue[] = [];
+  return validationIssues.map((vi) => ({
+    ref: vi.ref ?? "",
+    scope: determineScope(vi.ref ?? "", form),
+    reason: mapValidationToInspectReason(vi),
+    message: vi.message,
+    severity: vi.severity === "error" ? "required" : "recommended",
+    priority: 0, // Will be assigned after sorting
+  }));
+}
 
-  // Track which fields have validation issues
-  const fieldsWithIssues = new Set<string>();
+/**
+ * Add issues for empty optional fields that don't already have issues.
+ */
+function addOptionalEmptyIssues(
+  existingIssues: InspectIssue[],
+  form: ParsedForm,
+  fieldProgress: Record<string, { state: string }>
+): InspectIssue[] {
+  const issues = [...existingIssues];
+  const fieldsWithIssues = new Set(existingIssues.map((i) => i.ref));
 
-  // Convert validation issues
-  for (const vi of validationIssues) {
-    fieldsWithIssues.add(vi.ref ?? "");
-
-    const severity: "required" | "recommended" =
-      vi.severity === "error" ? "required" : "recommended";
-
-    const reason = mapValidationToInspectReason(vi);
-    const scope = determineScope(vi.ref ?? "", form);
-
-    inspectIssues.push({
-      ref: vi.ref ?? "",
-      scope,
-      reason,
-      message: vi.message,
-      severity,
-      priority: 0, // Will be assigned after sorting
-    });
-  }
-
-  // Add issues for empty optional fields that don't already have issues
-  for (const [fieldId, fieldProgress] of Object.entries(
-    progressSummary.fields
-  )) {
+  for (const [fieldId, progress] of Object.entries(fieldProgress)) {
     if (
-      fieldProgress.state === "empty" &&
+      progress.state === "empty" &&
       !fieldsWithIssues.has(fieldId) &&
       !isRequiredField(fieldId, form)
     ) {
-      inspectIssues.push({
+      issues.push({
         ref: fieldId,
         scope: "field",
         reason: "optional_empty",
@@ -142,52 +134,42 @@ function convertToInspectIssues(
     }
   }
 
-  // Sort and assign priorities
-  return sortAndAssignPriorities(inspectIssues);
+  return issues;
 }
 
 /**
  * Map ValidationIssue to InspectIssue reason code.
  */
-function mapValidationToInspectReason(
-  vi: ValidationIssue
-): InspectIssue["reason"] {
+function mapValidationToInspectReason(vi: ValidationIssue): IssueReason {
   // Check for specific patterns in the message or code
   // Required empty - check both code and message patterns
   if (
     vi.code === "REQUIRED_EMPTY" ||
-    vi.message.toLowerCase().includes("required") && vi.message.toLowerCase().includes("empty")
+    (vi.message.toLowerCase().includes("required") &&
+      vi.message.toLowerCase().includes("empty"))
   ) {
-    return "required_empty";
+    return "required_missing";
   }
 
   // Invalid checkbox state
   if (
     vi.code === "INVALID_CHECKBOX_STATE" ||
-    vi.message.toLowerCase().includes("checkbox state")
+    vi.code === "CHECKBOXES_INCOMPLETE" ||
+    vi.message.toLowerCase().includes("checkbox")
   ) {
-    return "invalid_state";
+    return "checkbox_incomplete";
   }
 
-  // Constraint violations - min/max for various types
+  // Min items violations
   if (
     vi.code === "MULTI_SELECT_TOO_FEW" ||
-    vi.code === "MULTI_SELECT_TOO_MANY" ||
     vi.code === "STRING_LIST_MIN_ITEMS" ||
-    vi.code === "STRING_LIST_MAX_ITEMS" ||
-    vi.code === "NUMBER_MIN" ||
-    vi.code === "NUMBER_MAX" ||
-    vi.code === "STRING_MIN_LENGTH" ||
-    vi.code === "STRING_MAX_LENGTH" ||
-    vi.code === "STRING_PATTERN" ||
-    vi.message.includes("at least") ||
-    vi.message.includes("at most") ||
-    vi.message.includes("must be")
+    vi.message.includes("at least")
   ) {
-    return "constraint_violated";
+    return "min_items_not_met";
   }
 
-  // Default to validation_error for unrecognized issues
+  // Default to validation_error for other issues
   return "validation_error";
 }
 

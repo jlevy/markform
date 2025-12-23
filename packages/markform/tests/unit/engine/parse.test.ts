@@ -55,7 +55,7 @@ ACME Corp
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId["company"];
+      const value = result.valuesByFieldId.company;
 
       expect(value).toBeDefined();
       expect(value?.kind).toBe("string");
@@ -83,7 +83,7 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId["revenue"];
+      const value = result.valuesByFieldId.revenue;
 
       expect(value).toBeDefined();
       expect(value?.kind).toBe("number");
@@ -113,7 +113,7 @@ Tag Three
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId["tags"];
+      const value = result.valuesByFieldId.tags;
 
       expect(value).toBeDefined();
       expect(value?.kind).toBe("string_list");
@@ -154,7 +154,7 @@ markform:
       }
 
       // Check value
-      const value = result.valuesByFieldId["rating"];
+      const value = result.valuesByFieldId.rating;
       expect(value?.kind).toBe("single_select");
       if (value?.kind === "single_select") {
         expect(value.selected).toBe("neutral");
@@ -180,7 +180,7 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId["categories"];
+      const value = result.valuesByFieldId.categories;
 
       expect(value?.kind).toBe("multi_select");
       if (value?.kind === "multi_select") {
@@ -211,15 +211,15 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId["tasks"];
+      const value = result.valuesByFieldId.tasks;
 
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
-        expect(value.values["done_task"]).toBe("done");
-        expect(value.values["in_progress"]).toBe("incomplete");
-        expect(value.values["active_task"]).toBe("active");
-        expect(value.values["na_task"]).toBe("na");
-        expect(value.values["todo_task"]).toBe("todo");
+        expect(value.values.done_task).toBe("done");
+        expect(value.values.in_progress).toBe("incomplete");
+        expect(value.values.active_task).toBe("active");
+        expect(value.values.na_task).toBe("na");
+        expect(value.values.todo_task).toBe("todo");
       }
     });
 
@@ -242,13 +242,13 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId["confirms"];
+      const value = result.valuesByFieldId.confirms;
 
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
-        expect(value.values["yes_item"]).toBe("yes");
-        expect(value.values["no_item"]).toBe("no");
-        expect(value.values["unfilled_item"]).toBe("unfilled");
+        expect(value.values.yes_item).toBe("yes");
+        expect(value.values.no_item).toBe("no");
+        expect(value.values.unfilled_item).toBe("unfilled");
       }
     });
 

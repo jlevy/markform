@@ -16,8 +16,6 @@ const VALID_SESSION_YAML = `session_version: "0.1.0"
 mode: mock
 form:
   path: examples/simple/simple.form.md
-validators:
-  builtin: true
 mock:
   completed_mock: examples/simple/simple.mock.filled.form.md
 harness:
@@ -108,13 +106,13 @@ describe("session module", () => {
 
     it("parses turn structure correctly", () => {
       const session = parseSession(VALID_SESSION_YAML);
-      const turn = session.turns[0];
+      const turn = session.turns[0]!;
 
       expect(turn.turn).toBe(1);
       expect(turn.inspect.issues.length).toBe(1);
-      expect(turn.inspect.issues[0].ref).toBe("name");
-      expect(turn.inspect.issues[0].scope).toBe("field");
-      expect(turn.inspect.issues[0].reason).toBe("required_missing");
+      expect(turn.inspect.issues[0]!.ref).toBe("name");
+      expect(turn.inspect.issues[0]!.scope).toBe("field");
+      expect(turn.inspect.issues[0]!.reason).toBe("required_missing");
       expect(turn.apply.patches.length).toBe(1);
       expect(turn.after.requiredIssueCount).toBe(0);
       expect(turn.after.markdownSha256).toBe("abc123def456");
@@ -135,7 +133,6 @@ describe("session module", () => {
         sessionVersion: "0.1.0",
         mode: "mock",
         form: { path: "test.form.md" },
-        validators: { builtin: true },
         harness: {
           maxIssues: 5,
           maxPatchesPerTurn: 3,
@@ -161,7 +158,6 @@ describe("session module", () => {
         sessionVersion: "0.1.0",
         mode: "live",
         form: { path: "test.form.md" },
-        validators: { builtin: true },
         harness: {
           maxIssues: 10,
           maxPatchesPerTurn: 5,
@@ -194,7 +190,6 @@ describe("session module", () => {
         sessionVersion: "0.1.0",
         mode: "mock",
         form: { path: "test.form.md" },
-        validators: { builtin: true },
         harness: {
           maxIssues: 5,
           maxPatchesPerTurn: 3,
@@ -258,12 +253,12 @@ describe("session module", () => {
       const serialized = serializeSession(original);
       const reparsed = parseSession(serialized);
 
-      expect(reparsed.turns[0].turn).toBe(original.turns[0].turn);
-      expect(reparsed.turns[0].inspect.issues.length).toBe(
-        original.turns[0].inspect.issues.length
+      expect(reparsed.turns[0]!.turn).toBe(original.turns[0]!.turn);
+      expect(reparsed.turns[0]!.inspect.issues.length).toBe(
+        original.turns[0]!.inspect.issues.length
       );
-      expect(reparsed.turns[0].apply.patches.length).toBe(
-        original.turns[0].apply.patches.length
+      expect(reparsed.turns[0]!.apply.patches.length).toBe(
+        original.turns[0]!.apply.patches.length
       );
     });
   });

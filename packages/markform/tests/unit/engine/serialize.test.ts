@@ -53,7 +53,7 @@ ACME Corp
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId["company"];
+      const value = reparsed.valuesByFieldId.company;
       expect(value?.kind).toBe("string");
       if (value?.kind === "string") {
         expect(value.value).toBe("ACME Corp");
@@ -82,7 +82,7 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId["revenue"];
+      const value = reparsed.valuesByFieldId.revenue;
       expect(value?.kind).toBe("number");
       if (value?.kind === "number") {
         expect(value.value).toBe(1234.56);
@@ -113,7 +113,7 @@ Tag Three
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId["tags"];
+      const value = reparsed.valuesByFieldId.tags;
       expect(value?.kind).toBe("string_list");
       if (value?.kind === "string_list") {
         expect(value.items).toEqual(["Tag One", "Tag Two", "Tag Three"]);
@@ -151,7 +151,7 @@ markform:
       }
 
       // Check value preserved
-      const value = reparsed.valuesByFieldId["rating"];
+      const value = reparsed.valuesByFieldId.rating;
       expect(value?.kind).toBe("single_select");
       if (value?.kind === "single_select") {
         expect(value.selected).toBe("neutral");
@@ -180,7 +180,7 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId["categories"];
+      const value = reparsed.valuesByFieldId.categories;
       expect(value?.kind).toBe("multi_select");
       if (value?.kind === "multi_select") {
         expect(value.selected).toContain("tech");
@@ -213,14 +213,14 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId["tasks"];
+      const value = reparsed.valuesByFieldId.tasks;
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
-        expect(value.values["done_task"]).toBe("done");
-        expect(value.values["in_progress"]).toBe("incomplete");
-        expect(value.values["active_task"]).toBe("active");
-        expect(value.values["na_task"]).toBe("na");
-        expect(value.values["todo_task"]).toBe("todo");
+        expect(value.values.done_task).toBe("done");
+        expect(value.values.in_progress).toBe("incomplete");
+        expect(value.values.active_task).toBe("active");
+        expect(value.values.na_task).toBe("na");
+        expect(value.values.todo_task).toBe("todo");
       }
     });
 
@@ -246,12 +246,12 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId["confirms"];
+      const value = reparsed.valuesByFieldId.confirms;
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
-        expect(value.values["yes_item"]).toBe("yes");
-        expect(value.values["no_item"]).toBe("no");
-        expect(value.values["unfilled_item"]).toBe("unfilled");
+        expect(value.values.yes_item).toBe("yes");
+        expect(value.values.no_item).toBe("no");
+        expect(value.values.unfilled_item).toBe("unfilled");
       }
     });
 

@@ -57,8 +57,8 @@ markform:
       const parsed = parseForm(markdown);
       const summary = computeStructureSummary(parsed.schema);
 
-      expect(summary.groupsById["g1"]).toBe("field_group");
-      expect(summary.fieldsById["name"]).toBe("string");
+      expect(summary.groupsById.g1).toBe("field_group");
+      expect(summary.fieldsById.name).toBe("string");
     });
 
     it("counts options for select fields", () => {
@@ -108,8 +108,8 @@ markform:
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
 
-      expect(progress.fields["name"]?.state).toBe("empty");
-      expect(progress.fields["name"]?.submitted).toBe(false);
+      expect(progress.fields.name?.state).toBe("empty");
+      expect(progress.fields.name?.submitted).toBe(false);
       expect(progress.counts.submittedFields).toBe(0);
     });
 
@@ -134,8 +134,8 @@ John Doe
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
 
-      expect(progress.fields["name"]?.state).toBe("complete");
-      expect(progress.fields["name"]?.submitted).toBe(true);
+      expect(progress.fields.name?.state).toBe("complete");
+      expect(progress.fields.name?.submitted).toBe(true);
       expect(progress.counts.submittedFields).toBe(1);
       expect(progress.counts.completeFields).toBe(1);
     });
@@ -174,9 +174,9 @@ X
 
       const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, issues);
 
-      expect(progress.fields["name"]?.state).toBe("invalid");
-      expect(progress.fields["name"]?.issueCount).toBe(1);
-      expect(progress.fields["name"]?.valid).toBe(false);
+      expect(progress.fields.name?.state).toBe("invalid");
+      expect(progress.fields.name?.issueCount).toBe(1);
+      expect(progress.fields.name?.valid).toBe(false);
       expect(progress.counts.invalidFields).toBe(1);
     });
 
@@ -227,10 +227,10 @@ markform:
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
 
-      expect(progress.fields["tasks"]?.checkboxProgress).toBeDefined();
-      expect(progress.fields["tasks"]?.checkboxProgress?.done).toBe(1);
-      expect(progress.fields["tasks"]?.checkboxProgress?.incomplete).toBe(1);
-      expect(progress.fields["tasks"]?.checkboxProgress?.todo).toBe(1);
+      expect(progress.fields.tasks?.checkboxProgress).toBeDefined();
+      expect(progress.fields.tasks?.checkboxProgress?.done).toBe(1);
+      expect(progress.fields.tasks?.checkboxProgress?.incomplete).toBe(1);
+      expect(progress.fields.tasks?.checkboxProgress?.todo).toBe(1);
     });
 
     it("tracks checkboxes with incomplete items as incomplete", () => {
@@ -254,7 +254,7 @@ markform:
       const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
 
       // In multi mode, having a "todo" item means incomplete
-      expect(progress.fields["tasks"]?.state).toBe("incomplete");
+      expect(progress.fields.tasks?.state).toBe("incomplete");
     });
 
     it("tracks explicit checkboxes with unfilled as incomplete", () => {
@@ -278,7 +278,7 @@ markform:
       const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
 
       // In explicit mode, having an "unfilled" item means incomplete
-      expect(progress.fields["confirms"]?.state).toBe("incomplete");
+      expect(progress.fields.confirms?.state).toBe("incomplete");
     });
   });
 

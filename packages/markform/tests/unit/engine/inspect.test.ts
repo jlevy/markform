@@ -7,7 +7,6 @@
 import { describe, it, expect } from "vitest";
 import { inspect } from "../../../src/engine/inspect";
 import { parseForm } from "../../../src/engine/parse";
-import type { InspectIssue } from "../../../src/engine/types";
 
 // =============================================================================
 // Test Fixtures
@@ -99,9 +98,9 @@ markform_version: "0.1.0"
 
 describe("inspect", () => {
   describe("basic functionality", () => {
-    it("returns InspectResult with all required fields", async () => {
+    it("returns InspectResult with all required fields", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result).toHaveProperty("structureSummary");
       expect(result).toHaveProperty("progressSummary");
@@ -110,18 +109,18 @@ describe("inspect", () => {
       expect(result).toHaveProperty("formState");
     });
 
-    it("returns structure summary with correct field counts", async () => {
+    it("returns structure summary with correct field counts", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.structureSummary.fieldCount).toBe(2);
       // Note: requiredFields is in progressSummary.counts, not structureSummary
       expect(result.progressSummary.counts.emptyRequiredFields).toBe(1);
     });
 
-    it("returns progress summary with field states", async () => {
+    it("returns progress summary with field states", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.progressSummary.fields).toHaveProperty("name");
       expect(result.progressSummary.fields).toHaveProperty("age");
@@ -129,9 +128,9 @@ describe("inspect", () => {
   });
 
   describe("issue detection", () => {
-    it("detects missing required field as required issue", async () => {
+    it("detects missing required field as required issue", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       const requiredIssues = result.issues.filter(
         (i) => i.severity === "required"
@@ -140,23 +139,23 @@ describe("inspect", () => {
 
       const nameIssue = requiredIssues.find((i) => i.ref === "name");
       expect(nameIssue).toBeDefined();
-      expect(nameIssue?.reason).toBe("required_empty");
+      expect(nameIssue?.reason).toBe("required_missing");
     });
 
-    it("detects validation errors as required issues", async () => {
+    it("detects validation errors as required issues", () => {
       const form = parseForm(INVALID_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       const countIssue = result.issues.find((i) => i.ref === "count");
       expect(countIssue).toBeDefined();
       expect(countIssue?.severity).toBe("required");
-      // Min/max constraint violations are mapped to "constraint_violated"
-      expect(countIssue?.reason).toBe("constraint_violated");
+      // Min/max constraint violations are mapped to "validation_error"
+      expect(countIssue?.reason).toBe("validation_error");
     });
 
-    it("detects empty optional fields as recommended issues", async () => {
+    it("detects empty optional fields as recommended issues", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       const ageIssue = result.issues.find((i) => i.ref === "age");
       expect(ageIssue).toBeDefined();
@@ -166,21 +165,21 @@ describe("inspect", () => {
   });
 
   describe("issue prioritization", () => {
-    it("sorts issues by priority ascending (1 = highest)", async () => {
+    it("sorts issues by priority ascending (1 = highest)", () => {
       const form = parseForm(MULTI_ISSUE_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       // Verify issues are sorted by priority ascending
       for (let i = 1; i < result.issues.length; i++) {
-        expect(result.issues[i].priority).toBeGreaterThanOrEqual(
-          result.issues[i - 1].priority
+        expect(result.issues[i]!.priority).toBeGreaterThanOrEqual(
+          result.issues[i - 1]!.priority
         );
       }
     });
 
-    it("assigns lower priority numbers to required issues", async () => {
+    it("assigns lower priority numbers to required issues", () => {
       const form = parseForm(MULTI_ISSUE_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       const requiredIssues = result.issues.filter(
         (i) => i.severity === "required"
@@ -200,9 +199,9 @@ describe("inspect", () => {
       }
     });
 
-    it("assigns unique priority numbers to each issue", async () => {
+    it("assigns unique priority numbers to each issue", () => {
       const form = parseForm(MULTI_ISSUE_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       const priorities = result.issues.map((i) => i.priority);
       const uniquePriorities = new Set(priorities);
@@ -211,46 +210,46 @@ describe("inspect", () => {
   });
 
   describe("completion status", () => {
-    it("returns isComplete=false when required issues exist", async () => {
+    it("returns isComplete=false when required issues exist", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.isComplete).toBe(false);
     });
 
-    it("returns isComplete=true when no required issues exist", async () => {
+    it("returns isComplete=true when no required issues exist", () => {
       const form = parseForm(FILLED_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.isComplete).toBe(true);
     });
 
-    it("returns formState='empty' when no fields are filled", async () => {
+    it("returns formState='empty' when no fields are filled", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.formState).toBe("empty");
     });
 
-    it("returns formState='complete' when all required fields are filled", async () => {
+    it("returns formState='complete' when all required fields are filled", () => {
       const form = parseForm(FILLED_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.formState).toBe("complete");
     });
 
-    it("returns formState='invalid' when validation errors exist", async () => {
+    it("returns formState='invalid' when validation errors exist", () => {
       const form = parseForm(INVALID_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       expect(result.formState).toBe("invalid");
     });
   });
 
   describe("issue scope", () => {
-    it("sets scope to 'field' for field-level issues", async () => {
+    it("sets scope to 'field' for field-level issues", () => {
       const form = parseForm(EMPTY_FORM);
-      const result = await inspect(form);
+      const result = inspect(form);
 
       const fieldIssues = result.issues.filter((i) => i.scope === "field");
       expect(fieldIssues.length).toBeGreaterThan(0);
