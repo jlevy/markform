@@ -9,8 +9,10 @@ import { Command } from "commander";
 import pc from "picocolors";
 
 import { VERSION } from "../index.js";
+import { registerApplyCommand } from "./commands/apply.js";
 import { registerExportCommand } from "./commands/export.js";
 import { registerInspectCommand } from "./commands/inspect.js";
+import { registerRunCommand } from "./commands/run.js";
 import { registerServeCommand } from "./commands/serve.js";
 
 /**
@@ -41,30 +43,10 @@ function createProgram(): Command {
 
   // Register commands
   registerInspectCommand(program);
+  registerApplyCommand(program);
   registerExportCommand(program);
   registerServeCommand(program);
-
-  // Phase 3 commands - placeholders for now
-  program
-    .command("apply <file>")
-    .description("Apply patches to a form")
-    .option("--patch <json>", "JSON array of patches to apply")
-    .option("-o, --output <file>", "Output file (defaults to stdout)")
-    .action((_file: string) => {
-      console.log(pc.yellow("Command not yet implemented: apply"));
-      console.log(pc.dim("This command will be implemented in Phase 3."));
-    });
-
-  program
-    .command("run <file>")
-    .description("Run the harness loop to fill a form")
-    .option("--mock", "Use mock agent for testing")
-    .option("--completed-mock <file>", "Path to completed mock file")
-    .option("--record <file>", "Record session to file")
-    .action((_file: string) => {
-      console.log(pc.yellow("Command not yet implemented: run"));
-      console.log(pc.dim("This command will be implemented in Phase 3."));
-    });
+  registerRunCommand(program);
 
   return program;
 }

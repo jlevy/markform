@@ -441,6 +441,14 @@ function validateCheckboxesField(
         ref: field.id,
         source: "builtin",
       });
+    } else if (mode === "simple" && doneCount < field.options.length) {
+      const remaining = field.options.length - doneCount;
+      issues.push({
+        severity: "error",
+        message: `All items in "${field.label}" must be checked (${remaining} unchecked)`,
+        ref: field.id,
+        source: "builtin",
+      });
     }
   }
 

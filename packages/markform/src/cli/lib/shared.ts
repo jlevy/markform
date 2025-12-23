@@ -76,6 +76,29 @@ export function logSuccess(ctx: CommandContext, message: string): void {
 }
 
 /**
+ * Log a timing message (hidden if --quiet is set).
+ */
+export function logTiming(
+  ctx: CommandContext,
+  label: string,
+  durationMs: number
+): void {
+  if (!ctx.quiet) {
+    const seconds = (durationMs / 1000).toFixed(1);
+    console.log(pc.cyan(`⏰ ${label}: ${seconds}s`));
+  }
+}
+
+/**
+ * Log a warning message (hidden if --quiet is set).
+ */
+export function logWarn(ctx: CommandContext, message: string): void {
+  if (!ctx.quiet) {
+    console.log(pc.yellow(`⚠️  ${message}`));
+  }
+}
+
+/**
  * Read a file and return its contents.
  */
 export async function readFile(filePath: string): Promise<string> {

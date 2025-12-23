@@ -84,21 +84,37 @@ function camelToSnake(str: string): string {
 
 /**
  * Recursively convert all object keys from snake_case to camelCase.
+ *
+ * Preserves keys that are user-defined identifiers (like option IDs in
+ * checkboxes `values` objects).
+ *
+ * @param obj - Object to convert
+ * @param preserveKeys - If true, don't convert keys in this object (but still recurse into values)
  */
-function toCamelCaseDeep(obj: unknown): unknown {
+function toCamelCaseDeep(obj: unknown, preserveKeys = false): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(toCamelCaseDeep);
+    return obj.map((item) => toCamelCaseDeep(item, false));
   }
 
   if (typeof obj === "object") {
     const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      const camelKey = snakeToCamel(key);
-      result[camelKey] = toCamelCaseDeep(value);
+    const record = obj as Record<string, unknown>;
+
+    for (const [key, value] of Object.entries(record)) {
+      // Determine the key to use
+      const resultKey = preserveKeys ? key : snakeToCamel(key);
+
+      // Check if this is a "values" key in a set_checkboxes patch
+      // The "values" object contains option IDs as keys which should be preserved
+      const isCheckboxValues =
+        key === "values" &&
+        record.op === "set_checkboxes";
+
+      result[resultKey] = toCamelCaseDeep(value, isCheckboxValues);
     }
     return result;
   }
@@ -108,21 +124,37 @@ function toCamelCaseDeep(obj: unknown): unknown {
 
 /**
  * Recursively convert all object keys from camelCase to snake_case.
+ *
+ * Preserves keys that are user-defined identifiers (like option IDs in
+ * checkboxes `values` objects).
+ *
+ * @param obj - Object to convert
+ * @param preserveKeys - If true, don't convert keys in this object (but still recurse into values)
  */
-function toSnakeCaseDeep(obj: unknown): unknown {
+function toSnakeCaseDeep(obj: unknown, preserveKeys = false): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(toSnakeCaseDeep);
+    return obj.map((item) => toSnakeCaseDeep(item, false));
   }
 
   if (typeof obj === "object") {
     const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      const snakeKey = camelToSnake(key);
-      result[snakeKey] = toSnakeCaseDeep(value);
+    const record = obj as Record<string, unknown>;
+
+    for (const [key, value] of Object.entries(record)) {
+      // Determine the key to use
+      const resultKey = preserveKeys ? key : camelToSnake(key);
+
+      // Check if this is a "values" key in a set_checkboxes patch
+      // The "values" object contains option IDs as keys which should be preserved
+      const isCheckboxValues =
+        key === "values" &&
+        record.op === "set_checkboxes";
+
+      result[resultKey] = toSnakeCaseDeep(value, isCheckboxValues);
     }
     return result;
   }
