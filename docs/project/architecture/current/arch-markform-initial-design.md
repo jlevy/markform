@@ -7,7 +7,25 @@ Version: v0.1 (proof of concept)
 ### What Markform Is
 
 **Markform** is a system for **agent-friendly, human-readable, editable forms** stored
-as **Markdoc-powered Markdown** (`.form.md`) that support:
+(`.form.md`) that support:
+
+- **Structured schema + form values in the same file** (template, incomplete, or
+  completed), which makes for easy and efficient context engineering
+
+- **Incremental filling** (field-by-field or batch) to allow incrementally assembling
+  and validating structured data via multiple channels or input modes (such as a tool or
+  MCP server used by an agent, a CLI, a library used alongside other libraries like
+  Vercel AI SDK tools, or in web UIs for users)
+
+- **Flexible validation** at multiple scopes (field/group/form), including declarative
+  constraints and external hooks (code or LLM-based)
+
+- A **harness loop** ("auto-execute") that runs step-by-step loops for agents, making
+  powerful agentic tools possible (like deep research agents that assemble validated
+  output in a given structure)
+
+- A **golden session testing framework** that validates end-to-end behavior across modes
+  so that Markfrom itself is easily tested end to end via agentic coding
 
 > **Why Markdoc?** Markdoc treats documents as structured data with an AST-first
 > approach, enabling reliable programmatic manipulation while preserving human
@@ -16,31 +34,22 @@ as **Markdoc-powered Markdown** (`.form.md`) that support:
 > For how Stripe uses this approach at scale, see [How Stripe builds interactive docs
 > with Markdoc][stripe-markdoc].
 
-- **Structured schema + form values in the same file** (template, incomplete, or
-  completed)
-
-- **Stable, globally-unique IDs** for everything (forms, groups, fields, options)
-
-- **Incremental filling** (field-by-field or batch) by CLI, MCP server, Vercel AI SDK
-  tools, or a simple web UI
-
-- **Validation** at multiple scopes (field/group/form), including declarative
-  constraints and external hooks (code or LLM-based)
-
-- A **form harness** ("auto-execute") that runs step-by-step loops for agents
-
-- A **golden session testing framework** that validates end-to-end behavior across modes
-
 ### Why It Exists
 
 Plain Markdown checklists and ad-hoc templates are readable, but fragile to update
-programmatically. Markform aims to:
+programmatically via LLMs or agents.
+Simple to-do list tools are now commonly used by agents, but these do not extend to more
+complex assembly of information.
 
-- Keep a **single readable artifact** (a `.form.md`)
+The core idea is to allow two things that are increasingly essetial for advanced agentic
+workflows:
 
-- Enable **reliable machine edits** via IDs + structured tags
+- Keep a **readable text file format** (a `.form.md`) a form template or a partially or
+  fully filled-in form and aligns well with existing Markdown, HTML, and React
+  conventions and is token-friendly for LLMs and agents
 
-- Make **agent workflows deterministic**, testable, and efficient
+- Have a clear schema (with field ids and defined tags) that allow **reliable machine
+  edits** to fill in or validate a form via tools or API calls
 
 ### Example Use Cases
 
@@ -74,10 +83,10 @@ programmatically. Markform aims to:
 
 | Term | Definition |
 | --- | --- |
-| **Harness** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. |
+| **Harness loop** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. Also called just "harness" or "loop" — these refer to the same component. |
 | **Session** | A single execution run from template form to completed form (or abandonment). |
 | **Turn** | One iteration of the harness loop: inspect → recommend → apply patches → validate. |
-| **Patch** | A single atomic change operation applied to form values (e.g., setting a text field, toggling checkboxes). |
+| **Patch** | A single atomic change operation applied to form values (e.g., setting a string field, toggling checkboxes). |
 
 **Testing and files:**
 
@@ -106,8 +115,8 @@ programmatically. Markform aims to:
 - **Incremental filling**: agent/user fills one or many fields at a time; tool returns
   “what’s missing next” + validation issues
 
-- **Form harness** loop with current errors + top-priority next steps, supporting mock
-  mode (deterministic) and live mode (LLM-driven)
+- A form-filling **harness loop** with current errors + top-priority next steps,
+  supporting mock mode (deterministic) and live mode (LLM-driven)
 
 - **Golden session tests**: record/replay multi-turn sessions with ops + snapshots
 
@@ -188,11 +197,12 @@ Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 
 | Tag | Description |
 | --- | --- |
-| `text-field` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
+| `string-field` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
 | `number-field` | Numeric value; optional `min`, `max`, `integer` |
+| `string-list` | Array of strings (open-ended list); supports `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
 | `single-select` | Select one option from enumerated list |
 | `multi-select` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
-| `checkboxes` | Stateful checklist; supports `multi_checkbox` (5 states), `simple_checkbox` (2 states), or `explicit_checkbox` (yes/no) |
+| `checkboxes` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no) |
 
 **Note on `pattern`:** The `pattern` attribute accepts a JavaScript-compatible regular
 expression string (without delimiters).
@@ -234,7 +244,7 @@ This is custom parsing layered on top of Markdoc’s AST traversal.
 
 Markform supports three checkbox modes:
 
-**`multi_checkbox`** (default) — 5 states for rich workflow tracking:
+**`checkboxMode="multi"`** (default) — 5 states for rich workflow tracking:
 
 | Token | State | Notes |
 | --- | --- | --- |
@@ -244,15 +254,15 @@ Markform supports three checkbox modes:
 | `[*]` | active | Currently being worked on (current focus). Useful for agents to indicate which step they're executing |
 | `[-]` | na | Not applicable / skipped. Obsidian convention ([guide][obsidian-tasks-guide]) |
 
-**`simple_checkbox`** — 2 states for GFM compatibility:
+**`checkboxMode="simple"`** — 2 states for GFM compatibility:
 
 | Token | State | Notes |
 | --- | --- | --- |
 | `[ ]` | todo | Unchecked |
 | `[x]` | done | Checked |
 
-**`explicit_checkbox`** — Requires explicit yes/no answer (no implicit “unchecked =
-no”):
+**`checkboxMode="explicit"`** — Requires explicit yes/no answer (no implicit “unchecked
+= no”):
 
 | Token | Value | Notes |
 | --- | --- | --- |
@@ -260,13 +270,13 @@ no”):
 | `[y]` | yes | Explicit affirmative |
 | `[n]` | no | Explicit negative |
 
-Use `checkbox_mode` attribute to select mode:
+Use `checkboxMode` attribute to select mode:
 
-- `checkbox_mode="multi"` (default) — 5 states for workflow tracking
+- `checkboxMode="multi"` (default) — 5 states for workflow tracking
 
-- `checkbox_mode="simple"` — 2 states for GFM compatibility
+- `checkboxMode="simple"` — 2 states for GFM compatibility
 
-- `checkbox_mode="explicit"` — Requires explicit yes/no, validates all options answered
+- `checkboxMode="explicit"` — Requires explicit yes/no, validates all options answered
 
 **Distinction between `in_progress` and `active`:**
 
@@ -299,20 +309,20 @@ Values are encoded differently based on field type.
 The `fence` node with `language="value"` is used for scalar values (see
 [Markdoc Nodes][markdoc-nodes] for fence handling).
 
-##### Text Fields
+##### String Fields
 
 **Empty:** Omit the body entirely:
 ```md
-{% text-field id="company_name" label="Company name" required=true %}{% /text-field %}
+{% string-field id="company_name" label="Company name" required=true %}{% /string-field %}
 ```
 
 **Filled:** Value in a fenced code block with language `value`:
 ```md
-{% text-field id="company_name" label="Company name" required=true %}
+{% string-field id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
 ```
-{% /text-field %}
+{% /string-field %}
 ```
 
 ##### Number Fields
@@ -368,7 +378,7 @@ Values are encoded **inline** via state markers—no separate value fence:
 
 For simple two-state checkboxes:
 ```md
-{% checkboxes id="agreements" label="Agreements" checkbox_mode="simple" %}
+{% checkboxes id="agreements" label="Agreements" checkboxMode="simple" %}
 - [x] I agree to terms {% #terms %}
 - [ ] Subscribe to newsletter {% #newsletter %}
 {% /checkboxes %}
@@ -376,7 +386,7 @@ For simple two-state checkboxes:
 
 For explicit yes/no checkboxes (requires answer for each):
 ```md
-{% checkboxes id="risk_factors" label="Risk Assessment" checkbox_mode="explicit" required=true %}
+{% checkboxes id="risk_factors" label="Risk Assessment" checkboxMode="explicit" required=true %}
 - [y] Market volatility risk assessed {% #market_risk %}
 - [n] Regulatory risk assessed {% #regulatory_risk %}
 - [ ] Currency risk assessed {% #currency_risk %}
@@ -384,7 +394,63 @@ For explicit yes/no checkboxes (requires answer for each):
 ```
 
 In this example, `currency_risk` is unfilled (`[ ]`) and will fail validation because
-`checkbox_mode="explicit"` requires all options to have explicit `[y]` or `[n]` answers.
+`checkboxMode="explicit"` requires all options to have explicit `[y]` or `[n]` answers.
+
+##### String-List Fields
+
+String-list fields represent open-ended arrays of user-provided strings.
+Items do not have individual IDs—the field has an ID and items are positional strings.
+
+**Empty:**
+```md
+{% string-list id="key_commitments" label="Key commitments" minItems=1 %}{% /string-list %}
+```
+
+**Filled:** One item per non-empty line in the value fence:
+```md
+{% string-list id="key_commitments" label="Key commitments" minItems=1 %}
+```value {% process=false %}
+Ship v1.0 by end of Q1
+Complete security audit
+Migrate legacy users to new platform
+```
+{% /string-list %}
+```
+
+**Parsing rules:**
+- Split fence content by `\n`
+- For each line: trim leading/trailing whitespace, ignore empty lines
+- Result is `string[]`
+
+**Serialization rules (canonical):**
+- Emit one item per line (no bullets)
+- Always use `process=false` on the fence
+- Empty arrays serialize as empty tag (no value fence)
+
+**Example with constraints:**
+```md
+{% string-list
+  id="top_risks"
+  label="Top 5 risks (specific, not generic)"
+  required=true
+  minItems=5
+  itemMinLength=10
+%}
+
+{% doc ref="top_risks" kind="instructions" %}
+One risk per line. Be specific (company- or product-specific), not generic.
+Minimum 5; include more if needed.
+{% /doc %}
+
+```value {% process=false %}
+Supply chain disruption from single-source vendor
+Key engineer departure risk (bus factor = 1)
+Regulatory changes in EU market
+Competitor launching similar feature in Q2
+Customer concentration risk (top 3 = 60% revenue)
+```
+{% /string-list %}
+```
 
 ##### The `process=false` Attribute
 
@@ -392,11 +458,11 @@ Only required when the value contains Markdoc syntax (e.g., `{% ... %}` or `{# .
 See [GitHub Discussion #261][markdoc-process-false] for implementation details:
 
 ```md
-{% text-field id="notes" label="Notes" %}
+{% string-field id="notes" label="Notes" %}
 ```value {% process=false %}
 Use {% tag %} for special formatting.
 ```
-{% /text-field %}
+{% /string-field %}
 ```
 
 #### Example: Template Form
@@ -413,9 +479,9 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 {% /doc %}
 
 {% field-group id="company_info" title="Company Info" %}
-{% text-field id="company_name" label="Company name" required=true %}{% /text-field %}
-{% text-field id="ticker" label="Ticker" required=true %}{% /text-field %}
-{% text-field id="fiscal_period" label="Fiscal period" required=true %}{% /text-field %}
+{% string-field id="company_name" label="Company name" required=true %}{% /string-field %}
+{% string-field id="ticker" label="Ticker" required=true %}{% /string-field %}
+{% string-field id="fiscal_period" label="Fiscal period" required=true %}{% /string-field %}
 {% /field-group %}
 
 {% field-group id="source_docs" title="Source Documents" %}
@@ -439,7 +505,7 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 - [ ] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
 {% /single-select %}
-{% text-field id="thesis" label="Investment thesis" required=true %}{% /text-field %}
+{% string-field id="thesis" label="Investment thesis" required=true %}{% /string-field %}
 {% /field-group %}
 
 {% /form %}
@@ -449,16 +515,16 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 
 ```md
 {% field-group id="company_info" title="Company Info" %}
-{% text-field id="company_name" label="Company name" required=true %}
+{% string-field id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
 ```
-{% /text-field %} {% text-field id="ticker" label="Ticker" required=true %}
+{% /string-field %} {% string-field id="ticker" label="Ticker" required=true %}
 ```value
 ACME
 ```
-{% /text-field %} {% text-field id="fiscal_period" label="Fiscal period" required=true
-%}{% /text-field %} {% /field-group %}
+{% /string-field %} {% string-field id="fiscal_period" label="Fiscal period"
+required=true %}{% /string-field %} {% /field-group %}
 
 {% field-group id="source_docs" title="Source Documents" %} {% checkboxes
 id="docs_reviewed" label="Documents reviewed" required=true %}
@@ -498,7 +564,7 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
 5. Run **semantic** validation (Markform-specific, not Markdoc built-in):
    - Globally-unique IDs across all elements
    - `ref` resolution (doc blocks reference valid targets)
-   - Checkbox mode enforcement (`checkbox_mode="simple"` restricts to 2 states)
+   - Checkbox mode enforcement (`checkboxMode="simple"` restricts to 2 states)
    - Option marker parsing (`[ ]`, `( )`, etc.)
 
 #### Serialization Strategy
@@ -527,21 +593,22 @@ requirements beyond what it provides—see [Formatting][markdoc-format]):
 ```ts
 type Id = string; // validated snake_case, e.g., /^[a-z][a-z0-9_]*$/
 
-// Multi-checkbox states (checkbox_mode="multi", default)
+// Multi-checkbox states (checkboxMode="multi", default)
 type MultiCheckboxState = 'todo' | 'done' | 'in_progress' | 'active' | 'na';
 
-// Simple checkbox states (checkbox_mode="simple")
+// Simple checkbox states (checkboxMode="simple")
 type SimpleCheckboxState = 'todo' | 'done';
 
-// Explicit checkbox values (checkbox_mode="explicit")
+// Explicit checkbox values (checkboxMode="explicit")
 type ExplicitCheckboxValue = 'unfilled' | 'yes' | 'no';
 
-// Union type for all checkbox values (validated based on checkbox_mode)
+// Union type for all checkbox values (validated based on checkboxMode)
 type CheckboxValue = MultiCheckboxState | ExplicitCheckboxValue;
 
 type Field =
-  | TextField
+  | StringField
   | NumberField
+  | StringListField
   | CheckboxesField
   | SingleSelectField
   | MultiSelectField;
@@ -568,8 +635,8 @@ interface FieldBase {
   validate?: string[];       // validator IDs
 }
 
-interface TextField extends FieldBase {
-  kind: 'text';
+interface StringField extends FieldBase {
+  kind: 'string';
   multiline?: boolean;
   pattern?: string;          // JS regex without delimiters
   minLength?: number;
@@ -581,6 +648,15 @@ interface NumberField extends FieldBase {
   min?: number;
   max?: number;
   integer?: boolean;
+}
+
+interface StringListField extends FieldBase {
+  kind: 'string_list';
+  minItems?: number;
+  maxItems?: number;
+  itemMinLength?: number;
+  itemMaxLength?: number;
+  uniqueItems?: boolean;
 }
 
 interface Option {
@@ -609,8 +685,9 @@ interface MultiSelectField extends FieldBase {
 }
 
 type FieldValue =
-  | { kind: 'text'; value: string | null }
+  | { kind: 'string'; value: string | null }
   | { kind: 'number'; value: number | null }
+  | { kind: 'string_list'; items: string[] }
   | { kind: 'checkboxes'; values: Record<Id, CheckboxValue> }
   | { kind: 'single_select'; selected: Id | null }
   | { kind: 'multi_select'; selected: Id[] };
@@ -622,9 +699,9 @@ interface DocumentationBlock {
 }
 ```
 
-**Naming convention mapping:** Markdoc attributes use `snake_case` (e.g.,
-`checkbox_mode`), while TypeScript properties use `camelCase` (e.g., `checkboxMode`).
-The parser handles this translation.
+**Naming convention note:** Markdoc attributes and TypeScript properties both use
+`camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
+alignment with JSON Schema keywords reduces translation complexity.
 
 #### Zod Schemas
 
@@ -643,6 +720,116 @@ tool inputs. Zod is used for:
 **Note:** The `zod-to-json-schema` library has a deprecation notice for some APIs—use
 the updated patterns documented in its README.
 
+#### Comprehensive Field Type Reference
+
+This section provides a complete mapping between Markdoc syntax, TypeScript types, and
+schema representations for all field types.
+
+##### Naming Conventions
+
+| Layer | Convention | Example |
+| --- | --- | --- |
+| Markdoc tag names | kebab-case | `string-field`, `multi-select` |
+| Markdoc attributes | camelCase | `minLength`, `checkboxMode`, `minItems` |
+| IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
+| TypeScript interfaces | PascalCase | `StringField`, `MultiSelectField` |
+| TypeScript properties | camelCase | `minLength`, `checkboxMode` |
+| TypeScript kind values | snake_case | `'string'`, `'single_select'` |
+| Patch operations | snake_case | `set_string`, `set_single_select` |
+| JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
+
+**Rationale:** Using camelCase for Markdoc attributes aligns with JSON Schema keywords
+and TypeScript conventions, eliminating translation overhead.
+IDs remain snake_case as they are data values, not code identifiers.
+
+##### Field Type Mappings
+
+**`string-field`** — Single string value
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `string-field` |
+| TypeScript interface | `StringField` |
+| TypeScript kind | `'string'` |
+| Attributes | `id`, `label`, `required`, `pattern`, `minLength`, `maxLength`, `multiline` |
+| FieldValue | `{ kind: 'string'; value: string \| null }` |
+| Patch operation | `{ op: 'set_string'; fieldId: Id; value: string \| null }` |
+| Zod | `z.string().min(n).max(m).regex(pattern)` |
+| JSON Schema | `{ type: "string", minLength, maxLength, pattern }` |
+
+**`number-field`** — Numeric value
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `number-field` |
+| TypeScript interface | `NumberField` |
+| TypeScript kind | `'number'` |
+| Attributes | `id`, `label`, `required`, `min`, `max`, `integer` |
+| FieldValue | `{ kind: 'number'; value: number \| null }` |
+| Patch operation | `{ op: 'set_number'; fieldId: Id; value: number \| null }` |
+| Zod | `z.number().min(n).max(m).int()` |
+| JSON Schema | `{ type: "number"/"integer", minimum, maximum }` |
+
+**`string-list`** — Array of strings (open-ended list)
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `string-list` |
+| TypeScript interface | `StringListField` |
+| TypeScript kind | `'string_list'` |
+| Attributes | `id`, `label`, `required`, `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
+| FieldValue | `{ kind: 'string_list'; items: string[] }` |
+| Patch operation | `{ op: 'set_string_list'; fieldId: Id; items: string[] }` |
+| Zod | `z.array(z.string().min(itemMin).max(itemMax)).min(n).max(m)` |
+| JSON Schema | `{ type: "array", items: { type: "string" }, minItems, maxItems, uniqueItems }` |
+
+**`single-select`** — Select exactly one option from enumerated list
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `single-select` |
+| TypeScript interface | `SingleSelectField` |
+| TypeScript kind | `'single_select'` |
+| Attributes | `id`, `label`, `required` + inline `options` via list syntax |
+| FieldValue | `{ kind: 'single_select'; selected: Id \| null }` |
+| Patch operation | `{ op: 'set_single_select'; fieldId: Id; selected: Id \| null }` |
+| Zod | `z.enum([...optionIds])` |
+| JSON Schema | `{ type: "string", enum: [...optionIds] }` |
+
+**`multi-select`** — Select multiple options from enumerated list
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `multi-select` |
+| TypeScript interface | `MultiSelectField` |
+| TypeScript kind | `'multi_select'` |
+| Attributes | `id`, `label`, `required`, `minSelections`, `maxSelections` + inline `options` |
+| FieldValue | `{ kind: 'multi_select'; selected: Id[] }` |
+| Patch operation | `{ op: 'set_multi_select'; fieldId: Id; selected: Id[] }` |
+| Zod | `z.array(z.enum([...optionIds])).min(n).max(m)` |
+| JSON Schema | `{ type: "array", items: { enum: [...optionIds] }, minItems, maxItems }` |
+
+**`checkboxes`** — Stateful checklist with configurable checkbox modes
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `checkboxes` |
+| TypeScript interface | `CheckboxesField` |
+| TypeScript kind | `'checkboxes'` |
+| Attributes | `id`, `label`, `required`, `checkboxMode` (`multi`/`simple`/`explicit`) + inline `options` |
+| FieldValue | `{ kind: 'checkboxes'; values: Record<Id, CheckboxValue> }` |
+| Patch operation | `{ op: 'set_checkboxes'; fieldId: Id; values: Record<Id, CheckboxValue> }` |
+| Zod | `z.record(z.enum([...states]))` |
+| JSON Schema | `{ type: "object", additionalProperties: { enum: [...states] } }` |
+
+##### Checkbox Mode State Values
+
+| Mode | States | Zod Enum |
+| --- | --- | --- |
+| `multi` (default) | `todo`, `done`, `in_progress`, `active`, `na` | `z.enum(['todo', 'done', 'in_progress', 'active', 'na'])` |
+| `simple` | `todo`, `done` | `z.enum(['todo', 'done'])` |
+| `explicit` | `unfilled`, `yes`, `no` | `z.enum(['unfilled', 'yes', 'no'])` |
+
 * * *
 
 ### Layer 3: Validation
@@ -660,12 +847,15 @@ Schema checks (always available, deterministic):
 | Number parsing success | `number-field` | Built-in |
 | Min/max value range | `number-field` | `min`, `max` attributes |
 | Integer constraint | `number-field` | `integer=true` attribute |
-| Pattern match | `text-field` | `pattern` attribute (JS regex) |
-| Min/max length | `text-field` | `minLength`, `maxLength` attributes |
+| Pattern match | `string-field` | `pattern` attribute (JS regex) |
+| Min/max length | `string-field` | `minLength`, `maxLength` attributes |
+| Min/max item count | `string-list` | `minItems`, `maxItems` attributes |
+| Item length constraints | `string-list` | `itemMinLength`, `itemMaxLength` attributes |
+| Unique items | `string-list` | `uniqueItems=true` attribute |
 | Min/max selections | `multi-select` | `minSelections`, `maxSelections` (see [JSON Schema array][json-schema-array]) |
 | Exactly one selected | `single-select` | `required=true` |
-| Valid checkbox states | `checkboxes` | `checkbox_mode` attribute (multi: 5 states, simple: 2 states, explicit: yes/no) |
-| All options answered | `checkboxes` | `checkbox_mode="explicit"` requires no `unfilled` values |
+| Valid checkbox states | `checkboxes` | `checkboxMode` attribute (multi: 5 states, simple: 2 states, explicit: yes/no) |
+| All options answered | `checkboxes` | `checkboxMode="explicit"` requires no `unfilled` values |
 
 Output: `ValidationIssue[]`
 
@@ -734,8 +924,11 @@ interface ValidationIssue {
 | `NUMBER_NOT_INTEGER` | Number has decimal when integer required |
 | `PATTERN_MISMATCH` | Value doesn't match regex pattern |
 | `LENGTH_OUT_OF_RANGE` | String length outside min/max bounds |
+| `ITEM_COUNT_ERROR` | String-list item count outside minItems/maxItems bounds |
+| `ITEM_LENGTH_ERROR` | String-list item length outside itemMinLength/itemMaxLength bounds |
+| `DUPLICATE_ITEMS` | String-list contains duplicate items when uniqueItems=true |
 | `SELECTION_COUNT_ERROR` | Wrong number of selections in multi-select |
-| `INVALID_CHECKBOX_STATE` | Checkbox has disallowed state (e.g., `[*]` when `checkbox_mode="simple"`) |
+| `INVALID_CHECKBOX_STATE` | Checkbox has disallowed state (e.g., `[*]` when `checkboxMode="simple"`) |
 | `EXPLICIT_CHECKBOX_UNFILLED` | Explicit checkbox has unfilled options (requires yes/no for all) |
 | `INVALID_OPTION_ID` | Selected option ID doesn't exist |
 
@@ -772,8 +965,9 @@ The tool layer is the public API contract for agents and CLI. Tool definitions f
 
 ```ts
 type Patch =
-  | { op: 'set_text'; fieldId: Id; value: string | null }
+  | { op: 'set_string'; fieldId: Id; value: string | null }
   | { op: 'set_number'; fieldId: Id; value: number | null }
+  | { op: 'set_string_list'; fieldId: Id; items: string[] }
   | { op: 'set_checkboxes'; fieldId: Id; values: Record<Id, CheckboxValue> }
   | { op: 'set_single_select'; fieldId: Id; selected: Id | null }
   | { op: 'set_multi_select'; fieldId: Id; selected: Id[] }
@@ -811,14 +1005,20 @@ When `inspect` runs, it computes recommended next actions (in priority order):
 
 3. **Incomplete checkbox sets** — Required checkboxes with items in `todo` state
 
-4. **Optional-but-empty fields** — Lowest priority, suggested for completeness
+4. **Underfilled string-lists** — Required string-lists with `items.length < minItems`
+
+5. **Optional-but-empty fields** — Lowest priority, suggested for completeness
 
 Returns a list of `{ fieldId, reason, priority }` recommendations.
 The harness config controls how many to return (`max_recommended`).
 
+**Reason codes for string-list fields:**
+
+- `minItemsNotMet` — List has fewer items than `minItems` requires
+
 * * *
 
-### Layer 5: Execution (Form Harness)
+### Layer 5: Execution (Harness Loop)
 
 The harness wraps the engine with a stable “step” protocol for bite-sized actions.
 
@@ -943,7 +1143,7 @@ turns:
           reason: required_missing
     apply:
       patches:
-        - { op: set_text, fieldId: company_name, value: "ACME Corp" }
+        - { op: set_string, fieldId: company_name, value: "ACME Corp" }
     after:
       issue_count: 0
       markdown_sha256: "..."
@@ -1080,7 +1280,7 @@ Files:
 
 A tiny form for fast debugging:
 
-- One group, one checkbox set, one text field
+- One group, one checkbox set, one string field
 
 - A session with 2 turns
 
@@ -1196,6 +1396,26 @@ Specified in this document but deferred from v0.1 proof of concept:
   compatibility)
 
 - **Max iteration limits** — Configurable `max_turns` for harness safety/cost control
+
+- **Repeating groups** — Array of structured objects for when list items need structure
+  (e.g., a risk entry with description, severity, likelihood, mitigation, owner).
+  Maps to JSON Schema `type: "array"` with `items: { type: "object" }`. Instance IDs are
+  auto-generated with sequential suffixes: `{base_id}_1`, `{base_id}_2`.
+  ```md
+  {% repeat ref="risk_entry" minItems=5 %}
+    {% field-group id="risk_entry" title="Risk entry template" %}
+    ...
+    {% /field-group %}
+  {% /repeat %}
+  ```
+
+- **string-list enhancements:**
+
+  - `itemPattern` — Regex validation per item
+
+  - `trimMode` — Attribute to control whitespace handling
+
+  - Item-level patch operations (insert/remove/reorder)
 
 ### Later Versions
 
@@ -1374,3 +1594,33 @@ Type system and validation vocabulary:
 [zod-to-json-schema]: https://github.com/StefanTerdell/zod-to-json-schema "zod-to-json-schema"
 [json-schema-validation]: https://json-schema.org/draft/2020-12/json-schema-validation "JSON Schema Validation"
 [json-schema-array]: https://json-schema.org/understanding-json-schema/reference/array "JSON Schema: Array"
+
+* * *
+
+## Outstanding Questions
+
+### string-list Design Decisions (v0.1)
+
+1. **Empty string handling** — Empty strings (after trimming) are silently discarded.
+   If users need explicit empty entries, that’s a different data modeling need.
+
+2. **Whitespace handling** — Always trim leading/trailing whitespace from items;
+   preserve internal whitespace.
+   A `trimMode` attribute to customize this behavior is deferred to v0.2+.
+
+3. **Item-level patterns** — `itemPattern` (regex validation per item) is deferred to
+   v0.2+. v0.1 focuses on cardinality constraints only.
+
+4. **Patch operations** — `set_string_list` performs full array replacement.
+   Item-level insert/remove/reorder operations are deferred to v0.2+.
+
+### Repeating Groups (v0.2+)
+
+5. **Instance ID generation** — Repeating group instances will use auto-generated
+   sequential suffixes: `{base_id}_1`, `{base_id}_2`, etc.
+   This keeps IDs predictable and readable while maintaining uniqueness.
+   Reordering may cause ID reassignment (acceptable for v0.2 scope).
+
+6. **Patch operations for repeating groups** — Full array replacement initially, with
+   item-level operations (insert/remove/reorder) and field-level patches within
+   instances as potential future enhancements.
