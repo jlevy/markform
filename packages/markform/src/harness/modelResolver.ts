@@ -13,8 +13,15 @@ import type { LanguageModel } from "ai";
 
 /**
  * Supported provider names.
+ *
+ * These correspond to the @ai-sdk/* packages from Vercel AI SDK.
  */
-export type ProviderName = "anthropic" | "openai" | "google";
+export type ProviderName =
+  | "anthropic"
+  | "openai"
+  | "google"
+  | "xai"
+  | "deepseek";
 
 /**
  * Parsed model identifier.
@@ -55,6 +62,14 @@ const PROVIDERS: Record<
   google: {
     package: "@ai-sdk/google",
     envVar: "GOOGLE_GENERATIVE_AI_API_KEY",
+  },
+  xai: {
+    package: "@ai-sdk/xai",
+    envVar: "XAI_API_KEY",
+  },
+  deepseek: {
+    package: "@ai-sdk/deepseek",
+    envVar: "DEEPSEEK_API_KEY",
   },
 };
 
