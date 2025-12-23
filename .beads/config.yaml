@@ -10,8 +10,10 @@
 
 # Use no-db mode: load from JSONL, no SQLite, write back after each command
 # When true, bd will use .beads/issues.jsonl as the source of truth
-# instead of SQLite database
-# no-db: false
+# instead of SQLite database.
+# Enabled for this project to support containerized environments (Claude Code web,
+# Codespaces, etc.) where 9p/NFS filesystems don't support SQLite WAL locking.
+no-db: true
 
 # Disable daemon for RPC communication (forces direct database access)
 # no-daemon: false
