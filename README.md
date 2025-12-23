@@ -2,12 +2,16 @@
 
 Agent-friendly, human-readable, editable forms stored as `.form.md` files.
 
-Markform enables AI agents to fill out forms using structured patches, while keeping the form source in human-readable Markdown.
+Markform enables AI agents to fill out forms using structured patches, while keeping the
+form source in human-readable Markdown.
 
 ## Documentation
 
-- [Development Guide](docs/development.md) - Getting started, workflows, and AI SDK integration
-- [Architecture Design](docs/project/architecture/current/arch-markform-initial-design.md) - Technical specification
+- [Development Guide](docs/development.md) - Getting started, workflows, and AI SDK
+  integration
+
+- [Architecture Design](docs/project/architecture/current/arch-markform-initial-design.md)
+  \- Technical specification
 
 ## Project Structure
 
@@ -40,7 +44,9 @@ markform serve examples/simple/simple.form.md
 
 ## Example Form
 
-See [`packages/markform/examples/simple/simple.form.md`](packages/markform/examples/simple/simple.form.md) for a working example.
+See
+[`packages/markform/examples/simple/simple.form.md`](packages/markform/examples/simple/simple.form.md)
+for a working example.
 
 ## License
 
