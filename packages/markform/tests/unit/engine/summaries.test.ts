@@ -163,7 +163,8 @@ X
       // Simulate a validation issue
       const issues: InspectIssue[] = [
         {
-          fieldId: "name",
+          ref: "name",
+          scope: "field",
           reason: "validation_error",
           severity: "required",
           message: "Value too short",
@@ -349,7 +350,8 @@ X
       const parsed = parseForm(markdown);
       const issues: InspectIssue[] = [
         {
-          fieldId: "name",
+          ref: "name",
+          scope: "field",
           reason: "validation_error",
           severity: "required",
           message: "Value too short",
@@ -456,7 +458,8 @@ X
       const parsed = parseForm(markdown);
       const issues: InspectIssue[] = [
         {
-          fieldId: "name",
+          ref: "name",
+          scope: "field",
           reason: "validation_error",
           severity: "required",
           message: "Value too short",

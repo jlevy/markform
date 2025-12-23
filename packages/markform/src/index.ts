@@ -59,6 +59,7 @@ export type {
   ValidationIssue,
   // Inspect
   IssueReason,
+  IssueScope,
   InspectIssue,
   // Summaries
   StructureSummary,
@@ -139,6 +140,7 @@ export {
   ValidationIssueSchema,
   // Inspect schemas
   IssueReasonSchema,
+  IssueScopeSchema,
   InspectIssueSchema,
   // Summary schemas
   ProgressStateSchema,

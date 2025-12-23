@@ -279,9 +279,13 @@ export type IssueReason =
   | "min_items_not_met"
   | "optional_empty";
 
+/** Issue scope - the level at which the issue applies */
+export type IssueScope = "form" | "group" | "field" | "option";
+
 /** Inspect issue - unified type for agent/UI consumption */
 export interface InspectIssue {
-  fieldId: Id;
+  ref: Id | QualifiedOptionRef;
+  scope: IssueScope;
   reason: IssueReason;
   message: string;
   severity: "required" | "recommended";
@@ -752,8 +756,16 @@ export const IssueReasonSchema = z.enum([
   "optional_empty",
 ]);
 
+export const IssueScopeSchema = z.enum([
+  "form",
+  "group",
+  "field",
+  "option",
+]);
+
 export const InspectIssueSchema = z.object({
-  fieldId: IdSchema,
+  ref: z.union([IdSchema, z.string()]), // Id or QualifiedOptionRef
+  scope: IssueScopeSchema,
   reason: IssueReasonSchema,
   message: z.string(),
   severity: z.enum(["required", "recommended"]),

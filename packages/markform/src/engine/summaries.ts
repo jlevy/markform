@@ -255,7 +255,7 @@ function computeFieldProgress(
   value: FieldValue | undefined,
   issues: InspectIssue[]
 ): FieldProgress {
-  const fieldIssues = issues.filter((i) => i.fieldId === field.id);
+  const fieldIssues = issues.filter((i) => i.ref === field.id);
   const issueCount = fieldIssues.length;
   const submitted = isFieldSubmitted(field, value);
   const valid = issueCount === 0;

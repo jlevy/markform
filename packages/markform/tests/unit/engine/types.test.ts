@@ -269,7 +269,8 @@ describe("engine/types", () => {
   describe("InspectIssueSchema", () => {
     it("parses inspect issue", () => {
       const issue = {
-        fieldId: "company_name",
+        ref: "company_name",
+        scope: "field",
         reason: "required_missing",
         message: "Required field 'Company name' has no value",
         severity: "required",
@@ -373,7 +374,8 @@ describe("engine/types", () => {
             inspect: {
               issues: [
                 {
-                  fieldId: "company_name",
+                  ref: "company_name",
+                  scope: "field",
                   reason: "required_missing",
                   message: "Required field has no value",
                   severity: "required",
