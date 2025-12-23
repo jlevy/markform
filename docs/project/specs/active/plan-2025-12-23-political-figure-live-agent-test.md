@@ -224,9 +224,22 @@ markform fill /tmp/lincoln-seeded.form.md \
 # 5. Inspect completed form
 markform inspect /tmp/lincoln-completed.form.md
 
-# 6. Export as JSON for verification
-markform export /tmp/lincoln-completed.form.md --format=json
+# 6. Dump values in various formats for verification
+markform dump /tmp/lincoln-completed.form.md                  # Console (colored)
+markform dump /tmp/lincoln-completed.form.md --format=yaml    # YAML for review
+markform dump /tmp/lincoln-completed.form.md --format=json    # JSON for programmatic use
+
+# 7. (Optional) Pipe plaintext values for scripting
+markform dump /tmp/lincoln-completed.form.md --format=plaintext | grep birth
 ```
+
+**Note:** The `dump` command extracts only field values without structure/progress/issues,
+making it ideal for:
+
+- Quick value verification after form completion
+- Piping to other tools (use `--format=plaintext` or `--format=json`)
+- Integration with external systems
+- Comparing values between form versions
 
 * * *
 
@@ -354,4 +367,5 @@ markform export /tmp/lincoln-completed.form.md --format=json
 
 ## Revision History
 
+- 2025-12-23: Added `dump` command usage in test workflow for value extraction
 - 2025-12-23: Initial plan created
