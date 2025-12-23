@@ -3014,6 +3014,53 @@ export const validators = {
 {% string-field id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
 ```
 
+**Variant: `required_if_equals`**
+
+Require field when another field equals a specific value:
+
+```ts
+export const validators = {
+  required_if_equals: (ctx) => {
+    const triggerField = ctx.params.when as string;
+    const expectedValue = ctx.params.equals as string;
+
+    if (!triggerField || expectedValue === undefined) {
+      return [{ severity: 'error', message: 'required_if_equals requires "when" and "equals" parameters', ref: ctx.targetId, source: 'code' }];
+    }
+
+    const trigger = ctx.values[triggerField];
+    const target = ctx.values[ctx.targetId];
+
+    // Check if trigger equals expected value
+    const triggerMatches =
+      (trigger?.kind === 'single_select' && trigger.selected === expectedValue) ||
+      (trigger?.kind === 'string' && trigger.value === expectedValue);
+
+    const targetEmpty =
+      !target ||
+      (target.kind === 'string' && !target.value?.trim()) ||
+      (target.kind === 'number' && target.value == null);
+
+    if (triggerMatches && targetEmpty) {
+      return [{
+        severity: 'error',
+        message: `This field is required when ${triggerField} is "${expectedValue}"`,
+        ref: ctx.targetId,
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+};
+```
+
+**Usage:**
+
+```md
+<!-- Require details when "Yes" is selected -->
+{% string-field id="price_change_details" label="Price change details" validate=[{id: "required_if_equals", when: "price_changes_recently", equals: "yes"}] %}{% /string-field %}
+```
+
 #### 4. Format Validation
 
 Validate that list items match expected formats:

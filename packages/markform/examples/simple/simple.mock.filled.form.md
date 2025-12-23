@@ -44,7 +44,7 @@ alice@example.com
 
 {% field-group id="list_fields" title="List Fields" %}
 
-{% string-list id="tags" label="Tags" minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}
+{% string-list id="tags" label="Tags" required=true minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}
 ```value
 typescript
 testing
@@ -66,7 +66,7 @@ Add 1-5 unique tags (each at least 2 characters).
 - [ ] High {% #high %}
 {% /single-select %}
 
-{% multi-select id="categories" label="Categories" minSelections=1 maxSelections=3 %}
+{% multi-select id="categories" label="Categories" required=true minSelections=1 maxSelections=3 %}
 - [x] Frontend {% #frontend %}
 - [x] Backend {% #backend %}
 - [ ] Database {% #database %}
