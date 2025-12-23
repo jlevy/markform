@@ -19,7 +19,10 @@ import type {
   SessionTranscript,
 } from "../../engine/types.js";
 import { createHarness } from "../../harness/harness.js";
+import { createLiveAgent } from "../../harness/liveAgent.js";
 import { createMockAgent } from "../../harness/mockAgent.js";
+import type { Agent } from "../../harness/mockAgent.js";
+import { resolveModel } from "../../harness/modelResolver.js";
 import {
   formatOutput,
   getCommandContext,
@@ -151,14 +154,6 @@ export function registerFillCommand(program: Command): void {
             process.exit(1);
           }
 
-          if (agentType === "live") {
-            // TODO: Implement live agent in Phase 2
-            logError(
-              "Live agent mode is not yet implemented. Use --agent=mock for now."
-            );
-            process.exit(1);
-          }
-
           const startTime = Date.now();
 
           // Parse harness config
@@ -174,15 +169,28 @@ export function registerFillCommand(program: Command): void {
           logVerbose(ctx, "Parsing form...");
           const form = parseForm(formContent);
 
-          // Load completed mock
-          const mockPath = resolve(options.mockSource!);
-          logVerbose(ctx, `Reading mock source: ${mockPath}`);
-          const mockContent = await readFile(mockPath);
-          const mockForm = parseForm(mockContent);
-
-          // Create harness and agent
+          // Create harness
           const harness = createHarness(form, harnessConfig);
-          const agent = createMockAgent(mockForm);
+
+          // Create agent based on type
+          let agent: Agent;
+          let mockPath: string | undefined;
+
+          if (agentType === "mock") {
+            // Mock agent requires a completed form as source
+            mockPath = resolve(options.mockSource!);
+            logVerbose(ctx, `Reading mock source: ${mockPath}`);
+            const mockContent = await readFile(mockPath);
+            const mockForm = parseForm(mockContent);
+            agent = createMockAgent(mockForm);
+          } else {
+            // Live agent uses LLM
+            const modelId = options.model ?? DEFAULT_MODEL;
+            logVerbose(ctx, `Resolving model: ${modelId}`);
+            const { model } = await resolveModel(modelId);
+            agent = createLiveAgent({ model });
+            logVerbose(ctx, `Using live agent with model: ${modelId}`);
+          }
 
           logInfo(ctx, pc.cyan(`Filling form: ${basename(filePath)}`));
           logVerbose(ctx, `Agent: ${agentType}`);
@@ -199,7 +207,7 @@ export function registerFillCommand(program: Command): void {
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
             // Generate patches from agent
-            const patches = agent.generatePatches(
+            const patches = await agent.generatePatches(
               stepResult.issues,
               harness.getForm(),
               harnessConfig.maxPatchesPerTurn!
@@ -242,7 +250,9 @@ export function registerFillCommand(program: Command): void {
           // Build session transcript
           const transcript = buildSessionTranscript(
             filePath,
+            agentType,
             mockPath,
+            options.model ?? DEFAULT_MODEL,
             harnessConfig as HarnessConfig,
             harness.getTurns(),
             stepResult.isComplete
@@ -284,31 +294,43 @@ export function registerFillCommand(program: Command): void {
  */
 function buildSessionTranscript(
   formPath: string,
-  mockPath: string,
+  agentType: AgentType,
+  mockPath: string | undefined,
+  modelId: string,
   harnessConfig: HarnessConfig,
   turns: SessionTranscript["turns"],
   expectComplete: boolean
 ): SessionTranscript {
   // Make paths relative for portability
   const relativeFormPath = basename(formPath);
-  const relativeMockPath = basename(mockPath);
+  const relativeMockPath = mockPath ? basename(mockPath) : undefined;
 
   const final: SessionFinal = {
     expectComplete,
-    expectedCompletedForm: relativeMockPath,
+    expectedCompletedForm: relativeMockPath ?? relativeFormPath,
   };
 
-  return {
+  const transcript: SessionTranscript = {
     sessionVersion: "0.1.0",
-    mode: "mock",
+    mode: agentType,
     form: {
       path: relativeFormPath,
-    },
-    mock: {
-      completedMock: relativeMockPath,
     },
     harness: harnessConfig,
     turns,
     final,
   };
+
+  // Add mode-specific fields
+  if (agentType === "mock" && relativeMockPath) {
+    transcript.mock = {
+      completedMock: relativeMockPath,
+    };
+  } else if (agentType === "live") {
+    transcript.live = {
+      modelId,
+    };
+  }
+
+  return transcript;
 }

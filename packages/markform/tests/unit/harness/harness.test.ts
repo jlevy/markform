@@ -254,7 +254,7 @@ describe("FormHarness", () => {
 // =============================================================================
 
 describe("MockAgent", () => {
-  it("generates patches from completed form", () => {
+  it("generates patches from completed form", async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
     const agent = createMockAgent(filledForm);
@@ -279,7 +279,7 @@ describe("MockAgent", () => {
       },
     ];
 
-    const patches = agent.generatePatches(issues, emptyForm, 10);
+    const patches = await agent.generatePatches(issues, emptyForm, 10);
 
     expect(patches.length).toBe(2);
     expect(patches[0]).toEqual({
@@ -294,7 +294,7 @@ describe("MockAgent", () => {
     });
   });
 
-  it("respects maxPatches limit", () => {
+  it("respects maxPatches limit", async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
     const agent = createMockAgent(filledForm);
@@ -318,12 +318,12 @@ describe("MockAgent", () => {
       },
     ];
 
-    const patches = agent.generatePatches(issues, emptyForm, 1);
+    const patches = await agent.generatePatches(issues, emptyForm, 1);
 
     expect(patches.length).toBe(1);
   });
 
-  it("skips non-field issues", () => {
+  it("skips non-field issues", async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
     const agent = createMockAgent(filledForm);
@@ -339,7 +339,7 @@ describe("MockAgent", () => {
       },
     ];
 
-    const patches = agent.generatePatches(issues, emptyForm, 10);
+    const patches = await agent.generatePatches(issues, emptyForm, 10);
 
     expect(patches.length).toBe(0);
   });
@@ -350,7 +350,7 @@ describe("MockAgent", () => {
 // =============================================================================
 
 describe("Harness + MockAgent Integration", () => {
-  it("fills form to completion using mock agent", () => {
+  it("fills form to completion using mock agent", async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
 
@@ -362,7 +362,7 @@ describe("Harness + MockAgent Integration", () => {
     expect(result.isComplete).toBe(false);
 
     // Generate and apply patches
-    const patches = agent.generatePatches(result.issues, emptyForm, 10);
+    const patches = await agent.generatePatches(result.issues, emptyForm, 10);
     result = harness.apply(patches, result.issues);
 
     expect(result.isComplete).toBe(true);

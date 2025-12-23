@@ -505,6 +505,9 @@ export interface SessionTranscript {
   mock?: {
     completedMock: string;
   };
+  live?: {
+    modelId: string;
+  };
   harness: HarnessConfig;
   turns: SessionTurn[];
   final: SessionFinal;
@@ -964,6 +967,11 @@ export const SessionTranscriptSchema = z.object({
   mock: z
     .object({
       completedMock: z.string(),
+    })
+    .optional(),
+  live: z
+    .object({
+      modelId: z.string(),
     })
     .optional(),
   harness: HarnessConfigSchema,
