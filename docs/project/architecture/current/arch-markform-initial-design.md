@@ -1402,7 +1402,27 @@ used on groups. If present, it is ignored with a warning.
 
 #### Hook Validators
 
-Validators are referenced by **ID** from fields/groups/form via `validate=["..."]`.
+Validators are referenced by **ID** from fields/groups/form via `validate=[...]`.
+
+**Validate attribute syntax:**
+
+The `validate` attribute accepts an array of validator references. Each reference can be:
+
+1. **String** — Simple validator ID with no parameters:
+   ```md
+   validate=["thesis_quality"]
+   ```
+
+2. **Object** — Validator ID with parameters (Markdoc supports JSON object syntax):
+   ```md
+   validate=[{id: "min_words", min: 50}]
+   validate=[{id: "sum_to", target: 100, tolerance: 0.1}]
+   ```
+
+3. **Mixed** — Combine both in one array:
+   ```md
+   validate=["format_check", {id: "min_words", min: 25}]
+   ```
 
 **Code validators (`.valid.ts`):**
 
@@ -1418,18 +1438,47 @@ Validators are referenced by **ID** from fields/groups/form via `validate=["..."
 import type { ValidatorContext, ValidationIssue } from 'markform';
 
 /**
+ * A single validator reference from the validate attribute.
+ */
+type ValidatorRef = string | { id: string; [key: string]: unknown };
+
+/**
  * Context passed to each validator function.
  */
 interface ValidatorContext {
   schema: FormSchema;
   values: Record<Id, FieldValue>;
   targetId: Id;              // field/group/form ID that referenced this validator
+  targetSchema: Field | FieldGroup | Form;  // schema of the target (for reading custom attrs)
+  params: Record<string, unknown>;          // parameters from validate ref (empty if string ref)
 }
 
 /**
  * Sidecar file exports a validators registry.
  */
 export const validators: Record<string, (ctx: ValidatorContext) => ValidationIssue[]> = {
+  // Parameterized validator: min word count from params
+  min_words: (ctx) => {
+    const min = ctx.params.min as number;
+    if (typeof min !== 'number') {
+      return [{ severity: 'error', message: 'min_words requires "min" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string' && value.value) {
+      const wordCount = value.value.trim().split(/\s+/).length;
+      if (wordCount < min) {
+        return [{
+          severity: 'error',
+          message: `Field requires at least ${min} words (currently ${wordCount})`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+
+  // Simple validator with no params
   thesis_quality: (ctx) => {
     const thesis = ctx.values.thesis;
     if (thesis?.kind === 'string' && thesis.value && thesis.value.length < 50) {
@@ -1443,6 +1492,19 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
     return [];
   },
 };
+```
+
+**Usage examples:**
+
+```md
+{# Parameterized: pass min word count as parameter #}
+{% string-field id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+
+{# Multiple validators with different params #}
+{% string-field id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+
+{# Sum-to validator with configurable target #}
+{% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_prob", "bull_prob", "bear_prob"], target: 100}] %}
 ```
 
 **Runtime loading (engine):**
@@ -2705,21 +2767,49 @@ These patterns should be implemented as code validators (`.valid.ts`), not as
 framework-level features. This keeps the core framework simple while enabling
 rich validation through code.
 
+All validators receive parameters via `ctx.params`, allowing reusable validators
+with configurable thresholds.
+
 #### 1. Word Count Validation
 
-Validate minimum/maximum word counts for text fields:
+Validate minimum/maximum word counts for text fields using parameterized validators:
 
 ```ts
 // In X.valid.ts
 export const validators = {
-  min_words_50: (ctx) => {
+  // Parameterized: reads min/max from ctx.params
+  min_words: (ctx) => {
+    const min = ctx.params.min as number;
+    if (typeof min !== 'number') {
+      return [{ severity: 'error', message: 'min_words requires "min" parameter', ref: ctx.targetId, source: 'code' }];
+    }
     const value = ctx.values[ctx.targetId];
     if (value?.kind === 'string' && value.value) {
       const wordCount = value.value.trim().split(/\s+/).length;
-      if (wordCount < 50) {
+      if (wordCount < min) {
         return [{
           severity: 'error',
-          message: `Field requires at least 50 words (currently ${wordCount})`,
+          message: `Field requires at least ${min} words (currently ${wordCount})`,
+          ref: ctx.targetId,
+          source: 'code',
+        }];
+      }
+    }
+    return [];
+  },
+
+  max_words: (ctx) => {
+    const max = ctx.params.max as number;
+    if (typeof max !== 'number') {
+      return [{ severity: 'error', message: 'max_words requires "max" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string' && value.value) {
+      const wordCount = value.value.trim().split(/\s+/).length;
+      if (wordCount > max) {
+        return [{
+          severity: 'error',
+          message: `Field exceeds ${max} word limit (currently ${wordCount})`,
           ref: ctx.targetId,
           source: 'code',
         }];
@@ -2733,53 +2823,78 @@ export const validators = {
 **Usage in form:**
 
 ```md
-{% string-field id="thesis" label="Investment thesis" required=true validate=["min_words_50"] %}{% /string-field %}
+{% string-field id="thesis" label="Investment thesis" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+
+{% string-field id="summary" label="Brief summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
 ```
 
 #### 2. Sum-To Validation for Percentage Fields
 
-Validate that a group of percentage fields sums to a target (typically 100%):
+Validate that a group of fields sums to a target using parameterized validators:
 
 ```ts
 export const validators = {
-  segments_sum_100: (ctx) => {
-    // Access string-list field and parse percentages
-    const segments = ctx.values['revenue_segments'];
-    if (segments?.kind === 'string_list' && segments.items.length > 0) {
-      const percentages = segments.items
-        .map(item => {
-          const match = item.match(/:\s*(\d+(?:\.\d+)?)\s*%/);
-          return match ? parseFloat(match[1]) : 0;
-        });
+  // Generic sum-to validator with configurable fields and target
+  sum_to: (ctx) => {
+    const fields = ctx.params.fields as string[];
+    const target = (ctx.params.target as number) ?? 100;
+    const tolerance = (ctx.params.tolerance as number) ?? 0.1;
+
+    if (!Array.isArray(fields)) {
+      return [{ severity: 'error', message: 'sum_to requires "fields" array parameter', ref: ctx.targetId, source: 'code' }];
+    }
+
+    const values = fields.map(fieldId => {
+      const val = ctx.values[fieldId];
+      return val?.kind === 'number' ? (val.value ?? 0) : 0;
+    });
+    const sum = values.reduce((a, b) => a + b, 0);
+
+    if (sum > 0 && Math.abs(sum - target) > tolerance) {
+      return [{
+        severity: 'error',
+        message: `Fields must sum to ${target}% (currently ${sum.toFixed(1)}%)`,
+        ref: fields[0],
+        source: 'code',
+      }];
+    }
+    return [];
+  },
+
+  // Sum-to for string-list with "Label: XX%" format
+  sum_to_percent_list: (ctx) => {
+    const target = (ctx.params.target as number) ?? 100;
+    const value = ctx.values[ctx.targetId];
+
+    if (value?.kind === 'string_list' && value.items.length > 0) {
+      const percentages = value.items.map(item => {
+        const match = item.match(/:\s*(\d+(?:\.\d+)?)\s*%/);
+        return match ? parseFloat(match[1]) : 0;
+      });
       const sum = percentages.reduce((a, b) => a + b, 0);
-      if (Math.abs(sum - 100) > 0.1) {
+
+      if (Math.abs(sum - target) > 0.1) {
         return [{
           severity: 'warning',
-          message: `Revenue segments should sum to 100% (currently ${sum.toFixed(1)}%)`,
-          ref: 'revenue_segments',
+          message: `Items should sum to ${target}% (currently ${sum.toFixed(1)}%)`,
+          ref: ctx.targetId,
           source: 'code',
         }];
       }
     }
     return [];
   },
-
-  scenario_probs_sum_100: (ctx) => {
-    const base = ctx.values['base_probability']?.value ?? 0;
-    const bull = ctx.values['bull_probability']?.value ?? 0;
-    const bear = ctx.values['bear_probability']?.value ?? 0;
-    const sum = base + bull + bear;
-    if (sum > 0 && Math.abs(sum - 100) > 0.1) {
-      return [{
-        severity: 'error',
-        message: `Scenario probabilities must sum to 100% (currently ${sum}%)`,
-        ref: 'base_probability',
-        source: 'code',
-      }];
-    }
-    return [];
-  },
 };
+```
+
+**Usage in form:**
+
+```md
+{# Validate three number fields sum to 100% #}
+{% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
+
+{# Validate string-list entries sum to 100% #}
+{% string-list id="revenue_segments" label="Revenue segments (Name: X%)" validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
 ```
 
 #### 3. Conditional Requirement Validation
@@ -2788,34 +2903,33 @@ Validate that a field has a value when another field meets a condition:
 
 ```ts
 export const validators = {
-  moat_explanation_required: (ctx) => {
-    const moatField = ctx.values['moat_diagnosis'];
-    const explanation = ctx.values['moat_explanation'];
+  // Generic: require target field when trigger field has value
+  required_if: (ctx) => {
+    const triggerField = ctx.params.when as string;
+    const targetField = ctx.params.then as string ?? ctx.targetId;
 
-    if (moatField?.kind === 'multi_select' && moatField.selected.length > 0) {
-      if (!explanation?.value || explanation.value.trim().length === 0) {
-        return [{
-          severity: 'error',
-          message: 'Moat explanation is required when moat factors are selected',
-          ref: 'moat_explanation',
-          source: 'code',
-        }];
-      }
+    if (!triggerField) {
+      return [{ severity: 'error', message: 'required_if requires "when" parameter', ref: ctx.targetId, source: 'code' }];
     }
-    return [];
-  },
 
-  whisper_evidence_required: (ctx) => {
-    const whisperRevenue = ctx.values['whisper_revenue'];
-    const whisperEps = ctx.values['whisper_eps'];
-    const evidence = ctx.values['whisper_evidence'];
+    const trigger = ctx.values[triggerField];
+    const target = ctx.values[targetField];
 
-    const hasWhisper = (whisperRevenue?.value != null) || (whisperEps?.value != null);
-    if (hasWhisper && (!evidence?.value || evidence.value.trim().length === 0)) {
+    const triggerHasValue =
+      (trigger?.kind === 'string' && trigger.value?.trim()) ||
+      (trigger?.kind === 'number' && trigger.value != null) ||
+      (trigger?.kind === 'multi_select' && trigger.selected.length > 0);
+
+    const targetEmpty =
+      !target ||
+      (target.kind === 'string' && !target.value?.trim()) ||
+      (target.kind === 'number' && target.value == null);
+
+    if (triggerHasValue && targetEmpty) {
       return [{
         severity: 'error',
-        message: 'Whisper evidence is required when whisper estimates are provided',
-        ref: 'whisper_evidence',
+        message: `This field is required when ${triggerField} has a value`,
+        ref: targetField,
         source: 'code',
       }];
     }
@@ -2824,22 +2938,41 @@ export const validators = {
 };
 ```
 
-#### 4. Cross-Field Consistency Validation
+**Usage in form:**
 
-Validate logical relationships between fields:
+```md
+{# Require explanation when moat factors are selected #}
+{% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
+
+{# Require evidence when whisper values provided #}
+{% string-field id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
+```
+
+#### 4. Format Validation
+
+Validate that list items match expected formats:
 
 ```ts
 export const validators = {
-  kpi_count_reasonable: (ctx) => {
-    const kpis = ctx.values['key_kpis_quarterly'];
-    if (kpis?.kind === 'string_list') {
-      // Check each KPI has the expected format "Name: reason"
-      const malformed = kpis.items.filter(item => !item.includes(':'));
+  // Validate each item matches a pattern
+  item_format: (ctx) => {
+    const pattern = ctx.params.pattern as string;
+    const example = ctx.params.example as string ?? '';
+
+    if (!pattern) {
+      return [{ severity: 'error', message: 'item_format requires "pattern" parameter', ref: ctx.targetId, source: 'code' }];
+    }
+
+    const value = ctx.values[ctx.targetId];
+    if (value?.kind === 'string_list') {
+      const regex = new RegExp(pattern);
+      const malformed = value.items.filter(item => !regex.test(item));
       if (malformed.length > 0) {
+        const hint = example ? ` Expected format: "${example}"` : '';
         return [{
           severity: 'warning',
-          message: `${malformed.length} KPI(s) missing explanation. Format: "KPI Name: Why it matters"`,
-          ref: 'key_kpis_quarterly',
+          message: `${malformed.length} item(s) don't match expected format.${hint}`,
+          ref: ctx.targetId,
           source: 'code',
         }];
       }
@@ -2847,6 +2980,16 @@ export const validators = {
     return [];
   },
 };
+```
+
+**Usage in form:**
+
+```md
+{# Validate KPIs have "Name: reason" format #}
+{% string-list id="key_kpis" label="Key KPIs" validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
+
+{# Validate sources have expected format #}
+{% string-list id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /string-list %}
 ```
 
 ### Patterns Requiring Repeating Groups (v0.2)

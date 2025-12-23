@@ -67,7 +67,7 @@ Describe any other business model types not covered above.
 
 {% string-list id="subsidiaries" label="Subsidiaries / key entities" minItems=0 %}{% /string-list %}
 
-{% string-field id="company_summary" label="One-paragraph summary (plain English)" required=true minLength=400 validate=["min_words_100"] %}{% /string-field %}
+{% string-field id="company_summary" label="One-paragraph summary (plain English)" required=true validate=[{id: "min_words", min: 100}] %}{% /string-field %}
 
 {% doc ref="company_summary" kind="instructions" %}
 Provide a plain-English summary of what the company does. Minimum 100 words (approximately 400 characters).
@@ -89,7 +89,7 @@ List 8-12 key pivotal moments in the company's history. One event per line.
 
 {% string-field id="past_crises" label="Past crises and responses" %}{% /string-field %}
 
-{% string-field id="strategic_move_analysis" label="What single strategic move best explains the current model?" required=true minLength=200 validate=["min_words_50"] %}{% /string-field %}
+{% string-field id="strategic_move_analysis" label="What single strategic move best explains the current model?" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
 
 {% doc ref="strategic_move_analysis" kind="instructions" %}
 Analyst prompt: Explain the strategic move that best explains the current business model. Minimum 50 words.
@@ -298,7 +298,7 @@ List exactly 5 competitive factors, ranked by importance. First item is most imp
 - [ ] Data advantage {% #data %}
 {% /multi-select %}
 
-{% string-field id="moat_explanation" label="Moat explanation" minLength=100 validate=["moat_explanation_required"] %}{% /string-field %}
+{% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
 
 {% doc ref="moat_explanation" kind="instructions" %}
 Required if any moat is checked above. Explain why these moats apply. Minimum 25 words.
@@ -330,7 +330,7 @@ Required if any moat is checked above. Explain why these moats apply. Minimum 25
 List exactly 5 macro variables, ranked by importance.
 {% /doc %}
 
-{% string-field id="transmission_mechanism" label="Transmission mechanism (how each impacts revenue/margin/cash)" required=true minLength=200 validate=["min_words_50"] %}{% /string-field %}
+{% string-field id="transmission_mechanism" label="Transmission mechanism (how each impacts revenue/margin/cash)" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
 
 {% doc ref="transmission_mechanism" kind="instructions" %}
 Minimum 50 words. Explain how each macro variable impacts the business.
@@ -344,7 +344,7 @@ Minimum 50 words. Explain how each macro variable impacts the business.
 
 {% field-group id="financial_history" title="9. Financial History" %}
 
-{% string-field id="trend_summary" label="3-5 year trend summary (revenue, margin, EPS, FCF)" required=true minLength=300 validate=["min_words_75"] %}{% /string-field %}
+{% string-field id="trend_summary" label="3-5 year trend summary (revenue, margin, EPS, FCF)" required=true validate=[{id: "min_words", min: 75}] %}{% /string-field %}
 
 {% doc ref="trend_summary" kind="instructions" %}
 Minimum 75 words. Cover revenue, margin, EPS, and free cash flow trends.
@@ -412,7 +412,7 @@ Check what you actually used. Fill the log as you go.
 Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tier, Link or file path, Key takeaways. At least 3 sources required.
 {% /doc %}
 
-{% string-list id="sources_accessed" label="Sources accessed (Date | Source | Type | Link | Takeaways)" required=true minItems=3 validate=["sources_format"] %}{% /string-list %}
+{% string-list id="sources_accessed" label="Sources accessed (Date | Source | Type | Link | Takeaways)" required=true minItems=3 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+", example: "2024-01-15 | SEC Filing | 10-K | https://... | Key takeaway"}] %}{% /string-list %}
 
 {% /field-group %}
 
@@ -481,7 +481,7 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% field-group id="sources_experts" title="Q2.5 Key Experts and Analysts" %}
 
-{% string-list id="experts_list" label="Key experts (Name | Angle | Lead time | Hit rate | Tier)" minItems=0 validate=["experts_format"] %}{% /string-list %}
+{% string-list id="experts_list" label="Key experts (Name | Angle | Lead time | Hit rate | Tier)" minItems=0 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+\\|.+\\|.+", example: "Jane Doe | Supply chain | 2 weeks | High | Tier 1"}] %}{% /string-list %}
 
 {% doc ref="experts_list" kind="instructions" %}
 Format each entry as: Name | Angle | Typical lead time | Hit rate assessment | Tier
@@ -497,7 +497,7 @@ Format each entry as: Name | Angle | Typical lead time | Hit rate assessment | T
 2-4 sentences; 25-75 words explaining how the company generates revenue.
 {% /doc %}
 
-{% string-list id="revenue_segments" label="Revenue segments (Segment: X%)" required=true minItems=1 validate=["revenue_segments_sum_100"] %}{% /string-list %}
+{% string-list id="revenue_segments" label="Revenue segments (Segment: X%)" required=true minItems=1 validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
 
 {% doc ref="revenue_segments" kind="instructions" %}
 List each segment with percentage of revenue. Format: "Segment Name: XX%". Percentages should sum to 100%.
@@ -508,13 +508,13 @@ List each segment with percentage of revenue. Format: "Segment Name: XX%". Perce
 - [ ] No {% #no %}
 {% /single-select %}
 
-{% string-field id="price_change_details" label="Price change details (if Yes)" validate=["price_change_details_required"] %}{% /string-field %}
+{% string-field id="price_change_details" label="Price change details (if Yes)" validate=[{id: "required_if_equals", when: "price_changes_recently", equals: "yes"}] %}{% /string-field %}
 
 {% string-field id="volume_demand_indicators" label="Volume/demand indicators" %}{% /string-field %}
 
 {% string-field id="mix_shift_risk" label="Mix shift risk" %}{% /string-field %}
 
-{% string-list id="key_kpis_quarterly" label="Key KPIs to track this quarter (KPI: why it matters)" required=true minItems=3 maxItems=8 validate=["kpi_format"] %}{% /string-list %}
+{% string-list id="key_kpis_quarterly" label="Key KPIs to track this quarter (KPI: why it matters)" required=true minItems=3 maxItems=8 validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
 
 {% doc ref="key_kpis_quarterly" kind="instructions" %}
 Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
@@ -633,7 +633,7 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% string-field id="estimate_kpis" label="Your KPI estimates" %}{% /string-field %}
 
-{% number-field id="variance_vs_consensus" label="Variance vs consensus (%)" validate=["estimate_variance_check"] %}{% /number-field %}
+{% number-field id="variance_vs_consensus" label="Variance vs consensus (%)" %}{% /number-field %}
 
 {% /field-group %}
 
@@ -647,7 +647,7 @@ Only fill if evidence-based.
 
 {% number-field id="whisper_eps" label="Whisper EPS" %}{% /number-field %}
 
-{% string-field id="whisper_evidence" label="Whisper evidence" validate=["whisper_evidence_required"] %}{% /string-field %}
+{% string-field id="whisper_evidence" label="Whisper evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
 
 {% doc ref="whisper_evidence" kind="instructions" %}
 Required if whisper values are provided. Explain the source of whisper estimates.
@@ -733,7 +733,7 @@ All margin impacts should sum to total margin change.
 
 {% /field-group %}
 
-{% field-group id="scenario_base" title="Q7.1 Scenarios - Base Case" validate=["scenario_probs_sum_100"] %}
+{% field-group id="scenario_base" title="Q7.1 Scenarios - Base Case" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
 
 {% doc ref="scenario_base" kind="instructions" %}
 Probabilities across Base/Bull/Bear should sum to 100%.
