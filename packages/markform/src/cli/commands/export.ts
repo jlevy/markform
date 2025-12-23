@@ -11,6 +11,7 @@ import type { Command } from "commander";
 import pc from "picocolors";
 
 import { parseForm } from "../../engine/parse.js";
+import { serialize } from "../../engine/serialize.js";
 import type { FieldValue, Id } from "../../engine/types.js";
 import {
   formatOutput,
@@ -43,6 +44,7 @@ interface ExportSchema {
 interface ExportOutput {
   schema: ExportSchema;
   values: Record<Id, FieldValue>;
+  markdown?: string;
 }
 
 /**
@@ -77,6 +79,13 @@ function formatConsoleExport(data: ExportOutput, useColors: boolean): string {
       lines.push(`    ${dim("→")} ${valueStr}`);
     }
     lines.push("");
+  }
+
+  // Include markdown if present
+  if (data.markdown) {
+    lines.push(bold(cyan("Canonical Markdown")));
+    lines.push(dim("─".repeat(40)));
+    lines.push(data.markdown);
   }
 
   return lines.join("\n");
@@ -128,10 +137,11 @@ export function registerExportCommand(program: Command): void {
     .command("export <file>")
     .description("Export form schema and values")
     .option("--compact", "Output compact JSON (no formatting, only for JSON format)")
+    .option("--markdown", "Include canonical markdown in output")
     .action(
       async (
         file: string,
-        options: { compact?: boolean },
+        options: { compact?: boolean; markdown?: boolean },
         cmd: Command
       ) => {
         const ctx = getCommandContext(cmd);
@@ -172,6 +182,11 @@ export function registerExportCommand(program: Command): void {
           // Extract current values from valuesByFieldId
           const values = form.valuesByFieldId;
           const output: ExportOutput = { schema, values };
+
+          // Include canonical markdown if requested
+          if (options.markdown) {
+            output.markdown = serialize(form);
+          }
 
           // Handle compact JSON specially
           if (options.compact && ctx.format === "json") {

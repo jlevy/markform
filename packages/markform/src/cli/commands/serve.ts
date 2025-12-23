@@ -7,6 +7,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Command } from "commander";
 
+import { exec } from "node:child_process";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 
@@ -42,6 +43,29 @@ import {
 } from "../lib/shared.js";
 
 const DEFAULT_PORT = 3000;
+
+/**
+ * Open a URL in the default browser (cross-platform).
+ */
+function openBrowser(url: string): void {
+  const platform = process.platform;
+
+  let command: string;
+  if (platform === "darwin") {
+    command = `open "${url}"`;
+  } else if (platform === "win32") {
+    command = `start "" "${url}"`;
+  } else {
+    // Linux and other Unix-like systems
+    command = `xdg-open "${url}"`;
+  }
+
+  exec(command, (error) => {
+    if (error) {
+      // Silently ignore - user can still open URL manually
+    }
+  });
+}
 
 /**
  * Register the serve command.
@@ -84,6 +108,11 @@ export function registerServeCommand(program: Command): void {
             const url = `http://localhost:${port}`;
             logInfo(ctx, pc.green(`\n✓ Form server running at ${pc.bold(url)}\n`));
             logInfo(ctx, pc.dim("Press Ctrl+C to stop\n"));
+
+            // Open browser by default unless --no-open is specified
+            if (options.open !== false) {
+              openBrowser(url);
+            }
           });
 
           // Handle graceful shutdown
