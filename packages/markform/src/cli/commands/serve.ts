@@ -42,7 +42,7 @@ import {
   writeFile,
 } from "../lib/shared.js";
 
-const DEFAULT_PORT = 3000;
+const DEFAULT_PORT = 3344;
 
 /**
  * Open a URL in the default browser (cross-platform).
