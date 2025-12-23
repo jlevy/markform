@@ -42,6 +42,7 @@ import {
   readFile,
   writeFile,
 } from "../lib/shared.js";
+import { generateVersionedPath } from "../lib/versioning.js";
 
 /**
  * Open a URL in the default browser (cross-platform).
@@ -371,32 +372,6 @@ async function handleSave(
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ success: false, error: message }));
   }
-}
-
-/**
- * Generate a versioned filename.
- * e.g., form.form.md -> form-v1.form.md
- *       form-v1.form.md -> form-v2.form.md
- */
-function generateVersionedPath(filePath: string): string {
-  // Match patterns like -v1, _v1, or v1 at the end (before extension)
-  const versionPattern = /^(.+?)(?:[-_]?v(\d+))?(\.form\.md)$/i;
-  const match = versionPattern.exec(filePath);
-
-  if (match) {
-    const [, base, version, ext] = match;
-    const newVersion = version ? parseInt(version, 10) + 1 : 1;
-    return `${base}-v${newVersion}${ext}`;
-  }
-
-  // Fallback: append -v1 before the extension
-  const extPattern = /^(.+)(\.form\.md)$/i;
-  const extMatch = extPattern.exec(filePath);
-  if (extMatch) {
-    return `${extMatch[1]}-v1${extMatch[2]}`;
-  }
-
-  return `${filePath}-v1`;
 }
 
 /**
