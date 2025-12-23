@@ -198,18 +198,30 @@ pnpm markform serve packages/markform/examples/simple/simple.form.md
 # Use --no-open to disable auto-open
 ```
 
-In browser at http://localhost:3000:
+**Automated HTML rendering tests** (26 tests in `tests/unit/web/serve-render.test.ts`):
 
-- [ ] Form renders with all 5 field groups
-- [ ] Field labels and descriptions display correctly
-- [ ] Text inputs, number inputs render properly
-- [ ] Checkboxes render with correct markers (`[ ]`, `[x]`, etc.)
-- [ ] Documentation blocks render as styled text
-- [ ] "Save" button is visible
-- [ ] Click "Save" creates a versioned file (check terminal output)
+- [x] String fields render as `<input type="text">` with minLength/maxLength
+- [x] Number fields render as `<input type="number">` with min/max/step
+- [x] String list fields render as `<textarea>` with placeholder
+- [x] Single-select fields render as `<select>` with options
+- [x] Multi-select fields render as checkboxes
+- [x] Checkboxes (simple mode) render as HTML checkboxes
+- [x] Checkboxes (multi mode) render as selects with 5 states (todo/done/active/incomplete/na)
+- [x] Checkboxes (explicit mode) render as selects with yes/no/unfilled
+- [x] Pre-filled values populate form controls correctly
+- [x] Form has POST method to /save endpoint
+- [x] Save button with type="submit" present
+- [x] HTML escaping prevents XSS
+
+**Manual browser testing** (interactive):
+
+- [ ] Form renders with all 5 field groups visually
+- [ ] Field labels and type badges display correctly
 - [ ] CSS styling is clean and readable
+- [ ] Fill in values and click "Save" creates versioned file (e.g., simple-v1.form.md)
 
-**Note:** Web UI requires interactive browser testing. Browser auto-opens by default; use `--no-open` to disable.
+**Note:** Core HTML rendering and form submission are verified by automated tests.
+Manual testing validates visual appearance and browser interaction.
 
 ### 9. Package Exports Verification
 
