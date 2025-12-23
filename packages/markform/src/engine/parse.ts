@@ -7,6 +7,7 @@
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
 
+import { DEFAULT_PRIORITY } from "../settings.js";
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -340,14 +341,14 @@ function extractFenceValue(node: Node): string | null {
 // =============================================================================
 
 /**
- * Get priority attribute value or default to 'medium'.
+ * Get priority attribute value or default to DEFAULT_PRIORITY.
  */
 function getPriorityAttr(node: Node): "high" | "medium" | "low" {
   const value = getStringAttr(node, "priority");
   if (value === "high" || value === "medium" || value === "low") {
     return value;
   }
-  return "medium";
+  return DEFAULT_PRIORITY;
 }
 
 /**

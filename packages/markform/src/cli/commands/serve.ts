@@ -16,6 +16,7 @@ import pc from "picocolors";
 import { applyPatches } from "../../engine/apply.js";
 import { parseForm } from "../../engine/parse.js";
 import { serialize } from "../../engine/serialize.js";
+import { DEFAULT_PORT } from "../../settings.js";
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -41,8 +42,6 @@ import {
   readFile,
   writeFile,
 } from "../lib/shared.js";
-
-const DEFAULT_PORT = 3344;
 
 /**
  * Open a URL in the default browser (cross-platform).

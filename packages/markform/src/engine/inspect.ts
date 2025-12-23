@@ -13,6 +13,7 @@ import type {
   IssueReason,
   FieldPriorityLevel,
 } from "./types";
+import { DEFAULT_PRIORITY } from "../settings.js";
 import { validate } from "./validate";
 import {
   computeStructureSummary,
@@ -346,5 +347,5 @@ function getFieldPriority(ref: string, form: ParsedForm): FieldPriorityLevel {
       }
     }
   }
-  return "medium"; // Fallback for non-field refs (groups, form)
+  return DEFAULT_PRIORITY; // Fallback for non-field refs (groups, form)
 }
