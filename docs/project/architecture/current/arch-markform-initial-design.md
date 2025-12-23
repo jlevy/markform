@@ -403,11 +403,11 @@ Markdown content here...
 
 - Doc blocks MAY appear inside `form` and `field-group` as direct children
 
-- *required:* Parser will reject doc blocks that appear inside field tag bodies
-  (doc blocks MUST NOT be nested inside a field tag)
+- *required:* Parser will reject doc blocks that appear inside field tag bodies (doc
+  blocks MUST NOT be nested inside a field tag)
 
-- For field-level docs: place immediately after the field block (as a sibling
-  within the group)
+- For field-level docs: place immediately after the field block (as a sibling within the
+  group)
 
 - Canonical serialization places doc blocks immediately after the referenced element
 
@@ -585,7 +585,11 @@ It is only required when the value contains Markdoc tag syntax:
 
 - Tag syntax: `{% ... %}`
 
-> **Note:** Markdoc uses HTML comments (`<!-- ... -->`), not `{# ... #}`. HTML comments
+> **Note:** Markdoc uses HTML comments (`
+
+<!-- ... -->
+
+`), not `{# ... #}`. HTML comments
 > in form values are plain text and don't require `process=false`.
 
 **Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check
@@ -741,7 +745,11 @@ Markform files may contain content outside of Markform tags. This content is han
 
 | Content Type | Policy |
 |--------------|--------|
-| HTML comments (`<!-- ... -->`) | Allowed, preserved verbatim on round-trip |
+| HTML comments (`
+
+<!-- ... -->
+
+`) | Allowed, preserved verbatim on round-trip |
 | Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
 | Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
 
@@ -830,10 +838,16 @@ type FieldPriorityLevel = 'high' | 'medium' | 'low';
 interface FieldBase {
   id: Id;
   label: string;
-  required?: boolean;
-  priority?: FieldPriorityLevel;  // field importance for issue prioritization (default: 'medium')
-  validate?: ValidatorRef[];  // validator references (string IDs or parameterized objects)
+  required: boolean;             // explicit: parser defaults to false if not specified
+  priority: FieldPriorityLevel;  // explicit: parser defaults to 'medium' if not specified
+  validate?: ValidatorRef[];     // validator references (string IDs or parameterized objects)
 }
+
+// NOTE: `required` and `priority` are explicit (not optional) in the data model.
+// The parser assigns defaults when not specified in markup. This ensures:
+// 1. Consumers don't need null/undefined checks or ?? fallbacks
+// 2. Intent is always explicit in parsed data - no silent "undefined means false" behavior
+// 3. Serialization can always emit these values for clarity
 
 interface StringField extends FieldBase {
   kind: 'string';
@@ -868,7 +882,7 @@ type CheckboxMode = 'multi' | 'simple' | 'explicit';
 
 interface CheckboxesField extends FieldBase {
   kind: 'checkboxes';
-  checkboxMode?: CheckboxMode;  // default: 'multi'
+  checkboxMode: CheckboxMode;   // explicit: parser defaults to 'multi' if not specified
   minDone?: number;             // simple mode only: integer, default -1 (all)
   options: Option[];
 }
@@ -1130,16 +1144,18 @@ else:
 
 **Implicit requiredness (*required*):**
 
-For form completion purposes, fields with constraints are treated as implicitly required:
+For form completion purposes, fields with constraints are treated as implicitly
+required:
 
 | Field Type | Implicit Required When |
-|------------|------------------------|
+| --- | --- |
 | `string-list` | `minItems > 0` |
 | `multi-select` | `minSelections > 0` |
 | `checkboxes` | `minDone > 0` (simple mode) |
 
-These fields contribute to `emptyRequiredFields` count even without explicit `required=true`.
-This ensures `form_state` accurately reflects whether all constraints are satisfied.
+These fields contribute to `emptyRequiredFields` count even without explicit
+`required=true`. This ensures `form_state` accurately reflects whether all constraints
+are satisfied.
 
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
@@ -1545,13 +1561,17 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
 **Usage examples:**
 
 ```md
+
 <!-- Parameterized: pass min word count as parameter -->
+
 {% string-field id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /string-field %}
 
 <!-- Multiple validators with different params -->
+
 {% string-field id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
 
 <!-- Sum-to validator with configurable target -->
+
 {% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_prob", "bull_prob", "bear_prob"], target: 100}] %}
 ```
 
@@ -1768,13 +1788,21 @@ scope. For example:
 - `set_*` with `null` value: Clears the field (equivalent to `clear_field`)
 
 - `clear_field`: Removes all values; behavior varies by field kind:
+
   - **string/number fields:** Clear the value fence entirely
+
   - **string_list field:** Clear to empty list (no value fence)
+
   - **single_select field:** Reset all markers to `[ ]` (no selection)
+
   - **multi_select field:** Reset all markers to `[ ]` (no selections)
+
   - **checkboxes field:** Reset to default state based on mode:
+
     - simple mode: all `[ ]`
+
     - multi mode: all `[ ]` (todo)
+
     - explicit mode: all `[ ]` (unfilled)
 
 - `set_checkboxes`: Merges provided values with existing state (only specified options
@@ -1828,8 +1856,9 @@ This is the normal inspect/apply/fix workflow.
 #### Inspect Results
 
 When `inspect` runs, it returns a **single list of `InspectIssue` objects** sorted by
-priority tier (ascending, where P1 = highest priority). Priority is computed using a
-tiered scoring system based on field importance and issue type.
+priority tier (ascending, where P1 = highest priority).
+Priority is computed using a tiered scoring system based on field importance and issue
+type.
 
 ##### Priority Scoring System
 
@@ -1875,8 +1904,11 @@ tiered scoring system based on field importance and issue type.
 | Optional field empty | low (1) | 1 + 1 = 2 | P4 |
 
 Within each tier, issues are sorted by:
+
 1. Severity (`required` before `recommended`)
+
 2. Score (higher scores first)
+
 3. Ref (alphabetically for deterministic output)
 
 The harness config controls how many issues to return (`max_issues`).
@@ -1920,11 +1952,12 @@ interface ExportedOption {
 **Key design decisions:**
 
 - **`required` is always explicit:** The `required` field is always present as `true` or
-  `false`, never omitted. This makes the schema self-documenting for external consumers
-  without requiring knowledge of default values.
+  `false`, never omitted.
+  This makes the schema self-documenting for external consumers without requiring
+  knowledge of default values.
 
 - **Values are typed by kind:** The `values` object maps field IDs to typed value
-  objects matching the field's `kind`.
+  objects matching the field’s `kind`.
 
 * * *
 
@@ -2118,15 +2151,21 @@ Thin wrapper around the tool contract:
 
 - `markform render <file.form.md> [-o <file.html>]` — render form as static HTML output:
 
-  - Default output: same stem with `.form.html` extension (e.g., `simple.form.md` → `simple.form.html`)
+  - Default output: same stem with `.form.html` extension (e.g., `simple.form.md` →
+    `simple.form.html`)
+
   - Use `-o` / `--output` to specify custom output path
+
   - Shares rendering logic with serve command
+
   - Useful for sharing/archiving forms without running a server
 
 - `markform serve [<file.form.md>]` — start a local web UI for interactive form editing:
 
   - Opens browser automatically (use `--no-open` to disable)
+
   - Interactive HTML form elements for all field types
+
   - Save writes to a new versioned filename (never overwrites the source)
 
   - Version naming: if the stem ends with a version pattern (e.g., `-v1`, `_v2`, ` v3`),
@@ -2145,7 +2184,7 @@ Thin wrapper around the tool contract:
 
 **Deferred to v0.2:**
 
-- **Validation in serve** — Run engine validation from the UI with a "Validate" button.
+- **Validation in serve** — Run engine validation from the UI with a “Validate” button.
   Requires deciding on validator execution strategy (see Future Considerations for
   research on server-executed vs baked validators).
 
@@ -2156,19 +2195,27 @@ Thin wrapper around the tool contract:
 
 ### Web UI (serve)
 
-The v0.1 "serve" command provides an interactive web UI for editing and saving forms:
+The v0.1 “serve” command provides an interactive web UI for editing and saving forms:
 
 - Opens browser automatically (use `--no-open` to disable)
 
 - Renders all field types as interactive HTML form elements:
 
   - String fields → `<input type="text">` with minLength/maxLength
+
   - Number fields → `<input type="number">` with min/max/step
+
   - String list fields → `<textarea>` with one item per line
+
   - Single-select → `<select>` dropdown with options
+
   - Multi-select → checkboxes for each option
+
   - Checkboxes (simple mode) → HTML checkboxes (checked/unchecked)
-  - Checkboxes (multi mode) → select dropdowns with 5 states (todo/done/active/incomplete/na)
+
+  - Checkboxes (multi mode) → select dropdowns with 5 states
+    (todo/done/active/incomplete/na)
+
   - Checkboxes (explicit mode) → select dropdowns with yes/no/unfilled
 
 - Pre-fills current values from the form file
@@ -2176,20 +2223,26 @@ The v0.1 "serve" command provides an interactive web UI for editing and saving f
 - Form submission via POST /save:
 
   - Applies patches from form data to the in-memory form state
+
   - Canonicalizes and writes to a new versioned filename (never overwrites original)
-  - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise append `-v1`
+
+  - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise
+    append `-v1`
+
   - Returns JSON response with success status and output path
 
 - CSS styling provides clean, readable form layout
 
 **Deferred to v0.2:**
 
-- Validation in serve (run engine validation from UI with a "Validate" button)
+- Validation in serve (run engine validation from UI with a “Validate” button)
+
 - JSON endpoints for programmatic access
+
 - Harness controls (step through the harness loop from the UI)
 
-Use `markform inspect <file>` from the CLI at any time to get a full report
-(YAML with summaries, form state, and prioritized issues).
+Use `markform inspect <file>` from the CLI at any time to get a full report (YAML with
+summaries, form state, and prioritized issues).
 
 ### AI SDK Integration
 
@@ -3054,10 +3107,13 @@ export const validators = {
 **Usage in form:**
 
 ```md
+
 <!-- Validate three number fields sum to 100% -->
+
 {% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
 
 <!-- Validate string-list entries sum to 100% -->
+
 {% string-list id="revenue_segments" label="Revenue segments (Name: X%)" validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
 ```
 
@@ -3105,10 +3161,13 @@ export const validators = {
 **Usage in form:**
 
 ```md
+
 <!-- Require explanation when moat factors are selected -->
+
 {% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
 
 <!-- Require evidence when whisper values provided -->
+
 {% string-field id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
 ```
 
@@ -3155,7 +3214,9 @@ export const validators = {
 **Usage:**
 
 ```md
+
 <!-- Require details when "Yes" is selected -->
+
 {% string-field id="price_change_details" label="Price change details" validate=[{id: "required_if_equals", when: "price_changes_recently", equals: "yes"}] %}{% /string-field %}
 ```
 
@@ -3196,10 +3257,13 @@ export const validators = {
 **Usage in form:**
 
 ```md
+
 <!-- Validate KPIs have "Name: reason" format -->
+
 {% string-list id="key_kpis" label="Key KPIs" validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
 
 <!-- Validate sources have expected format -->
+
 {% string-list id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /string-list %}
 ```
 
