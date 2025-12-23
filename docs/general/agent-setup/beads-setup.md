@@ -68,20 +68,17 @@ bd doctor       # Check installation health
 bd doctor --fix # Fix any setup issues
 ```
 
-**SQLite WAL mode errors (common in containers/VMs):**
+### Git Merge Driver (required for each clone)
 
-If you see `failed to enable WAL mode: sqlite3: locking protocol`, use JSONL-only mode:
+The `.gitattributes` file configures beads JSONL files to use a custom merge driver, but
+the driver must be registered in your local git config:
 
 ```bash
-# Add to config permanently (recommended)
-echo "no-db: true" >> .beads/config.yaml
-
-# Or use --no-db flag for each command
-bd --no-db status
+git config merge.beads.driver "bd merge %A %O %A %B"
+git config merge.beads.name "bd JSONL merge driver"
 ```
 
-`--no-db` mode reads/writes directly to `.beads/issues.jsonl` without SQLite.
-This is fully functional for all workflows.
+Verify with: `bd doctor | grep "Git Merge Driver"` (should show checkmark)
 
 ### This Project Uses no-db Mode
 
@@ -144,8 +141,6 @@ If you cloned an existing repo with beads, run the config commands above or `bd 
 - `chore` - Maintenance (dependencies, tooling)
 
 - `merge-request` - Code review / merge request
-
-- `molecule` - Work template (advanced)
 
 ### Priorities
 
@@ -223,6 +218,4 @@ Use `0-4` or `P0-P4` format (NOT "high"/"medium"/"low"):
 
 - Do NOT use external issue trackers
 
-- Do NOT duplicate tracking systems
-
-- Do NOT clutter repo root with planning documents
+- Do NOT use `main` as the sync branch (use `beads-sync`)
