@@ -1729,7 +1729,8 @@ interface ApplyResult {
 | apply | `markform apply` | `markform_apply` | `markform.apply` |
 | export | `markform export --format=json` | `markform_export` | `markform.export` |
 | getMarkdown | `markform apply` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
-| serve | `markform serve` (v0.1: view/save only) | — | — |
+| render | `markform render` (static HTML output) | — | — |
+| serve | `markform serve` (interactive web UI) | — | — |
 
 #### Patch Schema
 
@@ -2291,7 +2292,7 @@ Deliverable: `tests/goldenRunner.ts`
 
 ### 8) CLI
 
-`inspect`, `apply`, `export`, `serve`, `run --mock`
+`inspect`, `apply`, `export`, `render`, `serve`, `run --mock`
 
 Deliverable: `cli/commands/*`
 
