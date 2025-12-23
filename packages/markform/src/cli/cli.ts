@@ -9,6 +9,9 @@ import { Command } from "commander";
 import pc from "picocolors";
 
 import { VERSION } from "../index.js";
+import { registerExportCommand } from "./commands/export.js";
+import { registerInspectCommand } from "./commands/inspect.js";
+import { registerServeCommand } from "./commands/serve.js";
 
 /**
  * Configure Commander with colored help text.
@@ -36,33 +39,20 @@ function createProgram(): Command {
     .option("--quiet", "Suppress non-essential output")
     .option("--dry-run", "Show what would be done without making changes");
 
-  // Placeholder for commands - will be added in Phase 2+
-  program
-    .command("inspect <file>")
-    .description("Inspect a form and display its structure, progress, and issues")
-    .action((_file: string) => {
-      console.log(pc.yellow("Command not yet implemented: inspect"));
-    });
+  // Register commands
+  registerInspectCommand(program);
+  registerExportCommand(program);
+  registerServeCommand(program);
 
+  // Phase 3 commands - placeholders for now
   program
     .command("apply <file>")
     .description("Apply patches to a form")
+    .option("--patch <json>", "JSON array of patches to apply")
+    .option("-o, --output <file>", "Output file (defaults to stdout)")
     .action((_file: string) => {
       console.log(pc.yellow("Command not yet implemented: apply"));
-    });
-
-  program
-    .command("export <file>")
-    .description("Export form schema and values as JSON")
-    .action((_file: string) => {
-      console.log(pc.yellow("Command not yet implemented: export"));
-    });
-
-  program
-    .command("serve <file>")
-    .description("Serve a form as a web page for browsing")
-    .action((_file: string) => {
-      console.log(pc.yellow("Command not yet implemented: serve"));
+      console.log(pc.dim("This command will be implemented in Phase 3."));
     });
 
   program
@@ -73,6 +63,7 @@ function createProgram(): Command {
     .option("--record <file>", "Record session to file")
     .action((_file: string) => {
       console.log(pc.yellow("Command not yet implemented: run"));
+      console.log(pc.dim("This command will be implemented in Phase 3."));
     });
 
   return program;
