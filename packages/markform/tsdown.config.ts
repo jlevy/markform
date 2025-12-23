@@ -7,7 +7,7 @@ export default defineConfig({
     bin: "src/cli/bin.ts",
     "ai-sdk": "src/integrations/ai-sdk.ts",
   },
-  format: ["esm", "cjs"],
+  format: ["esm"],
   platform: "node",
   target: "node24",
   sourcemap: true,

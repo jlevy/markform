@@ -161,43 +161,96 @@ pnpm publint     # Package exports valid
 pnpm test        # Tests pass
 ```
 
-## CLI Development
+## CLI Usage
+
+After building, run the CLI from the repository root:
+
+```bash
+# Build first (required after code changes)
+pnpm build
+
+# Run the CLI using the pnpm script
+pnpm markform --help
+pnpm markform inspect <file>
+pnpm markform export <file>
+pnpm markform apply <file> --patch '<json>'
+pnpm markform serve <file>
+pnpm markform run <file> --mock
+```
+
+### CLI Commands
+
+| Command | Description |
+| ------- | ----------- |
+| `inspect <file>` | Display form structure, progress, and issues (YAML or JSON) |
+| `export <file>` | Export form schema and values as JSON |
+| `apply <file>` | Apply JSON patches to update field values |
+| `serve <file>` | Start a web server to browse/edit the form |
+| `run <file>` | Run the harness loop to fill a form (with `--mock` or live agent) |
+
+### CLI Development
 
 The CLI is built with Commander and uses these conventions:
 
 - **picocolors** for terminal colors (never hardcoded ANSI)
-
 - **@clack/prompts** for interactive UI
-
 - Support `--verbose`, `--quiet`, `--dry-run` flags
-
-Run the CLI during development:
-
-```bash
-# After building
-pnpm --filter markform build
-node packages/markform/dist/bin.js <command>
-
-# Or link globally
-cd packages/markform && pnpm link --global
-markform <command>
-```
 
 ## Testing
 
+### Quick Reference
+
 ```bash
-# All tests
-pnpm test
+# Full precommit check (build, lint, test)
+pnpm precommit
 
-# Unit tests only
-pnpm --filter markform test:unit
-
-# Golden session tests
-pnpm --filter markform test:golden
-
-# Watch mode
-pnpm --filter markform test -- --watch
+# Individual commands
+pnpm build           # Build all packages
+pnpm lint            # ESLint
+pnpm typecheck       # TypeScript type checking
+pnpm test            # All tests
+pnpm test:unit       # Unit tests only
+pnpm test:golden     # Golden session tests only
+pnpm publint         # Validate package exports
 ```
+
+### Test Categories
+
+**Unit Tests** (`tests/unit/`): Test individual engine functions
+
+```bash
+pnpm test:unit
+```
+
+**Golden Tests** (`tests/golden/`): End-to-end session replay tests
+
+```bash
+pnpm test:golden
+```
+
+Golden tests replay recorded agent sessions to validate form filling works
+correctly. Session files are in `tests/golden/sessions/`.
+
+### Watch Mode
+
+```bash
+# Run tests in watch mode during development
+pnpm --filter markform test:watch
+```
+
+### CI Consistency
+
+The CI workflow (`.github/workflows/ci.yml`) runs these commands in order:
+
+1. `pnpm install`
+2. `pnpm lint`
+3. `pnpm typecheck`
+4. `pnpm build`
+5. `pnpm publint`
+6. `pnpm test`
+
+To match CI behavior locally, run `pnpm precommit` which executes the same
+checks.
 
 ## AI SDK Integration
 

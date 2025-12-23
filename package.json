@@ -3,6 +3,12 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.26.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lefthook"
+    ]
+  },
   "engines": {
     "node": ">=24"
   },
@@ -10,8 +16,12 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "test:unit": "pnpm --filter markform test:unit",
+    "test:golden": "pnpm --filter markform test:golden",
     "publint": "pnpm -r publint",
     "lint": "eslint .",
+    "precommit": "pnpm build && pnpm lint && pnpm test",
+    "markform": "node packages/markform/dist/bin.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && pnpm publint && changeset publish"
@@ -21,6 +31,7 @@
     "@changesets/cli": "^2.28.0",
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
+    "lefthook": "^2.0.12",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.0.0"
   }
