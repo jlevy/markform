@@ -726,7 +726,7 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
    - Globally-unique IDs for form/group/field (option IDs are field-scoped only)
    - `ref` resolution (doc blocks reference valid targets)
    - Checkbox mode enforcement (`checkboxMode="simple"` restricts to 2 states)
-   - Option marker parsing (`[ ]`, `( )`, etc.)
+   - Option marker parsing (`[ ]`, `[x]`, `[-]`, `[/]`, `[~]`, `[y]`, `[n]`, etc.)
    - **Label requirement** (*required*): All fields must have a `label` attribute;
      missing label is a parse error
    - **Option ID annotation** (*required*): All options in select/checkbox fields must
@@ -1732,12 +1732,12 @@ scope. For example:
 - `clear_field`: Removes all values; behavior varies by field kind:
   - **string/number fields:** Clear the value fence entirely
   - **string_list field:** Clear to empty list (no value fence)
-  - **single_select field:** Reset all markers to `( )` (no selection)
+  - **single_select field:** Reset all markers to `[ ]` (no selection)
   - **multi_select field:** Reset all markers to `[ ]` (no selections)
   - **checkboxes field:** Reset to default state based on mode:
     - simple mode: all `[ ]`
     - multi mode: all `[-]` (todo)
-    - explicit mode: all `[_]` (unfilled)
+    - explicit mode: all `[ ]` (unfilled)
 
 - `set_checkboxes`: Merges provided values with existing state (only specified options
   are updated)
