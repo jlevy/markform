@@ -1,0 +1,354 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+import { parseForm } from "../../../src/engine/parse.js";
+import { serialize } from "../../../src/engine/serialize.js";
+
+describe("engine/serialize", () => {
+  describe("serialize", () => {
+    it("serializes a minimal form", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test_form" title="Test Form" %}
+
+{% field-group id="group1" title="Group 1" %}
+{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Parse the output to verify it's valid
+      const reparsed = parseForm(output);
+      expect(reparsed.schema.id).toBe("test_form");
+      expect(reparsed.schema.title).toBe("Test Form");
+      expect(reparsed.schema.groups).toHaveLength(1);
+    });
+
+    it("serializes string field with value", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% string-field id="company" label="Company" %}
+\`\`\`value
+ACME Corp
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const value = reparsed.valuesByFieldId["company"];
+      expect(value?.kind).toBe("string");
+      if (value?.kind === "string") {
+        expect(value.value).toBe("ACME Corp");
+      }
+    });
+
+    it("serializes number field with value", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% number-field id="revenue" label="Revenue" %}
+\`\`\`value
+1234.56
+\`\`\`
+{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const value = reparsed.valuesByFieldId["revenue"];
+      expect(value?.kind).toBe("number");
+      if (value?.kind === "number") {
+        expect(value.value).toBe(1234.56);
+      }
+    });
+
+    it("serializes string-list field with values", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% string-list id="tags" label="Tags" %}
+\`\`\`value
+Tag One
+Tag Two
+Tag Three
+\`\`\`
+{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const value = reparsed.valuesByFieldId["tags"];
+      expect(value?.kind).toBe("string_list");
+      if (value?.kind === "string_list") {
+        expect(value.items).toEqual(["Tag One", "Tag Two", "Tag Three"]);
+      }
+    });
+
+    it("serializes single-select field with selection", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% single-select id="rating" label="Rating" %}
+- [ ] Bullish {% #bullish %}
+- [x] Neutral {% #neutral %}
+- [ ] Bearish {% #bearish %}
+{% /single-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      // Check field schema
+      const group = reparsed.schema.groups[0];
+      const field = group?.children[0];
+      expect(field?.kind).toBe("single_select");
+      if (field?.kind === "single_select") {
+        expect(field.options).toHaveLength(3);
+      }
+
+      // Check value preserved
+      const value = reparsed.valuesByFieldId["rating"];
+      expect(value?.kind).toBe("single_select");
+      if (value?.kind === "single_select") {
+        expect(value.selected).toBe("neutral");
+      }
+    });
+
+    it("serializes multi-select field with selections", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% multi-select id="categories" label="Categories" %}
+- [x] Tech {% #tech %}
+- [ ] Health {% #health %}
+- [x] Finance {% #finance %}
+{% /multi-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const value = reparsed.valuesByFieldId["categories"];
+      expect(value?.kind).toBe("multi_select");
+      if (value?.kind === "multi_select") {
+        expect(value.selected).toContain("tech");
+        expect(value.selected).toContain("finance");
+        expect(value.selected).not.toContain("health");
+      }
+    });
+
+    it("serializes checkboxes field with multi mode", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% checkboxes id="tasks" label="Tasks" checkboxMode="multi" %}
+- [x] Done task {% #done_task %}
+- [/] In progress {% #in_progress %}
+- [*] Active {% #active_task %}
+- [-] Not applicable {% #na_task %}
+- [ ] Todo {% #todo_task %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const value = reparsed.valuesByFieldId["tasks"];
+      expect(value?.kind).toBe("checkboxes");
+      if (value?.kind === "checkboxes") {
+        expect(value.values["done_task"]).toBe("done");
+        expect(value.values["in_progress"]).toBe("incomplete");
+        expect(value.values["active_task"]).toBe("active");
+        expect(value.values["na_task"]).toBe("na");
+        expect(value.values["todo_task"]).toBe("todo");
+      }
+    });
+
+    it("serializes checkboxes field with explicit mode", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% checkboxes id="confirms" label="Confirms" checkboxMode="explicit" %}
+- [y] Yes answer {% #yes_item %}
+- [n] No answer {% #no_item %}
+- [ ] Unfilled {% #unfilled_item %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const value = reparsed.valuesByFieldId["confirms"];
+      expect(value?.kind).toBe("checkboxes");
+      if (value?.kind === "checkboxes") {
+        expect(value.values["yes_item"]).toBe("yes");
+        expect(value.values["no_item"]).toBe("no");
+        expect(value.values["unfilled_item"]).toBe("unfilled");
+      }
+    });
+
+    it("preserves field attributes through round-trip", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="Group Title" %}
+{% string-field id="email" label="Email" required=true minLength=5 maxLength=100 pattern="^[^@]+@[^@]+$" %}{% /string-field %}
+{% number-field id="count" label="Count" required=true min=0 max=1000 integer=true %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const group = reparsed.schema.groups[0];
+      expect(group?.title).toBe("Group Title");
+
+      const emailField = group?.children[0];
+      expect(emailField?.kind).toBe("string");
+      if (emailField?.kind === "string") {
+        expect(emailField.required).toBe(true);
+        expect(emailField.minLength).toBe(5);
+        expect(emailField.maxLength).toBe(100);
+        expect(emailField.pattern).toBe("^[^@]+@[^@]+$");
+      }
+
+      const countField = group?.children[1];
+      expect(countField?.kind).toBe("number");
+      if (countField?.kind === "number") {
+        expect(countField.required).toBe(true);
+        expect(countField.min).toBe(0);
+        expect(countField.max).toBe(1000);
+        expect(countField.integer).toBe(true);
+      }
+    });
+
+    it("outputs deterministic format", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output1 = serialize(parsed);
+      const output2 = serialize(parsed);
+      expect(output1).toBe(output2);
+    });
+  });
+
+  describe("serialize with simple.form.md", () => {
+    it("round-trips the simple test form", async () => {
+      const formPath = join(
+        import.meta.dirname,
+        "../../../examples/simple/simple.form.md"
+      );
+      const content = await readFile(formPath, "utf-8");
+      const parsed = parseForm(content);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      // Compare structure
+      expect(reparsed.schema.id).toBe(parsed.schema.id);
+      expect(reparsed.schema.title).toBe(parsed.schema.title);
+      expect(reparsed.schema.groups.length).toBe(parsed.schema.groups.length);
+
+      // Compare field IDs
+      expect(reparsed.orderIndex).toEqual(parsed.orderIndex);
+
+      // Verify key fields exist
+      expect(reparsed.orderIndex).toContain("name");
+      expect(reparsed.orderIndex).toContain("email");
+      expect(reparsed.orderIndex).toContain("age");
+      expect(reparsed.orderIndex).toContain("tags");
+      expect(reparsed.orderIndex).toContain("priority");
+      expect(reparsed.orderIndex).toContain("categories");
+
+      // Check idIndex has correct types
+      expect(reparsed.idIndex.get("simple_test")?.kind).toBe("form");
+      expect(reparsed.idIndex.get("basic_fields")?.kind).toBe("group");
+      expect(reparsed.idIndex.get("name")?.kind).toBe("field");
+      expect(reparsed.idIndex.get("priority.low")?.kind).toBe("option");
+    });
+  });
+});

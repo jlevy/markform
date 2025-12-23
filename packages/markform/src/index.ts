@@ -174,3 +174,5 @@ export {
 // =============================================================================
 
 export { parseForm, ParseError } from "./engine/parse.js";
+export { serialize } from "./engine/serialize.js";
+export type { SerializeOptions } from "./engine/serialize.js";
