@@ -256,11 +256,28 @@ Session Transcript
 Expected: ✓ complete
 ```
 
-### Live Agent - .env Loading - PASS
+### Live Agent - OpenAI - PASS
 
-The .env file in the project root is correctly loaded.
-Testing showed an API credit error (not missing key error), confirming dotenv
-integration works:
+Successfully tested live agent with OpenAI gpt-4o model:
+
+```bash
+$ pnpm markform fill packages/markform/examples/simple/simple.form.md \
+    --agent=live --model=openai/gpt-4o \
+    -o /tmp/simple-live-filled.form.md --record /tmp/simple-session.yaml
+Filling form: simple.form.md
+Form completed in 1 turn(s)
+⏰ Fill time: 3.2s
+Form written to: simple-live-filled.form.md
+Session recorded to: /tmp/simple-session.yaml
+```
+
+Form inspection confirmed all required fields filled correctly.
+Session transcript captured all turns with patches applied.
+
+### Live Agent - Anthropic - SKIPPED (credit exhausted)
+
+The .env file loads correctly. API credit error (not missing key error) confirms
+dotenv integration works:
 
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
@@ -293,20 +310,43 @@ Error: --agent=mock requires --mock-source <file>
 
 All 244 tests pass, TypeScript compiles, ESLint passes.
 
+### -o flag and versioned filenames - PASS
+
+```bash
+$ pnpm markform fill packages/markform/examples/simple/simple.form.md \
+    --agent=mock --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
+Form written to: simple-v1.form.md
+
+# Running again increments version:
+$ pnpm markform fill packages/markform/examples/simple/simple.form.md \
+    --agent=mock --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
+Form written to: simple-v2.form.md
+```
+
+### Model Resolution - PASS
+
+```bash
+$ pnpm markform fill ... --model=gpt-4o --dry-run
+Error: Invalid model ID format: "gpt-4o". Expected format: provider/model-id
+
+$ pnpm markform fill ... --model=invalid/model --dry-run
+Error: Unknown provider: "invalid". Supported providers: anthropic, openai, google
+```
+
 ### Known Limitations
 
-**-o flag not implemented:** The `-o, --output <file>` flag is defined but not used.
-The fill command outputs a session transcript but does not write the filled form content
-to a file. Use `--record` to save the session transcript instead.
-
-**Versioned filenames not implemented in fill:** The versioning logic exists in
-`cli/lib/versioning.ts` but is not integrated into the fill command output.
+**Google provider env var mismatch:** The Google AI SDK expects `GOOGLE_GENERATIVE_AI_API_KEY`
+but common convention is `GOOGLE_API_KEY`. Users must set the correct env var.
 
 ## User Review Feedback
 
 *(To be filled in after user review)*
 
 ## Revision History
+
+- 2025-12-23: Full validation completed - all tests pass including live OpenAI agent,
+  -o flag, versioned filenames, and model resolution. Added @ai-sdk/openai and
+  @ai-sdk/google packages.
 
 - 2025-12-23: Added agent testing results section with pass/fail status
 

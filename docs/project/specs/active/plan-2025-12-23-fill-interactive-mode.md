@@ -86,6 +86,7 @@ markform fill form-v1.form.md
 | `single_select` | `select()` |
 | `multi_select` | `multiselect()` |
 | `checkboxes` | varies by mode (see below) |
+
 - Show field label and description in prompts
 
 - Skip fields that already have values
