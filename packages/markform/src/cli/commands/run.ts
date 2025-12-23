@@ -21,6 +21,7 @@ import type {
 import { createHarness } from "../../harness/harness.js";
 import { createMockAgent } from "../../harness/mockAgent.js";
 import {
+  formatOutput,
   getCommandContext,
   logError,
   logInfo,
@@ -31,6 +32,60 @@ import {
   readFile,
   writeFile,
 } from "../lib/shared.js";
+
+/**
+ * Format session transcript for console output.
+ */
+function formatConsoleSession(
+  transcript: SessionTranscript,
+  useColors: boolean
+): string {
+  const lines: string[] = [];
+  const bold = useColors ? pc.bold : (s: string) => s;
+  const dim = useColors ? pc.dim : (s: string) => s;
+  const cyan = useColors ? pc.cyan : (s: string) => s;
+  const green = useColors ? pc.green : (s: string) => s;
+  const yellow = useColors ? pc.yellow : (s: string) => s;
+
+  // Header
+  lines.push(bold(cyan("Session Transcript")));
+  lines.push("");
+
+  // Session info
+  lines.push(`${bold("Form:")} ${transcript.form.path}`);
+  lines.push(`${bold("Mode:")} ${transcript.mode}`);
+  lines.push(`${bold("Version:")} ${transcript.sessionVersion}`);
+  lines.push("");
+
+  // Harness config
+  lines.push(bold("Harness Config:"));
+  lines.push(`  Max turns: ${transcript.harness.maxTurns}`);
+  lines.push(`  Max patches/turn: ${transcript.harness.maxPatchesPerTurn}`);
+  lines.push(`  Max issues: ${transcript.harness.maxIssues}`);
+  lines.push("");
+
+  // Turns summary
+  lines.push(bold(`Turns (${transcript.turns.length}):`));
+  for (const turn of transcript.turns) {
+    const issueCount = turn.inspect.issues.length;
+    const patchCount = turn.apply.patches.length;
+    const afterIssues = turn.after.requiredIssueCount;
+
+    lines.push(
+      `  Turn ${turn.turn}: ${dim(`${issueCount} issues`)} → ${yellow(`${patchCount} patches`)} → ${afterIssues === 0 ? green("0 remaining") : dim(`${afterIssues} remaining`)}`
+    );
+  }
+  lines.push("");
+
+  // Final result
+  const expectText = transcript.final.expectComplete
+    ? green("✓ complete")
+    : yellow("○ incomplete");
+  lines.push(`${bold("Expected:")} ${expectText}`);
+  lines.push(`${bold("Completed form:")} ${transcript.final.expectedCompletedForm}`);
+
+  return lines.join("\n");
+}
 
 /**
  * Register the run command.
@@ -164,6 +219,7 @@ export function registerRunCommand(program: Command): void {
           // Output or record session
           if (options.record) {
             const recordPath = resolve(options.record);
+            // Always use YAML for recorded files (standard format)
             const yaml = serializeSession(transcript);
 
             if (ctx.dryRun) {
@@ -174,9 +230,11 @@ export function registerRunCommand(program: Command): void {
               logSuccess(ctx, `Session recorded to: ${recordPath}`);
             }
           } else {
-            // Output to stdout
-            const yaml = serializeSession(transcript);
-            console.log(yaml);
+            // Output to stdout in requested format
+            const output = formatOutput(ctx, transcript, (data, useColors) =>
+              formatConsoleSession(data as SessionTranscript, useColors)
+            );
+            console.log(output);
           }
 
           process.exit(stepResult.isComplete ? 0 : 1);
