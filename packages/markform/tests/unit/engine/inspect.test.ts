@@ -199,13 +199,19 @@ describe("inspect", () => {
       }
     });
 
-    it("assigns unique priority numbers to each issue", () => {
+    it("assigns valid tier-based priorities (1-5) to each issue", () => {
       const form = parseForm(MULTI_ISSUE_FORM);
       const result = inspect(form);
 
-      const priorities = result.issues.map((i) => i.priority);
-      const uniquePriorities = new Set(priorities);
-      expect(uniquePriorities.size).toBe(priorities.length);
+      // All priorities should be valid tiers (1-5)
+      for (const issue of result.issues) {
+        expect(issue.priority).toBeGreaterThanOrEqual(1);
+        expect(issue.priority).toBeLessThanOrEqual(5);
+      }
+
+      // With the tiered system, multiple issues can share the same priority tier
+      // Required issues (required_missing) on medium priority fields get tier 1 (score 2+3=5)
+      // Optional issues (optional_empty) on medium priority fields get tier 3 (score 2+1=3)
     });
   });
 

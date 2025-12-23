@@ -825,10 +825,13 @@ interface FieldGroup {
   children: Field[];          // v0.1/v0.2: fields only; nested groups deferred (future)
 }
 
+type FieldPriorityLevel = 'high' | 'medium' | 'low';
+
 interface FieldBase {
   id: Id;
   label: string;
   required?: boolean;
+  priority?: FieldPriorityLevel;  // field importance for issue prioritization (default: 'medium')
   validate?: ValidatorRef[];  // validator references (string IDs or parameterized objects)
 }
 
@@ -921,14 +924,14 @@ interface ParsedForm {
 
 // InspectIssue: unified type for inspect/apply API results
 // Derived from ValidationIssue[] but simplified for agent/UI consumption
-// Returned as a single list sorted by priority (ascending, 1 = highest)
+// Returned as a single list sorted by priority tier (ascending, P1 = highest)
 interface InspectIssue {
   ref: Id | QualifiedOptionRef;  // target this issue relates to (field, group, or qualified option)
   scope: 'form' | 'group' | 'field' | 'option';  // scope of the issue target
   reason: IssueReason;       // machine-readable reason code
   message: string;           // human-readable description
   severity: 'required' | 'recommended';  // *required* = must fix; *recommended* = suggested
-  priority: number;          // 1 = highest; *required* items always have lower numbers
+  priority: number;          // tier 1-5 (P1-P5); computed from field priority + issue type score
 }
 
 // Standard reason codes (keep stable for golden tests)
@@ -1825,17 +1828,56 @@ This is the normal inspect/apply/fix workflow.
 #### Inspect Results
 
 When `inspect` runs, it returns a **single list of `InspectIssue` objects** sorted by
-priority (ascending, where 1 = highest priority).
-Issues with severity `required` always have higher priority (lower numbers) than issues
-with severity `recommended`.
+priority tier (ascending, where P1 = highest priority). Priority is computed using a
+tiered scoring system based on field importance and issue type.
 
-| Priority | Severity | Reason code | Description |
+##### Priority Scoring System
+
+**Field Priority Weight** (optional schema attribute, defaults to `medium`):
+
+| Field Priority | Weight |
+| --- | --- |
+| `high` | 3 |
+| `medium` | 2 (default) |
+| `low` | 1 |
+
+**Issue Type Score:**
+
+| Issue Reason | Score |
+| --- | --- |
+| `required_missing` | 3 |
+| `checkbox_incomplete` | 3 (required) / 2 (recommended) |
+| `validation_error` | 2 |
+| `min_items_not_met` | 2 |
+| `optional_empty` | 1 |
+
+**Total Score** = Field Priority Weight + Issue Type Score
+
+**Priority Tier** mapping from total score:
+
+| Tier | Score Threshold | Console Color |
+| --- | --- | --- |
+| P1 | ≥ 5 | Bold red |
+| P2 | ≥ 4 | Yellow |
+| P3 | ≥ 3 | Cyan |
+| P4 | ≥ 2 | Blue |
+| P5 | ≥ 1 | Dim/gray |
+
+**Examples** (assuming default `medium` field priority):
+
+| Issue Type | Field Priority | Total Score | Tier |
 | --- | --- | --- | --- |
-| 1 | *required* | `validation_error` | Fields with validation errors (pattern, range, etc.) |
-| 2 | *required* | `required_missing` | Required fields with no value |
-| 3 | *required* | `checkbox_incomplete` | Required checkboxes with non-terminal states |
-| 4 | *required* | `min_items_not_met` | String-lists or multi-selects below minimum count |
-| 5 | *recommended* | `optional_empty` | Optional fields with no value |
+| Required field missing | medium (2) | 2 + 3 = 5 | P1 |
+| Validation error | medium (2) | 2 + 2 = 4 | P2 |
+| Optional field empty | medium (2) | 2 + 1 = 3 | P3 |
+| Required field missing | low (1) | 1 + 3 = 4 | P2 |
+| Validation error | low (1) | 1 + 2 = 3 | P3 |
+| Optional field empty | low (1) | 1 + 1 = 2 | P4 |
+
+Within each tier, issues are sorted by:
+1. Severity (`required` before `recommended`)
+2. Score (higher scores first)
+3. Ref (alphabetically for deterministic output)
 
 The harness config controls how many issues to return (`max_issues`).
 

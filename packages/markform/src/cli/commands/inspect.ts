@@ -1,9 +1,11 @@
 /**
  * Inspect command - Display form structure, progress, and issues.
  *
- * Outputs a report with:
+ * Outputs a comprehensive report with:
+ * - Form state and title
  * - Structure summary (field counts, types)
- * - Progress summary (filled/empty counts, form state)
+ * - Progress summary (filled/empty counts)
+ * - Full form content (groups, fields, current values)
  * - Issues sorted by priority
  */
 
@@ -38,12 +40,19 @@ function formatState(state: ProgressState, useColors: boolean): string {
 
 /**
  * Format priority badge for console output.
+ *
+ * Priority tiers and colors:
+ * - P1: bold red (critical)
+ * - P2: yellow (high)
+ * - P3: cyan (medium)
+ * - P4: blue (low)
+ * - P5: dim/gray (minimal)
  */
 function formatPriority(priority: number, useColors: boolean): string {
   const label = `P${priority}`;
   if (!useColors) {
-return label;
-}
+    return label;
+  }
   switch (priority) {
     case 1:
       return pc.red(pc.bold(label));
@@ -51,6 +60,9 @@ return label;
       return pc.yellow(label);
     case 3:
       return pc.cyan(label);
+    case 4:
+      return pc.blue(label);
+    case 5:
     default:
       return pc.dim(label);
   }
@@ -64,8 +76,8 @@ function formatSeverity(
   useColors: boolean
 ): string {
   if (!useColors) {
-return severity;
-}
+    return severity;
+  }
   return severity === "required" ? pc.red(severity) : pc.yellow(severity);
 }
 

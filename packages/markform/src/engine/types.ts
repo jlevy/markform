@@ -60,11 +60,15 @@ export type FieldKind =
   | "single_select"
   | "multi_select";
 
+/** Field priority level for issue scoring */
+export type FieldPriorityLevel = "high" | "medium" | "low";
+
 /** Base interface for all field types */
 export interface FieldBase {
   id: Id;
   label: string;
   required?: boolean;
+  priority?: FieldPriorityLevel;
   validate?: ValidatorRef[];
 }
 
@@ -580,6 +584,8 @@ export const FieldKindSchema = z.enum([
   "multi_select",
 ]);
 
+export const FieldPriorityLevelSchema = z.enum(["high", "medium", "low"]);
+
 // Option schema
 export const OptionSchema = z.object({
   id: IdSchema,
@@ -591,6 +597,7 @@ const FieldBaseSchemaPartial = {
   id: IdSchema,
   label: z.string(),
   required: z.boolean().optional(),
+  priority: FieldPriorityLevelSchema.optional(),
   validate: z.array(ValidatorRefSchema).optional(),
 };
 

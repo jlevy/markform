@@ -59,6 +59,13 @@ export function formatState(state: string): string {
 
 /**
  * Format a priority badge.
+ *
+ * Priority tiers and colors:
+ * - P1: bold red (critical)
+ * - P2: yellow (high)
+ * - P3: cyan (medium)
+ * - P4: blue (low)
+ * - P5: dim/gray (minimal)
  */
 export function formatPriority(priority: number): string {
   const label = `P${priority}`;
@@ -69,6 +76,9 @@ export function formatPriority(priority: number): string {
       return pc.yellow(label);
     case 3:
       return pc.cyan(label);
+    case 4:
+      return pc.blue(label);
+    case 5:
     default:
       return pc.dim(label);
   }
