@@ -25,5 +25,5 @@ Better implementation approaches or architecture patterns Incorrect assumptions,
 edge cases, or flawed estimates New risks, dependencies, or performance concerns
 
 Refine the Specification: Update the original spec with findings.
-Add clarifications, correct technical details, adjust effort estimates, propose
-improvements, and document discovered risks.
+Add clarifications, correct technical details, propose improvements, and document
+discovered risks.

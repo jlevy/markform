@@ -66,3 +66,8 @@ issues.
     - Batch database queries instead of individual fetches in loops
 
     - Consolidate nested sequential queries into single `Promise.all` call
+
+14. **Guard early, normalize once** Handle all optional/conditional logic at the top of
+    a function. Use early returns for invalid states, or normalize inputs once into a
+    guaranteed shape. After that point, code must be straight-line—no repeated
+    conditionals.

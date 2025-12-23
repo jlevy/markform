@@ -84,13 +84,11 @@ When approaching a new feature:
 
 3. Run tests to confirm they pass (Green)
 
-4. Make any necessary structural changes (Tidy First), running tests after each change
+4. Commit structural changes separately
 
-5. Commit structural changes separately
+5. Add another test for the next small increment of functionality
 
-6. Add another test for the next small increment of functionality
-
-7. Repeat until the feature is complete, committing behavioral changes separately from
+6. Repeat until the feature is complete, committing behavioral changes separately from
    structural ones
 
 Follow this process precisely, always prioritizing clean, well-tested code over quick

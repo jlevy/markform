@@ -7,6 +7,29 @@ alwaysApply: false
 
 These rules apply to all CLI tools, command-line scripts, and terminal utilities.
 
+This is a **template document** providing opinionated patterns for building TypeScript
+CLI tools. The examples show suggested conventions—adapt them to your project’s
+structure.
+
+## Suggested Directory Layout
+
+For projects with CLI tooling, use this structure:
+
+```
+scripts/
+├── cli/
+│   ├── cli.ts              # Main entry point, registers all commands
+│   ├── commands/           # One file per command or command group
+│   │   ├── build.ts
+│   │   ├── test.ts
+│   │   └── deploy.ts
+│   └── lib/                # Shared utilities
+│       ├── shared.ts       # Command context, debug setup, dry-run helpers
+│       └── formatting.ts   # Color utilities, output formatting
+├── test-with-timings.ts    # Standalone scripts (kebab-case)
+└── generate-data.ts
+```
+
 ## Color and Output Formatting
 
 - **ALWAYS use picocolors for terminal colors:** Import `picocolors` (aliased as `pc`)
@@ -24,15 +47,20 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
   console.log('\x1b[36mInfo message\x1b[0m');
   ```
 
-- **Use shared color utilities:** Import from `scripts/cli/lib/cliFormatting.ts` for
-  consistent color application across commands.
+- **Create shared color utilities:** For consistency across commands, create a
+  `formatting.ts` module with semantic color helpers:
 
   ```ts
-  import { colors } from '../lib/cliFormatting.js';
+  // scripts/cli/lib/formatting.ts
+  import pc from 'picocolors';
   
-  console.log(colors.success('Operation completed'));
-  console.log(colors.error('Failed to process'));
-  console.log(colors.info('Informational message'));
+  export const colors = {
+    success: (msg: string) => pc.green(msg),
+    error: (msg: string) => pc.red(msg),
+    warn: (msg: string) => pc.yellow(msg),
+    info: (msg: string) => pc.cyan(msg),
+    dim: (msg: string) => pc.dim(msg),
+  };
   ```
 
 - **Trust picocolors TTY detection:** Picocolors automatically detects when stdout is
@@ -63,45 +91,64 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
 
 ## Commander.js Patterns
 
-- **Use Commander.js for all CLI tools:** Import from `commander` and follow the
-  patterns established in `scripts/cli/cli.ts`.
+- **Use Commander.js for all CLI tools:** Import from `commander` for argument parsing
+  and command structure.
 
-- **Apply colored help to all commands:** Use `withColoredHelp()` wrapper from shared
-  utilities to ensure consistent help text formatting.
+- **Create a colored help wrapper:** For consistent help text formatting:
 
   ```ts
+  // scripts/cli/lib/shared.ts
   import { Command } from 'commander';
-  import { withColoredHelp } from '../lib/shared.js';
+  import pc from 'picocolors';
   
-  export const myCommand = withColoredHelp(new Command('my-command'))
-    .description('Description here')
-    .action(async (options, command) => {
-      // Implementation
+  export function withColoredHelp<T extends Command>(cmd: T): T {
+    cmd.configureHelp({
+      styleTitle: (str) => pc.bold(pc.cyan(str)),
+      styleCommandText: (str) => pc.green(str),
+      styleOptionText: (str) => pc.yellow(str),
     });
+    return cmd;
+  }
   ```
 
-- **Use shared context helpers:** Import and use `getCommandContext()`, `setupDebug()`,
-  and `logDryRun()` from `scripts/cli/lib/shared.ts` for consistent behavior.
+- **Create shared context helpers:** Centralize option handling for consistency:
 
   ```ts
-  import { getCommandContext, setupDebug, logDryRun } from '../lib/shared.js';
+  // scripts/cli/lib/shared.ts
+  import { Command } from 'commander';
   
-  .action(async (options, command) => {
-    const ctx = getCommandContext(command);
-    setupDebug(ctx);
+  export interface CommandContext {
+    dryRun: boolean;
+    verbose: boolean;
+    quiet: boolean;
+  }
   
-    if (ctx.dryRun) {
-      logDryRun('Would perform action', { details: 'here' });
-      return;
-    }
+  export function getCommandContext(command: Command): CommandContext {
+    const opts = command.optsWithGlobals();
+    return {
+      dryRun: opts.dryRun ?? false,
+      verbose: opts.verbose ?? false,
+      quiet: opts.quiet ?? false,
+    };
+  }
   
-    // Actual implementation
-  });
+  export function logDryRun(message: string, details?: unknown): void {
+    console.log(pc.yellow(`[DRY RUN] ${message}`));
+    if (details) console.log(pc.dim(JSON.stringify(details, null, 2)));
+  }
   ```
 
-- **Support `--dry-run`, `--verbose`, and `--quiet` flags:** These are global options
-  defined at the program level.
-  Access them via `getCommandContext()`.
+- **Support `--dry-run`, `--verbose`, and `--quiet` flags:** Define these as global
+  options at the program level:
+
+  ```ts
+  // scripts/cli/cli.ts
+  const program = withColoredHelp(new Command())
+    .name('my-cli')
+    .option('--dry-run', 'Show what would be done without making changes')
+    .option('--verbose', 'Enable verbose output')
+    .option('--quiet', 'Suppress non-essential output');
+  ```
 
 ## Progress and Feedback
 
@@ -136,9 +183,9 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
 - **Use appropriate emojis for status:** Follow emoji conventions from
   `@docs/general/agent-rules/general-style-rules.md`:
 
-  - ✅ for success
+  - ✅ for success (or ✔︎ if the codebase prefers such Unicode symbols over emojis)
 
-  - ❌ for failure/error
+  - ❌ for failure/error (or ✘)
 
   - ⚠️ for warnings
 
@@ -155,17 +202,17 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
   const start = Date.now();
   // ... operation ...
   const duration = ((Date.now() - start) / 1000).toFixed(1);
-  console.log(colors.cyan(`⏰ Operation completed: ${duration}s`));
+  console.log(pc.cyan(`⏰ Operation completed: ${duration}s`));
   ```
 
 - **Show total time for multi-step operations:** For scripts that run multiple phases
   (like test suites), show individual phase times and a total.
 
   ```ts
-  console.log(colors.cyan(`⏰ Phase 1: ${phase1Time}s`));
-  console.log(colors.cyan(`⏰ Phase 2: ${phase2Time}s`));
+  console.log(pc.cyan(`⏰ Phase 1: ${phase1Time}s`));
+  console.log(pc.cyan(`⏰ Phase 2: ${phase2Time}s`));
   console.log('');
-  console.log(colors.green(`⏰ Total time: ${totalTime}s`));
+  console.log(pc.green(`⏰ Total time: ${totalTime}s`));
   ```
 
 ## Script Structure
@@ -206,6 +253,36 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
 - **Exit with proper codes:** Use `process.exit(0)` for success and `process.exit(1)`
   for failures. This is important for CI/CD pipelines and shell scripts.
 
+## Argument Validation
+
+- **For simple CLIs:** Commander.js built-in validation is sufficient.
+  Use `.choices()` for enums and `.argParser()` for custom parsing.
+
+  ```ts
+  .option('--format <type>', 'Output format')
+  .choices(['json', 'csv', 'table'])
+  ```
+
+- **For complex CLIs:** If you have complex option interdependencies or need detailed
+  validation errors, consider using `zod` to validate the parsed options object:
+
+  ```ts
+  import { z } from 'zod';
+  
+  const OptionsSchema = z.object({
+    input: z.string().min(1, 'Input file is required'),
+    output: z.string().optional(),
+    format: z.enum(['json', 'csv']).default('json'),
+  });
+  
+  // After Commander parses args:
+  const result = OptionsSchema.safeParse(options);
+  if (!result.success) {
+    p.log.error(result.error.issues[0].message);
+    process.exit(1);
+  }
+  ```
+
 ## File Naming
 
 - **Use descriptive kebab-case names:** CLI script files should use kebab-case with
@@ -240,8 +317,8 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
 
 ## Best Practices
 
-- **Don’t reinvent the wheel:** Use established patterns from existing CLI commands in
-  this project or best practices from other modern open source CLI tools in Typescript.
+- **Don’t reinvent the wheel:** Use established patterns from modern open source CLI
+  tools in TypeScript.
 
 - **Test with pipes:** Verify that scripts work correctly when output is piped (e.g.,
   `npm test | cat` should have no ANSI codes).
