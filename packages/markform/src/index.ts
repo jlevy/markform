@@ -168,3 +168,9 @@ export {
   // Frontmatter schema
   MarkformFrontmatterSchema,
 } from "./engine/types.js";
+
+// =============================================================================
+// Engine Exports
+// =============================================================================
+
+export { parseForm, ParseError } from "./engine/parse.js";
