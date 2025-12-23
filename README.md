@@ -36,17 +36,33 @@ pnpm build
 # Run tests
 pnpm test
 
-# CLI usage
-markform inspect examples/simple/simple.form.md
-markform export examples/simple/simple.form.md --format=json
-markform serve examples/simple/simple.form.md
+# CLI usage (use pnpm markform in development)
+pnpm markform inspect packages/markform/examples/simple/simple.form.md
+pnpm markform export packages/markform/examples/simple/simple.form.md --format=json
+pnpm markform serve packages/markform/examples/simple/simple.form.md
 
-# Fill a form with live agent (requires ANTHROPIC_API_KEY)
-markform fill examples/simple/simple.form.md --agent=live
+# Fill a form with live agent (requires API key for chosen provider)
+pnpm markform fill packages/markform/examples/simple/simple.form.md \
+  --agent=live --model=openai/gpt-4o
 
 # Fill a form with mock agent (for testing)
-markform fill examples/simple/simple.form.md --agent=mock --mock-source examples/simple/simple-mock-filled.form.md
+pnpm markform fill packages/markform/examples/simple/simple.form.md \
+  --agent=mock \
+  --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
+
+# See available providers and models
+pnpm markform fill --help
 ```
+
+## Supported Providers
+
+| Provider | Env Variable | Example Models |
+|----------|--------------|----------------|
+| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-haiku-4-5 |
+| openai | `OPENAI_API_KEY` | gpt-4o, gpt-4o-mini, o1 |
+| google | `GOOGLE_API_KEY` | gemini-2.0-flash, gemini-2.5-pro |
+| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
+| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
 
 ## Example Form
 

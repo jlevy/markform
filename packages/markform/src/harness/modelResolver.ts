@@ -49,27 +49,32 @@ export interface ResolvedModel {
  */
 const PROVIDERS: Record<
   ProviderName,
-  { package: string; envVar: string }
+  { package: string; envVar: string; createFn: string }
 > = {
   anthropic: {
     package: "@ai-sdk/anthropic",
     envVar: "ANTHROPIC_API_KEY",
+    createFn: "createAnthropic",
   },
   openai: {
     package: "@ai-sdk/openai",
     envVar: "OPENAI_API_KEY",
+    createFn: "createOpenAI",
   },
   google: {
     package: "@ai-sdk/google",
-    envVar: "GOOGLE_GENERATIVE_AI_API_KEY",
+    envVar: "GOOGLE_API_KEY",
+    createFn: "createGoogleGenerativeAI",
   },
   xai: {
     package: "@ai-sdk/xai",
     envVar: "XAI_API_KEY",
+    createFn: "createXai",
   },
   deepseek: {
     package: "@ai-sdk/deepseek",
     envVar: "DEEPSEEK_API_KEY",
+    createFn: "createDeepSeek",
   },
 };
 
@@ -153,16 +158,29 @@ export async function resolveModel(
     throw error;
   }
 
-  // Get the provider function (named export matching provider name)
-  const providerFn = providerModule[provider];
-  if (typeof providerFn !== "function") {
-    throw new Error(
-      `Provider package "${providerConfig.package}" does not export expected function "${provider}"`
-    );
-  }
+  // Get the createProvider function (e.g., createAnthropic, createOpenAI, createGoogleGenerativeAI)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createFn = providerModule[providerConfig.createFn] as ((options: { apiKey: string }) => any) | undefined;
 
-  // Create the model
-  const model = providerFn(modelId);
+  let model: LanguageModel;
+
+  if (createFn && typeof createFn === "function") {
+    // Use the factory function with explicit API key
+    // The provider instance is callable: providerInstance(modelId) returns a LanguageModel
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    model = createFn({ apiKey })(modelId);
+  } else {
+    // Fallback: try the simple provider function (for backwards compatibility)
+    const providerFn = providerModule[provider] as
+      | ((modelId: string) => LanguageModel)
+      | undefined;
+    if (typeof providerFn !== "function") {
+      throw new Error(
+        `Provider package "${providerConfig.package}" does not export expected function "${provider}" or "${providerConfig.createFn}"`
+      );
+    }
+    model = providerFn(modelId);
+  }
 
   return {
     model,

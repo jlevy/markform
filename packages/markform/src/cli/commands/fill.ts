@@ -42,8 +42,31 @@ import { generateVersionedPath } from "../lib/versioning.js";
 const AGENT_TYPES = ["mock", "live"] as const;
 type AgentType = (typeof AGENT_TYPES)[number];
 
-/** Default model for live agent */
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4-5";
+/**
+ * Example models for each provider.
+ * These are suggestions shown in help/error messages.
+ */
+const EXAMPLE_MODELS: Record<string, string[]> = {
+  anthropic: ["claude-sonnet-4-5", "claude-haiku-4-5", "claude-opus-4-5"],
+  openai: ["gpt-4o", "gpt-4o-mini", "o1", "o1-mini"],
+  google: ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.5-flash"],
+  xai: ["grok-4", "grok-4-fast"],
+  deepseek: ["deepseek-chat", "deepseek-reasoner"],
+};
+
+/**
+ * Format available models for display.
+ */
+function formatAvailableModels(): string {
+  const lines: string[] = ["Available providers and example models:"];
+  for (const [provider, models] of Object.entries(EXAMPLE_MODELS)) {
+    lines.push(`  ${provider}/`);
+    for (const model of models) {
+      lines.push(`    - ${provider}/${model}`);
+    }
+  }
+  return lines.join("\n");
+}
 
 /**
  * Format session transcript for console output.
@@ -113,8 +136,7 @@ export function registerFillCommand(program: Command): void {
     )
     .option(
       "--model <id>",
-      `Model ID for live agent (format: provider/model-id, default: ${DEFAULT_MODEL})`,
-      DEFAULT_MODEL
+      "Model ID for live agent (format: provider/model-id, e.g. openai/gpt-4o)"
     )
     .option("--mock-source <file>", "Path to completed form for mock agent")
     .option("--record <file>", "Record session transcript to file")
@@ -156,6 +178,13 @@ export function registerFillCommand(program: Command): void {
             process.exit(1);
           }
 
+          if (agentType === "live" && !options.model) {
+            logError("--agent=live requires --model <provider/model-id>");
+            console.log("");
+            console.log(formatAvailableModels());
+            process.exit(1);
+          }
+
           const startTime = Date.now();
 
           // Parse harness config
@@ -186,8 +215,8 @@ export function registerFillCommand(program: Command): void {
             const mockForm = parseForm(mockContent);
             agent = createMockAgent(mockForm);
           } else {
-            // Live agent uses LLM
-            const modelId = options.model ?? DEFAULT_MODEL;
+            // Live agent uses LLM (model is required, validated above)
+            const modelId = options.model!;
             logVerbose(ctx, `Resolving model: ${modelId}`);
             const { model } = await resolveModel(modelId);
             agent = createLiveAgent({ model });
@@ -267,7 +296,7 @@ export function registerFillCommand(program: Command): void {
             filePath,
             agentType,
             mockPath,
-            options.model ?? DEFAULT_MODEL,
+            options.model,
             harnessConfig as HarnessConfig,
             harness.getTurns(),
             stepResult.isComplete,
@@ -312,7 +341,7 @@ function buildSessionTranscript(
   formPath: string,
   agentType: AgentType,
   mockPath: string | undefined,
-  modelId: string,
+  modelId: string | undefined,
   harnessConfig: HarnessConfig,
   turns: SessionTranscript["turns"],
   expectComplete: boolean,
@@ -344,7 +373,7 @@ function buildSessionTranscript(
     transcript.mock = {
       completedMock: relativeMockPath,
     };
-  } else if (agentType === "live") {
+  } else if (agentType === "live" && modelId) {
     transcript.live = {
       modelId,
     };
