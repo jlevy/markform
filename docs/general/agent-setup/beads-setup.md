@@ -3,31 +3,17 @@
 **IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking.
 Do NOT use markdown TODOs or other ad-hoc issue tracking methods.
 
-**Run this now** to get an overview of `bd`:
+**Run this now** to check if `bd` is available:
 
 ```bash
 bd status || echo "bd not installed"
 ```
 
-**If bd is not installed, try these methods in order:**
+**If bd is not installed:**
 
-**Method 1: npm (recommended for most environments)**
-```bash
-npm install -g @beads/bd
-bd prime   # Get workflow context
-```
-
-**Method 2: Go install**
-```bash
-go install github.com/steveyegge/beads/cmd/bd@latest
-export PATH="$PATH:$HOME/go/bin" # Required each session
-bd prime   # Get workflow context
-```
-
-**Method 3: Manual download (fallback for network-restricted environments)**
-
-If npm/go fail with DNS or network errors (e.g., `getaddrinfo EAI_AGAIN`,
-`dial tcp: lookup storage.googleapis.com`), download the binary directly:
+Note: `npm install -g @beads/bd` and `go install` methods exist but typically fail in
+cloud environments (Claude Code web, containers) due to network restrictions.
+Use the direct download method:
 
 ```bash
 # Detect platform
@@ -47,45 +33,38 @@ tar -xzf /tmp/beads.tar.gz -C /tmp
 mkdir -p ~/.local/bin
 cp /tmp/bd ~/.local/bin/
 chmod +x ~/.local/bin/bd
-export PATH="$HOME/.local/bin:$PATH"  # Add to PATH
+export PATH="$HOME/.local/bin:$PATH"
 bd prime   # Get workflow context
 ```
 
-The script auto-detects your platform. For troubleshooting, see:
-https://github.com/steveyegge/beads/releases
+For troubleshooting, see: https://github.com/steveyegge/beads/releases
 
-**If bd says `Error: no beads database found` it requires one-time setup:**
+**If bd says `Error: no beads database found`:**
 ```bash
 bd init
-bd prime  # Get workflow context
+bd prime
 ```
 
 **If you encounter other errors:**
-```
-bd doctor  # Check installation health
-bd doctor --fix  # Fix any setup issues
+```bash
+bd doctor       # Check installation health
+bd doctor --fix # Fix any setup issues
 ```
 
 **SQLite WAL mode errors (common in containers/VMs):**
 
-If you see `failed to enable WAL mode: sqlite3: locking protocol`, the
-filesystem doesn't support proper file locking (common with 9p, NFS, or
-container-mounted filesystems). Use JSONL-only (`--no-db`) mode:
+If you see `failed to enable WAL mode: sqlite3: locking protocol`, use JSONL-only mode:
 
 ```bash
-# Option 1: Add to config permanently (recommended)
+# Add to config permanently (recommended)
 echo "no-db: true" >> .beads/config.yaml
 
-# Option 2: Use --no-db flag for each command
+# Or use --no-db flag for each command
 bd --no-db status
-bd --no-db ready
 ```
 
-`--no-db` mode reads/writes directly to `.beads/issues.jsonl` (the git-committed
-source of truth) without SQLite. This is fully functional for all workflows.
-
-Note: `--sandbox` mode is different—it disables daemon and auto-sync but still
-uses SQLite. Use `--no-db` specifically for filesystem locking issues.
+`--no-db` mode reads/writes directly to `.beads/issues.jsonl` without SQLite.
+This is fully functional for all workflows.
 
 ### Issue Types
 
@@ -172,24 +151,24 @@ bd automatically syncs with git:
 
 ### Important Rules
 
-- ✅ Use bd for ALL task tracking
+- Use bd for ALL task tracking
 
-- ✅ Always use `--json` flag for programmatic use
+- Always use `--json` flag for programmatic use
 
-- ✅ Link discovered work with `discovered-from` dependencies
+- Link discovered work with `discovered-from` dependencies
 
-- ✅ Check `bd ready` before asking “what should I work on?”
+- Check `bd ready` before asking “what should I work on?”
 
-- ✅ Store AI planning docs in `history/` directory
+- Store AI planning docs in `history/` directory
 
-- ✅ Run `bd <cmd> --help` to discover available flags
+- Run `bd <cmd> --help` to discover available flags
 
-- ✅ Run `bd sync --from-main` at session end
+- Run `bd sync --from-main` at session end
 
-- ❌ Do NOT use "high"/"medium"/"low" for priorities (use 0-4 or P0-P4)
+- Do NOT use "high"/"medium"/"low" for priorities (use 0-4 or P0-P4)
 
-- ❌ Do NOT use external issue trackers
+- Do NOT use external issue trackers
 
-- ❌ Do NOT duplicate tracking systems
+- Do NOT duplicate tracking systems
 
-- ❌ Do NOT clutter repo root with planning documents
+- Do NOT clutter repo root with planning documents
