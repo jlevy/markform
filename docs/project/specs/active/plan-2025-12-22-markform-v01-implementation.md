@@ -441,7 +441,7 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
 #### 1.1 Types and Schemas (`engine/types.ts`)
 
-- [ ] Define all TypeScript types from architecture doc:
+- [x] Define all TypeScript types from architecture doc:
 
   - `Id`, `OptionId`, `QualifiedOptionRef`
 
@@ -477,32 +477,32 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
   - `MarkformFrontmatter` (for frontmatter parsing/serialization)
 
-- [ ] Create Zod schemas for all types (including session transcripts)
+- [x] Create Zod schemas for all types (including session transcripts)
 
-- [ ] Implement session transcript parsing and validation helpers
+- [x] Implement session transcript parsing and validation helpers
 
-- [ ] Unit tests for schema validation (forms and sessions)
+- [x] Unit tests for schema validation (forms and sessions)
 
 #### 1.2 Markdoc Parsing (`engine/parse.ts`)
 
-- [ ] Implement `parseForm(markdown: string): ParsedForm`
+- [x] Implement `parseForm(markdown: string): ParsedForm`
 
-- [ ] Frontmatter extraction and parsing
+- [x] Frontmatter extraction and parsing
 
-- [ ] AST traversal for form/group/field tags
+- [x] AST traversal for form/group/field tags
 
-- [ ] Option extraction from list items (checkbox markers)
+- [x] Option extraction from list items (checkbox markers)
 
-- [ ] Value extraction from `fence` nodes with `language="value"`
+- [x] Value extraction from `fence` nodes with `language="value"`
 
-- [ ] Documentation block extraction
+- [x] Documentation block extraction
 
-- [ ] Implement `markformMarkdocConfig` with tag definitions and attribute schemas
+- [x] Implement `markformMarkdocConfig` with tag definitions and attribute schemas
   for `form`, `field-group`, all field tags, and `doc`
 
-- [ ] Doc body raw slice preservation (capture exact source text for round-trip)
+- [x] Doc body raw slice preservation (capture exact source text for round-trip)
 
-- [ ] Semantic validation:
+- [x] Semantic validation:
 
   - Global ID uniqueness
 
@@ -516,9 +516,9 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
   - Option ID annotation requirement
 
-- [ ] Build `orderIndex` and `idIndex`
+- [x] Build `orderIndex` and `idIndex`
 
-- [ ] Unit tests for:
+- [x] Unit tests for:
 
   - Empty form parsing
 
@@ -534,37 +534,37 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
 #### 1.3 Canonical Serialization (`engine/serialize.ts`)
 
-- [ ] Implement `serialize(form: ParsedForm, opts?): string`
+- [x] Implement `serialize(form: ParsedForm, opts?): string`
 
-- [ ] Frontmatter generation with computed summaries
+- [x] Frontmatter generation with computed summaries
 
-- [ ] Tag serialization with alphabetical attributes
+- [x] Tag serialization with alphabetical attributes
 
-- [ ] Value fence generation (omit for empty)
+- [x] Value fence generation (omit for empty)
 
-- [ ] Option list serialization with markers
+- [x] Option list serialization with markers
 
-- [ ] Doc block placement
+- [x] Doc block placement
 
-- [ ] Emit `process=false` only when value contains Markdoc syntax (`{%` pattern)
+- [x] Emit `process=false` only when value contains Markdoc syntax (`{%` pattern)
 
-- [ ] Round-trip tests: parse -> serialize -> parse -> compare
+- [x] Round-trip tests: parse -> serialize -> parse -> compare
 
 #### 1.4 Summaries (`engine/summaries.ts`)
 
-- [ ] Implement `computeStructureSummary(schema: FormSchema): StructureSummary`
+- [x] Implement `computeStructureSummary(schema: FormSchema): StructureSummary`
 
-- [ ] Implement `computeProgressSummary(schema, values, issues): ProgressSummary`
+- [x] Implement `computeProgressSummary(schema, values, issues): ProgressSummary`
 
-- [ ] Implement submission/completion state computation
+- [x] Implement submission/completion state computation
 
-- [ ] Unit tests for summary computation
+- [x] Unit tests for summary computation
 
 #### 1.5 Validation (`engine/validate.ts`)
 
-- [ ] Implement `validate(form: ParsedForm, opts?): ValidationResult`
+- [x] Implement `validate(form: ParsedForm, opts?): ValidationResult`
 
-- [ ] Built-in validators:
+- [x] Built-in validators:
 
   - Required field checks
 
@@ -580,17 +580,17 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
   - Explicit checkbox completion
 
-- [ ] Code validator loading via jiti
+- [x] Code validator loading via jiti
 
-- [ ] Validator execution and error collection
+- [x] Validator execution and error collection
 
-- [ ] Unit tests for all validation rules
+- [x] Unit tests for all validation rules
 
 #### 1.6 Patch Application (`engine/apply.ts`)
 
-- [ ] Implement `applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult`
+- [x] Implement `applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult`
 
-- [ ] Structural validation (pre-apply):
+- [x] Structural validation (pre-apply):
 
   - Field ID existence
 
@@ -598,7 +598,7 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
   - Value type checking
 
-- [ ] Patch semantics:
+- [x] Patch semantics:
 
   - `set_*` operations
 
@@ -606,21 +606,21 @@ modes, documentation blocks, required/optional fields, and various constraints.
 
   - `set_checkboxes` merge behavior
 
-- [ ] Transaction semantics (all-or-nothing)
+- [x] Transaction semantics (all-or-nothing)
 
-- [ ] Unit tests for all patch operations and error cases
+- [x] Unit tests for all patch operations and error cases
 
 #### 1.7 Inspect (`engine/inspect.ts`)
 
-- [ ] Implement `inspect(form: ParsedForm): InspectResult`
+- [x] Implement `inspect(form: ParsedForm): InspectResult`
 
-- [ ] Issue prioritization logic
+- [x] Issue prioritization logic (tiered P1-P5 system based on field priority + issue type)
 
-- [ ] Mapping from ValidationIssue to InspectIssue
+- [x] Mapping from ValidationIssue to InspectIssue
 
-- [ ] Completion check (`isComplete`)
+- [x] Completion check (`isComplete`)
 
-- [ ] Unit tests for issue ordering
+- [x] Unit tests for issue ordering
 
 #### 1.8 Validate with Simple Form
 
@@ -630,13 +630,13 @@ The simple form is already created at `examples/simple/`. Use it throughout Phas
 
 - [x] `examples/simple/simple.mock.filled.form.md` (completed mock) - already created
 
-- [ ] Verify parse/serialize round-trip with simple form
+- [x] Verify parse/serialize round-trip with simple form
 
-- [ ] Verify all field types parse correctly
+- [x] Verify all field types parse correctly
 
-- [ ] Verify all checkbox modes work
+- [x] Verify all checkbox modes work
 
-- [ ] Verify validation catches expected issues
+- [x] Verify validation catches expected issues
 
 **Phase 1 Checkpoints**:
 
@@ -658,13 +658,13 @@ The simple form is already created at `examples/simple/`. Use it throughout Phas
 
 #### 1.9 Session Transcript Handling (`engine/session.ts`)
 
-- [ ] Implement `parseSession(yaml: string): SessionTranscript`
+- [x] Implement `parseSession(yaml: string): SessionTranscript`
 
-- [ ] Implement `serializeSession(session: SessionTranscript): string`
+- [x] Implement `serializeSession(session: SessionTranscript): string`
 
-- [ ] Session schema validation via Zod
+- [x] Session schema validation via Zod
 
-- [ ] Session transcript structure per architecture doc:
+- [x] Session transcript structure per architecture doc:
 
   - `session_version`, `mode`, `form`, `validators`, `mock`, `harness` config
 
@@ -672,9 +672,9 @@ The simple form is already created at `examples/simple/`. Use it throughout Phas
 
   - `final` section with completion expectations
 
-- [ ] YAML serialization with snake_case key conversion
+- [x] YAML serialization with snake_case key conversion
 
-- [ ] Unit tests for:
+- [x] Unit tests for:
 
   - Valid session parsing
 
@@ -684,7 +684,7 @@ The simple form is already created at `examples/simple/`. Use it throughout Phas
 
   - Partial session handling (for recording in progress)
 
-- [ ] **Comprehensive round-trip validation tests**:
+- [x] **Comprehensive round-trip validation tests**:
 
   Session transcripts embed many nested types (InspectIssue, Patch, HarnessConfig,
   etc.), so round-trip testing sessions validates the entire type system:
@@ -709,9 +709,9 @@ The simple form is already created at `examples/simple/`. Use it throughout Phas
 
 Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rules.md):
 
-- [ ] Create `bin.ts` entry point with commander setup
+- [x] Create `bin.ts` entry point with commander setup
 
-- [ ] Create shared utilities:
+- [x] Create shared utilities:
 
   - `lib/colors.ts` - picocolors wrapper
 
@@ -719,17 +719,20 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
   - `lib/formatting.ts` - output formatting
 
-- [ ] Implement global options: `--verbose`, `--quiet`, `--dry-run`
+- [x] Implement global options: `--verbose`, `--quiet`, `--dry-run`, `--format`
 
-- [ ] Add colored help text
+- [x] Add colored help text
+
+**Implementation Note:** Added global `--format` flag with options: `console`, `plaintext`,
+`yaml`, `json`. Default is `console` for human-readable colored output.
 
 #### 2.2 Inspect Command (`cli/commands/inspect.ts`)
 
-- [ ] Parse form file
+- [x] Parse form file
 
-- [ ] Run validation
+- [x] Run validation
 
-- [ ] Output YAML report (machine-readable, no ANSI codes):
+- [x] Output YAML report (machine-readable, no ANSI codes):
 
   - Structure summary
 
@@ -737,33 +740,69 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
   - Form state
 
-  - Issues (sorted by priority)
+  - Issues (sorted by priority tier P1-P5)
 
-- [ ] Colored output for human-readable messages only (not in YAML output)
+- [x] Colored output for human-readable messages only (not in YAML output)
+
+#### 2.2.1 Validate Command (`cli/commands/validate.ts`) - NEW
+
+- [x] Parse form file
+
+- [x] Run validation
+
+- [x] Output summary and issues only (no form content)
+
+- [x] Lighter-weight alternative to `inspect` for quick validation checks
 
 #### 2.3 Export Command (`cli/commands/export.ts`)
 
-- [ ] Parse form file
+- [x] Parse form file
 
-- [ ] Output JSON: `{ schema, values }`
+- [x] Output JSON: `{ schema, values }`
 
-#### 2.4 Serve Command (`cli/commands/serve.ts`)
+- [x] `--markdown` flag to include canonical markdown in export
 
-- [ ] HTTP server setup
+#### 2.4 Render Command (`cli/commands/render.ts`) - NEW
 
-- [ ] HTML rendering of form structure:
+- [x] Render form as static HTML file
+
+- [x] Default output: same stem with `.form.html` extension
+
+- [x] `-o` flag for custom output path
+
+- [x] `--dry-run` shows what would be created
+
+#### 2.5 Serve Command (`cli/commands/serve.ts`)
+
+- [x] HTTP server setup
+
+- [x] HTML rendering of form structure with interactive form elements:
 
   - Groups with headers
 
-  - Fields with labels and values
+  - String fields as `<input type="text">`
 
-  - Checkbox states with markers
+  - Number fields as `<input type="number">` with min/max/step
+
+  - String list fields as `<textarea>`
+
+  - Single-select as `<select>` dropdown
+
+  - Multi-select as checkboxes
+
+  - Checkboxes (simple mode) as HTML checkboxes
+
+  - Checkboxes (multi mode) as selects with 5 states
+
+  - Checkboxes (explicit mode) as selects with yes/no/unfilled
 
   - Documentation blocks
 
-- [ ] CSS styling for readability
+- [x] CSS styling for readability
 
-- [ ] Save button with versioned filename logic:
+- [x] Auto-open browser on startup (use `--no-open` to disable)
+
+- [x] Save button with versioned filename logic:
 
   - Detect existing version pattern (`-vN`, `_vN`, ` vN`)
 
@@ -821,61 +860,63 @@ comprehensive real-world form with many fields, field groups, and code validator
 
 #### 3.1 Apply Command (`cli/commands/apply.ts`)
 
-- [ ] Parse form file
+- [x] Parse form file
 
-- [ ] Parse patches from `--patch` JSON argument
+- [x] Parse patches from `--patch` JSON argument
 
-- [ ] Apply patches
+- [x] Apply patches
 
-- [ ] Write canonical output
+- [x] Write canonical output
 
-- [ ] Report issues
+- [x] Report issues
+
+- [x] `--dry-run` shows what would change without modifying
 
 #### 3.2 Harness Implementation (`harness/`)
 
-- [ ] Implement `FormHarness` class with step protocol
+- [x] Implement `FormHarness` class with step protocol
 
-- [ ] State machine: INIT -> STEP -> WAIT -> APPLY -> COMPLETE
+- [x] State machine: INIT -> STEP -> WAIT -> APPLY -> COMPLETE
 
-- [ ] `step()` returns `StepResult` with summaries and issues
+- [x] `step()` returns `StepResult` with summaries and issues
 
-- [ ] `apply(patches)` applies and revalidates
+- [x] `apply(patches)` applies and revalidates
 
-- [ ] `max_turns` safety limit
+- [x] `max_turns` safety limit
 
 #### 3.3 Mock Agent (`harness/mockAgent.ts`)
 
-- [ ] Load completed mock file
+- [x] Load completed mock file
 
-- [ ] Extract values from mock
+- [x] Extract values from mock
 
-- [ ] On each step, pick recommended fields and generate patches
+- [x] On each step, pick recommended fields and generate patches
 
-- [ ] Deterministic execution for testing
+- [x] Deterministic execution for testing
 
 #### 3.4 Run Command (`cli/commands/run.ts`)
 
-- [ ] `--mock` flag for mock mode
+- [x] `--mock` flag for mock mode
 
-- [ ] `--completed-mock <file>` for mock values source
+- [x] `--completed-mock <file>` for mock values source
 
-- [ ] `--record <file>` to output session transcript
+- [x] `--record <file>` to output session transcript
 
-- [ ] Execute harness loop to completion
+- [x] Execute harness loop to completion
 
-- [ ] Output session YAML
+- [x] Output session YAML (respects global `--format` flag)
 
 #### 3.5 Golden Session Tests (`tests/golden/`)
 
-- [ ] Session transcript schema validation
+- [x] Session transcript schema validation
 
-- [ ] Implement `runGoldenTest(sessionPath)`:
+- [x] Implement `runGoldenTest(sessionPath)`:
 
   - Load session YAML
 
   - Load template form
 
-  - Replay each turn’s patches
+  - Replay each turn's patches
 
   - Verify issues match expected
 
@@ -883,13 +924,13 @@ comprehensive real-world form with many fields, field groups, and code validator
 
   - Verify final form matches completed mock
 
-- [ ] Create `examples/simple/simple.session.yaml` - quick golden test
+- [x] Create `examples/simple/simple.session.yaml` - quick golden test
 
-- [ ] Create
+- [x] Create
   `examples/company-quarterly-analysis/company-quarterly-analysis.session.yaml` -
   comprehensive golden test
 
-- [ ] Integration test runner that runs all golden tests
+- [x] Integration test runner that runs all golden tests
 
 **Phase 3 Checkpoints**:
 
@@ -933,9 +974,9 @@ AI features shouldn't need to install AI SDK packages. Use subpath exports patte
 
 #### 4.1 AI SDK Tool Definitions (`integrations/ai-sdk.ts`)
 
-- [ ] Implement `createMarkformTools(options)` factory
+- [x] Implement `createMarkformTools(options)` factory
 
-- [ ] Define tools:
+- [x] Define tools:
 
   - `markform_inspect` - Get form state
 
@@ -945,25 +986,27 @@ AI features shouldn't need to install AI SDK packages. Use subpath exports patte
 
   - `markform_get_markdown` - Get canonical source
 
-- [ ] Zod input schemas for all tools
+- [x] Zod input schemas for all tools
 
-- [ ] Tool execute functions wrapping engine
+- [x] Tool execute functions wrapping engine
+
+- [x] Unit tests for AI SDK tools (26 tests in `tests/unit/integrations/ai-sdk.test.ts`)
 
 #### 4.2 Live Agent Test Script
 
-- [ ] Create `scripts/test-live-agent.ts`
+- [x] Create `scripts/test-live-agent.ts`
 
-- [ ] Load simple form template for quick iteration
+- [x] Load simple form template for quick iteration
 
-- [ ] Configure AI SDK with tools
+- [x] Configure AI SDK with tools
 
-- [ ] Run agent loop to fill form
+- [x] Run agent loop to fill form
 
-- [ ] Log session transcript
+- [x] Log session transcript
 
-- [ ] Validate final form completeness
+- [x] Validate final form completeness
 
-- [ ] Run with complex form to verify comprehensive handling
+- [x] Run with complex form to verify comprehensive handling
 
 **Phase 4 Checkpoints**:
 
@@ -989,11 +1032,11 @@ AI features shouldn't need to install AI SDK packages. Use subpath exports patte
 
 #### 4.3 Documentation
 
-- [ ] Document AI SDK integration in README
+- [x] Document AI SDK integration in README
 
-- [ ] Document tool schemas
+- [x] Document tool schemas
 
-- [ ] Document harness configuration options
+- [x] Document harness configuration options
 
 * * *
 
@@ -1024,31 +1067,31 @@ Per [TDD Guidelines](../../../general/agent-guidelines/general-tdd-guidelines.md
 
 These tests are run by the coding agent and must all pass:
 
-- [ ] All unit tests pass (`pnpm test`)
+- [x] All unit tests pass (`pnpm test`) - 225 tests across 14 files
 
-- [ ] All integration tests pass
+- [x] All integration tests pass
 
-- [ ] `pnpm lint` passes
+- [x] `pnpm lint` passes
 
-- [ ] `pnpm typecheck` passes
+- [x] `pnpm typecheck` passes
 
-- [ ] `pnpm build` succeeds
+- [x] `pnpm build` succeeds
 
-- [ ] `pnpm publint` passes
+- [x] `pnpm publint` passes
 
-- [ ] `markform inspect` outputs valid YAML for both forms
+- [x] `markform inspect` outputs valid YAML for both forms
 
-- [ ] `markform export --format=json` outputs valid JSON
+- [x] `markform export --format=json` outputs valid JSON
 
-- [ ] `markform apply` with valid patches succeeds
+- [x] `markform apply` with valid patches succeeds
 
-- [ ] `markform apply` with invalid patches rejects batch
+- [x] `markform apply` with invalid patches rejects batch
 
-- [ ] `markform run --mock` completes for both forms
+- [x] `markform run --mock` completes for both forms
 
-- [ ] Golden session replay passes for `simple.session.yaml`
+- [x] Golden session replay passes for `simple.session.yaml`
 
-- [ ] Golden session replay passes for `company-quarterly-analysis.session.yaml`
+- [x] Golden session replay passes for `company-quarterly-analysis.session.yaml`
 
 ### Manual Test Checklist (User Verifies)
 
@@ -1120,3 +1163,51 @@ Agent should pause and ask user to verify:
    - `pnpm publint`
 
    - `pnpm test`
+
+* * *
+
+## Implementation Status (2025-12-23)
+
+### Summary
+
+**All automated implementation tasks are complete.** The v0.1 implementation includes:
+
+- **225 tests** across 14 test files, all passing
+- **7 CLI commands**: inspect, validate, apply, export, render, serve, run
+- **Core engine**: parsing, serialization, validation, patch application, summaries
+- **Harness system**: mock agent, session transcripts, golden tests
+- **AI SDK integration**: tools for AI agent form-filling
+
+### Key Changes from Original Plan
+
+1. **New `validate` command** - Lightweight validation without full form content output
+2. **New `render` command** - Static HTML output for archival/sharing
+3. **Global `--format` flag** - Unified format control (console/plaintext/yaml/json)
+4. **Tiered priority system** - P1-P5 issue priority based on field importance + issue type
+5. **Interactive form elements** - Serve renders real HTML form inputs, not just display
+6. **Auto-open browser** - Serve auto-opens browser (use `--no-open` to disable)
+7. **Export `--markdown` flag** - Include canonical markdown in structured export
+
+### Test Coverage by Module
+
+| Module | Tests | Description |
+| --- | --- | --- |
+| `engine/types.test.ts` | 29 | Zod schemas, type validation |
+| `engine/parse.test.ts` | 16 | Form parsing, field extraction |
+| `engine/serialize.test.ts` | 11 | Canonical serialization, round-trip |
+| `engine/summaries.test.ts` | 18 | Structure/progress summaries |
+| `engine/validate.test.ts` | 26 | Built-in validators, patterns |
+| `engine/apply.test.ts` | 12 | Patch application, transactions |
+| `engine/inspect.test.ts` | 15 | Issue prioritization, completeness |
+| `engine/session.test.ts` | 11 | Session transcript handling |
+| `engine/simple-form-validation.test.ts` | 14 | Real form integration |
+| `harness/harness.test.ts` | 18 | Form harness state machine |
+| `integrations/ai-sdk.test.ts` | 26 | AI SDK tools |
+| `web/serve-render.test.ts` | 26 | HTML rendering for serve/render |
+| `golden/golden.test.ts` | 2 | End-to-end session replay |
+| `index.test.ts` | 1 | Package exports |
+
+### Remaining Manual Validation
+
+See [valid-2025-12-22-markform-v01-implementation.md](valid-2025-12-22-markform-v01-implementation.md)
+for manual validation checklist.

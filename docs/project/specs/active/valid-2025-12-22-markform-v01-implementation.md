@@ -82,6 +82,7 @@ Verify CLI help and version output for all commands:
 pnpm markform --version
 pnpm markform --help
 pnpm markform inspect --help
+pnpm markform validate --help
 pnpm markform export --help
 pnpm markform apply --help
 pnpm markform render --help
@@ -90,9 +91,9 @@ pnpm markform run --help
 ```
 
 - [x] Version shows `0.1.0`
-- [x] Main help lists all 6 commands (inspect, export, apply, render, serve, run)
+- [x] Main help lists all 7 commands (inspect, validate, apply, export, render, serve, run)
 - [x] Each command help shows relevant options
-- [x] Global flags documented: `--verbose`, `--quiet`, `--dry-run`
+- [x] Global flags documented: `--verbose`, `--quiet`, `--dry-run`, `--format`
 
 ### 2. Golden Session Tests (Manual Verification)
 
@@ -114,18 +115,37 @@ cat packages/markform/tests/golden/sessions/company-quarterly-analysis.session.y
 ### 3. CLI Inspect Command
 
 ```bash
-# Inspect simple form (YAML output)
+# Inspect simple form (console output with colors)
 pnpm markform inspect packages/markform/examples/simple/simple.form.md
 
 # Inspect with JSON output
 pnpm markform inspect packages/markform/examples/simple/simple.form.md --format=json
+
+# Inspect with YAML output
+pnpm markform inspect packages/markform/examples/simple/simple.form.md --format=yaml
 ```
 
-- [x] YAML output shows structure, progress, form_state, and issues
+- [x] Console output shows structure, progress, form_state, and issues with colors
 - [x] JSON output is valid JSON with same content
+- [x] YAML output is valid YAML with same content
 - [x] Shows 12 fields across 5 groups
 - [x] Shows 9 required fields missing (form is empty)
+- [x] Issues sorted by priority tier (P1-P5) based on field importance + issue type
 - [ ] Terminal colors work for section headers (requires interactive terminal)
+
+### 3.1 CLI Validate Command (NEW)
+
+```bash
+# Quick validation check (summary + issues only, no form content)
+pnpm markform validate packages/markform/examples/simple/simple.form.md
+
+# With JSON output
+pnpm markform validate packages/markform/examples/simple/simple.form.md --format=json
+```
+
+- [x] Outputs progress summary and issues without full form structure
+- [x] Lighter-weight alternative to inspect for quick validation checks
+- [x] Respects global `--format` flag
 
 ### 4. CLI Export Command
 
@@ -327,8 +347,9 @@ AI SDK tools are verified via unit tests in `tests/unit/integrations/ai-sdk.test
 | Command | Result | Notes |
 |---------|--------|-------|
 | `--version` | ✅ PASS | Shows 0.1.0 |
-| `--help` | ✅ PASS | Lists all 6 commands |
-| `inspect` | ✅ PASS | YAML/JSON output, structure/progress/issues |
+| `--help` | ✅ PASS | Lists all 7 commands |
+| `inspect` | ✅ PASS | Console/YAML/JSON output, structure/progress/issues, P1-P5 priority |
+| `validate` | ✅ PASS | Lightweight validation check (no form content) |
 | `export` | ✅ PASS | Valid JSON schema/values, `--markdown` flag works |
 | `apply` | ✅ PASS | Patches apply correctly, `--dry-run` works |
 | `render` | ✅ PASS | Static HTML output, `-o` flag works |
@@ -350,10 +371,15 @@ All previously discovered issues have been resolved:
 2. ~~**Export command `markdown` field**~~: ✅ RESOLVED - Added `--markdown` flag to export command
 3. **Serve auto-open browser**: ✅ RESOLVED - Browser now auto-opens; use `--no-open` to disable
 4. **Render command**: ✅ ADDED - New `render` command for static HTML output
+5. **Validate command**: ✅ ADDED - Lightweight validation without full form content
+6. **Tiered priority system**: ✅ ADDED - P1-P5 issue priority based on field importance + issue type
+7. **Global `--format` flag**: ✅ ADDED - Unified format control (console/plaintext/yaml/json)
 
 ### Outstanding Manual Tests
 
 The following require interactive testing:
+- Browser testing of serve command (visual appearance, save workflow)
+- Terminal colors in interactive terminal
 - Live AI agent testing (requires valid API key with credits)
 - Documentation review
 
@@ -366,3 +392,4 @@ The following require interactive testing:
 - 2025-12-23: Initial validation spec created for v0.1 implementation
 - 2025-12-23: Comprehensive validation completed; added validation summary and test results
 - 2025-12-23: Resolved all discovered issues (markform-82, 83, 84, 88); added render command, export --markdown, serve auto-open, verified apply --dry-run
+- 2025-12-23: Updated for branch fixups1 - added validate command, tiered priority (P1-P5), global --format flag; updated CLI help to show 7 commands
