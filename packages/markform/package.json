@@ -29,6 +29,16 @@
         "default": "./dist/cli.cjs"
       }
     },
+    "./ai-sdk": {
+      "import": {
+        "types": "./dist/ai-sdk.d.mts",
+        "default": "./dist/ai-sdk.mjs"
+      },
+      "require": {
+        "types": "./dist/ai-sdk.d.cts",
+        "default": "./dist/ai-sdk.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "bin": {

@@ -191,3 +191,11 @@ export type { ValidateOptions, ValidateResult } from "./engine/validate.js";
 export { inspect } from "./engine/inspect.js";
 export type { InspectOptions } from "./engine/inspect.js";
 export { parseSession, serializeSession } from "./engine/session.js";
+export { applyPatches } from "./engine/apply.js";
+
+// =============================================================================
+// Harness Exports
+// =============================================================================
+
+export { FormHarness, createHarness } from "./harness/harness.js";
+export { MockAgent, createMockAgent } from "./harness/mockAgent.js";

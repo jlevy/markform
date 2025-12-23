@@ -146,6 +146,68 @@ pnpm --filter markform test:golden
 pnpm --filter markform test -- --watch
 ```
 
+## AI SDK Integration
+
+Markform provides AI SDK compatible tools for agent-driven form filling.
+
+### Installation
+
+```bash
+# Install Markform
+pnpm add markform
+
+# For live agent testing, also install:
+pnpm add ai @ai-sdk/anthropic
+```
+
+### Usage
+
+```typescript
+import { parseForm } from "markform";
+import { createMarkformTools, MarkformSessionStore } from "markform/ai-sdk";
+import { generateText } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+
+// Parse a form
+const form = parseForm(markdownContent);
+
+// Create session store and tools
+const store = new MarkformSessionStore(form);
+const tools = createMarkformTools({ sessionStore: store });
+
+// Use with AI SDK
+const result = await generateText({
+  model: anthropic("claude-sonnet-4-20250514"),
+  prompt: "Fill out this form with appropriate values...",
+  tools,
+  maxSteps: 10,
+});
+```
+
+### Available Tools
+
+| Tool | Description |
+| --- | --- |
+| `markform_inspect` | Get current form state, issues, and progress |
+| `markform_apply` | Apply patches to update field values |
+| `markform_export` | Export schema and values as JSON |
+| `markform_get_markdown` | Get canonical Markdown representation |
+
+### Live Agent Test Script
+
+A test script is provided for validating the AI SDK integration:
+
+```bash
+# Run with mock agent (no API key needed)
+npx tsx packages/markform/scripts/test-live-agent.ts
+
+# Run with live agent (requires ANTHROPIC_API_KEY)
+ANTHROPIC_API_KEY=your-key npx tsx packages/markform/scripts/test-live-agent.ts
+
+# Specify a different form
+npx tsx packages/markform/scripts/test-live-agent.ts path/to/form.md
+```
+
 * * *
 
 > **Note:** This is an initial version created during Phase 0 scaffolding.

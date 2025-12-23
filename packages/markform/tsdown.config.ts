@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     cli: "src/cli/cli.ts",
     bin: "src/cli/bin.ts",
+    "ai-sdk": "src/integrations/ai-sdk.ts",
   },
   format: ["esm", "cjs"],
   platform: "node",
