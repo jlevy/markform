@@ -13,7 +13,8 @@ IMPORTANT: You MUST read ./docs/development.md and ./docs/docs-overview.md for p
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
+   git add .beads/issues.jsonl   # Include issue changes
+   git commit -m "..." --amend   # Or new commit if needed
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -26,3 +27,4 @@ IMPORTANT: You MUST read ./docs/development.md and ./docs/docs-overview.md for p
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+- Do NOT run `bd sync` - this project uses no-db mode (JSONL is the database)

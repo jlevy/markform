@@ -83,10 +83,33 @@ bd --no-db status
 `--no-db` mode reads/writes directly to `.beads/issues.jsonl` without SQLite.
 This is fully functional for all workflows.
 
+### This Project Uses no-db Mode
+
+**IMPORTANT:** This project has `no-db: true` in `.beads/config.yaml`.
+
+In no-db mode, the JSONL file IS the database.
+This means:
+
+- **Do NOT run `bd sync`** - it will fail or corrupt data
+
+- bd commands read/write directly to `.beads/issues.jsonl`
+
+- Use git to sync issues between environments (not `bd sync`)
+
+**Session close protocol for no-db mode:**
+```bash
+git status                      # Check what changed
+git add <files>                 # Stage code changes
+git add .beads/issues.jsonl     # Stage issue changes
+git commit -m "..."             # Commit everything
+git push                        # Push to remote
+```
+
 ### Git Merge Driver (IMPORTANT)
 
-The beads JSONL file requires a custom git merge driver to handle 3-way merges correctly.
-Without it, git will use line-based merging which can corrupt issue statuses during merges.
+The beads JSONL file requires a custom git merge driver to handle 3-way merges
+correctly. Without it, git will use line-based merging which can corrupt issue statuses
+during merges.
 
 **Check if configured:**
 ```bash
@@ -104,8 +127,9 @@ The `.gitattributes` file should already contain:
 .beads/issues.jsonl merge=beads
 ```
 
-**Note:** `bd init` automatically configures the merge driver. If you cloned an existing
-repo with beads, run the config commands above or `bd doctor --fix` to set it up.
+**Note:** `bd init` automatically configures the merge driver.
+If you cloned an existing repo with beads, run the config commands above or `bd doctor
+--fix` to set it up.
 
 ### Issue Types
 
@@ -156,23 +180,12 @@ Use `0-4` or `P0-P4` format (NOT "high"/"medium"/"low"):
 
 6. **Session close protocol** (CRITICAL - before saying “done”):
    ```bash
-   git status              # Check what changed
-   git add <files>         # Stage code changes
-   bd sync --from-main     # Pull beads updates from main
-   git commit -m "..."     # Commit code changes
+   git status                      # Check what changed
+   git add <files>                 # Stage code changes
+   git add .beads/issues.jsonl     # Stage issue changes (if modified)
+   git commit -m "..."             # Commit everything
+   git push                        # Push to remote
    ```
-
-### Sync & Collaboration
-
-bd automatically syncs with git:
-
-- Exports to `.beads/issues.jsonl` after CRUD operations (5s debounce)
-
-- Imports from JSONL when newer than DB (e.g., after `git pull`)
-
-- Run `bd sync --from-main` at session end (especially for ephemeral branches)
-
-- Check sync status: `bd sync --status`
 
 ### Useful Commands
 
@@ -204,7 +217,7 @@ bd automatically syncs with git:
 
 - Run `bd <cmd> --help` to discover available flags
 
-- Run `bd sync --from-main` at session end
+- Do NOT run `bd sync` (this project uses no-db mode)
 
 - Do NOT use "high"/"medium"/"low" for priorities (use 0-4 or P0-P4)
 
