@@ -14,6 +14,7 @@ import { registerDumpCommand } from "./commands/dump.js";
 import { registerExportCommand } from "./commands/export.js";
 import { registerFillCommand } from "./commands/fill.js";
 import { registerInspectCommand } from "./commands/inspect.js";
+import { registerModelsCommand } from "./commands/models.js";
 import { registerRenderCommand } from "./commands/render.js";
 import { registerServeCommand } from "./commands/serve.js";
 import { registerValidateCommand } from "./commands/validate.js";
@@ -60,6 +61,7 @@ function createProgram(): Command {
   registerRenderCommand(program);
   registerServeCommand(program);
   registerFillCommand(program);
+  registerModelsCommand(program);
 
   return program;
 }

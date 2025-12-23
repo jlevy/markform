@@ -24,6 +24,7 @@ import { createLiveAgent } from "../../harness/liveAgent.js";
 import { createMockAgent } from "../../harness/mockAgent.js";
 import type { Agent } from "../../harness/mockAgent.js";
 import { resolveModel } from "../../harness/modelResolver.js";
+import { formatSuggestedLlms } from "../../settings.js";
 import {
   formatOutput,
   getCommandContext,
@@ -41,32 +42,6 @@ import { generateVersionedPath } from "../lib/versioning.js";
 /** Supported agent types */
 const AGENT_TYPES = ["mock", "live"] as const;
 type AgentType = (typeof AGENT_TYPES)[number];
-
-/**
- * Example models for each provider.
- * These are suggestions shown in help/error messages.
- */
-const EXAMPLE_MODELS: Record<string, string[]> = {
-  anthropic: ["claude-sonnet-4-5", "claude-haiku-4-5", "claude-opus-4-5"],
-  openai: ["gpt-4o", "gpt-4o-mini", "o1", "o1-mini"],
-  google: ["gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.5-flash"],
-  xai: ["grok-4", "grok-4-fast"],
-  deepseek: ["deepseek-chat", "deepseek-reasoner"],
-};
-
-/**
- * Format available models for display.
- */
-function formatAvailableModels(): string {
-  const lines: string[] = ["Available providers and example models:"];
-  for (const [provider, models] of Object.entries(EXAMPLE_MODELS)) {
-    lines.push(`  ${provider}/`);
-    for (const model of models) {
-      lines.push(`    - ${provider}/${model}`);
-    }
-  }
-  return lines.join("\n");
-}
 
 /**
  * Format session transcript for console output.
@@ -181,7 +156,7 @@ export function registerFillCommand(program: Command): void {
           if (agentType === "live" && !options.model) {
             logError("--agent=live requires --model <provider/model-id>");
             console.log("");
-            console.log(formatAvailableModels());
+            console.log(formatSuggestedLlms());
             process.exit(1);
           }
 

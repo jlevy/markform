@@ -45,6 +45,14 @@ export interface ResolvedModel {
 // =============================================================================
 
 /**
+ * Provider configuration info for display purposes.
+ */
+export interface ProviderInfo {
+  package: string;
+  envVar: string;
+}
+
+/**
  * Map of provider names to their npm package and env var.
  */
 const PROVIDERS: Record<
@@ -186,5 +194,23 @@ export async function resolveModel(
     model,
     provider,
     modelId,
+  };
+}
+
+/**
+ * Get list of supported provider names.
+ */
+export function getProviderNames(): ProviderName[] {
+  return Object.keys(PROVIDERS) as ProviderName[];
+}
+
+/**
+ * Get provider info for display purposes.
+ */
+export function getProviderInfo(provider: ProviderName): ProviderInfo {
+  const config = PROVIDERS[provider];
+  return {
+    package: config.package,
+    envVar: config.envVar,
   };
 }
