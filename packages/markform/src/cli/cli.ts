@@ -11,9 +11,9 @@ import pc from "picocolors";
 import { VERSION } from "../index.js";
 import { registerApplyCommand } from "./commands/apply.js";
 import { registerExportCommand } from "./commands/export.js";
+import { registerFillCommand } from "./commands/fill.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerRenderCommand } from "./commands/render.js";
-import { registerRunCommand } from "./commands/run.js";
 import { registerServeCommand } from "./commands/serve.js";
 import { registerValidateCommand } from "./commands/validate.js";
 import { OUTPUT_FORMATS } from "./lib/shared.js";
@@ -56,7 +56,7 @@ function createProgram(): Command {
   registerExportCommand(program);
   registerRenderCommand(program);
   registerServeCommand(program);
-  registerRunCommand(program);
+  registerFillCommand(program);
 
   return program;
 }

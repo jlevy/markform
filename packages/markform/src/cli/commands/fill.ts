@@ -1,8 +1,8 @@
 /**
- * Run command - Execute the harness loop to fill a form.
+ * Fill command - Run an agent to autonomously fill a form.
  *
- * Supports mock mode for deterministic testing and recording
- * session transcripts for golden tests.
+ * Supports both mock mode (for testing) and live mode (with LLM agent).
+ * Records session transcripts for debugging and golden tests.
  */
 
 import type { Command } from "commander";
@@ -32,6 +32,13 @@ import {
   readFile,
   writeFile,
 } from "../lib/shared.js";
+
+/** Supported agent types */
+const AGENT_TYPES = ["mock", "live"] as const;
+type AgentType = (typeof AGENT_TYPES)[number];
+
+/** Default model for live agent */
+const DEFAULT_MODEL = "anthropic:claude-sonnet-4-5";
 
 /**
  * Format session transcript for console output.
@@ -88,28 +95,40 @@ function formatConsoleSession(
 }
 
 /**
- * Register the run command.
+ * Register the fill command.
  */
-export function registerRunCommand(program: Command): void {
+export function registerFillCommand(program: Command): void {
   program
-    .command("run <file>")
-    .description("Run the harness loop to fill a form")
-    .option("--mock", "Use mock agent for testing")
-    .option("--completed-mock <file>", "Path to completed mock file")
-    .option("--record <file>", "Record session to file")
+    .command("fill <file>")
+    .description("Run an agent to autonomously fill a form")
+    .option(
+      "--agent <type>",
+      `Agent type: ${AGENT_TYPES.join(", ")} (default: live)`,
+      "live"
+    )
+    .option(
+      "--model <id>",
+      `Model ID for live agent (format: provider:model-id, default: ${DEFAULT_MODEL})`,
+      DEFAULT_MODEL
+    )
+    .option("--mock-source <file>", "Path to completed form for mock agent")
+    .option("--record <file>", "Record session transcript to file")
     .option("--max-turns <n>", "Maximum turns (default: 50)", "50")
     .option("--max-patches <n>", "Maximum patches per turn (default: 20)", "20")
     .option("--max-issues <n>", "Maximum issues per step (default: 10)", "10")
+    .option("-o, --output <file>", "Write final form to file")
     .action(
       async (
         file: string,
         options: {
-          mock?: boolean;
-          completedMock?: string;
+          agent?: string;
+          model?: string;
+          mockSource?: string;
           record?: string;
           maxTurns?: string;
           maxPatches?: string;
           maxIssues?: string;
+          output?: string;
         },
         cmd: Command
       ) => {
@@ -117,14 +136,26 @@ export function registerRunCommand(program: Command): void {
         const filePath = resolve(file);
 
         try {
-          // Validate options
-          if (options.mock && !options.completedMock) {
-            logError("--mock requires --completed-mock <file>");
+          // Validate agent type
+          const agentType = options.agent as AgentType;
+          if (!AGENT_TYPES.includes(agentType)) {
+            logError(
+              `Invalid agent type '${options.agent}'. Valid types: ${AGENT_TYPES.join(", ")}`
+            );
             process.exit(1);
           }
 
-          if (!options.mock) {
-            logError("Only mock mode is currently supported. Use --mock flag.");
+          // Validate options based on agent type
+          if (agentType === "mock" && !options.mockSource) {
+            logError("--agent=mock requires --mock-source <file>");
+            process.exit(1);
+          }
+
+          if (agentType === "live") {
+            // TODO: Implement live agent in Phase 2
+            logError(
+              "Live agent mode is not yet implemented. Use --agent=mock for now."
+            );
             process.exit(1);
           }
 
@@ -144,8 +175,8 @@ export function registerRunCommand(program: Command): void {
           const form = parseForm(formContent);
 
           // Load completed mock
-          const mockPath = resolve(options.completedMock!);
-          logVerbose(ctx, `Reading completed mock: ${mockPath}`);
+          const mockPath = resolve(options.mockSource!);
+          logVerbose(ctx, `Reading mock source: ${mockPath}`);
           const mockContent = await readFile(mockPath);
           const mockForm = parseForm(mockContent);
 
@@ -153,7 +184,8 @@ export function registerRunCommand(program: Command): void {
           const harness = createHarness(form, harnessConfig);
           const agent = createMockAgent(mockForm);
 
-          logInfo(ctx, pc.cyan(`Running harness loop on: ${basename(filePath)}`));
+          logInfo(ctx, pc.cyan(`Filling form: ${basename(filePath)}`));
+          logVerbose(ctx, `Agent: ${agentType}`);
           logVerbose(ctx, `Max turns: ${harnessConfig.maxTurns}`);
           logVerbose(ctx, `Max patches per turn: ${harnessConfig.maxPatchesPerTurn}`);
           logVerbose(ctx, `Max issues per step: ${harnessConfig.maxIssues}`);
@@ -166,7 +198,7 @@ export function registerRunCommand(program: Command): void {
           );
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-            // Generate patches from mock agent
+            // Generate patches from agent
             const patches = agent.generatePatches(
               stepResult.issues,
               harness.getForm(),
@@ -205,7 +237,7 @@ export function registerRunCommand(program: Command): void {
             logWarn(ctx, `Max turns reached (${harnessConfig.maxTurns})`);
           }
 
-          logTiming(ctx, "Run time", durationMs);
+          logTiming(ctx, "Fill time", durationMs);
 
           // Build session transcript
           const transcript = buildSessionTranscript(

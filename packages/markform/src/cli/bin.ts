@@ -20,7 +20,8 @@ const cwd = process.cwd();
 for (const file of [".env.local", ".env"]) {
   const path = resolve(cwd, file);
   if (existsSync(path)) {
-    config({ path, override: false });
+    // quiet: true suppresses the tip messages added in dotenv v17
+    config({ path, override: false, debug: false, quiet: true });
   }
 }
 
