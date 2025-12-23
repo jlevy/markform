@@ -528,7 +528,7 @@ Items do not have individual IDs—the field has an ID and items are positional 
 **Filled:** One item per non-empty line in the value fence:
 ```md
 {% string-list id="key_commitments" label="Key commitments" minItems=1 %}
-```value {% process=false %}
+```value
 Ship v1.0 by end of Q1
 Complete security audit
 Migrate legacy users to new platform
@@ -543,7 +543,7 @@ Migrate legacy users to new platform
 
 **Serialization rules (canonical):**
 - Emit one item per line (no bullets)
-- Always use `process=false` on the fence
+- Use `process=false` only if any item contains Markdoc syntax
 - Empty arrays serialize as empty tag (no value fence)
 
 **Example with constraints:**
@@ -555,7 +555,7 @@ Migrate legacy users to new platform
   minItems=5
   itemMinLength=10
 %}
-```value {% process=false %}
+```value
 Supply chain disruption from single-source vendor
 Key engineer departure risk (bus factor = 1)
 Regulatory changes in EU market
@@ -574,12 +574,25 @@ Minimum 5; include more if needed.
 
 ##### The `process=false` Attribute
 
-**v0.1 rule:** Always emit `process=false` on all value fences for consistency.
+**Rule:** Only emit `process=false` when the value contains Markdoc syntax.
 
-While technically only required when the value contains Markdoc syntax (e.g., `{% ... %}`
-or `{# ... #}`), v0.1 always emits it to ensure deterministic serialization and avoid
-edge cases. See [GitHub Discussion #261][markdoc-process-false] for background.
+The `process=false` attribute prevents Markdoc from interpreting content as tags or
+comments. It is only required when the value contains Markdoc syntax:
 
+- Tag syntax: `{% ... %}`
+- Comment syntax: `{# ... #}`
+
+**Detection:** Check if the value matches the pattern `/\{[%#]/`. A simple regex check
+is sufficient since false positives are harmless (adding `process=false` when not needed
+has no effect, but we prefer not to clutter the output).
+
+```ts
+function containsMarkdocSyntax(value: string): boolean {
+  return /\{[%#]/.test(value);
+}
+```
+
+**Example (process=false required):**
 ```md
 {% string-field id="notes" label="Notes" %}
 ```value {% process=false %}
@@ -587,6 +600,17 @@ Use {% tag %} for special formatting.
 ```
 {% /string-field %}
 ```
+
+**Example (process=false not needed):**
+```md
+{% string-field id="name" label="Name" %}
+```value
+Alice Johnson
+```
+{% /string-field %}
+```
+
+See [GitHub Discussion #261][markdoc-process-false] for background on the attribute.
 
 #### Example: Template Form
 
@@ -729,14 +753,10 @@ To ensure deterministic round-tripping without building a full markdown serializ
 | Indentation | 0 spaces for top-level, no nested indentation |
 | Blank lines | One blank line between field-groups, none between fields |
 | Value fences | Omit entirely for empty fields |
-| `process=false` | Always emit on all `value` fences (see note below) |
+| `process=false` | Emit only when value contains Markdoc syntax (`/\{[%#]/`) |
 | Option ordering | Preserved as authored (order is significant) |
 | Line endings | Unix (`\n`) only |
 | Doc block placement | Immediately after the referenced element |
-
-**Note on `process=false`:** For v0.1 consistency, always emit `{% process=false %}` on
-all value fences. This avoids edge cases where content might be interpreted as Markdoc
-syntax and ensures deterministic output regardless of value content.
 
 * * *
 
