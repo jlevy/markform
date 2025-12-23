@@ -83,6 +83,30 @@ bd --no-db status
 `--no-db` mode reads/writes directly to `.beads/issues.jsonl` without SQLite.
 This is fully functional for all workflows.
 
+### Git Merge Driver (IMPORTANT)
+
+The beads JSONL file requires a custom git merge driver to handle 3-way merges correctly.
+Without it, git will use line-based merging which can corrupt issue statuses during merges.
+
+**Check if configured:**
+```bash
+git config --get merge.beads.driver || echo "Not configured"
+```
+
+**Configure if missing:**
+```bash
+git config merge.beads.driver "bd merge %A %O %A %B"
+git config merge.beads.name "bd JSONL merge driver"
+```
+
+The `.gitattributes` file should already contain:
+```
+.beads/issues.jsonl merge=beads
+```
+
+**Note:** `bd init` automatically configures the merge driver. If you cloned an existing
+repo with beads, run the config commands above or `bd doctor --fix` to set it up.
+
 ### Issue Types
 
 - `bug` - Something broken
