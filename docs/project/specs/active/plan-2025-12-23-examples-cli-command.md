@@ -425,9 +425,9 @@ This form has agent-role fields remaining.
 │  ● No - exit (you can run 'markform fill' later)
 ```
 
-- [ ] Add prompt after interactive fill completes
-- [ ] Only show if there are unfilled agent-role fields
-- [ ] Allow user to skip and run manually later
+- [x] Add prompt after interactive fill completes
+- [x] Only show if there are unfilled agent-role fields
+- [x] Allow user to skip and run manually later
 
 #### 4.2: Model Selection
 
@@ -444,10 +444,10 @@ If user chooses to run agent fill:
 │  anthropic/claude-sonnet-4-20250514
 ```
 
-- [ ] Show common model options from supported providers
-- [ ] Allow custom model ID entry
-- [ ] Validate model ID format (provider/model-id)
-- [ ] Check for API key in environment (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+- [x] Show common model options from supported providers
+- [x] Allow custom model ID entry
+- [x] Validate model ID format (provider/model-id)
+- [x] Check for API key in environment (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
 
 #### 4.3: Agent Output Filename
 
@@ -458,9 +458,9 @@ Generate versioned output filename:
 │  simple-filled2.form.md
 ```
 
-- [ ] Use `generateVersionedPath()` to get next version (e.g., `-filled2` after `-filled1`)
-- [ ] Pre-fill with `initialValue` (not placeholder)
-- [ ] Allow user to edit
+- [x] Use `generateVersionedPath()` to get next version (e.g., `-filled2` after `-filled1`)
+- [x] Pre-fill with `initialValue` (not placeholder)
+- [x] Allow user to edit
 
 #### 4.4: Run Agent Harness
 
@@ -474,10 +474,10 @@ Execute the live agent:
 ✓ Form completed in 1 turn(s)
 ```
 
-- [ ] Import and use `createLiveAgent` and `createHarness`
-- [ ] Display progress during execution
-- [ ] Handle errors gracefully (API failures, rate limits)
-- [ ] Support cancellation (Ctrl+C)
+- [x] Import and use `createLiveAgent` and `createHarness`
+- [x] Display progress during execution
+- [x] Handle errors gracefully (API failures, rate limits)
+- [x] Support cancellation (Ctrl+C)
 
 ### Phase 5: Multi-format Export
 
@@ -500,24 +500,16 @@ After successful agent fill, generate additional output files:
   simple-filled2.yml        (values as YAML)
 ```
 
-- [ ] Use `serialize()` for `.form.md` output
-- [ ] Use `serializeRawMarkdown()` for `.raw.md` output
-- [ ] Use YAML library to serialize `form.valuesByFieldId` for `.yml` output
+- [x] Use `serialize()` for `.form.md` output
+- [x] Use `serializeRawMarkdown()` for `.raw.md` output
+- [x] Use YAML library to serialize `form.valuesByFieldId` for `.yml` output
 
-#### 5.2: Export Prompt
+#### 5.2: Automatic Export
 
-Ask user which formats to export:
+All formats are exported automatically after agent fill completes (no prompt needed for MVP):
 
-```
-◆  Export formats:
-│  ◉ Markform (.form.md) [always]
-│  ◉ Raw Markdown (.raw.md)
-│  ◉ Values YAML (.yml)
-```
-
-- [ ] Default all formats selected
-- [ ] Allow user to deselect optional formats
-- [ ] `.form.md` is always exported (not optional)
+- [x] Export all three formats automatically
+- [ ] Future: Add prompt to select formats (deferred)
 
 ### Implementation Sub-tasks
 
@@ -565,6 +557,10 @@ The following beads should be created for tracking:
 * * *
 
 ## Revision History
+
+- 2025-12-24: Implemented Stage 5 (Complete Workflow) - agent fill prompt, model selection,
+  versioned output naming, live agent harness integration, and multi-format export;
+  closed markform-163 through markform-167
 
 - 2025-12-24: Added Stage 5 (Complete Workflow) with agent fill integration and
   multi-format export; defined 5 implementation sub-tasks (markform-163 to markform-167)
