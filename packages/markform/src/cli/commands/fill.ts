@@ -418,7 +418,11 @@ export function registerFillCommand(program: Command): void {
 
             // Pass first target role to agent (for instruction lookup)
             const primaryRole = targetRoles[0] === "*" ? AGENT_ROLE : targetRoles[0];
-            agent = createLiveAgent({ model, systemPrompt, targetRole: primaryRole });
+            agent = createLiveAgent({
+              model,
+              systemPromptAddition: systemPrompt,
+              targetRole: primaryRole,
+            });
             logVerbose(ctx, `Using live agent with model: ${modelId}`);
           }
 
