@@ -7,11 +7,13 @@ for users to fill form fields directly in the terminal using `@clack/prompts`.
 
 **Related Docs:**
 
-- [Role System](plan-2025-12-23-role-system.md) - Roles determine which fields to fill
+- [Role System](../done/plan-2025-12-23-role-system.md) - Roles determine which fields to fill
+  ✅ **COMPLETE** - Role system fully implemented
 
 - [Examples CLI Command](plan-2025-12-23-examples-cli-command.md) - Uses this feature
 
-- [Fill Command Spec](valid-2025-12-23-fill-command-live-agent.md) - Base fill command
+- [Fill Command Spec](../done/valid-2025-12-23-fill-command-live-agent.md) - Base fill command
+  ✅ **COMPLETE** - Fill command with live/mock agent support
 
 - [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
 
@@ -256,16 +258,17 @@ Already installed:
 
 ### Integration with Roles
 
-Once the role system (plan-2025-12-23-role-system.md) is implemented:
+The role system is now implemented. Integration points:
 
 1. `--interactive` sets default `--roles=user`
 
-2. Field filtering uses `getFieldsForRole(form, targetRoles)`
+2. Field filtering uses the existing `targetRoles` + `inspectForm()` with role filtering
 
 3. Interactive fill respects blocking checkpoints (approval gates)
 
-**Before role system is implemented:** Interactive mode fills all fields (no role
-filtering).
+4. Constants `USER_ROLE` and `AGENT_ROLE` are in `settings.ts`
+
+5. `parseRolesFlag()` parses `--roles` CLI argument
 
 * * *
 

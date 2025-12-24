@@ -29,6 +29,7 @@ import {
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
   AGENT_ROLE,
+  USER_ROLE,
   parseRolesFlag,
 } from "../../settings.js";
 import type { Agent } from "../../harness/mockAgent.js";
@@ -47,6 +48,13 @@ import {
   writeFile,
 } from "../lib/shared.js";
 import { generateVersionedPath } from "../lib/versioning.js";
+import {
+  runInteractiveFill,
+  showInteractiveIntro,
+  showInteractiveOutro,
+} from "../lib/interactivePrompts.js";
+import { inspect } from "../../engine/inspect.js";
+import { applyPatches } from "../../engine/apply.js";
 
 /** Supported agent types */
 const AGENT_TYPES = ["mock", "live"] as const;
@@ -180,6 +188,10 @@ export function registerFillCommand(program: Command): void {
       "Fill mode: continue (skip filled fields) or overwrite (re-fill; default: continue)"
     )
     .option("-o, --output <file>", "Write final form to file")
+    .option(
+      "-i, --interactive",
+      "Interactive mode: prompt user for field values (defaults to user role)"
+    )
     .action(
       async (
         file: string,
@@ -196,6 +208,7 @@ export function registerFillCommand(program: Command): void {
           roles?: string;
           mode?: string;
           output?: string;
+          interactive?: boolean;
         },
         cmd: Command
       ) => {
@@ -203,8 +216,116 @@ export function registerFillCommand(program: Command): void {
         const filePath = resolve(file);
 
         try {
+          const startTime = Date.now();
+
+          // Parse and validate --roles (default depends on mode)
+          let targetRoles: string[];
+          if (options.roles) {
+            try {
+              targetRoles = parseRolesFlag(options.roles);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              logError(`Invalid --roles: ${message}`);
+              process.exit(1);
+            }
+          } else {
+            // Default: user role for interactive, agent role for agent mode
+            targetRoles = options.interactive ? [USER_ROLE] : [AGENT_ROLE];
+          }
+
+          // Parse and validate --mode
+          let fillMode: FillMode = "continue"; // Default
+          if (options.mode) {
+            if (options.mode !== "continue" && options.mode !== "overwrite") {
+              logError(`Invalid --mode: ${options.mode}. Valid modes: continue, overwrite`);
+              process.exit(1);
+            }
+            fillMode = options.mode;
+          }
+
+          logVerbose(ctx, `Reading form: ${filePath}`);
+          const formContent = await readFile(filePath);
+
+          logVerbose(ctx, "Parsing form...");
+          const form = parseForm(formContent);
+
+          // =====================================================================
+          // INTERACTIVE MODE
+          // =====================================================================
+          if (options.interactive) {
+            // Validate: --interactive conflicts with agent options
+            if (options.agent && options.agent !== "live") {
+              logError("--interactive cannot be used with --agent");
+              process.exit(1);
+            }
+            if (options.model) {
+              logError("--interactive cannot be used with --model");
+              process.exit(1);
+            }
+            if (options.mockSource) {
+              logError("--interactive cannot be used with --mock-source");
+              process.exit(1);
+            }
+
+            // Inspect form to get issues for target roles
+            const inspectResult = inspect(form, { targetRoles });
+
+            // Show intro
+            const formTitle = form.schema.title ?? form.schema.id;
+            const fieldIssues = inspectResult.issues.filter((i) => i.scope === "field");
+            const uniqueFieldIds = new Set(fieldIssues.map((i) => i.ref));
+            showInteractiveIntro(
+              formTitle,
+              targetRoles.join(", "),
+              uniqueFieldIds.size
+            );
+
+            // Run interactive prompts
+            const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
+
+            if (cancelled) {
+              showInteractiveOutro(0, "", true);
+              process.exit(1);
+            }
+
+            // Apply patches to form (mutates form in place)
+            if (patches.length > 0) {
+              applyPatches(form, patches);
+            }
+
+            const durationMs = Date.now() - startTime;
+
+            // Write output file
+            const outputPath = options.output
+              ? resolve(options.output)
+              : generateVersionedPath(filePath);
+            const formMarkdown = serialize(form);
+
+            if (ctx.dryRun) {
+              logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
+            } else {
+              await writeFile(outputPath, formMarkdown);
+            }
+
+            showInteractiveOutro(patches.length, outputPath, false);
+            logTiming(ctx, "Fill time", durationMs);
+
+            // Show next step hint
+            if (patches.length > 0) {
+              console.log("");
+              console.log(pc.dim("Next step: fill remaining fields with agent"));
+              console.log(pc.dim(`  markform fill ${outputPath} --agent=live --model=<provider/model>`));
+            }
+
+            process.exit(0);
+          }
+
+          // =====================================================================
+          // AGENT MODE (mock or live)
+          // =====================================================================
+
           // Validate agent type
-          const agentType = options.agent as AgentType;
+          const agentType = (options.agent ?? "live") as AgentType;
           if (!AGENT_TYPES.includes(agentType)) {
             logError(
               `Invalid agent type '${options.agent}'. Valid types: ${AGENT_TYPES.join(", ")}`
@@ -225,33 +346,9 @@ export function registerFillCommand(program: Command): void {
             process.exit(1);
           }
 
-          const startTime = Date.now();
-
-          // Parse and validate --roles
-          let targetRoles: string[] = [AGENT_ROLE]; // Default to agent
-          if (options.roles) {
-            try {
-              targetRoles = parseRolesFlag(options.roles);
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              logError(`Invalid --roles: ${message}`);
-              process.exit(1);
-            }
-          }
-
           // Warn about --roles=* in non-interactive mode
           if (targetRoles.includes("*")) {
             logWarn(ctx, "Warning: Filling all roles including user-designated fields");
-          }
-
-          // Parse and validate --mode
-          let fillMode: FillMode = "continue"; // Default
-          if (options.mode) {
-            if (options.mode !== "continue" && options.mode !== "overwrite") {
-              logError(`Invalid --mode: ${options.mode}. Valid modes: continue, overwrite`);
-              process.exit(1);
-            }
-            fillMode = options.mode;
           }
 
           // Parse harness config
@@ -277,12 +374,6 @@ export function registerFillCommand(program: Command): void {
             targetRoles,
             fillMode,
           };
-
-          logVerbose(ctx, `Reading form: ${filePath}`);
-          const formContent = await readFile(filePath);
-
-          logVerbose(ctx, "Parsing form...");
-          const form = parseForm(formContent);
 
           // Create harness
           const harness = createHarness(form, harnessConfig);
