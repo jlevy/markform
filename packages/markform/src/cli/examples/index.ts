@@ -54,25 +54,21 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
  * Works both during development and when installed as a package.
  */
 function getExamplesDir(): string {
-  // Get the directory of this file (dist/cli-*.mjs or src/cli/examples/index.ts)
+  // Get the directory of this file
+  // - Bundled mode: thisDir is /path/to/package/dist
+  // - Dev mode: thisDir is /path/to/package/src/cli/examples
   const thisDir = dirname(fileURLToPath(import.meta.url));
 
-  // Navigate up to package root (from dist/ or src/cli/examples/)
-  // When bundled: dist/cli-*.mjs -> dist -> package root
-  // We need to find the examples directory relative to package root
-  const distDir = thisDir.includes("dist") ? dirname(thisDir) : thisDir;
-
-  // If we're in dist, go up one level to package root
-  // If we're in src/cli/examples, go up three levels
-  let packageRoot: string;
-  if (distDir.endsWith("dist")) {
-    packageRoot = dirname(distDir);
-  } else {
-    // Development mode: src/cli/examples -> src/cli -> src -> package root
-    packageRoot = dirname(dirname(dirname(thisDir)));
+  // Check if we're in the dist directory (bundled mode)
+  // Use basename to check the directory name, not a substring match
+  const dirName = thisDir.split(/[/\\]/).pop();
+  if (dirName === "dist") {
+    // Bundled: dist -> package root -> examples
+    return join(dirname(thisDir), "examples");
   }
 
-  return join(packageRoot, "examples");
+  // Development mode: src/cli/examples -> src/cli -> src -> package root -> examples
+  return join(dirname(dirname(dirname(thisDir))), "examples");
 }
 
 /**
