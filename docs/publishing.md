@@ -44,10 +44,10 @@ When prompted: select `markform`, choose bump type, write summary.
 
 #### Option B: Non-Interactive (Agent/Script)
 
-Write a changeset file directly. The filename should be a random identifier:
+Write a changeset file directly, naming it with the target version:
 
 ```bash
-cat > .changeset/release-summary.md << 'EOF'
+cat > .changeset/v0.2.0.md << 'EOF'
 ---
 "markform": minor
 ---
@@ -57,9 +57,9 @@ EOF
 ```
 
 Format:
-- YAML frontmatter with `"package-name": bump-type`
-- Bump types: `patch`, `minor`, `major`
-- Description after the frontmatter
+- Filename: `vX.Y.Z.md` matching your target version
+- YAML frontmatter with `"package-name": patch|minor|major`
+- Description becomes the CHANGELOG entry
 
 Commit the changeset:
 
