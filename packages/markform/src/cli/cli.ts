@@ -11,6 +11,7 @@ import pc from "picocolors";
 import { VERSION } from "../index.js";
 import { registerApplyCommand } from "./commands/apply.js";
 import { registerDumpCommand } from "./commands/dump.js";
+import { registerExamplesCommand } from "./commands/examples.js";
 import { registerExportCommand } from "./commands/export.js";
 import { registerFillCommand } from "./commands/fill.js";
 import { registerInspectCommand } from "./commands/inspect.js";
@@ -62,6 +63,7 @@ function createProgram(): Command {
   registerServeCommand(program);
   registerFillCommand(program);
   registerModelsCommand(program);
+  registerExamplesCommand(program);
 
   return program;
 }
