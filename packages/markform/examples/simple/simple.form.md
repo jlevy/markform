@@ -5,15 +5,15 @@ markform:
     - user
     - agent
   role_instructions:
-    user: "Enter your name and email to identify yourself."
-    agent: "Complete the remaining form fields based on context."
+    user: "Fill in the required fields in this form."
+    agent: "Fill in the optional fields with reasonable test values."
 ---
 
 {% form id="simple_test" title="Simple Test Form" %}
 
 {% doc ref="simple_test" kind="description" %}
-A minimal form testing all Markform v0.1 field types and features.
-Used for TDD development and golden session testing.
+A form demonstrating user and agent roles. User fills required fields,
+agent fills optional fields. Demonstrates all Markform v0.1 field types.
 {% /doc %}
 
 {% field-group id="basic_fields" title="Basic Fields" %}
@@ -26,15 +26,19 @@ Enter your full name (2-50 characters).
 
 {% string-field id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" %}{% /string-field %}
 
-{% number-field id="age" label="Age" required=true min=0 max=150 integer=true %}{% /number-field %}
+{% number-field id="age" label="Age" role="user" required=true min=0 max=150 integer=true %}{% /number-field %}
 
-{% number-field id="score" label="Score" min=0.0 max=100.0 %}{% /number-field %}
+{% number-field id="score" label="Score" role="agent" min=0.0 max=100.0 %}{% /number-field %}
+
+{% doc ref="score" kind="instructions" %}
+Assign a score between 0 and 100 based on form completeness.
+{% /doc %}
 
 {% /field-group %}
 
 {% field-group id="list_fields" title="List Fields" %}
 
-{% string-list id="tags" label="Tags" required=true minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}{% /string-list %}
+{% string-list id="tags" label="Tags" role="user" required=true minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}{% /string-list %}
 
 {% doc ref="tags" kind="instructions" %}
 Add 1-5 unique tags (each at least 2 characters).
@@ -44,13 +48,13 @@ Add 1-5 unique tags (each at least 2 characters).
 
 {% field-group id="selection_fields" title="Selection Fields" %}
 
-{% single-select id="priority" label="Priority" required=true %}
+{% single-select id="priority" label="Priority" role="user" required=true %}
 - [ ] Low {% #low %}
 - [ ] Medium {% #medium %}
 - [ ] High {% #high %}
 {% /single-select %}
 
-{% multi-select id="categories" label="Categories" required=true minSelections=1 maxSelections=3 %}
+{% multi-select id="categories" label="Categories" role="user" required=true minSelections=1 maxSelections=3 %}
 - [ ] Frontend {% #frontend %}
 - [ ] Backend {% #backend %}
 - [ ] Database {% #database %}
@@ -61,7 +65,7 @@ Add 1-5 unique tags (each at least 2 characters).
 
 {% field-group id="checkbox_fields" title="Checkbox Fields" %}
 
-{% checkboxes id="tasks_multi" label="Tasks (Multi Mode)" checkboxMode="multi" required=true %}
+{% checkboxes id="tasks_multi" label="Tasks (Multi Mode)" role="user" checkboxMode="multi" required=true %}
 - [ ] Research {% #research %}
 - [ ] Design {% #design %}
 - [ ] Implement {% #implement %}
@@ -72,12 +76,12 @@ Add 1-5 unique tags (each at least 2 characters).
 Track task progress. All must reach done or na state to complete.
 {% /doc %}
 
-{% checkboxes id="tasks_simple" label="Agreements (Simple Mode)" checkboxMode="simple" required=true %}
+{% checkboxes id="tasks_simple" label="Agreements (Simple Mode)" role="user" checkboxMode="simple" required=true %}
 - [ ] I have read the guidelines {% #read_guidelines %}
 - [ ] I agree to the terms {% #agree_terms %}
 {% /checkboxes %}
 
-{% checkboxes id="confirmations" label="Confirmations (Explicit Mode)" checkboxMode="explicit" required=true %}
+{% checkboxes id="confirmations" label="Confirmations (Explicit Mode)" role="user" checkboxMode="explicit" required=true %}
 - [ ] Data has been backed up {% #backed_up %}
 - [ ] Stakeholders notified {% #notified %}
 {% /checkboxes %}
@@ -88,11 +92,15 @@ Answer yes or no for each confirmation. All must be explicitly answered.
 
 {% /field-group %}
 
-{% field-group id="optional_fields" title="Optional Fields" %}
+{% field-group id="optional_fields" title="Optional Fields (Agent)" %}
 
-{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="notes" label="Notes" role="agent" %}{% /string-field %}
 
-{% number-field id="optional_number" label="Optional Number" %}{% /number-field %}
+{% doc ref="notes" kind="instructions" %}
+Add any relevant notes or observations about this test form.
+{% /doc %}
+
+{% number-field id="optional_number" label="Optional Number" role="agent" %}{% /number-field %}
 
 {% /field-group %}
 

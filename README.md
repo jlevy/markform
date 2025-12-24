@@ -10,6 +10,8 @@ form source in human-readable Markdown.
 - [Development Guide](docs/development.md) - Getting started, workflows, and AI SDK
   integration
 
+- [Publishing](docs/publishing.md) - Release workflow and npm publishing
+
 - [Architecture Design](docs/project/architecture/current/arch-markform-initial-design.md)
   \- Technical specification
 

@@ -4,6 +4,8 @@
 
 import type { Command } from "commander";
 
+import { relative } from "node:path";
+
 import pc from "picocolors";
 import YAML from "yaml";
 
@@ -163,6 +165,18 @@ export function logWarn(ctx: CommandContext, message: string): void {
   if (!ctx.quiet) {
     console.log(pc.yellow(`⚠️  ${message}`));
   }
+}
+
+/**
+ * Format a file path for display: relative to cwd, colored green.
+ * If the path is within the cwd, shows as relative (e.g., "./simple-filled1.form.md")
+ * If outside cwd, shows the absolute path.
+ */
+export function formatPath(absolutePath: string, cwd: string = process.cwd()): string {
+  const relativePath = relative(cwd, absolutePath);
+  // If the relative path doesn't start with "..", it's within cwd
+  const displayPath = relativePath.startsWith("..") ? absolutePath : `./${relativePath}`;
+  return pc.green(displayPath);
 }
 
 /**

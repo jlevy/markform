@@ -8,6 +8,8 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
+import { formatPath } from "./shared.js";
+
 import type {
   Field,
   FieldValue,
@@ -534,5 +536,5 @@ export function showInteractiveOutro(
     return;
   }
 
-  p.outro(pc.green(`✓ ${patchCount} field(s) updated. Saved to ${outputPath}`));
+  p.outro(`✓ ${patchCount} field(s) updated. Saved to ${formatPath(outputPath)}`);
 }

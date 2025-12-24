@@ -26,7 +26,8 @@
     "markform": "./dist/bin.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "examples"
   ],
   "engines": {
     "node": ">=24"

@@ -395,6 +395,156 @@ const EXAMPLES: ExampleDefinition[] = [
 
 * * *
 
+## Stage 5: Complete Workflow (Post-MVP)
+
+### Overview
+
+After the basic scaffold + interactive fill is working, extend the command to provide
+a complete end-to-end workflow:
+
+1. **Scaffold** - Write example form to disk
+2. **Interactive Fill** - User fills their role fields
+3. **Agent Fill** - LLM agent fills remaining fields
+4. **Multi-format Export** - Export completed form in multiple formats
+
+### Phase 4: Agent Fill Integration
+
+**Goal:** After user completes interactive fill, optionally run agent to fill remaining fields.
+
+#### 4.1: Prompt for Agent Fill
+
+After interactive fill completes with remaining agent-role fields:
+
+```
+✓ 3 field(s) updated. Saved to simple-filled1.form.md
+
+This form has agent-role fields remaining.
+
+◆  Run agent fill now?
+│  ○ Yes - configure model and run
+│  ● No - exit (you can run 'markform fill' later)
+```
+
+- [x] Add prompt after interactive fill completes
+- [x] Only show if there are unfilled agent-role fields
+- [x] Allow user to skip and run manually later
+
+#### 4.2: Model Selection
+
+If user chooses to run agent fill:
+
+```
+◆  Select LLM provider:
+│  ○ OpenAI (gpt-4o, gpt-4o-mini)
+│  ○ Anthropic (claude-sonnet-4-20250514, claude-3-5-haiku-20241022)
+│  ○ Google (gemini-2.0-flash, gemini-1.5-pro)
+│  ● Enter custom model ID
+
+◆  Model ID:
+│  anthropic/claude-sonnet-4-20250514
+```
+
+- [x] Show common model options from supported providers
+- [x] Allow custom model ID entry
+- [x] Validate model ID format (provider/model-id)
+- [x] Check for API key in environment (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+
+#### 4.3: Agent Output Filename
+
+Generate versioned output filename:
+
+```
+◆  Agent output filename:
+│  simple-filled2.form.md
+```
+
+- [x] Use `generateVersionedPath()` to get next version (e.g., `-filled2` after `-filled1`)
+- [x] Pre-fill with `initialValue` (not placeholder)
+- [x] Allow user to edit
+
+#### 4.4: Run Agent Harness
+
+Execute the live agent:
+
+```
+◆  Running agent fill...
+│  Model: anthropic/claude-sonnet-4-20250514
+│  Turn 1: 5 issues → 5 patches → 0 remaining
+│
+✓ Form completed in 1 turn(s)
+```
+
+- [x] Import and use `createLiveAgent` and `createHarness`
+- [x] Display progress during execution
+- [x] Handle errors gracefully (API failures, rate limits)
+- [x] Support cancellation (Ctrl+C)
+
+### Phase 5: Multi-format Export
+
+**Goal:** After agent fill completes, export results in multiple formats.
+
+#### 5.1: Export Formats
+
+After successful agent fill, generate additional output files:
+
+| Format | Filename Pattern | Description |
+|--------|------------------|-------------|
+| Form | `{base}-filled2.form.md` | Complete Markform with all values |
+| Raw MD | `{base}-filled2.raw.md` | Plain markdown without Markform syntax |
+| YAML | `{base}-filled2.yml` | Field values as YAML for programmatic use |
+
+```
+✓ Agent fill complete. Outputs:
+  simple-filled2.form.md    (markform)
+  simple-filled2.raw.md     (plain markdown)
+  simple-filled2.yml        (values as YAML)
+```
+
+- [x] Use `serialize()` for `.form.md` output
+- [x] Use `serializeRawMarkdown()` for `.raw.md` output
+- [x] Use YAML library to serialize `form.valuesByFieldId` for `.yml` output
+
+#### 5.2: Automatic Export
+
+All formats are exported automatically after agent fill completes (no prompt needed for MVP):
+
+- [x] Export all three formats automatically for both user and agent fills
+- [ ] Future: Add prompt to select formats (deferred)
+
+Note: The `examples` command always exports all three formats. Other commands
+like `markform fill` export only markform format by default (users can run
+`markform export` or `markform dump` for other formats).
+
+### Implementation Sub-tasks
+
+The following beads should be created for tracking:
+
+| Bead | Title | Description |
+|------|-------|-------------|
+| markform-163 | Add prompt for agent fill after interactive fill | Check for agent fields, prompt user to continue |
+| markform-164 | Add model selection UI | Provider list, custom model entry, API key check |
+| markform-165 | Add agent output filename prompt | Versioned naming with generateVersionedPath |
+| markform-166 | Integrate live agent harness | Run agent, display progress, handle errors |
+| markform-167 | Add multi-format export | Raw markdown and YAML export after completion |
+| markform-168 | Normalize file path display | Use formatPath() helper for consistent relative paths |
+| markform-169 | Extract reusable multi-format export logic | Move export helpers to shared module |
+| markform-170 | Enable verbose logging during agent fill | Show each turn and patch during agent execution |
+| markform-171 | Check API availability at start | Display API status for each provider at startup |
+
+### Acceptance Criteria (Complete Workflow)
+
+1. After interactive fill, prompts to run agent fill if agent fields remain
+2. Model selection shows common options and allows custom entry
+3. Agent output uses versioned naming convention
+4. Agent progress is displayed during execution (verbose: turns, patches)
+5. On completion, exports to `.form.md`, `.raw.md`, and `.yml`
+6. User can skip agent fill and run manually later
+7. Graceful error handling for API failures
+8. File paths displayed consistently as relative paths (e.g., `./simple-filled1.form.md`)
+9. API availability status shown at startup (✓ for configured, ○ for missing)
+
+* * *
+
 ## Open Questions
 
 1. **Output directory:** Should we support `--output <dir>` or just use current
@@ -417,6 +567,20 @@ const EXAMPLES: ExampleDefinition[] = [
 * * *
 
 ## Revision History
+
+- 2025-12-24: UX improvements - added formatPath() for consistent path display, extracted
+  reusable export helpers to shared module, added verbose logging during agent fill,
+  added API availability status at startup; closed markform-168 through markform-171
+
+- 2025-12-24: Implemented Stage 5 (Complete Workflow) - agent fill prompt, model selection,
+  versioned output naming, live agent harness integration, and multi-format export;
+  closed markform-163 through markform-167
+
+- 2025-12-24: Added Stage 5 (Complete Workflow) with agent fill integration and
+  multi-format export; defined 5 implementation sub-tasks (markform-163 to markform-167)
+
+- 2025-12-24: Updated Stage 3 implementation - auto-run interactive fill after scaffold,
+  simple form now has all user-role fields for testing
 
 - 2025-12-23: Renamed "political-figure" to "political-research"; renamed
   "company-quarterly" to "earnings-analysis"; added dump command as final workflow step;
