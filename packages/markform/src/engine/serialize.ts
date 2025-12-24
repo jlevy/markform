@@ -560,3 +560,175 @@ markform:
 
   return `${frontmatter}\n\n${body}\n`;
 }
+
+// =============================================================================
+// Raw Markdown Serialization (human-readable, no markdoc)
+// =============================================================================
+
+/** Map checkbox state to GFM marker for raw markdown output */
+const STATE_TO_GFM_MARKER: Record<CheckboxValue, string> = {
+  // Multi mode
+  todo: " ",
+  done: "x",
+  incomplete: "/",
+  active: "*",
+  na: "-",
+  // Explicit mode
+  unfilled: " ",
+  yes: "x",
+  no: " ",
+};
+
+/**
+ * Serialize a field value to raw markdown (human-readable).
+ */
+function serializeFieldRaw(
+  field: Field,
+  values: Record<Id, FieldValue>,
+): string {
+  const value = values[field.id];
+  const lines: string[] = [];
+
+  lines.push(`**${field.label}:**`);
+
+  switch (field.kind) {
+    case "string": {
+      const strValue = value as StringValue | undefined;
+      if (strValue?.value) {
+        lines.push(strValue.value);
+      } else {
+        lines.push("_(empty)_");
+      }
+      break;
+    }
+    case "number": {
+      const numValue = value as NumberValue | undefined;
+      if (numValue?.value !== null && numValue?.value !== undefined) {
+        lines.push(String(numValue.value));
+      } else {
+        lines.push("_(empty)_");
+      }
+      break;
+    }
+    case "string_list": {
+      const listValue = value as StringListValue | undefined;
+      if (listValue?.items && listValue.items.length > 0) {
+        for (const item of listValue.items) {
+          lines.push(`- ${item}`);
+        }
+      } else {
+        lines.push("_(empty)_");
+      }
+      break;
+    }
+    case "single_select": {
+      const selectValue = value as SingleSelectValue | undefined;
+      const selected = field.options.find(
+        (opt) => opt.id === selectValue?.selected,
+      );
+      if (selected) {
+        lines.push(selected.label);
+      } else {
+        lines.push("_(none selected)_");
+      }
+      break;
+    }
+    case "multi_select": {
+      const multiValue = value as MultiSelectValue | undefined;
+      const selectedSet = new Set(multiValue?.selected ?? []);
+      const selectedOpts = field.options.filter((opt) =>
+        selectedSet.has(opt.id),
+      );
+      if (selectedOpts.length > 0) {
+        for (const opt of selectedOpts) {
+          lines.push(`- ${opt.label}`);
+        }
+      } else {
+        lines.push("_(none selected)_");
+      }
+      break;
+    }
+    case "checkboxes": {
+      const cbValue = value as CheckboxesValue | undefined;
+      for (const opt of field.options) {
+        const state = cbValue?.values[opt.id] ?? "todo";
+        const marker = STATE_TO_GFM_MARKER[state] ?? " ";
+        lines.push(`- [${marker}] ${opt.label}`);
+      }
+      break;
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Serialize a ParsedForm to plain, human-readable markdown.
+ *
+ * This output does NOT contain markdoc directives and cannot be parsed back
+ * into a form. It's intended for human consumption and export.
+ *
+ * @param form - The parsed form to serialize
+ * @returns Plain markdown string
+ */
+export function serializeRawMarkdown(form: ParsedForm): string {
+  const lines: string[] = [];
+
+  // Group doc blocks by ref
+  const docsByRef = new Map<string, DocumentationBlock[]>();
+  for (const doc of form.docs) {
+    const list = docsByRef.get(doc.ref) ?? [];
+    list.push(doc);
+    docsByRef.set(doc.ref, list);
+  }
+
+  // Add form title
+  if (form.schema.title) {
+    lines.push(`# ${form.schema.title}`);
+    lines.push("");
+  }
+
+  // Add form-level docs
+  const formDocs = docsByRef.get(form.schema.id);
+  if (formDocs) {
+    for (const doc of formDocs) {
+      lines.push(doc.bodyMarkdown.trim());
+      lines.push("");
+    }
+  }
+
+  // Process each group
+  for (const group of form.schema.groups) {
+    // Add group title as H2
+    if (group.title) {
+      lines.push(`## ${group.title}`);
+      lines.push("");
+    }
+
+    // Add group-level docs
+    const groupDocs = docsByRef.get(group.id);
+    if (groupDocs) {
+      for (const doc of groupDocs) {
+        lines.push(doc.bodyMarkdown.trim());
+        lines.push("");
+      }
+    }
+
+    // Process fields
+    for (const field of group.children) {
+      lines.push(serializeFieldRaw(field, form.valuesByFieldId));
+      lines.push("");
+
+      // Add field-level docs
+      const fieldDocs = docsByRef.get(field.id);
+      if (fieldDocs) {
+        for (const doc of fieldDocs) {
+          lines.push(doc.bodyMarkdown.trim());
+          lines.push("");
+        }
+      }
+    }
+  }
+
+  return lines.join("\n").trim() + "\n";
+}

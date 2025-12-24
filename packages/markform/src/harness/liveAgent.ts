@@ -10,12 +10,14 @@ import { generateText, stepCountIs, zodSchema } from "ai";
 import { z } from "zod";
 
 import type {
+  DocumentationBlock,
   InspectIssue,
   ParsedForm,
   Patch,
 } from "../engine/types.js";
 import { PatchSchema } from "../engine/types.js";
 import type { Agent } from "./mockAgent.js";
+import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from "../settings.js";
 
 // =============================================================================
 // Types
@@ -29,8 +31,10 @@ export interface LiveAgentConfig {
   model: LanguageModel;
   /** Maximum tool call steps per turn (default: 3) */
   maxStepsPerTurn?: number;
-  /** Custom system prompt (optional) */
+  /** Custom system prompt (overrides all automatic instruction composition) */
   systemPrompt?: string;
+  /** Target role for instruction lookup (default: AGENT_ROLE) */
+  targetRole?: string;
 }
 
 // =============================================================================
@@ -43,12 +47,14 @@ export interface LiveAgentConfig {
 export class LiveAgent implements Agent {
   private model: LanguageModel;
   private maxStepsPerTurn: number;
-  private systemPrompt: string;
+  private customSystemPrompt?: string;
+  private targetRole: string;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
     this.maxStepsPerTurn = config.maxStepsPerTurn ?? 3;
-    this.systemPrompt = config.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
+    this.customSystemPrompt = config.systemPrompt;
+    this.targetRole = config.targetRole ?? AGENT_ROLE;
   }
 
   /**
@@ -64,6 +70,10 @@ export class LiveAgent implements Agent {
   ): Promise<Patch[]> {
     // Build context prompt with issues and form schema
     const contextPrompt = buildContextPrompt(issues, form, maxPatches);
+
+    // Build system prompt: custom > composed from form > default
+    const systemPrompt = this.customSystemPrompt
+      ?? buildSystemPrompt(form, this.targetRole, issues);
 
     // Define the patch tool with properly typed parameters
     const patchesSchema = z.object({
@@ -83,7 +93,7 @@ export class LiveAgent implements Agent {
     // Call the model
     const result = await generateText({
       model: this.model,
-      system: this.systemPrompt,
+      system: systemPrompt,
       prompt: contextPrompt,
       tools: { generatePatches: generatePatchesTool },
       stopWhen: stepCountIs(this.maxStepsPerTurn),
@@ -125,6 +135,86 @@ Guidelines:
 8. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
 
 Always use the generatePatches tool to submit your field values.`;
+
+/**
+ * Extract doc blocks of a specific kind for a given ref.
+ */
+function getDocBlocks(
+  docs: DocumentationBlock[],
+  ref: string,
+  kind: string
+): DocumentationBlock[] {
+  return docs.filter((d) => d.ref === ref && d.kind === kind);
+}
+
+/**
+ * Build a composed system prompt from form instructions.
+ *
+ * Instruction sources (later ones augment earlier):
+ * 1. Base form instructions - Doc blocks with ref=formId and kind="instructions"
+ * 2. Role-specific instructions - From form.metadata.roleInstructions[targetRole]
+ * 3. Per-field instructions - Doc blocks with ref=fieldId and kind="instructions"
+ * 4. System defaults - DEFAULT_ROLE_INSTRUCTIONS[targetRole] or DEFAULT_SYSTEM_PROMPT
+ */
+function buildSystemPrompt(
+  form: ParsedForm,
+  targetRole: string,
+  issues: InspectIssue[]
+): string {
+  const sections: string[] = [];
+
+  // Start with base system prompt guidelines
+  sections.push(DEFAULT_SYSTEM_PROMPT);
+
+  // 1. Form-level instructions (doc blocks with kind="instructions" for the form)
+  const formInstructions = getDocBlocks(form.docs, form.schema.id, "instructions");
+  if (formInstructions.length > 0) {
+    sections.push("");
+    sections.push("# Form Instructions");
+    for (const doc of formInstructions) {
+      sections.push(doc.bodyMarkdown.trim());
+    }
+  }
+
+  // 2. Role-specific instructions from frontmatter
+  const roleInstructions = form.metadata?.roleInstructions?.[targetRole];
+  if (roleInstructions) {
+    sections.push("");
+    sections.push(`# Instructions for ${targetRole} role`);
+    sections.push(roleInstructions);
+  } else {
+    // Fallback to default role instructions
+    const defaultRoleInstr = DEFAULT_ROLE_INSTRUCTIONS[targetRole];
+    if (defaultRoleInstr) {
+      sections.push("");
+      sections.push(`# Role guidance`);
+      sections.push(defaultRoleInstr);
+    }
+  }
+
+  // 3. Per-field instructions for fields being addressed
+  const fieldIds = new Set(
+    issues.filter((i) => i.scope === "field").map((i) => i.ref)
+  );
+  const fieldInstructions: string[] = [];
+
+  for (const fieldId of fieldIds) {
+    const fieldDocs = getDocBlocks(form.docs, fieldId, "instructions");
+    if (fieldDocs.length > 0) {
+      for (const doc of fieldDocs) {
+        fieldInstructions.push(`**${fieldId}:** ${doc.bodyMarkdown.trim()}`);
+      }
+    }
+  }
+
+  if (fieldInstructions.length > 0) {
+    sections.push("");
+    sections.push("# Field-specific instructions");
+    sections.push(...fieldInstructions);
+  }
+
+  return sections.join("\n");
+}
 
 /**
  * Build a context prompt with issues and form information.

@@ -15,8 +15,10 @@ import { convertKeysToSnakeCase } from "./naming.js";
  * - plaintext: same as console but no ANSI colors
  * - yaml: structured YAML output
  * - json: structured JSON output
+ * - markform: canonical markform format (markdoc directives, for export command)
+ * - markdown: plain readable markdown (no directives, for export command)
  */
-export type OutputFormat = "console" | "plaintext" | "yaml" | "json";
+export type OutputFormat = "console" | "plaintext" | "yaml" | "json" | "markform" | "markdown";
 
 /**
  * Valid format options for Commander choice validation.
@@ -26,6 +28,8 @@ export const OUTPUT_FORMATS: OutputFormat[] = [
   "plaintext",
   "yaml",
   "json",
+  "markform",
+  "markdown",
 ];
 
 /**
