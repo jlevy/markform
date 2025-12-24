@@ -10,8 +10,15 @@ Create a to-do list with the following items then perform all of them:
    spec and @docs/general/agent-guidelines/general-tdd-guidelines.md to understand all
    project and testing rules.
 
-3. Begin implementing the spec.
-   IMPORTANT: *Track all work with beads.* Make as much progress as possible, following
-   all rules and workflows, and following @shortcut:precommit-process.md at each phase.
+3. IMPORTANT: *Track all work with beads.* See docs/general/agent-setup/beads-setup.md
+   if `bd` is not set up yet.
+   Check if beads exist for the spec already.
+   If not, create them according to
+   @docs/general/agent-shortcuts/shortcut:new-implementation-beads.md
 
-4. At the end of each phase confirm with the user before proceeding to the next phase.
+4. Make as much progress as possible, one phase at a time, following all rules and TDD
+   workflows, and following @shortcut:precommit-process.md at each phase.
+
+5. At the end of each phase when all is passing checks and reviewed make sure code is
+   committed and pushed (and passes commit and push gates) and then move to the next
+   phase.
