@@ -1,5 +1,8 @@
 # Publishing
 
+> **Template note**: Replace `OWNER` with your GitHub username/org and `PACKAGE` with
+> your package name when adapting this for other projects.
+
 This project uses [Changesets](https://github.com/changesets/changesets) for version
 management and tag-based releases with OIDC trusted publishing to npm.
 
@@ -14,7 +17,7 @@ Run from the package directory (important: the root `.npmrc` has pnpm-specific c
 that confuses npm):
 
 ```bash
-cd packages/markform
+cd packages/PACKAGE
 npm publish --access public
 ```
 
@@ -22,13 +25,23 @@ This will prompt for web-based authentication in your browser.
 
 ### 2. Configure OIDC Trusted Publishing on npm
 
-1. Go to https://www.npmjs.com/package/markform/access
+1. Go to https://www.npmjs.com/package/PACKAGE/access
 
-2. Under “Publishing access”, click “Configure Trusted Publishing”
+2. Under "Publishing access", click "Add a trusted publisher" or "Configure Trusted
+   Publishing"
 
-3. Add the GitHub repository: `jlevy/markform`
+3. Select **GitHub Actions** as the publisher
 
-4. Leave environment blank (allows any workflow) or set to `release`
+4. Fill in the form:
+   - **Organization or user**: `OWNER`
+   - **Repository**: `PACKAGE`
+   - **Workflow filename**: `release.yml`
+   - **Environment name**: Leave blank (not required unless using GitHub environments)
+
+5. For **Publishing access**, select **"Require two-factor authentication and disallow
+   tokens (recommended)"** - OIDC trusted publishers work regardless of this setting
+
+6. Click "Set up connection"
 
 ### 3. Verify Repository is Public
 
@@ -75,7 +88,7 @@ Write the changeset file with target version as filename:
 ```bash
 cat > .changeset/v0.2.0.md << 'EOF'
 ---
-"markform": minor
+"PACKAGE": minor
 ---
 
 Summary of changes for the changelog.
@@ -102,7 +115,7 @@ Review and commit:
 ```bash
 git diff  # Verify package.json and CHANGELOG.md
 git add .
-git commit -m "chore: release markform v0.2.0"
+git commit -m "chore: release PACKAGE v0.2.0"
 git push
 ```
 
@@ -129,13 +142,13 @@ The GitHub Actions workflow will build and publish to npm using OIDC authenticat
 git checkout main && git pull
 cat > .changeset/v0.2.0.md << 'EOF'
 ---
-"markform": minor
+"PACKAGE": minor
 ---
 Summary of changes.
 EOF
 git add .changeset && git commit -m "chore: add changeset for v0.2.0"
 pnpm version-packages
-git add . && git commit -m "chore: release markform v0.2.0"
+git add . && git commit -m "chore: release PACKAGE v0.2.0"
 git push && git tag v0.2.0 && git push --tags
 ```
 
@@ -162,9 +175,9 @@ publishes automatically without requiring an `NPM_TOKEN` secret.
 
 **npm publish failing with 401/403?**
 
-- Verify OIDC is configured: https://www.npmjs.com/package/markform/access
+- Verify OIDC is configured: https://www.npmjs.com/package/PACKAGE/access
 
-- Check repository is listed under “Trusted Publishing”
+- Check repository is listed under "Trusted Publishing"
 
 - Ensure the repository is public
 
@@ -185,10 +198,10 @@ To use the latest unreleased code directly from GitHub:
 
 ```bash
 # pnpm
-pnpm add "github:jlevy/markform#path:packages/markform"
+pnpm add "github:OWNER/PACKAGE#path:packages/PACKAGE"
 
 # npm
-npm install "github:jlevy/markform#path:packages/markform"
+npm install "github:OWNER/PACKAGE#path:packages/PACKAGE"
 ```
 
 This runs the `prepare` script to build from source.
