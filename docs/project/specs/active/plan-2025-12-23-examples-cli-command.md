@@ -7,10 +7,11 @@ users to discover and scaffold example forms into their current working director
 
 **Related Docs:**
 
-- [Political Figure Live Agent
-  Test](plan-2025-12-23-political-figure-live-agent-test.md) - One of the example forms
+- [Political Research Example](plan-2025-12-23-political-research-example.md) - One of
+  the example forms
 
-- [Role System](plan-2025-12-23-role-system.md) - Defines user/agent roles for fields
+- [Role System](../done/plan-2025-12-23-role-system.md) - Defines user/agent roles for
+  fields
 
 - [Interactive Fill Mode](plan-2025-12-23-fill-interactive-mode.md) - Console prompts
   for user role fields
@@ -42,7 +43,7 @@ the CLI.
 
    - **Simple Test Form** - Minimal form with all field types
 
-   - **Political Figure** - Biographical form for web research (agent test case)
+   - **Political Research** - Biographical form for web research (agent test case)
 
    - **Company Quarterly Analysis** - Extensive financial analysis worksheet
 
@@ -59,8 +60,8 @@ behavior.
 
 ## Prerequisites
 
-- **markform-111**: Political Figure form must be created first (per the
-  political-figure plan)
+- **Political Research Example**: Political Research form must be created first (per the
+  political-research-example plan)
 
 - **Role System**: The role system plan must be implemented so example forms can define
   `role="user"` fields
@@ -105,8 +106,8 @@ behavior.
 | ID | Title | Filename | Description |
 | --- | --- | --- | --- |
 | `simple` | Simple Test Form | `simple.form.md` | Minimal form demonstrating all Markform v0.1 field types. Good for learning the basics. |
-| `political-figure` | Political Figure | `political-figure.form.md` | Biographical form for researching political figures using web search. Includes repeating groups for offices held. |
-| `company-quarterly` | Company Quarterly Analysis | `earnings-analysis.form.md` | Extensive financial analysis worksheet with company profile and quarterly analysis sections. |
+| `political-research` | Political Research | `political-research.form.md` | Biographical form for researching political figures using web search. Includes repeating groups for offices held. |
+| `earnings-analysis` | Company Quarterly Analysis | `earnings-analysis.form.md` | Extensive financial analysis worksheet with company profile and quarterly analysis sections. |
 
 ### CLI Interface
 
@@ -136,7 +137,7 @@ $ markform examples
 ◆  Select an example form to scaffold:
 │  ○ Simple Test Form
 │     Minimal form demonstrating all Markform v0.1 field types.
-│  ○ Political Figure
+│  ○ Political Research
 │     Biographical form for researching political figures using web search.
 │  ● Company Quarterly Analysis
 │     Extensive financial analysis worksheet with company profile and quarterly analysis.
@@ -151,14 +152,16 @@ This form has fields for both you (user) and the AI agent.
 
 Next steps:
   # 1. Fill in your fields (company name, ticker, period)
-  markform fill earnings-analysis.form.md --interactive
+  markform fill earnings-analysis.form.md --interactive -o earnings-filled.form.md
 
   # 2. Let the agent complete the analysis
-  markform fill earnings-analysis-v1.form.md
+  markform fill earnings-filled.form.md -o earnings-done.form.md
+
+  # 3. Review the final output
+  markform dump earnings-done.form.md
 
 Other useful commands:
   markform inspect earnings-analysis.form.md
-  markform dump earnings-analysis.form.md
 ```
 
 **Overwrite flow (file exists):**
@@ -194,8 +197,9 @@ $ markform examples
 ✔ Created my-project.form.md
 
 Next steps:
-  markform fill my-project.form.md --interactive
-  markform fill my-project-v1.form.md
+  markform fill my-project.form.md --interactive -o my-project-filled.form.md
+  markform fill my-project-filled.form.md -o my-project-done.form.md
+  markform dump my-project-done.form.md
 ```
 
 ### Acceptance Criteria
@@ -210,8 +214,8 @@ Next steps:
 
 5. If file exists, prompts for overwrite confirmation
 
-6. Output confirms file creation and shows two-stage workflow hint (interactive fill,
-   then agent fill)
+6. Output confirms file creation and shows three-step workflow (interactive fill,
+   agent fill, then dump for verification)
 
 7. `markform examples --list` shows non-interactive list
 
@@ -258,8 +262,8 @@ src/cli/
 └── examples/
     ├── index.ts             # Example registry (title, description, content)
     ├── simple.ts            # Simple form content
-    ├── political-figure.ts  # Political figure form content
-    └── company-quarterly.ts # Company quarterly form content
+    ├── political-research.ts  # Political research form content
+    └── earnings-analysis.ts # Company quarterly analysis form content
 ```
 
 ### Example Registry Interface
@@ -306,13 +310,13 @@ const EXAMPLES: ExampleDefinition[] = [
 
 - [ ] Create `src/cli/examples/simple.ts` with `SIMPLE_FORM_CONTENT` export
 
-- [ ] Create `src/cli/examples/company-quarterly.ts` with `COMPANY_QUARTERLY_CONTENT`
+- [ ] Create `src/cli/examples/earnings-analysis.ts` with `EARNINGS_ANALYSIS_CONTENT`
   export
 
-- [ ] Create `src/cli/examples/political-figure.ts` with `POLITICAL_FIGURE_CONTENT`
+- [ ] Create `src/cli/examples/political-research.ts` with `POLITICAL_RESEARCH_CONTENT`
   export
 
-  - Note: Depends on markform-111 (political-figure form creation)
+  - Note: Depends on political-research-example plan
 
 - [ ] Create `src/cli/examples/index.ts` with `EXAMPLES` registry array
 
@@ -385,7 +389,7 @@ const EXAMPLES: ExampleDefinition[] = [
 
 5. Existing file prompts for confirmation
 
-6. Success message shows two-stage workflow (interactive fill, then agent fill)
+6. Success message shows three-step workflow (interactive fill, agent fill, dump)
 
 7. Tests pass
 
@@ -404,14 +408,19 @@ const EXAMPLES: ExampleDefinition[] = [
    - **Decision:** Yes. User can edit the pre-filled filename before writing.
      This allows customization while keeping the default easy.
 
-3. **Political Figure form dependency:** Should this plan wait for markform-111?
+3. **Political Research form dependency:** Should this plan wait for the
+   political-research-example plan?
 
-   - **Decision:** Yes. Add markform-111 as prerequisite.
+   - **Decision:** Yes. Add political-research-example as prerequisite.
      Can stub the content initially.
 
 * * *
 
 ## Revision History
+
+- 2025-12-23: Renamed "political-figure" to "political-research"; renamed
+  "company-quarterly" to "earnings-analysis"; added dump command as final workflow step;
+  updated three-step workflow (interactive fill, agent fill, dump)
 
 - 2025-12-23: Added role system and interactive fill mode as prerequisites; updated
   suggested commands to show two-stage workflow (user fills interactively, then agent)
