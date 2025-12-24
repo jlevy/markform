@@ -467,3 +467,123 @@ describe("Harness + MockAgent Integration", () => {
     expect(turns[0]?.apply.patches.length).toBe(2);
   });
 });
+
+// =============================================================================
+// Fill Mode Tests
+// =============================================================================
+
+describe("fillMode", () => {
+  describe("continue mode (default)", () => {
+    it("skips filled fields - form is immediately complete", () => {
+      const form = parseForm(FILLED_FORM);
+      const harness = createHarness(form);
+
+      const result = harness.step();
+
+      // Form is already complete with filled fields
+      expect(result.isComplete).toBe(true);
+      expect(result.issues.filter((i) => i.severity === "required").length).toBe(0);
+    });
+
+    it("explicitly setting continue mode behaves same as default", () => {
+      const form = parseForm(FILLED_FORM);
+      const harness = createHarness(form, { fillMode: "continue" });
+
+      const result = harness.step();
+
+      // Form is already complete with filled fields
+      expect(result.isComplete).toBe(true);
+    });
+  });
+
+  describe("overwrite mode", () => {
+    it("clears target role fields on first step", () => {
+      const form = parseForm(FILLED_FORM);
+      const harness = createHarness(form, { fillMode: "overwrite" });
+
+      const result = harness.step();
+
+      // Fields should have been cleared, so form is NOT complete
+      expect(result.isComplete).toBe(false);
+      // Should have issues for the cleared fields
+      const requiredIssues = result.issues.filter((i) => i.severity === "required");
+      expect(requiredIssues.length).toBe(2); // name and age
+    });
+
+    it("allows re-filling cleared fields", async () => {
+      const emptyForm = parseForm(SIMPLE_FORM);
+      const filledForm = parseForm(FILLED_FORM);
+
+      // Start with a filled form in overwrite mode
+      const harness = createHarness(parseForm(FILLED_FORM), { fillMode: "overwrite" });
+      const agent = createMockAgent(filledForm);
+
+      // First step - fields should be cleared
+      let result = harness.step();
+      expect(result.isComplete).toBe(false);
+
+      // Generate and apply patches to re-fill
+      const patches = await agent.generatePatches(result.issues, emptyForm, 10);
+      result = harness.apply(patches, result.issues);
+
+      // Form should be complete again
+      expect(result.isComplete).toBe(true);
+    });
+
+    it("respects targetRoles when clearing", () => {
+      // Form with mixed roles
+      const MIXED_ROLE_FORM = `---
+markform:
+  markform_version: "0.1.0"
+  roles:
+    - agent
+    - user
+  role_instructions:
+    agent: Fill the agent fields
+    user: Fill the user fields
+---
+
+{% form id="test_form" %}
+
+{% field-group id="basics" %}
+
+{% string-field id="agent_field" label="Agent Field" required=true role="agent" %}
+\`\`\`value
+Agent Value
+\`\`\`
+{% /string-field %}
+
+{% string-field id="user_field" label="User Field" required=true role="user" %}
+\`\`\`value
+User Value
+\`\`\`
+{% /string-field %}
+
+{% /field-group %}
+
+{% /form %}
+`;
+
+      const form = parseForm(MIXED_ROLE_FORM);
+      const harness = createHarness(form, {
+        fillMode: "overwrite",
+        targetRoles: ["agent"],
+      });
+
+      const result = harness.step();
+
+      // Only agent_field should have been cleared and reported as needing fill
+      // user_field should be untouched
+      const requiredIssues = result.issues.filter((i) => i.severity === "required");
+      expect(requiredIssues.length).toBe(1);
+      expect(requiredIssues[0]?.ref).toBe("agent_field");
+
+      // Verify that user_field still has its value
+      const userValue = form.valuesByFieldId.user_field;
+      expect(userValue?.kind).toBe("string");
+      if (userValue?.kind === "string") {
+        expect(userValue.value).toBe("User Value");
+      }
+    });
+  });
+});
