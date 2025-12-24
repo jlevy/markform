@@ -31,8 +31,8 @@ export interface LiveAgentConfig {
   model: LanguageModel;
   /** Maximum tool call steps per turn (default: 3) */
   maxStepsPerTurn?: number;
-  /** Custom system prompt (overrides all automatic instruction composition) */
-  systemPrompt?: string;
+  /** Additional context to append to the composed system prompt (never overrides) */
+  systemPromptAddition?: string;
   /** Target role for instruction lookup (default: AGENT_ROLE) */
   targetRole?: string;
 }
@@ -47,13 +47,13 @@ export interface LiveAgentConfig {
 export class LiveAgent implements Agent {
   private model: LanguageModel;
   private maxStepsPerTurn: number;
-  private customSystemPrompt?: string;
+  private systemPromptAddition?: string;
   private targetRole: string;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
     this.maxStepsPerTurn = config.maxStepsPerTurn ?? 3;
-    this.customSystemPrompt = config.systemPrompt;
+    this.systemPromptAddition = config.systemPromptAddition;
     this.targetRole = config.targetRole ?? AGENT_ROLE;
   }
 
@@ -71,9 +71,13 @@ export class LiveAgent implements Agent {
     // Build context prompt with issues and form schema
     const contextPrompt = buildContextPrompt(issues, form, maxPatches);
 
-    // Build system prompt: custom > composed from form > default
-    const systemPrompt = this.customSystemPrompt
-      ?? buildSystemPrompt(form, this.targetRole, issues);
+    // Build composed system prompt from form instructions
+    let systemPrompt = buildSystemPrompt(form, this.targetRole, issues);
+
+    // Append additional context if provided (never overrides form instructions)
+    if (this.systemPromptAddition) {
+      systemPrompt += "\n\n# Additional Context\n" + this.systemPromptAddition;
+    }
 
     // Define the patch tool with properly typed parameters
     const patchesSchema = z.object({
