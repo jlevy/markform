@@ -244,6 +244,8 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 
 - *required:* Identified by `(ref, kind)` combination, which must be unique
 
+- When `kind` is omitted, it defaults to `'notes'`
+
 - Duplicate `(ref, kind)` pairs are an error
 
 - Multiple doc blocks can reference the same target with different `kind` values
@@ -420,6 +422,8 @@ without filtering out nested doc blocks.
 
 - *required:* `(ref, kind)` combination must be unique
 
+- When `kind` is omitted, it defaults to `'notes'`
+
 - Multiple doc blocks with different `kind` values can reference the same target
 
 #### Field Values
@@ -585,12 +589,7 @@ It is only required when the value contains Markdoc tag syntax:
 
 - Tag syntax: `{% ... %}`
 
-> **Note:** Markdoc uses HTML comments (`
-
-<!-- ... -->
-
-`), not `{# ... #}`. HTML comments
-> in form values are plain text and don't require `process=false`.
+> **Note:** Markdoc uses HTML comments (`<!-- ... -->`), not `{# ... #}`. HTML comments in form values are plain text and don't require `process=false`.
 
 **Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check
 is sufficient since false positives are harmless (adding `process=false` when not needed
@@ -915,7 +914,7 @@ type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
 
 interface DocumentationBlock {
   ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
-  kind?: 'description' | 'instructions' | 'notes' | 'examples';
+  kind: 'description' | 'instructions' | 'notes' | 'examples';  // defaults to 'notes' when omitted
   bodyMarkdown: string;
 }
 
@@ -1992,6 +1991,29 @@ The harness wraps the engine with a stable “step” protocol for bite-sized ac
 A default `max_turns` safety limit (e.g., 100) should be enforced to prevent runaway
 loops during development and testing.
 Exceeding `max_turns` results in an error state.
+
+**Error Behavior:**
+
+| Condition | Harness Status | CLI Exit Code |
+|-----------|---------------|---------------|
+| Form completed successfully | `'complete'` | 0 |
+| `max_turns` exceeded | `'max_turns_exceeded'` | 1 |
+| Agent/LLM error | `'error'` | 1 |
+| User cancelled | `'cancelled'` | 130 |
+
+The harness returns a `HarnessResult` with `status` and optional `error` fields:
+
+```ts
+interface HarnessResult {
+  status: 'complete' | 'max_turns_exceeded' | 'error' | 'cancelled';
+  error?: Error;           // present when status is 'error'
+  turnCount: number;       // total turns executed
+  outputPath?: string;     // path to output file (when complete)
+}
+```
+
+Integration tests can check `result.status` to verify expected outcomes without
+parsing console output.
 
 #### Harness Contract
 

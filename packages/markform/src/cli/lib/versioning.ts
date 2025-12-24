@@ -2,15 +2,16 @@
  * Versioned filename utilities for form output.
  *
  * Generates versioned filenames to avoid overwriting existing files.
- * Pattern: name.form.md → name-v1.form.md → name-v2.form.md
+ * Pattern: name.form.md → name-filled1.form.md → name-filled2.form.md
  */
 
 import { existsSync } from "node:fs";
 
 /**
- * Version pattern that matches -vN, _vN, or vN before the extension.
+ * Version pattern that matches -filledN or _filledN before the extension.
+ * Also matches legacy -vN pattern for backwards compatibility.
  */
-const VERSION_PATTERN = /^(.+?)(?:[-_]?v(\d+))?(\.form\.md)$/i;
+const VERSION_PATTERN = /^(.+?)(?:[-_]?(?:filled|v)(\d+))?(\.form\.md)$/i;
 
 /**
  * Extension pattern for fallback matching.
@@ -63,7 +64,7 @@ export function parseVersionedPath(filePath: string): {
 /**
  * Generate the next versioned filename.
  *
- * If the file has no version, adds -v1.
+ * If the file has no version, adds -filled1.
  * If the file has a version, increments it.
  *
  * @param filePath - Original file path
@@ -74,11 +75,11 @@ export function incrementVersion(filePath: string): string {
 
   if (parsed) {
     const newVersion = parsed.version !== null ? parsed.version + 1 : 1;
-    return `${parsed.base}-v${newVersion}${parsed.extension}`;
+    return `${parsed.base}-filled${newVersion}${parsed.extension}`;
   }
 
   // Fallback for non-.form.md files
-  return `${filePath}-v1`;
+  return `${filePath}-filled1`;
 }
 
 /**
@@ -95,23 +96,23 @@ export function generateVersionedPath(filePath: string): string {
 
   if (!parsed) {
     // Fallback for non-.form.md files
-    let candidate = `${filePath}-v1`;
+    let candidate = `${filePath}-filled1`;
     let version = 1;
     while (existsSync(candidate)) {
       version++;
-      candidate = `${filePath}-v${version}`;
+      candidate = `${filePath}-filled${version}`;
     }
     return candidate;
   }
 
   // Start from version 1 or increment existing version
   let version = parsed.version !== null ? parsed.version + 1 : 1;
-  let candidate = `${parsed.base}-v${version}${parsed.extension}`;
+  let candidate = `${parsed.base}-filled${version}${parsed.extension}`;
 
   // Find next available version
   while (existsSync(candidate)) {
     version++;
-    candidate = `${parsed.base}-v${version}${parsed.extension}`;
+    candidate = `${parsed.base}-filled${version}${parsed.extension}`;
   }
 
   return candidate;
