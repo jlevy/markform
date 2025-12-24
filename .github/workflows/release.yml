@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write  # Required for OIDC trusted publishing
 
 jobs:
   release:
@@ -27,10 +28,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Create Release PR or Publish
-        uses: changesets/action@v1
-        with:
-          publish: pnpm release
+      - name: Build and publish
+        run: pnpm build && pnpm publint
+
+      # Publish with OIDC trusted publishing (no NPM_TOKEN needed)
+      - name: Publish to npm
+        run: pnpm -r publish --access public --no-git-checks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

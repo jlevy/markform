@@ -1,8 +1,28 @@
 {
   "name": "markform",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Agent-friendly, human-readable, editable forms stored as .form.md files",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
+  "author": "Joshua Levy",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlevy/markform.git",
+    "directory": "packages/markform"
+  },
+  "homepage": "https://github.com/jlevy/markform#readme",
+  "bugs": {
+    "url": "https://github.com/jlevy/markform/issues"
+  },
+  "keywords": [
+    "forms",
+    "markdown",
+    "ai",
+    "agents",
+    "llm",
+    "structured-data",
+    "markdoc",
+    "ai-sdk"
+  ],
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.mjs",
@@ -35,6 +55,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
+    "prepare": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -58,6 +79,14 @@
     "picocolors": "^1.1.0",
     "yaml": "^2.7.0",
     "zod": "^3.24.0"
+  },
+  "peerDependencies": {
+    "ai": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@ai-sdk/anthropic": "^3.0.1",

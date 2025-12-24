@@ -1,7 +1,32 @@
 # Publishing
 
 This project uses [Changesets](https://github.com/changesets/changesets) for version
-management and tag-based releases.
+management and tag-based releases with OIDC trusted publishing to npm.
+
+## One-Time Setup
+
+Before the first release, complete these steps:
+
+### 1. Manual First Publish
+
+The package must exist on npm before OIDC can be configured:
+
+```bash
+cd packages/markform
+npm login
+npm publish --access public
+```
+
+### 2. Configure OIDC Trusted Publishing on npm
+
+1. Go to https://www.npmjs.com/package/markform/access
+2. Under "Publishing access", click "Configure Trusted Publishing"
+3. Add the GitHub repository: `jlevy/markform`
+4. Leave environment blank (allows any workflow) or set to `release`
+
+### 3. Verify Repository is Public
+
+OIDC trusted publishing requires a public GitHub repository.
 
 ## During Development
 
@@ -84,9 +109,10 @@ git push --tags
 
 ```bash
 gh run list --limit 1  # Check release workflow started
+gh run view --log      # Watch progress
 ```
 
-The GitHub Actions workflow will build and publish to npm.
+The GitHub Actions workflow will build and publish to npm using OIDC authentication.
 
 ## Quick Reference
 
@@ -105,12 +131,16 @@ git add . && git commit -m "chore: release markform v0.2.0"
 git push && git tag v0.2.0 && git push --tags
 ```
 
-## Prerequisites
+## How OIDC Publishing Works
 
-For npm publishing:
+This project uses npm's trusted publishing via OIDC (OpenID Connect):
 
-- `NPM_TOKEN` secret must be set in GitHub repository settings
-- Token needs publish permissions for the `markform` package
+- **No tokens to manage**: GitHub Actions presents an OIDC identity to npm
+- **No secrets to rotate**: npm issues a one-time credential for each workflow run
+- **Provenance attestation**: Published packages include signed build provenance
+
+The release workflow (`.github/workflows/release.yml`) triggers on `v*` tags and
+publishes automatically without requiring an `NPM_TOKEN` secret.
 
 ## Troubleshooting
 
@@ -119,12 +149,32 @@ For npm publishing:
 - Ensure tag format is `v*` (e.g., `v0.2.0`)
 - Check tag was pushed: `git ls-remote --tags origin`
 
-**npm publish failing?**
+**npm publish failing with 401/403?**
 
-- Verify `NPM_TOKEN` is set in GitHub secrets
-- Check token has publish permissions
+- Verify OIDC is configured: https://www.npmjs.com/package/markform/access
+- Check repository is listed under "Trusted Publishing"
+- Ensure the repository is public
+
+**First publish?**
+
+- OIDC requires the package to already exist on npm
+- Do a manual `npm publish --access public` first (see One-Time Setup)
 
 ## Alternative: Interactive Mode
 
 For humans who prefer prompts, use `pnpm changeset` instead of writing the file directly.
 It will prompt for package selection, bump type, and description.
+
+## Installing from Git (Bleeding Edge)
+
+To use the latest unreleased code directly from GitHub:
+
+```bash
+# pnpm
+pnpm add "github:jlevy/markform#path:packages/markform"
+
+# npm
+npm install "github:jlevy/markform#path:packages/markform"
+```
+
+This runs the `prepare` script to build from source.
