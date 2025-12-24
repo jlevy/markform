@@ -15,12 +15,11 @@ import * as p from "@clack/prompts";
 import { existsSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import pc from "picocolors";
-import YAML from "yaml";
 
 import { parseForm } from "../../engine/parse.js";
-import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
 import { inspect } from "../../engine/inspect.js";
 import { applyPatches } from "../../engine/apply.js";
+import { exportMultiFormat, exportFormOnly } from "../lib/exportHelpers.js";
 import {
   USER_ROLE,
   AGENT_ROLE,
@@ -38,7 +37,7 @@ import {
   getExampleById,
   loadExampleContent,
 } from "../examples/index.js";
-import { getCommandContext, logError, logTiming } from "../lib/shared.js";
+import { formatPath, getCommandContext, logError, logTiming } from "../lib/shared.js";
 import { generateVersionedPath } from "../lib/versioning.js";
 import {
   runInteractiveFill,
@@ -58,6 +57,21 @@ function printExamplesList(): void {
     console.log(`    Default filename: ${example.filename}`);
     console.log("");
   }
+}
+
+/**
+ * Display API availability status at startup.
+ */
+function showApiStatus(): void {
+  console.log(pc.dim("API Status:"));
+  for (const [provider, _models] of Object.entries(SUGGESTED_LLMS)) {
+    const info = getProviderInfo(provider as ProviderName);
+    const hasKey = !!process.env[info.envVar];
+    const status = hasKey ? pc.green("✓") : pc.dim("○");
+    const envVar = hasKey ? pc.dim(info.envVar) : pc.yellow(info.envVar);
+    console.log(`  ${status} ${provider} (${envVar})`);
+  }
+  console.log("");
 }
 
 /**
@@ -128,66 +142,6 @@ async function promptForModel(): Promise<string | null> {
 }
 
 /**
- * Convert field values to plain values for YAML export.
- */
-function toPlainValues(form: ParsedForm): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-
-  for (const [fieldId, value] of Object.entries(form.valuesByFieldId)) {
-    switch (value.kind) {
-      case "string":
-        result[fieldId] = value.value ?? null;
-        break;
-      case "number":
-        result[fieldId] = value.value ?? null;
-        break;
-      case "string_list":
-        result[fieldId] = value.items;
-        break;
-      case "single_select":
-        result[fieldId] = value.selected ?? null;
-        break;
-      case "multi_select":
-        result[fieldId] = value.selected;
-        break;
-      case "checkboxes":
-        result[fieldId] = value.values;
-        break;
-    }
-  }
-
-  return result;
-}
-
-/**
- * Export form to multiple formats.
- */
-function exportMultiFormat(
-  form: ParsedForm,
-  basePath: string,
-): { formPath: string; rawPath: string; yamlPath: string } {
-  // Derive paths from base
-  const formPath = basePath;
-  const rawPath = basePath.replace(/\.form\.md$/, ".raw.md");
-  const yamlPath = basePath.replace(/\.form\.md$/, ".yml");
-
-  // Export form markdown
-  const formContent = serialize(form);
-  writeFileSync(formPath, formContent, "utf-8");
-
-  // Export raw markdown
-  const rawContent = serializeRawMarkdown(form);
-  writeFileSync(rawPath, rawContent, "utf-8");
-
-  // Export YAML values
-  const values = toPlainValues(form);
-  const yamlContent = YAML.stringify(values);
-  writeFileSync(yamlPath, yamlContent, "utf-8");
-
-  return { formPath, rawPath, yamlPath };
-}
-
-/**
  * Run the agent fill workflow.
  */
 async function runAgentFill(
@@ -216,13 +170,14 @@ async function runAgentFill(
     const harness = createHarness(form, harnessConfig);
     const agent = createLiveAgent({ model, targetRole: AGENT_ROLE });
 
-    // Run harness loop
-    spinner.start("Running agent fill...");
+    // Run harness loop with verbose output
+    console.log("");
+    p.log.step(pc.bold("Agent fill in progress..."));
     let stepResult = harness.step();
 
     while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-      spinner.message(
-        `Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issues`
+      console.log(
+        pc.dim(`  Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issue(s) to address`)
       );
 
       // Generate patches from agent
@@ -232,19 +187,28 @@ async function runAgentFill(
         harnessConfig.maxPatchesPerTurn!
       );
 
+      // Log each patch
+      for (const patch of patches) {
+        const fieldId = patch.fieldId;
+        console.log(pc.dim(`    → ${patch.op} ${fieldId}`));
+      }
+
       // Apply patches
       stepResult = harness.apply(patches, stepResult.issues);
+      console.log(
+        pc.dim(`    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining`)
+      );
 
       if (!stepResult.isComplete) {
         stepResult = harness.step();
       }
     }
 
-    spinner.stop(
-      stepResult.isComplete
-        ? pc.green(`✓ Form completed in ${harness.getTurnNumber()} turn(s)`)
-        : pc.yellow(`Max turns reached (${harnessConfig.maxTurns})`)
-    );
+    if (stepResult.isComplete) {
+      p.log.success(pc.green(`Form completed in ${harness.getTurnNumber()} turn(s)`));
+    } else {
+      p.log.warn(pc.yellow(`Max turns reached (${harnessConfig.maxTurns})`));
+    }
 
     // Copy final form state
     Object.assign(form, harness.getForm());
@@ -268,6 +232,9 @@ async function runInteractiveFlow(
   const startTime = Date.now();
 
   p.intro(pc.bgCyan(pc.black(" markform examples ")));
+
+  // Show API availability status
+  showApiStatus();
 
   // Step 1: Select example (or use preselected)
   let selectedId = preselectedId;
@@ -344,7 +311,7 @@ async function runInteractiveFlow(
     process.exit(1);
   }
 
-  p.log.success(`Created ${pc.green(filename)}`);
+  p.log.success(`Created ${formatPath(outputPath)}`);
 
   // Step 5: Parse the form and run interactive fill
   const form = parseForm(content);
@@ -385,9 +352,8 @@ async function runInteractiveFlow(
       applyPatches(form, patches);
     }
 
-    // Save the filled form
-    const formMarkdown = serialize(form);
-    writeFileSync(outputPath, formMarkdown, "utf-8");
+    // Save the filled form (markform format only; users can export other formats via CLI)
+    exportFormOnly(form, outputPath);
 
     showInteractiveOutro(patches.length, outputPath, false);
     logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Fill time", Date.now() - startTime);
@@ -409,7 +375,7 @@ async function runInteractiveFlow(
     if (p.isCancel(runAgent) || !runAgent) {
       console.log("");
       console.log(pc.dim("You can run agent fill later with:"));
-      console.log(pc.dim(`  markform fill ${outputPath} --agent=live --model=<provider/model>`));
+      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --agent=live --model=<provider/model>`));
       p.outro(pc.dim("Happy form filling!"));
       return;
     }
@@ -453,9 +419,9 @@ async function runInteractiveFlow(
 
       console.log("");
       p.log.success("Agent fill complete. Outputs:");
-      console.log(`  ${pc.green(basename(formPath))}  ${pc.dim("(markform)")}`);
-      console.log(`  ${pc.green(basename(rawPath))}  ${pc.dim("(plain markdown)")}`);
-      console.log(`  ${pc.green(basename(yamlPath))}  ${pc.dim("(values as YAML)")}`);
+      console.log(`  ${formatPath(formPath)}  ${pc.dim("(markform)")}`);
+      console.log(`  ${formatPath(rawPath)}  ${pc.dim("(plain markdown)")}`);
+      console.log(`  ${formatPath(yamlPath)}  ${pc.dim("(values as YAML)")}`);
 
       if (!success) {
         p.log.warn("Agent did not complete all fields. You may need to run it again.");
@@ -465,7 +431,7 @@ async function runInteractiveFlow(
       p.log.error(`Agent fill failed: ${message}`);
       console.log("");
       console.log(pc.dim("You can try again with:"));
-      console.log(pc.dim(`  markform fill ${outputPath} --agent=live --model=${modelId}`));
+      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --agent=live --model=${modelId}`));
     }
   }
 
