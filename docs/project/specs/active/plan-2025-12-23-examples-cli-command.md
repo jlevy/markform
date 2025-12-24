@@ -522,16 +522,22 @@ The following beads should be created for tracking:
 | markform-165 | Add agent output filename prompt | Versioned naming with generateVersionedPath |
 | markform-166 | Integrate live agent harness | Run agent, display progress, handle errors |
 | markform-167 | Add multi-format export | Raw markdown and YAML export after completion |
+| markform-168 | Normalize file path display | Use formatPath() helper for consistent relative paths |
+| markform-169 | Extract reusable multi-format export logic | Move export helpers to shared module |
+| markform-170 | Enable verbose logging during agent fill | Show each turn and patch during agent execution |
+| markform-171 | Check API availability at start | Display API status for each provider at startup |
 
 ### Acceptance Criteria (Complete Workflow)
 
 1. After interactive fill, prompts to run agent fill if agent fields remain
 2. Model selection shows common options and allows custom entry
 3. Agent output uses versioned naming convention
-4. Agent progress is displayed during execution
+4. Agent progress is displayed during execution (verbose: turns, patches)
 5. On completion, exports to `.form.md`, `.raw.md`, and `.yml`
 6. User can skip agent fill and run manually later
 7. Graceful error handling for API failures
+8. File paths displayed consistently as relative paths (e.g., `./simple-filled1.form.md`)
+9. API availability status shown at startup (✓ for configured, ○ for missing)
 
 * * *
 
@@ -557,6 +563,10 @@ The following beads should be created for tracking:
 * * *
 
 ## Revision History
+
+- 2025-12-24: UX improvements - added formatPath() for consistent path display, extracted
+  reusable export helpers to shared module, added verbose logging during agent fill,
+  added API availability status at startup; closed markform-168 through markform-171
 
 - 2025-12-24: Implemented Stage 5 (Complete Workflow) - agent fill prompt, model selection,
   versioned output naming, live agent harness integration, and multi-format export;
