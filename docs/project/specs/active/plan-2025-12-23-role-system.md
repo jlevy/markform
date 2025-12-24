@@ -1053,11 +1053,11 @@ markform fill company-quarterly-analysis.form.md --dry-run
 - **markform-149.3**: Phase 3 - Inspect module filters by targetRoles, detects blocking checkpoints
 - **markform-149.4**: Phase 4 - Fill command has --roles and --mode flags, harness passes targetRoles
 - **markform-149.5**: Phase 5 - Serializer outputs role and approvalMode when non-default
+- **markform-149.6**: Phase 6 - Inspect CLI shows role badges, --roles flag, blockedBy annotations
+- **markform-149.7**: Phase 7 - Example forms updated with roles frontmatter and role="user" fields
 
-### Remaining Work
+### Remaining Work (Future Phases)
 
-- **markform-149.6**: Phase 6 - Update inspect CLI to show role info and blocked field annotations
-- **markform-149.7**: Phase 7 - Update example forms to use role system
 - **markform-146**: Add --prompt flag to fill command for custom agent instructions
 - **markform-147**: Connect form instructions to live agent prompt composition
 

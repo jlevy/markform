@@ -20,6 +20,7 @@ import type {
   InspectIssue,
   ProgressState,
 } from "../../engine/types.js";
+import { parseRolesFlag } from "../../settings.js";
 import {
   formatOutput,
   getCommandContext,
@@ -132,6 +133,7 @@ interface ReportField {
   kind: string;
   label: string;
   required: boolean;
+  role: string;
 }
 
 /** Group info for console report */
@@ -156,6 +158,7 @@ interface InspectReport {
     message: string;
     priority: number;
     severity: "required" | "recommended";
+    blockedBy?: string;
   }[];
 }
 
@@ -222,9 +225,10 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     lines.push(`  ${bold(group.title ?? group.id)}`);
     for (const field of group.children) {
       const reqBadge = field.required ? yellow("[required]") : dim("[optional]");
+      const roleBadge = field.role !== "agent" ? cyan(`[${field.role}]`) : "";
       const value = report.values[field.id];
       const valueStr = formatFieldValue(value, useColors);
-      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge}`);
+      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge} ${roleBadge}`.trim());
       lines.push(`      ${dim("→")} ${valueStr}`);
     }
   }
@@ -236,8 +240,11 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     for (const issue of report.issues) {
       const priority = formatPriority(issue.priority, useColors);
       const severity = formatSeverity(issue.severity, useColors);
+      const blockedInfo = issue.blockedBy
+        ? ` ${dim(`(blocked by: ${issue.blockedBy})`)}`
+        : "";
       lines.push(
-        `  ${priority} (${severity}) ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message}`
+        `  ${priority} (${severity}) ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message}${blockedInfo}`
       );
     }
   } else {
@@ -254,58 +261,84 @@ export function registerInspectCommand(program: Command): void {
   program
     .command("inspect <file>")
     .description("Inspect a form and display its structure, progress, and issues")
-    .action(async (file: string, _options: Record<string, unknown>, cmd: Command) => {
-      const ctx = getCommandContext(cmd);
+    .option(
+      "--roles <roles>",
+      "Filter issues by target roles (comma-separated, or '*' for all; default: all)"
+    )
+    .action(
+      async (
+        file: string,
+        options: { roles?: string },
+        cmd: Command
+      ) => {
+        const ctx = getCommandContext(cmd);
 
-      try {
-        logVerbose(ctx, `Reading file: ${file}`);
-        const content = await readFile(file);
+        try {
+          // Parse and validate --roles
+          let targetRoles: string[] | undefined;
+          if (options.roles) {
+            try {
+              targetRoles = parseRolesFlag(options.roles);
+              // '*' means all roles - pass undefined to not filter
+              if (targetRoles.includes("*")) {
+                targetRoles = undefined;
+              }
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : String(error);
+              logError(`Invalid --roles: ${message}`);
+              process.exit(1);
+            }
+          }
 
-        logVerbose(ctx, "Parsing form...");
-        const form = parseForm(content);
+          logVerbose(ctx, `Reading file: ${file}`);
+          const content = await readFile(file);
 
-        logVerbose(ctx, "Running inspection...");
-        const result = inspect(form);
+          logVerbose(ctx, "Parsing form...");
+          const form = parseForm(content);
 
-        // Build the report structure
-        const report: InspectReport = {
-          title: form.schema.title,
-          structure: result.structureSummary,
-          progress: result.progressSummary,
-          form_state: result.formState,
-          groups: form.schema.groups.map((group) => ({
-            id: group.id,
-            title: group.title,
-            children: group.children.map((field) => ({
-              id: field.id,
-              kind: field.kind,
-              label: field.label,
-              required: field.required,
+          logVerbose(ctx, "Running inspection...");
+          const result = inspect(form, { targetRoles });
+
+          // Build the report structure
+          const report: InspectReport = {
+            title: form.schema.title,
+            structure: result.structureSummary,
+            progress: result.progressSummary,
+            form_state: result.formState,
+            groups: form.schema.groups.map((group) => ({
+              id: group.id,
+              title: group.title,
+              children: group.children.map((field) => ({
+                id: field.id,
+                kind: field.kind,
+                label: field.label,
+                required: field.required,
+                role: field.role,
+              })),
             })),
-          })),
-          values: form.valuesByFieldId,
-          issues: result.issues.map((issue: InspectIssue) => ({
-            ref: issue.ref,
-            scope: issue.scope,
-            reason: issue.reason,
-            message: issue.message,
-            priority: issue.priority,
-            severity: issue.severity,
-          })),
-        };
+            values: form.valuesByFieldId,
+            issues: result.issues.map((issue: InspectIssue) => ({
+              ref: issue.ref,
+              scope: issue.scope,
+              reason: issue.reason,
+              message: issue.message,
+              priority: issue.priority,
+              severity: issue.severity,
+              blockedBy: issue.blockedBy,
+            })),
+          };
 
-        // Output in requested format
-        const output = formatOutput(ctx, report, (data, useColors) =>
-          formatConsoleReport(
-            data as typeof report,
-            useColors
-          )
-        );
-        console.log(output);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(message);
-        process.exit(1);
+          // Output in requested format
+          const output = formatOutput(ctx, report, (data, useColors) =>
+            formatConsoleReport(data as typeof report, useColors)
+          );
+          console.log(output);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          logError(message);
+          process.exit(1);
+        }
       }
-    });
+    );
 }
