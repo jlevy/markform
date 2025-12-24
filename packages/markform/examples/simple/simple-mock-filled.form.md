@@ -11,10 +11,10 @@ markform:
 
 {% form id="simple_test" title="Simple Test Form" %}
 
-{% doc ref="simple_test" kind="description" %}
+{% description ref="simple_test" %}
 A form demonstrating user and agent roles. User fills required fields,
 agent fills optional fields. Demonstrates all Markform v0.1 field types.
-{% /doc %}
+{% /description %}
 
 {% field-group id="basic_fields" title="Basic Fields" %}
 
@@ -24,9 +24,9 @@ Alice Johnson
 ```
 {% /string-field %}
 
-{% doc ref="name" kind="instructions" %}
+{% instructions ref="name" %}
 Enter your full name (2-50 characters).
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" %}
 ```value
@@ -46,9 +46,9 @@ alice@example.com
 ```
 {% /number-field %}
 
-{% doc ref="score" kind="instructions" %}
+{% instructions ref="score" %}
 Assign a score between 0 and 100 based on form completeness.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -62,9 +62,9 @@ forms
 ```
 {% /string-list %}
 
-{% doc ref="tags" kind="instructions" %}
+{% instructions ref="tags" %}
 Add 1-5 unique tags (each at least 2 characters).
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -94,9 +94,9 @@ Add 1-5 unique tags (each at least 2 characters).
 - [-] Test {% #test %}
 {% /checkboxes %}
 
-{% doc ref="tasks_multi" kind="instructions" %}
+{% instructions ref="tasks_multi" %}
 Track task progress. All must reach done or na state to complete.
-{% /doc %}
+{% /instructions %}
 
 {% checkboxes id="tasks_simple" label="Agreements (Simple Mode)" role="user" checkboxMode="simple" required=true %}
 - [x] I have read the guidelines {% #read_guidelines %}
@@ -108,9 +108,9 @@ Track task progress. All must reach done or na state to complete.
 - [n] Stakeholders notified {% #notified %}
 {% /checkboxes %}
 
-{% doc ref="confirmations" kind="instructions" %}
+{% instructions ref="confirmations" %}
 Answer yes or no for each confirmation. All must be explicitly answered.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -122,9 +122,9 @@ This is a test note.
 ```
 {% /string-field %}
 
-{% doc ref="notes" kind="instructions" %}
+{% instructions ref="notes" %}
 Add any relevant notes or observations about this test form.
-{% /doc %}
+{% /instructions %}
 
 {% number-field id="optional_number" label="Optional Number" role="agent" %}{% /number-field %}
 

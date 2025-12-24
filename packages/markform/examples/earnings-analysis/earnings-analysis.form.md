@@ -11,18 +11,18 @@ markform:
 
 {% form id="company_analysis" title="Company Quarterly Analysis Worksheet" %}
 
-{% doc ref="company_analysis" kind="description" %}
+{% description ref="company_analysis" %}
 This worksheet supports systematic research on a company for a given quarter.
 It has two parts: a relatively static company profile, and a period-specific analysis section.
-{% /doc %}
+{% /description %}
 
-{% doc ref="company_analysis" kind="instructions" %}
+{% documentation ref="company_analysis" %}
 **Part 1: Company Profile** — Foundational information that changes slowly.
 Update as needed but expect most content to persist quarter-to-quarter.
 
 **Part 2: Quarterly Analysis** — Period-specific analysis.
 Complete fresh each quarter.
-{% /doc %}
+{% /documentation %}
 
 <!-- PART 1: COMPANY PROFILE -->
 
@@ -32,17 +32,17 @@ Complete fresh each quarter.
 
 {% string-list id="tickers" label="Ticker(s)" role="user" required=true minItems=1 %}{% /string-list %}
 
-{% doc ref="tickers" kind="instructions" %}
+{% instructions ref="tickers" %}
 List at least one ticker symbol. Add multiple if the company trades on different exchanges.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="hq_regions" label="HQ / key operating regions" required=true %}{% /string-field %}
 
 {% string-field id="fiscal_year_end" label="Fiscal year end" role="user" required=true pattern="^(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$|^(January|February|March|April|May|June|July|August|September|October|November|December)$" %}{% /string-field %}
 
-{% doc ref="fiscal_year_end" kind="instructions" %}
+{% instructions ref="fiscal_year_end" %}
 Enter month name (e.g., December) or MM-DD format (e.g., 12-31).
-{% /doc %}
+{% /instructions %}
 
 {% single-select id="reporting_cadence" label="Reporting cadence" required=true %}
 - [ ] Yearly {% #yearly %}
@@ -61,23 +61,23 @@ Enter month name (e.g., December) or MM-DD format (e.g., 12-31).
 - [ ] Financial / credit {% #financial %}
 {% /multi-select %}
 
-{% doc ref="business_model_type" kind="instructions" %}
+{% instructions ref="business_model_type" %}
 Check all that apply. At least one is required.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="business_model_other" label="Other business model (if applicable)" %}{% /string-field %}
 
-{% doc ref="business_model_other" kind="instructions" %}
+{% instructions ref="business_model_other" %}
 Describe any other business model types not covered above.
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="subsidiaries" label="Subsidiaries / key entities" minItems=0 %}{% /string-list %}
 
 {% string-field id="company_summary" label="One-paragraph summary (plain English)" required=true validate=[{id: "min_words", min: 100}] %}{% /string-field %}
 
-{% doc ref="company_summary" kind="instructions" %}
+{% instructions ref="company_summary" %}
 Provide a plain-English summary of what the company does. Minimum 100 words (approximately 400 characters).
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -85,9 +85,9 @@ Provide a plain-English summary of what the company does. Minimum 100 words (app
 
 {% string-list id="timeline_pivots" label="Timeline (key pivots)" required=true minItems=8 maxItems=12 %}{% /string-list %}
 
-{% doc ref="timeline_pivots" kind="instructions" %}
+{% instructions ref="timeline_pivots" %}
 List 8-12 key pivotal moments in the company's history. One event per line.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="transformative_acquisitions" label="Transformative acquisitions / divestitures" %}{% /string-field %}
 
@@ -97,9 +97,9 @@ List 8-12 key pivotal moments in the company's history. One event per line.
 
 {% string-field id="strategic_move_analysis" label="What single strategic move best explains the current model?" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
 
-{% doc ref="strategic_move_analysis" kind="instructions" %}
+{% instructions ref="strategic_move_analysis" %}
 Analyst prompt: Explain the strategic move that best explains the current business model. Minimum 50 words.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -121,9 +121,9 @@ Analyst prompt: Explain the strategic move that best explains the current busine
 
 {% string-field id="direct_indirect_mix" label="Mix of direct vs indirect (if disclosed)" %}{% /string-field %}
 
-{% doc ref="direct_indirect_mix" kind="instructions" %}
+{% instructions ref="direct_indirect_mix" %}
 Enter percentages that should sum to 100% (e.g., "Direct: 60%, Indirect: 40%").
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="key_partners" label="Key partners required to deliver the product" %}{% /string-field %}
 
@@ -133,18 +133,18 @@ Enter percentages that should sum to 100% (e.g., "Direct: 60%, Indirect: 40%").
 
 {% field-group id="offerings_primary" title="4.1 Offerings - Primary Family" %}
 
-{% doc ref="offerings_primary" kind="description" %}
+{% description ref="offerings_primary" %}
 Tie every revenue line to something someone buys. Use "families," not SKUs.
 This section ideally uses repeating groups (future feature). For now, model one offering family.
-{% /doc %}
+{% /description %}
 
 {% string-field id="offering_1_name" label="Offering family name" required=true %}{% /string-field %}
 
 {% string-field id="offering_1_value_prop" label="Value proposition (1 sentence)" required=true maxLength=250 %}{% /string-field %}
 
-{% doc ref="offering_1_value_prop" kind="instructions" %}
+{% instructions ref="offering_1_value_prop" %}
 Maximum 50 words. Describe the core value in one sentence.
-{% /doc %}
+{% /instructions %}
 
 {% single-select id="offering_1_delivery" label="Delivery type" required=true %}
 - [ ] Physical {% #physical %}
@@ -176,17 +176,17 @@ Maximum 50 words. Describe the core value in one sentence.
 
 {% field-group id="pricing_structure" title="5.1 Pricing Structure" %}
 
-{% doc ref="pricing_structure" kind="description" %}
+{% description ref="pricing_structure" %}
 Make "pricing power" concrete.
-{% /doc %}
+{% /description %}
 
 {% string-field id="pricing_offering_name" label="Offering family" required=true %}{% /string-field %}
 
 {% string-field id="list_price_range" label="List price / typical range" required=true %}{% /string-field %}
 
-{% doc ref="list_price_range" kind="instructions" %}
+{% instructions ref="list_price_range" %}
 Include currency and range (e.g., "$99-$499 USD" or "€50/month").
-{% /doc %}
+{% /instructions %}
 
 {% multi-select id="discounting_norms" label="Discounting norms" %}
 - [ ] None {% #none %}
@@ -242,9 +242,9 @@ Include currency and range (e.g., "$99-$499 USD" or "€50/month").
 
 {% string-field id="geography_mix" label="Geography mix" required=true %}{% /string-field %}
 
-{% doc ref="geography_mix" kind="instructions" %}
+{% instructions ref="geography_mix" %}
 Enter percentages that should sum to 100% (e.g., "Americas: 55%, EMEA: 30%, APAC: 15%").
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="buyer_user_influencer" label="Buyer vs user vs influencer" %}{% /string-field %}
 
@@ -278,9 +278,9 @@ Enter percentages that should sum to 100% (e.g., "Americas: 55%, EMEA: 30%, APAC
 
 {% string-field id="tam_sam_som" label="TAM/SAM/SOM (and confidence)" %}{% /string-field %}
 
-{% doc ref="tam_sam_som" kind="instructions" %}
+{% instructions ref="tam_sam_som" %}
 Include currency values with confidence level (e.g., "TAM: $50B (high), SAM: $10B (medium), SOM: $500M (low)").
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="market_growth_cyclicality" label="Market growth rate and cyclicality" %}{% /string-field %}
 
@@ -288,9 +288,9 @@ Include currency values with confidence level (e.g., "TAM: $50B (high), SAM: $10
 
 {% string-list id="basis_of_competition" label="Basis of competition (ranked top 5)" required=true minItems=5 maxItems=5 %}{% /string-list %}
 
-{% doc ref="basis_of_competition" kind="instructions" %}
+{% instructions ref="basis_of_competition" %}
 List exactly 5 competitive factors, ranked by importance. First item is most important.
-{% /doc %}
+{% /instructions %}
 
 {% multi-select id="moat_diagnosis" label="Moat diagnosis" %}
 - [ ] Switching costs {% #switching_costs %}
@@ -306,9 +306,9 @@ List exactly 5 competitive factors, ranked by importance. First item is most imp
 
 {% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
 
-{% doc ref="moat_explanation" kind="instructions" %}
+{% instructions ref="moat_explanation" %}
 Required if any moat is checked above. Explain why these moats apply. Minimum 25 words.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="competitive_risks" label="Competitive risks (price wars, bundling, platform shifts)" %}{% /string-field %}
 
@@ -332,15 +332,15 @@ Required if any moat is checked above. Explain why these moats apply. Minimum 25
 
 {% string-list id="macro_variables" label="Top 5 macro variables that historically mattered" required=true minItems=5 maxItems=5 %}{% /string-list %}
 
-{% doc ref="macro_variables" kind="instructions" %}
+{% instructions ref="macro_variables" %}
 List exactly 5 macro variables, ranked by importance.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="transmission_mechanism" label="Transmission mechanism (how each impacts revenue/margin/cash)" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
 
-{% doc ref="transmission_mechanism" kind="instructions" %}
+{% instructions ref="transmission_mechanism" %}
 Minimum 50 words. Explain how each macro variable impacts the business.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="historical_episodes" label="Historical episodes (recession/inflation/FX/supply shock)" %}{% /string-field %}
 
@@ -352,9 +352,9 @@ Minimum 50 words. Explain how each macro variable impacts the business.
 
 {% string-field id="trend_summary" label="3-5 year trend summary (revenue, margin, EPS, FCF)" required=true validate=[{id: "min_words", min: 75}] %}{% /string-field %}
 
-{% doc ref="trend_summary" kind="instructions" %}
+{% instructions ref="trend_summary" %}
 Minimum 75 words. Cover revenue, margin, EPS, and free cash flow trends.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="capital_return_policy" label="Capital return policy (buybacks/dividends)" %}{% /string-field %}
 
@@ -374,9 +374,9 @@ Minimum 75 words. Cover revenue, margin, EPS, and free cash flow trends.
 
 {% string-field id="deadline" label="Deadline (before earnings, next quarter, etc.)" pattern="^\\d{4}-\\d{2}-\\d{2}$|^[A-Za-z].*$" %}{% /string-field %}
 
-{% doc ref="deadline" kind="instructions" %}
+{% instructions ref="deadline" %}
 Enter a date (YYYY-MM-DD format) or descriptive text (e.g., "Before Q2 earnings").
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -384,11 +384,11 @@ Enter a date (YYYY-MM-DD format) or descriptive text (e.g., "Before Q2 earnings"
 
 {% field-group id="quarterly_cover" title="Q1. Cover Sheet" %}
 
-{% doc ref="quarterly_cover" kind="description" %}
+{% description ref="quarterly_cover" %}
 This section is period-specific. Complete fresh each quarter.
-{% /doc %}
+{% /description %}
 
-{% doc ref="quarterly_cover" kind="instructions" %}
+{% instructions ref="quarterly_cover" %}
 **Recommended Operating Cadence:**
 - **T-21 to T-14:** Refresh model + read filings; pick "what matters this quarter"
 - **T-14 to T-7:** Build expectations stack; peer read-across; gather alt data / checks
@@ -396,13 +396,13 @@ This section is period-specific. Complete fresh each quarter.
 - **T-1:** Confirm options pricing + positioning; finalize risks and stops
 - **Earnings day:** Watchlist + rapid interpretation plan
 - **T+1 to T+2:** Post-mortem; update model; document learnings
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="pre_earnings_thesis" label="One-sentence thesis (pre-earnings)" required=true maxLength=250 %}{% /string-field %}
 
-{% doc ref="pre_earnings_thesis" kind="instructions" %}
+{% instructions ref="pre_earnings_thesis" %}
 Maximum 50 words. State your core thesis before the earnings release.
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="what_matters_top_3" label="What matters this quarter (top 3 drivers)" required=true minItems=3 maxItems=3 %}{% /string-list %}
 
@@ -410,13 +410,13 @@ Maximum 50 words. State your core thesis before the earnings release.
 
 {% field-group id="sources_log" title="Q2.1 Sourcing Log" %}
 
-{% doc ref="sources_log" kind="description" %}
+{% description ref="sources_log" %}
 Check what you actually used. Fill the log as you go.
-{% /doc %}
+{% /description %}
 
-{% doc ref="sources_log" kind="instructions" %}
+{% instructions ref="sources_log" %}
 Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tier, Link or file path, Key takeaways. At least 3 sources required.
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="sources_accessed" label="Sources accessed (Date | Source | Type | Link | Takeaways)" required=true minItems=3 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+\\|.+\\|.+", example: "2024-01-15 | SEC Filing | 10-K | https://... | Key takeaway"}] %}{% /string-list %}
 
@@ -489,9 +489,9 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% string-list id="experts_list" label="Key experts (Name | Angle | Lead time | Hit rate | Tier)" minItems=0 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+\\|.+\\|.+", example: "Jane Doe | Supply chain | 2 weeks | High | Tier 1"}] %}{% /string-list %}
 
-{% doc ref="experts_list" kind="instructions" %}
+{% instructions ref="experts_list" %}
 Format each entry as: Name | Angle | Typical lead time | Hit rate assessment | Tier
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -499,15 +499,15 @@ Format each entry as: Name | Angle | Typical lead time | Hit rate assessment | T
 
 {% string-field id="how_makes_money" label="How the company makes money" required=true validate=[{id: "min_words", min: 25}, {id: "max_words", max: 75}] %}{% /string-field %}
 
-{% doc ref="how_makes_money" kind="instructions" %}
+{% instructions ref="how_makes_money" %}
 2-4 sentences; 25-75 words explaining how the company generates revenue.
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="revenue_segments" label="Revenue segments (Segment: X%)" required=true minItems=1 validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
 
-{% doc ref="revenue_segments" kind="instructions" %}
+{% instructions ref="revenue_segments" %}
 List each segment with percentage of revenue. Format: "Segment Name: XX%". Percentages should sum to 100%.
-{% /doc %}
+{% /instructions %}
 
 {% single-select id="price_changes_recently" label="Price changes recently?" required=true %}
 - [ ] Yes {% #yes %}
@@ -522,9 +522,9 @@ List each segment with percentage of revenue. Format: "Segment Name: XX%". Perce
 
 {% string-list id="key_kpis_quarterly" label="Key KPIs to track this quarter (KPI: why it matters)" required=true minItems=3 maxItems=8 validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
 
-{% doc ref="key_kpis_quarterly" kind="instructions" %}
+{% instructions ref="key_kpis_quarterly" %}
 Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -645,9 +645,9 @@ Format: "KPI Name: Why it matters this quarter". 3-8 KPIs required.
 
 {% field-group id="expect_whisper" title="Q5.4 Whisper / Buyside Bar" %}
 
-{% doc ref="expect_whisper" kind="instructions" %}
+{% instructions ref="expect_whisper" %}
 Only fill if evidence-based.
-{% /doc %}
+{% /instructions %}
 
 {% number-field id="whisper_revenue" label="Whisper revenue" %}{% /number-field %}
 
@@ -655,9 +655,9 @@ Only fill if evidence-based.
 
 {% string-field id="whisper_evidence" label="Whisper evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
 
-{% doc ref="whisper_evidence" kind="instructions" %}
+{% instructions ref="whisper_evidence" %}
 Required if whisper values are provided. Explain the source of whisper estimates.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -677,9 +677,9 @@ Required if whisper values are provided. Explain the source of whisper estimates
 
 {% field-group id="driver_1" title="Q6.1 Driver Model - Driver 1" %}
 
-{% doc ref="driver_1" kind="description" %}
+{% description ref="driver_1" %}
 Simple, explicit, testable assumptions. At least 2 drivers required.
-{% /doc %}
+{% /description %}
 
 {% string-field id="driver_1_name" label="Driver name" required=true %}{% /string-field %}
 
@@ -723,9 +723,9 @@ Simple, explicit, testable assumptions. At least 2 drivers required.
 
 {% field-group id="driver_margin_bridge" title="Q6.4 Margin Bridge" %}
 
-{% doc ref="driver_margin_bridge" kind="instructions" %}
+{% instructions ref="driver_margin_bridge" %}
 All margin impacts should sum to total margin change.
-{% /doc %}
+{% /instructions %}
 
 {% number-field id="margin_mix_bps" label="Mix impact (bps)" %}{% /number-field %}
 
@@ -741,9 +741,9 @@ All margin impacts should sum to total margin change.
 
 {% field-group id="scenario_base" title="Q7.1 Scenarios - Base Case" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
 
-{% doc ref="scenario_base" kind="instructions" %}
+{% instructions ref="scenario_base" %}
 Probabilities across Base/Bull/Bear should sum to 100%.
-{% /doc %}
+{% /instructions %}
 
 {% number-field id="base_probability" label="Probability (%)" required=true min=0 max=100 %}{% /number-field %}
 
@@ -838,9 +838,9 @@ Probabilities across Base/Bull/Bear should sum to 100%.
 
 {% string-field id="valuation_why" label="Why (valuation rationale)" required=true minLength=60 %}{% /string-field %}
 
-{% doc ref="valuation_why" kind="instructions" %}
+{% instructions ref="valuation_why" %}
 Required. Explain your valuation assessment. Minimum 15 words.
-{% /doc %}
+{% /instructions %}
 
 {% number-field id="avg_earnings_move" label="Avg earnings move last 8 quarters (%)" %}{% /number-field %}
 

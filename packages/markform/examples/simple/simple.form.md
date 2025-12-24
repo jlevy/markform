@@ -11,18 +11,18 @@ markform:
 
 {% form id="simple_test" title="Simple Test Form" %}
 
-{% doc ref="simple_test" kind="description" %}
+{% description ref="simple_test" %}
 A form demonstrating user and agent roles. User fills required fields,
 agent fills optional fields. Demonstrates all Markform v0.1 field types.
-{% /doc %}
+{% /description %}
 
 {% field-group id="basic_fields" title="Basic Fields" %}
 
 {% string-field id="name" label="Name" role="user" required=true minLength=2 maxLength=50 %}{% /string-field %}
 
-{% doc ref="name" kind="instructions" %}
+{% instructions ref="name" %}
 Enter your full name (2-50 characters).
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" %}{% /string-field %}
 
@@ -30,9 +30,9 @@ Enter your full name (2-50 characters).
 
 {% number-field id="score" label="Score" role="agent" min=0.0 max=100.0 %}{% /number-field %}
 
-{% doc ref="score" kind="instructions" %}
+{% instructions ref="score" %}
 Assign a score between 0 and 100 based on form completeness.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -40,9 +40,9 @@ Assign a score between 0 and 100 based on form completeness.
 
 {% string-list id="tags" label="Tags" role="user" required=true minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}{% /string-list %}
 
-{% doc ref="tags" kind="instructions" %}
+{% instructions ref="tags" %}
 Add 1-5 unique tags (each at least 2 characters).
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -72,9 +72,9 @@ Add 1-5 unique tags (each at least 2 characters).
 - [ ] Test {% #test %}
 {% /checkboxes %}
 
-{% doc ref="tasks_multi" kind="instructions" %}
+{% instructions ref="tasks_multi" %}
 Track task progress. All must reach done or na state to complete.
-{% /doc %}
+{% /instructions %}
 
 {% checkboxes id="tasks_simple" label="Agreements (Simple Mode)" role="user" checkboxMode="simple" required=true %}
 - [ ] I have read the guidelines {% #read_guidelines %}
@@ -86,9 +86,9 @@ Track task progress. All must reach done or na state to complete.
 - [ ] Stakeholders notified {% #notified %}
 {% /checkboxes %}
 
-{% doc ref="confirmations" kind="instructions" %}
+{% instructions ref="confirmations" %}
 Answer yes or no for each confirmation. All must be explicitly answered.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -96,9 +96,9 @@ Answer yes or no for each confirmation. All must be explicitly answered.
 
 {% string-field id="notes" label="Notes" role="agent" %}{% /string-field %}
 
-{% doc ref="notes" kind="instructions" %}
+{% instructions ref="notes" %}
 Add any relevant notes or observations about this test form.
-{% /doc %}
+{% /instructions %}
 
 {% number-field id="optional_number" label="Optional Number" role="agent" %}{% /number-field %}
 

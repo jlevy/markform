@@ -21,14 +21,14 @@ markform:
 
 {% form id="political_research" title="Political Research Form" %}
 
-{% doc ref="political_research" kind="description" %}
+{% description ref="political_research" %}
 A biographical research form for political figures based on Wikipedia's president infobox structure.
 This form demonstrates role-based field assignment: the user provides the subject name,
 and the agent researches and fills all remaining fields.
-{% /doc %}
+{% /description %}
 
-{% doc ref="political_research" kind="instructions" %}
-**Workflow:**
+{% documentation ref="political_research" %}
+**Workflow:
 1. User enters the political figure's name
 2. Agent researches and fills biographical data using web search
 3. Agent fills office history (up to 3 positions)
@@ -38,7 +38,7 @@ and the agent researches and fills all remaining fields.
 - Wikipedia biographical pages
 - Official government websites
 - Historical archives
-{% /doc %}
+{% /documentation %}
 
 {% field-group id="basic_info" title="Basic Information" %}
 
@@ -48,9 +48,9 @@ Abraham Lincoln
 ```
 {% /string-field %}
 
-{% doc ref="name" kind="instructions" %}
+{% instructions ref="name" %}
 Enter the full name of the political figure you want to research (e.g., "Abraham Lincoln").
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="portrait_description" label="Portrait Description" maxLength=500 %}
 ```value
@@ -58,9 +58,9 @@ The famous 1863 Alexander Gardner photograph showing Lincoln in three-quarter pr
 ```
 {% /string-field %}
 
-{% doc ref="portrait_description" kind="instructions" %}
+{% instructions ref="portrait_description" %}
 Describe the official portrait or most commonly used photograph. 50-100 words max.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="birth_date" label="Birth Date" required=true pattern="^\\d{4}-\\d{2}-\\d{2}$" %}
 ```value
@@ -68,9 +68,9 @@ Describe the official portrait or most commonly used photograph. 50-100 words ma
 ```
 {% /string-field %}
 
-{% doc ref="birth_date" kind="instructions" %}
+{% instructions ref="birth_date" %}
 Format: YYYY-MM-DD (e.g., 1809-02-12)
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="birth_place" label="Birth Place" required=true %}
 ```value
@@ -78,9 +78,9 @@ Hodgenville, Kentucky
 ```
 {% /string-field %}
 
-{% doc ref="birth_place" kind="instructions" %}
+{% instructions ref="birth_place" %}
 Format: City, State/Country (e.g., Hodgenville, Kentucky)
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="death_date" label="Death Date" pattern="^\\d{4}-\\d{2}-\\d{2}$" %}
 ```value
@@ -88,9 +88,9 @@ Format: City, State/Country (e.g., Hodgenville, Kentucky)
 ```
 {% /string-field %}
 
-{% doc ref="death_date" kind="instructions" %}
+{% instructions ref="death_date" %}
 Format: YYYY-MM-DD. Leave empty if the person is still living.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="death_place" label="Death Place" %}
 ```value
@@ -98,9 +98,9 @@ Washington, D.C.
 ```
 {% /string-field %}
 
-{% doc ref="death_place" kind="instructions" %}
+{% instructions ref="death_place" %}
 Format: City, State/Country. Leave empty if the person is still living.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="cause_of_death" label="Cause of Death" %}
 ```value
@@ -108,9 +108,9 @@ Assassination
 ```
 {% /string-field %}
 
-{% doc ref="cause_of_death" kind="instructions" %}
+{% instructions ref="cause_of_death" %}
 Brief description if applicable (e.g., "Assassination", "Natural causes"). Leave empty if still living.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="resting_place" label="Resting Place" %}
 ```value
@@ -118,9 +118,9 @@ Oak Ridge Cemetery, Springfield, Illinois
 ```
 {% /string-field %}
 
-{% doc ref="resting_place" kind="instructions" %}
+{% instructions ref="resting_place" %}
 Burial location if applicable (e.g., "Oak Ridge Cemetery, Springfield, Illinois").
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -132,9 +132,9 @@ Republican
 ```
 {% /string-field %}
 
-{% doc ref="political_party" kind="instructions" %}
+{% instructions ref="political_party" %}
 Primary party affiliation (e.g., "Republican", "Democratic").
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="other_parties" label="Other Party Affiliations" %}
 ```value
@@ -142,9 +142,9 @@ Whig
 ```
 {% /string-list %}
 
-{% doc ref="other_parties" kind="instructions" %}
+{% instructions ref="other_parties" %}
 List any previous party affiliations, one per line.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
@@ -156,9 +156,9 @@ Mary Todd Lincoln (1842-1865)
 ```
 {% /string-field %}
 
-{% doc ref="spouse" kind="instructions" %}
+{% instructions ref="spouse" %}
 Format: Name (years married), e.g., "Mary Todd Lincoln (1842-1865)"
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="children" label="Children" %}
 ```value
@@ -169,9 +169,9 @@ Thomas Lincoln III
 ```
 {% /string-list %}
 
-{% doc ref="children" kind="instructions" %}
+{% instructions ref="children" %}
 List children's names, one per line.
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="parents" label="Parents" %}
 ```value
@@ -180,9 +180,9 @@ Nancy Hanks Lincoln
 ```
 {% /string-list %}
 
-{% doc ref="parents" kind="instructions" %}
+{% instructions ref="parents" %}
 List parents' names, one per line.
-{% /doc %}
+{% /instructions %}
 
 {% string-list id="education" label="Education" %}
 ```value
@@ -190,17 +190,17 @@ Self-educated
 ```
 {% /string-list %}
 
-{% doc ref="education" kind="instructions" %}
+{% instructions ref="education" %}
 List schools, degrees, or educational background, one per line.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
 {% field-group id="office_1" title="Office 1 (Most Recent)" %}
 
-{% doc ref="office_1" kind="description" %}
+{% description ref="office_1" %}
 Primary or most notable office held. Fill chronologically with most recent first.
-{% /doc %}
+{% /description %}
 
 {% string-field id="office_1_title" label="Office Title" required=true %}
 ```value
@@ -208,9 +208,9 @@ Primary or most notable office held. Fill chronologically with most recent first
 ```
 {% /string-field %}
 
-{% doc ref="office_1_title" kind="instructions" %}
+{% instructions ref="office_1_title" %}
 Full title including ordinal if applicable (e.g., "16th President of the United States").
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="office_1_term_start" label="Term Start" required=true pattern="^\\d{4}-\\d{2}-\\d{2}$" %}
 ```value
@@ -218,9 +218,9 @@ Full title including ordinal if applicable (e.g., "16th President of the United 
 ```
 {% /string-field %}
 
-{% doc ref="office_1_term_start" kind="instructions" %}
+{% instructions ref="office_1_term_start" %}
 Format: YYYY-MM-DD
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="office_1_term_end" label="Term End" required=true pattern="^(\\d{4}-\\d{2}-\\d{2}|Incumbent)$" %}
 ```value
@@ -228,9 +228,9 @@ Format: YYYY-MM-DD
 ```
 {% /string-field %}
 
-{% doc ref="office_1_term_end" kind="instructions" %}
+{% instructions ref="office_1_term_end" %}
 Format: YYYY-MM-DD or "Incumbent" if currently serving.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="office_1_preceded_by" label="Preceded By" %}
 ```value
@@ -238,9 +238,9 @@ James Buchanan
 ```
 {% /string-field %}
 
-{% doc ref="office_1_preceded_by" kind="instructions" %}
+{% instructions ref="office_1_preceded_by" %}
 Name of the previous office holder.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="office_1_succeeded_by" label="Succeeded By" %}
 ```value
@@ -248,9 +248,9 @@ Andrew Johnson
 ```
 {% /string-field %}
 
-{% doc ref="office_1_succeeded_by" kind="instructions" %}
+{% instructions ref="office_1_succeeded_by" %}
 Name of the next office holder, or empty if still in office.
-{% /doc %}
+{% /instructions %}
 
 {% string-field id="office_1_running_mate" label="Running Mate / Vice President" %}
 ```value
@@ -258,17 +258,17 @@ Hannibal Hamlin (1861-1865), Andrew Johnson (1865)
 ```
 {% /string-field %}
 
-{% doc ref="office_1_running_mate" kind="instructions" %}
+{% instructions ref="office_1_running_mate" %}
 For presidential terms, list running mate(s) or Vice President(s).
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 
 {% field-group id="office_2" title="Office 2" %}
 
-{% doc ref="office_2" kind="description" %}
+{% description ref="office_2" %}
 Second most notable office held. Leave empty if not applicable.
-{% /doc %}
+{% /description %}
 
 {% string-field id="office_2_title" label="Office Title" %}
 ```value
@@ -306,9 +306,9 @@ Thomas L. Harris
 
 {% field-group id="office_3" title="Office 3" %}
 
-{% doc ref="office_3" kind="description" %}
+{% description ref="office_3" %}
 Third most notable office held. Leave empty if not applicable.
-{% /doc %}
+{% /description %}
 
 {% string-field id="office_3_title" label="Office Title" %}
 ```value
@@ -346,9 +346,9 @@ https://www.nps.gov/liho/learn/historyculture/index.htm
 ```
 {% /string-list %}
 
-{% doc ref="sources" kind="instructions" %}
+{% instructions ref="sources" %}
 List source URLs or citations used for research. Include Wikipedia and any additional sources consulted.
-{% /doc %}
+{% /instructions %}
 
 {% /field-group %}
 

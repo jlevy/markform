@@ -421,8 +421,8 @@ No form here.
     });
   });
 
-  describe("doc block edge cases", () => {
-    it("allows multiple doc blocks with same ref but different kinds", () => {
+  describe("documentation tag edge cases", () => {
+    it("allows multiple doc tags with same ref but different tags", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -433,24 +433,24 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="name" label="Name" %}{% /string-field %}
 
-{% doc ref="name" kind="description" %}
+{% description ref="name" %}
 This is a description.
-{% /doc %}
+{% /description %}
 
-{% doc ref="name" kind="instructions" %}
+{% instructions ref="name" %}
 Enter your full name.
-{% /doc %}
+{% /instructions %}
 {% /field-group %}
 
 {% /form %}
 `;
       const result = parseForm(markdown);
       expect(result.docs).toHaveLength(2);
-      expect(result.docs[0]?.kind).toBe("description");
-      expect(result.docs[1]?.kind).toBe("instructions");
+      expect(result.docs[0]?.tag).toBe("description");
+      expect(result.docs[1]?.tag).toBe("instructions");
     });
 
-    it("throws on duplicate doc blocks with same ref and same kind", () => {
+    it("throws on duplicate description blocks for same ref", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -461,22 +461,22 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="name" label="Name" %}{% /string-field %}
 
-{% doc ref="name" kind="description" %}
+{% description ref="name" %}
 First description.
-{% /doc %}
+{% /description %}
 
-{% doc ref="name" kind="description" %}
+{% description ref="name" %}
 Second description.
-{% /doc %}
+{% /description %}
 {% /field-group %}
 
 {% /form %}
 `;
       expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/Duplicate doc block/);
+      expect(() => parseForm(markdown)).toThrow(/Duplicate description block/);
     });
 
-    it("throws on duplicate doc blocks with same ref and no kind (defaulted)", () => {
+    it("throws on duplicate instructions blocks for same ref", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -487,22 +487,22 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="name" label="Name" %}{% /string-field %}
 
-{% doc ref="name" %}
-First doc without kind.
-{% /doc %}
+{% instructions ref="name" %}
+First instructions.
+{% /instructions %}
 
-{% doc ref="name" %}
-Second doc without kind.
-{% /doc %}
+{% instructions ref="name" %}
+Second instructions.
+{% /instructions %}
 {% /field-group %}
 
 {% /form %}
 `;
       expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/Duplicate doc block/);
+      expect(() => parseForm(markdown)).toThrow(/Duplicate instructions block/);
     });
 
-    it("allows doc block without kind and another with kind for same ref", () => {
+    it("allows all three tag types for same ref", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -513,21 +513,26 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="name" label="Name" %}{% /string-field %}
 
-{% doc ref="name" %}
-Doc without kind.
-{% /doc %}
+{% description ref="name" %}
+What this field is.
+{% /description %}
 
-{% doc ref="name" kind="instructions" %}
-Doc with instructions kind.
-{% /doc %}
+{% instructions ref="name" %}
+How to fill this field.
+{% /instructions %}
+
+{% documentation ref="name" %}
+Additional context.
+{% /documentation %}
 {% /field-group %}
 
 {% /form %}
 `;
       const result = parseForm(markdown);
-      expect(result.docs).toHaveLength(2);
-      expect(result.docs[0]?.kind).toBeUndefined();
-      expect(result.docs[1]?.kind).toBe("instructions");
+      expect(result.docs).toHaveLength(3);
+      expect(result.docs[0]?.tag).toBe("description");
+      expect(result.docs[1]?.tag).toBe("instructions");
+      expect(result.docs[2]?.tag).toBe("documentation");
     });
   });
 });

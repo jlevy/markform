@@ -15,6 +15,7 @@ import type {
   CheckboxMode,
   CheckboxValue,
   DocumentationBlock,
+  DocumentationTag,
   Field,
   FieldGroup,
   FieldValue,
@@ -852,8 +853,12 @@ function parseFormTag(
 // Documentation Block Parsing
 // =============================================================================
 
+/** Valid documentation tag names */
+const DOC_TAG_NAMES = ["description", "instructions", "documentation"] as const;
+
 /**
- * Extract all doc blocks from AST.
+ * Extract all documentation blocks from AST.
+ * Looks for {% description %}, {% instructions %}, and {% documentation %} tags.
  */
 function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): DocumentationBlock[] {
   const docs: DocumentationBlock[] = [];
@@ -864,25 +869,26 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
       return;
     }
 
-    if (isTagNode(node, "doc")) {
+    // Check for description, instructions, or documentation tags
+    const nodeTag = node.type === "tag" && node.tag ? node.tag : null;
+    if (nodeTag && (DOC_TAG_NAMES as readonly string[]).includes(nodeTag)) {
+      const tag = nodeTag as DocumentationTag;
       const ref = getStringAttr(node, "ref");
-      const kindStr = getStringAttr(node, "kind");
 
       if (!ref) {
-        throw new ParseError("doc block missing required 'ref' attribute");
+        throw new ParseError(`${tag} block missing required 'ref' attribute`);
       }
 
       // Validate ref exists
       if (!idIndex.has(ref)) {
-        throw new ParseError(`doc block references unknown ID '${ref}'`);
+        throw new ParseError(`${tag} block references unknown ID '${ref}'`);
       }
 
-      const kind = kindStr as DocumentationBlock["kind"];
-      const uniqueKey = `${ref}:${kind ?? ""}`;
+      const uniqueKey = `${ref}:${tag}`;
 
       if (seenRefs.has(uniqueKey)) {
         throw new ParseError(
-          `Duplicate doc block for ref='${ref}' kind='${kind ?? "(none)"}'`
+          `Duplicate ${tag} block for ref='${ref}'`
         );
       }
       seenRefs.add(uniqueKey);
@@ -906,8 +912,8 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
       }
 
       docs.push({
+        tag,
         ref,
-        kind,
         bodyMarkdown: bodyMarkdown.trim(),
       });
     }
