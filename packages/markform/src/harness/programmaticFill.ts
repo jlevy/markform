@@ -314,6 +314,18 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       maxPatchesPerTurn,
     );
 
+    // Re-check for cancellation after agent call (signal may have fired during LLM call)
+    if (options.signal?.aborted) {
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        { ok: false, reason: "cancelled" },
+        inputContextWarnings,
+        stepResult.issues,
+      );
+    }
+
     // Apply patches
     stepResult = harness.apply(patches, stepResult.issues);
     totalPatches += patches.length;
