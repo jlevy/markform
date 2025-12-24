@@ -13,8 +13,8 @@ for users to fill form fields directly in the terminal using `@clack/prompts`.
 - [Examples CLI Command](plan-2025-12-23-examples-cli-command.md) - Uses this feature;
   includes `check apis` subcommand and workflow orchestration
 
-- [Fill Command Spec](../done/valid-2025-12-23-fill-command-live-agent.md) ✅ **COMPLETE** -
-  Fill command with live/mock agent support
+- [Fill Command Spec](../done/valid-2025-12-23-fill-command-live-agent.md) ✅
+  **COMPLETE** - Fill command with live/mock agent support
 
 - [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
 
@@ -259,7 +259,8 @@ Already installed:
 
 ### Integration with Roles
 
-The role system is now implemented. Integration points:
+The role system is now implemented.
+Integration points:
 
 1. `--interactive` sets default `--roles=user`
 
