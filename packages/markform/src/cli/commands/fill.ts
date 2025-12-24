@@ -181,7 +181,7 @@ export function registerFillCommand(program: Command): void {
     )
     .option(
       "--roles <roles>",
-      "Target roles to fill (comma-separated, or '*' for all; default: agent)"
+      "Target roles to fill (comma-separated, or '*' for all; default: 'agent' in agent mode, 'user' in --interactive mode)"
     )
     .option(
       "--mode <mode>",
