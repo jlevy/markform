@@ -233,7 +233,7 @@ export function registerFillCommand(program: Command): void {
           let stepResult = harness.step();
           logInfo(
             ctx,
-            pc.dim(`Turn ${stepResult.turnNumber}: Found ${stepResult.issues.length} issues`)
+            `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`
           );
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
@@ -245,13 +245,10 @@ export function registerFillCommand(program: Command): void {
             );
 
             // Log patches - brief by default, detailed in verbose mode
-            logInfo(
-              ctx,
-              pc.dim(`  → ${patches.length} patches`)
-            );
+            logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patches`);
             for (const patch of patches) {
               const value = formatPatchValue(patch);
-              logVerbose(ctx, pc.dim(`    ${patch.fieldId} = ${value}`));
+              logVerbose(ctx, `    ${pc.cyan(patch.fieldId)} ${pc.dim("=")} ${pc.green(value)}`);
             }
 
             // Apply patches
@@ -264,7 +261,7 @@ export function registerFillCommand(program: Command): void {
               stepResult = harness.step();
               logInfo(
                 ctx,
-                pc.dim(`Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issues`)
+                `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`
               );
             }
           }
