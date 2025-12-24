@@ -238,37 +238,33 @@ export function registerFillCommand(program: Command): void {
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
             // Generate patches from agent
-            logInfo(ctx, pc.dim(`  Generating patches...`));
             const patches = await agent.generatePatches(
               stepResult.issues,
               harness.getForm(),
               harnessConfig.maxPatchesPerTurn!
             );
 
-            logInfo(ctx, pc.dim(`  Applying ${patches.length} patches:`));
+            // Log patches - brief by default, detailed in verbose mode
+            logInfo(
+              ctx,
+              pc.dim(`  → ${patches.length} patches`)
+            );
             for (const patch of patches) {
               const value = formatPatchValue(patch);
-              logInfo(ctx, pc.dim(`    ${patch.fieldId} = ${value}`));
+              logVerbose(ctx, pc.dim(`    ${patch.fieldId} = ${value}`));
             }
 
             // Apply patches
             stepResult = harness.apply(patches, stepResult.issues);
 
             if (stepResult.isComplete) {
-              logInfo(ctx, pc.green(`  ✓ Form complete`));
+              logInfo(ctx, pc.green(`  ✓ Complete`));
             } else {
-              logInfo(
-                ctx,
-                pc.dim(`  ${stepResult.issues.length} issues remaining`)
-              );
-            }
-
-            // Step for next turn if not complete
-            if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
+              // Step for next turn
               stepResult = harness.step();
               logInfo(
                 ctx,
-                pc.dim(`Turn ${stepResult.turnNumber}: Found ${stepResult.issues.length} issues`)
+                pc.dim(`Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issues`)
               );
             }
           }
