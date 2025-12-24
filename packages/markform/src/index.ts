@@ -201,13 +201,13 @@ export {
   findFieldById,
   coerceToFieldPatch,
   coerceInputContext,
-} from "./engine/values.js";
+} from "./engine/valueCoercion.js";
 export type {
   RawFieldValue,
   InputContext,
   CoercionResult,
   CoerceInputContextResult,
-} from "./engine/values.js";
+} from "./engine/valueCoercion.js";
 
 // =============================================================================
 // Harness Exports

@@ -19,8 +19,7 @@ import type {
 import {
   coerceInputContext,
   type InputContext,
-  type RawFieldValue,
-} from "../engine/values.js";
+} from "../engine/valueCoercion.js";
 import {
   AGENT_ROLE,
   DEFAULT_MAX_ISSUES,
@@ -371,8 +370,3 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   );
 }
 
-// =============================================================================
-// Re-exports for convenience
-// =============================================================================
-
-export type { InputContext, RawFieldValue };

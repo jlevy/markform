@@ -15,6 +15,4 @@ export type {
   FillResult,
   FillStatus,
   TurnProgress,
-  InputContext,
-  RawFieldValue,
 } from "./programmaticFill.js";
