@@ -272,6 +272,36 @@ alwaysApply: true
     import { backtestStep } from './experimentExecution';
     ```
 
+- **Barrel files:** The rules differ for libraries vs applications.
+
+  **For libraries:** Use exactly ONE barrel file — the root `index.ts` that defines the
+  public API. This is essential for consumers who `import { X } from 'your-library'`. Do
+  NOT create module-level barrels (like `utils/index.ts` or `harness/index.ts`).
+  Internal code should import directly from source files.
+
+  ```ts
+  // BAD: Module-level barrel that just re-exports siblings
+  // src/harness/index.ts
+  export { FormHarness } from './harness.js';
+  export { MockAgent } from './mockAgent.js';
+  
+  // BAD: Importing through module barrel
+  import { FormHarness } from '../harness';
+  
+  // GOOD: Import directly from source file
+  import { FormHarness } from '../harness/harness.js';
+  
+  // GOOD: Root index.ts for public API is fine
+  // src/index.ts (package entry point)
+  export { FormHarness } from './harness/harness.js';
+  ```
+
+  **For applications:** Avoid barrel files entirely.
+  Apps have no public API, so barrels only add indirection.
+  Import directly from source files throughout.
+  If you find yourself wanting a barrel for “convenience,” that’s likely a sign of
+  incomplete refactors or poor module structure.
+
 ## Exceptions
 
 - **Do not use pointless try/catch blocks:** Look for try/catch blocks like this:
