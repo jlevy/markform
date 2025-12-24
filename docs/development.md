@@ -294,7 +294,7 @@ const tools = createMarkformTools({ sessionStore: store });
 
 // Use with AI SDK
 const result = await generateText({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-4-5-20250929"),
   prompt: "Fill out this form with appropriate values...",
   tools,
   maxSteps: 10,

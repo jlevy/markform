@@ -29,6 +29,26 @@ export const DEFAULT_PRIORITY: FieldPriorityLevel = "medium";
 export const DEFAULT_PORT = 3344;
 
 // =============================================================================
+// Harness Defaults
+// =============================================================================
+
+/**
+ * Default maximum turns for the fill harness.
+ * Prevents runaway loops during agent execution.
+ */
+export const DEFAULT_MAX_TURNS = 100;
+
+/**
+ * Default maximum patches per turn.
+ */
+export const DEFAULT_MAX_PATCHES_PER_TURN = 20;
+
+/**
+ * Default maximum issues to show per step.
+ */
+export const DEFAULT_MAX_ISSUES = 10;
+
+// =============================================================================
 // LLM Suggestions
 // =============================================================================
 

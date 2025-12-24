@@ -23,6 +23,11 @@ import type {
 import { createHarness } from "../../harness/harness.js";
 import { createLiveAgent } from "../../harness/liveAgent.js";
 import { createMockAgent } from "../../harness/mockAgent.js";
+import {
+  DEFAULT_MAX_ISSUES,
+  DEFAULT_MAX_PATCHES_PER_TURN,
+  DEFAULT_MAX_TURNS,
+} from "../../settings.js";
 import type { Agent } from "../../harness/mockAgent.js";
 import { resolveModel } from "../../harness/modelResolver.js";
 import { formatSuggestedLlms } from "../../settings.js";
@@ -140,9 +145,23 @@ export function registerFillCommand(program: Command): void {
     )
     .option("--mock-source <file>", "Path to completed form for mock agent")
     .option("--record <file>", "Record session transcript to file")
-    .option("--max-turns <n>", "Maximum turns (default: 50)", "50")
-    .option("--max-patches <n>", "Maximum patches per turn (default: 20)", "20")
-    .option("--max-issues <n>", "Maximum issues per step (default: 10)", "10")
+    .option(
+      "--max-turns <n>",
+      `Maximum turns (default: ${DEFAULT_MAX_TURNS})`,
+      String(DEFAULT_MAX_TURNS)
+    )
+    .option(
+      "--max-patches <n>",
+      `Maximum patches per turn (default: ${DEFAULT_MAX_PATCHES_PER_TURN})`,
+      String(DEFAULT_MAX_PATCHES_PER_TURN)
+    )
+    .option(
+      "--max-issues <n>",
+      `Maximum issues per step (default: ${DEFAULT_MAX_ISSUES})`,
+      String(DEFAULT_MAX_ISSUES)
+    )
+    .option("--max-fields <n>", "Maximum unique fields per turn (default: unlimited)")
+    .option("--max-groups <n>", "Maximum unique groups per turn (default: unlimited)")
     .option("-o, --output <file>", "Write final form to file")
     .action(
       async (
@@ -155,6 +174,8 @@ export function registerFillCommand(program: Command): void {
           maxTurns?: string;
           maxPatches?: string;
           maxIssues?: string;
+          maxFields?: string;
+          maxGroups?: string;
           output?: string;
         },
         cmd: Command
@@ -189,9 +210,24 @@ export function registerFillCommand(program: Command): void {
 
           // Parse harness config
           const harnessConfig: Partial<HarnessConfig> = {
-            maxTurns: parseInt(options.maxTurns ?? "50", 10),
-            maxPatchesPerTurn: parseInt(options.maxPatches ?? "20", 10),
-            maxIssues: parseInt(options.maxIssues ?? "10", 10),
+            maxTurns: parseInt(
+              options.maxTurns ?? String(DEFAULT_MAX_TURNS),
+              10
+            ),
+            maxPatchesPerTurn: parseInt(
+              options.maxPatches ?? String(DEFAULT_MAX_PATCHES_PER_TURN),
+              10
+            ),
+            maxIssues: parseInt(
+              options.maxIssues ?? String(DEFAULT_MAX_ISSUES),
+              10
+            ),
+            ...(options.maxFields && {
+              maxFieldsPerTurn: parseInt(options.maxFields, 10),
+            }),
+            ...(options.maxGroups && {
+              maxGroupsPerTurn: parseInt(options.maxGroups, 10),
+            }),
           };
 
           logVerbose(ctx, `Reading form: ${filePath}`);

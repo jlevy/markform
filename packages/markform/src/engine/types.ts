@@ -469,6 +469,10 @@ export interface HarnessConfig {
   maxIssues: number;
   maxPatchesPerTurn: number;
   maxTurns: number;
+  /** Maximum unique fields to include issues for per turn (undefined = unlimited) */
+  maxFieldsPerTurn?: number;
+  /** Maximum unique groups to include issues for per turn (undefined = unlimited) */
+  maxGroupsPerTurn?: number;
 }
 
 /** Session turn - one iteration of the harness loop */
@@ -932,6 +936,8 @@ export const HarnessConfigSchema = z.object({
   maxIssues: z.number().int().positive(),
   maxPatchesPerTurn: z.number().int().positive(),
   maxTurns: z.number().int().positive(),
+  maxFieldsPerTurn: z.number().int().positive().optional(),
+  maxGroupsPerTurn: z.number().int().positive().optional(),
 });
 
 export const SessionTurnSchema = z.object({

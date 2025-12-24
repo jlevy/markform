@@ -70,7 +70,7 @@ This plan depends on:
 
 - `--model <id>` flag for live agent model selection
 
-- `--completed-mock <file>` for mock agent (required when `--agent=mock`)
+- `--mock-source <file>` for mock agent (required when `--agent=mock`)
 
 - `--record <file>` to output session transcript
 
@@ -102,7 +102,7 @@ This plan depends on:
 
 ### Acceptance Criteria
 
-1. `markform fill <file> --agent=mock --completed-mock <mock>` works identically to
+1. `markform fill <file> --agent=mock --mock-source <mock>` works identically to
    current `run --mock`
 
 2. `markform fill <file> --agent=live --model=anthropic/claude-sonnet-4-5` fills form
@@ -131,9 +131,9 @@ Options:
   --model <id>            Model ID for live agent (format: provider/model-name)
                           Examples: anthropic/claude-sonnet-4-5, grok-4-fast
                           Default: anthropic/claude-sonnet-4-5
-  --completed-mock <file> Path to completed mock file (required for --agent=mock)
+  --mock-source <file>    Path to completed mock file (required for --agent=mock)
   --record <file>         Record session transcript to file
-  --max-turns <n>         Maximum turns (default: 50)
+  --max-turns <n>         Maximum turns (default: 100)
   --max-patches <n>       Maximum patches per turn (default: 20)
   --max-issues <n>        Maximum issues per step (default: 10)
   -o, --output <file>     Write final form to file (default: versioned filename)
@@ -238,7 +238,7 @@ packages/markform/src/harness/
 
 - [ ] Add `--model` flag (string, default: `anthropic/claude-sonnet-4-5`)
 
-- [ ] Keep `--completed-mock` flag name (consistent with current `run` command)
+- [ ] Keep `--mock-source` flag name (consistent with current `run` command)
 
 - [ ] Update CLI registration in `cli.ts`
 
@@ -258,7 +258,7 @@ packages/markform/src/harness/
 
 - [ ] Existing mock mode tests pass with `fill --agent=mock`
 
-- [ ] `--agent=mock` without `--completed-mock` shows helpful error
+- [ ] `--agent=mock` without `--mock-source` shows helpful error
 
 - [ ] Invalid `--agent` value shows error with valid options
 
@@ -428,7 +428,7 @@ class LiveAgent implements Agent {
 
 - [ ] `markform fill --help` shows correct options
 
-- [ ] `markform fill <file> --agent=mock --completed-mock <mock>` completes form
+- [ ] `markform fill <file> --agent=mock --mock-source <mock>` completes form
 
 - [ ] Mock mode session transcripts match expected format
 
