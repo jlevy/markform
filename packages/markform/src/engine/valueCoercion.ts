@@ -53,16 +53,19 @@ export interface CoerceInputContextResult {
 // =============================================================================
 
 /**
- * Find a field by ID using the form's idIndex for O(1) lookup.
- * This is the single source of truth for field lookups.
+ * Find a field by ID.
+ *
+ * Uses idIndex for O(1) validation that the ID exists and is a field,
+ * then retrieves the Field object from the schema.
  */
 export function findFieldById(form: ParsedForm, fieldId: string): Field | undefined {
+  // O(1) check: verify the ID exists and is a field
   const entry = form.idIndex.get(fieldId);
   if (entry?.kind !== "field") {
     return undefined;
   }
 
-  // Look up the field in the schema
+  // Retrieve the Field object from the schema
   for (const group of form.schema.groups) {
     for (const field of group.children) {
       if (field.id === fieldId) {

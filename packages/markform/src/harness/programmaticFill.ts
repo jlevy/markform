@@ -24,6 +24,7 @@ import {
   AGENT_ROLE,
   DEFAULT_MAX_ISSUES,
   DEFAULT_MAX_PATCHES_PER_TURN,
+  DEFAULT_MAX_TURNS,
 } from "../settings.js";
 import { createHarness } from "./harness.js";
 import { createLiveAgent } from "./liveAgent.js";
@@ -50,7 +51,7 @@ export interface FillOptions {
   inputContext?: InputContext;
   /** Additional context to append to the composed system prompt (never overrides) */
   systemPromptAddition?: string;
-  /** Maximum harness turns (default: 30) */
+  /** Maximum harness turns (default: 100) */
   maxTurns?: number;
   /** Maximum patches per turn (default: 20) */
   maxPatchesPerTurn?: number;
@@ -115,12 +116,6 @@ export interface FillResult {
     priority: number;
   }[];
 }
-
-// =============================================================================
-// Default Configuration
-// =============================================================================
-
-const DEFAULT_FILL_MAX_TURNS = 30;
 
 // =============================================================================
 // Helper Functions
@@ -275,7 +270,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   }
 
   // 4. Create harness + agent
-  const maxTurns = options.maxTurns ?? DEFAULT_FILL_MAX_TURNS;
+  const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
   const maxIssues = options.maxIssues ?? DEFAULT_MAX_ISSUES;
   const targetRoles = options.targetRoles ?? [AGENT_ROLE];
