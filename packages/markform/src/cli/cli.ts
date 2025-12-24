@@ -10,22 +10,25 @@ import pc from "picocolors";
 
 import { VERSION } from "../index.js";
 import { registerApplyCommand } from "./commands/apply.js";
+import { registerDumpCommand } from "./commands/dump.js";
 import { registerExportCommand } from "./commands/export.js";
+import { registerFillCommand } from "./commands/fill.js";
 import { registerInspectCommand } from "./commands/inspect.js";
+import { registerModelsCommand } from "./commands/models.js";
 import { registerRenderCommand } from "./commands/render.js";
-import { registerRunCommand } from "./commands/run.js";
 import { registerServeCommand } from "./commands/serve.js";
 import { registerValidateCommand } from "./commands/validate.js";
 import { OUTPUT_FORMATS } from "./lib/shared.js";
 
 /**
- * Configure Commander with colored help text.
+ * Configure Commander with colored help text and global options display.
  */
 function withColoredHelp<T extends Command>(cmd: T): T {
   cmd.configureHelp({
     styleTitle: (str) => pc.bold(pc.cyan(str)),
     styleCommandText: (str) => pc.green(str),
     styleOptionText: (str) => pc.yellow(str),
+    showGlobalOptions: true,
   });
   return cmd;
 }
@@ -44,7 +47,7 @@ function createProgram(): Command {
     .option("--quiet", "Suppress non-essential output")
     .option("--dry-run", "Show what would be done without making changes")
     .option(
-      "-f, --format <format>",
+      "--format <format>",
       `Output format: ${OUTPUT_FORMATS.join(", ")}`,
       "console"
     );
@@ -54,9 +57,11 @@ function createProgram(): Command {
   registerValidateCommand(program);
   registerApplyCommand(program);
   registerExportCommand(program);
+  registerDumpCommand(program);
   registerRenderCommand(program);
   registerServeCommand(program);
-  registerRunCommand(program);
+  registerFillCommand(program);
+  registerModelsCommand(program);
 
   return program;
 }

@@ -34,13 +34,13 @@ export interface Agent {
    * @param issues - Prioritized issues from harness step
    * @param form - Current form state
    * @param maxPatches - Maximum number of patches to generate
-   * @returns Array of patches to apply
+   * @returns Promise resolving to array of patches to apply
    */
   generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number
-  ): Patch[];
+  ): Promise<Patch[]>;
 }
 
 // =============================================================================
@@ -77,11 +77,11 @@ export class MockAgent implements Agent {
    * Processes issues in priority order, generating patches for
    * fields that have values in the completed mock.
    */
-  generatePatches(
+  async generatePatches(
     issues: InspectIssue[],
     _form: ParsedForm,
     maxPatches: number
-  ): Patch[] {
+  ): Promise<Patch[]> {
     const patches: Patch[] = [];
     const addressedFields = new Set<Id>();
 
@@ -123,7 +123,8 @@ export class MockAgent implements Agent {
       }
     }
 
-    return patches;
+    // Return wrapped in Promise.resolve to satisfy async interface
+    return Promise.resolve(patches);
   }
 
   /**

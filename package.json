@@ -20,7 +20,7 @@
     "test:golden": "pnpm --filter markform test:golden",
     "publint": "pnpm -r publint",
     "lint": "eslint .",
-    "precommit": "pnpm build && pnpm lint && pnpm test",
+    "precommit": "pnpm typecheck && pnpm lint && pnpm test",
     "markform": "node packages/markform/dist/bin.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",

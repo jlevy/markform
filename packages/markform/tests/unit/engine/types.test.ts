@@ -375,7 +375,7 @@ describe("engine/types", () => {
         mode: "mock",
         form: { path: "examples/simple/simple.form.md" },
         validators: { code: "examples/simple/simple.valid.ts" },
-        mock: { completedMock: "examples/simple/simple.mock.filled.form.md" },
+        mock: { completedMock: "examples/simple/simple-mock-filled.form.md" },
         harness: {
           maxIssues: 5,
           maxPatchesPerTurn: 3,
@@ -409,7 +409,7 @@ describe("engine/types", () => {
         ],
         final: {
           expectComplete: true,
-          expectedCompletedForm: "examples/simple/simple.mock.filled.form.md",
+          expectedCompletedForm: "examples/simple/simple-mock-filled.form.md",
         },
       };
       const result = SessionTranscriptSchema.parse(session);

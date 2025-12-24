@@ -62,7 +62,7 @@ function parseArgs(): Config {
   return {
     formPath: resolve(formPath),
     maxTurns: 20,
-    model: "claude-sonnet-4-20250514",
+    model: "anthropic/claude-sonnet-4-5",
     outputSessionPath: args[1],
     verbose: args.includes("--verbose") || args.includes("-v"),
   };

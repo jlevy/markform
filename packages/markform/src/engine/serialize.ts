@@ -28,6 +28,7 @@ import type {
   StringListValue,
   StringValue,
 } from "./types.js";
+import { DEFAULT_PRIORITY } from "../settings.js";
 
 // =============================================================================
 // Options
@@ -121,7 +122,7 @@ function serializeStringField(
   if (field.required) {
     attrs.required = field.required;
   }
-  if (field.priority !== "medium") {
+  if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
   if (field.multiline) {
@@ -161,7 +162,7 @@ function serializeNumberField(
   if (field.required) {
     attrs.required = field.required;
   }
-  if (field.priority !== "medium") {
+  if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
   if (field.min !== undefined) {
@@ -198,7 +199,7 @@ function serializeStringListField(
   if (field.required) {
     attrs.required = field.required;
   }
-  if (field.priority !== "medium") {
+  if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
   if (field.minItems !== undefined) {
@@ -259,7 +260,7 @@ function serializeSingleSelectField(
   if (field.required) {
     attrs.required = field.required;
   }
-  if (field.priority !== "medium") {
+  if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
   if (field.validate) {
@@ -289,7 +290,7 @@ function serializeMultiSelectField(
   if (field.required) {
     attrs.required = field.required;
   }
-  if (field.priority !== "medium") {
+  if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
   if (field.minSelections !== undefined) {
@@ -326,7 +327,7 @@ function serializeCheckboxesField(
   if (field.required) {
     attrs.required = field.required;
   }
-  if (field.priority !== "medium") {
+  if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
   if (field.checkboxMode !== "multi") {

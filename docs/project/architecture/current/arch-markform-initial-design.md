@@ -244,6 +244,8 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 
 - *required:* Identified by `(ref, kind)` combination, which must be unique
 
+- When `kind` is omitted, it defaults to `'notes'`
+
 - Duplicate `(ref, kind)` pairs are an error
 
 - Multiple doc blocks can reference the same target with different `kind` values
@@ -420,6 +422,8 @@ without filtering out nested doc blocks.
 
 - *required:* `(ref, kind)` combination must be unique
 
+- When `kind` is omitted, it defaults to `'notes'`
+
 - Multiple doc blocks with different `kind` values can reference the same target
 
 #### Field Values
@@ -585,12 +589,7 @@ It is only required when the value contains Markdoc tag syntax:
 
 - Tag syntax: `{% ... %}`
 
-> **Note:** Markdoc uses HTML comments (`
-
-<!-- ... -->
-
-`), not `{# ... #}`. HTML comments
-> in form values are plain text and don't require `process=false`.
+> **Note:** Markdoc uses HTML comments (`<!-- ... -->`), not `{# ... #}`. HTML comments in form values are plain text and don't require `process=false`.
 
 **Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check
 is sufficient since false positives are harmless (adding `process=false` when not needed
@@ -915,7 +914,7 @@ type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
 
 interface DocumentationBlock {
   ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
-  kind?: 'description' | 'instructions' | 'notes' | 'examples';
+  kind: 'description' | 'instructions' | 'notes' | 'examples';  // defaults to 'notes' when omitted
   bodyMarkdown: string;
 }
 
@@ -1993,6 +1992,29 @@ A default `max_turns` safety limit (e.g., 100) should be enforced to prevent run
 loops during development and testing.
 Exceeding `max_turns` results in an error state.
 
+**Error Behavior:**
+
+| Condition | Harness Status | CLI Exit Code |
+|-----------|---------------|---------------|
+| Form completed successfully | `'complete'` | 0 |
+| `max_turns` exceeded | `'max_turns_exceeded'` | 1 |
+| Agent/LLM error | `'error'` | 1 |
+| User cancelled | `'cancelled'` | 130 |
+
+The harness returns a `HarnessResult` with `status` and optional `error` fields:
+
+```ts
+interface HarnessResult {
+  status: 'complete' | 'max_turns_exceeded' | 'error' | 'cancelled';
+  error?: Error;           // present when status is 'error'
+  turnCount: number;       // total turns executed
+  outputPath?: string;     // path to output file (when complete)
+}
+```
+
+Integration tests can check `result.status` to verify expected outcomes without
+parsing console output.
+
 #### Harness Contract
 
 ```ts
@@ -2179,8 +2201,11 @@ Thin wrapper around the tool contract:
 
     - `draft v12.form.md` → `draft v13.form.md`
 
-- `markform run <file.form.md> --mock --completed-mock <file>` — run harness end-to-end,
-  write session transcript
+- `markform fill <file.form.md> --agent=mock --mock-source <file>` — fill form using
+  mock agent, write session transcript
+
+- `markform fill <file.form.md> --agent=live --model=anthropic/claude-sonnet-4-5` — fill
+  form using live LLM agent
 
 **Deferred to v0.2:**
 
@@ -2387,7 +2412,7 @@ Deliverable: `tests/goldenRunner.ts`
 
 ### 8) CLI
 
-`inspect`, `apply`, `export`, `render`, `serve`, `run --mock`
+`inspect`, `apply`, `export`, `render`, `serve`, `fill`
 
 Deliverable: `cli/commands/*`
 
@@ -2422,7 +2447,7 @@ Full specification included above.
      the form; Save to confirm output path (defaults to `quarterly-v1.form.md`); run
      `markform inspect` separately at any time to check status
 
-   - `markform run examples/quarterly/quarterly.form.md --mock --completed-mock
+   - `markform fill examples/quarterly/quarterly.form.md --agent=mock --mock-source
      examples/quarterly/quarterly.mock.filled.form.md --record
      examples/quarterly/quarterly.session.yaml`
 

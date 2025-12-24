@@ -18,15 +18,20 @@ import type {
   SessionTurn,
   StepResult,
 } from "../engine/types.js";
+import {
+  DEFAULT_MAX_ISSUES,
+  DEFAULT_MAX_PATCHES_PER_TURN,
+  DEFAULT_MAX_TURNS,
+} from "../settings.js";
 
 // =============================================================================
 // Default Configuration
 // =============================================================================
 
 const DEFAULT_CONFIG: HarnessConfig = {
-  maxIssues: 10,
-  maxPatchesPerTurn: 20,
-  maxTurns: 50,
+  maxIssues: DEFAULT_MAX_ISSUES,
+  maxPatchesPerTurn: DEFAULT_MAX_PATCHES_PER_TURN,
+  maxTurns: DEFAULT_MAX_TURNS,
 };
 
 // =============================================================================
@@ -119,11 +124,14 @@ export class FormHarness {
 
     this.state = "step";
 
-    // Inspect form
+    // Inspect form to get all issues
     const result = inspect(this.form);
 
-    // Limit issues to maxIssues
-    const limitedIssues = result.issues.slice(0, this.config.maxIssues);
+    // Issue filtering pipeline (order matters):
+    // 1. Filter by maxGroupsPerTurn/maxFieldsPerTurn - limits scope diversity
+    // 2. Cap by maxIssues - limits total count shown to agent
+    const filteredIssues = this.filterIssuesByScope(result.issues);
+    const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
 
     // Calculate step budget
     const stepBudget = Math.min(
@@ -191,8 +199,9 @@ export class FormHarness {
       },
     });
 
-    // Limit issues for next step
-    const limitedIssues = result.issues.slice(0, this.config.maxIssues);
+    // Issue filtering pipeline for next turn (same as step())
+    const filteredIssues = this.filterIssuesByScope(result.issues);
+    const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
 
     // Calculate step budget for next turn
     const stepBudget = Math.min(
@@ -240,6 +249,107 @@ export class FormHarness {
   getMarkdownHash(): string {
     const markdown = serialize(this.form);
     return createHash("sha256").update(markdown).digest("hex");
+  }
+
+  /**
+   * Filter issues based on maxFieldsPerTurn and maxGroupsPerTurn limits.
+   *
+   * Issues are processed in priority order. An issue is included if:
+   * - Adding it doesn't exceed the field limit (for field/option scoped issues)
+   * - Adding it doesn't exceed the group limit
+   *
+   * Form-level issues are always included.
+   */
+  private filterIssuesByScope(issues: InspectIssue[]): InspectIssue[] {
+    const maxFields = this.config.maxFieldsPerTurn;
+    const maxGroups = this.config.maxGroupsPerTurn;
+
+    // If no limits configured, return all issues
+    if (maxFields === undefined && maxGroups === undefined) {
+      return issues;
+    }
+
+    const result: InspectIssue[] = [];
+    const seenFields = new Set<string>();
+    const seenGroups = new Set<string>();
+
+    for (const issue of issues) {
+      // Form-level issues always pass
+      if (issue.scope === "form") {
+        result.push(issue);
+        continue;
+      }
+
+      // Extract field ID from ref (for options, it's "fieldId.optionId")
+      const fieldId = this.getFieldIdFromRef(issue.ref, issue.scope);
+
+      // Get the parent group for the field (if any)
+      const groupId = fieldId ? this.getGroupForField(fieldId) : undefined;
+
+      // Check field limit
+      if (maxFields !== undefined && fieldId) {
+        if (!seenFields.has(fieldId) && seenFields.size >= maxFields) {
+          continue; // Would exceed field limit
+        }
+      }
+
+      // Check group limit
+      if (maxGroups !== undefined && groupId) {
+        if (!seenGroups.has(groupId) && seenGroups.size >= maxGroups) {
+          continue; // Would exceed group limit
+        }
+      }
+
+      // Include the issue and track the field/group
+      result.push(issue);
+      if (fieldId) {
+seenFields.add(fieldId);
+}
+      if (groupId) {
+seenGroups.add(groupId);
+}
+    }
+
+    return result;
+  }
+
+  /**
+   * Extract field ID from an issue ref.
+   */
+  private getFieldIdFromRef(
+    ref: string,
+    scope: InspectIssue["scope"]
+  ): string | undefined {
+    if (scope === "field") {
+      return ref;
+    }
+    if (scope === "option") {
+      // Option refs are "fieldId.optionId"
+      const dotIndex = ref.indexOf(".");
+      return dotIndex > 0 ? ref.slice(0, dotIndex) : undefined;
+    }
+    // Group-level issues don't have a field
+    return undefined;
+  }
+
+  /**
+   * Get the parent group ID for a field.
+   */
+  private getGroupForField(fieldId: string): string | undefined {
+    const entry = this.form.idIndex.get(fieldId);
+    if (!entry) {
+return undefined;
+}
+
+    // If the field has a parent and that parent is a group, return it
+    if (entry.parentId) {
+      const parentEntry = this.form.idIndex.get(entry.parentId);
+      if (parentEntry?.kind === "group") {
+        return entry.parentId;
+      }
+    }
+
+    return undefined;
   }
 }
 
