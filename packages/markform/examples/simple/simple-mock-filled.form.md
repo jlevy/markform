@@ -3,15 +3,17 @@ markform:
   markform_version: "0.1.0"
   roles:
     - user
+    - agent
   role_instructions:
-    user: "Fill in all fields in this simple test form."
+    user: "Fill in the required fields in this form."
+    agent: "Fill in the optional fields with reasonable test values."
 ---
 
 {% form id="simple_test" title="Simple Test Form" %}
 
 {% doc ref="simple_test" kind="description" %}
-A minimal form with all user-role fields for testing interactive filling.
-Demonstrates all Markform v0.1 field types.
+A form demonstrating user and agent roles. User fills required fields,
+agent fills optional fields. Demonstrates all Markform v0.1 field types.
 {% /doc %}
 
 {% field-group id="basic_fields" title="Basic Fields" %}
@@ -38,11 +40,15 @@ alice@example.com
 ```
 {% /number-field %}
 
-{% number-field id="score" label="Score" role="user" min=0.0 max=100.0 %}
+{% number-field id="score" label="Score" role="agent" min=0.0 max=100.0 %}
 ```value
 87.5
 ```
 {% /number-field %}
+
+{% doc ref="score" kind="instructions" %}
+Assign a score between 0 and 100 based on form completeness.
+{% /doc %}
 
 {% /field-group %}
 
@@ -108,15 +114,19 @@ Answer yes or no for each confirmation. All must be explicitly answered.
 
 {% /field-group %}
 
-{% field-group id="optional_fields" title="Optional Fields" %}
+{% field-group id="optional_fields" title="Optional Fields (Agent)" %}
 
-{% string-field id="notes" label="Notes" role="user" %}
+{% string-field id="notes" label="Notes" role="agent" %}
 ```value
 This is a test note.
 ```
 {% /string-field %}
 
-{% number-field id="optional_number" label="Optional Number" role="user" %}{% /number-field %}
+{% doc ref="notes" kind="instructions" %}
+Add any relevant notes or observations about this test form.
+{% /doc %}
+
+{% number-field id="optional_number" label="Optional Number" role="agent" %}{% /number-field %}
 
 {% /field-group %}
 

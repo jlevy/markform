@@ -27,7 +27,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     id: "simple",
     title: "Simple Test Form",
     description:
-      "All user-role fields for testing interactive filling. Demonstrates all Markform field types.",
+      "User and agent roles for testing full workflow. User fills required fields, agent fills optional.",
     filename: "simple.form.md",
     path: "simple/simple.form.md",
   },
