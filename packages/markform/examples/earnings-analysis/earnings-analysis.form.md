@@ -1,6 +1,12 @@
 ---
 markform:
   markform_version: "0.1.0"
+  roles:
+    - user
+    - agent
+  role_instructions:
+    user: "Enter company identification (legal name, ticker, fiscal year) and the quarter you want analyzed."
+    agent: "Complete the company profile and quarterly analysis based on the provided company context."
 ---
 
 {% form id="company_analysis" title="Company Quarterly Analysis Worksheet" %}
@@ -22,9 +28,9 @@ Complete fresh each quarter.
 
 {% field-group id="identity_structure" title="1. Identity and Structure" %}
 
-{% string-field id="company_legal_name" label="Company legal name" required=true %}{% /string-field %}
+{% string-field id="company_legal_name" label="Company legal name" role="user" required=true %}{% /string-field %}
 
-{% string-list id="tickers" label="Ticker(s)" required=true minItems=1 %}{% /string-list %}
+{% string-list id="tickers" label="Ticker(s)" role="user" required=true minItems=1 %}{% /string-list %}
 
 {% doc ref="tickers" kind="instructions" %}
 List at least one ticker symbol. Add multiple if the company trades on different exchanges.
@@ -32,7 +38,7 @@ List at least one ticker symbol. Add multiple if the company trades on different
 
 {% string-field id="hq_regions" label="HQ / key operating regions" required=true %}{% /string-field %}
 
-{% string-field id="fiscal_year_end" label="Fiscal year end" required=true pattern="^(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$|^(January|February|March|April|May|June|July|August|September|October|November|December)$" %}{% /string-field %}
+{% string-field id="fiscal_year_end" label="Fiscal year end" role="user" required=true pattern="^(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$|^(January|February|March|April|May|June|July|August|September|October|November|December)$" %}{% /string-field %}
 
 {% doc ref="fiscal_year_end" kind="instructions" %}
 Enter month name (e.g., December) or MM-DD format (e.g., 12-31).

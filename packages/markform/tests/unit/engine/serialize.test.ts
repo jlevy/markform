@@ -315,6 +315,85 @@ markform:
       const output2 = serialize(parsed);
       expect(output1).toBe(output2);
     });
+
+    it("serializes validate attribute with object arrays correctly", () => {
+      // This test ensures we don't regress on the [object Object] bug
+      // where validate=[{id: "min_words", min: 50}] was serialized as [[object Object]]
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% string-field id="summary" label="Summary" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+{% string-field id="description" label="Description" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Must not contain [object Object] - this was the bug
+      expect(output).not.toContain("[object Object]");
+
+      // Should contain properly serialized validate attributes
+      expect(output).toContain('validate=[{id: "min_words", min: 50}]');
+      expect(output).toContain('validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}]');
+
+      // Round-trip: parse the output and verify validate is preserved
+      const reparsed = parseForm(output);
+      const group = reparsed.schema.groups[0];
+
+      const summaryField = group?.children[0];
+      expect(summaryField?.kind).toBe("string");
+      if (summaryField?.kind === "string") {
+        expect(summaryField.validate).toHaveLength(1);
+        expect(summaryField.validate?.[0]).toEqual({ id: "min_words", min: 50 });
+      }
+
+      const descField = group?.children[1];
+      expect(descField?.kind).toBe("string");
+      if (descField?.kind === "string") {
+        expect(descField.validate).toHaveLength(2);
+        expect(descField.validate?.[0]).toEqual({ id: "min_words", min: 25 });
+        expect(descField.validate?.[1]).toEqual({ id: "max_words", max: 100 });
+      }
+    });
+
+    it("serializes nested objects in attributes", () => {
+      // Test that deeply nested objects are also serialized correctly
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% string-field id="item" label="Item" validate=[{id: "custom", config: {threshold: 10, enabled: true}}] %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      expect(output).not.toContain("[object Object]");
+      expect(output).toContain("config: {threshold: 10, enabled: true}");
+
+      // Verify round-trip
+      const reparsed = parseForm(output);
+      const field = reparsed.schema.groups[0]?.children[0];
+      if (field?.kind === "string") {
+        expect(field.validate?.[0]).toEqual({
+          id: "custom",
+          config: { threshold: 10, enabled: true },
+        });
+      }
+    });
   });
 
   describe("serialize with simple.form.md", () => {

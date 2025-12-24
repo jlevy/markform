@@ -9,6 +9,62 @@
 import type { FieldPriorityLevel } from "./engine/types.js";
 
 // =============================================================================
+// Role System Constants
+// =============================================================================
+
+/** Default role for fields without explicit role attribute */
+export const AGENT_ROLE = "agent" as const;
+
+/** Role for human-filled fields in interactive mode */
+export const USER_ROLE = "user" as const;
+
+/** Default roles list for forms without explicit roles in frontmatter */
+export const DEFAULT_ROLES: readonly [typeof USER_ROLE, typeof AGENT_ROLE] = [
+  USER_ROLE,
+  AGENT_ROLE,
+] as const;
+
+/** Default instructions per role (used when form doesn't specify role_instructions) */
+export const DEFAULT_ROLE_INSTRUCTIONS: Record<string, string> = {
+  [USER_ROLE]: "Fill in the fields you have direct knowledge of.",
+  [AGENT_ROLE]: "Complete the remaining fields based on the provided context.",
+};
+
+/** Pattern for valid role names: starts with letter, alphanumeric with underscores/hyphens */
+export const ROLE_NAME_PATTERN = /^[a-z][a-z0-9_-]*$/;
+
+/** Reserved role identifiers (not allowed as role names in forms) */
+export const RESERVED_ROLE_NAMES = ["*"] as const;
+
+/**
+ * Normalize a role name: trim whitespace, lowercase.
+ * Throws if invalid pattern or reserved name.
+ */
+export function normalizeRole(role: string): string {
+  const normalized = role.trim().toLowerCase();
+  if (!ROLE_NAME_PATTERN.test(normalized)) {
+    throw new Error(
+      `Invalid role name: "${role}" (must match pattern: start with letter, alphanumeric with underscores/hyphens)`
+    );
+  }
+  if ((RESERVED_ROLE_NAMES as readonly string[]).includes(normalized)) {
+    throw new Error(`Reserved role name: "${role}"`);
+  }
+  return normalized;
+}
+
+/**
+ * Parse --roles CLI flag value into normalized role array.
+ * Handles comma-separated values and '*' wildcard.
+ */
+export function parseRolesFlag(raw: string): string[] {
+  if (raw === "*") {
+    return ["*"];
+  }
+  return raw.split(",").map((r) => normalizeRole(r));
+}
+
+// =============================================================================
 // Field Defaults
 // =============================================================================
 

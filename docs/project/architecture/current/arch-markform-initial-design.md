@@ -589,7 +589,11 @@ It is only required when the value contains Markdoc tag syntax:
 
 - Tag syntax: `{% ... %}`
 
-> **Note:** Markdoc uses HTML comments (`<!-- ... -->`), not `{# ... #}`. HTML comments in form values are plain text and don't require `process=false`.
+> **Note:** Markdoc uses HTML comments (`
+
+<!-- ... -->
+
+`), not `{# ... #}`. HTML comments in form values are plain text and don't require `process=false`.
 
 **Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check
 is sufficient since false positives are harmless (adding `process=false` when not needed
@@ -1995,7 +1999,7 @@ Exceeding `max_turns` results in an error state.
 **Error Behavior:**
 
 | Condition | Harness Status | CLI Exit Code |
-|-----------|---------------|---------------|
+| --- | --- | --- |
 | Form completed successfully | `'complete'` | 0 |
 | `max_turns` exceeded | `'max_turns_exceeded'` | 1 |
 | Agent/LLM error | `'error'` | 1 |
@@ -2012,8 +2016,8 @@ interface HarnessResult {
 }
 ```
 
-Integration tests can check `result.status` to verify expected outcomes without
-parsing console output.
+Integration tests can check `result.status` to verify expected outcomes without parsing
+console output.
 
 #### Harness Contract
 
@@ -2092,11 +2096,11 @@ A golden test is a YAML file containing:
 session_version: 0.1
 mode: mock  # mock | live (see explanation below)
 form:
-  path: examples/quarterly/quarterly.form.md
+  path: examples/earnings-analysis/earnings-analysis.form.md
 validators:
-  code: examples/quarterly/quarterly.valid.ts  # optional
+  code: examples/earnings-analysis/earnings-analysis.valid.ts  # optional
 mock:
-  completed_mock: examples/quarterly/quarterly.mock.filled.form.md
+  completed_mock: examples/earnings-analysis/earnings-analysis.mock.filled.form.md
 
 harness:
   max_issues: 5              # max issues to return per turn
@@ -2121,7 +2125,7 @@ turns:
 
 final:
   expect_complete: true
-  expected_completed_form: examples/quarterly/quarterly.mock.filled.form.md
+  expected_completed_form: examples/earnings-analysis/earnings-analysis.mock.filled.form.md
 ```
 
 **Mode field semantics:**
@@ -2195,7 +2199,7 @@ Thin wrapper around the tool contract:
 
   - Examples:
 
-    - `quarterly.form.md` → `quarterly-v1.form.md` → `quarterly-v2.form.md`
+    - `earnings-analysis.form.md` → `quarterly-v1.form.md` → `quarterly-v2.form.md`
 
     - `report_v5.form.md` → `report_v6.form.md`
 
@@ -2339,14 +2343,14 @@ is optional later.
 
 Files:
 
-- `examples/quarterly/quarterly.form.md` (template form)
+- `examples/earnings-analysis/earnings-analysis.form.md` (template form)
 
-- `examples/quarterly/quarterly.mock.filled.form.md` (completed mock with checkbox
-  states and values)
+- `examples/earnings-analysis/earnings-analysis.mock.filled.form.md` (completed mock
+  with checkbox states and values)
 
-- `examples/quarterly/quarterly.valid.ts` (code validators)
+- `examples/earnings-analysis/earnings-analysis.valid.ts` (code validators)
 
-- `examples/quarterly/quarterly.session.yaml` (session transcript)
+- `examples/earnings-analysis/earnings-analysis.session.yaml` (session transcript)
 
 ### Example 2: Small smoke test form
 
@@ -2435,21 +2439,23 @@ Full specification included above.
 
 ## What “Done” Looks Like for v0.1
 
-1. Write `quarterly.form.md` (template) and `quarterly.mock.filled.form.md` (completed
-   mock)
+1. Write `earnings-analysis.form.md` (template) and
+   `earnings-analysis.mock.filled.form.md` (completed mock)
 
 2. Run:
 
-   - `markform inspect examples/quarterly/quarterly.form.md` — prints YAML report with
-     structure summary, progress summary, form state, and all issues in priority order
+   - `markform inspect examples/earnings-analysis/earnings-analysis.form.md` — prints
+     YAML report with structure summary, progress summary, form state, and all issues in
+     priority order
 
-   - `markform serve examples/quarterly/quarterly.form.md` — open the browser, browse
-     the form; Save to confirm output path (defaults to `quarterly-v1.form.md`); run
-     `markform inspect` separately at any time to check status
+   - `markform serve examples/earnings-analysis/earnings-analysis.form.md` — open the
+     browser, browse the form; Save to confirm output path (defaults to
+     `quarterly-v1.form.md`); run `markform inspect` separately at any time to check
+     status
 
-   - `markform fill examples/quarterly/quarterly.form.md --agent=mock --mock-source
-     examples/quarterly/quarterly.mock.filled.form.md --record
-     examples/quarterly/quarterly.session.yaml`
+   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --agent=mock
+     --mock-source examples/earnings-analysis/earnings-analysis.mock.filled.form.md
+     --record examples/earnings-analysis/earnings-analysis.session.yaml`
 
 3. Run tests:
 
@@ -2909,7 +2915,7 @@ this is not needed for typical local workflows.
 ## Enhancements Identified from Company Analysis Form
 
 This section documents enhancements identified while converting the complex
-`company-quarterly-analysis-draft-form.md` to proper Markform syntax.
+`earnings-analysis-draft-form.md` to proper Markform syntax.
 The form exercises many advanced patterns and serves as a comprehensive test case for
 the framework.
 

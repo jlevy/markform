@@ -802,8 +802,7 @@ function getFieldsToFill(
 
 - [ ] Update `political-figure.form.md`: add `role="user"` to person name field
 
-- [ ] Update `company-quarterly-analysis.form.md`: add `role="user"` to company info
-  fields
+- [ ] Update `earnings-analysis.form.md`: add `role="user"` to company info fields
 
 - [ ] Update `simple.form.md`: add `role="user"` to a few demo fields
 
@@ -1023,7 +1022,7 @@ The following example forms need to be updated to demonstrate the role system:
 
 2. **political-figure.form.md** - Add `role="user"` to person name field
 
-3. **company-quarterly-analysis.form.md** - Add `role="user"` to company_name, ticker,
+3. **earnings-analysis.form.md** - Add `role="user"` to company_name, ticker,
    fiscal_period
 
 Each form should also get frontmatter with `roles` and `role_instructions` to show the
@@ -1033,14 +1032,73 @@ recommended pattern.
 
 ```bash
 # Stage 1: User fills context fields interactively
-markform fill company-quarterly-analysis.form.md --interactive -o company-quarterly-analysis-v1.form.md
+markform fill earnings-analysis.form.md --interactive -o earnings-analysis-v1.form.md
 
 # Stage 2: Agent completes analysis (default: agent role only)
-markform fill company-quarterly-analysis-v1.form.md -o company-quarterly-analysis-filled.form.md
+markform fill earnings-analysis-v1.form.md -o earnings-analysis-filled.form.md
 
 # Preview what would be filled without making changes
-markform fill company-quarterly-analysis.form.md --dry-run
+markform fill earnings-analysis.form.md --dry-run
 ```
+
+* * *
+
+## Implementation Status (2025-12-24)
+
+### Completed
+
+- **markform-149.1**: Phase 1 - Added FillMode, ApprovalMode types, role constants to
+  settings.ts
+
+- **markform-149.2**: Phase 2 - Parser extracts role from field attributes, approvalMode
+  from checkboxes
+
+- **markform-149.3**: Phase 3 - Inspect module filters by targetRoles, detects blocking
+  checkpoints
+
+- **markform-149.4**: Phase 4 - Fill command has --roles and --mode flags, harness
+  passes targetRoles
+
+- **markform-149.5**: Phase 5 - Serializer outputs role and approvalMode when
+  non-default
+
+- **markform-149.6**: Phase 6 - Inspect CLI shows role badges, --roles flag, blockedBy
+  annotations
+
+- **markform-149.7**: Phase 7 - Example forms updated with roles frontmatter and
+  role="user" fields
+
+### Remaining Work (Future Phases)
+
+- **markform-146**: Add --prompt flag to fill command for custom agent instructions
+
+- **markform-147**: Connect form instructions to live agent prompt composition
+
+### Known Limitations and Future Work
+
+1. **Frontmatter roles parsing not implemented**: The parser does not yet extract
+   `roles` and `role_instructions` from YAML frontmatter.
+   Fields use roles, but form-level role lists are not parsed.
+   Workaround: Pass targetRoles explicitly via --roles flag.
+
+2. **Interactive mode not updated**: The --interactive flag does not yet default to
+   USER_ROLE as specified.
+   This was deferred as --interactive is not fully implemented.
+
+3. **Overwrite mode not implemented**: The FillMode type and harness config accept
+   fillMode, but the actual field clearing logic is not implemented.
+   Current behavior is always “continue”.
+
+4. **Role validation warnings not implemented**: Parser does not warn if field role is
+   not in form’s roles list.
+
+5. **Role instructions not passed to agent**: The liveAgent does not yet receive
+   role_instructions from frontmatter.
+   Tracked in markform-147.
+
+6. **approvalMode on non-checkbox field**: Parser does not produce an error if
+   approvalMode is used on non-checkbox fields.
+   Should be added as validation.
 
 * * *
 

@@ -12,6 +12,8 @@ import type {
   IssueScope,
   IssueReason,
   FieldPriorityLevel,
+  Field,
+  Id,
 } from "./types";
 import { DEFAULT_PRIORITY } from "../settings.js";
 import { validate } from "./validate";
@@ -27,6 +29,8 @@ import {
 export interface InspectOptions {
   /** Skip code validators */
   skipCodeValidators?: boolean;
+  /** Target roles to filter issues by (default: all roles, '*' means all) */
+  targetRoles?: string[];
 }
 
 /**
@@ -79,13 +83,16 @@ export function inspect(
   // Sort and assign priorities
   const sortedIssues = sortAndAssignPriorities(allIssues, form);
 
-  // Check if complete (no required issues)
-  const isComplete = !sortedIssues.some((i) => i.severity === "required");
+  // Filter by role and add blocking annotations
+  const filteredIssues = filterIssuesByRole(sortedIssues, form, options.targetRoles);
+
+  // Check if complete (no required issues in filtered set)
+  const isComplete = !filteredIssues.some((i) => i.severity === "required");
 
   return {
     structureSummary,
     progressSummary,
-    issues: sortedIssues,
+    issues: filteredIssues,
     isComplete,
     formState,
   };
@@ -348,4 +355,189 @@ function getFieldPriority(ref: string, form: ParsedForm): FieldPriorityLevel {
     }
   }
   return DEFAULT_PRIORITY; // Fallback for non-field refs (groups, form)
+}
+
+// =============================================================================
+// Role Filtering and Blocking Checkpoint Helpers
+// =============================================================================
+
+/**
+ * Get all fields from the form schema as a flat array.
+ */
+export function getAllFields(form: ParsedForm): Field[] {
+  return form.schema.groups.flatMap((g) => g.children);
+}
+
+/**
+ * Find a field by its ID.
+ */
+export function findFieldById(form: ParsedForm, fieldId: Id): Field | undefined {
+  for (const group of form.schema.groups) {
+    for (const field of group.children) {
+      if (field.id === fieldId) {
+        return field;
+      }
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Get fields that match the target roles.
+ * If targetRoles includes '*', returns all fields.
+ */
+export function getFieldsForRoles(form: ParsedForm, targetRoles: string[]): Field[] {
+  const allFields = getAllFields(form);
+  if (targetRoles.includes("*")) {
+    return allFields;
+  }
+  return allFields.filter((field) => targetRoles.includes(field.role));
+}
+
+/**
+ * Check if a checkbox field is complete based on its mode.
+ *
+ * Completion semantics by mode:
+ * - 'all': All options must be done or n/a
+ * - 'any': At least minDone (default 1) options must be done
+ * - 'explicit': No options may be 'unfilled'
+ */
+export function isCheckboxComplete(form: ParsedForm, fieldId: Id): boolean {
+  const field = findFieldById(form, fieldId);
+  if (field?.kind !== "checkboxes") {
+    return true; // Non-checkbox fields are not blocking
+  }
+
+  const checkboxField = field;
+  const value = form.valuesByFieldId[fieldId];
+  if (value?.kind !== "checkboxes") {
+    return false;
+  }
+
+  const values = value.values;
+  const optionIds = checkboxField.options.map((o) => o.id);
+  const mode = checkboxField.checkboxMode;
+
+  if (mode === "multi") {
+    // Multi mode: all options must be done or na (not todo, incomplete, or active)
+    // If minDone is set, at least that many must be done
+    const minDone = checkboxField.minDone;
+    if (minDone !== undefined) {
+      const doneCount = optionIds.filter((id) => values[id] === "done").length;
+      return doneCount >= minDone;
+    }
+    // Otherwise, all must be done or na
+    return optionIds.every((id) => values[id] === "done" || values[id] === "na");
+  }
+
+  if (mode === "simple") {
+    // Simple mode (GFM-compatible): all options must be done (not todo)
+    return optionIds.every((id) => values[id] === "done");
+  }
+
+  if (mode === "explicit") {
+    // Explicit mode: no unfilled values remain (all must be yes or no)
+    return optionIds.every((id) => values[id] !== "unfilled");
+  }
+
+  // Default case (shouldn't happen with valid CheckboxMode)
+  return true;
+}
+
+/**
+ * Result of finding a blocking checkpoint.
+ */
+export interface BlockingCheckpointResult {
+  /** Index in orderIndex where the blocking checkpoint is */
+  index: number;
+  /** Field ID of the blocking checkpoint */
+  fieldId: Id;
+}
+
+/**
+ * Find the first incomplete blocking checkpoint in the form.
+ * Returns null if no blocking checkpoint is incomplete.
+ */
+export function findBlockingCheckpoint(form: ParsedForm): BlockingCheckpointResult | null {
+  for (let i = 0; i < form.orderIndex.length; i++) {
+    const fieldId = form.orderIndex[i];
+    if (!fieldId) {
+continue;
+}
+
+    const field = findFieldById(form, fieldId);
+    if (field?.kind !== "checkboxes") {
+continue;
+}
+
+    const checkboxField = field;
+    if (checkboxField.approvalMode === "blocking" && !isCheckboxComplete(form, fieldId)) {
+      return { index: i, fieldId };
+    }
+  }
+  return null;
+}
+
+/**
+ * Get the set of field IDs that are blocked by a checkpoint.
+ * These are all fields that appear after the blocking checkpoint in orderIndex.
+ */
+export function getBlockedFieldIds(
+  form: ParsedForm,
+  blockingCheckpoint: BlockingCheckpointResult
+): Set<Id> {
+  const blocked = new Set<Id>();
+  for (let i = blockingCheckpoint.index + 1; i < form.orderIndex.length; i++) {
+    const fieldId = form.orderIndex[i];
+    if (fieldId) {
+      blocked.add(fieldId);
+    }
+  }
+  return blocked;
+}
+
+/**
+ * Filter issues to only include those for fields matching target roles.
+ * Also adds blockedBy annotation for fields blocked by a checkpoint.
+ */
+export function filterIssuesByRole(
+  issues: InspectIssue[],
+  form: ParsedForm,
+  targetRoles?: string[]
+): InspectIssue[] {
+  // Find blocking checkpoint first
+  const blockingCheckpoint = findBlockingCheckpoint(form);
+  const blockedFieldIds = blockingCheckpoint
+    ? getBlockedFieldIds(form, blockingCheckpoint)
+    : new Set<Id>();
+
+  // Get field IDs for target roles
+  const targetFieldIds = targetRoles && !targetRoles.includes("*")
+    ? new Set(getFieldsForRoles(form, targetRoles).map((f) => f.id))
+    : null;
+
+  return issues.map((issue) => {
+    // Extract field ID from ref (handles both field refs and option refs)
+    const fieldId = issue.ref.includes(".") ? issue.ref.split(".")[0] : issue.ref;
+
+    // Check if this field is blocked
+    const isBlocked = fieldId && blockedFieldIds.has(fieldId);
+    const annotatedIssue: InspectIssue = isBlocked
+      ? { ...issue, blockedBy: blockingCheckpoint!.fieldId }
+      : issue;
+
+    return annotatedIssue;
+  }).filter((issue) => {
+    // If no target roles specified, include all issues
+    if (!targetFieldIds) {
+      return true;
+    }
+
+    // Extract field ID and check if it matches target roles
+    const fieldId = issue.ref.includes(".") ? (issue.ref.split(".")[0] ?? issue.ref) : issue.ref;
+
+    // Include if field matches target roles, or if it's not a field ref (form/group level)
+    const field = findFieldById(form, fieldId);
+    return !field || targetFieldIds.has(fieldId);
+  });
 }

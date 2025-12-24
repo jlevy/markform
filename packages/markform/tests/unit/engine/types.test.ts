@@ -68,6 +68,7 @@ describe("engine/types", () => {
         label: "Company Name",
         required: true,
         priority: "high",
+        role: "agent",
         pattern: "^[A-Z].*",
         minLength: 1,
         maxLength: 100,
@@ -84,6 +85,7 @@ describe("engine/types", () => {
         label: "Revenue",
         required: false,
         priority: "medium",
+        role: "agent",
         min: 0,
         max: 1000000,
         integer: true,
@@ -99,11 +101,13 @@ describe("engine/types", () => {
         label: "Tasks",
         required: false,
         priority: "medium",
+        role: "agent",
         checkboxMode: "multi",
         options: [
           { id: "task_a", label: "Task A" },
           { id: "task_b", label: "Task B" },
         ],
+        approvalMode: "none",
       };
       const result = FieldSchema.parse(field);
       expect(result.kind).toBe("checkboxes");
@@ -119,6 +123,7 @@ describe("engine/types", () => {
         label: "Rating",
         required: false,
         priority: "medium",
+        role: "agent",
         options: [
           { id: "bullish", label: "Bullish" },
           { id: "neutral", label: "Neutral" },
@@ -136,6 +141,7 @@ describe("engine/types", () => {
         label: "Categories",
         required: false,
         priority: "medium",
+        role: "agent",
         minSelections: 1,
         maxSelections: 3,
         options: [
@@ -154,6 +160,7 @@ describe("engine/types", () => {
         label: "Risks",
         required: false,
         priority: "medium",
+        role: "agent",
         minItems: 3,
         maxItems: 10,
         itemMinLength: 10,
@@ -181,6 +188,7 @@ describe("engine/types", () => {
                 label: "Company Name",
                 required: true,
                 priority: "high",
+                role: "user",
               },
               {
                 kind: "string",
@@ -188,6 +196,7 @@ describe("engine/types", () => {
                 label: "Ticker",
                 required: true,
                 priority: "high",
+                role: "agent",
               },
             ],
           },

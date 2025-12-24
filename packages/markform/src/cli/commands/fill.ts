@@ -15,6 +15,7 @@ import { parseForm } from "../../engine/parse.js";
 import { serialize } from "../../engine/serialize.js";
 import { serializeSession } from "../../engine/session.js";
 import type {
+  FillMode,
   HarnessConfig,
   Patch,
   SessionFinal,
@@ -27,6 +28,8 @@ import {
   DEFAULT_MAX_ISSUES,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
+  AGENT_ROLE,
+  parseRolesFlag,
 } from "../../settings.js";
 import type { Agent } from "../../harness/mockAgent.js";
 import { resolveModel } from "../../harness/modelResolver.js";
@@ -168,6 +171,14 @@ export function registerFillCommand(program: Command): void {
       "--max-groups <n>",
       "Maximum unique groups per turn (applied before --max-issues)"
     )
+    .option(
+      "--roles <roles>",
+      "Target roles to fill (comma-separated, or '*' for all; default: agent)"
+    )
+    .option(
+      "--mode <mode>",
+      "Fill mode: continue (skip filled fields) or overwrite (re-fill; default: continue)"
+    )
     .option("-o, --output <file>", "Write final form to file")
     .action(
       async (
@@ -182,6 +193,8 @@ export function registerFillCommand(program: Command): void {
           maxIssues?: string;
           maxFields?: string;
           maxGroups?: string;
+          roles?: string;
+          mode?: string;
           output?: string;
         },
         cmd: Command
@@ -214,6 +227,33 @@ export function registerFillCommand(program: Command): void {
 
           const startTime = Date.now();
 
+          // Parse and validate --roles
+          let targetRoles: string[] = [AGENT_ROLE]; // Default to agent
+          if (options.roles) {
+            try {
+              targetRoles = parseRolesFlag(options.roles);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              logError(`Invalid --roles: ${message}`);
+              process.exit(1);
+            }
+          }
+
+          // Warn about --roles=* in non-interactive mode
+          if (targetRoles.includes("*")) {
+            logWarn(ctx, "Warning: Filling all roles including user-designated fields");
+          }
+
+          // Parse and validate --mode
+          let fillMode: FillMode = "continue"; // Default
+          if (options.mode) {
+            if (options.mode !== "continue" && options.mode !== "overwrite") {
+              logError(`Invalid --mode: ${options.mode}. Valid modes: continue, overwrite`);
+              process.exit(1);
+            }
+            fillMode = options.mode;
+          }
+
           // Parse harness config
           const harnessConfig: Partial<HarnessConfig> = {
             maxTurns: parseInt(
@@ -234,6 +274,8 @@ export function registerFillCommand(program: Command): void {
             ...(options.maxGroups && {
               maxGroupsPerTurn: parseInt(options.maxGroups, 10),
             }),
+            targetRoles,
+            fillMode,
           };
 
           logVerbose(ctx, `Reading form: ${filePath}`);
@@ -270,6 +312,8 @@ export function registerFillCommand(program: Command): void {
           logVerbose(ctx, `Max turns: ${harnessConfig.maxTurns}`);
           logVerbose(ctx, `Max patches per turn: ${harnessConfig.maxPatchesPerTurn}`);
           logVerbose(ctx, `Max issues per step: ${harnessConfig.maxIssues}`);
+          logVerbose(ctx, `Target roles: ${targetRoles.includes("*") ? "*" : targetRoles.join(", ")}`);
+          logVerbose(ctx, `Fill mode: ${fillMode}`);
 
           // Run harness loop
           let stepResult = harness.step();

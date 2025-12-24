@@ -47,6 +47,20 @@ export type CheckboxValue = MultiCheckboxState | ExplicitCheckboxValue;
 /** Checkbox mode determines which states are valid */
 export type CheckboxMode = "multi" | "simple" | "explicit";
 
+/**
+ * Controls how fill handles existing values for target role fields.
+ * - 'continue': Skip fields that already have values (default)
+ * - 'overwrite': Clear and re-fill all fields for the target role
+ */
+export type FillMode = "continue" | "overwrite";
+
+/**
+ * Controls whether a checkbox field acts as a blocking checkpoint.
+ * - 'none': No blocking behavior (default)
+ * - 'blocking': Fields after this cannot be filled until checkbox is complete
+ */
+export type ApprovalMode = "none" | "blocking";
+
 // =============================================================================
 // Field Types
 // =============================================================================
@@ -69,6 +83,7 @@ export interface FieldBase {
   label: string;
   required: boolean;            // explicit: parser defaults to false if not specified
   priority: FieldPriorityLevel; // explicit: parser defaults to 'medium' if not specified
+  role: string;                 // explicit: parser defaults to AGENT_ROLE if not specified
   validate?: ValidatorRef[];
 }
 
@@ -111,6 +126,7 @@ export interface CheckboxesField extends FieldBase {
   checkboxMode: CheckboxMode; // explicit: parser defaults to 'multi' if not specified
   minDone?: number;
   options: Option[];
+  approvalMode: ApprovalMode; // explicit: parser defaults to 'none' if not specified
 }
 
 /** Single-select field - exactly one option can be selected */
@@ -221,6 +237,17 @@ export interface DocumentationBlock {
 }
 
 // =============================================================================
+// Form Metadata (from frontmatter)
+// =============================================================================
+
+/** Form-level metadata from YAML frontmatter, including role configuration */
+export interface FormMetadata {
+  markformVersion: string;
+  roles: string[];
+  roleInstructions: Record<string, string>;
+}
+
+// =============================================================================
 // Parsed Form
 // =============================================================================
 
@@ -238,6 +265,7 @@ export interface ParsedForm {
   docs: DocumentationBlock[];
   orderIndex: Id[];
   idIndex: Map<Id, IdIndexEntry>;
+  metadata?: FormMetadata; // optional for backward compat with forms without frontmatter
 }
 
 // =============================================================================
@@ -294,6 +322,7 @@ export interface InspectIssue {
   message: string;
   severity: "required" | "recommended";
   priority: number;
+  blockedBy?: Id; // if field is blocked by an incomplete blocking checkpoint
 }
 
 // =============================================================================
@@ -473,6 +502,10 @@ export interface HarnessConfig {
   maxFieldsPerTurn?: number;
   /** Maximum unique groups to include issues for per turn (undefined = unlimited) */
   maxGroupsPerTurn?: number;
+  /** Target roles to fill (default: [AGENT_ROLE], '*' for all) */
+  targetRoles?: string[];
+  /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
+  fillMode?: FillMode;
 }
 
 /** Session turn - one iteration of the harness loop */
@@ -581,6 +614,10 @@ export const CheckboxValueSchema = z.union([
 
 export const CheckboxModeSchema = z.enum(["multi", "simple", "explicit"]);
 
+export const FillModeSchema = z.enum(["continue", "overwrite"]);
+
+export const ApprovalModeSchema = z.enum(["none", "blocking"]);
+
 // Field kind schema
 export const FieldKindSchema = z.enum([
   "string",
@@ -600,12 +637,13 @@ export const OptionSchema = z.object({
 });
 
 // Field base schema (partial, used for extension)
-// NOTE: required and priority are explicit (not optional) - parser assigns defaults
+// NOTE: required, priority, and role are explicit (not optional) - parser assigns defaults
 const FieldBaseSchemaPartial = {
   id: IdSchema,
   label: z.string(),
   required: z.boolean(),
   priority: FieldPriorityLevelSchema,
+  role: z.string(),
   validate: z.array(ValidatorRefSchema).optional(),
 };
 
@@ -643,6 +681,7 @@ export const CheckboxesFieldSchema = z.object({
   checkboxMode: CheckboxModeSchema, // explicit: parser defaults to 'multi'
   minDone: z.number().int().optional(),
   options: z.array(OptionSchema),
+  approvalMode: ApprovalModeSchema, // explicit: parser defaults to 'none'
 });
 
 export const SingleSelectFieldSchema = z.object({
@@ -738,6 +777,13 @@ export const DocumentationBlockSchema = z.object({
   bodyMarkdown: z.string(),
 });
 
+// Form metadata schema
+export const FormMetadataSchema = z.object({
+  markformVersion: z.string(),
+  roles: z.array(z.string()).min(1),
+  roleInstructions: z.record(z.string(), z.string()),
+});
+
 // Validation schemas
 export const SeveritySchema = z.enum(["error", "warning", "info"]);
 
@@ -785,6 +831,7 @@ export const InspectIssueSchema = z.object({
   message: z.string(),
   severity: z.enum(["required", "recommended"]),
   priority: z.number().int().positive(),
+  blockedBy: IdSchema.optional(),
 });
 
 // Summary schemas
@@ -938,6 +985,8 @@ export const HarnessConfigSchema = z.object({
   maxTurns: z.number().int().positive(),
   maxFieldsPerTurn: z.number().int().positive().optional(),
   maxGroupsPerTurn: z.number().int().positive().optional(),
+  targetRoles: z.array(z.string()).optional(),
+  fillMode: FillModeSchema.optional(),
 });
 
 export const SessionTurnSchema = z.object({

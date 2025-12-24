@@ -106,7 +106,7 @@ behavior.
 | --- | --- | --- | --- |
 | `simple` | Simple Test Form | `simple.form.md` | Minimal form demonstrating all Markform v0.1 field types. Good for learning the basics. |
 | `political-figure` | Political Figure | `political-figure.form.md` | Biographical form for researching political figures using web search. Includes repeating groups for offices held. |
-| `company-quarterly` | Company Quarterly Analysis | `company-quarterly-analysis.form.md` | Extensive financial analysis worksheet with company profile and quarterly analysis sections. |
+| `company-quarterly` | Company Quarterly Analysis | `earnings-analysis.form.md` | Extensive financial analysis worksheet with company profile and quarterly analysis sections. |
 
 ### CLI Interface
 
@@ -142,23 +142,23 @@ $ markform examples
 │     Extensive financial analysis worksheet with company profile and quarterly analysis.
 
 ◆  Filename:
-│  company-quarterly-analysis.form.md
+│  earnings-analysis.form.md
 │  (edit or press Enter to accept)
 
-✔ Created company-quarterly-analysis.form.md
+✔ Created earnings-analysis.form.md
 
 This form has fields for both you (user) and the AI agent.
 
 Next steps:
   # 1. Fill in your fields (company name, ticker, period)
-  markform fill company-quarterly-analysis.form.md --interactive
+  markform fill earnings-analysis.form.md --interactive
 
   # 2. Let the agent complete the analysis
-  markform fill company-quarterly-analysis-v1.form.md
+  markform fill earnings-analysis-v1.form.md
 
 Other useful commands:
-  markform inspect company-quarterly-analysis.form.md
-  markform dump company-quarterly-analysis.form.md
+  markform inspect earnings-analysis.form.md
+  markform dump earnings-analysis.form.md
 ```
 
 **Overwrite flow (file exists):**

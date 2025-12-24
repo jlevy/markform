@@ -28,7 +28,7 @@ import type {
   StringListValue,
   StringValue,
 } from "./types.js";
-import { DEFAULT_PRIORITY } from "../settings.js";
+import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
 
 // =============================================================================
 // Options
@@ -58,11 +58,29 @@ function serializeAttrValue(value: unknown): string {
   if (typeof value === "boolean") {
     return value ? "true" : "false";
   }
+  if (value === null) {
+    return "null";
+  }
   if (Array.isArray(value)) {
     const items = value.map((v) => serializeAttrValue(v)).join(", ");
     return `[${items}]`;
   }
-  return String(value);
+  if (typeof value === "object") {
+    // Serialize plain objects as Markdoc object literals: {key: value, key2: value2}
+    const entries = Object.entries(value as Record<string, unknown>);
+    const parts = entries.map(([k, v]) => `${k}: ${serializeAttrValue(v)}`);
+    return `{${parts.join(", ")}}`;
+  }
+  // Handle remaining primitive types (bigint, symbol, undefined, function)
+  // These shouldn't appear in form attributes but handle gracefully
+  if (typeof value === "bigint") {
+    return String(value);
+  }
+  if (typeof value === "undefined") {
+    return "null";
+  }
+  // For functions and symbols, throw - these are invalid in form attributes
+  throw new Error(`Cannot serialize value of type ${typeof value} to Markdoc`);
 }
 
 /**
@@ -125,6 +143,9 @@ function serializeStringField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.multiline) {
     attrs.multiline = field.multiline;
   }
@@ -165,6 +186,9 @@ function serializeNumberField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.min !== undefined) {
     attrs.min = field.min;
   }
@@ -201,6 +225,9 @@ function serializeStringListField(
   }
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
   }
   if (field.minItems !== undefined) {
     attrs.minItems = field.minItems;
@@ -263,6 +290,9 @@ function serializeSingleSelectField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.validate) {
     attrs.validate = field.validate;
   }
@@ -292,6 +322,9 @@ function serializeMultiSelectField(
   }
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
   }
   if (field.minSelections !== undefined) {
     attrs.minSelections = field.minSelections;
@@ -330,11 +363,17 @@ function serializeCheckboxesField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.checkboxMode !== "multi") {
     attrs.checkboxMode = field.checkboxMode;
   }
   if (field.minDone !== undefined) {
     attrs.minDone = field.minDone;
+  }
+  if (field.approvalMode !== "none") {
+    attrs.approvalMode = field.approvalMode;
   }
   if (field.validate) {
     attrs.validate = field.validate;

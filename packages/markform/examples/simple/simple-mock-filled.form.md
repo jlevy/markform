@@ -1,6 +1,12 @@
 ---
 markform:
   markform_version: "0.1.0"
+  roles:
+    - user
+    - agent
+  role_instructions:
+    user: "Enter your name and email to identify yourself."
+    agent: "Complete the remaining form fields based on context."
 ---
 
 {% form id="simple_test" title="Simple Test Form" %}
@@ -12,7 +18,7 @@ Used for TDD development and golden session testing.
 
 {% field-group id="basic_fields" title="Basic Fields" %}
 
-{% string-field id="name" label="Name" required=true minLength=2 maxLength=50 %}
+{% string-field id="name" label="Name" role="user" required=true minLength=2 maxLength=50 %}
 ```value
 Alice Johnson
 ```
@@ -22,7 +28,7 @@ Alice Johnson
 Enter your full name (2-50 characters).
 {% /doc %}
 
-{% string-field id="email" label="Email" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" %}
+{% string-field id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" %}
 ```value
 alice@example.com
 ```

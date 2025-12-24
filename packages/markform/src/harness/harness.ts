@@ -8,9 +8,10 @@
 import { createHash } from "node:crypto";
 
 import { applyPatches } from "../engine/apply.js";
-import { inspect } from "../engine/inspect.js";
+import { inspect, getFieldsForRoles } from "../engine/inspect.js";
 import { serialize } from "../engine/serialize.js";
 import type {
+  ClearFieldPatch,
   HarnessConfig,
   InspectIssue,
   ParsedForm,
@@ -22,6 +23,7 @@ import {
   DEFAULT_MAX_ISSUES,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
+  AGENT_ROLE,
 } from "../settings.js";
 
 // =============================================================================
@@ -99,10 +101,18 @@ export class FormHarness {
    *
    * This transitions from INIT/WAIT -> STEP state.
    * Returns the current form state with prioritized issues.
+   *
+   * On first step with fillMode='overwrite', clears all target role fields
+   * so they will be reported as needing to be filled.
    */
   step(): StepResult {
     if (this.state === "complete") {
       throw new Error("Harness is complete - cannot step");
+    }
+
+    // On first step with fillMode='overwrite', clear all target role fields
+    if (this.state === "init" && this.config.fillMode === "overwrite") {
+      this.clearTargetRoleFields();
     }
 
     // Increment turn number
@@ -111,7 +121,7 @@ export class FormHarness {
     // Check max turns
     if (this.turnNumber > this.config.maxTurns) {
       this.state = "complete";
-      const result = inspect(this.form);
+      const result = inspect(this.form, { targetRoles: this.config.targetRoles });
       return {
         structureSummary: result.structureSummary,
         progressSummary: result.progressSummary,
@@ -124,8 +134,8 @@ export class FormHarness {
 
     this.state = "step";
 
-    // Inspect form to get all issues
-    const result = inspect(this.form);
+    // Inspect form to get all issues (filtered by target roles if configured)
+    const result = inspect(this.form, { targetRoles: this.config.targetRoles });
 
     // Issue filtering pipeline (order matters):
     // 1. Filter by maxGroupsPerTurn/maxFieldsPerTurn - limits scope diversity
@@ -232,7 +242,7 @@ export class FormHarness {
    * Check if the form is complete.
    */
   isComplete(): boolean {
-    const result = inspect(this.form);
+    const result = inspect(this.form, { targetRoles: this.config.targetRoles });
     return result.isComplete;
   }
 
@@ -350,6 +360,26 @@ return undefined;
     }
 
     return undefined;
+  }
+
+  /**
+   * Clear all fields that match the target roles.
+   * Used when fillMode='overwrite' to re-fill already-filled fields.
+   */
+  private clearTargetRoleFields(): void {
+    const targetRoles = this.config.targetRoles ?? [AGENT_ROLE];
+    const targetFields = getFieldsForRoles(this.form, targetRoles);
+
+    // Create clear patches for all target role fields
+    const clearPatches: ClearFieldPatch[] = targetFields.map((field) => ({
+      op: "clear_field" as const,
+      fieldId: field.id,
+    }));
+
+    // Apply clear patches (this modifies the form in place)
+    if (clearPatches.length > 0) {
+      applyPatches(this.form, clearPatches);
+    }
   }
 }
 

@@ -71,7 +71,7 @@ const PROVIDERS: Record<
   },
   google: {
     package: "@ai-sdk/google",
-    envVar: "GOOGLE_API_KEY",
+    envVar: "GOOGLE_GENERATIVE_AI_API_KEY",
     createFn: "createGoogleGenerativeAI",
   },
   xai: {
@@ -146,7 +146,8 @@ export async function resolveModel(
   const apiKey = process.env[providerConfig.envVar];
   if (!apiKey) {
     throw new Error(
-      `Missing API key for ${provider}. Set the ${providerConfig.envVar} environment variable.`
+      `Missing API key for "${provider}" provider (model: ${modelIdString}).\n` +
+        `Set the ${providerConfig.envVar} environment variable or add it to your .env file.`
     );
   }
 
@@ -159,8 +160,8 @@ export async function resolveModel(
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes("Cannot find module") || message.includes("ERR_MODULE_NOT_FOUND")) {
       throw new Error(
-        `Provider package "${providerConfig.package}" is not installed. ` +
-        `Install it with: pnpm add ${providerConfig.package}`
+        `Provider package not installed for model "${modelIdString}".\n` +
+          `Install with: pnpm add ${providerConfig.package}`
       );
     }
     throw error;
