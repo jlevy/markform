@@ -10,7 +10,7 @@ export default defineConfig({
   format: ["esm"],
   platform: "node",
   target: "node24",
-  sourcemap: true,
+  sourcemap: false,
   dts: true,
   clean: true,
   banner: ({ fileName }) =>
