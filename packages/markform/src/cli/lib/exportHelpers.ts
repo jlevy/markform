@@ -108,8 +108,10 @@ export function exportMultiFormat(
 /**
  * Export form to markform format only.
  *
- * Use this for regular user fill where only the canonical format is needed.
- * Users can generate raw/yaml via `markform export` or `markform dump`.
+ * Use this for commands like `markform fill` where only the canonical format
+ * is needed by default. Users can generate raw/yaml via `markform export` or
+ * `markform dump`. Note: The `examples` command uses exportMultiFormat() for
+ * both user and agent fills.
  *
  * @param form - The parsed form to export
  * @param outputPath - Path to write the .form.md file

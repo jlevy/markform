@@ -508,8 +508,12 @@ After successful agent fill, generate additional output files:
 
 All formats are exported automatically after agent fill completes (no prompt needed for MVP):
 
-- [x] Export all three formats automatically
+- [x] Export all three formats automatically for both user and agent fills
 - [ ] Future: Add prompt to select formats (deferred)
+
+Note: The `examples` command always exports all three formats. Other commands
+like `markform fill` export only markform format by default (users can run
+`markform export` or `markform dump` for other formats).
 
 ### Implementation Sub-tasks
 
