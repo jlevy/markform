@@ -47,7 +47,7 @@ function createProgram(): Command {
     .option("--quiet", "Suppress non-essential output")
     .option("--dry-run", "Show what would be done without making changes")
     .option(
-      "-f, --format <format>",
+      "--format <format>",
       `Output format: ${OUTPUT_FORMATS.join(", ")}`,
       "console"
     );
