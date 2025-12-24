@@ -150,6 +150,7 @@ pnpm changeset
 ```
 
 Changeset files are committed with your PR and processed during release.
+See [Publishing](publishing.md) for the full release workflow.
 
 ### Pre-commit Checklist
 
