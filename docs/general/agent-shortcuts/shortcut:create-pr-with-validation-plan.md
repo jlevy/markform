@@ -16,12 +16,15 @@ Create a to-do list with the following items then perform all of them:
    filename stem with valid- replacing plan-)
 
 3. **Fill in the validation plan:** Fill in the template, in particular covering
+   everything you have validated via autoamted tests and in a separate section
    everything the user should validate.
-   Don’t repeat things that are validated by automated tests!
-   This is for manual validation.
-   Be sure to ask for clarifications from the user if unsure how much to include.
+   Don’t repeat things for manual validation if they are fully validated by automated
+   tests like unit or integration tests.
+   Be sure to ask for clarifications from the user if scope of validation is unclear.
 
-4. **Ask for user review:** Summarize what you have done and ask the user to review.
+4. **Summarize for the user:** Summarize what you have done for the user but don’t add
+   new information in the summary; be sure that all information is in the validation
+   plan the user can review later.
 
 5. **Review and commit:** Follow @shortcut:precommit-process.md and sure everything is
    committed. And that you’ve already followed the pre-commit rules before (or at least
@@ -37,7 +40,7 @@ Create a to-do list with the following items then perform all of them:
      The reviewer can click through to files and specs or architecture docs as needed
      for details.
 
-   - Include the validation steps documented here are part of the GitHub PR. Be sure the
+   - Include the validation steps documented here as part of the GitHub PR. Be sure the
      PR description includes a section with Manual Validation and this would hold the
      content you wrote in the .valid.md file.
 
@@ -46,16 +49,14 @@ Create a to-do list with the following items then perform all of them:
 
 7. **Validate CI:** Use the `gh` CLI to be sure the CI system runs and passes.
 
-- Use `gh pr checks <pr_number>` to check on the build checks.
+   - Use `gh pr checks <pr_number>` to check on the build checks.
 
-- If any are failing, try reproduce locally.
+   - If any are failing, try reproduce locally.
 
-- If you can’t reproduce locally, review GitHub Actions configurations and debug why
-  local build is not reproducible but CI build is failing.
+   - If you can’t reproduce locally, review GitHub Actions configurations and debug why
+     local build is not reproducible but CI build is failing.
 
-- Make a fix and confirm it works on the next GitHub PR.
+   - Make a fix and confirm it works on the next GitHub PR.
 
-- You *MUST* make the build pass.
-  If you cannot or don’t know how, tell the user and ask for help.
-
-8. Update and sync all beads following the standard process.
+   - You *MUST* make the build pass.
+     If you cannot or don’t know how, tell the user and ask for help.
