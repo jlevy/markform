@@ -13,14 +13,26 @@ import type { Command } from "commander";
 
 import * as p from "@clack/prompts";
 import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import pc from "picocolors";
+import YAML from "yaml";
 
 import { parseForm } from "../../engine/parse.js";
-import { serialize } from "../../engine/serialize.js";
+import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
 import { inspect } from "../../engine/inspect.js";
 import { applyPatches } from "../../engine/apply.js";
-import { USER_ROLE } from "../../settings.js";
+import {
+  USER_ROLE,
+  AGENT_ROLE,
+  SUGGESTED_LLMS,
+  DEFAULT_MAX_TURNS,
+  DEFAULT_MAX_PATCHES_PER_TURN,
+  DEFAULT_MAX_ISSUES,
+} from "../../settings.js";
+import type { ParsedForm, HarnessConfig, Patch } from "../../engine/types.js";
+import { createHarness } from "../../harness/harness.js";
+import { createLiveAgent } from "../../harness/liveAgent.js";
+import { resolveModel, getProviderInfo, type ProviderName } from "../../harness/modelResolver.js";
 import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
@@ -45,6 +57,205 @@ function printExamplesList(): void {
     console.log(`    ${pc.dim(example.description)}`);
     console.log(`    Default filename: ${example.filename}`);
     console.log("");
+  }
+}
+
+/**
+ * Build model options for the select prompt.
+ */
+function buildModelOptions(): { value: string; label: string; hint?: string }[] {
+  const options: { value: string; label: string; hint?: string }[] = [];
+
+  for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
+    const info = getProviderInfo(provider as ProviderName);
+    const hasKey = !!process.env[info.envVar];
+    const keyStatus = hasKey ? pc.green("✓") : pc.dim("○");
+
+    for (const model of models.slice(0, 2)) {
+      // Show top 2 models per provider
+      options.push({
+        value: `${provider}/${model}`,
+        label: `${provider}/${model}`,
+        hint: `${keyStatus} ${info.envVar}`,
+      });
+    }
+  }
+
+  options.push({
+    value: "custom",
+    label: "Enter custom model ID...",
+    hint: "provider/model-id format",
+  });
+
+  return options;
+}
+
+/**
+ * Prompt user to select a model for agent fill.
+ */
+async function promptForModel(): Promise<string | null> {
+  const modelOptions = buildModelOptions();
+
+  const selection = await p.select({
+    message: "Select LLM model:",
+    options: modelOptions,
+  });
+
+  if (p.isCancel(selection)) {
+    return null;
+  }
+
+  if (selection === "custom") {
+    const customModel = await p.text({
+      message: "Model ID (provider/model-id):",
+      placeholder: "anthropic/claude-sonnet-4-20250514",
+      validate: (value) => {
+        if (!value.includes("/")) {
+          return "Format: provider/model-id (e.g., anthropic/claude-sonnet-4-20250514)";
+        }
+        return undefined;
+      },
+    });
+
+    if (p.isCancel(customModel)) {
+      return null;
+    }
+
+    return customModel;
+  }
+
+  return selection;
+}
+
+/**
+ * Convert field values to plain values for YAML export.
+ */
+function toPlainValues(form: ParsedForm): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [fieldId, value] of Object.entries(form.valuesByFieldId)) {
+    switch (value.kind) {
+      case "string":
+        result[fieldId] = value.value ?? null;
+        break;
+      case "number":
+        result[fieldId] = value.value ?? null;
+        break;
+      case "string_list":
+        result[fieldId] = value.items;
+        break;
+      case "single_select":
+        result[fieldId] = value.selected ?? null;
+        break;
+      case "multi_select":
+        result[fieldId] = value.selected;
+        break;
+      case "checkboxes":
+        result[fieldId] = value.values;
+        break;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Export form to multiple formats.
+ */
+function exportMultiFormat(
+  form: ParsedForm,
+  basePath: string,
+): { formPath: string; rawPath: string; yamlPath: string } {
+  // Derive paths from base
+  const formPath = basePath;
+  const rawPath = basePath.replace(/\.form\.md$/, ".raw.md");
+  const yamlPath = basePath.replace(/\.form\.md$/, ".yml");
+
+  // Export form markdown
+  const formContent = serialize(form);
+  writeFileSync(formPath, formContent, "utf-8");
+
+  // Export raw markdown
+  const rawContent = serializeRawMarkdown(form);
+  writeFileSync(rawPath, rawContent, "utf-8");
+
+  // Export YAML values
+  const values = toPlainValues(form);
+  const yamlContent = YAML.stringify(values);
+  writeFileSync(yamlPath, yamlContent, "utf-8");
+
+  return { formPath, rawPath, yamlPath };
+}
+
+/**
+ * Run the agent fill workflow.
+ */
+async function runAgentFill(
+  form: ParsedForm,
+  modelId: string,
+  _outputPath: string,
+): Promise<{ success: boolean; turnCount: number }> {
+  const spinner = p.spinner();
+
+  try {
+    // Resolve the model
+    spinner.start(`Resolving model: ${modelId}`);
+    const { model } = await resolveModel(modelId);
+    spinner.stop(`Model resolved: ${modelId}`);
+
+    // Create harness config
+    const harnessConfig: Partial<HarnessConfig> = {
+      maxTurns: DEFAULT_MAX_TURNS,
+      maxPatchesPerTurn: DEFAULT_MAX_PATCHES_PER_TURN,
+      maxIssues: DEFAULT_MAX_ISSUES,
+      targetRoles: [AGENT_ROLE],
+      fillMode: "continue",
+    };
+
+    // Create harness and agent
+    const harness = createHarness(form, harnessConfig);
+    const agent = createLiveAgent({ model, targetRole: AGENT_ROLE });
+
+    // Run harness loop
+    spinner.start("Running agent fill...");
+    let stepResult = harness.step();
+
+    while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
+      spinner.message(
+        `Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issues`
+      );
+
+      // Generate patches from agent
+      const patches: Patch[] = await agent.generatePatches(
+        stepResult.issues,
+        harness.getForm(),
+        harnessConfig.maxPatchesPerTurn!
+      );
+
+      // Apply patches
+      stepResult = harness.apply(patches, stepResult.issues);
+
+      if (!stepResult.isComplete) {
+        stepResult = harness.step();
+      }
+    }
+
+    spinner.stop(
+      stepResult.isComplete
+        ? pc.green(`✓ Form completed in ${harness.getTurnNumber()} turn(s)`)
+        : pc.yellow(`Max turns reached (${harnessConfig.maxTurns})`)
+    );
+
+    // Copy final form state
+    Object.assign(form, harness.getForm());
+
+    return {
+      success: stepResult.isComplete,
+      turnCount: harness.getTurnNumber(),
+    };
+  } catch (error) {
+    spinner.stop(pc.red("Agent fill failed"));
+    throw error;
   }
 }
 
@@ -146,45 +357,115 @@ async function runInteractiveFlow(
 
   if (uniqueFieldIds.size === 0) {
     p.log.info("No user-role fields to fill in this example.");
-    logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Total time", Date.now() - startTime);
-    p.outro(pc.dim("Form scaffolded. Use 'markform fill' to complete agent fields."));
-    return;
-  }
-
-  // Show interactive fill intro
-  const formTitle = form.schema.title ?? form.schema.id;
-  showInteractiveIntro(formTitle, targetRoles.join(", "), uniqueFieldIds.size);
-
-  // Run interactive prompts
-  const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
-
-  if (cancelled) {
-    showInteractiveOutro(0, "", true);
-    process.exit(1);
-  }
-
-  // Apply patches to form
-  if (patches.length > 0) {
-    applyPatches(form, patches);
-  }
-
-  // Save the filled form
-  const formMarkdown = serialize(form);
-  writeFileSync(outputPath, formMarkdown, "utf-8");
-
-  showInteractiveOutro(patches.length, outputPath, false);
-  logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Fill time", Date.now() - startTime);
-
-  // Show next step hint for agent fill
-  if (patches.length > 0) {
-    // Check if there are any agent-role fields remaining
-    const agentInspect = inspect(form, { targetRoles: ["agent"] });
+    // Check if there are agent fields
+    const agentInspect = inspect(form, { targetRoles: [AGENT_ROLE] });
     const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === "field");
 
-    if (agentFieldIssues.length > 0) {
+    if (agentFieldIssues.length === 0) {
+      logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Total time", Date.now() - startTime);
+      p.outro(pc.dim("Form scaffolded with no fields to fill."));
+      return;
+    }
+    // Skip to agent fill
+  } else {
+    // Show interactive fill intro
+    const formTitle = form.schema.title ?? form.schema.id;
+    showInteractiveIntro(formTitle, targetRoles.join(", "), uniqueFieldIds.size);
+
+    // Run interactive prompts
+    const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
+
+    if (cancelled) {
+      showInteractiveOutro(0, "", true);
+      process.exit(1);
+    }
+
+    // Apply patches to form
+    if (patches.length > 0) {
+      applyPatches(form, patches);
+    }
+
+    // Save the filled form
+    const formMarkdown = serialize(form);
+    writeFileSync(outputPath, formMarkdown, "utf-8");
+
+    showInteractiveOutro(patches.length, outputPath, false);
+    logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Fill time", Date.now() - startTime);
+  }
+
+  // Step 6: Check for agent-role fields and prompt for agent fill
+  const agentInspect = inspect(form, { targetRoles: [AGENT_ROLE] });
+  const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === "field");
+
+  if (agentFieldIssues.length > 0) {
+    console.log("");
+    p.log.info(`This form has ${agentFieldIssues.length} agent-role field(s) remaining.`);
+
+    const runAgent = await p.confirm({
+      message: "Run agent fill now?",
+      initialValue: true,
+    });
+
+    if (p.isCancel(runAgent) || !runAgent) {
       console.log("");
-      console.log(pc.dim("Next step: fill remaining fields with agent"));
+      console.log(pc.dim("You can run agent fill later with:"));
       console.log(pc.dim(`  markform fill ${outputPath} --agent=live --model=<provider/model>`));
+      p.outro(pc.dim("Happy form filling!"));
+      return;
+    }
+
+    // Step 7: Model selection
+    const modelId = await promptForModel();
+    if (!modelId) {
+      p.cancel("Cancelled.");
+      process.exit(0);
+    }
+
+    // Step 8: Agent output filename
+    const agentDefaultFilename = generateVersionedPath(outputPath);
+    const agentFilenameResult = await p.text({
+      message: "Agent output filename:",
+      initialValue: basename(agentDefaultFilename),
+      validate: (value) => {
+        if (!value.trim()) {
+          return "Filename is required";
+        }
+        return undefined;
+      },
+    });
+
+    if (p.isCancel(agentFilenameResult)) {
+      p.cancel("Cancelled.");
+      process.exit(0);
+    }
+
+    const agentOutputPath = join(process.cwd(), agentFilenameResult);
+
+    // Step 9: Run agent fill
+    const agentStartTime = Date.now();
+    try {
+      const { success, turnCount: _turnCount } = await runAgentFill(form, modelId, agentOutputPath);
+
+      logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Agent fill time", Date.now() - agentStartTime);
+
+      // Step 10: Multi-format export
+      const { formPath, rawPath, yamlPath } = exportMultiFormat(form, agentOutputPath);
+
+      console.log("");
+      p.log.success("Agent fill complete. Outputs:");
+      console.log(`  ${pc.green(basename(formPath))}  ${pc.dim("(markform)")}`);
+      console.log(`  ${pc.green(basename(rawPath))}  ${pc.dim("(plain markdown)")}`);
+      console.log(`  ${pc.green(basename(yamlPath))}  ${pc.dim("(values as YAML)")}`);
+
+      if (!success) {
+        p.log.warn("Agent did not complete all fields. You may need to run it again.");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      p.log.error(`Agent fill failed: ${message}`);
+      console.log("");
+      console.log(pc.dim("You can try again with:"));
+      console.log(pc.dim(`  markform fill ${outputPath} --agent=live --model=${modelId}`));
     }
   }
 
