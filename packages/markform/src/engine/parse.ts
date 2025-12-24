@@ -7,8 +7,9 @@
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
 
-import { DEFAULT_PRIORITY } from "../settings.js";
+import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
 import type {
+  ApprovalMode,
   CheckboxesField,
   CheckboxesValue,
   CheckboxMode,
@@ -371,6 +372,7 @@ function parseStringField(node: Node): { field: StringField; value: StringValue 
     label,
     required: getBooleanAttr(node, "required") ?? false,
     priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
     multiline: getBooleanAttr(node, "multiline"),
     pattern: getStringAttr(node, "pattern"),
     minLength: getNumberAttr(node, "minLength"),
@@ -407,6 +409,7 @@ function parseNumberField(node: Node): { field: NumberField; value: NumberValue 
     label,
     required: getBooleanAttr(node, "required") ?? false,
     priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
     min: getNumberAttr(node, "min"),
     max: getNumberAttr(node, "max"),
     integer: getBooleanAttr(node, "integer"),
@@ -454,6 +457,7 @@ function parseStringListField(node: Node): { field: StringListField; value: Stri
     label,
     required: getBooleanAttr(node, "required") ?? false,
     priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
     minItems: getNumberAttr(node, "minItems"),
     maxItems: getNumberAttr(node, "maxItems"),
     itemMinLength: getNumberAttr(node, "itemMinLength"),
@@ -547,6 +551,7 @@ function parseSingleSelectField(node: Node): { field: SingleSelectField; value: 
     label,
     required: getBooleanAttr(node, "required") ?? false,
     priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
     options,
     validate: getValidateAttr(node),
   };
@@ -590,6 +595,7 @@ function parseMultiSelectField(node: Node): { field: MultiSelectField; value: Mu
     label,
     required: getBooleanAttr(node, "required") ?? false,
     priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
     options,
     minSelections: getNumberAttr(node, "minSelections"),
     maxSelections: getNumberAttr(node, "maxSelections"),
@@ -634,15 +640,23 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; value: Chec
     checkboxMode = checkboxModeStr;
   }
 
+  const approvalModeStr = getStringAttr(node, "approvalMode");
+  let approvalMode: ApprovalMode = "none"; // default
+  if (approvalModeStr === "blocking") {
+    approvalMode = "blocking";
+  }
+
   const field: CheckboxesField = {
     kind: "checkboxes",
     id,
     label,
     required: getBooleanAttr(node, "required") ?? false,
     priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
     checkboxMode,
     minDone: getNumberAttr(node, "minDone"),
     options,
+    approvalMode,
     validate: getValidateAttr(node),
   };
 
