@@ -16,7 +16,7 @@ import type {
   CheckboxesField,
   ParsedForm,
   InspectIssue,
-} from "../../../src/engine/types.js";
+} from "../../../src/engine/coreTypes.js";
 
 // Mock @clack/prompts
 vi.mock("@clack/prompts", () => ({

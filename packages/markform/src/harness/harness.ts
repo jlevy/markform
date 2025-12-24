@@ -18,7 +18,7 @@ import type {
   Patch,
   SessionTurn,
   StepResult,
-} from "../engine/types.js";
+} from "../engine/coreTypes.js";
 import {
   DEFAULT_MAX_ISSUES,
   DEFAULT_MAX_PATCHES_PER_TURN,

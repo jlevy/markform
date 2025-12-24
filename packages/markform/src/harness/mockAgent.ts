@@ -18,30 +18,11 @@ import type {
   SingleSelectValue,
   StringListValue,
   StringValue,
-} from "../engine/types.js";
+} from "../engine/coreTypes.js";
+import type { Agent } from "./harnessTypes.js";
 
-// =============================================================================
-// Mock Agent Interface
-// =============================================================================
-
-/**
- * Interface for agents that can generate patches.
- */
-export interface Agent {
-  /**
-   * Generate patches to address the given issues.
-   *
-   * @param issues - Prioritized issues from harness step
-   * @param form - Current form state
-   * @param maxPatches - Maximum number of patches to generate
-   * @returns Promise resolving to array of patches to apply
-   */
-  generatePatches(
-    issues: InspectIssue[],
-    form: ParsedForm,
-    maxPatches: number
-  ): Promise<Patch[]>;
-}
+// Re-export Agent type for backwards compatibility
+export type { Agent } from "./harnessTypes.js";
 
 // =============================================================================
 // Mock Agent Implementation

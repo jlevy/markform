@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 // Markform imports
 import { parseForm } from "../src/engine/parse.js";
 import { serializeSession } from "../src/engine/session.js";
-import type { SessionTranscript, SessionTurn, Patch } from "../src/engine/types.js";
+import type { SessionTranscript, SessionTurn, Patch } from "../src/engine/coreTypes.js";
 import {
   createMarkformTools,
   MarkformSessionStore,

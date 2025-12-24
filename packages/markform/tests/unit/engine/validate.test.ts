@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseForm } from "../../../src/engine/parse.js";
 import { validate } from "../../../src/engine/validate.js";
-import type { ValidatorRegistry } from "../../../src/engine/types.js";
+import type { ValidatorRegistry } from "../../../src/engine/coreTypes.js";
 
 describe("engine/validate", () => {
   describe("string field validation", () => {

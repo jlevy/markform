@@ -27,7 +27,7 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
-} from "./types.js";
+} from "./coreTypes.js";
 import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
 
 // =============================================================================

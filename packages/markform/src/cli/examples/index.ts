@@ -7,19 +7,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Example definition for the examples command. */
-export interface ExampleDefinition {
-  /** Machine-readable identifier (e.g., 'simple', 'political-research'). */
-  id: string;
-  /** Human-readable title for menu display. */
-  title: string;
-  /** One-line description of the example. */
-  description: string;
-  /** Default output filename (e.g., 'simple.form.md'). */
-  filename: string;
-  /** Relative path within examples directory. */
-  path: string;
-}
+import type { ExampleDefinition } from "../lib/cliTypes.js";
+
+// Re-export types for backwards compatibility
+export type { ExampleDefinition } from "../lib/cliTypes.js";
 
 /** Example definitions without content - content is loaded lazily. */
 export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [

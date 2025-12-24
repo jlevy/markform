@@ -7,50 +7,20 @@
 
 import type { LanguageModel } from "ai";
 
-// =============================================================================
-// Types
-// =============================================================================
+import type {
+  ParsedModelId,
+  ProviderInfo,
+  ProviderName,
+  ResolvedModel,
+} from "./harnessTypes.js";
 
-/**
- * Supported provider names.
- *
- * These correspond to the @ai-sdk/* packages from Vercel AI SDK.
- */
-export type ProviderName =
-  | "anthropic"
-  | "openai"
-  | "google"
-  | "xai"
-  | "deepseek";
-
-/**
- * Parsed model identifier.
- */
-export interface ParsedModelId {
-  provider: ProviderName;
-  modelId: string;
-}
-
-/**
- * Model resolution result.
- */
-export interface ResolvedModel {
-  model: LanguageModel;
-  provider: ProviderName;
-  modelId: string;
-}
-
-// =============================================================================
-// Supported Providers
-// =============================================================================
-
-/**
- * Provider configuration info for display purposes.
- */
-export interface ProviderInfo {
-  package: string;
-  envVar: string;
-}
+// Re-export types for backwards compatibility
+export type {
+  ParsedModelId,
+  ProviderInfo,
+  ProviderName,
+  ResolvedModel,
+} from "./harnessTypes.js";
 
 /**
  * Map of provider names to their npm package and env var.

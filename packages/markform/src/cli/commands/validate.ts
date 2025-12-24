@@ -16,7 +16,7 @@ import pc from "picocolors";
 
 import { inspect } from "../../engine/inspect.js";
 import { parseForm } from "../../engine/parse.js";
-import type { InspectIssue, ProgressState } from "../../engine/types.js";
+import type { InspectIssue, ProgressState } from "../../engine/coreTypes.js";
 import {
   formatOutput,
   getCommandContext,

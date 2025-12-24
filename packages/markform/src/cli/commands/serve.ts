@@ -32,7 +32,7 @@ import type {
   SingleSelectValue,
   StringField,
   StringListField,
-} from "../../engine/types.js";
+} from "../../engine/coreTypes.js";
 import {
   type CommandContext,
   getCommandContext,

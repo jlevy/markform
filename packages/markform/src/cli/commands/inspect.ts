@@ -19,7 +19,7 @@ import type {
   FieldValue,
   InspectIssue,
   ProgressState,
-} from "../../engine/types.js";
+} from "../../engine/coreTypes.js";
 import { parseRolesFlag } from "../../settings.js";
 import {
   formatOutput,

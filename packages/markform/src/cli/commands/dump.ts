@@ -11,7 +11,7 @@ import type { Command } from "commander";
 import pc from "picocolors";
 
 import { parseForm } from "../../engine/parse.js";
-import type { FieldValue } from "../../engine/types.js";
+import type { FieldValue } from "../../engine/coreTypes.js";
 import {
   formatOutput,
   getCommandContext,

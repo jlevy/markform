@@ -21,7 +21,7 @@ import type {
   ParsedForm,
   SessionTranscript,
   SessionTurn,
-} from "../../src/engine/types.js";
+} from "../../src/engine/coreTypes.js";
 
 // =============================================================================
 // Types

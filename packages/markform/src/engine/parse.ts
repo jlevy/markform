@@ -35,7 +35,7 @@ import type {
   StringListValue,
   StringValue,
   ValidatorRef,
-} from "./types.js";
+} from "./coreTypes.js";
 
 // =============================================================================
 // Error Types

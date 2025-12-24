@@ -22,7 +22,7 @@ import type {
   CheckboxesField,
   ParsedForm,
   InspectIssue,
-} from "../../engine/types.js";
+} from "../../engine/coreTypes.js";
 
 /**
  * Context for a field prompt including description from docs.

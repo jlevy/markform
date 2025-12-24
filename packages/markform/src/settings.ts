@@ -6,7 +6,7 @@
  * are compile-time constants.
  */
 
-import type { FieldPriorityLevel } from "./engine/types.js";
+import type { FieldPriorityLevel } from "./engine/coreTypes.js";
 
 // =============================================================================
 // Role System Constants

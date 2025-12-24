@@ -20,7 +20,7 @@ import type {
   Patch,
   SessionFinal,
   SessionTranscript,
-} from "../../engine/types.js";
+} from "../../engine/coreTypes.js";
 import { createHarness } from "../../harness/harness.js";
 import { createLiveAgent } from "../../harness/liveAgent.js";
 import { createMockAgent } from "../../harness/mockAgent.js";

@@ -14,7 +14,7 @@ import type {
   FieldPriorityLevel,
   Field,
   Id,
-} from "./types";
+} from "./coreTypes";
 import { DEFAULT_PRIORITY } from "../settings.js";
 import { validate } from "./validate";
 import {

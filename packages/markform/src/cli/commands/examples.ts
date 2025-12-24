@@ -28,7 +28,7 @@ import {
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_ISSUES,
 } from "../../settings.js";
-import type { ParsedForm, HarnessConfig, Patch } from "../../engine/types.js";
+import type { ParsedForm, HarnessConfig, Patch } from "../../engine/coreTypes.js";
 import { createHarness } from "../../harness/harness.js";
 import { createLiveAgent } from "../../harness/liveAgent.js";
 import { resolveModel, getProviderInfo, type ProviderName } from "../../harness/modelResolver.js";

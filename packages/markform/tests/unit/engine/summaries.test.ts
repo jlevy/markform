@@ -8,7 +8,7 @@ import {
   isFormComplete,
   computeAllSummaries,
 } from "../../../src/engine/summaries.js";
-import type { InspectIssue } from "../../../src/engine/types.js";
+import type { InspectIssue } from "../../../src/engine/coreTypes.js";
 
 describe("engine/summaries", () => {
   describe("computeStructureSummary", () => {

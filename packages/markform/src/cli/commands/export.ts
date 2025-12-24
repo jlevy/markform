@@ -15,7 +15,7 @@ import YAML from "yaml";
 
 import { parseForm } from "../../engine/parse.js";
 import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
-import type { FieldValue, Id } from "../../engine/types.js";
+import type { FieldValue, Id } from "../../engine/coreTypes.js";
 import { getCommandContext, logError, logVerbose, readFile } from "../lib/shared.js";
 
 interface ExportField {

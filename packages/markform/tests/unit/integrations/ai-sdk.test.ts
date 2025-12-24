@@ -11,7 +11,7 @@ import {
   type MarkformToolSet,
 } from "../../../src/integrations/ai-sdk.js";
 import { parseForm } from "../../../src/engine/parse.js";
-import type { ParsedForm, Patch } from "../../../src/engine/types.js";
+import type { ParsedForm, Patch } from "../../../src/engine/coreTypes.js";
 
 // =============================================================================
 // Test Fixtures

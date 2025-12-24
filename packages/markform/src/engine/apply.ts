@@ -27,7 +27,7 @@ import type {
   SingleSelectValue,
   StringListValue,
   StringValue,
-} from "./types.js";
+} from "./coreTypes.js";
 import {
   computeAllSummaries,
   computeFormState,

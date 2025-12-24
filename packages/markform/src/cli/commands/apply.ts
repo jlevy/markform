@@ -12,8 +12,8 @@ import pc from "picocolors";
 import { applyPatches } from "../../engine/apply.js";
 import { parseForm } from "../../engine/parse.js";
 import { serialize } from "../../engine/serialize.js";
-import type { ApplyResult, InspectIssue, ProgressState } from "../../engine/types.js";
-import { PatchSchema } from "../../engine/types.js";
+import type { ApplyResult, InspectIssue, ProgressState } from "../../engine/coreTypes.js";
+import { PatchSchema } from "../../engine/coreTypes.js";
 import {
   formatOutput,
   getCommandContext,

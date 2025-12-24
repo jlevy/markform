@@ -1,0 +1,66 @@
+/**
+ * CLI types - Types for CLI commands and utilities.
+ *
+ * This module consolidates types from:
+ * - shared.ts: OutputFormat, CommandContext
+ * - exportHelpers.ts: ExportResult
+ * - examples/index.ts: ExampleDefinition
+ */
+
+// =============================================================================
+// Output Format Types
+// =============================================================================
+
+/**
+ * Output format options for CLI commands.
+ * - console: auto-detect TTY, use ANSI colors if available (default)
+ * - plaintext: same as console but no ANSI colors
+ * - yaml: structured YAML output
+ * - json: structured JSON output
+ * - markform: canonical markform format (markdoc directives, for export command)
+ * - markdown: plain readable markdown (no directives, for export command)
+ */
+export type OutputFormat = "console" | "plaintext" | "yaml" | "json" | "markform" | "markdown";
+
+/**
+ * Context available to all commands.
+ */
+export interface CommandContext {
+  dryRun: boolean;
+  verbose: boolean;
+  quiet: boolean;
+  format: OutputFormat;
+}
+
+// =============================================================================
+// Export Types
+// =============================================================================
+
+/**
+ * Result of multi-format export.
+ */
+export interface ExportResult {
+  formPath: string;
+  rawPath: string;
+  yamlPath: string;
+}
+
+// =============================================================================
+// Example Types
+// =============================================================================
+
+/**
+ * Example definition for the examples command.
+ */
+export interface ExampleDefinition {
+  /** Machine-readable identifier (e.g., 'simple', 'political-research'). */
+  id: string;
+  /** Human-readable title for menu display. */
+  title: string;
+  /** One-line description of the example. */
+  description: string;
+  /** Default output filename (e.g., 'simple.form.md'). */
+  filename: string;
+  /** Relative path within examples directory. */
+  path: string;
+}

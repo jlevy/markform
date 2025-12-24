@@ -10,17 +10,10 @@ import pc from "picocolors";
 import YAML from "yaml";
 
 import { convertKeysToSnakeCase } from "./naming.js";
+import type { CommandContext, OutputFormat } from "./cliTypes.js";
 
-/**
- * Output format options for CLI commands.
- * - console: auto-detect TTY, use ANSI colors if available (default)
- * - plaintext: same as console but no ANSI colors
- * - yaml: structured YAML output
- * - json: structured JSON output
- * - markform: canonical markform format (markdoc directives, for export command)
- * - markdown: plain readable markdown (no directives, for export command)
- */
-export type OutputFormat = "console" | "plaintext" | "yaml" | "json" | "markform" | "markdown";
+// Re-export types for backwards compatibility
+export type { CommandContext, OutputFormat } from "./cliTypes.js";
 
 /**
  * Valid format options for Commander choice validation.
@@ -33,16 +26,6 @@ export const OUTPUT_FORMATS: OutputFormat[] = [
   "markform",
   "markdown",
 ];
-
-/**
- * Context available to all commands.
- */
-export interface CommandContext {
-  dryRun: boolean;
-  verbose: boolean;
-  quiet: boolean;
-  format: OutputFormat;
-}
 
 /**
  * Extract command context from Commander options.

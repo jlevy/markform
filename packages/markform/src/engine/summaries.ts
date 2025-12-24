@@ -25,7 +25,7 @@ import type {
   StringListValue,
   StringValue,
   StructureSummary,
-} from "./types.js";
+} from "./coreTypes.js";
 
 // =============================================================================
 // Structure Summary Computation

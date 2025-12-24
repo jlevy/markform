@@ -14,28 +14,13 @@ import type {
   InspectIssue,
   ParsedForm,
   Patch,
-} from "../engine/types.js";
-import { PatchSchema } from "../engine/types.js";
-import type { Agent } from "./mockAgent.js";
+} from "../engine/coreTypes.js";
+import { PatchSchema } from "../engine/coreTypes.js";
 import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from "../settings.js";
+import type { Agent, LiveAgentConfig } from "./harnessTypes.js";
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Configuration for the live agent.
- */
-export interface LiveAgentConfig {
-  /** The language model to use */
-  model: LanguageModel;
-  /** Maximum tool call steps per turn (default: 3) */
-  maxStepsPerTurn?: number;
-  /** Additional context to append to the composed system prompt (never overrides) */
-  systemPromptAddition?: string;
-  /** Target role for instruction lookup (default: AGENT_ROLE) */
-  targetRole?: string;
-}
+// Re-export types for backwards compatibility
+export type { LiveAgentConfig } from "./harnessTypes.js";
 
 // =============================================================================
 // Live Agent Implementation

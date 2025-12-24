@@ -92,7 +92,7 @@ export type {
   ValidatorContext,
   ValidatorFn,
   ValidatorRegistry,
-} from "./engine/types.js";
+} from "./engine/coreTypes.js";
 
 // =============================================================================
 // Schema Exports
@@ -169,7 +169,7 @@ export {
   SessionTranscriptSchema,
   // Frontmatter schema
   MarkformFrontmatterSchema,
-} from "./engine/types.js";
+} from "./engine/coreTypes.js";
 
 // =============================================================================
 // Engine Exports

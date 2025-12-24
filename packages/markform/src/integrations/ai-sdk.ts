@@ -21,20 +21,11 @@
  */
 
 import { z } from "zod";
-import type {
-  ParsedForm,
-  InspectResult,
-  ApplyResult,
-  Patch,
-  FormSchema,
-  FieldValue,
-  Id,
-  ValidatorRegistry,
-} from "../engine/types.js";
+import type { ParsedForm, Patch, ValidatorRegistry } from "../engine/coreTypes.js";
 import { inspect } from "../engine/inspect.js";
 import { applyPatches } from "../engine/apply.js";
 import { serialize } from "../engine/serialize.js";
-import { PatchSchema } from "../engine/types.js";
+import { PatchSchema } from "../engine/coreTypes.js";
 
 // =============================================================================
 // Session Store
@@ -98,75 +89,27 @@ export interface CreateMarkformToolsOptions {
 }
 
 // =============================================================================
-// Tool Result Types
+// Tool Types (imported from toolTypes.ts)
 // =============================================================================
 
-/**
- * Result from markform_inspect tool.
- */
-export interface InspectToolResult {
-  success: boolean;
-  data: InspectResult;
-  message: string;
-}
+import type {
+  ApplyToolResult,
+  ExportToolResult,
+  GetMarkdownToolResult,
+  InspectToolResult,
+  MarkformTool,
+  MarkformToolSet,
+} from "./toolTypes.js";
 
-/**
- * Result from markform_apply tool.
- */
-export interface ApplyToolResult {
-  success: boolean;
-  data: ApplyResult;
-  message: string;
-}
-
-/**
- * Result from markform_export tool.
- */
-export interface ExportToolResult {
-  success: boolean;
-  data: {
-    schema: FormSchema;
-    values: Record<Id, FieldValue>;
-  };
-  message: string;
-}
-
-/**
- * Result from markform_get_markdown tool.
- */
-export interface GetMarkdownToolResult {
-  success: boolean;
-  data: {
-    markdown: string;
-  };
-  message: string;
-}
-
-// =============================================================================
-// Tool Definitions
-// =============================================================================
-
-/**
- * AI SDK tool interface (compatible with Vercel AI SDK).
- */
-export interface MarkformTool<TInput, TOutput> {
-  description: string;
-  inputSchema: z.ZodType<TInput>;
-  execute: (input: TInput) => Promise<TOutput>;
-}
-
-/**
- * The complete set of Markform AI SDK tools.
- */
-export interface MarkformToolSet {
-  markform_inspect: MarkformTool<Record<string, never>, InspectToolResult>;
-  markform_apply: MarkformTool<{ patches: Patch[] }, ApplyToolResult>;
-  markform_export: MarkformTool<Record<string, never>, ExportToolResult>;
-  markform_get_markdown?: MarkformTool<
-    Record<string, never>,
-    GetMarkdownToolResult
-  >;
-}
+// Re-export types for backwards compatibility
+export type {
+  ApplyToolResult,
+  ExportToolResult,
+  GetMarkdownToolResult,
+  InspectToolResult,
+  MarkformTool,
+  MarkformToolSet,
+} from "./toolTypes.js";
 
 // =============================================================================
 // Zod Schemas for Tool Inputs
@@ -372,4 +315,4 @@ export function createMarkformTools(
 // Convenience Exports
 // =============================================================================
 
-export { PatchSchema } from "../engine/types.js";
+export { PatchSchema } from "../engine/coreTypes.js";

@@ -13,9 +13,9 @@ import {
   SessionTranscriptSchema,
   StructureSummarySchema,
   ValidationIssueSchema,
-} from "../../../src/engine/types.js";
+} from "../../../src/engine/coreTypes.js";
 
-describe("engine/types", () => {
+describe("engine/coreTypes", () => {
   describe("CheckboxValueSchema", () => {
     it("accepts multi mode states", () => {
       expect(CheckboxValueSchema.parse("todo")).toBe("todo");

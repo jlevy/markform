@@ -11,16 +11,11 @@ import { writeFileSync } from "node:fs";
 import YAML from "yaml";
 
 import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
-import type { ParsedForm } from "../../engine/types.js";
+import type { ParsedForm } from "../../engine/coreTypes.js";
+import type { ExportResult } from "./cliTypes.js";
 
-/**
- * Result of multi-format export.
- */
-export interface ExportResult {
-  formPath: string;
-  rawPath: string;
-  yamlPath: string;
-}
+// Re-export types for backwards compatibility
+export type { ExportResult } from "./cliTypes.js";
 
 /**
  * Convert field values to plain values for YAML export.

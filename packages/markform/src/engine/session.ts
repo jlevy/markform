@@ -5,8 +5,8 @@
  * They capture the full interaction between the harness and agent.
  */
 import YAML from "yaml";
-import type { SessionTranscript } from "./types";
-import { SessionTranscriptSchema } from "./types";
+import type { SessionTranscript } from "./coreTypes";
+import { SessionTranscriptSchema } from "./coreTypes";
 
 /**
  * Parse a session transcript from YAML string.

@@ -27,7 +27,7 @@ import type {
   ValidatorContext,
   ValidatorRef,
   ValidatorRegistry,
-} from "./types.js";
+} from "./coreTypes.js";
 
 // =============================================================================
 // Validation Options and Results

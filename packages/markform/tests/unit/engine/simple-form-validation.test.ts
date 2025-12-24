@@ -17,7 +17,7 @@ import { validate } from "../../../src/engine/validate";
 import { inspect } from "../../../src/engine/inspect";
 import { applyPatches } from "../../../src/engine/apply";
 import { computeStructureSummary } from "../../../src/engine/summaries";
-import type { Patch } from "../../../src/engine/types";
+import type { Patch } from "../../../src/engine/coreTypes";
 
 // =============================================================================
 // Helper Functions

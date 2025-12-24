@@ -6,7 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { parseSession, serializeSession } from "../../../src/engine/session";
-import type { SessionTranscript } from "../../../src/engine/types";
+import type { SessionTranscript } from "../../../src/engine/coreTypes";
 
 // =============================================================================
 // Test Fixtures

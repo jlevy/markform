@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseForm } from "../../../src/engine/parse.js";
 import { applyPatches } from "../../../src/engine/apply.js";
-import type { Patch } from "../../../src/engine/types.js";
+import type { Patch } from "../../../src/engine/coreTypes.js";
 
 describe("engine/apply", () => {
   describe("set_string patch", () => {

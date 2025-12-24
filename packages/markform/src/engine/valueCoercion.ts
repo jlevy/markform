@@ -13,7 +13,7 @@ import type {
   OptionId,
   ParsedForm,
   Patch,
-} from "./types.js";
+} from "./coreTypes.js";
 
 // =============================================================================
 // Raw Input Types
