@@ -83,16 +83,16 @@ Choose version bump:
 
 ### Step 3: Create Changeset
 
-Write the changeset file with target version as filename:
+```bash
+pnpm changeset:add <bump> <version> "<summary>"
+```
+
+Examples:
 
 ```bash
-cat > .changeset/v0.2.0.md << 'EOF'
----
-"PACKAGE": minor
----
-
-Summary of changes for the changelog.
-EOF
+pnpm changeset:add patch 0.1.1 "Fix parsing bug"
+pnpm changeset:add minor 0.2.0 "Add new export format"
+pnpm changeset:add major 1.0.0 "Breaking API changes"
 ```
 
 Commit:
@@ -140,12 +140,7 @@ The GitHub Actions workflow will build and publish to npm using OIDC authenticat
 ```bash
 # Full release sequence (replace version as needed)
 git checkout main && git pull
-cat > .changeset/v0.2.0.md << 'EOF'
----
-"PACKAGE": minor
----
-Summary of changes.
-EOF
+pnpm changeset:add minor 0.2.0 "Summary of changes"
 git add .changeset && git commit -m "chore: add changeset for v0.2.0"
 pnpm version-packages
 git add . && git commit -m "chore: release PACKAGE v0.2.0"

@@ -23,6 +23,7 @@
     "precommit": "pnpm typecheck && pnpm lint && pnpm test",
     "markform": "node packages/markform/dist/bin.mjs",
     "changeset": "changeset",
+    "changeset:add": "npx tsx scripts/create-changeset.ts",
     "version-packages": "changeset version",
     "release": "pnpm build && pnpm publint && changeset publish"
   },
