@@ -82,9 +82,10 @@ markform examples --name nonexistent
 - Lists available examples
 - Exits with non-zero status
 
-#### 4. Verify Interactive Selection (Optional)
+#### 4. Verify Interactive Chooser (Primary UX)
 
-If interactive terminal is available:
+This is the main user experience - running `markform examples` without arguments shows an
+interactive chooser:
 
 ```bash
 cd /tmp
@@ -92,10 +93,12 @@ markform examples
 ```
 
 **Expected behavior:**
-- Shows intro banner
-- Presents selection menu with 3 examples and descriptions
-- After selection, prompts for filename
-- Creates file and shows success message
+- Shows intro banner "markform examples"
+- Presents interactive selection menu with 3 examples
+- Each option shows title and description hint
+- Arrow keys navigate, Enter selects
+- After selection, prompts for filename with editable default
+- Creates file and shows success message with suggested next commands
 
 #### 5. Verify Political Research Form Structure
 
@@ -136,6 +139,7 @@ npm pack --dry-run 2>&1 | grep examples
 
 ## User Review Checklist
 
+- [ ] `markform examples` shows interactive chooser menu
 - [ ] `markform examples --list` displays correctly
 - [ ] `markform examples --name simple` creates file correctly
 - [ ] Invalid example name shows appropriate error
