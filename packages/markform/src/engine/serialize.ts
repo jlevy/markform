@@ -58,11 +58,29 @@ function serializeAttrValue(value: unknown): string {
   if (typeof value === "boolean") {
     return value ? "true" : "false";
   }
+  if (value === null) {
+    return "null";
+  }
   if (Array.isArray(value)) {
     const items = value.map((v) => serializeAttrValue(v)).join(", ");
     return `[${items}]`;
   }
-  return String(value);
+  if (typeof value === "object") {
+    // Serialize plain objects as Markdoc object literals: {key: value, key2: value2}
+    const entries = Object.entries(value as Record<string, unknown>);
+    const parts = entries.map(([k, v]) => `${k}: ${serializeAttrValue(v)}`);
+    return `{${parts.join(", ")}}`;
+  }
+  // Handle remaining primitive types (bigint, symbol, undefined, function)
+  // These shouldn't appear in form attributes but handle gracefully
+  if (typeof value === "bigint") {
+    return String(value);
+  }
+  if (typeof value === "undefined") {
+    return "null";
+  }
+  // For functions and symbols, throw - these are invalid in form attributes
+  throw new Error(`Cannot serialize value of type ${typeof value} to Markdoc`);
 }
 
 /**
