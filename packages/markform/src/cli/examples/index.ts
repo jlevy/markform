@@ -27,7 +27,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     id: "simple",
     title: "Simple Test Form",
     description:
-      "Minimal form demonstrating all Markform v0.1 field types. Good for learning the basics.",
+      "All user-role fields for testing interactive filling. Demonstrates all Markform field types.",
     filename: "simple.form.md",
     path: "simple/simple.form.md",
   },
@@ -35,7 +35,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     id: "political-research",
     title: "Political Research",
     description:
-      "Biographical form for researching political figures using web search. Includes repeating groups for offices held.",
+      "Biographical research form with one user field (name) and agent-filled details. Uses web search.",
     filename: "political-research.form.md",
     path: "political-research/political-research.form.md",
   },
@@ -43,7 +43,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     id: "earnings-analysis",
     title: "Company Quarterly Analysis",
     description:
-      "Extensive financial analysis worksheet with company profile and quarterly analysis sections.",
+      "Financial analysis with one user field (company) and agent-filled quarterly analysis sections.",
     filename: "earnings-analysis.form.md",
     path: "earnings-analysis/earnings-analysis.form.md",
   },

@@ -1,64 +1,38 @@
 /**
- * Examples command - Scaffold example forms into the current directory.
+ * Examples command - Scaffold and fill example forms interactively.
  *
- * Provides an interactive menu for discovering and scaffolding example forms.
- * Supports:
- * - Interactive selection with descriptions
- * - Editable filename with default
- * - Overwrite confirmation
- * - Suggested next commands
+ * Provides a complete workflow:
+ * 1. Select an example form
+ * 2. Scaffold it with a versioned filename
+ * 3. Automatically run interactive fill for user-role fields
+ * 4. Optionally run agent fill for remaining fields
+ * 5. Export results in multiple formats
  */
 
 import type { Command } from "commander";
 
 import * as p from "@clack/prompts";
 import { existsSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import pc from "picocolors";
 
+import { parseForm } from "../../engine/parse.js";
+import { serialize } from "../../engine/serialize.js";
+import { inspect } from "../../engine/inspect.js";
+import { applyPatches } from "../../engine/apply.js";
+import { USER_ROLE } from "../../settings.js";
 import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
   loadExampleContent,
 } from "../examples/index.js";
-import { getCommandContext, logError } from "../lib/shared.js";
-
-/**
- * Format suggested commands for a scaffolded example.
- */
-function formatSuggestedCommands(
-  exampleId: string,
-  filename: string,
-): string[] {
-  const lines: string[] = [];
-  const filenameBase = basename(filename, ".form.md");
-  const filledName = `${filenameBase}-filled.form.md`;
-  const doneName = `${filenameBase}-done.form.md`;
-
-  lines.push("");
-  lines.push("This form has fields for both you (user) and the AI agent.");
-  lines.push("");
-  lines.push(pc.bold("Next steps:"));
-  lines.push(
-    `  ${pc.dim("# 1. Fill in your fields (interactive mode for user-role fields)")}`
-  );
-  lines.push(
-    `  markform fill ${filename} --interactive -o ${filledName}`
-  );
-  lines.push("");
-  lines.push(
-    `  ${pc.dim("# 2. Let the agent complete the remaining fields")}`
-  );
-  lines.push(`  markform fill ${filledName} -o ${doneName}`);
-  lines.push("");
-  lines.push(`  ${pc.dim("# 3. Review the final output")}`);
-  lines.push(`  markform dump ${doneName}`);
-  lines.push("");
-  lines.push(pc.dim("Other useful commands:"));
-  lines.push(`  markform inspect ${filename}`);
-
-  return lines;
-}
+import { getCommandContext, logError, logTiming } from "../lib/shared.js";
+import { generateVersionedPath } from "../lib/versioning.js";
+import {
+  runInteractiveFill,
+  showInteractiveIntro,
+  showInteractiveOutro,
+} from "../lib/interactivePrompts.js";
 
 /**
  * Print non-interactive list of examples.
@@ -75,11 +49,13 @@ function printExamplesList(): void {
 }
 
 /**
- * Run the interactive example scaffolding flow.
+ * Run the interactive example scaffolding and filling flow.
  */
 async function runInteractiveFlow(
   preselectedId?: string,
 ): Promise<void> {
+  const startTime = Date.now();
+
   p.intro(pc.bgCyan(pc.black(" markform examples ")));
 
   // Step 1: Select example (or use preselected)
@@ -109,11 +85,11 @@ async function runInteractiveFlow(
     process.exit(1);
   }
 
-  // Step 2: Prompt for filename
+  // Step 2: Prompt for output filename (use filled naming convention)
+  const defaultFilename = generateVersionedPath(example.filename);
   const filenameResult = await p.text({
-    message: "Filename:",
-    placeholder: example.filename,
-    defaultValue: example.filename,
+    message: "Output filename:",
+    initialValue: defaultFilename,
     validate: (value) => {
       if (!value.trim()) {
         return "Filename is required";
@@ -147,8 +123,9 @@ async function runInteractiveFlow(
   }
 
   // Step 4: Load and write the example
+  let content: string;
   try {
-    const content = loadExampleContent(selectedId);
+    content = loadExampleContent(selectedId);
     writeFileSync(outputPath, content, "utf-8");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -158,10 +135,57 @@ async function runInteractiveFlow(
 
   p.log.success(`Created ${pc.green(filename)}`);
 
-  // Step 5: Show suggested commands
-  const suggestions = formatSuggestedCommands(selectedId, filename);
-  for (const line of suggestions) {
-    console.log(line);
+  // Step 5: Parse the form and run interactive fill
+  const form = parseForm(content);
+  const targetRoles = [USER_ROLE];
+
+  // Inspect form to get issues for user role
+  const inspectResult = inspect(form, { targetRoles });
+  const fieldIssues = inspectResult.issues.filter((i) => i.scope === "field");
+  const uniqueFieldIds = new Set(fieldIssues.map((i) => i.ref));
+
+  if (uniqueFieldIds.size === 0) {
+    p.log.info("No user-role fields to fill in this example.");
+    logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Total time", Date.now() - startTime);
+    p.outro(pc.dim("Form scaffolded. Use 'markform fill' to complete agent fields."));
+    return;
+  }
+
+  // Show interactive fill intro
+  const formTitle = form.schema.title ?? form.schema.id;
+  showInteractiveIntro(formTitle, targetRoles.join(", "), uniqueFieldIds.size);
+
+  // Run interactive prompts
+  const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
+
+  if (cancelled) {
+    showInteractiveOutro(0, "", true);
+    process.exit(1);
+  }
+
+  // Apply patches to form
+  if (patches.length > 0) {
+    applyPatches(form, patches);
+  }
+
+  // Save the filled form
+  const formMarkdown = serialize(form);
+  writeFileSync(outputPath, formMarkdown, "utf-8");
+
+  showInteractiveOutro(patches.length, outputPath, false);
+  logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Fill time", Date.now() - startTime);
+
+  // Show next step hint for agent fill
+  if (patches.length > 0) {
+    // Check if there are any agent-role fields remaining
+    const agentInspect = inspect(form, { targetRoles: ["agent"] });
+    const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === "field");
+
+    if (agentFieldIssues.length > 0) {
+      console.log("");
+      console.log(pc.dim("Next step: fill remaining fields with agent"));
+      console.log(pc.dim(`  markform fill ${outputPath} --agent=live --model=<provider/model>`));
+    }
   }
 
   p.outro(pc.dim("Happy form filling!"));
@@ -173,7 +197,7 @@ async function runInteractiveFlow(
 export function registerExamplesCommand(program: Command): void {
   program
     .command("examples")
-    .description("Scaffold an example form into the current directory")
+    .description("Scaffold an example form and fill it interactively")
     .option("--list", "List available examples without interactive selection")
     .option(
       "--name <example>",

@@ -151,7 +151,11 @@ describe("examples registry", () => {
         // Check that the raw content contains roles in frontmatter
         expect(content).toContain("roles:");
         expect(content).toContain("- user");
-        expect(content).toContain("- agent");
+        // Note: simple form only has user role for testing interactive fill
+        // Political and earnings examples have both user and agent roles
+        if (example.id !== "simple") {
+          expect(content).toContain("- agent");
+        }
       }
     });
   });

@@ -8,6 +8,8 @@ harness:
   max_turns: 50
   max_patches_per_turn: 20
   max_issues: 20
+  target_roles:
+    - user
 turns:
   - turn: 1
     inspect:
@@ -137,7 +139,7 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: f09206f9b850a3ce4dada3d9ca3f7d1bff1e7d1a54e27f046c07edf01d74a1cc
+      markdown_sha256: 7cdea48c85d48e478e1cbf6974f770809b00a825225c46b4a61abfd7d5a78f8d
 final:
   expect_complete: true
   expected_completed_form: simple-mock-filled.form.md
