@@ -5,7 +5,7 @@ import {
   coerceInputContext,
   coerceToFieldPatch,
   findFieldById,
-} from "../../src/engine/values.js";
+} from "../../src/engine/valueCoercion.js";
 
 // Test form with various field types
 const TEST_FORM_MD = `---

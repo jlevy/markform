@@ -330,6 +330,46 @@ describe("fillForm", () => {
       expect(result.values).toBeDefined();
       expect(result.markdown).toBeDefined();
     });
+
+    it("cancellation during agent call prevents patches from being applied", async () => {
+      const controller = new AbortController();
+      let generatePatchesCalled = false;
+
+      // Create a mock agent that aborts during generatePatches
+      const cancellingAgent = {
+        generatePatches() {
+          generatePatchesCalled = true;
+          // Simulate abort happening during the LLM call
+          controller.abort();
+          return Promise.resolve([
+            { op: "set_number" as const, fieldId: "age", value: 42 },
+          ]);
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: "mock/model",
+        inputContext: { name: "John" },
+        _testAgent: cancellingAgent,
+        signal: controller.signal,
+      });
+
+      // Agent was called
+      expect(generatePatchesCalled).toBe(true);
+
+      // But result should be cancelled, not successful
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe("cancelled");
+      }
+
+      // The patch should NOT have been applied - age remains unfilled (null)
+      const ageValue = result.values.age;
+      if (ageValue?.kind === "number") {
+        expect(ageValue.value).toBeNull();
+      }
+    });
   });
 
   describe("max turns", () => {

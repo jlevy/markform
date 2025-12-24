@@ -184,17 +184,17 @@ if (result.status.ok) {
 
 ### Testing Plan
 
-Tests should be added incrementally as each component is implemented.
+Tests have been implemented. See the validation spec for full coverage details.
 
-#### 1. Value Coercion Layer Tests (`tests/unit/values.test.ts`)
+#### 1. Value Coercion Layer Tests (`tests/unit/valueCoercion.test.ts`)
 
 **`findFieldById()` tests:**
 
-- [ ] Returns field when found via idIndex
+- [x] Returns field when found via idIndex
 
-- [ ] Returns undefined for non-existent field ID
+- [x] Returns undefined for non-existent field ID
 
-- [ ] Works with fields in nested groups (if applicable)
+- [x] Works with fields in nested groups
 
 **`coerceToFieldPatch()` tests per field kind:**
 
@@ -209,99 +209,99 @@ Tests should be added incrementally as each component is implemented.
 
 **Coercion warnings:**
 
-- [ ] Returns warning when coercing number to string
+- [x] Returns warning when coercing number to string
 
-- [ ] Returns warning when coercing string to number
+- [x] Returns warning when coercing string to number
 
-- [ ] Returns warning when coercing string to array
+- [x] Returns warning when coercing string to array
 
 **`coerceInputContext()` tests:**
 
-- [ ] Returns patches for valid input context
+- [x] Returns patches for valid input context
 
-- [ ] Collects warnings from multiple coercions
+- [x] Collects warnings from multiple coercions
 
-- [ ] Collects errors for missing fields
+- [x] Collects errors for missing fields
 
-- [ ] Collects errors for incompatible types
+- [x] Collects errors for incompatible types
 
-- [ ] Skips null values (clear field)
+- [x] Skips null values (clear field)
 
-- [ ] Handles empty input context
+- [x] Handles empty input context
 
-#### 2. Programmatic Fill API Tests (`tests/unit/programmaticFill.test.ts`)
+#### 2. Programmatic Fill API Tests (`tests/unit/harness/programmaticFill.test.ts`)
 
 **Basic functionality (use MockAgent for determinism):**
 
-- [ ] Fills form with minimal options `{ form, model }`
+- [x] Fills form with minimal options `{ form, model }`
 
-- [ ] Returns `status.ok: true` when form completes
+- [x] Returns `status.ok: true` when form completes
 
-- [ ] Returns correct `values` map keyed by field ID
+- [x] Returns correct `values` map keyed by field ID
 
-- [ ] Returns serialized `markdown`
+- [x] Returns serialized `markdown`
 
-- [ ] Returns `turns` count
+- [x] Returns `turns` count
 
 **Input context:**
 
-- [ ] Pre-fills fields from inputContext before agent runs
+- [x] Pre-fills fields from inputContext before agent runs
 
-- [ ] Fails fast with `status.ok: false, reason: 'error'` on invalid field ID
+- [x] Fails fast with `status.ok: false, reason: 'error'` on invalid field ID
 
-- [ ] Fails fast on incompatible type (e.g., object for string field)
+- [x] Fails fast on incompatible type (e.g., object for string field)
 
-- [ ] Includes `inputContextWarnings` for coerced values
+- [x] Includes `inputContextWarnings` for coerced values
 
-- [ ] Agent sees pre-filled values (doesn’t try to fill them again)
+- [x] Agent sees pre-filled values (doesn't try to fill them again)
 
 **System prompt addition:**
 
-- [ ] `systemPromptAddition` is appended to composed prompt
+- [x] `systemPromptAddition` is appended to composed prompt
 
-- [ ] Form instructions are preserved (not overridden)
+- [x] Form instructions are preserved (not overridden)
 
 **Progress callback:**
 
-- [ ] `onTurnComplete` called after each turn
+- [x] `onTurnComplete` called after each turn
 
-- [ ] `TurnProgress` contains correct values
+- [x] `TurnProgress` contains correct values
 
-- [ ] Callback errors don’t abort fill (warning logged)
+- [x] Callback errors don't abort fill (warning logged)
 
 **Cancellation:**
 
-- [ ] `signal.abort()` returns partial result with `reason: 'cancelled'`
+- [x] `signal.abort()` returns partial result with `reason: 'cancelled'`
 
-- [ ] Partial `values` and `markdown` are returned
+- [x] Partial `values` and `markdown` are returned
 
 **Max turns:**
 
-- [ ] Returns `status.ok: false, reason: 'max_turns'` when limit reached
+- [x] Returns `status.ok: false, reason: 'max_turns'` when limit reached
 
-- [ ] `remainingIssues` populated when not complete
+- [x] `remainingIssues` populated when not complete
 
 **Fill modes:**
 
-- [ ] `fillMode: 'continue'` skips already-filled fields
+- [x] `fillMode: 'continue'` skips already-filled fields
 
-- [ ] `fillMode: 'overwrite'` re-fills all target role fields
+- [ ] `fillMode: 'overwrite'` re-fills all target role fields (not yet tested)
 
 #### 3. LiveAgent Enhancement Tests (`tests/unit/liveAgent.test.ts`)
 
-- [ ] `systemPromptAddition` is appended to composed prompt
+- [x] `systemPromptAddition` is appended to composed prompt (tested via programmaticFill tests)
 
-- [ ] Null/undefined `systemPromptAddition` doesn’t affect prompt
+- [x] Null/undefined `systemPromptAddition` doesn't affect prompt
 
 #### 4. Integration Tests (`tests/integration/programmaticFill.test.ts`)
 
 **End-to-end with MockAgent:**
 
-- [ ] Complete fill of simple.form.md using mock values
+- [x] Complete fill of simple.form.md using mock values
 
-- [ ] Complete fill of political-research.form.md with inputContext for user fields
+- [x] Complete fill of political-research.form.md with inputContext for user fields
 
-- [ ] Verify round-trip: fillForm result can be re-parsed
+- [x] Verify round-trip: fillForm result can be re-parsed
 
 **Error scenarios:**
 
@@ -405,7 +405,7 @@ export interface FillOptions {
   model: string | LanguageModel;
   inputContext?: InputContext;
   systemPromptAddition?: string;  // Appended to composed prompt (never overrides)
-  maxTurns?: number;              // Default: 30
+  maxTurns?: number;              // Default: 100
   maxPatchesPerTurn?: number;     // Default: 20
   maxIssues?: number;             // Default: 10
   targetRoles?: string[];         // Default: ['agent']
@@ -437,8 +437,8 @@ export interface FillResult {
   remainingIssues?: Array<{              // Present if not complete
     ref: string;
     message: string;
-    severity: 'required' | 'optional';
-    priority: 1 | 2 | 3;
+    severity: 'required' | 'recommended';
+    priority: number;  // 1-5 (P1-P5)
   }>;
 }
 ```
