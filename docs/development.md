@@ -136,21 +136,12 @@ pnpm --filter markform test
 
 3. Run full validation: `pnpm lint && pnpm typecheck && pnpm build && pnpm test`
 
-4. Create a changeset if user-facing: `pnpm changeset`
+4. Commit and push
 
-5. Commit and push
+### Releases
 
-### Changesets
-
-For any user-facing change, create a changeset:
-
-```bash
-pnpm changeset
-# Follow prompts to describe the change and select version bump type
-```
-
-Changeset files are committed with your PR and processed during release.
-See [Publishing](publishing.md) for the full release workflow.
+Changesets are created at release time, not per-PR. Just merge your work to `main`.
+See [Publishing](publishing.md) for the release workflow.
 
 ### Pre-commit Checklist
 

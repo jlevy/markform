@@ -1,84 +1,121 @@
 # Publishing
 
-This project uses [Changesets](https://github.com/changesets/changesets) for version management and tag-based releases.
+This project uses [Changesets](https://github.com/changesets/changesets) for version
+management and tag-based releases.
+
+## During Development
+
+Merge PRs to `main` without creating changesets. Changesets are created only at release
+time.
 
 ## Release Workflow
 
-### 1. Track Changes with Changesets
+Follow these steps when ready to publish a new version.
 
-When making user-facing changes, create a changeset:
+### Step 1: Ensure Main is Clean
+
+```bash
+git checkout main
+git pull
+git status  # Should show clean working tree
+```
+
+### Step 2: Review Changes Since Last Release
+
+```bash
+# See commits since last tag
+git log $(git describe --tags --abbrev=0)..HEAD --oneline
+
+# Determine version bump:
+# - patch (0.1.0 → 0.1.1): Bug fixes, docs, internal changes
+# - minor (0.1.0 → 0.2.0): New features, non-breaking changes
+# - major (0.1.0 → 1.0.0): Breaking changes
+```
+
+### Step 3: Create Changeset
 
 ```bash
 pnpm changeset
 ```
 
-Follow the prompts to:
-- Select which packages changed
-- Choose version bump type (patch/minor/major)
-- Describe the change
+When prompted:
 
-Changeset files (`.changeset/*.md`) are committed with your PR.
+1. Select `markform` package
+2. Choose version bump type (patch/minor/major)
+3. Write a summary of changes for the changelog
 
-### 2. Version Packages
+Commit the changeset:
 
-When ready to release, consume changesets and bump versions:
+```bash
+git add .changeset
+git commit -m "chore: add changeset for release"
+```
+
+### Step 4: Version Packages
 
 ```bash
 pnpm version-packages
 ```
 
-This:
-- Consumes all `.changeset/*.md` files
-- Updates `package.json` versions
-- Updates `CHANGELOG.md`
+This updates `package.json` version and `CHANGELOG.md`. Review the changes:
 
-Commit the version bump:
+```bash
+git diff
+```
+
+Commit and push:
 
 ```bash
 git add .
-git commit -m "chore: version packages"
+git commit -m "chore: release markform vX.Y.Z"
+git push
 ```
 
-### 3. Create Release Tag
-
-Push a version tag to trigger the release workflow:
+### Step 5: Create and Push Tag
 
 ```bash
-git tag v0.1.0
-git push origin main --tags
+# Use the version from package.json
+git tag v0.2.0
+git push --tags
 ```
 
-The tag format must be `v*` (e.g., `v0.1.0`, `v1.0.0-beta.1`).
+### Step 6: Verify Release
 
-### 4. Automated Publishing
+The GitHub Actions workflow will:
 
-The GitHub Actions release workflow (`.github/workflows/release.yml`) runs on version tags and:
-1. Builds the package
-2. Validates with publint
-3. Publishes to npm via `changeset publish`
+1. Build the package
+2. Run publint validation
+3. Publish to npm (requires `NPM_TOKEN` secret)
+
+Check the release:
+
+```bash
+gh run list --limit 1
+```
 
 ## Prerequisites
 
-For npm publishing to work:
-- Set `NPM_TOKEN` secret in GitHub repository settings
-- Token must have publish permissions for the package
+For npm publishing:
+
+- `NPM_TOKEN` secret must be set in GitHub repository settings
+- Token needs publish permissions for the `markform` package
 
 ## Quick Reference
 
-| Command | Description |
+| Step | Command |
 | --- | --- |
-| `pnpm changeset` | Create a changeset for your changes |
-| `pnpm version-packages` | Bump versions and update changelogs |
-| `pnpm release` | Build and publish (CI only) |
+| Create changeset | `pnpm changeset` |
+| Bump versions | `pnpm version-packages` |
+| Tag release | `git tag vX.Y.Z && git push --tags` |
+| Check CI | `gh run list --limit 1` |
 
-## Manual Local Publishing (Not Recommended)
+## Troubleshooting
 
-For testing or emergencies:
+**Release workflow not running?**
+- Ensure tag format is `v*` (e.g., `v0.2.0`)
+- Check that tag was pushed: `git ls-remote --tags origin`
 
-```bash
-pnpm build
-pnpm publint
-npm publish --access public
-```
-
-Prefer tag-based releases for traceability.
+**npm publish failing?**
+- Verify `NPM_TOKEN` is set in GitHub secrets
+- Check token has publish permissions
+- Ensure package name isn't taken on npm
