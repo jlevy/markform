@@ -102,8 +102,8 @@ This plan depends on:
 
 ### Acceptance Criteria
 
-1. `markform fill <file> --agent=mock --mock-source <mock>` works identically to
-   current `run --mock`
+1. `markform fill <file> --agent=mock --mock-source <mock>` works identically to current
+   `run --mock`
 
 2. `markform fill <file> --agent=live --model=anthropic/claude-sonnet-4-5` fills form
    using Anthropic API (short form `--model=claude-sonnet-4-5` also works)
@@ -505,23 +505,37 @@ class LiveAgent implements Agent {
 ### Implemented
 
 - ✅ `fill` command replacing `run`
+
 - ✅ `--agent` flag with `mock` and `live` options
+
 - ✅ `--model` flag with `provider/model-name` format
+
 - ✅ `--mock-source` for mock agent
+
 - ✅ `--record` for session transcript
+
 - ✅ Harness config: `--max-turns`, `--max-patches`, `--max-issues`
+
 - ✅ Additional filtering: `--max-fields`, `--max-groups`
+
 - ✅ `-o/--output` with versioned filename default
+
 - ✅ Model resolution for all 5 providers (anthropic, openai, google, xai, deepseek)
+
 - ✅ Live agent with AI SDK `generateText` and tool calling
+
 - ✅ Session transcript recording for both modes
+
 - ✅ `LiveAgentConfig` supports `systemPrompt` internally
 
 ### Deferred to Follow-on Issues
 
 - ❌ `--prompt <file>` flag → **markform-146**
+
 - ❌ `--dry-run` flag
-- ❌ Form instructions → agent prompt pipeline → **markform-147** (depends on role-system)
+
+- ❌ Form instructions → agent prompt pipeline → **markform-147** (depends on
+  role-system)
 
 ### Notes
 

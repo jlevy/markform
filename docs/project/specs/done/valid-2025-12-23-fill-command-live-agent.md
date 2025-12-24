@@ -276,8 +276,8 @@ Session transcript captured all turns with patches applied.
 
 ### Live Agent - Anthropic - SKIPPED (credit exhausted)
 
-The .env file loads correctly. API credit error (not missing key error) confirms
-dotenv integration works:
+The .env file loads correctly.
+API credit error (not missing key error) confirms dotenv integration works:
 
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
@@ -335,8 +335,9 @@ Error: Unknown provider: "invalid". Supported providers: anthropic, openai, goog
 
 ### Known Limitations
 
-**Google provider env var mismatch:** The Google AI SDK expects `GOOGLE_GENERATIVE_AI_API_KEY`
-but common convention is `GOOGLE_API_KEY`. Users must set the correct env var.
+**Google provider env var mismatch:** The Google AI SDK expects
+`GOOGLE_GENERATIVE_AI_API_KEY` but common convention is `GOOGLE_API_KEY`. Users must set
+the correct env var.
 
 ## User Review Feedback
 
@@ -344,9 +345,9 @@ but common convention is `GOOGLE_API_KEY`. Users must set the correct env var.
 
 ## Revision History
 
-- 2025-12-23: Full validation completed - all tests pass including live OpenAI agent,
-  -o flag, versioned filenames, and model resolution. Added @ai-sdk/openai and
-  @ai-sdk/google packages.
+- 2025-12-23: Full validation completed - all tests pass including live OpenAI agent, -o
+  flag, versioned filenames, and model resolution.
+  Added @ai-sdk/openai and @ai-sdk/google packages.
 
 - 2025-12-23: Added agent testing results section with pass/fail status
 
