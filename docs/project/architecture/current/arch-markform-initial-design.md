@@ -744,11 +744,7 @@ Markform files may contain content outside of Markform tags. This content is han
 
 | Content Type | Policy |
 |--------------|--------|
-| HTML comments (`
-
-<!-- ... -->
-
-`) | Allowed, preserved verbatim on round-trip |
+| HTML comments (`<!-- ... -->`) | Allowed, preserved verbatim on round-trip |
 | Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
 | Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
 

@@ -86,11 +86,12 @@ This plan depends on the following being implemented first:
 
 - `portrait_description` (string, optional) - Description of official portrait
 
-- `birth_date` (string, required) - Format: YYYY-MM-DD
+- `birth_date` (string, required, `pattern="^\d{4}-\d{2}-\d{2}$"`) - Format: YYYY-MM-DD
 
 - `birth_place` (string, required) - City, State/Country
 
-- `death_date` (string, optional) - Format: YYYY-MM-DD (if deceased)
+- `death_date` (string, optional, `pattern="^\d{4}-\d{2}-\d{2}$"`) - Format: YYYY-MM-DD
+  (if deceased)
 
 - `death_place` (string, optional) - City, State/Country
 
@@ -116,17 +117,28 @@ This plan depends on the following being implemented first:
 
 **Offices Held (repeating group):**
 
-- `office_title` (string, required) - e.g., “16th President of the United States”
+> **Note:** True repeating groups (dynamic add/remove of field sets) are planned for v0.2.
+> For v0.1, we use a fixed number of office slots with indexed field names (e.g.,
+> `office_1_title`, `office_2_title`, etc.).
 
-- `term_start` (string, required) - YYYY-MM-DD
+- `office_title` (string, required) - e.g., "16th President of the United States"
 
-- `term_end` (string, required) - YYYY-MM-DD or “Incumbent”
+- `term_start` (string, required, `pattern="^\d{4}-\d{2}-\d{2}$"`) - YYYY-MM-DD
+
+- `term_end` (string, required) - YYYY-MM-DD or "Incumbent". Note: The dual
+  format (date OR text) requires either no pattern validation, or a pattern that
+  accepts both: `pattern="^(\d{4}-\d{2}-\d{2}|Incumbent)$"`
 
 - `preceded_by` (string, optional, priority=medium) - Previous office holder
 
 - `succeeded_by` (string, optional, priority=medium) - Next office holder
 
 - `running_mate` (string, optional) - For presidential terms
+
+**Sources and Citations:**
+
+- `sources` (string_list, optional) - List of source URLs or citations used for research.
+  Agent should include Wikipedia and any additional sources consulted.
 
 **Agent Instructions:**
 
@@ -208,6 +220,8 @@ markform:
       4. Fill offices chronologically - Most recent first
       5. Include predecessors/successors - These provide historical context
       6. Leave unknown fields empty - Don't guess or fabricate information
+      7. Keep text fields concise - Aim for 50-100 words max for descriptive fields
+         (e.g., portrait_description, cause_of_death). Lists should have 3-10 items.
 ---
 ```
 
@@ -418,6 +432,9 @@ structure/progress/issues, making it ideal for:
 * * *
 
 ## Revision History
+
+- 2025-12-24: Added date pattern validation, term_end dual-format note, sources field,
+  repeating groups v0.2 note, and word limit guidance (markform-122)
 
 - 2025-12-23: Updated to use role system (`role="user"` for name field, frontmatter
   roles)
