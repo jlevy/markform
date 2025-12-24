@@ -74,8 +74,7 @@ We use two test forms for progressive validation:
    types and features. Used during Phase 1 for rapid TDD iteration.
    Already created.
 
-2. **Complex form**
-   (`examples/company-quarterly-analysis/company-quarterly-analysis.form.md`) -
+2. **Complex form** (`examples/earnings-analysis/earnings-analysis.form.md`) -
    Comprehensive real-world form with many fields, field groups, and validators.
    Used in Phase 3+ for golden session tests and comprehensive validation.
    Already exists in examples directory.
@@ -244,11 +243,11 @@ markform/
           simple.form.md
           simple-mock-filled.form.md
           simple.session.yaml
-        company-quarterly-analysis/  # Complex form (golden tests)
-          company-quarterly-analysis.form.md
-          company-quarterly-analysis.mock.filled.form.md
-          company-quarterly-analysis.valid.ts
-          company-quarterly-analysis.session.yaml
+        earnings-analysis/  # Complex form (golden tests)
+          earnings-analysis.form.md
+          earnings-analysis.mock.filled.form.md
+          earnings-analysis.valid.ts
+          earnings-analysis.session.yaml
       package.json
       tsconfig.json
       tsdown.config.ts
@@ -854,10 +853,10 @@ Per [TypeScript CLI Rules](../../../general/agent-rules/typescript-cli-tool-rule
 
 - **Simple form**: Quick iteration for harness development
 
-- **Complex form** (`company-quarterly-analysis.form.md`): Comprehensive golden tests
+- **Complex form** (`earnings-analysis.form.md`): Comprehensive golden tests
 
-At this phase, use the existing `company-quarterly-analysis.form.md` - a comprehensive
-real-world form with many fields, field groups, and code validators.
+At this phase, use the existing `earnings-analysis.form.md` - a comprehensive real-world
+form with many fields, field groups, and code validators.
 
 #### 3.1 Apply Command (`cli/commands/apply.ts`)
 
@@ -927,9 +926,8 @@ real-world form with many fields, field groups, and code validators.
 
 - [x] Create `examples/simple/simple.session.yaml` - quick golden test
 
-- [x] Create
-  `examples/company-quarterly-analysis/company-quarterly-analysis.session.yaml` -
-  comprehensive golden test
+- [x] Create `examples/earnings-analysis/earnings-analysis.session.yaml` - comprehensive
+  golden test
 
 - [x] Integration test runner that runs all golden tests
 
@@ -949,7 +947,7 @@ real-world form with many fields, field groups, and code validators.
 
   - Final form matches `simple-mock-filled.form.md`
 
-- Golden test replay for `company-quarterly-analysis.session.yaml` passes:
+- Golden test replay for `earnings-analysis.session.yaml` passes:
 
   - Code validators execute correctly
 
@@ -1092,7 +1090,7 @@ These tests are run by the coding agent and must all pass:
 
 - [x] Golden session replay passes for `simple.session.yaml`
 
-- [x] Golden session replay passes for `company-quarterly-analysis.session.yaml`
+- [x] Golden session replay passes for `earnings-analysis.session.yaml`
 
 ### Manual Test Checklist (User Verifies)
 
@@ -1127,8 +1125,7 @@ Agent should pause and ask user to verify:
 
    - `examples/simple/simple.form.md` + mock (already done)
 
-   - `examples/company-quarterly-analysis/company-quarterly-analysis.form.md` + mock +
-     validators
+   - `examples/earnings-analysis/earnings-analysis.form.md` + mock + validators
 
 2. Run and verify with simple form:
 
@@ -1140,8 +1137,7 @@ Agent should pause and ask user to verify:
 
 3. Run and verify with complex form:
 
-   - `markform inspect
-     examples/company-quarterly-analysis/company-quarterly-analysis.form.md`
+   - `markform inspect examples/earnings-analysis/earnings-analysis.form.md`
 
    - `markform run --mock` with code validators
 

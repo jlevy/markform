@@ -116,7 +116,7 @@ pnpm test:golden
 
 # Inspect the session files
 cat packages/markform/tests/golden/sessions/simple.session.yaml
-cat packages/markform/tests/golden/sessions/company-quarterly-analysis.session.yaml
+cat packages/markform/tests/golden/sessions/earnings-analysis.session.yaml
 ```
 
 - [x] Golden tests pass (2 tests)
@@ -335,7 +335,7 @@ pnpm markform inspect packages/markform/examples/simple/simple.form.md
 #### 10.2 Company Quarterly Analysis Form
 
 ```bash
-pnpm markform inspect packages/markform/examples/company-quarterly-analysis/company-quarterly-analysis.form.md
+pnpm markform inspect packages/markform/examples/earnings-analysis/earnings-analysis.form.md
 ```
 
 - [x] Complex form with multiple field groups parses correctly (41 groups, 206 fields)

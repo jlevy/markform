@@ -1,5 +1,5 @@
 /**
- * Custom validators for company-quarterly-analysis.form.md
+ * Custom validators for earnings-analysis.form.md
  *
  * These validators demonstrate parameterized validation patterns.
  * Parameters are passed via ctx.params from the validate attribute:

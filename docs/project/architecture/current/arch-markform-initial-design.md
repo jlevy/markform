@@ -2096,11 +2096,11 @@ A golden test is a YAML file containing:
 session_version: 0.1
 mode: mock  # mock | live (see explanation below)
 form:
-  path: examples/company-quarterly-analysis/company-quarterly-analysis.form.md
+  path: examples/earnings-analysis/earnings-analysis.form.md
 validators:
-  code: examples/company-quarterly-analysis/company-quarterly-analysis.valid.ts  # optional
+  code: examples/earnings-analysis/earnings-analysis.valid.ts  # optional
 mock:
-  completed_mock: examples/company-quarterly-analysis/company-quarterly-analysis.mock.filled.form.md
+  completed_mock: examples/earnings-analysis/earnings-analysis.mock.filled.form.md
 
 harness:
   max_issues: 5              # max issues to return per turn
@@ -2125,7 +2125,7 @@ turns:
 
 final:
   expect_complete: true
-  expected_completed_form: examples/company-quarterly-analysis/company-quarterly-analysis.mock.filled.form.md
+  expected_completed_form: examples/earnings-analysis/earnings-analysis.mock.filled.form.md
 ```
 
 **Mode field semantics:**
@@ -2199,8 +2199,7 @@ Thin wrapper around the tool contract:
 
   - Examples:
 
-    - `company-quarterly-analysis.form.md` → `quarterly-v1.form.md` →
-      `quarterly-v2.form.md`
+    - `earnings-analysis.form.md` → `quarterly-v1.form.md` → `quarterly-v2.form.md`
 
     - `report_v5.form.md` → `report_v6.form.md`
 
@@ -2344,17 +2343,14 @@ is optional later.
 
 Files:
 
-- `examples/company-quarterly-analysis/company-quarterly-analysis.form.md` (template
-  form)
+- `examples/earnings-analysis/earnings-analysis.form.md` (template form)
 
-- `examples/company-quarterly-analysis/company-quarterly-analysis.mock.filled.form.md`
-  (completed mock with checkbox states and values)
+- `examples/earnings-analysis/earnings-analysis.mock.filled.form.md` (completed mock
+  with checkbox states and values)
 
-- `examples/company-quarterly-analysis/company-quarterly-analysis.valid.ts` (code
-  validators)
+- `examples/earnings-analysis/earnings-analysis.valid.ts` (code validators)
 
-- `examples/company-quarterly-analysis/company-quarterly-analysis.session.yaml` (session
-  transcript)
+- `examples/earnings-analysis/earnings-analysis.session.yaml` (session transcript)
 
 ### Example 2: Small smoke test form
 
@@ -2443,28 +2439,23 @@ Full specification included above.
 
 ## What “Done” Looks Like for v0.1
 
-1. Write `company-quarterly-analysis.form.md` (template) and
-   `company-quarterly-analysis.mock.filled.form.md` (completed mock)
+1. Write `earnings-analysis.form.md` (template) and
+   `earnings-analysis.mock.filled.form.md` (completed mock)
 
 2. Run:
 
-   - `markform inspect
-     examples/company-quarterly-analysis/company-quarterly-analysis.form.md` — prints
+   - `markform inspect examples/earnings-analysis/earnings-analysis.form.md` — prints
      YAML report with structure summary, progress summary, form state, and all issues in
      priority order
 
-   - `markform serve
-     examples/company-quarterly-analysis/company-quarterly-analysis.form.md` — open the
+   - `markform serve examples/earnings-analysis/earnings-analysis.form.md` — open the
      browser, browse the form; Save to confirm output path (defaults to
      `quarterly-v1.form.md`); run `markform inspect` separately at any time to check
      status
 
-   - `markform fill
-     examples/company-quarterly-analysis/company-quarterly-analysis.form.md --agent=mock
-     --mock-source
-     examples/company-quarterly-analysis/company-quarterly-analysis.mock.filled.form.md
-     --record
-     examples/company-quarterly-analysis/company-quarterly-analysis.session.yaml`
+   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --agent=mock
+     --mock-source examples/earnings-analysis/earnings-analysis.mock.filled.form.md
+     --record examples/earnings-analysis/earnings-analysis.session.yaml`
 
 3. Run tests:
 
@@ -2924,7 +2915,7 @@ this is not needed for typical local workflows.
 ## Enhancements Identified from Company Analysis Form
 
 This section documents enhancements identified while converting the complex
-`company-quarterly-analysis-draft-form.md` to proper Markform syntax.
+`earnings-analysis-draft-form.md` to proper Markform syntax.
 The form exercises many advanced patterns and serves as a comprehensive test case for
 the framework.
 
