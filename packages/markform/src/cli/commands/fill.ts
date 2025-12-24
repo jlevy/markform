@@ -16,6 +16,7 @@ import { serialize } from "../../engine/serialize.js";
 import { serializeSession } from "../../engine/session.js";
 import type {
   HarnessConfig,
+  Patch,
   SessionFinal,
   SessionTranscript,
 } from "../../engine/types.js";
@@ -42,6 +43,30 @@ import { generateVersionedPath } from "../lib/versioning.js";
 /** Supported agent types */
 const AGENT_TYPES = ["mock", "live"] as const;
 type AgentType = (typeof AGENT_TYPES)[number];
+
+/**
+ * Format a patch value for display.
+ */
+function formatPatchValue(patch: Patch): string {
+  switch (patch.op) {
+    case "set_string":
+      return patch.value ? `"${patch.value}"` : "(empty)";
+    case "set_number":
+      return patch.value !== null ? String(patch.value) : "(empty)";
+    case "set_string_list":
+      return patch.items.length > 0 ? `[${patch.items.join(", ")}]` : "(empty)";
+    case "set_single_select":
+      return patch.selected ?? "(none)";
+    case "set_multi_select":
+      return patch.selected.length > 0 ? `[${patch.selected.join(", ")}]` : "(none)";
+    case "set_checkboxes":
+      return Object.entries(patch.values)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(", ");
+    case "clear_field":
+      return "(cleared)";
+  }
+}
 
 /**
  * Format session transcript for console output.
@@ -220,7 +245,11 @@ export function registerFillCommand(program: Command): void {
               harnessConfig.maxPatchesPerTurn!
             );
 
-            logInfo(ctx, pc.dim(`  Applying ${patches.length} patches...`));
+            logInfo(ctx, pc.dim(`  Applying ${patches.length} patches:`));
+            for (const patch of patches) {
+              const value = formatPatchValue(patch);
+              logInfo(ctx, pc.dim(`    ${patch.fieldId} = ${value}`));
+            }
 
             // Apply patches
             stepResult = harness.apply(patches, stepResult.issues);
