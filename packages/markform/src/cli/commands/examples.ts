@@ -19,7 +19,7 @@ import pc from "picocolors";
 import { parseForm } from "../../engine/parse.js";
 import { inspect } from "../../engine/inspect.js";
 import { applyPatches } from "../../engine/apply.js";
-import { exportMultiFormat, exportFormOnly } from "../lib/exportHelpers.js";
+import { exportMultiFormat } from "../lib/exportHelpers.js";
 import {
   USER_ROLE,
   AGENT_ROLE,
@@ -352,10 +352,16 @@ async function runInteractiveFlow(
       applyPatches(form, patches);
     }
 
-    // Save the filled form (markform format only; users can export other formats via CLI)
-    exportFormOnly(form, outputPath);
+    // Export filled form in all formats (examples command always exports all formats)
+    const { formPath, rawPath, yamlPath } = exportMultiFormat(form, outputPath);
 
     showInteractiveOutro(patches.length, outputPath, false);
+    console.log("");
+    p.log.success("Outputs:");
+    console.log(`  ${formatPath(formPath)}  ${pc.dim("(markform)")}`);
+    console.log(`  ${formatPath(rawPath)}  ${pc.dim("(plain markdown)")}`);
+    console.log(`  ${formatPath(yamlPath)}  ${pc.dim("(values as YAML)")}`);
+
     logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Fill time", Date.now() - startTime);
   }
 
