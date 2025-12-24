@@ -420,4 +420,114 @@ No form here.
       expect(result.idIndex.get("priority.low")?.kind).toBe("option");
     });
   });
+
+  describe("doc block edge cases", () => {
+    it("allows multiple doc blocks with same ref but different kinds", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+
+{% doc ref="name" kind="description" %}
+This is a description.
+{% /doc %}
+
+{% doc ref="name" kind="instructions" %}
+Enter your full name.
+{% /doc %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      expect(result.docs).toHaveLength(2);
+      expect(result.docs[0]?.kind).toBe("description");
+      expect(result.docs[1]?.kind).toBe("instructions");
+    });
+
+    it("throws on duplicate doc blocks with same ref and same kind", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+
+{% doc ref="name" kind="description" %}
+First description.
+{% /doc %}
+
+{% doc ref="name" kind="description" %}
+Second description.
+{% /doc %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/Duplicate doc block/);
+    });
+
+    it("throws on duplicate doc blocks with same ref and no kind (defaulted)", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+
+{% doc ref="name" %}
+First doc without kind.
+{% /doc %}
+
+{% doc ref="name" %}
+Second doc without kind.
+{% /doc %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/Duplicate doc block/);
+    });
+
+    it("allows doc block without kind and another with kind for same ref", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+
+{% doc ref="name" %}
+Doc without kind.
+{% /doc %}
+
+{% doc ref="name" kind="instructions" %}
+Doc with instructions kind.
+{% /doc %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      expect(result.docs).toHaveLength(2);
+      expect(result.docs[0]?.kind).toBeUndefined();
+      expect(result.docs[1]?.kind).toBe("instructions");
+    });
+  });
 });

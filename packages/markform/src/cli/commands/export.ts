@@ -1,7 +1,8 @@
 /**
- * Export command - Export form as canonical markdown or structured data.
+ * Export command - Export form as markform or plain markdown or structured data.
  *
- * Default output is canonical markdown.
+ * Default output is markform format (canonical markdown with markdoc directives).
+ * With --format=markdown, outputs plain readable markdown without markdoc.
  * With --format=json or --format=yaml, outputs structured data with:
  * - schema: Form structure and field definitions
  * - values: Current field values
@@ -13,7 +14,7 @@ import type { Command } from "commander";
 import YAML from "yaml";
 
 import { parseForm } from "../../engine/parse.js";
-import { serialize } from "../../engine/serialize.js";
+import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
 import type { FieldValue, Id } from "../../engine/types.js";
 import { getCommandContext, logError, logVerbose, readFile } from "../lib/shared.js";
 
@@ -43,8 +44,8 @@ interface ExportOutput {
   markdown: string;
 }
 
-/** Export format options (markdown is unique to export command) */
-type ExportFormat = "markdown" | "json" | "yaml";
+/** Export format options */
+type ExportFormat = "markform" | "markdown" | "json" | "yaml";
 
 /**
  * Register the export command.
@@ -53,7 +54,7 @@ export function registerExportCommand(program: Command): void {
   program
     .command("export <file>")
     .description(
-      "Export form as canonical markdown (default), or use --format=json/yaml for structured data"
+      "Export form as markform (default), markdown (readable), or json/yaml for structured data"
     )
     .option("--compact", "Output compact JSON (no formatting, only for JSON format)")
     .action(
@@ -66,14 +67,18 @@ export function registerExportCommand(program: Command): void {
 
         // Determine format: map global format to export format
         // json/yaml from global --format work for export
-        // console/plaintext from global map to markdown (export's default)
-        let format: ExportFormat = "markdown";
+        // console/plaintext from global map to markform (export's default)
+        let format: ExportFormat = "markform";
         if (ctx.format === "json") {
           format = "json";
         } else if (ctx.format === "yaml") {
           format = "yaml";
+        } else if (ctx.format === "markdown") {
+          format = "markdown";
+        } else if (ctx.format === "markform") {
+          format = "markform";
         }
-        // "console" and "plaintext" default to "markdown" for export
+        // "console" and "plaintext" default to "markform" for export
 
         try {
           logVerbose(ctx, `Reading file: ${file}`);
@@ -82,9 +87,15 @@ export function registerExportCommand(program: Command): void {
           logVerbose(ctx, "Parsing form...");
           const form = parseForm(content);
 
-          // For markdown format, just output the serialized form
-          if (format === "markdown") {
+          // For markform format, output canonical markdoc markdown
+          if (format === "markform") {
             console.log(serialize(form));
+            return;
+          }
+
+          // For markdown format, output plain readable markdown
+          if (format === "markdown") {
+            console.log(serializeRawMarkdown(form));
             return;
           }
 

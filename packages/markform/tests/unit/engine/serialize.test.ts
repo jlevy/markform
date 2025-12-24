@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { parseForm } from "../../../src/engine/parse.js";
-import { serialize } from "../../../src/engine/serialize.js";
+import { serialize, serializeRawMarkdown } from "../../../src/engine/serialize.js";
 
 describe("engine/serialize", () => {
   describe("serialize", () => {
@@ -428,6 +428,233 @@ markform:
       expect(reparsed.idIndex.get("basic_fields")?.kind).toBe("group");
       expect(reparsed.idIndex.get("name")?.kind).toBe("field");
       expect(reparsed.idIndex.get("priority.low")?.kind).toBe("option");
+    });
+  });
+
+  describe("serializeRawMarkdown", () => {
+    it("outputs plain markdown without markdoc directives for string field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" title="Test Form" %}
+
+{% field-group id="g1" title="Basic Info" %}
+{% string-field id="company" label="Company Name" %}
+\`\`\`value
+ACME Corp
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      // Should not contain markdoc directives
+      expect(output).not.toContain("{%");
+      expect(output).not.toContain("%}");
+      expect(output).not.toContain("```value");
+
+      // Should contain the form title and group header
+      expect(output).toContain("# Test Form");
+      expect(output).toContain("## Basic Info");
+
+      // Should contain field label and value
+      expect(output).toContain("**Company Name:**");
+      expect(output).toContain("ACME Corp");
+    });
+
+    it("outputs plain markdown for number field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="revenue" label="Revenue" %}
+\`\`\`value
+1234567
+\`\`\`
+{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      expect(output).not.toContain("{%");
+      expect(output).toContain("**Revenue:**");
+      expect(output).toContain("1234567");
+    });
+
+    it("outputs plain markdown for string-list field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="tags" label="Tags" %}
+\`\`\`value
+Technology
+Finance
+Healthcare
+\`\`\`
+{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      expect(output).not.toContain("{%");
+      expect(output).toContain("**Tags:**");
+      expect(output).toContain("Technology");
+      expect(output).toContain("Finance");
+      expect(output).toContain("Healthcare");
+    });
+
+    it("outputs plain markdown for single-select field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% single-select id="rating" label="Rating" %}
+- [ ] Bullish {% #bullish %}
+- [x] Neutral {% #neutral %}
+- [ ] Bearish {% #bearish %}
+{% /single-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      expect(output).not.toContain("{%");
+      expect(output).toContain("**Rating:**");
+      expect(output).toContain("Neutral");
+    });
+
+    it("outputs plain markdown for multi-select field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% multi-select id="sectors" label="Sectors" %}
+- [x] Technology {% #tech %}
+- [ ] Finance {% #finance %}
+- [x] Healthcare {% #health %}
+{% /multi-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      expect(output).not.toContain("{%");
+      expect(output).toContain("**Sectors:**");
+      expect(output).toContain("Technology");
+      expect(output).toContain("Healthcare");
+    });
+
+    it("outputs plain markdown for checkboxes field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" %}
+- [x] Task 1 {% #task1 %}
+- [ ] Task 2 {% #task2 %}
+- [/] Task 3 {% #task3 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      expect(output).not.toContain("{%");
+      expect(output).toContain("**Tasks:**");
+      // Should show checkboxes in GFM format
+      expect(output).toContain("- [x] Task 1");
+      expect(output).toContain("- [ ] Task 2");
+      expect(output).toContain("- [/] Task 3");
+    });
+
+    it("shows empty placeholder for unfilled fields", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      expect(output).not.toContain("{%");
+      expect(output).toContain("**Name:**");
+      expect(output).toContain("_(empty)_");
+    });
+
+    it("includes doc blocks as regular markdown", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" title="Test Form" %}
+
+{% doc ref="test" kind="instructions" %}
+Please fill out this form carefully.
+{% /doc %}
+
+{% field-group id="g1" title="Group 1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+
+{% doc ref="name" kind="description" %}
+Enter your full legal name.
+{% /doc %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      expect(output).not.toContain("{%");
+      expect(output).toContain("Please fill out this form carefully.");
+      expect(output).toContain("Enter your full legal name.");
     });
   });
 });

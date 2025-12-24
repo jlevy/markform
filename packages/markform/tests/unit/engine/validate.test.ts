@@ -553,6 +553,102 @@ markform:
       expect(result.isValid).toBe(false);
       expect(result.issues[0]?.message).toContain("at least 2 items done");
     });
+
+    it("validates minDone constraint in simple mode", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" checkboxMode="simple" minDone=2 %}
+- [x] First {% #first %}
+- [ ] Second {% #second %}
+- [ ] Third {% #third %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at least 2 items done");
+    });
+
+    it("passes minDone when threshold met in simple mode", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" checkboxMode="simple" minDone=2 %}
+- [x] First {% #first %}
+- [x] Second {% #second %}
+- [ ] Third {% #third %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it("validates required multi-mode checkboxes fail when incomplete items exist", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" checkboxMode="multi" required=true %}
+- [x] Done task {% #done %}
+- [/] Incomplete task {% #incomplete %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("completed");
+    });
+
+    it("passes when all required multi-mode checkboxes are done or na", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" checkboxMode="multi" required=true %}
+- [x] Done task {% #done %}
+- [-] NA task {% #na %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
   });
 
   describe("code validators", () => {

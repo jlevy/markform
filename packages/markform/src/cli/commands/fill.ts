@@ -189,6 +189,14 @@ export function registerFillCommand(program: Command): void {
     )
     .option("-o, --output <file>", "Write final form to file")
     .option(
+      "--prompt <file>",
+      "Path to custom system prompt file (overrides default)"
+    )
+    .option(
+      "--instructions <text>",
+      "Inline system prompt (overrides --prompt and default)"
+    )
+    .option(
       "-i, --interactive",
       "Interactive mode: prompt user for field values (defaults to user role)"
     )
@@ -208,6 +216,8 @@ export function registerFillCommand(program: Command): void {
           roles?: string;
           mode?: string;
           output?: string;
+          prompt?: string;
+          instructions?: string;
           interactive?: boolean;
         },
         cmd: Command
@@ -394,7 +404,21 @@ export function registerFillCommand(program: Command): void {
             const modelId = options.model!;
             logVerbose(ctx, `Resolving model: ${modelId}`);
             const { model } = await resolveModel(modelId);
-            agent = createLiveAgent({ model });
+
+            // Determine system prompt: --instructions > --prompt > default
+            let systemPrompt: string | undefined;
+            if (options.instructions) {
+              systemPrompt = options.instructions;
+              logVerbose(ctx, "Using inline system prompt from --instructions");
+            } else if (options.prompt) {
+              const promptPath = resolve(options.prompt);
+              logVerbose(ctx, `Reading system prompt from: ${promptPath}`);
+              systemPrompt = await readFile(promptPath);
+            }
+
+            // Pass first target role to agent (for instruction lookup)
+            const primaryRole = targetRoles[0] === "*" ? AGENT_ROLE : targetRoles[0];
+            agent = createLiveAgent({ model, systemPrompt, targetRole: primaryRole });
             logVerbose(ctx, `Using live agent with model: ${modelId}`);
           }
 
