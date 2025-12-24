@@ -40,7 +40,7 @@ interface FieldPromptContext {
  */
 function getFieldDescription(form: ParsedForm, fieldId: string): string | undefined {
   const doc = form.docs.find(
-    (d) => d.ref === fieldId && (d.kind === "description" || d.kind === "instructions")
+    (d) => d.ref === fieldId && (d.tag === "description" || d.tag === "instructions")
   );
   return doc?.bodyMarkdown;
 }

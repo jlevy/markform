@@ -635,16 +635,16 @@ markform:
 
 {% form id="test" title="Test Form" %}
 
-{% doc ref="test" kind="instructions" %}
+{% instructions ref="test" %}
 Please fill out this form carefully.
-{% /doc %}
+{% /instructions %}
 
 {% field-group id="g1" title="Group 1" %}
 {% string-field id="name" label="Name" %}{% /string-field %}
 
-{% doc ref="name" kind="description" %}
+{% description ref="name" %}
 Enter your full legal name.
-{% /doc %}
+{% /description %}
 {% /field-group %}
 
 {% /form %}

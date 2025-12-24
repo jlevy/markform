@@ -141,23 +141,23 @@ Guidelines:
 Always use the generatePatches tool to submit your field values.`;
 
 /**
- * Extract doc blocks of a specific kind for a given ref.
+ * Extract doc blocks of a specific tag type for a given ref.
  */
 function getDocBlocks(
   docs: DocumentationBlock[],
   ref: string,
-  kind: string
+  tag: string
 ): DocumentationBlock[] {
-  return docs.filter((d) => d.ref === ref && d.kind === kind);
+  return docs.filter((d) => d.ref === ref && d.tag === tag);
 }
 
 /**
  * Build a composed system prompt from form instructions.
  *
  * Instruction sources (later ones augment earlier):
- * 1. Base form instructions - Doc blocks with ref=formId and kind="instructions"
+ * 1. Base form instructions - Doc blocks with ref=formId and tag="instructions"
  * 2. Role-specific instructions - From form.metadata.roleInstructions[targetRole]
- * 3. Per-field instructions - Doc blocks with ref=fieldId and kind="instructions"
+ * 3. Per-field instructions - Doc blocks with ref=fieldId and tag="instructions"
  * 4. System defaults - DEFAULT_ROLE_INSTRUCTIONS[targetRole] or DEFAULT_SYSTEM_PROMPT
  */
 function buildSystemPrompt(

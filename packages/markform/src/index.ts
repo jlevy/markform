@@ -47,7 +47,7 @@ export type {
   MultiSelectValue,
   FieldValue,
   // Documentation
-  DocBlockKind,
+  DocumentationTag,
   DocumentationBlock,
   // Parsed form
   IdIndexEntry,
@@ -131,7 +131,7 @@ export {
   MultiSelectValueSchema,
   FieldValueSchema,
   // Documentation schemas
-  DocBlockKindSchema,
+  DocumentationTagSchema,
   DocumentationBlockSchema,
   // Validation schemas
   SeveritySchema,

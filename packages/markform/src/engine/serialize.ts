@@ -425,15 +425,12 @@ function serializeField(field: Field, values: Record<Id, FieldValue>): string {
 
 /**
  * Serialize a documentation block.
+ * Uses the semantic tag name (description, instructions, documentation).
  */
 function serializeDocBlock(doc: DocumentationBlock): string {
   const attrs: Record<string, unknown> = { ref: doc.ref };
-  if (doc.kind) {
-    attrs.kind = doc.kind;
-  }
-
   const attrStr = serializeAttrs(attrs);
-  return `{% doc ${attrStr} %}\n${doc.bodyMarkdown}\n{% /doc %}`;
+  return `{% ${doc.tag} ${attrStr} %}\n${doc.bodyMarkdown}\n{% /${doc.tag} %}`;
 }
 
 // =============================================================================

@@ -225,14 +225,15 @@ export type FieldValue =
 // Documentation Block
 // =============================================================================
 
-/** Documentation block kind */
-export type DocBlockKind = "description" | "instructions" | "notes" | "examples";
+/** Documentation tag type - determines the semantic purpose of the block */
+export type DocumentationTag = "description" | "instructions" | "documentation";
 
 /** Documentation block attached to form elements */
 export interface DocumentationBlock {
+  /** The semantic tag type: description, instructions, or documentation */
+  tag: DocumentationTag;
   /** Reference to form/group/field ID or qualified option ref (fieldId.optionId) */
   ref: string;
-  kind?: DocBlockKind;
   bodyMarkdown: string;
 }
 
@@ -764,16 +765,15 @@ export const FieldValueSchema = z.discriminatedUnion("kind", [
 ]);
 
 // Documentation block schema
-export const DocBlockKindSchema = z.enum([
+export const DocumentationTagSchema = z.enum([
   "description",
   "instructions",
-  "notes",
-  "examples",
+  "documentation",
 ]);
 
 export const DocumentationBlockSchema = z.object({
+  tag: DocumentationTagSchema,
   ref: z.string(),
-  kind: DocBlockKindSchema.optional(),
   bodyMarkdown: z.string(),
 });
 
