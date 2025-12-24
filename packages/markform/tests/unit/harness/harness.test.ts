@@ -5,11 +5,8 @@
 import { describe, expect, it } from "vitest";
 
 import { parseForm } from "../../../src/engine/parse.js";
-import {
-  createHarness,
-  createMockAgent,
-  FormHarness,
-} from "../../../src/harness/index.js";
+import { createHarness, FormHarness } from "../../../src/harness/harness.js";
+import { createMockAgent } from "../../../src/harness/mockAgent.js";
 
 // =============================================================================
 // Test Fixtures

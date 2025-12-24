@@ -10,7 +10,7 @@ import {
   getExampleById,
   getExampleIds,
   loadExampleContent,
-} from "../../../src/cli/examples/index.js";
+} from "../../../src/cli/examples/exampleRegistry.js";
 
 describe("examples registry", () => {
   describe("EXAMPLE_DEFINITIONS", () => {

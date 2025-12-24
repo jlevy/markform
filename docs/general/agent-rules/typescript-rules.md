@@ -299,7 +299,7 @@ alwaysApply: true
   **For applications:** Avoid barrel files entirely.
   Apps have no public API, so barrels only add indirection.
   Import directly from source files throughout.
-  If you find yourself wanting a barrel for “convenience,” that’s likely a sign of
+  If you find yourself wanting a barrel for “convenience,” that’s often a sign of
   incomplete refactors or poor module structure.
 
 ## Exceptions

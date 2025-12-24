@@ -36,7 +36,7 @@ import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
   loadExampleContent,
-} from "../examples/index.js";
+} from "../examples/exampleRegistry.js";
 import { formatPath, getCommandContext, logError, logTiming } from "../lib/shared.js";
 import { generateVersionedPath } from "../lib/versioning.js";
 import {
