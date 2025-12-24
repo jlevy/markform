@@ -34,15 +34,32 @@ git log $(git describe --tags --abbrev=0)..HEAD --oneline
 
 ### Step 3: Create Changeset
 
+#### Option A: Interactive (Human)
+
 ```bash
 pnpm changeset
 ```
 
-When prompted:
+When prompted: select `markform`, choose bump type, write summary.
 
-1. Select `markform` package
-2. Choose version bump type (patch/minor/major)
-3. Write a summary of changes for the changelog
+#### Option B: Non-Interactive (Agent/Script)
+
+Write a changeset file directly. The filename should be a random identifier:
+
+```bash
+cat > .changeset/release-summary.md << 'EOF'
+---
+"markform": minor
+---
+
+Add examples CLI command and improve form validation.
+EOF
+```
+
+Format:
+- YAML frontmatter with `"package-name": bump-type`
+- Bump types: `patch`, `minor`, `major`
+- Description after the frontmatter
 
 Commit the changeset:
 
