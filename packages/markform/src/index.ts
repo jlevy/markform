@@ -194,8 +194,31 @@ export { parseSession, serializeSession } from "./engine/session.js";
 export { applyPatches } from "./engine/apply.js";
 
 // =============================================================================
+// Value Coercion Exports
+// =============================================================================
+
+export {
+  findFieldById,
+  coerceToFieldPatch,
+  coerceInputContext,
+} from "./engine/valueCoercion.js";
+export type {
+  RawFieldValue,
+  InputContext,
+  CoercionResult,
+  CoerceInputContextResult,
+} from "./engine/valueCoercion.js";
+
+// =============================================================================
 // Harness Exports
 // =============================================================================
 
 export { FormHarness, createHarness } from "./harness/harness.js";
 export { MockAgent, createMockAgent } from "./harness/mockAgent.js";
+export { fillForm } from "./harness/programmaticFill.js";
+export type {
+  FillOptions,
+  FillResult,
+  FillStatus,
+  TurnProgress,
+} from "./harness/programmaticFill.js";

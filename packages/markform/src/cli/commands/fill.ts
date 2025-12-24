@@ -190,11 +190,11 @@ export function registerFillCommand(program: Command): void {
     .option("-o, --output <file>", "Write final form to file")
     .option(
       "--prompt <file>",
-      "Path to custom system prompt file (overrides default)"
+      "Path to custom system prompt file (appends to default)"
     )
     .option(
       "--instructions <text>",
-      "Inline system prompt (overrides --prompt and default)"
+      "Inline system prompt (appends to default; takes precedence over --prompt)"
     )
     .option(
       "-i, --interactive",
@@ -418,7 +418,11 @@ export function registerFillCommand(program: Command): void {
 
             // Pass first target role to agent (for instruction lookup)
             const primaryRole = targetRoles[0] === "*" ? AGENT_ROLE : targetRoles[0];
-            agent = createLiveAgent({ model, systemPrompt, targetRole: primaryRole });
+            agent = createLiveAgent({
+              model,
+              systemPromptAddition: systemPrompt,
+              targetRole: primaryRole,
+            });
             logVerbose(ctx, `Using live agent with model: ${modelId}`);
           }
 
