@@ -399,17 +399,78 @@ When a file contains multiple `{% form %}` tags:
 
 ### Role Instructions in Agent Prompts
 
-When passing instructions to the agent, composition order is:
+When passing instructions to the agent, the system composes a prompt from multiple
+sources. This is implemented in `buildContextPrompt()` in `harness/liveAgent.ts`.
 
-1. Base form instructions (from `form.instructions` if present)
+**Composition Order (later augments earlier):**
 
-2. Role-specific instructions (from `role_instructions[targetRole]`)
+1. **System defaults** - `DEFAULT_SYSTEM_PROMPT` from `liveAgent.ts` (always present)
 
-3. Per-field instructions (from individual field `instructions` attributes)
+2. **Role defaults** - `DEFAULT_ROLE_INSTRUCTIONS[targetRole]` from `settings.ts`
 
-4. System defaults for that role (from `DEFAULT_ROLE_INSTRUCTIONS`)
+3. **Form-level instructions** - Doc blocks with `kind="instructions"` and `ref`
+   matching the form ID
 
-Later instructions augment (not replace) earlier ones.
+4. **Role-specific instructions** - `role_instructions[targetRole]` from frontmatter
+
+5. **Per-field instructions** - Doc blocks with `kind="instructions"` and `ref` matching
+   fields being filled (concatenated in field order)
+
+**CLI Override:**
+
+The `--prompt <file>` flag (markform-146) **completely replaces** the composed
+instructions with the file contents.
+This allows full customization for specialized use cases.
+
+**Implementation in `buildContextPrompt()`:**
+
+```typescript
+function buildContextPrompt(
+  issues: InspectIssue[],
+  form: ParsedForm,
+  maxPatches: number,
+  targetRole?: string,
+  cliPromptOverride?: string
+): string {
+  // If CLI override provided, use it exclusively
+  if (cliPromptOverride) {
+    return formatWithIssues(cliPromptOverride, issues, form);
+  }
+
+  // Compose from sources
+  const parts: string[] = [];
+
+  // 1. Role defaults (if targetRole specified)
+  if (targetRole && DEFAULT_ROLE_INSTRUCTIONS[targetRole]) {
+    parts.push(DEFAULT_ROLE_INSTRUCTIONS[targetRole]);
+  }
+
+  // 2. Form-level instructions doc blocks
+  const formInstructions = form.docs.filter(
+    d => d.ref === form.schema.id && d.kind === 'instructions'
+  );
+  parts.push(...formInstructions.map(d => d.bodyMarkdown));
+
+  // 3. Role-specific instructions from frontmatter
+  if (targetRole && form.metadata?.roleInstructions?.[targetRole]) {
+    parts.push(form.metadata.roleInstructions[targetRole]);
+  }
+
+  // 4. Per-field instructions for fields being filled
+  const fieldIds = issues.filter(i => i.scope === 'field').map(i => i.ref);
+  for (const fieldId of fieldIds) {
+    const fieldInstructions = form.docs.filter(
+      d => d.ref === fieldId && d.kind === 'instructions'
+    );
+    parts.push(...fieldInstructions.map(d => d.bodyMarkdown));
+  }
+
+  return formatWithIssues(parts.join('\n\n'), issues, form);
+}
+```
+
+**Tracked in:** markform-147 (Connect form instructions to live agent prompt
+composition)
 
 ### AI SDK Tool Integration
 
@@ -984,6 +1045,10 @@ markform fill company-quarterly-analysis.form.md --dry-run
 * * *
 
 ## Revision History
+
+- 2025-12-23: Expanded “Role Instructions in Agent Prompts” section with detailed
+  `buildContextPrompt()` implementation, CLI override behavior, and reference to
+  markform-146/147
 
 - 2025-12-23: Major spec review and improvements:
 

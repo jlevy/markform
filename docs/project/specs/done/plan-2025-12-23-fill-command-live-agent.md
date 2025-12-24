@@ -498,7 +498,43 @@ class LiveAgent implements Agent {
 
 * * *
 
+## Implementation Status
+
+**Core functionality: COMPLETE** (as of 2025-12-23)
+
+### Implemented
+
+- ✅ `fill` command replacing `run`
+- ✅ `--agent` flag with `mock` and `live` options
+- ✅ `--model` flag with `provider/model-name` format
+- ✅ `--mock-source` for mock agent
+- ✅ `--record` for session transcript
+- ✅ Harness config: `--max-turns`, `--max-patches`, `--max-issues`
+- ✅ Additional filtering: `--max-fields`, `--max-groups`
+- ✅ `-o/--output` with versioned filename default
+- ✅ Model resolution for all 5 providers (anthropic, openai, google, xai, deepseek)
+- ✅ Live agent with AI SDK `generateText` and tool calling
+- ✅ Session transcript recording for both modes
+- ✅ `LiveAgentConfig` supports `systemPrompt` internally
+
+### Deferred to Follow-on Issues
+
+- ❌ `--prompt <file>` flag → **markform-146**
+- ❌ `--dry-run` flag
+- ❌ Form instructions → agent prompt pipeline → **markform-147** (depends on role-system)
+
+### Notes
+
+The `LiveAgentConfig.systemPrompt` field exists but cannot be set from CLI or form.
+This will be addressed by markform-146 (CLI flag) and markform-147 (form instructions),
+with markform-147 depending on the role-system implementation for `role_instructions`.
+
+* * *
+
 ## Revision History
+
+- 2025-12-23: Added Implementation Status section; deferred --prompt and instruction
+  pipeline to markform-146 and markform-147
 
 - 2025-12-23: Initial plan created
 
