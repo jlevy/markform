@@ -247,6 +247,99 @@ describe("FormHarness", () => {
       expect(hash1.length).toBe(64); // SHA256 hex
     });
   });
+
+  describe("issue filtering", () => {
+    // Form with 2 groups, 3 fields each (6 required fields total)
+    const MULTI_GROUP_FORM = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test_form" %}
+
+{% field-group id="group_a" %}
+{% string-field id="field_a1" label="A1" required=true %}{% /string-field %}
+{% string-field id="field_a2" label="A2" required=true %}{% /string-field %}
+{% string-field id="field_a3" label="A3" required=true %}{% /string-field %}
+{% /field-group %}
+
+{% field-group id="group_b" %}
+{% string-field id="field_b1" label="B1" required=true %}{% /string-field %}
+{% string-field id="field_b2" label="B2" required=true %}{% /string-field %}
+{% string-field id="field_b3" label="B3" required=true %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+
+    it("limits issues by maxFieldsPerTurn", () => {
+      const form = parseForm(MULTI_GROUP_FORM);
+      const harness = createHarness(form, { maxFieldsPerTurn: 2 });
+
+      const result = harness.step();
+
+      // Should have at most 2 unique fields in the issues
+      const fieldIds = new Set(
+        result.issues
+          .filter((i) => i.scope === "field")
+          .map((i) => i.ref)
+      );
+      expect(fieldIds.size).toBeLessThanOrEqual(2);
+    });
+
+    it("limits issues by maxGroupsPerTurn", () => {
+      const form = parseForm(MULTI_GROUP_FORM);
+      const harness = createHarness(form, { maxGroupsPerTurn: 1 });
+
+      const result = harness.step();
+
+      // Get unique group IDs from the field issues
+      const fieldRefs = result.issues
+        .filter((i) => i.scope === "field")
+        .map((i) => i.ref);
+
+      // Map field refs to their parent groups using the form's idIndex
+      const groupIds = new Set<string>();
+      for (const ref of fieldRefs) {
+        const entry = form.idIndex.get(ref);
+        if (entry?.parentId) {
+          groupIds.add(entry.parentId);
+        }
+      }
+
+      // Should only have fields from 1 group
+      expect(groupIds.size).toBeLessThanOrEqual(1);
+    });
+
+    it("applies both field and group limits together", () => {
+      const form = parseForm(MULTI_GROUP_FORM);
+      const harness = createHarness(form, {
+        maxGroupsPerTurn: 1,
+        maxFieldsPerTurn: 2,
+      });
+
+      const result = harness.step();
+
+      const fieldRefs = result.issues
+        .filter((i) => i.scope === "field")
+        .map((i) => i.ref);
+
+      // Should have at most 2 fields from 1 group
+      expect(fieldRefs.length).toBeLessThanOrEqual(2);
+    });
+
+    it("applies maxIssues after field/group filtering", () => {
+      const form = parseForm(MULTI_GROUP_FORM);
+      const harness = createHarness(form, {
+        maxFieldsPerTurn: 5, // Would allow 5 fields
+        maxIssues: 2, // But cap at 2 issues total
+      });
+
+      const result = harness.step();
+
+      expect(result.issues.length).toBeLessThanOrEqual(2);
+    });
+  });
 });
 
 // =============================================================================

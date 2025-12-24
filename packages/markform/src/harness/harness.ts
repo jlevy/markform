@@ -124,13 +124,13 @@ export class FormHarness {
 
     this.state = "step";
 
-    // Inspect form
+    // Inspect form to get all issues
     const result = inspect(this.form);
 
-    // Filter issues by fields/groups if limits are configured
+    // Issue filtering pipeline (order matters):
+    // 1. Filter by maxGroupsPerTurn/maxFieldsPerTurn - limits scope diversity
+    // 2. Cap by maxIssues - limits total count shown to agent
     const filteredIssues = this.filterIssuesByScope(result.issues);
-
-    // Limit issues to maxIssues
     const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
 
     // Calculate step budget
@@ -199,7 +199,7 @@ export class FormHarness {
       },
     });
 
-    // Filter and limit issues for next step
+    // Issue filtering pipeline for next turn (same as step())
     const filteredIssues = this.filterIssuesByScope(result.issues);
     const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
 

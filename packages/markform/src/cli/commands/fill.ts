@@ -157,11 +157,17 @@ export function registerFillCommand(program: Command): void {
     )
     .option(
       "--max-issues <n>",
-      `Maximum issues per step (default: ${DEFAULT_MAX_ISSUES})`,
+      `Maximum issues shown per turn (default: ${DEFAULT_MAX_ISSUES})`,
       String(DEFAULT_MAX_ISSUES)
     )
-    .option("--max-fields <n>", "Maximum unique fields per turn (default: unlimited)")
-    .option("--max-groups <n>", "Maximum unique groups per turn (default: unlimited)")
+    .option(
+      "--max-fields <n>",
+      "Maximum unique fields per turn (applied before --max-issues)"
+    )
+    .option(
+      "--max-groups <n>",
+      "Maximum unique groups per turn (applied before --max-issues)"
+    )
     .option("-o, --output <file>", "Write final form to file")
     .action(
       async (
