@@ -111,7 +111,7 @@ export class FormHarness {
     // Check max turns
     if (this.turnNumber > this.config.maxTurns) {
       this.state = "complete";
-      const result = inspect(this.form);
+      const result = inspect(this.form, { targetRoles: this.config.targetRoles });
       return {
         structureSummary: result.structureSummary,
         progressSummary: result.progressSummary,
@@ -124,8 +124,8 @@ export class FormHarness {
 
     this.state = "step";
 
-    // Inspect form to get all issues
-    const result = inspect(this.form);
+    // Inspect form to get all issues (filtered by target roles if configured)
+    const result = inspect(this.form, { targetRoles: this.config.targetRoles });
 
     // Issue filtering pipeline (order matters):
     // 1. Filter by maxGroupsPerTurn/maxFieldsPerTurn - limits scope diversity
@@ -232,7 +232,7 @@ export class FormHarness {
    * Check if the form is complete.
    */
   isComplete(): boolean {
-    const result = inspect(this.form);
+    const result = inspect(this.form, { targetRoles: this.config.targetRoles });
     return result.isComplete;
   }
 

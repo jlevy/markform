@@ -28,7 +28,7 @@ import type {
   StringListValue,
   StringValue,
 } from "./types.js";
-import { DEFAULT_PRIORITY } from "../settings.js";
+import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
 
 // =============================================================================
 // Options
@@ -125,6 +125,9 @@ function serializeStringField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.multiline) {
     attrs.multiline = field.multiline;
   }
@@ -165,6 +168,9 @@ function serializeNumberField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.min !== undefined) {
     attrs.min = field.min;
   }
@@ -201,6 +207,9 @@ function serializeStringListField(
   }
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
   }
   if (field.minItems !== undefined) {
     attrs.minItems = field.minItems;
@@ -263,6 +272,9 @@ function serializeSingleSelectField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.validate) {
     attrs.validate = field.validate;
   }
@@ -292,6 +304,9 @@ function serializeMultiSelectField(
   }
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
   }
   if (field.minSelections !== undefined) {
     attrs.minSelections = field.minSelections;
@@ -330,11 +345,17 @@ function serializeCheckboxesField(
   if (field.priority !== DEFAULT_PRIORITY) {
     attrs.priority = field.priority;
   }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
   if (field.checkboxMode !== "multi") {
     attrs.checkboxMode = field.checkboxMode;
   }
   if (field.minDone !== undefined) {
     attrs.minDone = field.minDone;
+  }
+  if (field.approvalMode !== "none") {
+    attrs.approvalMode = field.approvalMode;
   }
   if (field.validate) {
     attrs.validate = field.validate;
