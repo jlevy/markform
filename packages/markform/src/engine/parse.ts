@@ -34,6 +34,10 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  UrlField,
+  UrlListField,
+  UrlListValue,
+  UrlValue,
   ValidatorRef,
 } from "./coreTypes.js";
 
@@ -683,6 +687,87 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; value: Chec
 }
 
 /**
+ * Parse a url-field tag.
+ */
+function parseUrlField(node: Node): { field: UrlField; value: UrlValue } {
+  const id = getStringAttr(node, "id");
+  const label = getStringAttr(node, "label");
+
+  if (!id) {
+    throw new ParseError("url-field missing required 'id' attribute");
+  }
+  if (!label) {
+    throw new ParseError(`url-field '${id}' missing required 'label' attribute`);
+  }
+
+  const field: UrlField = {
+    kind: "url",
+    id,
+    label,
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
+    validate: getValidateAttr(node),
+  };
+
+  const fenceContent = extractFenceValue(node);
+  const value: UrlValue = {
+    kind: "url",
+    value: fenceContent !== null ? fenceContent.trim() : null,
+  };
+
+  return { field, value };
+}
+
+/**
+ * Parse a url-list tag.
+ */
+function parseUrlListField(node: Node): { field: UrlListField; value: UrlListValue } {
+  const id = getStringAttr(node, "id");
+  const label = getStringAttr(node, "label");
+
+  if (!id) {
+    throw new ParseError("url-list missing required 'id' attribute");
+  }
+  if (!label) {
+    throw new ParseError(`url-list '${id}' missing required 'label' attribute`);
+  }
+
+  const field: UrlListField = {
+    kind: "url_list",
+    id,
+    label,
+    required: getBooleanAttr(node, "required") ?? false,
+    priority: getPriorityAttr(node),
+    role: getStringAttr(node, "role") ?? AGENT_ROLE,
+    minItems: getNumberAttr(node, "minItems"),
+    maxItems: getNumberAttr(node, "maxItems"),
+    uniqueItems: getBooleanAttr(node, "uniqueItems"),
+    validate: getValidateAttr(node),
+  };
+
+  const fenceContent = extractFenceValue(node);
+  const items: string[] = [];
+
+  if (fenceContent !== null) {
+    const lines = fenceContent.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed) {
+        items.push(trimmed);
+      }
+    }
+  }
+
+  const value: UrlListValue = {
+    kind: "url_list",
+    items,
+  };
+
+  return { field, value };
+}
+
+/**
  * Parse a field tag and return field schema and value.
  */
 function parseField(node: Node): { field: Field; value: FieldValue } | null {
@@ -702,6 +787,10 @@ function parseField(node: Node): { field: Field; value: FieldValue } | null {
       return parseMultiSelectField(node);
     case "checkboxes":
       return parseCheckboxesField(node);
+    case "url-field":
+      return parseUrlField(node);
+    case "url-list":
+      return parseUrlListField(node);
     default:
       return null;
   }

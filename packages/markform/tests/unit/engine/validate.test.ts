@@ -753,6 +753,288 @@ test
     });
   });
 
+  describe("url field validation", () => {
+    it("validates required url field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" required=true %}{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0]?.severity).toBe("error");
+      expect(result.issues[0]?.ref).toBe("website");
+      expect(result.issues[0]?.message).toContain("empty");
+    });
+
+    it("passes when required url field has valid URL", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" required=true %}
+\`\`\`value
+https://example.com
+\`\`\`
+{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+      expect(result.issues).toHaveLength(0);
+    });
+
+    it("rejects invalid URL format", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" %}
+\`\`\`value
+not-a-valid-url
+\`\`\`
+{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("not a valid URL");
+    });
+
+    it("rejects non-http(s) URLs", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" %}
+\`\`\`value
+ftp://example.com
+\`\`\`
+{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("not a valid URL");
+    });
+
+    it("accepts http URLs", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" %}
+\`\`\`value
+http://example.com
+\`\`\`
+{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe("url-list field validation", () => {
+    it("validates required url-list field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" required=true %}{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.ref).toBe("sources");
+    });
+
+    it("validates minItems constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" minItems=3 %}
+\`\`\`value
+https://example.com
+https://another.com
+\`\`\`
+{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at least 3 items");
+    });
+
+    it("validates maxItems constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" maxItems=2 %}
+\`\`\`value
+https://example.com
+https://another.com
+https://third.com
+\`\`\`
+{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("at most 2 items");
+    });
+
+    it("validates uniqueItems constraint", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" uniqueItems=true %}
+\`\`\`value
+https://example.com
+https://another.com
+https://example.com
+\`\`\`
+{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("Duplicate URL");
+    });
+
+    it("validates each URL in the list", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" %}
+\`\`\`value
+https://valid.com
+not-a-url
+https://also-valid.com
+\`\`\`
+{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain("Item 2");
+      expect(result.issues[0]?.message).toContain("not a valid URL");
+    });
+
+    it("passes with valid URL list", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" %}
+\`\`\`value
+https://example.com
+https://another.com
+http://third.com
+\`\`\`
+{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
+
   describe("complete form validation", () => {
     it("validates a form with multiple field types", () => {
       const markdown = `---

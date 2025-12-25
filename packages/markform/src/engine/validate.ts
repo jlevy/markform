@@ -23,6 +23,10 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  UrlField,
+  UrlListField,
+  UrlListValue,
+  UrlValue,
   ValidationIssue,
   ValidatorContext,
   ValidatorRef,
@@ -466,6 +470,138 @@ function validateCheckboxesField(
 }
 
 /**
+ * Check if a string is a valid URL.
+ * Uses URL constructor for validation (RFC 3986 compliant).
+ */
+function isValidUrl(str: string): boolean {
+  try {
+    const url = new URL(str);
+    // Only allow http and https protocols
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate a URL field.
+ */
+function validateUrlField(
+  field: UrlField,
+  value: UrlValue | undefined,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const urlValue = value?.value ?? null;
+
+  // Required check
+  if (field.required && (urlValue === null || urlValue.trim() === "")) {
+    issues.push({
+      severity: "error",
+      message: `Required field "${field.label}" is empty`,
+      ref: field.id,
+      source: "builtin",
+    });
+    return issues;
+  }
+
+  // Skip other checks if no value
+  if (urlValue === null || urlValue === "") {
+    return issues;
+  }
+
+  // URL format validation
+  if (!isValidUrl(urlValue)) {
+    issues.push({
+      severity: "error",
+      message: `"${field.label}" is not a valid URL`,
+      ref: field.id,
+      source: "builtin",
+    });
+  }
+
+  return issues;
+}
+
+/**
+ * Validate a URL list field.
+ */
+function validateUrlListField(
+  field: UrlListField,
+  value: UrlListValue | undefined,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const items = value?.items ?? [];
+
+  // Required check
+  if (field.required && items.length === 0) {
+    issues.push({
+      severity: "error",
+      message: `Required field "${field.label}" is empty`,
+      ref: field.id,
+      source: "builtin",
+    });
+    return issues;
+  }
+
+  // Skip other checks if no items
+  if (items.length === 0) {
+    return issues;
+  }
+
+  // Min items
+  if (field.minItems !== undefined && items.length < field.minItems) {
+    issues.push({
+      severity: "error",
+      message: `"${field.label}" must have at least ${field.minItems} items (got ${items.length})`,
+      ref: field.id,
+      source: "builtin",
+    });
+  }
+
+  // Max items
+  if (field.maxItems !== undefined && items.length > field.maxItems) {
+    issues.push({
+      severity: "error",
+      message: `"${field.label}" must have at most ${field.maxItems} items (got ${items.length})`,
+      ref: field.id,
+      source: "builtin",
+    });
+  }
+
+  // URL format validation for each item
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item !== undefined && !isValidUrl(item)) {
+      issues.push({
+        severity: "error",
+        message: `Item ${i + 1} in "${field.label}" is not a valid URL`,
+        ref: field.id,
+        source: "builtin",
+      });
+    }
+  }
+
+  // Unique items
+  if (field.uniqueItems) {
+    const seen = new Set<string>();
+    for (const item of items) {
+      if (seen.has(item)) {
+        issues.push({
+          severity: "error",
+          message: `Duplicate URL "${item}" in "${field.label}"`,
+          ref: field.id,
+          source: "builtin",
+        });
+        break; // Only report once
+      }
+      seen.add(item);
+    }
+  }
+
+  return issues;
+}
+
+/**
  * Validate a single field.
  */
 function validateField(
@@ -499,6 +635,10 @@ function validateField(
         field,
         value as CheckboxesValue | undefined,
       );
+    case "url":
+      return validateUrlField(field, value as UrlValue | undefined);
+    case "url_list":
+      return validateUrlListField(field, value as UrlListValue | undefined);
   }
 }
 

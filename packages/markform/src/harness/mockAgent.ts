@@ -18,6 +18,8 @@ import type {
   SingleSelectValue,
   StringListValue,
   StringValue,
+  UrlListValue,
+  UrlValue,
 } from "../engine/coreTypes.js";
 import type { Agent } from "./harnessTypes.js";
 
@@ -168,6 +170,24 @@ export class MockAgent implements Agent {
           op: "set_checkboxes",
           fieldId,
           values: v.values,
+        };
+      }
+
+      case "url": {
+        const v = value as UrlValue;
+        return {
+          op: "set_url",
+          fieldId,
+          value: v.value,
+        };
+      }
+
+      case "url_list": {
+        const v = value as UrlListValue;
+        return {
+          op: "set_url_list",
+          fieldId,
+          items: v.items,
         };
       }
 
