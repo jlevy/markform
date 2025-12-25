@@ -19,6 +19,7 @@ import type {
   ParsedForm,
   Patch,
   SessionTurn,
+  SessionTurnStats,
   StepResult,
 } from "../engine/coreTypes.js";
 import {
@@ -191,9 +192,10 @@ export class FormHarness {
    *
    * @param patches - Patches to apply
    * @param issues - Issues that were shown to the agent (for recording)
+   * @param llmStats - Optional LLM stats for session logging
    * @returns StepResult after applying patches
    */
-  apply(patches: Patch[], issues: InspectIssue[]): StepResult {
+  apply(patches: Patch[], issues: InspectIssue[], llmStats?: SessionTurnStats): StepResult {
     if (this.state !== "wait") {
       throw new Error(`Cannot apply in state: ${this.state}`);
     }
@@ -216,7 +218,7 @@ export class FormHarness {
       (i) => i.severity === "required"
     ).length;
 
-    this.turns.push({
+    const turn: SessionTurn = {
       turn: this.turnNumber,
       inspect: { issues },
       apply: { patches },
@@ -226,7 +228,14 @@ export class FormHarness {
         answeredFieldCount: result.progressSummary.counts.answeredFields,
         skippedFieldCount: result.progressSummary.counts.skippedFields,
       },
-    });
+    };
+
+    // Add LLM stats if provided (from live agent)
+    if (llmStats) {
+      turn.llm = llmStats;
+    }
+
+    this.turns.push(turn);
 
     // Issue filtering pipeline for next turn (same as step())
     const filteredIssues = this.filterIssuesByScope(result.issues);

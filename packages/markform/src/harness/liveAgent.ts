@@ -5,7 +5,7 @@
  * by analyzing issues and generating appropriate patches.
  */
 
-import type { LanguageModel, Tool, ModelMessage, UserModelMessage } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import { generateText, stepCountIs, zodSchema } from "ai";
 import { z } from "zod";
 import { openai } from "@ai-sdk/openai";
@@ -18,8 +18,9 @@ import type {
   Patch,
 } from "../engine/coreTypes.js";
 import { PatchSchema } from "../engine/coreTypes.js";
+import { serialize } from "../engine/serialize.js";
 import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, getWebSearchConfig } from "../settings.js";
-import type { Agent, LiveAgentConfig } from "./harnessTypes.js";
+import type { Agent, AgentResponse, LiveAgentConfig, TurnStats } from "./harnessTypes.js";
 import {
   DEFAULT_SYSTEM_PROMPT,
   WEB_SEARCH_INSTRUCTIONS,
@@ -48,7 +49,6 @@ export class LiveAgent implements Agent {
   private provider?: string;
   private enableWebSearch: boolean;
   private webSearchTools: Record<string, Tool> | null = null;
-  private messageHistory: ModelMessage[] = [];
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -60,24 +60,17 @@ export class LiveAgent implements Agent {
   }
 
   /**
-   * Get current message history (for debugging/logging).
-   */
-  getHistory(): readonly ModelMessage[] {
-    return this.messageHistory;
-  }
-
-  /**
    * Generate patches using the LLM.
    *
-   * Calls the model with the current form state and issues,
-   * and extracts patches from the tool calls. Maintains conversation
-   * history across turns for better context.
+   * Each call is stateless - the full form context is provided fresh each turn.
+   * The form itself carries all state (filled values, remaining issues).
+   * Returns patches and per-turn stats for observability.
    */
   async generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number
-  ): Promise<Patch[]> {
+  ): Promise<AgentResponse> {
     // Build context prompt with issues and form schema
     const contextPrompt = buildContextPrompt(issues, form, maxPatches);
 
@@ -126,29 +119,26 @@ export class LiveAgent implements Agent {
       ...this.webSearchTools,
     };
 
-    // Build user message for this turn
-    const userMessage: UserModelMessage = {
-      role: "user",
-      content: contextPrompt,
-    };
-
-    // Call the model with accumulated history
+    // Call the model (stateless - full context provided each turn)
     const result = await generateText({
       model: this.model,
       system: systemPrompt,
-      messages: [...this.messageHistory, userMessage],
+      prompt: contextPrompt,
       tools,
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
 
-    // Append this turn's messages to history for next turn
-    this.messageHistory.push(userMessage);
-    this.messageHistory.push(...result.response.messages);
-
-    // Extract patches from tool calls
+    // Extract patches from tool calls and count tool usage
     const patches: Patch[] = [];
+    const toolCallCounts = new Map<string, number>();
+
     for (const step of result.steps) {
       for (const toolCall of step.toolCalls) {
+        // Count tool calls
+        const count = toolCallCounts.get(toolCall.toolName) ?? 0;
+        toolCallCounts.set(toolCall.toolName, count + 1);
+
+        // Extract patches from generatePatches calls
         if (toolCall.toolName === "generatePatches" && "input" in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
           patches.push(...input.patches);
@@ -156,8 +146,40 @@ export class LiveAgent implements Agent {
       }
     }
 
-    // Limit to maxPatches
-    return patches.slice(0, maxPatches);
+    // Build tool call stats
+    const toolCalls: TurnStats["toolCalls"] = [];
+    for (const [name, count] of toolCallCounts) {
+      toolCalls.push({ name, count });
+    }
+
+    // Count remaining issues by severity
+    const requiredRemaining = issues.filter((i) => i.severity === "required").length;
+    const optionalRemaining = issues.filter((i) => i.severity === "recommended").length;
+
+    // Build stats
+    const stats: TurnStats = {
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens,
+      toolCalls,
+      formProgress: {
+        // Note: these are the counts BEFORE this turn's patches are applied
+        // The caller will update these after applying patches
+        answeredFields: Object.keys(form.valuesByFieldId).filter(
+          (id) => form.valuesByFieldId[id] !== null
+        ).length,
+        skippedFields: Object.keys(form.skipsByFieldId ?? {}).filter(
+          (id) => form.skipsByFieldId?.[id]?.skipped
+        ).length,
+        requiredRemaining,
+        optionalRemaining,
+      },
+    };
+
+    // Limit to maxPatches and return with stats
+    return {
+      patches: patches.slice(0, maxPatches),
+      stats,
+    };
   }
 }
 
@@ -246,7 +268,10 @@ function buildSystemPrompt(
 }
 
 /**
- * Build a context prompt with issues and form information.
+ * Build a context prompt with full form state and remaining issues.
+ *
+ * The form markdown shows the agent exactly what's been filled so far,
+ * making each turn stateless - all state is in the form itself.
  */
 function buildContextPrompt(
   issues: InspectIssue[],
@@ -255,6 +280,18 @@ function buildContextPrompt(
 ): string {
   const lines: string[] = [];
 
+  // Include full form markdown so agent sees current state
+  lines.push("# Current Form State");
+  lines.push("");
+  lines.push("Below is the complete form with all currently filled values.");
+  lines.push("Fields marked with `[ ]` or empty values still need to be filled.");
+  lines.push("");
+  lines.push("```markdown");
+  lines.push(serialize(form));
+  lines.push("```");
+  lines.push("");
+
+  // List remaining issues
   lines.push(ISSUES_HEADER);
   lines.push("");
   lines.push(getIssuesIntro(maxPatches));

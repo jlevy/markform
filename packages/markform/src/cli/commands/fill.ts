@@ -21,6 +21,7 @@ import type {
   MockMode,
   SessionFinal,
   SessionTranscript,
+  SessionTurnStats,
 } from "../../engine/coreTypes.js";
 import { createHarness } from "../../harness/harness.js";
 import { createLiveAgent } from "../../harness/liveAgent.js";
@@ -413,11 +414,12 @@ export function registerFillCommand(program: Command): void {
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
             // Generate patches from agent
-            const patches = await agent.generatePatches(
+            const response = await agent.generatePatches(
               stepResult.issues,
               harness.getForm(),
               harnessConfig.maxPatchesPerTurn!
             );
+            const { patches, stats } = response;
 
             // Log patches with field id, type, and value (truncated)
             logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patches:`);
@@ -427,8 +429,27 @@ export function registerFillCommand(program: Command): void {
               logInfo(ctx, `    ${pc.cyan(patch.fieldId)} ${pc.dim(`(${typeName})`)} ${pc.dim("=")} ${pc.green(value)}`);
             }
 
+            // Log stats in verbose mode
+            if (stats) {
+              logVerbose(ctx, `  Stats: ${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out tokens`);
+              if (stats.toolCalls.length > 0) {
+                const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(", ");
+                logVerbose(ctx, `  Tools: ${toolSummary}`);
+              }
+            }
+
+            // Convert TurnStats to SessionTurnStats for session logging
+            let llmStats: SessionTurnStats | undefined;
+            if (stats) {
+              llmStats = {
+                inputTokens: stats.inputTokens,
+                outputTokens: stats.outputTokens,
+                toolCalls: stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
+              };
+            }
+
             // Apply patches
-            stepResult = harness.apply(patches, stepResult.issues);
+            stepResult = harness.apply(patches, stepResult.issues, llmStats);
 
             if (stepResult.isComplete) {
               logInfo(ctx, pc.green(`  ✓ Complete`));

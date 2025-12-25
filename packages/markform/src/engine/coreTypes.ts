@@ -583,6 +583,16 @@ export interface HarnessConfig {
   fillMode?: FillMode;
 }
 
+/** LLM stats for a turn (from live agent) */
+export interface SessionTurnStats {
+  /** Input tokens for this turn */
+  inputTokens?: number;
+  /** Output tokens for this turn */
+  outputTokens?: number;
+  /** Tool calls made during this turn */
+  toolCalls?: { name: string; count: number }[];
+}
+
 /** Session turn - one iteration of the harness loop */
 export interface SessionTurn {
   turn: number;
@@ -598,6 +608,8 @@ export interface SessionTurn {
     answeredFieldCount: number;
     skippedFieldCount: number;
   };
+  /** LLM stats (only present for live agent sessions) */
+  llm?: SessionTurnStats;
 }
 
 /** Final session expectations */
@@ -1121,6 +1133,15 @@ export const HarnessConfigSchema = z.object({
   fillMode: FillModeSchema.optional(),
 });
 
+export const SessionTurnStatsSchema = z.object({
+  inputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative().optional(),
+  toolCalls: z.array(z.object({
+    name: z.string(),
+    count: z.number().int().positive(),
+  })).optional(),
+});
+
 export const SessionTurnSchema = z.object({
   turn: z.number().int().positive(),
   inspect: z.object({
@@ -1135,6 +1156,7 @@ export const SessionTurnSchema = z.object({
     answeredFieldCount: z.number().int().nonnegative(),
     skippedFieldCount: z.number().int().nonnegative(),
   }),
+  llm: SessionTurnStatsSchema.optional(),
 });
 
 export const SessionFinalSchema = z.object({

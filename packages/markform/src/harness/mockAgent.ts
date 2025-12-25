@@ -21,10 +21,10 @@ import type {
   UrlListValue,
   UrlValue,
 } from "../engine/coreTypes.js";
-import type { Agent } from "./harnessTypes.js";
+import type { Agent, AgentResponse } from "./harnessTypes.js";
 
 // Re-export Agent type for backwards compatibility
-export type { Agent } from "./harnessTypes.js";
+export type { Agent, AgentResponse } from "./harnessTypes.js";
 
 // =============================================================================
 // Mock Agent Implementation
@@ -59,12 +59,13 @@ export class MockAgent implements Agent {
    *
    * Processes issues in priority order, generating patches for
    * fields that have values in the completed mock.
+   * Returns AgentResponse with patches but no stats (mock doesn't track LLM usage).
    */
   async generatePatches(
     issues: InspectIssue[],
     _form: ParsedForm,
     maxPatches: number
-  ): Promise<Patch[]> {
+  ): Promise<AgentResponse> {
     const patches: Patch[] = [];
     const addressedFields = new Set<Id>();
 
@@ -106,8 +107,8 @@ export class MockAgent implements Agent {
       }
     }
 
-    // Return wrapped in Promise.resolve to satisfy async interface
-    return Promise.resolve(patches);
+    // Return AgentResponse (no stats for mock agent)
+    return Promise.resolve({ patches });
   }
 
   /**

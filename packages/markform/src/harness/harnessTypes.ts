@@ -24,6 +24,46 @@ import type { InputContext } from "../engine/valueCoercion.js";
 // =============================================================================
 
 /**
+ * Per-turn statistics from LLM calls.
+ *
+ * Tracks token usage, tool calls, and form progress for observability.
+ */
+export interface TurnStats {
+  /** Input tokens for this turn (from provider usage) */
+  inputTokens?: number;
+  /** Output tokens for this turn (from provider usage) */
+  outputTokens?: number;
+  /** Tool calls made during this turn */
+  toolCalls: {
+    /** Tool name */
+    name: string;
+    /** Number of times called */
+    count: number;
+  }[];
+  /** Form progress after this turn */
+  formProgress: {
+    /** Fields with values */
+    answeredFields: number;
+    /** Fields marked as skipped */
+    skippedFields: number;
+    /** Required issues still remaining */
+    requiredRemaining: number;
+    /** Optional/recommended issues still remaining */
+    optionalRemaining: number;
+  };
+}
+
+/**
+ * Response from agent's generatePatches call.
+ */
+export interface AgentResponse {
+  /** Patches to apply */
+  patches: Patch[];
+  /** Per-turn stats (undefined for MockAgent) */
+  stats?: TurnStats;
+}
+
+/**
  * Interface for agents that can generate patches.
  */
 export interface Agent {
@@ -33,13 +73,13 @@ export interface Agent {
    * @param issues - Prioritized issues from harness step
    * @param form - Current form state
    * @param maxPatches - Maximum number of patches to generate
-   * @returns Promise resolving to array of patches to apply
+   * @returns Promise resolving to patches and optional stats
    */
   generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number
-  ): Promise<Patch[]>;
+  ): Promise<AgentResponse>;
 }
 
 // =============================================================================
@@ -155,6 +195,8 @@ export interface TurnProgress {
   patchesApplied: number;
   requiredIssuesRemaining: number;
   isComplete: boolean;
+  /** Per-turn stats from LLM (undefined for MockAgent) */
+  stats?: TurnStats;
 }
 
 /**

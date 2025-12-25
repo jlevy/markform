@@ -2023,7 +2023,9 @@ interface ExportedOption {
 
 ### Layer 5: Execution (Harness Loop)
 
-The harness wraps the engine with a stable “step” protocol for bite-sized actions.
+The harness wraps the engine with a stable "step" protocol for bite-sized actions.
+**Each turn is stateless:** the agent receives the full serialized form plus remaining
+issues each turn—no conversation history is maintained. The form itself IS the state.
 
 #### Harness State Machine
 
@@ -2078,6 +2080,9 @@ console output.
 
 #### Harness Contract
 
+The harness manages the form-filling loop but does not maintain session state beyond
+the form itself. **The serialized form is the single source of truth.**
+
 ```ts
 interface StepResult {
   structureSummary: StructureSummary;   // form structure overview (static)
@@ -2088,6 +2093,8 @@ interface StepResult {
   turnNumber: number;
 }
 ```
+
+**Key behaviors:**
 
 - `harness.step()` returns current state including summaries + issues
 
@@ -2101,7 +2108,21 @@ interface StepResult {
 
 - Summaries allow agents/UIs to quickly display progress without parsing the full form
 
-This keeps turns short and controlled for long-lived sessions.
+**Form-as-state principle:**
+
+The harness does not track conversation history or accumulate context across turns.
+Instead:
+
+- Each turn, the agent receives the full serialized form (current state) + issues
+
+- This is structurally equivalent to `markform inspect` output
+
+- After patches are applied, the form is re-serialized with updated values
+
+- The next turn sees the updated form, not a diff or delta
+
+This design keeps turns short and controlled, enables easy debugging (any turn can be
+replayed from its form snapshot), and avoids context window growth in long sessions.
 
 #### Mocked Mode
 
@@ -2114,23 +2135,126 @@ This keeps turns short and controlled for long-lived sessions.
 
 - No LLM calls required
 
+#### Stateless Turn Context Design
+
+A key architectural decision is that **each agent turn is stateless**. The agent does
+not maintain conversation history across turns. Instead, the full form context is
+provided fresh each turn:
+
+**Turn Context = Full Form Markdown + Remaining Issues**
+
+This mirrors what `markform inspect` outputs, making each turn self-contained:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Turn N Context (User Prompt)                                                 │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ # Current Form State                                                         │
+│                                                                              │
+│ Below is the complete form with all currently filled values.                 │
+│ Fields marked with `[ ]` or empty values still need to be filled.            │
+│                                                                              │
+│ ```markdown                                                                  │
+│ ---                                                                          │
+│ markform:                                                                    │
+│   markform_version: "0.1.0"                                                  │
+│   form_state: incomplete                                                     │
+│   ...                                                                        │
+│ ---                                                                          │
+│ {% form id="example" %}                                                      │
+│ {% string-field id="name" label="Name" %}                                    │
+│ ```value                                                                     │
+│ Alice                                                                        │
+│ ```                                                                          │
+│ {% /string-field %}                                                          │
+│ {% string-field id="email" label="Email" %}{% /string-field %}              │
+│ ...                                                                          │
+│ {% /form %}                                                                  │
+│ ```                                                                          │
+│                                                                              │
+│ # Remaining Issues                                                           │
+│                                                                              │
+│ - **email** (field): Required field 'Email' has no value                     │
+│   Severity: required, Priority: P1                                           │
+│   Type: string                                                               │
+│ ...                                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Why stateless turns?**
+
+1. **The form IS the state** — All filled values, progress, and structure are encoded
+   in the serialized form markdown. No separate state tracking needed.
+
+2. **Simpler implementation** — No conversation history management, memory limits, or
+   context window concerns across turns.
+
+3. **Debuggable** — Each turn's context is complete and self-contained. You can replay
+   any turn by providing its form snapshot.
+
+4. **Consistent with inspect** — The turn context is structurally identical to what
+   `markform inspect` outputs, enabling agents to understand form state the same way
+   humans do via CLI.
+
+5. **Token efficient for iterative fills** — While each turn includes the full form,
+   this is typically smaller than accumulated conversation history for multi-turn
+   sessions.
+
+**Implementation:**
+
+The agent receives the serialized form (via `serialize(form)`) plus the remaining
+issues list as its prompt each turn. After generating patches, the harness applies
+them, revalidates, and provides the updated form for the next turn.
+
 #### Live Mode (AI SDK)
 
 Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 [AI SDK 5][ai-sdk-5] and [AI SDK 6][ai-sdk-6]:
 
-- Define Markform tools using AI SDK `tool({ inputSchema: zod, execute })`
+- Each turn is stateless—the agent sees the full form markdown + remaining issues
 
-- Control multi-step behavior with `stopWhen: stepCountIs(k)` for “1–3 actions per
-  iteration” (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
+- The form itself carries all state (filled values, validation status, progress)
 
-- Harness builds the “user message” (current state + next steps)
+- No conversation history is accumulated between turns
 
-- Call `streamText`/`generateText` with tools enabled
+- Define a `generatePatches` tool using AI SDK `tool({ inputSchema: zod })`
 
-- Execute tool calls (apply patches)
+- Control multi-step behavior with `stopWhen: stepCountIs(k)` for "1–3 tool calls per
+  turn" (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
 
-- Repeat until complete
+- Agent analyzes form state and issues, then calls `generatePatches` with patches
+
+- Harness applies patches, revalidates, serializes updated form
+
+- Next turn receives fresh context with updated form state
+
+- Repeat until complete (no required issues remaining)
+
+**Turn flow:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Turn N                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   1. Harness serializes current form state                                  │
+│      └─► Full markdown with frontmatter, values, structure                  │
+│                                                                             │
+│   2. Harness provides context prompt                                        │
+│      └─► Form markdown + remaining issues (like `inspect` output)           │
+│                                                                             │
+│   3. LLM analyzes context, calls generatePatches tool                       │
+│      └─► Returns array of Patch objects                                     │
+│                                                                             │
+│   4. Harness applies patches to form                                        │
+│      └─► Updates values, revalidates, computes new progress                 │
+│                                                                             │
+│   5. Check completion                                                       │
+│      └─► If no required issues: DONE                                        │
+│      └─► Otherwise: Go to Turn N+1 with updated form                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 * * *
 
@@ -2149,6 +2273,10 @@ A golden test is a YAML file containing:
 
 #### Session Transcript Schema
 
+Session transcripts record the form state at each turn, not conversation history.
+Since each turn is stateless, the transcript captures the form snapshot (or hash) and
+patches applied at each step.
+
 ```yaml
 session_version: 0.1
 mode: mock  # mock | live (see explanation below)
@@ -2166,19 +2294,22 @@ harness:
 
 turns:
   - turn: 1
-    inspect:
-      issues:
-        - fieldId: company_name
-          reason: required_missing
-          message: "Required field 'Company name' has no value"
-          severity: required
-          priority: 2
-    apply:
-      patches:
-        - { op: set_string, fieldId: company_name, value: "ACME Corp" }
+    # Form state at start of turn (what agent sees)
+    form_state: incomplete          # from frontmatter form_state
+    required_issues_before: 5       # count of severity: required issues
+    # Patches generated by agent
+    patches:
+      - { op: set_string, fieldId: company_name, value: "ACME Corp" }
+    # State after patches applied
     after:
-      required_issue_count: 0
-      markdown_sha256: "..."
+      required_issues_remaining: 4
+      form_state: incomplete
+      markdown_sha256: "..."        # for deterministic verification
+    # Optional: LLM stats for live sessions
+    stats:
+      input_tokens: 1234
+      output_tokens: 456
+      tool_calls: 1
 
 final:
   expect_complete: true
@@ -2194,6 +2325,11 @@ final:
 
 For `mode: live`, the session transcript is an **output** (recorded log), not an input
 for replay. Live sessions are useful for debugging but not for CI assertions.
+
+**Note on stateless recording:** Since each turn is stateless (agent receives full form
+each time), the transcript does not need to record conversation messages. The form
+markdown at each turn can be reconstructed by applying patches sequentially from the
+initial template, or by storing the `markdown_sha256` for verification.
 
 #### Test Modes
 

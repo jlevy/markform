@@ -84,6 +84,7 @@ export type {
   StepResult,
   HarnessConfig,
   SessionTurn,
+  SessionTurnStats,
   SessionFinal,
   SessionTranscript,
   // Frontmatter
@@ -221,4 +222,6 @@ export type {
   FillResult,
   FillStatus,
   TurnProgress,
-} from "./harness/programmaticFill.js";
+  TurnStats,
+  AgentResponse,
+} from "./harness/harnessTypes.js";

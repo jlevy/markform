@@ -28,7 +28,7 @@ import {
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_ISSUES,
 } from "../../settings.js";
-import type { ParsedForm, HarnessConfig, Patch } from "../../engine/coreTypes.js";
+import type { ParsedForm, HarnessConfig } from "../../engine/coreTypes.js";
 import { formatPatchValue, formatPatchType } from "../lib/patchFormat.js";
 import { createHarness } from "../../harness/harness.js";
 import { createLiveAgent } from "../../harness/liveAgent.js";
@@ -182,11 +182,12 @@ async function runAgentFill(
       );
 
       // Generate patches from agent
-      const patches: Patch[] = await agent.generatePatches(
+      const response = await agent.generatePatches(
         stepResult.issues,
         harness.getForm(),
         harnessConfig.maxPatchesPerTurn!
       );
+      const { patches } = response;
 
       // Log each patch with field id, type, and value (truncated)
       for (const patch of patches) {

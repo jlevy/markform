@@ -3,13 +3,18 @@
 ## Purpose
 
 This is a technical design doc for adding explicit field acknowledgment semantics to
-markform. Currently, a form is marked "complete" when all required fields are filled, but
-optional fields may never be considered by the agent. This feature adds:
+markform.
+Currently, a form is marked “complete” when all required fields are filled, but
+optional fields may never be considered by the agent.
+This feature adds:
 
 1. A `skip_field` patch operation for explicitly acknowledging a field as intentionally
    blank
-2. Tracking of "answered" (has value) and "skipped" (explicitly skipped) fields
-3. Updated completion semantics: form is complete when `answered + skipped == totalFields`
+
+2. Tracking of “answered” (has value) and “skipped” (explicitly skipped) fields
+
+3. Updated completion semantics: form is complete when `answered + skipped ==
+   totalFields`
 
 ## Background
 
@@ -23,15 +28,20 @@ const isComplete = !filteredIssues.some((i) => i.severity === "required");
 ```
 
 This means:
+
 - Required fields with no value → severity `"required"` → blocks completion
+
 - Optional fields with no value → severity `"recommended"` → does NOT block completion
 
-**Problem:** When an agent fills a form, the loop may exit as soon as all required fields
-are filled. Optional fields may never be considered. There's no way to distinguish:
+**Problem:** When an agent fills a form, the loop may exit as soon as all required
+fields are filled. Optional fields may never be considered.
+There’s no way to distinguish:
 
 1. Agent consciously decided to leave field blank
+
 2. Agent never looked at the field (loop exited early)
-3. Agent couldn't find information for the field
+
+3. Agent couldn’t find information for the field
 
 **Current Progress Counts** (`ProgressCounts` in `coreTypes.ts:377-386`):
 
@@ -48,12 +58,30 @@ interface ProgressCounts {
 }
 ```
 
-**Gap:** No tracking for "skipped" fields. No completion check that all fields are
-accounted for.
+**Gap:** No tracking for “skipped” fields.
+No completion check that all fields are accounted for.
+
+**Stateless Turn Context:**
+
+With the stateless turn design (see architecture doc), each agent turn receives the full
+serialized form + remaining issues.
+The skip state affects this context:
+
+- Skipped fields appear as empty in the serialized form markdown
+
+- Skip state is tracked in `skipsByFieldId` on `ParsedForm` (runtime metadata)
+
+- The issues list shows which optional fields remain unanswered AND unskipped
+
+- Once a field is skipped, it no longer appears in the issues list
+
+This means the agent naturally sees fewer issues each turn as fields are either answered
+or skipped, progressing toward completion.
 
 **Related Docs:**
 
 - [arch-markform-initial-design.md](../architecture/current/arch-markform-initial-design.md)
+
 - [plan-2025-12-24-programmatic-fill-api.md](plan-2025-12-24-programmatic-fill-api.md)
 
 ## Summary of Task
@@ -71,16 +99,23 @@ interface SkipFieldPatch {
 ```
 
 **Constraints:**
+
 - Can only skip **optional** fields (required fields cannot be skipped)
+
 - Skipping a field clears any existing value
+
 - A skipped field counts toward completion but has no value
 
 ### 2. Track Answered and Skipped Fields
 
 **Terminology:**
+
 - **answered** = field has a value (any value, including partial)
+
 - **skipped** = field was explicitly skipped via `skip_field` patch
-- **complete** = all fields are either answered or skipped (`answered + skipped == total`)
+
+- **complete** = all fields are either answered or skipped (`answered + skipped ==
+  total`)
 
 Add new fields to `FieldProgress`:
 
@@ -92,7 +127,7 @@ interface FieldProgress {
 }
 ```
 
-Note: "answered" is equivalent to existing `submitted` field.
+Note: “answered” is equivalent to existing `submitted` field.
 
 Add new counts to `ProgressCounts`:
 
@@ -129,33 +164,41 @@ const noRequiredFieldsEmpty = !filteredIssues.some(i => i.severity === "required
 const isComplete = allFieldsAccountedFor && noRequiredFieldsEmpty;
 ```
 
-**CRITICAL**: The counts MUST be filtered by target roles. Using global `progressSummary.counts`
-(which counts ALL fields) will cause forms to never complete when running with a subset of roles.
+**CRITICAL**: The counts MUST be filtered by target roles.
+Using global `progressSummary.counts` (which counts ALL fields) will cause forms to
+never complete when running with a subset of roles.
 
-**Current Implementation Bug (2025-12-25):** The `isFormComplete()` function in `summaries.ts`
-uses global `counts.totalFields` instead of role-filtered counts. When `skippedFields > 0`,
-calling `isFormComplete(progressSummary)` compares `answered + skipped` against ALL fields,
-not just target-role fields. This bug doesn't manifest when `skippedFields === 0` because
-the fallback is `noRequiredIssues` which IS role-filtered.
+**Current Implementation Bug (2025-12-25):** The `isFormComplete()` function in
+`summaries.ts` uses global `counts.totalFields` instead of role-filtered counts.
+When `skippedFields > 0`, calling `isFormComplete(progressSummary)` compares `answered +
+skipped` against ALL fields, not just target-role fields.
+This bug doesn’t manifest when `skippedFields === 0` because the fallback is
+`noRequiredIssues` which IS role-filtered.
 
 This means:
-- All required fields must have values (can't skip required)
+
+- All required fields must have values (can’t skip required)
+
 - All optional fields must be either answered OR skipped
+
 - The agent cannot simply ignore optional fields
 
 ### 4. Update Golden Tests
 
 Verify that session transcripts:
+
 - Record `skip_field` patches correctly
+
 - Track `answeredFields` and `skippedFields` counts
+
 - Verify completion is based on answered + skipped == total
 
 ## Backward Compatibility
 
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
-- **Code types, methods, and function signatures**: KEEP DEPRECATED - new fields added to
-  `ProgressCounts` and `FieldProgress` with defaults for existing code
+- **Code types, methods, and function signatures**: KEEP DEPRECATED - new fields added
+  to `ProgressCounts` and `FieldProgress` with defaults for existing code
 
 - **Library APIs**: KEEP DEPRECATED - `skip_field` is additive; existing patches work
 
@@ -169,9 +212,13 @@ Verify that session transcripts:
 **Migration Notes:**
 
 - Existing forms without skip_field patches will work unchanged
+
 - `answeredFields` mirrors `submittedFields` for clarity
+
 - A field with a value is answered (skipped=false)
-- A field without a value has neither answered nor skipped status until skip_field is applied
+
+- A field without a value has neither answered nor skipped status until skip_field is
+  applied
 
 ## Stage 1: Planning Stage
 
@@ -208,36 +255,59 @@ type Patch =
 **In Scope:**
 
 - `SkipFieldPatch` type and Zod schema
+
 - `skip_field` handling in `applyPatches()`
+
 - `skipped`, `skipReason` in `FieldProgress`
+
 - `answeredFields`, `skippedFields` in `ProgressCounts`
+
 - Updated completion logic: `answered + skipped == total`
+
 - Golden test updates
+
 - CLI inspect output showing skipped status
 
 **Out of Scope (Explicit Non-Goals):**
 
 - UI changes in web serve mode (deferred)
+
 - Agent prompt changes to teach skip behavior (separate feature)
+
 - Automatic skipping based on heuristics
-- "Unskip" operation (can just set a value)
+
+- “Unskip” operation (can just set a value)
 
 ### Acceptance Criteria
 
 1. `skip_field` patch applies successfully to optional fields
+
 2. `skip_field` patch is rejected for required fields with clear error
+
 3. `FieldProgress.skipped` is true only for explicitly skipped fields
+
 4. `ProgressCounts.answeredFields` counts fields with values
+
 5. `ProgressCounts.skippedFields` counts explicitly skipped fields
+
 6. Form is complete when `answered + skipped == totalFields` (for target roles)
+
 7. Form is NOT complete if required fields are empty (even if others skipped)
+
 8. Golden tests verify answered/skipped tracking
+
 9. CLI inspect shows skipped fields distinctly
+
 10. `checkboxMode="explicit"` fields default to `required=true`
+
 11. Parse error when `checkboxMode="explicit"` with `required=false`
+
 12. `checkboxMode="multi"` and `checkboxMode="simple"` default to `required=false`
+
 13. Console interactive mode supports explicit `skip_field` for optional fields
+
 14. Web serve mode supports skip button for optional fields
+
 15. Skipped fields display with visual indicator in both console and web
 
 ### Testing Plan
@@ -245,72 +315,109 @@ type Patch =
 #### 1. Unit Tests: Skip Field Patch (`tests/unit/engine/apply.test.ts`)
 
 **Apply skip_field:**
+
 - [ ] Skipping optional string field sets skipped=true
+
 - [ ] Skipping optional number field sets skipped=true
+
 - [ ] Skipping optional string_list field sets skipped=true
+
 - [ ] Skipping optional single_select field sets skipped=true
+
 - [ ] Skipping optional multi_select field sets skipped=true
+
 - [ ] Skipping optional checkboxes field sets skipped=true
 
 **Reject skip on required:**
+
 - [ ] Skipping required string field returns error
+
 - [ ] Skipping required number field returns error
+
 - [ ] Skipping required checkboxes field returns error
 
 **With reason:**
+
 - [ ] Skip reason is stored in FieldProgress
+
 - [ ] Skip reason is preserved after re-inspect
+
 - [ ] Missing reason defaults to undefined
 
 **Clear then skip:**
+
 - [ ] Skipping field with existing value clears value and sets skipped=true
+
 - [ ] Value is null/empty after skip
 
 **Setting value clears skip:**
+
 - [ ] Setting value on skipped field: skipped becomes false
 
 #### 2. Unit Tests: Progress Computation (`tests/unit/engine/summaries.test.ts`)
 
 **State tracking:**
+
 - [ ] Field with value: submitted=true, skipped=false
+
 - [ ] Skipped field: submitted=false, skipped=true
+
 - [ ] Empty field (not yet answered or skipped): submitted=false, skipped=false
 
 **Counts:**
+
 - [ ] New form has answeredFields=0, skippedFields=0
+
 - [ ] After setting value, answeredFields increments
+
 - [ ] After skip_field, skippedFields increments (not answeredFields)
+
 - [ ] Clearing a value decrements answeredFields
+
 - [ ] Setting value on skipped field: answeredFields++, skippedFields--
 
 #### 3. Unit Tests: Completion Logic (`tests/unit/engine/inspect.test.ts`)
 
 **Basic completion:**
+
 - [ ] Form with optional fields not answered or skipped is NOT complete
+
 - [ ] Form with all fields answered IS complete
+
 - [ ] Form with mix of answered + skipped (totaling all fields) IS complete
+
 - [ ] Form with empty required field is NOT complete (even if optional fields skipped)
 
 **Role-filtered completion:**
+
 - [ ] Only target-role fields count toward completion check
-- [ ] Non-target-role fields don't need to be answered or skipped
+
+- [ ] Non-target-role fields don’t need to be answered or skipped
 
 #### 4. Golden Tests (`tests/golden/`)
 
 **New session file: `examples/simple/simple-with-skips.session.yaml`**
+
 - [ ] Session that uses skip_field for optional_number
+
 - [ ] Verifies skip is recorded in transcript
+
 - [ ] Verifies completion with answered + skipped == total
+
 - [ ] Verifies answeredFields/skippedFields counts
 
 **Update existing session verification:**
+
 - [ ] Verify answeredFields count in turn.after
+
 - [ ] Add skippedFields to turn.after schema
 
 #### 5. Integration Tests
 
 - [ ] CLI inspect shows skipped status for fields
+
 - [ ] MockAgent can generate skip_field patches
+
 - [ ] LiveAgent system prompt describes skip capability (future)
 
 ## Stage 2: Architecture Stage
@@ -516,28 +623,67 @@ export function inspect(form: ParsedForm, options: InspectOptions = {}): Inspect
 
 #### `serialize.ts`: No changes needed
 
-Skip state doesn't affect markdown serialization. Skipped fields remain as their
-default/empty state in the markdown.
+Skip state doesn’t affect markdown serialization.
+Skipped fields remain as their default/empty state in the markdown.
+
+**Visibility in stateless turns:**
+
+Since each turn is stateless and the agent sees the full form markdown, how does the
+agent know a field was skipped vs.
+just empty?
+
+1. **Via issues list:** Empty optional fields appear as `severity: recommended` issues.
+   Once skipped, they no longer appear in the issues list.
+
+2. **Via progress counts:** The agent can see `answeredFields` and `skippedFields`
+   counts in the progress summary, included in the turn context.
+
+3. **Implicit completion:** When `answeredFields + skippedFields == totalFields` for
+   target roles, the form is complete.
+   The agent doesn’t need to distinguish—it just needs to ensure all fields are
+   accounted for.
+
+This design keeps the form markdown clean (no skip metadata cluttering the file) while
+providing the agent with all needed information via the issues and progress summaries.
 
 ### Session Transcript Changes
 
-Update `SessionTurn.after` to include new counts:
+Session transcripts record form state at each turn (not conversation history, since
+turns are stateless).
+Update `SessionTurn` to include skip tracking:
 
 ```typescript
 interface SessionTurn {
   turn: number;
-  inspect: { issues: InspectIssue[] };
-  apply: { patches: Patch[] };
+  // Form state at start of turn (what agent sees in context)
+  formState: ProgressState;             // from frontmatter form_state
+  requiredIssuesBefore: number;         // count of severity: required issues
+  // Patches generated by agent this turn
+  patches: Patch[];                     // includes skip_field patches
+  // State after patches applied
   after: {
-    requiredIssueCount: number;
-    markdownSha256: string;
-    answeredFieldCount: number;  // NEW
-    skippedFieldCount: number;   // NEW
+    requiredIssuesRemaining: number;
+    formState: ProgressState;
+    markdownSha256: string;             // for deterministic verification
+    answeredFieldCount: number;         // NEW: fields with values
+    skippedFieldCount: number;          // NEW: fields explicitly skipped
+  };
+  // Optional: LLM stats for live sessions
+  stats?: {
+    inputTokens: number;
+    outputTokens: number;
+    toolCalls: number;
   };
 }
 ```
 
-Golden tests should verify these counts match expected values.
+Golden tests should verify:
+
+- `skip_field` patches are recorded correctly
+
+- `answeredFieldCount + skippedFieldCount` approaches total target-role fields
+
+- Completion triggers when all fields are accounted for
 
 ## Stage 3: Refine Architecture
 
@@ -553,34 +699,52 @@ Golden tests should verify these counts match expected values.
 
 1. **answered and skipped are mutually exclusive**: A field with a value is answered; a
    field that was explicitly skipped is skipped; otherwise neither
+
 2. **Skip state storage**: Store in `skipsByFieldId` on ParsedForm, not in values
+
 3. **Skip clears value**: Skipping a field with a value clears it first
-4. **Setting value clears skip**: If you set a value on a skipped field, it becomes answered
+
+4. **Setting value clears skip**: If you set a value on a skipped field, it becomes
+   answered
+
 5. **Required field restriction**: Cannot skip required fields
+
 6. **Completion = answered + skipped == total**: All fields must be accounted for
 
 ### Migration Path
 
 **Phase 1: Types and Basic Apply**
+
 - Add types, schemas, and basic apply handling
+
 - Add skip state storage to ParsedForm
+
 - Handle skip_field in applyPatches
 
 **Phase 2: Progress Tracking**
+
 - Add skipped to FieldProgress
+
 - Add answeredFields, skippedFields to ProgressCounts
+
 - Update summaries computation
 
 **Phase 3: Completion Logic**
+
 - Update inspect to check answered + skipped == total
+
 - Add tests for new completion semantics
 
 **Phase 4: Golden Tests and CLI**
+
 - Create new session transcript with skips
+
 - Update CLI inspect output
+
 - Verify end-to-end
 
 **Phase 5: Architecture Documentation**
+
 - Update architecture doc with all changes below
 
 ## Architecture Documentation Changes
@@ -670,7 +834,7 @@ interface SkipInfo {
 }
 ```
 
-### 6. isComplete Definition (lines ~1721, ~1730)
+### 6. isComplete Definition (lines ~~1721, ~~1730)
 
 Update the `isComplete` definition from:
 
@@ -678,7 +842,8 @@ Update the `isComplete` definition from:
 
 To:
 
-> `isComplete: boolean; // true when (answered + skipped == total target-role fields) AND no issues with severity: 'required'`
+> `isComplete: boolean; // true when (answered + skipped == total target-role fields)
+> AND no issues with severity: 'required'`
 
 Add explanation:
 
@@ -719,19 +884,21 @@ XX. **Skip field semantics** — The `skip_field` patch allows explicitly skippi
 
 ### Design Principle
 
-The `checkboxMode` attribute carries inherent semantics about whether a checkbox field must
-be answered:
+The `checkboxMode` attribute carries inherent semantics about whether a checkbox field
+must be answered:
 
-- **`checkboxMode="explicit"`** — Inherently required. The agent MUST answer yes or no for
-  each option. Having unfilled options is invalid. Cannot have `required=false`.
+- **`checkboxMode="explicit"`** — Inherently required.
+  The agent MUST answer yes or no for each option.
+  Having unfilled options is invalid.
+  Cannot have `required=false`.
 
-- **`checkboxMode="multi"`** — Optional by default. Workflow tracking (todo/done/incomplete/
-  active/na) doesn't require all items to be resolved. Can be made required with
-  `required=true`.
+- **`checkboxMode="multi"`** — Optional by default.
+  Workflow tracking (todo/done/incomplete/ active/na) doesn’t require all items to be
+  resolved. Can be made required with `required=true`.
 
-- **`checkboxMode="simple"`** — Optional by default. GFM-compatible checkboxes don't require
-  all to be checked. Can be made required with `required=true` and further controlled with
-  `minDone`.
+- **`checkboxMode="simple"`** — Optional by default.
+  GFM-compatible checkboxes don’t require all to be checked.
+  Can be made required with `required=true` and further controlled with `minDone`.
 
 ### Validation Rules
 
@@ -841,7 +1008,7 @@ describe("checkbox mode/required constraints", () => {
 
 ### Architecture Documentation Changes for Checkbox Mode Constraints
 
-Add to the "Checkbox Modes" section in `arch-markform-initial-design.md`:
+Add to the “Checkbox Modes” section in `arch-markform-initial-design.md`:
 
 #### After line ~354 (after mode descriptions)
 
@@ -888,8 +1055,11 @@ To:
 ### Principle
 
 The `skip_field` operation and answered/skipped tracking must work equivalently for:
+
 1. **Agent tool APIs** — `skip_field` patch via `applyPatches()`
+
 2. **Console interactive mode** — `markform fill` command
+
 3. **Web serve mode** — `markform serve` browser UI
 
 Users should have the same ability to explicitly skip optional fields that agents have.
@@ -898,24 +1068,28 @@ Users should have the same ability to explicitly skip optional fields that agent
 
 In `src/cli/lib/interactivePrompts.ts`:
 
-- **String/Number fields:** Pressing Enter without a value on optional field returns null
-  (no patch applied). This is implicit skip, not recorded.
+- **String/Number fields:** Pressing Enter without a value on optional field returns
+  null (no patch applied).
+  This is implicit skip, not recorded.
 
-- **String list:** Same - empty list on optional field just doesn't generate a patch.
+- **String list:** Same - empty list on optional field just doesn’t generate a patch.
 
-- **Single/Multi select:** Optional fields don't force selection, but no explicit skip.
+- **Single/Multi select:** Optional fields don’t force selection, but no explicit skip.
 
-- **Explicit checkboxes:** Individual options have "Skip" choice that sets `unfilled`, but
-  this is per-option, not field-level skip.
+- **Explicit checkboxes:** Individual options have “Skip” choice that sets `unfilled`,
+  but this is per-option, not field-level skip.
 
-**Gap:** Console has no explicit "skip this field" action that generates a `skip_field` patch.
+**Gap:** Console has no explicit “skip this field” action that generates a `skip_field`
+patch.
 
 ### Current Web Behavior
 
 In `src/cli/commands/serve.ts`:
 
 - Required fields show `*` marker and `required` HTML attribute
-- Optional fields just don't show the marker
+
+- Optional fields just don’t show the marker
+
 - No explicit skip button or link
 
 **Gap:** Web has no way to explicitly skip a field.
@@ -971,7 +1145,9 @@ if (result.toLowerCase() === "/skip" && !field.required) {
 Add skip button for optional fields:
 
 ```html
+
 <!-- For optional fields, add skip button -->
+
 <div class="field-actions">
   <button type="button" class="skip-btn" data-field-id="${field.id}">
     Skip this field
@@ -994,13 +1170,19 @@ if (formData.get(`skip_${field.id}`)) {
 #### Visual Indicators
 
 **Console:**
-- Optional fields show "(optional)" or "(can skip)" label
-- Skipped fields show "⊘ Skipped" or similar indicator when reviewing
+
+- Optional fields show “(optional)” or “(can skip)” label
+
+- Skipped fields show “⊘ Skipped” or similar indicator when reviewing
 
 **Web:**
-- Optional fields show "optional" label or lighter styling
+
+- Optional fields show “optional” label or lighter styling
+
 - Skip button visible for optional fields
-- Skipped fields show disabled state with "Skipped" indicator
+
+- Skipped fields show disabled state with “Skipped” indicator
+
 - Clear skip (unskip) by entering a value
 
 ### Test Cases
@@ -1075,7 +1257,8 @@ Optional fields in web forms:
 
 ### Existing Code to Update
 
-The following test files have explicit checkboxes without `required=true` and need updating:
+The following test files have explicit checkboxes without `required=true` and need
+updating:
 
 1. `tests/unit/valueCoercion.test.ts:59` — Add `required=true` (or test will fail after
    parse validation is added, since explicit mode will default to required=true)
@@ -1094,28 +1277,35 @@ they should be updated for clarity to explicitly show `required=true`.
 ### Resolved
 
 1. **Should skip_field clear existing value?**
+
    - **Decision:** Yes, skipping clears any existing value
 
-2. **Can you "unskip" a field?**
+2. **Can you “unskip” a field?**
+
    - **Decision:** Yes, by setting a value (skipped becomes false)
 
 3. **Where to store skip state?**
+
    - **Decision:** New `skipsByFieldId` record on ParsedForm
 
-4. **Terminology for "has value"?**
-   - **Decision:** Use "answered" (clearer than "submitted" or "addressed")
+4. **Terminology for “has value”?**
+
+   - **Decision:** Use “answered” (clearer than “submitted” or “addressed”)
 
 ### Deferred
 
 5. **Should agents be prompted to use skip_field?**
+
    - Deferred to separate feature for agent prompt enhancement
 
 6. **Should skip_field appear in markdown output?**
-   - No, skipped fields remain as empty/default in markdown
+
+   - **Resolved:** No, skipped fields remain as empty/default in markdown
+
    - Skip state is runtime metadata, not persisted to file
 
-7. **Should web UI show skip capability?**
-   - Deferred to future UI enhancement
+   - Agent visibility is via issues list and progress counts (see “Visibility in
+     stateless turns” in serialize.ts section)
 
 ## Revision History
 
@@ -1127,3 +1317,4 @@ they should be updated for clarity to explicitly show `required=true`.
 | 2025-12-25 | Claude | Added Architecture Documentation Changes section |
 | 2025-12-25 | Claude | Added Checkbox Mode and Required Attribute Constraints section |
 | 2025-12-25 | Claude | Added UI Parity section for Console and Web skip support |
+| 2025-12-25 | Claude | Aligned with stateless turn design: added visibility section, updated session format |

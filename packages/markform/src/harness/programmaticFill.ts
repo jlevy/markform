@@ -10,7 +10,7 @@ import type { LanguageModel } from "ai";
 import { applyPatches } from "../engine/apply.js";
 import { parseForm } from "../engine/parse.js";
 import { serialize } from "../engine/serialize.js";
-import type { InspectIssue, ParsedForm } from "../engine/coreTypes.js";
+import type { InspectIssue, ParsedForm, SessionTurnStats } from "../engine/coreTypes.js";
 import { coerceInputContext } from "../engine/valueCoercion.js";
 import {
   AGENT_ROLE,
@@ -223,11 +223,12 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
 
     // Generate patches using agent
-    const patches = await agent.generatePatches(
+    const response = await agent.generatePatches(
       stepResult.issues,
       form,
       maxPatchesPerTurn,
     );
+    const { patches, stats } = response;
 
     // Re-check for cancellation after agent call (signal may have fired during LLM call)
     if (options.signal?.aborted) {
@@ -241,8 +242,18 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       );
     }
 
+    // Convert TurnStats to SessionTurnStats (only include fields relevant for session logs)
+    let llmStats: SessionTurnStats | undefined;
+    if (stats) {
+      llmStats = {
+        inputTokens: stats.inputTokens,
+        outputTokens: stats.outputTokens,
+        toolCalls: stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
+      };
+    }
+
     // Apply patches
-    stepResult = harness.apply(patches, stepResult.issues);
+    stepResult = harness.apply(patches, stepResult.issues, llmStats);
     totalPatches += patches.length;
     turnCount++;
 
@@ -258,6 +269,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           patchesApplied: patches.length,
           requiredIssuesRemaining: requiredIssues.length,
           isComplete: stepResult.isComplete,
+          stats,
         });
       } catch {
         // Ignore callback errors

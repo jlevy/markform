@@ -369,15 +369,15 @@ describe("MockAgent", () => {
       },
     ];
 
-    const patches = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.generatePatches(issues, emptyForm, 10);
 
-    expect(patches.length).toBe(2);
-    expect(patches[0]).toEqual({
+    expect(response.patches.length).toBe(2);
+    expect(response.patches[0]).toEqual({
       op: "set_string",
       fieldId: "name",
       value: "John Doe",
     });
-    expect(patches[1]).toEqual({
+    expect(response.patches[1]).toEqual({
       op: "set_number",
       fieldId: "age",
       value: 30,
@@ -408,9 +408,9 @@ describe("MockAgent", () => {
       },
     ];
 
-    const patches = await agent.generatePatches(issues, emptyForm, 1);
+    const response = await agent.generatePatches(issues, emptyForm, 1);
 
-    expect(patches.length).toBe(1);
+    expect(response.patches.length).toBe(1);
   });
 
   it("skips non-field issues", async () => {
@@ -429,9 +429,9 @@ describe("MockAgent", () => {
       },
     ];
 
-    const patches = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.generatePatches(issues, emptyForm, 10);
 
-    expect(patches.length).toBe(0);
+    expect(response.patches.length).toBe(0);
   });
 
   it("generates patches for url fields", async () => {
@@ -503,15 +503,15 @@ https://github.com/example
       },
     ];
 
-    const patches = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.generatePatches(issues, emptyForm, 10);
 
-    expect(patches.length).toBe(2);
-    expect(patches[0]).toEqual({
+    expect(response.patches.length).toBe(2);
+    expect(response.patches[0]).toEqual({
       op: "set_url",
       fieldId: "website",
       value: "https://example.com",
     });
-    expect(patches[1]).toEqual({
+    expect(response.patches[1]).toEqual({
       op: "set_url_list",
       fieldId: "sources",
       items: ["https://docs.example.com", "https://github.com/example"],
@@ -536,8 +536,8 @@ describe("Harness + MockAgent Integration", () => {
     expect(result.isComplete).toBe(false);
 
     // Generate and apply patches
-    const patches = await agent.generatePatches(result.issues, emptyForm, 10);
-    result = harness.apply(patches, result.issues);
+    const response = await agent.generatePatches(result.issues, emptyForm, 10);
+    result = harness.apply(response.patches, result.issues);
 
     expect(result.isComplete).toBe(true);
     expect(harness.getState()).toBe("complete");
@@ -604,8 +604,8 @@ describe("fillMode", () => {
       expect(result.isComplete).toBe(false);
 
       // Generate and apply patches to re-fill
-      const patches = await agent.generatePatches(result.issues, emptyForm, 10);
-      result = harness.apply(patches, result.issues);
+      const response = await agent.generatePatches(result.issues, emptyForm, 10);
+      result = harness.apply(response.patches, result.issues);
 
       // Form should be complete again
       expect(result.isComplete).toBe(true);
