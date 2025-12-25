@@ -282,6 +282,20 @@ Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 expression string (without delimiters).
 Example: `pattern="^[A-Z]{1,5}$"` for a ticker symbol.
 
+**Common attributes (all field types):**
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| `id` | string | Required. Unique identifier (snake_case) |
+| `label` | string | Required. Human-readable field name |
+| `required` | boolean | Whether field must be filled for form completion |
+| `role` | string | Target actor (e.g., `"user"`, `"agent"`). See role-filtered completion |
+
+The `role` attribute enables multi-actor workflows where different fields are assigned
+to different actors. When running the fill harness with `targetRoles`, only fields
+matching those roles are considered for completion. See **Role-filtered completion** in
+the ProgressState Definitions section.
+
 #### Option Syntax (Markform-specific)
 
 Markdoc does **not** natively support GFM-style task list checkbox syntax.
@@ -1160,6 +1174,38 @@ These fields contribute to `emptyRequiredFields` count even without explicit
 `required=true`. This ensures `form_state` accurately reflects whether all constraints
 are satisfied.
 
+**Role-filtered completion (for multi-role forms):**
+
+When running the fill harness with a specific `targetRoles` parameter (e.g., just the
+`agent` role), completion should be determined by only the fields assignable to those
+roles, not all fields in the form. The completion formula becomes:
+
+```
+Role-filtered completion for targetRoles:
+  roleFilteredFields = fields.filter(f => targetRoles.includes(f.role) || !f.role)
+
+  isComplete = for all f in roleFilteredFields:
+    f.state == 'complete'  OR
+    f.state == 'skipped'   OR
+    (!f.required && f.state == 'empty')
+```
+
+This is critical for forms where the user fills some fields first, then the agent fills
+the remaining agent-role fields. Without role filtering, the harness would incorrectly
+report the form as incomplete even after all agent fields are filled, because user
+fields (intended for a different actor) would still be empty.
+
+**Field states for completion purposes:**
+
+| State | Counts as Complete | Notes |
+| --- | --- | --- |
+| `complete` | Yes | Field has valid value |
+| `skipped` | Yes | Agent explicitly skipped (with `skip_field` patch) |
+| `empty` (non-required) | Yes | Optional field left unfilled |
+| `empty` (required) | No | Required field must be filled |
+| `incomplete` | No | Partially filled (e.g., list with fewer items than `minItems`) |
+| `invalid` | No | Has validation errors |
+
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
 alignment with JSON Schema keywords reduces translation complexity.
@@ -1768,7 +1814,10 @@ type Patch =
   | { op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }
   | { op: 'set_single_select'; fieldId: Id; selected: OptionId | null }
   | { op: 'set_multi_select'; fieldId: Id; selected: OptionId[] }
-  | { op: 'clear_field'; fieldId: Id };
+  | { op: 'set_url'; fieldId: Id; value: string | null }
+  | { op: 'set_url_list'; fieldId: Id; items: string[] }
+  | { op: 'clear_field'; fieldId: Id }
+  | { op: 'skip_field'; fieldId: Id; reason?: string };
 
 // OptionId is just the local ID within the field (e.g., "ten_k", "bullish")
 // NOT the qualified form—the fieldId provides the scope
@@ -1812,6 +1861,14 @@ scope. For example:
   are updated)
 
 - `set_multi_select`: Replaces entire selection array (not additive)
+
+- `skip_field`: Marks a field as explicitly skipped by the actor. Used when an agent
+  cannot or should not fill a field (e.g., information not available, field not
+  applicable). The optional `reason` field provides context. Skipped fields:
+  - Are stored in `skipReasons` map in frontmatter (`skip_reasons` in YAML)
+  - Count as "answered" for completion purposes (field won't block form completion)
+  - Remain empty (no value is set)
+  - Can be un-skipped by applying a value patch later (removes from skip_reasons)
 
 **Patch validation layers (*required*):**
 
@@ -2205,10 +2262,10 @@ Thin wrapper around the tool contract:
 
     - `draft v12.form.md` → `draft v13.form.md`
 
-- `markform fill <file.form.md> --agent=mock --mock-source <file>` — fill form using
+- `markform fill <file.form.md> --mock --mock-source <file>` — fill form using
   mock agent, write session transcript
 
-- `markform fill <file.form.md> --agent=live --model=anthropic/claude-sonnet-4-5` — fill
+- `markform fill <file.form.md> --model=anthropic/claude-sonnet-4-5` — fill
   form using live LLM agent
 
 **Deferred to v0.2:**
@@ -2453,7 +2510,7 @@ Full specification included above.
      `quarterly-v1.form.md`); run `markform inspect` separately at any time to check
      status
 
-   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --agent=mock
+   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --mock
      --mock-source examples/earnings-analysis/earnings-analysis.mock.filled.form.md
      --record examples/earnings-analysis/earnings-analysis.session.yaml`
 
