@@ -397,15 +397,38 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 /**
  * Determine if the form is complete (ready for submission).
  *
+ * A form is complete when:
+ * 1. No required fields are empty
+ * 2. No fields have validation errors
+ * 3. No fields are in incomplete state (e.g., partial checkbox completion)
+ * 4. If skip_field feature is used, all fields must be addressed (answered + skipped == total)
+ *
+ * The skip_field feature enables stricter completion semantics where all fields
+ * must be explicitly addressed. For backward compatibility, forms without any
+ * skipped fields use the legacy logic where only required fields matter.
+ *
  * @param progress - The progress summary
  * @returns True if the form is complete
  */
 export function isFormComplete(progress: ProgressSummary): boolean {
-  return (
-    progress.counts.invalidFields === 0 &&
-    progress.counts.incompleteFields === 0 &&
-    progress.counts.emptyRequiredFields === 0
-  );
+  const { counts } = progress;
+
+  // Basic requirements: no invalid/incomplete fields, all required fields filled
+  const baseComplete =
+    counts.invalidFields === 0 &&
+    counts.incompleteFields === 0 &&
+    counts.emptyRequiredFields === 0;
+
+  // If skip_field feature is being used (any field has been skipped),
+  // enforce stricter completion: all fields must be addressed
+  if (counts.skippedFields > 0) {
+    const allFieldsAccountedFor =
+      (counts.answeredFields + counts.skippedFields) === counts.totalFields;
+    return baseComplete && allFieldsAccountedFor;
+  }
+
+  // Legacy behavior: complete when all required fields are filled
+  return baseComplete;
 }
 
 // =============================================================================

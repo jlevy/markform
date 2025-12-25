@@ -568,6 +568,72 @@ John
       expect(result.formState).toBe("complete");
       expect(result.isComplete).toBe(true);
     });
+
+    it("requires all fields addressed when skip_field is used", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Skip only one optional field, leave another unskipped and empty
+      const skips = { notes: { skipped: true } };
+      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      // With skip_field in use, form is not complete because bio is neither answered nor skipped
+      expect(result.isComplete).toBe(false);
+      expect(result.progressSummary.counts.answeredFields).toBe(1); // name
+      expect(result.progressSummary.counts.skippedFields).toBe(1); // notes
+      expect(result.progressSummary.counts.totalFields).toBe(3);
+    });
+
+    it("is complete when all fields addressed with skip_field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Skip both optional fields
+      const skips = {
+        notes: { skipped: true },
+        bio: { skipped: true, reason: "No bio provided" },
+      };
+      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      // All fields addressed: 1 answered + 2 skipped = 3 total
+      expect(result.isComplete).toBe(true);
+      expect(result.progressSummary.counts.answeredFields).toBe(1);
+      expect(result.progressSummary.counts.skippedFields).toBe(2);
+    });
   });
 
   describe("computeAllSummaries", () => {

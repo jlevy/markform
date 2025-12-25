@@ -21,6 +21,7 @@ import {
   computeStructureSummary,
   computeProgressSummary,
   computeFormState,
+  isFormComplete,
 } from "./summaries";
 
 /**
@@ -65,11 +66,12 @@ export function inspect(
   // Compute structure summary
   const structureSummary = computeStructureSummary(form.schema);
 
-  // Compute progress summary with the converted issues
+  // Compute progress summary with the converted issues and skips
   const progressSummary = computeProgressSummary(
     form.schema,
     form.valuesByFieldId,
-    validationInspectIssues
+    validationInspectIssues,
+    form.skipsByFieldId
   );
   const formState = computeFormState(progressSummary);
 
@@ -86,14 +88,22 @@ export function inspect(
   // Filter by role and add blocking annotations
   const filteredIssues = filterIssuesByRole(sortedIssues, form, options.targetRoles);
 
-  // Check if complete (no required issues in filtered set)
-  const isComplete = !filteredIssues.some((i) => i.severity === "required");
+  // Check completion: role-aware (no required issues in filtered set) AND
+  // if skip_field is used, all targeted fields must be addressed
+  const noRequiredIssues = !filteredIssues.some((i) => i.severity === "required");
+
+  // If skip_field feature is used, also check that all fields are addressed
+  // This only applies when skippedFields > 0 (feature is actively used)
+  const complete =
+    noRequiredIssues &&
+    (progressSummary.counts.skippedFields === 0 ||
+      isFormComplete(progressSummary));
 
   return {
     structureSummary,
     progressSummary,
     issues: filteredIssues,
-    isComplete,
+    isComplete: complete,
     formState,
   };
 }
