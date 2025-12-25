@@ -667,9 +667,10 @@ John
       expect(result.progressSummary.counts.totalFields).toBe(2);
       expect(result.progressSummary.counts.submittedFields).toBe(1);
 
-      // Form state
+      // Form state (formState is based on required fields, isComplete requires all fields addressed)
       expect(result.formState).toBe("complete");
-      expect(result.isComplete).toBe(true);
+      // isComplete is false because the optional 'age' field is not addressed (filled or skipped)
+      expect(result.isComplete).toBe(false);
     });
   });
 });

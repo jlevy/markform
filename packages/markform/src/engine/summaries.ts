@@ -413,11 +413,10 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
  * 1. No required fields are empty
  * 2. No fields have validation errors
  * 3. No fields are in incomplete state (e.g., partial checkbox completion)
- * 4. If skip_field feature is used, all fields must be addressed (answered + skipped == total)
+ * 4. All fields must be addressed (answered + skipped == total)
  *
- * The skip_field feature enables stricter completion semantics where all fields
- * must be explicitly addressed. For backward compatibility, forms without any
- * skipped fields use the legacy logic where only required fields matter.
+ * Every field must be explicitly addressed - either filled with a value or
+ * skipped with a reason. This ensures agents fully process all fields.
  *
  * @param progress - The progress summary
  * @returns True if the form is complete
@@ -431,16 +430,11 @@ export function isFormComplete(progress: ProgressSummary): boolean {
     counts.incompleteFields === 0 &&
     counts.emptyRequiredFields === 0;
 
-  // If skip_field feature is being used (any field has been skipped),
-  // enforce stricter completion: all fields must be addressed
-  if (counts.skippedFields > 0) {
-    const allFieldsAccountedFor =
-      (counts.answeredFields + counts.skippedFields) === counts.totalFields;
-    return baseComplete && allFieldsAccountedFor;
-  }
+  // All fields must be addressed (filled or skipped)
+  const allFieldsAccountedFor =
+    (counts.answeredFields + counts.skippedFields) === counts.totalFields;
 
-  // Legacy behavior: complete when all required fields are filled
-  return baseComplete;
+  return baseComplete && allFieldsAccountedFor;
 }
 
 // =============================================================================

@@ -58,7 +58,8 @@ export class MockAgent implements Agent {
    * Generate patches from the completed mock to address issues.
    *
    * Processes issues in priority order, generating patches for
-   * fields that have values in the completed mock.
+   * fields that have values in the completed mock. For fields with no
+   * value (empty optional fields), generates skip_field patches.
    * Returns AgentResponse with patches but no stats (mock doesn't track LLM usage).
    */
   async generatePatches(
@@ -87,15 +88,25 @@ export class MockAgent implements Agent {
         continue;
       }
 
-      // Get the completed value for this field
-      const completedValue = this.completedValues[fieldId];
-      if (!completedValue) {
-        continue;
-      }
-
       // Get field schema
       const field = this.fieldMap.get(fieldId);
       if (!field) {
+        continue;
+      }
+
+      // Get the completed value for this field
+      const completedValue = this.completedValues[fieldId];
+
+      // If no value exists, generate skip_field patch for optional fields
+      if (!completedValue || !this.hasValue(completedValue)) {
+        if (!field.required) {
+          patches.push({
+            op: "skip_field",
+            fieldId,
+            reason: "No value in mock form",
+          });
+          addressedFields.add(fieldId);
+        }
         continue;
       }
 
@@ -109,6 +120,32 @@ export class MockAgent implements Agent {
 
     // Return AgentResponse (no stats for mock agent)
     return Promise.resolve({ patches });
+  }
+
+  /**
+   * Check if a field value actually has content (not null/empty).
+   */
+  private hasValue(value: FieldValue): boolean {
+    switch (value.kind) {
+      case "string":
+        return value.value !== null && value.value !== "";
+      case "number":
+        return value.value !== null;
+      case "string_list":
+        return value.items.length > 0;
+      case "single_select":
+        return value.selected !== null;
+      case "multi_select":
+        return value.selected.length > 0;
+      case "checkboxes":
+        return true; // Checkboxes always have some state
+      case "url":
+        return value.value !== null && value.value !== "";
+      case "url_list":
+        return value.items.length > 0;
+      default:
+        return false;
+    }
   }
 
   /**

@@ -192,11 +192,14 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       const form = await loadFilledForm();
       const result = inspect(form);
 
-      expect(result.isComplete).toBe(true);
+      // formState is "complete" when all required fields are filled
       expect(result.formState).toBe("complete");
       expect(result.issues.filter((i) => i.severity === "required").length).toBe(
         0
       );
+      // isComplete is false because optional_number is empty and not skipped
+      // (isComplete requires ALL fields to be addressed or skipped)
+      expect(result.isComplete).toBe(false);
     });
 
     it("inspect returns incomplete result for empty form", async () => {

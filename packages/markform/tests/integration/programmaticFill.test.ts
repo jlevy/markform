@@ -312,7 +312,7 @@ describe("programmatic fill API - integration tests", () => {
 
       const progressUpdates: number[] = [];
 
-      // Pre-fill ALL fields (including agent fields) via inputContext
+      // Pre-fill ALL fields (including agent fields and optional fields) via inputContext
       const result = await fillForm({
         form: emptyForm,
         model: "mock/model",
@@ -328,10 +328,11 @@ describe("programmatic fill API - integration tests", () => {
           confirmations: { backed_up: "yes", notified: "yes" },
           website: "https://test.com",
           references: ["https://example.com"],
-          // Also pre-fill agent fields
+          // Also pre-fill agent fields (including optional ones)
           score: 87.5,
           notes: "Pre-filled note",
           related_url: "https://related.com",
+          optional_number: 42,
         },
         targetRoles: ["user", "agent"],
         _testAgent: mockAgent,

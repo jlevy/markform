@@ -21,7 +21,6 @@ import {
   computeStructureSummary,
   computeProgressSummary,
   computeFormState,
-  isFormComplete,
 } from "./summaries";
 
 /**
@@ -86,24 +85,18 @@ export function inspect(
   const sortedIssues = sortAndAssignPriorities(allIssues, form);
 
   // Filter by role and add blocking annotations
-  const filteredIssues = filterIssuesByRole(sortedIssues, form, options.targetRoles);
+  const issues = filterIssuesByRole(sortedIssues, form, options.targetRoles);
 
-  // Check completion: role-aware (no required issues in filtered set) AND
-  // if skip_field is used, all targeted fields must be addressed
-  const noRequiredIssues = !filteredIssues.some((i) => i.severity === "required");
-
-  // If skip_field feature is used, also check that all fields are addressed
-  // This only applies when skippedFields > 0 (feature is actively used)
-  const complete =
-    noRequiredIssues &&
-    (progressSummary.counts.skippedFields === 0 ||
-      isFormComplete(progressSummary));
+  // Form is complete when all issues for the target role(s) are resolved.
+  // This is role-aware: if targeting only "agent" role, user-role fields don't matter.
+  // Each field must be either filled (no optional_empty issue) or skipped.
+  const isComplete = issues.length === 0;
 
   return {
     structureSummary,
     progressSummary,
-    issues: filteredIssues,
-    isComplete: complete,
+    issues,
+    isComplete,
     formState,
   };
 }
@@ -127,16 +120,22 @@ function convertValidationIssues(
 
 /**
  * Add issues for empty optional fields that don't already have issues.
+ * Fields that have been explicitly skipped do not get optional_empty issues.
  */
 function addOptionalEmptyIssues(
   existingIssues: InspectIssue[],
   form: ParsedForm,
-  fieldProgress: Record<string, { state: string }>
+  fieldProgress: Record<string, { state: string; skipped?: boolean }>
 ): InspectIssue[] {
   const issues = [...existingIssues];
   const fieldsWithIssues = new Set(existingIssues.map((i) => i.ref));
 
   for (const [fieldId, progress] of Object.entries(fieldProgress)) {
+    // Skip if field is already addressed via skip_field
+    if (progress.skipped) {
+      continue;
+    }
+
     if (
       progress.state === "empty" &&
       !fieldsWithIssues.has(fieldId) &&
