@@ -53,6 +53,8 @@ describe("programmatic fill API - integration tests", () => {
           tasks_multi: { research: "done", design: "done", implement: "done", test: "incomplete" },
           tasks_simple: { read_guidelines: "done", agree_terms: "done" },
           confirmations: { backed_up: "yes", notified: "no" },
+          website: "https://alice.dev",
+          references: ["https://docs.example.com/guide", "https://github.com/example/project", "https://medium.com/article-about-forms"],
         },
         targetRoles: ["user", "agent"],
         _testAgent: mockAgent,
@@ -118,6 +120,8 @@ describe("programmatic fill API - integration tests", () => {
           tasks_multi: { research: "done", design: "done", implement: "done", test: "done" },
           tasks_simple: { read_guidelines: "done", agree_terms: "done" },
           confirmations: { backed_up: "yes", notified: "yes" },
+          website: "https://test.com",
+          references: ["https://example.com"],
         },
         targetRoles: ["user", "agent"],
         _testAgent: mockAgent,
@@ -128,7 +132,7 @@ describe("programmatic fill API - integration tests", () => {
 
       // Should have the same structure
       expect(reparsedForm.schema.id).toBe("simple_test");
-      expect(reparsedForm.schema.groups.length).toBe(5);
+      expect(reparsedForm.schema.groups.length).toBe(6);
 
       // Values should be preserved
       expect(reparsedForm.valuesByFieldId.name).toEqual({ kind: "string", value: "Test User" });
@@ -257,7 +261,7 @@ describe("programmatic fill API - integration tests", () => {
         isComplete: boolean;
       }[] = [];
 
-      // Only pre-fill user fields, let MockAgent fill agent fields (score, notes)
+      // Only pre-fill user fields, let MockAgent fill agent fields (score, notes, related_url)
       // This ensures at least one turn is executed
       const result = await fillForm({
         form: emptyForm,
@@ -272,7 +276,9 @@ describe("programmatic fill API - integration tests", () => {
           tasks_multi: { research: "done", design: "done", implement: "done", test: "done" },
           tasks_simple: { read_guidelines: "done", agree_terms: "done" },
           confirmations: { backed_up: "yes", notified: "yes" },
-          // Note: NOT pre-filling score or notes - MockAgent will fill these
+          website: "https://test.com",
+          references: ["https://example.com"],
+          // Note: NOT pre-filling score, notes, or related_url - MockAgent will fill these
         },
         targetRoles: ["user", "agent"],
         _testAgent: mockAgent,
@@ -320,9 +326,12 @@ describe("programmatic fill API - integration tests", () => {
           tasks_multi: { research: "done", design: "done", implement: "done", test: "done" },
           tasks_simple: { read_guidelines: "done", agree_terms: "done" },
           confirmations: { backed_up: "yes", notified: "yes" },
+          website: "https://test.com",
+          references: ["https://example.com"],
           // Also pre-fill agent fields
           score: 87.5,
           notes: "Pre-filled note",
+          related_url: "https://related.com",
         },
         targetRoles: ["user", "agent"],
         _testAgent: mockAgent,

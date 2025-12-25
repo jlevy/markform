@@ -27,6 +27,10 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  UrlField,
+  UrlListField,
+  UrlListValue,
+  UrlValue,
 } from "./coreTypes.js";
 import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
 
@@ -386,6 +390,77 @@ function serializeCheckboxesField(
 }
 
 /**
+ * Serialize a url-field.
+ */
+function serializeUrlField(
+  field: UrlField,
+  value: UrlValue | undefined,
+): string {
+  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  if (field.required) {
+    attrs.required = field.required;
+  }
+  if (field.priority !== DEFAULT_PRIORITY) {
+    attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
+  if (field.validate) {
+    attrs.validate = field.validate;
+  }
+
+  const attrStr = serializeAttrs(attrs);
+  let content = "";
+
+  if (value?.value) {
+    content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+  }
+
+  return `{% url-field ${attrStr} %}${content}{% /url-field %}`;
+}
+
+/**
+ * Serialize a url-list field.
+ */
+function serializeUrlListField(
+  field: UrlListField,
+  value: UrlListValue | undefined,
+): string {
+  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  if (field.required) {
+    attrs.required = field.required;
+  }
+  if (field.priority !== DEFAULT_PRIORITY) {
+    attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
+  if (field.minItems !== undefined) {
+    attrs.minItems = field.minItems;
+  }
+  if (field.maxItems !== undefined) {
+    attrs.maxItems = field.maxItems;
+  }
+  if (field.uniqueItems) {
+    attrs.uniqueItems = field.uniqueItems;
+  }
+  if (field.validate) {
+    attrs.validate = field.validate;
+  }
+
+  const attrStr = serializeAttrs(attrs);
+  let content = "";
+
+  if (value?.items && value.items.length > 0) {
+    content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
+  }
+
+  return `{% url-list ${attrStr} %}${content}{% /url-list %}`;
+}
+
+/**
  * Serialize a field to Markdoc format.
  */
 function serializeField(field: Field, values: Record<Id, FieldValue>): string {
@@ -416,6 +491,10 @@ function serializeField(field: Field, values: Record<Id, FieldValue>): string {
         field,
         value as CheckboxesValue | undefined,
       );
+    case "url":
+      return serializeUrlField(field, value as UrlValue | undefined);
+    case "url_list":
+      return serializeUrlListField(field, value as UrlListValue | undefined);
   }
 }
 
@@ -651,6 +730,26 @@ function serializeFieldRaw(
         const state = cbValue?.values[opt.id] ?? "todo";
         const marker = STATE_TO_GFM_MARKER[state] ?? " ";
         lines.push(`- [${marker}] ${opt.label}`);
+      }
+      break;
+    }
+    case "url": {
+      const urlValue = value as UrlValue | undefined;
+      if (urlValue?.value) {
+        lines.push(urlValue.value);
+      } else {
+        lines.push("_(empty)_");
+      }
+      break;
+    }
+    case "url_list": {
+      const urlListValue = value as UrlListValue | undefined;
+      if (urlListValue?.items && urlListValue.items.length > 0) {
+        for (const item of urlListValue.items) {
+          lines.push(`- ${item}`);
+        }
+      } else {
+        lines.push("_(empty)_");
       }
       break;
     }

@@ -366,6 +366,81 @@ function coerceToCheckboxes(
   };
 }
 
+function coerceToUrl(
+  fieldId: string,
+  rawValue: RawFieldValue,
+): CoercionResult {
+  if (rawValue === null) {
+    return {
+      ok: true,
+      patch: { op: "set_url", fieldId, value: null },
+    };
+  }
+
+  if (typeof rawValue === "string") {
+    return {
+      ok: true,
+      patch: { op: "set_url", fieldId, value: rawValue },
+    };
+  }
+
+  return {
+    ok: false,
+    error: `Cannot coerce ${typeof rawValue} to url for field '${fieldId}'`,
+  };
+}
+
+function coerceToUrlList(
+  fieldId: string,
+  rawValue: RawFieldValue,
+): CoercionResult {
+  if (rawValue === null) {
+    return {
+      ok: true,
+      patch: { op: "set_url_list", fieldId, items: [] },
+    };
+  }
+
+  if (isStringArray(rawValue)) {
+    return {
+      ok: true,
+      patch: { op: "set_url_list", fieldId, items: rawValue },
+    };
+  }
+
+  if (typeof rawValue === "string") {
+    return {
+      ok: true,
+      patch: { op: "set_url_list", fieldId, items: [rawValue] },
+      warning: `Coerced single string to array for field '${fieldId}'`,
+    };
+  }
+
+  if (Array.isArray(rawValue)) {
+    // Try to coerce non-string items
+    const items: string[] = [];
+    for (const item of rawValue) {
+      if (typeof item === "string") {
+        items.push(item);
+      } else {
+        return {
+          ok: false,
+          error: `Cannot coerce array with non-string items to url_list for field '${fieldId}'`,
+        };
+      }
+    }
+    return {
+      ok: true,
+      patch: { op: "set_url_list", fieldId, items },
+    };
+  }
+
+  return {
+    ok: false,
+    error: `Cannot coerce ${typeof rawValue} to url_list for field '${fieldId}'`,
+  };
+}
+
 // =============================================================================
 // Main Coercion Functions
 // =============================================================================
@@ -396,11 +471,10 @@ export function coerceToFieldPatch(
       return coerceToMultiSelect(field, rawValue);
     case "checkboxes":
       return coerceToCheckboxes(field, rawValue);
-    default: {
-      // Exhaustive check
-      const _exhaustive: never = field;
-      return { ok: false, error: `Unknown field kind: ${(_exhaustive as Field).kind}` };
-    }
+    case "url":
+      return coerceToUrl(fieldId, rawValue);
+    case "url_list":
+      return coerceToUrlList(fieldId, rawValue);
   }
 }
 

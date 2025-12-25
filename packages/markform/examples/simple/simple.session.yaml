@@ -21,6 +21,30 @@ turns:
           message: Required field "Age" is empty
           severity: required
           priority: 1
+        - ref: email
+          scope: field
+          reason: required_missing
+          message: Required field "Email" is empty
+          severity: required
+          priority: 1
+        - ref: name
+          scope: field
+          reason: required_missing
+          message: Required field "Name" is empty
+          severity: required
+          priority: 1
+        - ref: tags
+          scope: field
+          reason: required_missing
+          message: Required field "Tags" is empty
+          severity: required
+          priority: 1
+        - ref: website
+          scope: field
+          reason: required_missing
+          message: Required field "Website" is empty
+          severity: required
+          priority: 1
         - ref: categories
           scope: field
           reason: validation_error
@@ -32,61 +56,55 @@ turns:
           reason: validation_error
           message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
           severity: required
-          priority: 3
-        - ref: email
-          scope: field
-          reason: required_missing
-          message: Required field "Email" is empty
-          severity: required
-          priority: 4
-        - ref: name
-          scope: field
-          reason: required_missing
-          message: Required field "Name" is empty
-          severity: required
-          priority: 5
+          priority: 2
         - ref: priority
           scope: field
           reason: validation_error
           message: Required field "Priority" has no selection
           severity: required
-          priority: 6
-        - ref: tags
-          scope: field
-          reason: required_missing
-          message: Required field "Tags" is empty
-          severity: required
-          priority: 7
+          priority: 2
         - ref: tasks_multi
           scope: field
           reason: validation_error
           message: All items in "Tasks (Multi Mode)" must be completed
           severity: required
-          priority: 8
+          priority: 2
         - ref: tasks_simple
           scope: field
           reason: validation_error
           message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
           severity: required
-          priority: 9
+          priority: 2
         - ref: notes
           scope: field
           reason: optional_empty
           message: Optional field has no value
           severity: recommended
-          priority: 10
+          priority: 3
         - ref: optional_number
           scope: field
           reason: optional_empty
           message: Optional field has no value
           severity: recommended
-          priority: 11
+          priority: 3
+        - ref: references
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: related_url
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
         - ref: score
           scope: field
           reason: optional_empty
           message: Optional field has no value
           severity: recommended
-          priority: 12
+          priority: 3
     apply:
       patches:
         - op: set_number
@@ -129,6 +147,15 @@ turns:
           values:
             read_guidelines: done
             agree_terms: done
+        - op: set_url
+          field_id: website
+          value: https://alice.dev
+        - op: set_url_list
+          field_id: references
+          items:
+            - https://docs.example.com/guide
+            - https://github.com/example/project
+            - https://medium.com/article-about-forms
         - op: set_string
           field_id: notes
           value: This is a test note.
@@ -138,9 +165,12 @@ turns:
         - op: set_number
           field_id: score
           value: 87.5
+        - op: set_url
+          field_id: related_url
+          value: https://markform.dev/docs
     after:
       required_issue_count: 0
-      markdown_sha256: d633b7eaeb1be08374fd829a9865d476bf16c49292261ab3749b66855f61cdea
+      markdown_sha256: f2eaf91bd0cefccfca4ae116683626ab9735e00274095373174045527344a8e6
 final:
   expect_complete: true
   expected_completed_form: simple-mock-filled.form.md

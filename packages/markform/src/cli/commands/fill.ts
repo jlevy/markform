@@ -81,6 +81,10 @@ function formatPatchValue(patch: Patch): string {
         .join(", ");
     case "clear_field":
       return "(cleared)";
+    case "set_url":
+      return patch.value ? `"${patch.value}"` : "(empty)";
+    case "set_url_list":
+      return patch.items.length > 0 ? `[${patch.items.join(", ")}]` : "(empty)";
   }
 }
 
