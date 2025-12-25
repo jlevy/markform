@@ -83,6 +83,10 @@ function formatPatchValue(patch: Patch): string {
       return "(cleared)";
     case "skip_field":
       return patch.reason ? `(skipped: ${patch.reason})` : "(skipped)";
+    case "set_url":
+      return patch.value ? `"${patch.value}"` : "(empty)";
+    case "set_url_list":
+      return patch.items.length > 0 ? `[${patch.items.join(", ")}]` : "(empty)";
   }
 }
 

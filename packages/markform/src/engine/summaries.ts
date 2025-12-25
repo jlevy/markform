@@ -26,6 +26,8 @@ import type {
   StringListValue,
   StringValue,
   StructureSummary,
+  UrlListValue,
+  UrlValue,
 } from "./coreTypes.js";
 
 // =============================================================================
@@ -46,6 +48,8 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
     checkboxes: 0,
     single_select: 0,
     multi_select: 0,
+    url: 0,
+    url_list: 0,
   };
 
   const groupsById: Record<Id, "field_group"> = {};
@@ -147,6 +151,14 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
         }
       }
       return false;
+    }
+    case "url": {
+      const v = value as UrlValue;
+      return v.value !== null && v.value.trim() !== "";
+    }
+    case "url_list": {
+      const v = value as UrlListValue;
+      return v.items.length > 0;
     }
   }
 }

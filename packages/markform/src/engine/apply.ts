@@ -24,11 +24,15 @@ import type {
   SetSingleSelectPatch,
   SetStringListPatch,
   SetStringPatch,
+  SetUrlListPatch,
+  SetUrlPatch,
   SingleSelectValue,
   SkipFieldPatch,
   SkipInfo,
   StringListValue,
   StringValue,
+  UrlListValue,
+  UrlValue,
 } from "./coreTypes.js";
 import {
   computeAllSummaries,
@@ -165,6 +169,24 @@ function validatePatch(
       break;
     }
 
+    case "set_url":
+      if (field.kind !== "url") {
+        return {
+          patchIndex: index,
+          message: `Cannot apply set_url to ${field.kind} field "${field.id}"`,
+        };
+      }
+      break;
+
+    case "set_url_list":
+      if (field.kind !== "url_list") {
+        return {
+          patchIndex: index,
+          message: `Cannot apply set_url_list to ${field.kind} field "${field.id}"`,
+        };
+      }
+      break;
+
     case "clear_field":
       // Any field can be cleared
       break;
@@ -292,6 +314,32 @@ function applySetCheckboxes(
 }
 
 /**
+ * Apply a set_url patch.
+ */
+function applySetUrl(
+  values: Record<Id, FieldValue>,
+  patch: SetUrlPatch,
+): void {
+  values[patch.fieldId] = {
+    kind: "url",
+    value: patch.value,
+  } as UrlValue;
+}
+
+/**
+ * Apply a set_url_list patch.
+ */
+function applySetUrlList(
+  values: Record<Id, FieldValue>,
+  patch: SetUrlListPatch,
+): void {
+  values[patch.fieldId] = {
+    kind: "url_list",
+    items: patch.items,
+  } as UrlListValue;
+}
+
+/**
  * Apply a clear_field patch.
  */
 function applyClearField(
@@ -323,6 +371,12 @@ return;
       break;
     case "checkboxes":
       values[patch.fieldId] = { kind: "checkboxes", values: {} } as CheckboxesValue;
+      break;
+    case "url":
+      values[patch.fieldId] = { kind: "url", value: null } as UrlValue;
+      break;
+    case "url_list":
+      values[patch.fieldId] = { kind: "url_list", items: [] } as UrlListValue;
       break;
   }
 }
@@ -386,6 +440,12 @@ function applyPatch(
     case "set_checkboxes":
       applySetCheckboxes(values, patch);
       delete skips[patch.fieldId];
+      break;
+    case "set_url":
+      applySetUrl(values, patch);
+      break;
+    case "set_url_list":
+      applySetUrlList(values, patch);
       break;
     case "clear_field":
       applyClearField(form, values, patch);

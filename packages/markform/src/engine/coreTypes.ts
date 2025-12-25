@@ -72,7 +72,9 @@ export type FieldKind =
   | "string_list"
   | "checkboxes"
   | "single_select"
-  | "multi_select";
+  | "multi_select"
+  | "url"
+  | "url_list";
 
 /** Field priority level for issue scoring */
 export type FieldPriorityLevel = "high" | "medium" | "low";
@@ -143,6 +145,20 @@ export interface MultiSelectField extends FieldBase {
   maxSelections?: number;
 }
 
+/** URL field - single URL value with built-in format validation */
+export interface UrlField extends FieldBase {
+  kind: "url";
+  // No additional constraints - URL format validation is built-in
+}
+
+/** URL list field - multiple URLs (for citations, sources, references) */
+export interface UrlListField extends FieldBase {
+  kind: "url_list";
+  minItems?: number;
+  maxItems?: number;
+  uniqueItems?: boolean;
+}
+
 /** Union of all field types */
 export type Field =
   | StringField
@@ -150,7 +166,9 @@ export type Field =
   | StringListField
   | CheckboxesField
   | SingleSelectField
-  | MultiSelectField;
+  | MultiSelectField
+  | UrlField
+  | UrlListField;
 
 // =============================================================================
 // Form Structure Types
@@ -212,6 +230,18 @@ export interface MultiSelectValue {
   selected: OptionId[];
 }
 
+/** URL field value */
+export interface UrlValue {
+  kind: "url";
+  value: string | null; // null if empty, validated URL string otherwise
+}
+
+/** URL list field value */
+export interface UrlListValue {
+  kind: "url_list";
+  items: string[]; // Array of URL strings
+}
+
 /** Union of all field value types */
 export type FieldValue =
   | StringValue
@@ -219,7 +249,9 @@ export type FieldValue =
   | StringListValue
   | CheckboxesValue
   | SingleSelectValue
-  | MultiSelectValue;
+  | MultiSelectValue
+  | UrlValue
+  | UrlListValue;
 
 // =============================================================================
 // Documentation Block
@@ -471,6 +503,20 @@ export interface SetMultiSelectPatch {
   selected: OptionId[];
 }
 
+/** Set URL field value */
+export interface SetUrlPatch {
+  op: "set_url";
+  fieldId: Id;
+  value: string | null;
+}
+
+/** Set URL list field value */
+export interface SetUrlListPatch {
+  op: "set_url_list";
+  fieldId: Id;
+  items: string[];
+}
+
 /** Clear field value */
 export interface ClearFieldPatch {
   op: "clear_field";
@@ -492,6 +538,8 @@ export type Patch =
   | SetCheckboxesPatch
   | SetSingleSelectPatch
   | SetMultiSelectPatch
+  | SetUrlPatch
+  | SetUrlListPatch
   | ClearFieldPatch
   | SkipFieldPatch;
 
@@ -648,6 +696,8 @@ export const FieldKindSchema = z.enum([
   "checkboxes",
   "single_select",
   "multi_select",
+  "url",
+  "url_list",
 ]);
 
 export const FieldPriorityLevelSchema = z.enum(["high", "medium", "low"]);
@@ -720,6 +770,19 @@ export const MultiSelectFieldSchema = z.object({
   maxSelections: z.number().int().nonnegative().optional(),
 });
 
+export const UrlFieldSchema = z.object({
+  ...FieldBaseSchemaPartial,
+  kind: z.literal("url"),
+});
+
+export const UrlListFieldSchema = z.object({
+  ...FieldBaseSchemaPartial,
+  kind: z.literal("url_list"),
+  minItems: z.number().int().nonnegative().optional(),
+  maxItems: z.number().int().nonnegative().optional(),
+  uniqueItems: z.boolean().optional(),
+});
+
 export const FieldSchema = z.discriminatedUnion("kind", [
   StringFieldSchema,
   NumberFieldSchema,
@@ -727,6 +790,8 @@ export const FieldSchema = z.discriminatedUnion("kind", [
   CheckboxesFieldSchema,
   SingleSelectFieldSchema,
   MultiSelectFieldSchema,
+  UrlFieldSchema,
+  UrlListFieldSchema,
 ]);
 
 // Field group schema
@@ -776,6 +841,16 @@ export const MultiSelectValueSchema = z.object({
   selected: z.array(OptionIdSchema),
 });
 
+export const UrlValueSchema = z.object({
+  kind: z.literal("url"),
+  value: z.string().nullable(),
+});
+
+export const UrlListValueSchema = z.object({
+  kind: z.literal("url_list"),
+  items: z.array(z.string()),
+});
+
 export const FieldValueSchema = z.discriminatedUnion("kind", [
   StringValueSchema,
   NumberValueSchema,
@@ -783,6 +858,8 @@ export const FieldValueSchema = z.discriminatedUnion("kind", [
   CheckboxesValueSchema,
   SingleSelectValueSchema,
   MultiSelectValueSchema,
+  UrlValueSchema,
+  UrlListValueSchema,
 ]);
 
 // Documentation block schema
@@ -978,6 +1055,18 @@ export const SetMultiSelectPatchSchema = z.object({
   selected: z.array(OptionIdSchema),
 });
 
+export const SetUrlPatchSchema = z.object({
+  op: z.literal("set_url"),
+  fieldId: IdSchema,
+  value: z.string().nullable(),
+});
+
+export const SetUrlListPatchSchema = z.object({
+  op: z.literal("set_url_list"),
+  fieldId: IdSchema,
+  items: z.array(z.string()),
+});
+
 export const ClearFieldPatchSchema = z.object({
   op: z.literal("clear_field"),
   fieldId: IdSchema,
@@ -996,6 +1085,8 @@ export const PatchSchema = z.discriminatedUnion("op", [
   SetCheckboxesPatchSchema,
   SetSingleSelectPatchSchema,
   SetMultiSelectPatchSchema,
+  SetUrlPatchSchema,
+  SetUrlListPatchSchema,
   ClearFieldPatchSchema,
   SkipFieldPatchSchema,
 ]);

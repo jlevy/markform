@@ -40,37 +40,10 @@ turns:
           message: Required field "Tags" is empty
           severity: required
           priority: 1
-        - ref: categories
-          scope: field
-          reason: validation_error
-          message: Required field "Categories" has no selections
-          severity: required
-          priority: 2
-    apply:
-      patches:
-        - op: set_string
-          field_id: name
-          value: Test User
-        - op: set_string
-          field_id: email
-          value: test@example.com
-        - op: set_number
-          field_id: age
-          value: 25
-    after:
-      required_issue_count: 6
-      markdown_sha256: 0971ddb7a00402f894c1c56081080df4b26c26795b155cda96d10ee0a2ed6154
-      answered_field_count: 3
-      skipped_field_count: 0
-
-  # Turn 2: Fill selection fields (tags, priority, categories)
-  - turn: 2
-    inspect:
-      issues:
-        - ref: tags
+        - ref: website
           scope: field
           reason: required_missing
-          message: Required field "Tags" is empty
+          message: Required field "Website" is empty
           severity: required
           priority: 1
         - ref: categories
@@ -97,6 +70,75 @@ turns:
           message: All items in "Tasks (Multi Mode)" must be completed
           severity: required
           priority: 2
+        - ref: tasks_simple
+          scope: field
+          reason: validation_error
+          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
+          severity: required
+          priority: 2
+    apply:
+      patches:
+        - op: set_string
+          field_id: name
+          value: Test User
+        - op: set_string
+          field_id: email
+          value: test@example.com
+        - op: set_number
+          field_id: age
+          value: 25
+    after:
+      required_issue_count: 7
+      markdown_sha256: be317980230ed614221e949a31c950d69e170470882a2e69228044b80392d422
+      answered_field_count: 3
+      skipped_field_count: 0
+
+  # Turn 2: Fill selection fields (tags, priority, categories, website, references)
+  - turn: 2
+    inspect:
+      issues:
+        - ref: tags
+          scope: field
+          reason: required_missing
+          message: Required field "Tags" is empty
+          severity: required
+          priority: 1
+        - ref: website
+          scope: field
+          reason: required_missing
+          message: Required field "Website" is empty
+          severity: required
+          priority: 1
+        - ref: categories
+          scope: field
+          reason: validation_error
+          message: Required field "Categories" has no selections
+          severity: required
+          priority: 2
+        - ref: confirmations
+          scope: field
+          reason: validation_error
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
+          severity: required
+          priority: 2
+        - ref: priority
+          scope: field
+          reason: validation_error
+          message: Required field "Priority" has no selection
+          severity: required
+          priority: 2
+        - ref: tasks_multi
+          scope: field
+          reason: validation_error
+          message: All items in "Tasks (Multi Mode)" must be completed
+          severity: required
+          priority: 2
+        - ref: tasks_simple
+          scope: field
+          reason: validation_error
+          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
+          severity: required
+          priority: 2
     apply:
       patches:
         - op: set_string_list
@@ -112,10 +154,17 @@ turns:
           selected:
             - frontend
             - backend
+        - op: set_url
+          field_id: website
+          value: https://test.example.com
+        - op: set_url_list
+          field_id: references
+          items:
+            - https://docs.example.com
     after:
       required_issue_count: 3
-      markdown_sha256: ffae62612981cc77214579121f23edfbe8b0cb223b893d60508e83ba6c22dd84
-      answered_field_count: 6
+      markdown_sha256: f3b491aea22dc2da552c3cbb22aad61a13e90383e2a73e3758def7127c739614
+      answered_field_count: 8
       skipped_field_count: 0
 
   # Turn 3: Fill checkboxes + SKIP optional fields (demonstrates skip_field)
@@ -168,11 +217,14 @@ turns:
           reason: No notes required
         - op: skip_field
           field_id: optional_number
+        - op: skip_field
+          field_id: related_url
+          reason: No related URL needed
     after:
       required_issue_count: 0
-      markdown_sha256: 05bd1fea2c825ca1cd499902e86d49fca7a8c513562cd76a876890d8ed7b34d8
-      answered_field_count: 9
-      skipped_field_count: 3
+      markdown_sha256: 474cfdab3f98dbd0852e104ccc7f9dc28115de52975df5104629a9cc5dec5c67
+      answered_field_count: 11
+      skipped_field_count: 4
 final:
   expect_complete: true
   expected_completed_form: simple-skipped-filled.form.md

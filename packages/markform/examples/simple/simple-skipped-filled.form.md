@@ -102,6 +102,30 @@ Answer yes or no for each confirmation. All must be explicitly answered.
 
 {% /field-group %}
 
+{% field-group id="url_fields" title="URL Fields" %}
+
+{% url-field id="website" label="Website" required=true role="user" %}
+```value
+https://test.example.com
+```
+{% /url-field %}
+
+{% instructions ref="website" %}
+Enter your website URL (must be http or https).
+{% /instructions %}
+
+{% url-list id="references" label="References" maxItems=5 minItems=1 role="user" uniqueItems=true %}
+```value
+https://docs.example.com
+```
+{% /url-list %}
+
+{% instructions ref="references" %}
+Add 1-5 unique reference URLs for sources or documentation.
+{% /instructions %}
+
+{% /field-group %}
+
 {% field-group id="optional_fields" title="Optional Fields (Agent)" %}
 
 {% string-field id="notes" label="Notes" %}{% /string-field %}
@@ -111,6 +135,12 @@ Add any relevant notes or observations about this test form.
 {% /instructions %}
 
 {% number-field id="optional_number" label="Optional Number" %}{% /number-field %}
+
+{% url-field id="related_url" label="Related URL" %}{% /url-field %}
+
+{% instructions ref="related_url" %}
+Optionally add a URL to related documentation or resources.
+{% /instructions %}
 
 {% /field-group %}
 

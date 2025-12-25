@@ -52,11 +52,11 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       const summary = computeStructureSummary(form.schema);
 
       // Expected counts based on simple.form.md:
-      // 12 fields: name, email, age, score, tags, priority, categories,
-      //   tasks_multi, tasks_simple, confirmations, notes, optional_number
-      // 5 groups: basic_fields, list_fields, selection_fields, checkbox_fields, optional_fields
-      expect(summary.fieldCount).toBe(12);
-      expect(summary.groupCount).toBe(5);
+      // 15 fields: name, email, age, score, tags, priority, categories,
+      //   tasks_multi, tasks_simple, confirmations, website, references, notes, optional_number, related_url
+      // 6 groups: basic_fields, list_fields, selection_fields, checkbox_fields, url_fields, optional_fields
+      expect(summary.fieldCount).toBe(15);
+      expect(summary.groupCount).toBe(6);
 
       // Check field types
       expect(summary.fieldCountByKind.string).toBe(3); // name, email, notes
@@ -65,6 +65,8 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       expect(summary.fieldCountByKind.single_select).toBe(1); // priority
       expect(summary.fieldCountByKind.multi_select).toBe(1); // categories
       expect(summary.fieldCountByKind.checkboxes).toBe(3); // tasks_multi, tasks_simple, confirmations
+      expect(summary.fieldCountByKind.url).toBe(2); // website, related_url
+      expect(summary.fieldCountByKind.url_list).toBe(1); // references
     });
 
     it("has all required fields marked correctly", async () => {
@@ -106,7 +108,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       // Check specific required fields are complete
       // Optional fields may be empty, which is fine
       const requiredFieldIds = ["name", "email", "age", "tags", "priority",
-        "categories", "tasks_multi", "tasks_simple", "confirmations"];
+        "categories", "tasks_multi", "tasks_simple", "confirmations", "website"];
 
       for (const fieldId of requiredFieldIds) {
         const progress = result.progressSummary.fields[fieldId];
