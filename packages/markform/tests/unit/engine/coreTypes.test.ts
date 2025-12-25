@@ -413,6 +413,8 @@ describe("engine/coreTypes", () => {
             after: {
               requiredIssueCount: 0,
               markdownSha256: "abc123",
+              answeredFieldCount: 1,
+              skippedFieldCount: 0,
             },
           },
         ],

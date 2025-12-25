@@ -540,6 +540,8 @@ export interface SessionTurn {
   after: {
     requiredIssueCount: number;
     markdownSha256: string;
+    answeredFieldCount: number;
+    skippedFieldCount: number;
   };
 }
 
@@ -1030,6 +1032,8 @@ export const SessionTurnSchema = z.object({
   after: z.object({
     requiredIssueCount: z.number().int().nonnegative(),
     markdownSha256: z.string(),
+    answeredFieldCount: z.number().int().nonnegative(),
+    skippedFieldCount: z.number().int().nonnegative(),
   }),
 });
 

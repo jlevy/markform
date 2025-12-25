@@ -40,6 +40,8 @@ turns:
     after:
       required_issue_count: 0
       markdown_sha256: abc123def456
+      answered_field_count: 1
+      skipped_field_count: 0
 final:
   expect_complete: true
   expected_completed_form: examples/simple/simple-mock-filled.form.md
@@ -116,6 +118,8 @@ describe("session module", () => {
       expect(turn.apply.patches.length).toBe(1);
       expect(turn.after.requiredIssueCount).toBe(0);
       expect(turn.after.markdownSha256).toBe("abc123def456");
+      expect(turn.after.answeredFieldCount).toBe(1);
+      expect(turn.after.skippedFieldCount).toBe(0);
     });
 
     it("throws on invalid session YAML", () => {
@@ -216,6 +220,8 @@ describe("session module", () => {
             after: {
               requiredIssueCount: 1,
               markdownSha256: "abc123def456",
+              answeredFieldCount: 1,
+              skippedFieldCount: 0,
             },
           },
         ],
@@ -231,6 +237,8 @@ describe("session module", () => {
       expect(yaml).toContain("field_id: field1");
       expect(yaml).toContain("required_issue_count:");
       expect(yaml).toContain("markdown_sha256: abc123def456");
+      expect(yaml).toContain("answered_field_count: 1");
+      expect(yaml).toContain("skipped_field_count: 0");
     });
   });
 

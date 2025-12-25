@@ -1,0 +1,178 @@
+session_version: 0.1.0
+mode: mock
+form:
+  path: simple.form.md
+mock:
+  completed_mock: simple-skipped-filled.form.md
+harness:
+  max_turns: 50
+  max_patches_per_turn: 20
+  max_issues: 20
+  target_roles:
+    - user
+    - agent
+turns:
+  # Turn 1: Fill basic user fields (name, email, age)
+  - turn: 1
+    inspect:
+      issues:
+        - ref: age
+          scope: field
+          reason: required_missing
+          message: Required field "Age" is empty
+          severity: required
+          priority: 1
+        - ref: email
+          scope: field
+          reason: required_missing
+          message: Required field "Email" is empty
+          severity: required
+          priority: 1
+        - ref: name
+          scope: field
+          reason: required_missing
+          message: Required field "Name" is empty
+          severity: required
+          priority: 1
+        - ref: tags
+          scope: field
+          reason: required_missing
+          message: Required field "Tags" is empty
+          severity: required
+          priority: 1
+        - ref: categories
+          scope: field
+          reason: validation_error
+          message: Required field "Categories" has no selections
+          severity: required
+          priority: 2
+    apply:
+      patches:
+        - op: set_string
+          field_id: name
+          value: Test User
+        - op: set_string
+          field_id: email
+          value: test@example.com
+        - op: set_number
+          field_id: age
+          value: 25
+    after:
+      required_issue_count: 6
+      markdown_sha256: 0971ddb7a00402f894c1c56081080df4b26c26795b155cda96d10ee0a2ed6154
+      answered_field_count: 3
+      skipped_field_count: 0
+
+  # Turn 2: Fill selection fields (tags, priority, categories)
+  - turn: 2
+    inspect:
+      issues:
+        - ref: tags
+          scope: field
+          reason: required_missing
+          message: Required field "Tags" is empty
+          severity: required
+          priority: 1
+        - ref: categories
+          scope: field
+          reason: validation_error
+          message: Required field "Categories" has no selections
+          severity: required
+          priority: 2
+        - ref: confirmations
+          scope: field
+          reason: validation_error
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
+          severity: required
+          priority: 2
+        - ref: priority
+          scope: field
+          reason: validation_error
+          message: Required field "Priority" has no selection
+          severity: required
+          priority: 2
+        - ref: tasks_multi
+          scope: field
+          reason: validation_error
+          message: All items in "Tasks (Multi Mode)" must be completed
+          severity: required
+          priority: 2
+    apply:
+      patches:
+        - op: set_string_list
+          field_id: tags
+          items:
+            - typescript
+            - testing
+        - op: set_single_select
+          field_id: priority
+          selected: high
+        - op: set_multi_select
+          field_id: categories
+          selected:
+            - frontend
+            - backend
+    after:
+      required_issue_count: 3
+      markdown_sha256: ffae62612981cc77214579121f23edfbe8b0cb223b893d60508e83ba6c22dd84
+      answered_field_count: 6
+      skipped_field_count: 0
+
+  # Turn 3: Fill checkboxes + SKIP optional fields (demonstrates skip_field)
+  - turn: 3
+    inspect:
+      issues:
+        - ref: confirmations
+          scope: field
+          reason: validation_error
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
+          severity: required
+          priority: 2
+        - ref: tasks_multi
+          scope: field
+          reason: validation_error
+          message: All items in "Tasks (Multi Mode)" must be completed
+          severity: required
+          priority: 2
+        - ref: tasks_simple
+          scope: field
+          reason: validation_error
+          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
+          severity: required
+          priority: 2
+    apply:
+      patches:
+        - op: set_checkboxes
+          field_id: tasks_multi
+          values:
+            research: done
+            design: done
+            implement: done
+            test: na
+        - op: set_checkboxes
+          field_id: tasks_simple
+          values:
+            read_guidelines: done
+            agree_terms: done
+        - op: set_checkboxes
+          field_id: confirmations
+          values:
+            backed_up: yes
+            notified: no
+        # Skip optional fields explicitly
+        - op: skip_field
+          field_id: score
+          reason: Not needed for this test
+        - op: skip_field
+          field_id: notes
+          reason: No notes required
+        - op: skip_field
+          field_id: optional_number
+    after:
+      required_issue_count: 0
+      markdown_sha256: 05bd1fea2c825ca1cd499902e86d49fca7a8c513562cd76a876890d8ed7b34d8
+      answered_field_count: 9
+      skipped_field_count: 3
+final:
+  expect_complete: true
+  expected_completed_form: simple-skipped-filled.form.md

@@ -206,12 +206,15 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       invalidFields: number;
       emptyRequiredFields: number;
       emptyOptionalFields: number;
+      answeredFields: number;
+      skippedFields: number;
     };
   };
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
-  lines.push(`  Submitted: ${progress.counts.submittedFields}`);
+  lines.push(`  Answered: ${progress.counts.answeredFields}`);
+  lines.push(`  Skipped: ${progress.counts.skippedFields}`);
   lines.push(`  Complete: ${progress.counts.completeFields}`);
   lines.push(`  Incomplete: ${progress.counts.incompleteFields}`);
   lines.push(`  Invalid: ${progress.counts.invalidFields}`);

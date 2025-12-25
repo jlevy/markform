@@ -206,6 +206,8 @@ export class FormHarness {
       after: {
         requiredIssueCount,
         markdownSha256: hash,
+        answeredFieldCount: result.progressSummary.counts.answeredFields,
+        skippedFieldCount: result.progressSummary.counts.skippedFields,
       },
     });
 

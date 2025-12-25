@@ -39,8 +39,13 @@ export interface TurnResult {
   turn: number;
   issuesMatch: boolean;
   hashMatch: boolean;
+  countsMatch: boolean;
   expectedHash: string;
   actualHash: string;
+  expectedAnswered: number;
+  actualAnswered: number;
+  expectedSkipped: number;
+  actualSkipped: number;
   issuesDiff?: IssueDiff[];
 }
 
@@ -124,6 +129,11 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
         `Turn ${turn.turn}: Hash mismatch (expected ${turnResult.expectedHash.slice(0, 16)}..., got ${turnResult.actualHash.slice(0, 16)}...)`
       );
     }
+    if (!turnResult.countsMatch) {
+      errors.push(
+        `Turn ${turn.turn}: Counts mismatch (answered: expected ${turnResult.expectedAnswered}, got ${turnResult.actualAnswered}; skipped: expected ${turnResult.expectedSkipped}, got ${turnResult.actualSkipped})`
+      );
+    }
     // Note: patches are applied within replayTurn, so form is already updated
   }
 
@@ -155,7 +165,7 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
 
   const success =
     errors.length === 0 &&
-    turnResults.every((t) => t.issuesMatch && t.hashMatch) &&
+    turnResults.every((t) => t.issuesMatch && t.hashMatch && t.countsMatch) &&
     formMatches;
 
   return {
@@ -186,19 +196,31 @@ function replayTurn(form: ParsedForm, turn: SessionTurn): TurnResult {
   const issuesMatch = issuesDiff.length === 0;
 
   // Apply patches and compute hash
-  applyPatches(form, turn.apply.patches);
+  const applyResult = applyPatches(form, turn.apply.patches);
   const markdown = serialize(form);
   const actualHash = createHash("sha256").update(markdown).digest("hex");
 
   const expectedHash = turn.after.markdownSha256;
   const hashMatch = actualHash === expectedHash;
 
+  // Verify answered/skipped counts
+  const actualAnswered = applyResult.progressSummary.counts.answeredFields;
+  const actualSkipped = applyResult.progressSummary.counts.skippedFields;
+  const expectedAnswered = turn.after.answeredFieldCount;
+  const expectedSkipped = turn.after.skippedFieldCount;
+  const countsMatch = actualAnswered === expectedAnswered && actualSkipped === expectedSkipped;
+
   return {
     turn: turn.turn,
     issuesMatch,
     hashMatch,
+    countsMatch,
     expectedHash,
     actualHash,
+    expectedAnswered,
+    actualAnswered,
+    expectedSkipped,
+    actualSkipped,
     issuesDiff: issuesDiff.length > 0 ? issuesDiff : undefined,
   };
 }
@@ -241,23 +263,60 @@ function issueKey(issue: InspectIssue): string {
 }
 
 /**
+ * Check if a field value represents "no value" (null, empty array, empty object).
+ */
+function isEmptyValue(value: unknown): boolean {
+  if (!value) {
+return true;
+}
+  const v = value as Record<string, unknown>;
+  if (v.value === null) {
+return true;
+}
+  if (Array.isArray(v.items) && v.items.length === 0) {
+return true;
+}
+  if (Array.isArray(v.selected) && v.selected.length === 0) {
+return true;
+}
+  if (v.values && typeof v.values === "object" && Object.keys(v.values).length === 0) {
+return true;
+}
+  return false;
+}
+
+/**
  * Compare form values between two parsed forms.
+ *
+ * Handles skipped fields: if actual form has a field skipped (in skipsByFieldId),
+ * it matches expected fields with null/empty values.
  */
 function compareFormValues(actual: ParsedForm, expected: ParsedForm): boolean {
   const actualValues = actual.valuesByFieldId;
   const expectedValues = expected.valuesByFieldId;
+  const actualSkips = actual.skipsByFieldId ?? {};
 
   // Get all field IDs from both
   const allIds = new Set([
     ...Object.keys(actualValues),
     ...Object.keys(expectedValues),
+    ...Object.keys(actualSkips),
   ]);
 
   for (const id of allIds) {
     const actualValue = actualValues[id];
     const expectedValue = expectedValues[id];
+    const isSkipped = actualSkips[id]?.skipped === true;
 
-    // Compare JSON representations
+    // If field is skipped in actual, it should match empty/null in expected
+    if (isSkipped) {
+      if (!isEmptyValue(expectedValue)) {
+        return false; // Expected has a value but actual skipped it
+      }
+      continue; // Match: skipped === empty
+    }
+
+    // Normal comparison
     if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
       return false;
     }
