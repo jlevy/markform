@@ -264,8 +264,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       }
     }
 
-    // If not complete, step again
-    if (!stepResult.isComplete) {
+    // If not complete and not at max turns, step again
+    if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
       stepResult = harness.step();
     }
   }

@@ -201,7 +201,7 @@ async function runAgentFill(
         pc.dim(`    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining`)
       );
 
-      if (!stepResult.isComplete) {
+      if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
         stepResult = harness.step();
       }
     }
@@ -345,7 +345,7 @@ async function runInteractiveFlow(
     const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
 
     if (cancelled) {
-      showInteractiveOutro(0, "", true);
+      showInteractiveOutro(0, true);
       process.exit(1);
     }
 
@@ -357,7 +357,7 @@ async function runInteractiveFlow(
     // Export filled form in all formats (examples command always exports all formats)
     const { formPath, rawPath, yamlPath } = exportMultiFormat(form, outputPath);
 
-    showInteractiveOutro(patches.length, outputPath, false);
+    showInteractiveOutro(patches.length, false);
     console.log("");
     p.log.success("Outputs:");
     console.log(`  ${formatPath(formPath)}  ${pc.dim("(markform)")}`);

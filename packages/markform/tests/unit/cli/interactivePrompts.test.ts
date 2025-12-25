@@ -649,23 +649,21 @@ describe("interactivePrompts", () => {
 
   describe("showInteractiveOutro", () => {
     it("shows cancel message when cancelled", () => {
-      showInteractiveOutro(0, "", true);
+      showInteractiveOutro(0, true);
 
       expect(p.cancel).toHaveBeenCalledWith("Interactive fill cancelled.");
     });
 
     it("shows no changes message when patch count is 0", () => {
-      showInteractiveOutro(0, "", false);
+      showInteractiveOutro(0, false);
 
       expect(p.outro).toHaveBeenCalledWith("No changes made.");
     });
 
     it("shows success message with patch count", () => {
-      showInteractiveOutro(3, "/path/to/form.form.md", false);
+      showInteractiveOutro(3, false);
 
-      expect(p.outro).toHaveBeenCalledWith(
-        "✓ 3 field(s) updated. Saved to /path/to/form.form.md"
-      );
+      expect(p.outro).toHaveBeenCalledWith("✓ 3 field(s) updated.");
     });
   });
 

@@ -9,6 +9,7 @@ import type { Command } from "commander";
 
 import { resolve } from "node:path";
 
+import * as p from "@clack/prompts";
 import pc from "picocolors";
 
 import { parseForm } from "../../engine/parse.js";
@@ -37,6 +38,7 @@ import { resolveModel } from "../../harness/modelResolver.js";
 import { formatSuggestedLlms } from "../../settings.js";
 import {
   formatOutput,
+  formatPath,
   getCommandContext,
   logError,
   logInfo,
@@ -47,6 +49,7 @@ import {
   readFile,
   writeFile,
 } from "../lib/shared.js";
+import { exportMultiFormat } from "../lib/exportHelpers.js";
 import { generateVersionedPath } from "../lib/versioning.js";
 import {
   runInteractiveFill,
@@ -263,7 +266,7 @@ export function registerFillCommand(program: Command): void {
             const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
 
             if (cancelled) {
-              showInteractiveOutro(0, "", true);
+              showInteractiveOutro(0, true);
               process.exit(1);
             }
 
@@ -274,26 +277,33 @@ export function registerFillCommand(program: Command): void {
 
             const durationMs = Date.now() - startTime;
 
-            // Write output file
+            // Write output files (all formats)
             const outputPath = options.output
               ? resolve(options.output)
               : generateVersionedPath(filePath);
-            const formMarkdown = serialize(form);
 
             if (ctx.dryRun) {
               logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
+              showInteractiveOutro(patches.length, false);
             } else {
-              await writeFile(outputPath, formMarkdown);
+              // Export all formats (form, raw markdown, YAML)
+              const { formPath, rawPath, yamlPath } = exportMultiFormat(form, outputPath);
+
+              showInteractiveOutro(patches.length, false);
+              console.log("");
+              p.log.success("Outputs:");
+              console.log(`  ${formatPath(formPath)}  ${pc.dim("(markform)")}`);
+              console.log(`  ${formatPath(rawPath)}  ${pc.dim("(plain markdown)")}`);
+              console.log(`  ${formatPath(yamlPath)}  ${pc.dim("(values as YAML)")}`);
             }
 
-            showInteractiveOutro(patches.length, outputPath, false);
             logTiming(ctx, "Fill time", durationMs);
 
             // Show next step hint
             if (patches.length > 0) {
               console.log("");
               console.log(pc.dim("Next step: fill remaining fields with agent"));
-              console.log(pc.dim(`  markform fill ${outputPath} --model=<provider/model>`));
+              console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`));
             }
 
             process.exit(0);
@@ -422,8 +432,8 @@ export function registerFillCommand(program: Command): void {
 
             if (stepResult.isComplete) {
               logInfo(ctx, pc.green(`  ✓ Complete`));
-            } else {
-              // Step for next turn
+            } else if (!harness.hasReachedMaxTurns()) {
+              // Step for next turn (only if not at max turns)
               stepResult = harness.step();
               logInfo(
                 ctx,

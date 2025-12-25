@@ -93,9 +93,24 @@ export class FormHarness {
 
   /**
    * Check if the harness has reached max turns.
+   *
+   * Returns true when we've completed all allowed turns. This happens when:
+   * - turnNumber >= maxTurns AND we've already applied (state is "complete")
+   * - OR turnNumber > maxTurns (we've exceeded the limit)
+   *
+   * This allows the harness loop to run N times when maxTurns=N by returning
+   * false when we're at turn N but haven't applied yet (state is "wait").
    */
   hasReachedMaxTurns(): boolean {
-    return this.turnNumber >= this.config.maxTurns;
+    // If we've exceeded the limit, always return true
+    if (this.turnNumber > this.config.maxTurns) {
+      return true;
+    }
+    // At the last turn, check if we've completed it (state transitioned to "complete")
+    if (this.turnNumber === this.config.maxTurns && this.state === "complete") {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -227,6 +242,7 @@ export class FormHarness {
     if (result.isComplete) {
       this.state = "complete";
     } else if (this.turnNumber >= this.config.maxTurns) {
+      // Mark complete when we've used all allowed turns
       this.state = "complete";
     } else {
       this.state = "wait";

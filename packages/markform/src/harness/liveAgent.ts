@@ -5,7 +5,7 @@
  * by analyzing issues and generating appropriate patches.
  */
 
-import type { LanguageModel, Tool } from "ai";
+import type { LanguageModel, Tool, ModelMessage, UserModelMessage } from "ai";
 import { generateText, stepCountIs, zodSchema } from "ai";
 import { z } from "zod";
 import { openai } from "@ai-sdk/openai";
@@ -48,6 +48,7 @@ export class LiveAgent implements Agent {
   private provider?: string;
   private enableWebSearch: boolean;
   private webSearchTools: Record<string, Tool> | null = null;
+  private messageHistory: ModelMessage[] = [];
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -59,10 +60,18 @@ export class LiveAgent implements Agent {
   }
 
   /**
+   * Get current message history (for debugging/logging).
+   */
+  getHistory(): readonly ModelMessage[] {
+    return this.messageHistory;
+  }
+
+  /**
    * Generate patches using the LLM.
    *
    * Calls the model with the current form state and issues,
-   * and extracts patches from the tool calls.
+   * and extracts patches from the tool calls. Maintains conversation
+   * history across turns for better context.
    */
   async generatePatches(
     issues: InspectIssue[],
@@ -117,14 +126,24 @@ export class LiveAgent implements Agent {
       ...this.webSearchTools,
     };
 
-    // Call the model
+    // Build user message for this turn
+    const userMessage: UserModelMessage = {
+      role: "user",
+      content: contextPrompt,
+    };
+
+    // Call the model with accumulated history
     const result = await generateText({
       model: this.model,
       system: systemPrompt,
-      prompt: contextPrompt,
+      messages: [...this.messageHistory, userMessage],
       tools,
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
+
+    // Append this turn's messages to history for next turn
+    this.messageHistory.push(userMessage);
+    this.messageHistory.push(...result.response.messages);
 
     // Extract patches from tool calls
     const patches: Patch[] = [];

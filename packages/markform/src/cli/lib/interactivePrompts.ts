@@ -8,7 +8,6 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
-import { formatPath } from "./shared.js";
 
 import type {
   Field,
@@ -697,7 +696,6 @@ export function showInteractiveIntro(
  */
 export function showInteractiveOutro(
   patchCount: number,
-  outputPath: string,
   cancelled: boolean
 ): void {
   if (cancelled) {
@@ -710,5 +708,5 @@ export function showInteractiveOutro(
     return;
   }
 
-  p.outro(`✓ ${patchCount} field(s) updated. Saved to ${formatPath(outputPath)}`);
+  p.outro(`✓ ${patchCount} field(s) updated.`);
 }
