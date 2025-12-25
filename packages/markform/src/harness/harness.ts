@@ -5,7 +5,9 @@
  * INIT -> STEP -> WAIT -> APPLY -> (repeat) -> COMPLETE
  */
 
-import { createHash } from "node:crypto";
+// Use pure JS sha256 to avoid node:crypto dependency, enabling use in
+// browsers, edge runtimes (Cloudflare Workers, Convex), and other non-Node environments.
+import { sha256 } from "js-sha256";
 
 import { applyPatches } from "../engine/apply.js";
 import { inspect, getFieldsForRoles } from "../engine/inspect.js";
@@ -192,7 +194,7 @@ export class FormHarness {
 
     // Compute markdown hash
     const markdown = serialize(this.form);
-    const hash = createHash("sha256").update(markdown).digest("hex");
+    const hash = sha256(markdown);
 
     // Record turn
     const requiredIssueCount = result.issues.filter(
@@ -260,7 +262,7 @@ export class FormHarness {
    */
   getMarkdownHash(): string {
     const markdown = serialize(this.form);
-    return createHash("sha256").update(markdown).digest("hex");
+    return sha256(markdown);
   }
 
   /**

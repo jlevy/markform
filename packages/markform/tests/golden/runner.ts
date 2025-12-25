@@ -7,9 +7,11 @@
  * - Final form matches completed mock
  */
 
-import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
+
+// Use pure JS sha256 to match harness.ts (avoids node:crypto for portability).
+import { sha256 } from "js-sha256";
 
 import { applyPatches } from "../../src/engine/apply.js";
 import { inspect } from "../../src/engine/inspect.js";
@@ -198,7 +200,7 @@ function replayTurn(form: ParsedForm, turn: SessionTurn): TurnResult {
   // Apply patches and compute hash
   const applyResult = applyPatches(form, turn.apply.patches);
   const markdown = serialize(form);
-  const actualHash = createHash("sha256").update(markdown).digest("hex");
+  const actualHash = sha256(markdown);
 
   const expectedHash = turn.after.markdownSha256;
   const hashMatch = actualHash === expectedHash;
