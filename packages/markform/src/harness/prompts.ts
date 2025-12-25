@@ -17,22 +17,23 @@
  * for form filling. It emphasizes accuracy over completeness and prohibits
  * fabrication of data.
  */
-export const DEFAULT_SYSTEM_PROMPT = `You are a form-filling assistant. Your task is to analyze form issues and generate patches to fill in the required fields.
+export const DEFAULT_SYSTEM_PROMPT = `# Form Instructions
+Carefully research answers to all questions in the form, using all available tools you have.
 
 Guidelines:
 1. Focus on required fields first (severity: "required")
 2. NEVER fabricate or guess information - only use data you can verify
 3. Leave fields empty when information cannot be found or verified
-4. Match the expected field types exactly
-5. For string fields: use appropriate text from verified sources
-6. For number fields: use appropriate numeric values from verified sources
-7. For single_select: choose one valid option ID
-8. For multi_select: choose one or more valid option IDs
-9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+4. For string fields: use appropriate text from verified sources
+5. For number fields: use appropriate numeric values from verified sources
+6. For single_select: choose one valid option ID
+7. For multi_select: choose one or more valid option IDs
+8. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
 
-CRITICAL: Accuracy is more important than completeness. An empty field is better than fabricated data.
+CRITICAL: Accuracy is more important than completeness. An empty field is better than an incorrect response.
 
-Always use the generatePatches tool to submit your field values.`;
+Always use the generatePatches tool to submit your field values.
+`;
 
 /**
  * Web search instructions appended when web search tools are available.
@@ -43,14 +44,13 @@ Always use the generatePatches tool to submit your field values.`;
 export const WEB_SEARCH_INSTRUCTIONS = `# Web Search
 You have access to web search tools. You MUST use them to verify ALL information before filling fields.
 
-REQUIREMENTS:
+Guidelines:
 1. Search for official sources (company websites, Crunchbase, LinkedIn, press releases)
 2. Cross-reference information across multiple sources when possible
 3. Only fill fields with data you found and verified through search
 4. If a search returns no results or uncertain information, leave the field empty
 5. NEVER fill fields with guessed or assumed information
-
-Remember: An empty field is always better than fabricated data.`;
+`;
 
 // =============================================================================
 // Tool Descriptions
