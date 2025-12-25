@@ -367,8 +367,9 @@ describe("interactivePrompts", () => {
 
         it("returns set_checkboxes patch with 5-state values", async () => {
           vi.mocked(p.select)
-            .mockResolvedValueOnce("done")
-            .mockResolvedValueOnce("active");
+            .mockResolvedValueOnce("fill") // First call: skip/fill choice
+            .mockResolvedValueOnce("done") // Second call: item1 state
+            .mockResolvedValueOnce("active"); // Third call: item2 state
           vi.mocked(p.isCancel).mockReturnValue(false);
 
           const patch = await promptForField(createContext(multiCheckboxes));
@@ -582,6 +583,207 @@ describe("interactivePrompts", () => {
       expect(p.outro).toHaveBeenCalledWith(
         "✓ 3 field(s) updated. Saved to /path/to/form.form.md"
       );
+    });
+  });
+
+  describe("skip_field support", () => {
+    describe("optional string field", () => {
+      const optionalStringField: StringField = {
+        kind: "string",
+        id: "notes",
+        label: "Notes",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option for optional field and returns skip_field patch when selected", async () => {
+        // User selects "skip" option
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalStringField));
+
+        expect(p.select).toHaveBeenCalled();
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "notes",
+          reason: "User skipped in console",
+        });
+      });
+
+      it("prompts for value when fill option is selected", async () => {
+        // User selects "fill" then enters a value
+        vi.mocked(p.select).mockResolvedValue("fill");
+        vi.mocked(p.text).mockResolvedValue("My notes");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalStringField));
+
+        expect(p.select).toHaveBeenCalled();
+        expect(p.text).toHaveBeenCalled();
+        expect(patch).toEqual({
+          op: "set_string",
+          fieldId: "notes",
+          value: "My notes",
+        });
+      });
+    });
+
+    describe("optional number field", () => {
+      const optionalNumberField: NumberField = {
+        kind: "number",
+        id: "score",
+        label: "Score",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalNumberField));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "score",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional string_list field", () => {
+      const optionalStringListField: StringListField = {
+        kind: "string_list",
+        id: "tags",
+        label: "Tags",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalStringListField));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "tags",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional single_select field", () => {
+      const optionalSingleSelect: SingleSelectField = {
+        kind: "single_select",
+        id: "priority",
+        label: "Priority",
+        required: false,
+        priority: "medium",
+        role: "user",
+        options: [
+          { id: "low", label: "Low" },
+          { id: "high", label: "High" },
+        ],
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalSingleSelect));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "priority",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional multi_select field", () => {
+      const optionalMultiSelect: MultiSelectField = {
+        kind: "multi_select",
+        id: "categories",
+        label: "Categories",
+        required: false,
+        priority: "medium",
+        role: "user",
+        options: [
+          { id: "a", label: "A" },
+          { id: "b", label: "B" },
+        ],
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalMultiSelect));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "categories",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional checkboxes field", () => {
+      const optionalCheckboxes: CheckboxesField = {
+        kind: "checkboxes",
+        id: "tasks",
+        label: "Tasks",
+        required: false,
+        priority: "medium",
+        role: "user",
+        checkboxMode: "simple",
+        approvalMode: "none",
+        options: [
+          { id: "task1", label: "Task 1" },
+        ],
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalCheckboxes));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "tasks",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("required fields", () => {
+      const requiredStringField: StringField = {
+        kind: "string",
+        id: "name",
+        label: "Name",
+        required: true,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("does not show skip option for required fields", async () => {
+        vi.mocked(p.text).mockResolvedValue("Alice");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        await promptForField(createContext(requiredStringField));
+
+        // Should go straight to text prompt, not select for skip/fill
+        expect(p.text).toHaveBeenCalled();
+        // select should not be called for required fields
+        expect(p.select).not.toHaveBeenCalled();
+      });
     });
   });
 });

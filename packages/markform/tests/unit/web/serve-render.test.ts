@@ -419,4 +419,80 @@ John Doe
       expect(html).toMatch(/<option[^>]*value="low"[^>]*selected[^>]*>/);
     });
   });
+
+  describe("skip_field support", () => {
+    describe("optional fields", () => {
+      const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% string-field id="notes" label="Notes" required=false %}{% /string-field %}
+{% number-field id="score" label="Score" required=false %}{% /number-field %}
+{% /field-group %}
+{% /form %}`;
+
+      it("should render skip button for optional string field", () => {
+        const form = parseForm(formContent);
+        const html = renderFormHtml(form);
+
+        // Should have a skip button with data-skip-field attribute
+        expect(html).toContain('data-skip-field="notes"');
+        expect(html).toMatch(/Skip/i);
+      });
+
+      it("should render skip button for optional number field", () => {
+        const form = parseForm(formContent);
+        const html = renderFormHtml(form);
+
+        expect(html).toContain('data-skip-field="score"');
+      });
+    });
+
+    describe("required fields", () => {
+      const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% /field-group %}
+{% /form %}`;
+
+      it("should not render skip button for required fields", () => {
+        const form = parseForm(formContent);
+        const html = renderFormHtml(form);
+
+        // Should NOT have a skip button for required fields
+        expect(html).not.toContain('data-skip-field="name"');
+      });
+    });
+
+    describe("skipped state display", () => {
+      const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% string-field id="notes" label="Notes" required=false %}{% /string-field %}
+{% /field-group %}
+{% /form %}`;
+
+      it("should show skipped indicator for previously skipped fields", () => {
+        const form = parseForm(formContent);
+        // Mark the field as skipped
+        form.skipsByFieldId = {
+          notes: { skipped: true, reason: "User skipped" },
+        };
+        const html = renderFormHtml(form);
+
+        // Should show a visual indicator that field is skipped
+        expect(html).toMatch(/skipped/i);
+        expect(html).toContain('disabled');
+      });
+    });
+  });
 });

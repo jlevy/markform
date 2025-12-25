@@ -30,6 +30,7 @@ import type {
   ParsedForm,
   SingleSelectField,
   SingleSelectValue,
+  SkipInfo,
   StringField,
   StringListField,
 } from "../../engine/coreTypes.js";
@@ -379,11 +380,11 @@ async function handleSave(
  * @public Exported for testing.
  */
 export function renderFormHtml(form: ParsedForm): string {
-  const { schema, valuesByFieldId } = form;
+  const { schema, valuesByFieldId, skipsByFieldId } = form;
   const formTitle = schema.title ?? schema.id;
 
   const groupsHtml = schema.groups
-    .map((group) => renderGroup(group, valuesByFieldId))
+    .map((group) => renderGroup(group, valuesByFieldId, skipsByFieldId ?? {}))
     .join("\n");
 
   return `<!DOCTYPE html>
@@ -516,6 +517,40 @@ export function renderFormHtml(form: ParsedForm): string {
       color: #6c757d;
       margin-top: 0.25rem;
     }
+    .field-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .btn-skip {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.85rem;
+      background: #f8f9fa;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      color: #6c757d;
+      cursor: pointer;
+    }
+    .btn-skip:hover {
+      background: #e9ecef;
+      color: #495057;
+    }
+    .field-skipped {
+      opacity: 0.6;
+    }
+    .field-skipped input,
+    .field-skipped textarea,
+    .field-skipped select {
+      background: #f8f9fa;
+    }
+    .skipped-badge {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.4rem;
+      background: #6c757d;
+      color: white;
+      border-radius: 3px;
+      margin-left: 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -561,11 +596,12 @@ export function renderFormHtml(form: ParsedForm): string {
  */
 function renderGroup(
   group: FieldGroup,
-  values: Record<string, FieldValue>
+  values: Record<string, FieldValue>,
+  skips: Record<string, SkipInfo>
 ): string {
   const groupTitle = group.title ?? group.id;
   const fieldsHtml = group.children
-    .map((field) => renderFieldHtml(field, values[field.id]))
+    .map((field) => renderFieldHtml(field, values[field.id], skips[field.id]))
     .join("\n");
 
   return `
@@ -579,50 +615,69 @@ function renderGroup(
  * Render a field as HTML.
  * @public Exported for testing.
  */
-export function renderFieldHtml(field: Field, value: FieldValue | undefined): string {
+export function renderFieldHtml(
+  field: Field,
+  value: FieldValue | undefined,
+  skipInfo?: SkipInfo
+): string {
+  const isSkipped = skipInfo?.skipped === true;
   const requiredMark = field.required ? '<span class="required">*</span>' : "";
   const typeLabel = `<span class="type-badge">${field.kind}</span>`;
+  const skippedBadge = isSkipped ? '<span class="skipped-badge">Skipped</span>' : "";
+  const fieldClass = isSkipped ? "field field-skipped" : "field";
+  const disabledAttr = isSkipped ? " disabled" : "";
 
   let inputHtml: string;
 
   switch (field.kind) {
     case "string":
-      inputHtml = renderStringInput(field, value);
+      inputHtml = renderStringInput(field, value, disabledAttr);
       break;
     case "number":
-      inputHtml = renderNumberInput(field, value);
+      inputHtml = renderNumberInput(field, value, disabledAttr);
       break;
     case "string_list":
-      inputHtml = renderStringListInput(field, value);
+      inputHtml = renderStringListInput(field, value, disabledAttr);
       break;
     case "single_select":
       inputHtml = renderSingleSelectInput(
         field,
-        value as SingleSelectValue | undefined
+        value as SingleSelectValue | undefined,
+        disabledAttr
       );
       break;
     case "multi_select":
       inputHtml = renderMultiSelectInput(
         field,
-        value as MultiSelectValue | undefined
+        value as MultiSelectValue | undefined,
+        disabledAttr
       );
       break;
     case "checkboxes":
       inputHtml = renderCheckboxesInput(
         field,
-        value as CheckboxesValue | undefined
+        value as CheckboxesValue | undefined,
+        disabledAttr
       );
       break;
     default:
       inputHtml = '<div class="field-help">(unknown field type)</div>';
   }
 
+  // Add skip button for optional, non-skipped fields
+  const skipButton = !field.required && !isSkipped
+    ? `<div class="field-actions">
+        <button type="button" class="btn-skip" data-skip-field="${field.id}">Skip</button>
+      </div>`
+    : "";
+
   return `
-    <div class="field">
+    <div class="${fieldClass}">
       <label class="field-label" for="field-${field.id}">
-        ${escapeHtml(field.label)} ${requiredMark} ${typeLabel}
+        ${escapeHtml(field.label)} ${requiredMark} ${typeLabel} ${skippedBadge}
       </label>
       ${inputHtml}
+      ${skipButton}
     </div>`;
 }
 
@@ -631,7 +686,8 @@ export function renderFieldHtml(field: Field, value: FieldValue | undefined): st
  */
 function renderStringInput(
   field: StringField,
-  value: FieldValue | undefined
+  value: FieldValue | undefined,
+  disabledAttr: string
 ): string {
   const currentValue =
     value?.kind === "string" && value.value !== null ? value.value : "";
@@ -641,7 +697,7 @@ function renderStringInput(
   const maxLengthAttr =
     field.maxLength !== undefined ? ` maxlength="${field.maxLength}"` : "";
 
-  return `<input type="text" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minLengthAttr}${maxLengthAttr}>`;
+  return `<input type="text" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minLengthAttr}${maxLengthAttr}${disabledAttr}>`;
 }
 
 /**
@@ -649,7 +705,8 @@ function renderStringInput(
  */
 function renderNumberInput(
   field: NumberField,
-  value: FieldValue | undefined
+  value: FieldValue | undefined,
+  disabledAttr: string
 ): string {
   const currentValue =
     value?.kind === "number" && value.value !== null ? String(value.value) : "";
@@ -658,7 +715,7 @@ function renderNumberInput(
   const maxAttr = field.max !== undefined ? ` max="${field.max}"` : "";
   const stepAttr = field.integer ? ' step="1"' : "";
 
-  return `<input type="number" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minAttr}${maxAttr}${stepAttr}>`;
+  return `<input type="number" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minAttr}${maxAttr}${stepAttr}${disabledAttr}>`;
 }
 
 /**
@@ -666,14 +723,15 @@ function renderNumberInput(
  */
 function renderStringListInput(
   field: StringListField,
-  value: FieldValue | undefined
+  value: FieldValue | undefined,
+  disabledAttr: string
 ): string {
   const items =
     value?.kind === "string_list" ? value.items : [];
   const currentValue = items.join("\n");
   const requiredAttr = field.required ? " required" : "";
 
-  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one item per line"${requiredAttr}>${escapeHtml(currentValue)}</textarea>`;
+  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one item per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
 }
 
 /**
@@ -681,7 +739,8 @@ function renderStringListInput(
  */
 function renderSingleSelectInput(
   field: SingleSelectField,
-  value: SingleSelectValue | undefined
+  value: SingleSelectValue | undefined,
+  disabledAttr: string
 ): string {
   const selected = value?.selected ?? null;
   const requiredAttr = field.required ? " required" : "";
@@ -694,7 +753,7 @@ function renderSingleSelectInput(
     })
     .join("\n      ");
 
-  return `<select id="field-${field.id}" name="${field.id}"${requiredAttr}>
+  return `<select id="field-${field.id}" name="${field.id}"${requiredAttr}${disabledAttr}>
       <option value="">-- Select --</option>
       ${options}
     </select>`;
@@ -705,7 +764,8 @@ function renderSingleSelectInput(
  */
 function renderMultiSelectInput(
   field: MultiSelectField,
-  value: MultiSelectValue | undefined
+  value: MultiSelectValue | undefined,
+  disabledAttr: string
 ): string {
   const selected = value?.selected ?? [];
 
@@ -715,7 +775,7 @@ function renderMultiSelectInput(
       const checkedAttr = isChecked ? " checked" : "";
       const checkboxId = `field-${field.id}-${opt.id}`;
       return `<div class="checkbox-item">
-        <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}>
+        <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}${disabledAttr}>
         <label for="${checkboxId}">${escapeHtml(opt.label)}</label>
       </div>`;
     })
@@ -731,7 +791,8 @@ function renderMultiSelectInput(
  */
 function renderCheckboxesInput(
   field: CheckboxesField,
-  value: CheckboxesValue | undefined
+  value: CheckboxesValue | undefined,
+  disabledAttr: string
 ): string {
   const checkboxValues = value?.values ?? {};
   const mode = field.checkboxMode ?? "multi";
@@ -745,7 +806,7 @@ function renderCheckboxesInput(
         const checkedAttr = isChecked ? " checked" : "";
         const checkboxId = `field-${field.id}-${opt.id}`;
         return `<div class="checkbox-item">
-        <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}>
+        <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}${disabledAttr}>
         <label for="${checkboxId}">${escapeHtml(opt.label)}</label>
       </div>`;
       })
@@ -766,7 +827,7 @@ function renderCheckboxesInput(
 
         return `<div class="option-row">
         <span class="option-label">${escapeHtml(opt.label)}</span>
-        <select id="${selectId}" name="${selectName}">
+        <select id="${selectId}" name="${selectName}"${disabledAttr}>
           <option value="unfilled"${state === "unfilled" ? " selected" : ""}>-- Select --</option>
           <option value="yes"${state === "yes" ? " selected" : ""}>Yes</option>
           <option value="no"${state === "no" ? " selected" : ""}>No</option>
@@ -789,7 +850,7 @@ function renderCheckboxesInput(
 
       return `<div class="option-row">
         <span class="option-label">${escapeHtml(opt.label)}</span>
-        <select id="${selectId}" name="${selectName}">
+        <select id="${selectId}" name="${selectName}"${disabledAttr}>
           <option value="todo"${state === "todo" ? " selected" : ""}>To Do</option>
           <option value="active"${state === "active" ? " selected" : ""}>Active</option>
           <option value="done"${state === "done" ? " selected" : ""}>Done</option>

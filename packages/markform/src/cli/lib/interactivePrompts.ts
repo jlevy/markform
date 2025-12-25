@@ -14,6 +14,7 @@ import type {
   Field,
   FieldValue,
   Patch,
+  SkipFieldPatch,
   StringField,
   NumberField,
   StringListField,
@@ -65,6 +66,49 @@ function formatFieldLabel(ctx: FieldPromptContext): string {
   const required = ctx.field.required ? pc.red("*") : "";
   const progress = pc.dim(`(${ctx.index} of ${ctx.total})`);
   return `${ctx.field.label}${required} ${progress}`;
+}
+
+/**
+ * Create a skip_field patch for the given field.
+ */
+function createSkipPatch(field: Field): SkipFieldPatch {
+  return {
+    op: "skip_field",
+    fieldId: field.id,
+    reason: "User skipped in console",
+  };
+}
+
+/**
+ * For optional fields, prompt user to choose between filling or skipping.
+ * Returns "fill" if user wants to enter a value, or a skip_field patch if skipping.
+ * Returns null if user cancelled.
+ */
+async function promptSkipOrFill(ctx: FieldPromptContext): Promise<"fill" | SkipFieldPatch | null> {
+  const field = ctx.field;
+
+  // Required fields must be filled - no skip option
+  if (field.required) {
+    return "fill";
+  }
+
+  const result = await p.select({
+    message: `${formatFieldLabel(ctx)} ${pc.dim("(optional)")}`,
+    options: [
+      { value: "fill", label: "Enter value" },
+      { value: "skip", label: "Skip this field" },
+    ],
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  if (result === "skip") {
+    return createSkipPatch(field);
+  }
+
+  return "fill";
 }
 
 /**
@@ -398,6 +442,8 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
 /**
  * Prompt user for a single field value based on field type.
  * Returns a Patch to set the value, or null if skipped/cancelled.
+ *
+ * For optional fields, first offers a choice to skip or fill.
  */
 export async function promptForField(
   ctx: FieldPromptContext
@@ -407,6 +453,20 @@ export async function promptForField(
     p.note(ctx.description, pc.dim("Instructions"));
   }
 
+  // For optional fields, offer skip/fill choice first
+  const skipOrFillResult = await promptSkipOrFill(ctx);
+
+  if (skipOrFillResult === null) {
+    // User cancelled
+    return null;
+  }
+
+  if (typeof skipOrFillResult !== "string") {
+    // User chose to skip - return the skip_field patch
+    return skipOrFillResult;
+  }
+
+  // User chose to fill - proceed to field-specific prompt
   switch (ctx.field.kind) {
     case "string":
       return promptForString(ctx);
