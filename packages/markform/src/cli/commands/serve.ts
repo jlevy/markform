@@ -321,6 +321,34 @@ function formDataToPatches(
         }
         break;
       }
+
+      case "url": {
+        const value = formData[fieldId];
+        if (typeof value === "string" && value.trim() !== "") {
+          patches.push({ op: "set_url", fieldId, value: value.trim() });
+        } else {
+          patches.push({ op: "clear_field", fieldId });
+        }
+        break;
+      }
+
+      case "url_list": {
+        const value = formData[fieldId];
+        if (typeof value === "string" && value.trim() !== "") {
+          const items = value
+            .split("\n")
+            .map((s) => s.trim())
+            .filter((s) => s !== "");
+          if (items.length > 0) {
+            patches.push({ op: "set_url_list", fieldId, items });
+          } else {
+            patches.push({ op: "clear_field", fieldId });
+          }
+        } else {
+          patches.push({ op: "clear_field", fieldId });
+        }
+        break;
+      }
     }
   }
 

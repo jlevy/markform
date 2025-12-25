@@ -21,6 +21,8 @@ import type {
   SingleSelectField,
   MultiSelectField,
   CheckboxesField,
+  UrlField,
+  UrlListField,
   ParsedForm,
   InspectIssue,
 } from "../../engine/coreTypes.js";
@@ -440,6 +442,114 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
 }
 
 /**
+ * Prompt for a URL field value.
+ */
+async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
+  const field = ctx.field as UrlField;
+  const currentVal =
+    ctx.currentValue?.kind === "url" ? ctx.currentValue.value : null;
+
+  const result = await p.text({
+    message: formatFieldLabel(ctx),
+    placeholder: currentVal ?? "https://example.com",
+    initialValue: currentVal ?? "",
+    validate: (value) => {
+      if (field.required && !value.trim()) {
+        return "This field is required";
+      }
+      if (!value.trim()) {
+        return undefined; // Allow empty for optional
+      }
+      // Basic URL validation
+      try {
+        new URL(value);
+      } catch {
+        return "Please enter a valid URL (e.g., https://example.com)";
+      }
+      return undefined;
+    },
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  // Skip if empty and not required (user pressed Enter to skip)
+  if (!result && !field.required) {
+    return null;
+  }
+
+  return {
+    op: "set_url",
+    fieldId: field.id,
+    value: result || null,
+  };
+}
+
+/**
+ * Prompt for a URL list field value.
+ */
+async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> {
+  const field = ctx.field as UrlListField;
+  const currentItems =
+    ctx.currentValue?.kind === "url_list" ? ctx.currentValue.items : [];
+
+  const hint = ctx.description
+    ? `${ctx.description.slice(0, 50)}... (one URL per line)`
+    : "Enter URLs, one per line. Press Enter twice when done.";
+
+  const result = await p.text({
+    message: formatFieldLabel(ctx),
+    placeholder: hint,
+    initialValue: currentItems.join("\n"),
+    validate: (value) => {
+      const items = value
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (field.required && items.length === 0) {
+        return "At least one URL is required";
+      }
+      if (field.minItems && items.length < field.minItems) {
+        return `Minimum ${field.minItems} URLs required`;
+      }
+      if (field.maxItems && items.length > field.maxItems) {
+        return `Maximum ${field.maxItems} URLs allowed`;
+      }
+      // Validate each URL
+      for (const item of items) {
+        try {
+          new URL(item);
+        } catch {
+          return `Invalid URL: ${item}`;
+        }
+      }
+      return undefined;
+    },
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  const items = (result)
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Skip if empty and not required
+  if (items.length === 0 && !field.required) {
+    return null;
+  }
+
+  return {
+    op: "set_url_list",
+    fieldId: field.id,
+    items,
+  };
+}
+
+/**
  * Prompt user for a single field value based on field type.
  * Returns a Patch to set the value, or null if skipped/cancelled.
  *
@@ -480,6 +590,10 @@ export async function promptForField(
       return promptForMultiSelect(ctx);
     case "checkboxes":
       return promptForCheckboxes(ctx);
+    case "url":
+      return promptForUrl(ctx);
+    case "url_list":
+      return promptForUrlList(ctx);
     default:
       // Unknown field type - skip
       return null;
