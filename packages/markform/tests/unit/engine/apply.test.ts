@@ -342,6 +342,133 @@ markform:
     });
   });
 
+  describe("skip_field patch", () => {
+    it("applies skip_field to optional field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: "skip_field", fieldId: "notes", reason: "Not applicable" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.skipsByFieldId.notes).toEqual({
+        skipped: true,
+        reason: "Not applicable",
+      });
+      // Value should be cleared
+      expect(form.valuesByFieldId.notes).toBeUndefined();
+    });
+
+    it("rejects skip_field on required field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: "skip_field", fieldId: "name", reason: "Can't skip required" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("rejected");
+      expect(form.skipsByFieldId.name).toBeUndefined();
+    });
+
+    it("clears existing value when skipping", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}
+\`\`\`value
+Some existing value
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      // Verify value exists initially
+      expect(form.valuesByFieldId.notes).toBeDefined();
+
+      const patches: Patch[] = [
+        { op: "skip_field", fieldId: "notes" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.skipsByFieldId.notes).toEqual({
+        skipped: true,
+        reason: undefined,
+      });
+      // Value should be cleared
+      expect(form.valuesByFieldId.notes).toBeUndefined();
+    });
+
+    it("un-skips field when setting a value", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+
+      // First skip the field
+      applyPatches(form, [{ op: "skip_field", fieldId: "notes" }]);
+      expect(form.skipsByFieldId.notes?.skipped).toBe(true);
+
+      // Then set a value
+      const result = applyPatches(form, [
+        { op: "set_string", fieldId: "notes", value: "New value" },
+      ]);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.skipsByFieldId.notes).toBeUndefined();
+      expect(form.valuesByFieldId.notes).toEqual({
+        kind: "string",
+        value: "New value",
+      });
+    });
+  });
+
   describe("result summaries", () => {
     it("returns updated summaries after applying patches", () => {
       const markdown = `---
