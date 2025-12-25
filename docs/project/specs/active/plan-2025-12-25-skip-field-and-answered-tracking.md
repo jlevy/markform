@@ -109,16 +109,34 @@ interface ProgressCounts {
 A form is complete when **all target-role fields are either answered or skipped**:
 
 ```typescript
-// New completion check
-const answeredCount = progressSummary.counts.answeredFields;
-const skippedCount = progressSummary.counts.skippedFields;
-const totalTargetFields = targetRoleFields.length;
+// New completion check - MUST filter by target roles
+const targetRoleFields = getFieldsForRoles(form, options.targetRoles ?? ["*"]);
+const targetFieldIds = new Set(targetRoleFields.map(f => f.id));
 
-const allFieldsAccountedFor = (answeredCount + skippedCount) === totalTargetFields;
-const noRequiredFieldsEmpty = progressSummary.counts.emptyRequiredFields === 0;
+let targetAnswered = 0;
+let targetSkipped = 0;
+
+for (const [fieldId, fp] of Object.entries(progressSummary.fields)) {
+  if (targetFieldIds.has(fieldId)) {
+    if (fp.submitted) targetAnswered++;
+    if (fp.skipped) targetSkipped++;
+  }
+}
+
+const allFieldsAccountedFor = (targetAnswered + targetSkipped) === targetRoleFields.length;
+const noRequiredFieldsEmpty = !filteredIssues.some(i => i.severity === "required");
 
 const isComplete = allFieldsAccountedFor && noRequiredFieldsEmpty;
 ```
+
+**CRITICAL**: The counts MUST be filtered by target roles. Using global `progressSummary.counts`
+(which counts ALL fields) will cause forms to never complete when running with a subset of roles.
+
+**Current Implementation Bug (2025-12-25):** The `isFormComplete()` function in `summaries.ts`
+uses global `counts.totalFields` instead of role-filtered counts. When `skippedFields > 0`,
+calling `isFormComplete(progressSummary)` compares `answered + skipped` against ALL fields,
+not just target-role fields. This bug doesn't manifest when `skippedFields === 0` because
+the fallback is `noRequiredIssues` which IS role-filtered.
 
 This means:
 - All required fields must have values (can't skip required)

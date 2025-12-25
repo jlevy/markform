@@ -283,6 +283,8 @@ function buildContextPrompt(
   lines.push("- single_select: { op: \"set_single_select\", fieldId: \"...\", selected: \"option_id\" }");
   lines.push("- multi_select: { op: \"set_multi_select\", fieldId: \"...\", selected: [\"opt1\", \"opt2\"] }");
   lines.push("- checkboxes: { op: \"set_checkboxes\", fieldId: \"...\", values: { \"opt1\": \"done\", \"opt2\": \"todo\" } }");
+  lines.push("- url: { op: \"set_url\", fieldId: \"...\", value: \"https://...\" }");
+  lines.push("- url_list: { op: \"set_url_list\", fieldId: \"...\", items: [\"https://...\", \"https://...\"] }");
 
   return lines.join("\n");
 }

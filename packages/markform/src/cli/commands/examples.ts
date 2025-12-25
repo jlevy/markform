@@ -29,6 +29,7 @@ import {
   DEFAULT_MAX_ISSUES,
 } from "../../settings.js";
 import type { ParsedForm, HarnessConfig, Patch } from "../../engine/coreTypes.js";
+import { formatPatchValue, formatPatchType } from "../lib/patchFormat.js";
 import { createHarness } from "../../harness/harness.js";
 import { createLiveAgent } from "../../harness/liveAgent.js";
 import { resolveModel, getProviderInfo, type ProviderName } from "../../harness/modelResolver.js";
@@ -186,10 +187,11 @@ async function runAgentFill(
         harnessConfig.maxPatchesPerTurn!
       );
 
-      // Log each patch
+      // Log each patch with field id, type, and value (truncated)
       for (const patch of patches) {
-        const fieldId = patch.fieldId;
-        console.log(pc.dim(`    → ${patch.op} ${fieldId}`));
+        const typeName = formatPatchType(patch);
+        const value = formatPatchValue(patch);
+        console.log(pc.dim(`    ${pc.cyan(patch.fieldId)} (${typeName}) = ${pc.green(value)}`));
       }
 
       // Apply patches
@@ -380,7 +382,7 @@ async function runInteractiveFlow(
     if (p.isCancel(runAgent) || !runAgent) {
       console.log("");
       console.log(pc.dim("You can run agent fill later with:"));
-      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --agent=live --model=<provider/model>`));
+      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`));
       p.outro(pc.dim("Happy form filling!"));
       return;
     }
@@ -436,7 +438,7 @@ async function runInteractiveFlow(
       p.log.error(`Agent fill failed: ${message}`);
       console.log("");
       console.log(pc.dim("You can try again with:"));
-      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --agent=live --model=${modelId}`));
+      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=${modelId}`));
     }
   }
 
