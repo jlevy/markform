@@ -242,13 +242,13 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 
 - Doc blocks do not have their own IDs
 
-- *required:* Identified by `(ref, kind)` combination, which must be unique
+- *required:* Identified by `(ref, tag)` combination, which must be unique (e.g., only
+  one `{% instructions ref="foo" %}` allowed)
 
-- When `kind` is omitted, it defaults to `'notes'`
+- Duplicate `(ref, tag)` pairs are an error
 
-- Duplicate `(ref, kind)` pairs are an error
-
-- Multiple doc blocks can reference the same target with different `kind` values
+- Multiple doc blocks can reference the same target with different tags (e.g., both `{%
+  description ref="foo" %}` and `{% instructions ref="foo" %}` are allowed)
 
 - To reference an option, use qualified form: `ref="{fieldId}.{optionId}"`
 
@@ -424,17 +424,31 @@ The parser enforces this:
 
 #### Documentation Blocks
 
-Documentation blocks provide contextual help attached to form elements:
+Documentation blocks provide contextual help attached to form elements and each has its
+own tag:
 
 ```md
-{% doc ref="<target_id>" kind="description|instructions|notes|examples" %}
+{% description ref="<target_id>" %}
 Markdown content here...
-{% /doc %}
+{% /description %}
+
+{% instructions ref="<target_id>" %}
+Step-by-step guidance...
+{% /instructions %}
+
+{% notes ref="<target_id>" %}
+Additional notes...
+{% /notes %}
+
+{% examples ref="<target_id>" %}
+Example values or usage...
+{% /examples %}
 ```
 
 - `ref` (*required*): References the ID of a form, group, field, or option
 
-- `kind` (optional): Categorizes the documentation type
+- The tag name determines the documentation kind (`description`, `instructions`,
+  `notes`, `examples`, or `documentation` for general content)
 
 **Placement rules (v0.1):**
 
@@ -455,11 +469,11 @@ without filtering out nested doc blocks.
 
 - Doc blocks do not have their own IDs
 
-- *required:* `(ref, kind)` combination must be unique
+- *required:* `(ref, tag)` combination must be unique (e.g., only one `{% instructions
+  ref="foo" %}`)
 
-- When `kind` is omitted, it defaults to `'notes'`
-
-- Multiple doc blocks with different `kind` values can reference the same target
+- Multiple doc blocks with different tags can reference the same target (e.g., both `{%
+  description ref="foo" %}` and `{% instructions ref="foo" %}` are allowed)
 
 #### Field Values
 
@@ -607,10 +621,10 @@ Customer concentration risk (top 3 = 60% revenue)
 ```
 {% /string-list %}
 
-{% doc ref="top_risks" kind="instructions" %} One risk per line.
+{% instructions ref="top_risks" %} One risk per line.
 Be specific (company- or product-specific), not generic.
 Minimum 5; include more if needed.
-{% /doc %}
+{% /instructions %}
 ```
 
 **Note:** The doc block is a sibling placed after the field, not nested inside it.
@@ -672,9 +686,9 @@ markform:
 
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
 
-{% doc ref="quarterly_earnings" kind="description" %}
+{% description ref="quarterly_earnings" %}
 Prepare an earnings-call brief by extracting key financials and writing a thesis.
-{% /doc %}
+{% /description %}
 
 {% field-group id="company_info" title="Company Info" %}
 {% string-field id="company_name" label="Company name" required=true %}{% /string-field %}
@@ -969,7 +983,7 @@ type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
 
 interface DocumentationBlock {
   ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
-  kind: 'description' | 'instructions' | 'notes' | 'examples';  // defaults to 'notes' when omitted
+  kind: 'description' | 'instructions' | 'notes' | 'examples' | 'documentation';  // from tag name
   bodyMarkdown: string;
 }
 
@@ -3696,7 +3710,7 @@ The `company-analysis.form.md` exercises the following Markform features:
 | `multi-select` with `minSelections` | ✅ Business model, moats |
 | `checkboxes` with `checkboxMode="simple"` | ✅ Source checklists |
 | `field-group` (flat) | ✅ Many groups |
-| `doc` blocks with `kind` | ✅ Instructions throughout |
+| Documentation blocks (`description`, `instructions`, etc.) | ✅ Instructions throughout |
 | Code validators | ⏳ Planned in `.valid.ts` |
 
 ### Recommended Implementation Order
