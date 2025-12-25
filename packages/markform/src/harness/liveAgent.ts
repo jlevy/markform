@@ -72,6 +72,14 @@ export class LiveAgent implements Agent {
     // Load web search tools if enabled and not already loaded
     if (this.enableWebSearch && this.provider && !this.webSearchTools) {
       this.webSearchTools = await loadWebSearchTools(this.provider);
+
+      // Log warning if web search was requested but not available
+      if (!this.webSearchTools || Object.keys(this.webSearchTools).length === 0) {
+        console.warn(
+          `[markform] Web search not available for provider "${this.provider}". ` +
+          `Agent will operate without web search capabilities.`
+        );
+      }
     }
 
     // If web search is available, add instructions to use it
