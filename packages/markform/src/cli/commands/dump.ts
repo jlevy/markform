@@ -56,6 +56,12 @@ function formatFieldValue(
       }
       return entries.map(([k, v]) => `${k}:${v}`).join(", ");
     }
+    case "url":
+      return value.value ? green(`"${value.value}"`) : dim("(empty)");
+    case "url_list":
+      return value.items.length > 0
+        ? green(`[${value.items.join(", ")}]`)
+        : dim("(empty)");
     default:
       return dim("(unknown)");
   }
@@ -101,6 +107,10 @@ function toPlainValue(value: FieldValue): unknown {
       return value.selected;
     case "checkboxes":
       return value.values;
+    case "url":
+      return value.value ?? null;
+    case "url_list":
+      return value.items;
     default:
       return null;
   }

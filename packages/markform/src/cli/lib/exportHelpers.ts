@@ -46,6 +46,12 @@ export function toPlainValues(form: ParsedForm): Record<string, unknown> {
       case "checkboxes":
         result[fieldId] = value.values;
         break;
+      case "url":
+        result[fieldId] = value.value ?? null;
+        break;
+      case "url_list":
+        result[fieldId] = value.items;
+        break;
     }
   }
 

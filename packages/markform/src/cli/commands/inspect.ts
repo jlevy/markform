@@ -122,6 +122,12 @@ function formatFieldValue(
       }
       return entries.map(([k, v]) => `${k}:${v}`).join(", ");
     }
+    case "url":
+      return value.value ? green(`"${value.value}"`) : dim("(empty)");
+    case "url_list":
+      return value.items.length > 0
+        ? green(`[${value.items.map((i) => `"${i}"`).join(", ")}]`)
+        : dim("(empty)");
     default:
       return dim("(unknown)");
   }
