@@ -112,6 +112,284 @@ workflows:
 
 * * *
 
+## Architecture Roadmap
+
+This section provides a high-level overview of the Markform architecture layers and
+their relationships.
+The architecture is designed to separate the **portable specification** (which could be
+implemented in any language) from the **implementation-specific details** (specific to
+this TypeScript codebase).
+
+### Quick Reference
+
+**Core Specification (Layers 1-4):**
+
+| Layer | Name | Section |
+| --- | --- | --- |
+| 1 | Syntax | [Layer 1: Syntax](#layer-1-syntax) |
+| 2 | Form Data Model | [Layer 2: Form Data Model](#layer-2-form-data-model) |
+| 3 | Validation & Form Filling | [Layer 3: Validation & Form Filling](#layer-3-validation--form-filling) |
+| 4 | Tool API & Interfaces | [Layer 4: Tool API & Interfaces](#layer-4-tool-api--interfaces) |
+
+**Implementation Components:**
+
+| Component | Section |
+| --- | --- |
+| Engine Implementation | [Engine Implementation](#engine-implementation) |
+| Execution Harness | [Execution Harness](#execution-harness) |
+| User Interfaces | [User Interfaces](#user-interfaces) |
+| Agent Interfaces | [Agent Interfaces](#agent-interfaces) |
+| Testing Framework | [Testing Framework](#testing-framework) |
+
+### Layer Overview
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                            MARKFORM SPECIFICATION                                      │
+│                         (Portable, Language-Agnostic)                                  │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ Layer 1: SYNTAX                                                                 │   │
+│  │ The .form.md file format, Markdoc tag syntax, structural/field tags             │   │
+│  │ - File extension, frontmatter structure                                         │   │
+│  │ - Tag definitions: form, field-group, string-field, checkboxes, etc.            │   │
+│  │ - Option syntax, checkbox state tokens, value encoding                          │   │
+│  └─────────────────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                                 │
+│                                      ▼                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ Layer 2: FORM DATA MODEL                                                        │   │
+│  │ Precise schema definitions for forms, fields, values, and documentation         │   │
+│  │ - FormSchema, FieldGroup, Field (all kinds), FieldValue                         │   │
+│  │ - DocumentationBlock, StructureSummary, ProgressSummary                         │   │
+│  │ - Defined via Zod schemas (mappable to JSON Schema, Pydantic, etc.)             │   │
+│  └─────────────────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                                 │
+│                                      ▼                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ Layer 3: VALIDATION & FORM FILLING                                              │   │
+│  │ Rules for validation, progress computation, and form manipulation               │   │
+│  │ - ID uniqueness rules (global vs field-scoped)                                  │   │
+│  │ - Required field semantics and completion rules per field kind                  │   │
+│  │ - ProgressState computation (empty/incomplete/invalid/complete)                 │   │
+│  │ - Built-in validation (type/pattern/range checks)                               │   │
+│  │ - Hook validator contract (code validators, LLM validators)                     │   │
+│  │ - Patch data model for operations and their effects on form state               │   │
+│  └─────────────────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                                 │
+│                                      ▼                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ Layer 4: TOOL API & INTERFACES                                                  │   │
+│  │ Abstract interfaces for agents and humans to interact with forms                │   │
+│  │ - MCP tool definitions: inspect, apply, export, getMarkdown                     │   │
+│  │ - Method signatures and result types                                            │   │
+│  │ - Import/export formats for values (JSON, YAML)                                 │   │
+│  │ - Priority scoring and issue ordering for agent guidance                        │   │
+│  │ - Abstract UI patterns (console, web, agent tools)                              │   │
+│  └─────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                         IMPLEMENTATION COMPONENTS                                      │
+│                         (This TypeScript Codebase)                                     │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ ENGINE IMPLEMENTATION                                                           │   │
+│  │ TypeScript/Zod implementation of the specification                              │   │
+│  │ - Markdoc-based parser and canonical serializer                                 │   │
+│  │ - Validation engine, patch application                                          │   │
+│  │ - jiti-based code validator loading                                             │   │
+│  └─────────────────────────────────────────────────────────────────────────────────┘   │
+│                                      │                                                 │
+│              ┌───────────────────────┼───────────────────────┐                         │
+│              ▼                       ▼                       ▼                         │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐             │
+│  │ USER INTERFACES     │  │ AGENT INTERFACES    │  │ EXECUTION HARNESS   │             │
+│  │ - CLI commands      │  │ - Tool API library  │  │ - Step-by-step loop │             │
+│  │ - Web UI (serve)    │  │ - MCP server        │  │ - Mock agent mode   │             │
+│  │ - Render to HTML    │  │ - AI SDK tools      │  │ - Live agent mode   │             │
+│  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘             │
+│                                      │                                                 │
+│                                      ▼                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
+│  │ TESTING FRAMEWORK                                                               │   │
+│  │ Golden session testing infrastructure                                           │   │
+│  │ - Session transcript format (.session.yaml)                                     │   │
+│  │ - Mock/live mode recording and replay                                           │   │
+│  └─────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Specification vs Implementation Boundary
+
+The **Markform Specification** (Layers 1-4) defines:
+
+- **Layer 1 (Syntax):** What a `.form.md` file looks like—the file format itself
+
+- **Layer 2 (Form Data Model):** The precise data structures for forms, fields, and
+  values. Zod schemas provide precision but can be mapped to JSON Schema, Pydantic, or
+  other schema languages for alternative implementations.
+
+- **Layer 3 (Validation & Form Filling):** How validation works, how progress is
+  computed, and how patches manipulate form state
+
+- **Layer 4 (Tool API & Interfaces):** How agents and humans interact with forms—the
+  abstract interface patterns, MCP tool definitions, and import/export formats
+
+This specification could be implemented in any language (Python, Go, Rust, etc.)
+and would produce interoperable `.form.md` files.
+
+The **Implementation Components** are specific to this TypeScript codebase:
+
+- **Engine Implementation:** The parser, serializer, and validation engine
+
+- **User Interfaces:** CLI commands and web UI (specific to Node.js ecosystem)
+
+- **Agent Interfaces:** Tool API library, MCP server, AI SDK integration
+
+- **Execution Harness:** The step-by-step agent loop (a particular approach to
+  agent-driven form filling, not required by the spec)
+
+- **Testing Framework:** Golden session infrastructure (specific to this repository)
+
+### Layer Dependencies
+
+| Layer/Component | Depends On | Provides To |
+| --- | --- | --- |
+| 1. Syntax | (foundation) | Layer 2, Engine |
+| 2. Form Data Model | Layer 1 | Layers 3, 4, Engine |
+| 3. Validation & Form Filling | Layers 1, 2 | Layer 4, Engine |
+| 4. Tool API & Interfaces | Layers 2, 3 | All interfaces |
+| Engine Implementation | Layers 1-4 | Harness, Interfaces, Testing |
+| Execution Harness | Engine | Agent Interfaces, Testing |
+| User Interfaces | Engine | (end users) |
+| Agent Interfaces | Engine, Harness | (agents) |
+| Testing Framework | Engine, Harness | (developers) |
+
+### Future: Extracting the Core Specification
+
+The architecture is designed to allow extracting Layers 1-4 as a standalone **Markform
+Specification** document that:
+
+1. Defines the `.form.md` file format normatively (Layer 1)
+
+2. Specifies the form data model precisely, with schemas mappable to JSON Schema,
+   Pydantic, or other schema languages (Layer 2)
+
+3. Provides validation rules, progress computation, and form manipulation semantics
+   (Layer 3)
+
+4. Documents the tool API and interface patterns for both agents and humans (Layer 4)
+
+This would enable:
+
+- Alternative implementations in other languages
+
+- Formal specification for interoperability testing
+
+- Clear separation between “what Markform is” and “how this library works”
+
+### Document Organization
+
+This document currently combines specification and implementation details.
+Future versions may split into:
+
+| Document | Content | Scope |
+| --- | --- | --- |
+| `markform-spec.md` | Core specification (portable) | Layers 1-4 |
+| `markform-engine.md` | Engine implementation details | Engine |
+| `markform-harness.md` | Execution harness design | Harness |
+| `markform-interfaces.md` | CLI, Web UI, MCP, AI SDK | Interfaces |
+| `markform-testing.md` | Golden session testing | Testing |
+
+### Recommendations for Layer Separation
+
+The following areas in this document could be improved to achieve cleaner layer
+separation:
+
+**1. Zod schemas as specification, not just implementation**
+
+Layer 2 uses Zod schemas to define the form data model precisely.
+This is intentional— Zod provides a rigorous way to specify schemas that can be mapped
+to:
+
+- JSON Schema (for language-agnostic interchange)
+
+- Pydantic (for Python implementations)
+
+- Other schema languages as needed
+
+The specification should clarify that Zod is the *canonical notation* for precision,
+while acknowledging that implementations may use equivalent schema definitions in their
+native language.
+
+**2. Clarify validation rules vs TypeScript types (Layer 3)**
+
+Layer 3 “Validation & Form Filling” mixes:
+
+- Normative rules (what validation MUST check) — belongs in spec
+
+- TypeScript types like `ValidationIssue` — implementation detail
+
+- Error codes and messages — should be normative for interoperability
+
+Recommendation: Define normative validation rules as tables or prose.
+The TypeScript types illustrate the structure but aren’t required for conformance.
+
+**3. Layer 4 should fully specify the Tool API**
+
+Layer 4 “Tool API & Interfaces” should include:
+
+- Complete MCP tool definitions with method signatures
+
+- All result types and their structures
+
+- Import/export format specifications (JSON, YAML)
+
+- Abstract UI patterns that any implementation should support
+
+The current document partially specifies these.
+A full specification would allow alternative implementations to be fully compatible at
+the API level.
+
+**4. Harness is implementation-specific**
+
+The execution harness (step-by-step agent loop, mock mode, live mode) is specific to
+this codebase’s approach to agent-driven form filling.
+Other implementations might:
+
+- Use different execution models (streaming, event-driven, etc.)
+
+- Skip the harness entirely for direct API usage
+
+- Define different session formats
+
+Layer 4 should specify the Tool API without assuming harness concepts.
+
+**5. Move npm package and implementation order to implementation sections**
+
+The “NPM Package” and “Implementation Order” sections are purely implementation details.
+They should follow the implementation components, not appear mixed with the
+specification layers.
+
+**6. Consolidate engine implementation details**
+
+Create a dedicated “Engine Implementation” section that consolidates:
+
+- Markdoc-based parser and serializer notes
+
+- Validator loading (jiti)
+
+- Any TypeScript-specific implementation patterns
+
+Currently some implementation details are spread throughout Layers 1-4.
+
+* * *
+
 ## v0.1 Scope
 
 ### Goals
@@ -151,27 +429,33 @@ workflows:
 
 ## Core Architecture
 
-Everything (CLI, MCP, AI SDK, web, tests) uses **one shared engine**:
+Everything (CLI, MCP, AI SDK, web, tests) uses **one shared engine** that implements the
+Core Markform Specification (Layers 1-4):
 
-**`MarkformEngine`**
+**`MarkformEngine`** (implementation of Layer 4 operations)
 
-- `parseForm(markdown: string): ParsedForm`
+- `parseForm(markdown: string): ParsedForm` — Layer 1 syntax → Layer 2 model
 
-- `validate(form: ParsedForm, opts?): ValidationResult`
+- `validate(form: ParsedForm, opts?): ValidationResult` — Layer 3 semantics
 
-- `applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult`
+- `applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult` — Layer 4 operation
 
-- `serialize(form: ParsedForm, opts?): string` (canonical)
+- `serialize(form: ParsedForm, opts?): string` — Layer 2 model → Layer 1 syntax
 
-- `exportJson(form: ParsedForm): { schema: FormSchemaJson; values: FormValuesJson }`
+- `exportJson(form: ParsedForm): { schema: FormSchemaJson; values: FormValuesJson }` —
+  Layer 4 operation
 
 This boundary enables “one set of tests, many interfaces.”
 
 * * *
 
-## Architecture Layers
+## Core Markform Specification (Layers 1-4)
 
-### Layer 1: Syntax and Schema (Markdoc)
+The following four layers constitute the **Core Markform Specification**—the portable,
+language-agnostic definition of the Markform format and semantics.
+Any conforming implementation must adhere to these layers.
+
+### Layer 1: Syntax
 
 Defines the **Markform document format** (`.form.md`) containing the form schema and
 current filled-in state.
@@ -851,7 +1135,20 @@ To ensure deterministic round-tripping without building a full markdown serializ
 
 * * *
 
-### Layer 2: Data Model
+### Layer 2: Form Data Model
+
+This layer defines the precise data structures for forms, fields, values, and
+documentation. We use **Zod schemas** as the canonical notation because they provide:
+
+- Precise, unambiguous type definitions
+- Runtime validation built-in
+- Easy mapping to JSON Schema (via `zod-to-json-schema`)
+- Clear documentation of constraints and invariants
+
+Alternative implementations may use equivalent schema definitions in their native
+language (e.g., Pydantic for Python, JSON Schema for language-agnostic interchange).
+The schemas below are normative—conforming implementations must support equivalent
+data structures.
 
 #### Canonical TypeScript Types
 
@@ -1571,7 +1868,11 @@ implicit.
 
 * * *
 
-### Layer 3: Validation
+### Layer 3: Validation & Form Filling
+
+This layer defines the rules for validating form data, computing progress state, and
+manipulating forms through patches.
+It covers both the constraints that must be satisfied and the mechanics of form filling.
 
 Validation happens at two levels: Markdoc syntax validation (see
 [Markdoc Validation][markdoc-validation]) and Markform semantic validation.
@@ -1873,10 +2174,23 @@ interface ValidationIssue {
 
 * * *
 
-### Layer 4: Tool Layer
+### Layer 4: Tool API & Interfaces
 
-The tool layer is the public API contract for agents and CLI. Tool definitions follow
-[AI SDK tool conventions][ai-sdk-tools] with Zod schemas for `inputSchema`.
+This layer defines how agents and humans interact with forms.
+It specifies:
+
+- **Tool operations** (inspect, apply, export) and their method signatures
+
+- **Result types** for each operation
+
+- **Import/export formats** for form values (JSON, YAML)
+
+- **Priority scoring** for guiding agents on what to fill next
+
+- **Abstract interface patterns** for console, web, and agent tools
+
+Tool definitions follow [AI SDK tool conventions][ai-sdk-tools] and can be exposed via
+MCP (Model Context Protocol) for agent integration.
 
 #### Core Operations
 
@@ -2184,7 +2498,20 @@ interface ExportedOption {
 
 * * *
 
-### Layer 5: Execution (Harness Loop)
+* * *
+
+## Implementation Components
+
+The following components are specific to this TypeScript codebase.
+They implement the Markform Specification and provide execution, interface, and testing
+capabilities.
+
+**Note:** Engine implementation details (TypeScript types, Zod schemas) are currently
+shown inline within the specification layers above.
+A future refactor may consolidate these into a dedicated “Engine Implementation”
+section.
+
+### Execution Harness
 
 The harness wraps the engine with a stable “step” protocol for bite-sized actions.
 **Each turn is stateless:** the agent receives the full serialized form plus remaining
@@ -2424,7 +2751,160 @@ Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 
 * * *
 
-### Layer 6: Testing Framework (Golden Sessions)
+### User Interfaces
+
+#### CLI Commands (v0.1)
+
+Thin wrapper around the tool contract:
+
+**Core commands (required for v0.1):**
+
+- `markform inspect <file.form.md>` — parse + run validators, print full report as YAML
+  (structure summary, progress summary, form state, and all issues in priority order).
+  This is the canonical way to check form status at any time.
+
+- `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
+
+- `markform export <file.form.md> --format=json` — print `{schema, values}`
+
+- `markform render <file.form.md> [-o <file.html>]` — render form as static HTML output:
+
+  - Default output: same stem with `.form.html` extension (e.g., `simple.form.md` →
+    `simple.form.html`)
+
+  - Use `-o` / `--output` to specify custom output path
+
+  - Shares rendering logic with serve command
+
+  - Useful for sharing/archiving forms without running a server
+
+- `markform serve [<file.form.md>]` — start a local web UI for interactive form editing:
+
+  - Opens browser automatically (use `--no-open` to disable)
+
+  - Interactive HTML form elements for all field types
+
+  - Save writes to a new versioned filename (never overwrites the source)
+
+  - Version naming: if the stem ends with a version pattern (e.g., `-v1`, `_v2`, ` v3`),
+    extract and increment the number; otherwise append `-v1`
+
+  - Examples:
+
+    - `earnings-analysis.form.md` → `quarterly-v1.form.md` → `quarterly-v2.form.md`
+
+    - `report_v5.form.md` → `report_v6.form.md`
+
+    - `draft v12.form.md` → `draft v13.form.md`
+
+- `markform fill <file.form.md> --mock --mock-source <file>` — fill form using mock
+  agent, write session transcript
+
+- `markform fill <file.form.md> --model=anthropic/claude-sonnet-4-5` — fill form using
+  live LLM agent
+
+**Deferred to v0.2:**
+
+- **Validation in serve** — Run engine validation from the UI with a “Validate” button.
+  Requires deciding on validator execution strategy (see Future Considerations for
+  research on server-executed vs baked validators).
+
+- **JSON endpoints** — Expose inspect/apply/export as HTTP endpoints for programmatic
+  clients.
+
+- **Harness controls** — Step through the harness loop from the UI.
+
+#### Web UI (serve)
+
+The v0.1 “serve” command provides an interactive web UI for editing and saving forms:
+
+- Opens browser automatically (use `--no-open` to disable)
+
+- Renders all field types as interactive HTML form elements:
+
+  - String fields → `<input type="text">` with minLength/maxLength
+
+  - Number fields → `<input type="number">` with min/max/step
+
+  - String list fields → `<textarea>` with one item per line
+
+  - Single-select → `<select>` dropdown with options
+
+  - Multi-select → checkboxes for each option
+
+  - Checkboxes (simple mode) → HTML checkboxes (checked/unchecked)
+
+  - Checkboxes (multi mode) → select dropdowns with 5 states
+    (todo/done/active/incomplete/na)
+
+  - Checkboxes (explicit mode) → select dropdowns with yes/no/unfilled
+
+- Pre-fills current values from the form file
+
+- Form submission via POST /save:
+
+  - Applies patches from form data to the in-memory form state
+
+  - Canonicalizes and writes to a new versioned filename (never overwrites original)
+
+  - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise
+    append `-v1`
+
+  - Returns JSON response with success status and output path
+
+- CSS styling provides clean, readable form layout
+
+**Deferred to v0.2:**
+
+- Validation in serve (run engine validation from UI with a “Validate” button)
+
+- JSON endpoints for programmatic access
+
+- Harness controls (step through the harness loop from the UI)
+
+Use `markform inspect <file>` from the CLI at any time to get a full report (YAML with
+summaries, form state, and prioritized issues).
+
+### Agent Interfaces
+
+#### AI SDK Integration
+
+Helper: `createMarkformTools({ sessionStore, validatorRegistry, ... })`
+
+Returns an AI SDK `ToolSet` with:
+
+- `markform_inspect`
+
+- `markform_apply`
+
+- `markform_export`
+
+- `markform_get_markdown` (optional)
+
+#### MCP Server Integration (v0.2)
+
+Built on the [Model Context Protocol Specification][mcp-spec] using the
+[official TypeScript SDK][mcp-typescript-sdk]. See [MCP SDKs overview][mcp-sdks] for
+client/server patterns.
+
+Tools correspond to the same operations:
+
+- `markform.inspect`
+
+- `markform.apply`
+
+- `markform.export`
+
+- `markform.get_markdown`
+
+**Transport:** stdio for local CLI integration (see MCP transports documentation).
+
+**AI SDK interop:** Use [AI SDK MCP tools][ai-sdk-mcp] to connect AI SDK agents to the
+Markform MCP server.
+
+* * *
+
+### Testing Framework
 
 Provides a unified testing approach covering parsing/serialization, tool operations,
 validation behavior, harness behavior, and all adapters.
@@ -2486,8 +2966,8 @@ final:
 
 | Mode | Purpose | `turns` field | Reproducible |
 | --- | --- | --- | --- |
-| `mock` | CI testing with deterministic values | Pre-recorded, replayed exactly | ✅ Yes |
-| `live` | Development logging of real LLM sessions | Recorded during execution | ❌ No |
+| `mock` | CI testing with deterministic values | Pre-recorded, replayed exactly | Yes |
+| `live` | Development logging of real LLM sessions | Recorded during execution | No |
 
 For `mode: live`, the session transcript is an **output** (recorded log), not an input
 for replay. Live sessions are useful for debugging but not for CI assertions.
@@ -2515,157 +2995,6 @@ from the initial template, or by storing the `markdown_sha256` for verification.
 - Produces session transcript
 
 - Useful for exploratory testing, not strict CI
-
-* * *
-
-## Interfaces
-
-### CLI Commands (v0.1)
-
-Thin wrapper around the tool contract:
-
-**Core commands (required for v0.1):**
-
-- `markform inspect <file.form.md>` — parse + run validators, print full report as YAML
-  (structure summary, progress summary, form state, and all issues in priority order).
-  This is the canonical way to check form status at any time.
-
-- `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
-
-- `markform export <file.form.md> --format=json` — print `{schema, values}`
-
-- `markform render <file.form.md> [-o <file.html>]` — render form as static HTML output:
-
-  - Default output: same stem with `.form.html` extension (e.g., `simple.form.md` →
-    `simple.form.html`)
-
-  - Use `-o` / `--output` to specify custom output path
-
-  - Shares rendering logic with serve command
-
-  - Useful for sharing/archiving forms without running a server
-
-- `markform serve [<file.form.md>]` — start a local web UI for interactive form editing:
-
-  - Opens browser automatically (use `--no-open` to disable)
-
-  - Interactive HTML form elements for all field types
-
-  - Save writes to a new versioned filename (never overwrites the source)
-
-  - Version naming: if the stem ends with a version pattern (e.g., `-v1`, `_v2`, ` v3`),
-    extract and increment the number; otherwise append `-v1`
-
-  - Examples:
-
-    - `earnings-analysis.form.md` → `quarterly-v1.form.md` → `quarterly-v2.form.md`
-
-    - `report_v5.form.md` → `report_v6.form.md`
-
-    - `draft v12.form.md` → `draft v13.form.md`
-
-- `markform fill <file.form.md> --mock --mock-source <file>` — fill form using mock
-  agent, write session transcript
-
-- `markform fill <file.form.md> --model=anthropic/claude-sonnet-4-5` — fill form using
-  live LLM agent
-
-**Deferred to v0.2:**
-
-- **Validation in serve** — Run engine validation from the UI with a “Validate” button.
-  Requires deciding on validator execution strategy (see Future Considerations for
-  research on server-executed vs baked validators).
-
-- **JSON endpoints** — Expose inspect/apply/export as HTTP endpoints for programmatic
-  clients.
-
-- **Harness controls** — Step through the harness loop from the UI.
-
-### Web UI (serve)
-
-The v0.1 “serve” command provides an interactive web UI for editing and saving forms:
-
-- Opens browser automatically (use `--no-open` to disable)
-
-- Renders all field types as interactive HTML form elements:
-
-  - String fields → `<input type="text">` with minLength/maxLength
-
-  - Number fields → `<input type="number">` with min/max/step
-
-  - String list fields → `<textarea>` with one item per line
-
-  - Single-select → `<select>` dropdown with options
-
-  - Multi-select → checkboxes for each option
-
-  - Checkboxes (simple mode) → HTML checkboxes (checked/unchecked)
-
-  - Checkboxes (multi mode) → select dropdowns with 5 states
-    (todo/done/active/incomplete/na)
-
-  - Checkboxes (explicit mode) → select dropdowns with yes/no/unfilled
-
-- Pre-fills current values from the form file
-
-- Form submission via POST /save:
-
-  - Applies patches from form data to the in-memory form state
-
-  - Canonicalizes and writes to a new versioned filename (never overwrites original)
-
-  - Version naming: if stem ends with `-vN`, `_vN`, or ` vN`, increment N; otherwise
-    append `-v1`
-
-  - Returns JSON response with success status and output path
-
-- CSS styling provides clean, readable form layout
-
-**Deferred to v0.2:**
-
-- Validation in serve (run engine validation from UI with a “Validate” button)
-
-- JSON endpoints for programmatic access
-
-- Harness controls (step through the harness loop from the UI)
-
-Use `markform inspect <file>` from the CLI at any time to get a full report (YAML with
-summaries, form state, and prioritized issues).
-
-### AI SDK Integration
-
-Helper: `createMarkformTools({ sessionStore, validatorRegistry, ... })`
-
-Returns an AI SDK `ToolSet` with:
-
-- `markform_inspect`
-
-- `markform_apply`
-
-- `markform_export`
-
-- `markform_get_markdown` (optional)
-
-### MCP Server Integration (v0.2)
-
-Built on the [Model Context Protocol Specification][mcp-spec] using the
-[official TypeScript SDK][mcp-typescript-sdk]. See [MCP SDKs overview][mcp-sdks] for
-client/server patterns.
-
-Tools correspond to the same operations:
-
-- `markform.inspect`
-
-- `markform.apply`
-
-- `markform.export`
-
-- `markform.get_markdown`
-
-**Transport:** stdio for local CLI integration (see MCP transports documentation).
-
-**AI SDK interop:** Use [AI SDK MCP tools][ai-sdk-mcp] to connect AI SDK agents to the
-Markform MCP server.
 
 * * *
 
