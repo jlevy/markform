@@ -111,8 +111,8 @@ pnpm markform fill packages/markform/examples/simple/simple.form.md --interactiv
 
 **Verify:**
 
-- [ ] Optional fields (score, notes, optional_number) show "Skip this field" option
-- [ ] Required fields (name, email, age, etc.) do NOT show skip option
+- [ ] Optional fields (score, notes, optional_number, related_url) show "Skip this field" option
+- [ ] Required fields (name, email, age, website, etc.) do NOT show skip option
 - [ ] Selecting "Skip" for an optional field advances to next field
 - [ ] Review at end shows "⊘ Skipped" indicator for skipped fields
 - [ ] Form completes successfully when all fields are answered or skipped
@@ -125,24 +125,51 @@ Run the following command and test in browser:
 pnpm markform serve packages/markform/examples/simple/simple.form.md
 ```
 
-Open http://localhost:3000 in browser and **verify:**
+Open http://localhost:3000 in browser.
 
-- [ ] Optional fields have a "Skip" button next to the input
-- [ ] Required fields do NOT have a skip button
-- [ ] Clicking "Skip" marks field as skipped with visual indicator
-- [ ] Skipped fields show disabled state and "Skipped" label
-- [ ] Entering a value in skipped field clears skip state
-- [ ] Form can be saved with mix of filled and skipped fields
+**A. Skip Button Rendering:**
+
+- [ ] Optional fields (score, notes, optional_number, related_url) have a "Skip" button
+- [ ] Required fields (name, email, age, website, etc.) do NOT have skip button
+- [ ] Skip button is styled appropriately (gray/muted color)
+
+**B. Skip Button Functionality:**
+
+- [ ] Clicking "Skip" on an optional field:
+  - [ ] Button text changes to "Unskip"
+  - [ ] Input field becomes disabled/grayed out
+  - [ ] "Skipped" indicator appears
+- [ ] Clicking "Unskip" reverses the skip state:
+  - [ ] Button text returns to "Skip"
+  - [ ] Input field becomes enabled again
+  - [ ] "Skipped" indicator disappears
+
+**C. Form Submission with Skips:**
+
+- [ ] Fill required fields (name, email, age, website, tags, priority, categories, checkboxes)
+- [ ] Skip some optional fields (e.g., score, notes)
+- [ ] Fill other optional fields (e.g., references)
+- [ ] Click "Save and Continue"
+- [ ] Verify form saves correctly with mix of filled and skipped fields
+- [ ] Reload page and verify skipped state persists
+
+**D. Skip and Value Interaction:**
+
+- [ ] Skip an optional field, then type a value - skip state should clear
+- [ ] Previously skipped field should become editable when submitting with value
 
 #### 3. CLI Inspect Output
 
 Run inspect on a filled form with skipped fields:
 
 ```bash
+# First, fill the form using mock with skips
 pnpm markform fill packages/markform/examples/simple/simple.form.md --agent=mock \
-  --mock-source packages/markform/examples/simple/simple-skipped-filled.form.md
+  --mock-source packages/markform/examples/simple/simple-skipped-filled.form.md \
+  --output /tmp/test-skipped.form.md
 
-pnpm markform inspect packages/markform/examples/simple/simple.form.md
+# Then inspect the filled form
+pnpm markform inspect /tmp/test-skipped.form.md
 ```
 
 **Verify:**
@@ -151,7 +178,23 @@ pnpm markform inspect packages/markform/examples/simple/simple.form.md
 - [ ] Inspect output shows `skippedFields` count
 - [ ] `isComplete` is true when answered + skipped equals total fields
 
-#### 4. Portability (node:crypto removal)
+#### 4. CLI Fill Output (Non-Interactive Mock Mode)
+
+Run fill with mock agent and verify transcript output:
+
+```bash
+pnpm markform fill packages/markform/examples/simple/simple.form.md --agent=mock \
+  --mock-source packages/markform/examples/simple/simple-skipped-filled.form.md \
+  --verbose
+```
+
+**Verify:**
+
+- [ ] Console output shows `skip_field` patches being applied
+- [ ] Summary shows correct answered/skipped counts
+- [ ] Session transcript records skip operations
+
+#### 5. Portability (node:crypto removal)
 
 The `js-sha256` library replaces `node:crypto` for SHA256 hashing. This change enables
 markform to work in environments without Node.js built-in modules (e.g., edge runtimes).
@@ -159,7 +202,7 @@ markform to work in environments without Node.js built-in modules (e.g., edge ru
 **Verify golden tests pass:**
 
 ```bash
-pnpm test:golden
+pnpm test -- --testPathPattern=golden
 ```
 
 - [ ] Golden tests pass (SHA256 hashes match expected values)
@@ -170,3 +213,4 @@ pnpm test:golden
 | Date | Author | Changes |
 | --- | --- | --- |
 | 2025-12-25 | Claude | Initial validation spec |
+| 2025-12-25 | Claude | Expanded manual web serve testing (skip button functionality, form submission) |
