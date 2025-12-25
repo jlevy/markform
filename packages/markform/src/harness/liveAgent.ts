@@ -8,6 +8,8 @@
 import type { LanguageModel, Tool } from "ai";
 import { generateText, stepCountIs, zodSchema } from "ai";
 import { z } from "zod";
+import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 
 import type {
   DocumentationBlock,
@@ -18,6 +20,15 @@ import type {
 import { PatchSchema } from "../engine/coreTypes.js";
 import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, getWebSearchConfig } from "../settings.js";
 import type { Agent, LiveAgentConfig } from "./harnessTypes.js";
+import {
+  DEFAULT_SYSTEM_PROMPT,
+  WEB_SEARCH_INSTRUCTIONS,
+  GENERATE_PATCHES_TOOL_DESCRIPTION,
+  ISSUES_HEADER,
+  getIssuesIntro,
+  PATCH_FORMAT_INSTRUCTIONS,
+  SECTION_HEADERS,
+} from "./prompts.js";
 
 // Re-export types for backwards compatibility
 export type { LiveAgentConfig } from "./harnessTypes.js";
@@ -71,7 +82,7 @@ export class LiveAgent implements Agent {
 
     // Load web search tools if enabled and not already loaded
     if (this.enableWebSearch && this.provider && !this.webSearchTools) {
-      this.webSearchTools = await loadWebSearchTools(this.provider);
+      this.webSearchTools = loadWebSearchTools(this.provider);
 
       // Log warning if web search was requested but not available
       if (!this.webSearchTools || Object.keys(this.webSearchTools).length === 0) {
@@ -84,10 +95,7 @@ export class LiveAgent implements Agent {
 
     // If web search is available, add instructions to use it
     if (this.webSearchTools && Object.keys(this.webSearchTools).length > 0) {
-      systemPrompt += "\n\n# Web Search\n" +
-        "You have access to web search tools. Use them to research and find accurate, up-to-date information " +
-        "for the form fields. Search for company websites, news articles, LinkedIn profiles, and other sources " +
-        "to gather real data rather than using placeholder values.";
+      systemPrompt += "\n\n" + WEB_SEARCH_INSTRUCTIONS;
     }
 
     // Define the patch tool with properly typed parameters
@@ -99,9 +107,7 @@ export class LiveAgent implements Agent {
 
     // Create tool using zodSchema wrapper for AI SDK v6 compatibility
     const generatePatchesTool: Tool = {
-      description:
-        "Generate patches to fill form fields. Each patch sets a field value. " +
-        "Use the field IDs from the issues list. Return patches for all issues you can address.",
+      description: GENERATE_PATCHES_TOOL_DESCRIPTION,
       inputSchema: zodSchema(patchesSchema),
     };
 
@@ -141,23 +147,6 @@ export class LiveAgent implements Agent {
 // =============================================================================
 
 /**
- * Default system prompt for the live agent.
- */
-const DEFAULT_SYSTEM_PROMPT = `You are a form-filling assistant. Your task is to analyze form issues and generate patches to fill in the required fields.
-
-Guidelines:
-1. Focus on required fields first (severity: "required")
-2. Use realistic but generic values when specific data is not provided
-3. Match the expected field types exactly
-4. For string fields: use appropriate text
-5. For number fields: use appropriate numeric values
-6. For single_select: choose one valid option ID
-7. For multi_select: choose one or more valid option IDs
-8. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
-
-Always use the generatePatches tool to submit your field values.`;
-
-/**
  * Extract doc blocks of a specific tag type for a given ref.
  */
 function getDocBlocks(
@@ -191,7 +180,7 @@ function buildSystemPrompt(
   const formInstructions = getDocBlocks(form.docs, form.schema.id, "instructions");
   if (formInstructions.length > 0) {
     sections.push("");
-    sections.push("# Form Instructions");
+    sections.push(SECTION_HEADERS.formInstructions);
     for (const doc of formInstructions) {
       sections.push(doc.bodyMarkdown.trim());
     }
@@ -201,14 +190,14 @@ function buildSystemPrompt(
   const roleInstructions = form.metadata?.roleInstructions?.[targetRole];
   if (roleInstructions) {
     sections.push("");
-    sections.push(`# Instructions for ${targetRole} role`);
+    sections.push(SECTION_HEADERS.roleInstructions(targetRole));
     sections.push(roleInstructions);
   } else {
     // Fallback to default role instructions
     const defaultRoleInstr = DEFAULT_ROLE_INSTRUCTIONS[targetRole];
     if (defaultRoleInstr) {
       sections.push("");
-      sections.push(`# Role guidance`);
+      sections.push(SECTION_HEADERS.roleGuidance);
       sections.push(defaultRoleInstr);
     }
   }
@@ -230,7 +219,7 @@ function buildSystemPrompt(
 
   if (fieldInstructions.length > 0) {
     sections.push("");
-    sections.push("# Field-specific instructions");
+    sections.push(SECTION_HEADERS.fieldInstructions);
     sections.push(...fieldInstructions);
   }
 
@@ -247,9 +236,9 @@ function buildContextPrompt(
 ): string {
   const lines: string[] = [];
 
-  lines.push("# Current Form Issues");
+  lines.push(ISSUES_HEADER);
   lines.push("");
-  lines.push(`You need to address up to ${maxPatches} issues. Here are the current issues:`);
+  lines.push(getIssuesIntro(maxPatches));
   lines.push("");
 
   for (const issue of issues) {
@@ -273,18 +262,7 @@ function buildContextPrompt(
     lines.push("");
   }
 
-  lines.push("# Instructions");
-  lines.push("");
-  lines.push("Use the generatePatches tool to submit patches for the fields above.");
-  lines.push("Each patch should match the field type:");
-  lines.push("- string: { op: \"set_string\", fieldId: \"...\", value: \"...\" }");
-  lines.push("- number: { op: \"set_number\", fieldId: \"...\", value: 123 }");
-  lines.push("- string_list: { op: \"set_string_list\", fieldId: \"...\", items: [\"...\", \"...\"] }");
-  lines.push("- single_select: { op: \"set_single_select\", fieldId: \"...\", selected: \"option_id\" }");
-  lines.push("- multi_select: { op: \"set_multi_select\", fieldId: \"...\", selected: [\"opt1\", \"opt2\"] }");
-  lines.push("- checkboxes: { op: \"set_checkboxes\", fieldId: \"...\", values: { \"opt1\": \"done\", \"opt2\": \"todo\" } }");
-  lines.push("- url: { op: \"set_url\", fieldId: \"...\", value: \"https://...\" }");
-  lines.push("- url_list: { op: \"set_url_list\", fieldId: \"...\", items: [\"https://...\", \"https://...\"] }");
+  lines.push(PATCH_FORMAT_INSTRUCTIONS);
 
   return lines.join("\n");
 }
@@ -310,61 +288,44 @@ function findField(form: ParsedForm, fieldId: string) {
 /**
  * Load web search tools for a provider.
  *
- * Dynamically imports provider-specific web search tools if available.
- * Returns empty object if provider doesn't support web search or tools fail to load.
+ * Uses statically imported provider modules to get web search tools.
+ * Returns empty object if provider doesn't support web search.
  */
-async function loadWebSearchTools(provider: string): Promise<Record<string, Tool>> {
+function loadWebSearchTools(provider: string): Record<string, Tool> {
   const config = getWebSearchConfig(provider);
   if (!config) {
     return {};
   }
 
-  try {
-    switch (provider) {
-      case "openai": {
-        // OpenAI web search preview tool
-        // Dynamic import - module structure varies by version
-        const openaiModule = await import("@ai-sdk/openai");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-        const webSearch = (openaiModule as any).openaiTools?.webSearchPreview;
-        if (webSearch) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          return { web_search: webSearch() as Tool };
-        }
-        // Try alternative export path
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-        const altWebSearch = (openaiModule as any).webSearchPreview;
-        if (altWebSearch) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          return { web_search: altWebSearch() as Tool };
-        }
-        return {};
+  switch (provider) {
+    case "openai": {
+      // OpenAI web search tool via openai.tools
+      // Prefer webSearch (newer) over webSearchPreview (legacy)
+      if (openai.tools.webSearch) {
+        return { web_search: openai.tools.webSearch({}) as Tool };
       }
-
-      case "google": {
-        // Google search grounding tool
-        const googleModule = await import("@ai-sdk/google");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-        const googleSearch = (googleModule as any).googleSearch;
-        if (googleSearch) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-          return { google_search: googleSearch() as Tool };
-        }
-        return {};
+      if (openai.tools.webSearchPreview) {
+        return { web_search: openai.tools.webSearchPreview({}) as Tool };
       }
-
-      case "xai": {
-        // xAI Grok has built-in web search - no separate tool needed
-        // The model itself handles search when prompted
-        return {};
-      }
-
-      default:
-        return {};
+      return {};
     }
-  } catch {
-    // If tools fail to load, continue without web search
-    return {};
+
+    case "google": {
+      // Google search grounding tool via google.tools
+      if (google.tools?.googleSearch) {
+        return { google_search: google.tools.googleSearch({}) as Tool };
+      }
+      return {};
+    }
+
+    case "xai": {
+      // xAI Grok has built-in web search - no separate tool needed
+      // The model itself handles search when prompted
+      return {};
+    }
+
+    default:
+      return {};
   }
 }
 
