@@ -215,6 +215,9 @@ type Patch =
 7. Form is NOT complete if required fields are empty (even if others skipped)
 8. Golden tests verify answered/skipped tracking
 9. CLI inspect shows skipped fields distinctly
+10. `checkboxMode="explicit"` fields default to `required=true`
+11. Parse error when `checkboxMode="explicit"` with `required=false`
+12. `checkboxMode="multi"` and `checkboxMode="simple"` default to `required=false`
 
 ### Testing Plan
 
@@ -691,6 +694,190 @@ XX. **Skip field semantics** — The `skip_field` patch allows explicitly skippi
     ensuring agents actively respond to every field. Required fields cannot be skipped.
 ```
 
+## Checkbox Mode and Required Attribute Constraints
+
+### Design Principle
+
+The `checkboxMode` attribute carries inherent semantics about whether a checkbox field must
+be answered:
+
+- **`checkboxMode="explicit"`** — Inherently required. The agent MUST answer yes or no for
+  each option. Having unfilled options is invalid. Cannot have `required=false`.
+
+- **`checkboxMode="multi"`** — Optional by default. Workflow tracking (todo/done/incomplete/
+  active/na) doesn't require all items to be resolved. Can be made required with
+  `required=true`.
+
+- **`checkboxMode="simple"`** — Optional by default. GFM-compatible checkboxes don't require
+  all to be checked. Can be made required with `required=true` and further controlled with
+  `minDone`.
+
+### Validation Rules
+
+| Mode | `required` Attribute | Behavior |
+| --- | --- | --- |
+| `explicit` | Must be `true` or omitted (defaults to `true`) | All items must be answered yes/no |
+| `explicit` | `required=false` | **VALIDATION ERROR** — contradicts explicit semantics |
+| `multi` | Omitted (defaults to `false`) | Optional; any state valid |
+| `multi` | `required=true` | All items must be done/na (no incomplete/active/todo) |
+| `simple` | Omitted (defaults to `false`) | Optional; any state valid |
+| `simple` | `required=true` | All items must be checked (or use `minDone`) |
+
+### Implementation
+
+#### 1. Parse-time validation
+
+Add validation in `parse.ts` to reject `checkboxMode="explicit"` with `required=false`:
+
+```typescript
+// In parseCheckboxes or field validation
+if (checkboxMode === "explicit" && required === false) {
+  throw new ParseError(
+    `Checkbox field "${label}" has checkboxMode="explicit" which is inherently required. ` +
+    `Cannot set required=false. Remove required attribute or change checkboxMode.`
+  );
+}
+```
+
+#### 2. Default `required` based on mode
+
+```typescript
+// When parsing checkboxes field:
+const checkboxMode = attrs.checkboxMode ?? "multi";
+const required = checkboxMode === "explicit"
+  ? true  // explicit mode is always required
+  : (attrs.required ?? false);  // multi/simple default to optional
+```
+
+#### 3. Lint warning for redundant `required=true` on explicit
+
+When `checkboxMode="explicit"` and `required=true` is explicitly set, emit a warning:
+
+```
+Warning: required=true is redundant for checkboxMode="explicit" (explicit mode is inherently required)
+```
+
+### Test Cases
+
+#### Unit Tests: Parse Validation (`tests/unit/engine/parse.test.ts`)
+
+```typescript
+describe("checkbox mode/required constraints", () => {
+  it("rejects explicit mode with required=false", () => {
+    const md = `
+{% checkboxes id="test" label="Test" checkboxMode="explicit" required=false %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+`;
+    expect(() => parseMarkformMarkdown(md)).toThrow(/explicit.*inherently required/i);
+  });
+
+  it("accepts explicit mode without required attribute (defaults to true)", () => {
+    const md = `
+{% checkboxes id="test" label="Test" checkboxMode="explicit" %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+`;
+    const result = parseMarkformMarkdown(md);
+    const field = result.form.fieldsById.test as CheckboxesField;
+    expect(field.required).toBe(true);
+  });
+
+  it("accepts explicit mode with required=true (redundant but valid)", () => {
+    const md = `
+{% checkboxes id="test" label="Test" checkboxMode="explicit" required=true %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+`;
+    const result = parseMarkformMarkdown(md);
+    const field = result.form.fieldsById.test as CheckboxesField;
+    expect(field.required).toBe(true);
+  });
+
+  it("multi mode defaults to optional", () => {
+    const md = `
+{% checkboxes id="test" label="Test" checkboxMode="multi" %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+`;
+    const result = parseMarkformMarkdown(md);
+    const field = result.form.fieldsById.test as CheckboxesField;
+    expect(field.required).toBe(false);
+  });
+
+  it("simple mode defaults to optional", () => {
+    const md = `
+{% checkboxes id="test" label="Test" checkboxMode="simple" %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+`;
+    const result = parseMarkformMarkdown(md);
+    const field = result.form.fieldsById.test as CheckboxesField;
+    expect(field.required).toBe(false);
+  });
+});
+```
+
+### Architecture Documentation Changes for Checkbox Mode Constraints
+
+Add to the "Checkbox Modes" section in `arch-markform-initial-design.md`:
+
+#### After line ~354 (after mode descriptions)
+
+Add new subsection:
+
+```markdown
+### Checkbox Mode and Required Attribute Relationship
+
+The `checkboxMode` attribute has semantic implications for the `required` attribute:
+
+**`checkboxMode="explicit"` is inherently required:**
+- All options MUST have an explicit yes (`[y]`) or no (`[n]`) answer
+- Unfilled options (`[ ]`) are invalid for explicit mode
+- The `required` attribute is implicitly `true` and cannot be set to `false`
+- Setting `required=false` with `checkboxMode="explicit"` is a parse error
+
+**`checkboxMode="multi"` and `checkboxMode="simple"` are optional by default:**
+- The `required` attribute defaults to `false` for these modes
+- Set `required=true` to enforce completion of all items
+- Use `minDone` (simple mode only) for partial completion requirements
+
+| Mode | Default Required | Can Set `required=false`? |
+| --- | --- | --- |
+| `explicit` | `true` | No (parse error) |
+| `multi` | `false` | Yes (default) |
+| `simple` | `false` | Yes (default) |
+```
+
+#### Update line ~354
+
+Change:
+```
+- `checkboxMode="explicit"` — Requires explicit yes/no, validates all options answered
+```
+
+To:
+```
+- `checkboxMode="explicit"` — Requires explicit yes/no; inherently required (cannot set
+  required=false); validates all options answered
+```
+
+### Existing Code to Update
+
+The following test files have explicit checkboxes without `required=true` and need updating:
+
+1. `tests/unit/valueCoercion.test.ts:59` — Add `required=true` (or test will fail after
+   parse validation is added, since explicit mode will default to required=true)
+
+2. `tests/unit/engine/summaries.test.ts:269` — Same
+
+3. `tests/unit/engine/serialize.test.ts:236` — Same
+
+4. `tests/unit/engine/parse.test.ts:235` — Same
+
+These should continue to work since explicit mode will default to `required=true`, but
+they should be updated for clarity to explicitly show `required=true`.
+
 ## Open Questions
 
 ### Resolved
@@ -727,3 +914,4 @@ XX. **Skip field semantics** — The `skip_field` patch allows explicitly skippi
 | 2025-12-25 | Claude | Clarified terminology: answered (has value), skipped (explicitly skipped) |
 | 2025-12-25 | Claude | Completion = answered + skipped == totalFields |
 | 2025-12-25 | Claude | Added Architecture Documentation Changes section |
+| 2025-12-25 | Claude | Added Checkbox Mode and Required Attribute Constraints section |
