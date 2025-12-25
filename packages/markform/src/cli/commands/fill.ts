@@ -374,7 +374,7 @@ export function registerFillCommand(program: Command): void {
             // Live agent uses LLM (model is required, validated above)
             const modelId = options.model!;
             logVerbose(ctx, `Resolving model: ${modelId}`);
-            const { model } = await resolveModel(modelId);
+            const { model, provider } = await resolveModel(modelId);
 
             // Determine system prompt: --instructions > --prompt > default
             let systemPrompt: string | undefined;
@@ -389,11 +389,17 @@ export function registerFillCommand(program: Command): void {
 
             // Pass first target role to agent (for instruction lookup)
             const primaryRole = targetRoles[0] === "*" ? AGENT_ROLE : targetRoles[0];
-            agent = createLiveAgent({
+            const liveAgent = createLiveAgent({
               model,
+              provider,
               systemPromptAddition: systemPrompt,
               targetRole: primaryRole,
             });
+            agent = liveAgent;
+
+            // Log available tools
+            const toolNames = liveAgent.getAvailableToolNames();
+            logInfo(ctx, `Available tools: ${toolNames.join(", ")}`);
             logVerbose(ctx, `Using live agent with model: ${modelId}`);
           }
 

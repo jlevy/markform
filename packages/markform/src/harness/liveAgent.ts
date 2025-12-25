@@ -57,6 +57,23 @@ export class LiveAgent implements Agent {
     this.targetRole = config.targetRole ?? AGENT_ROLE;
     this.provider = config.provider;
     this.enableWebSearch = config.enableWebSearch ?? true;
+
+    // Eagerly load web search tools to enable early logging
+    if (this.enableWebSearch && this.provider) {
+      this.webSearchTools = loadWebSearchTools(this.provider);
+    }
+  }
+
+  /**
+   * Get list of available tool names for this agent.
+   * Useful for logging what capabilities the agent has.
+   */
+  getAvailableToolNames(): string[] {
+    const tools = ["generatePatches"];
+    if (this.webSearchTools) {
+      tools.push(...Object.keys(this.webSearchTools));
+    }
+    return tools;
   }
 
   /**
@@ -82,17 +99,9 @@ export class LiveAgent implements Agent {
       systemPrompt += "\n\n# Additional Context\n" + this.systemPromptAddition;
     }
 
-    // Load web search tools if enabled and not already loaded
+    // Web search tools are loaded in constructor, but check again for runtime changes
     if (this.enableWebSearch && this.provider && !this.webSearchTools) {
       this.webSearchTools = loadWebSearchTools(this.provider);
-
-      // Log warning if web search was requested but not available
-      if (!this.webSearchTools || Object.keys(this.webSearchTools).length === 0) {
-        console.warn(
-          `[markform] Web search not available for provider "${this.provider}". ` +
-          `Agent will operate without web search capabilities.`
-        );
-      }
     }
 
     // If web search is available, add instructions to use it
@@ -361,10 +370,10 @@ function loadWebSearchTools(provider: string): Record<string, Tool> {
     case "openai": {
       // OpenAI web search tool via openai.tools
       // Prefer webSearch (newer) over webSearchPreview (legacy)
-      if (openai.tools.webSearch) {
+      if (openai.tools?.webSearch) {
         return { web_search: openai.tools.webSearch({}) as Tool };
       }
-      if (openai.tools.webSearchPreview) {
+      if (openai.tools?.webSearchPreview) {
         return { web_search: openai.tools.webSearchPreview({}) as Tool };
       }
       return {};
