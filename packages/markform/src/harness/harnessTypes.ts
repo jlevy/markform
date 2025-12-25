@@ -51,6 +51,13 @@ export interface TurnStats {
     /** Optional/recommended issues still remaining */
     optionalRemaining: number;
   };
+  /** Full prompts sent to LLM (for verbose logging) */
+  prompts?: {
+    /** System prompt with instructions */
+    system: string;
+    /** Context prompt with form state and issues */
+    context: string;
+  };
 }
 
 /**

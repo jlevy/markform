@@ -173,6 +173,10 @@ export class LiveAgent implements Agent {
         requiredRemaining,
         optionalRemaining,
       },
+      prompts: {
+        system: systemPrompt,
+        context: contextPrompt,
+      },
     };
 
     // Limit to maxPatches and return with stats

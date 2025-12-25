@@ -429,12 +429,27 @@ export function registerFillCommand(program: Command): void {
               logInfo(ctx, `    ${pc.cyan(patch.fieldId)} ${pc.dim(`(${typeName})`)} ${pc.dim("=")} ${pc.green(value)}`);
             }
 
-            // Log stats in verbose mode
+            // Log stats and prompts in verbose mode
             if (stats) {
               logVerbose(ctx, `  Stats: ${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out tokens`);
               if (stats.toolCalls.length > 0) {
                 const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(", ");
                 logVerbose(ctx, `  Tools: ${toolSummary}`);
+              }
+
+              // Log full prompts in verbose mode
+              if (stats.prompts) {
+                logVerbose(ctx, ``);
+                logVerbose(ctx, pc.dim(`  ─── System Prompt ───`));
+                for (const line of stats.prompts.system.split("\n")) {
+                  logVerbose(ctx, pc.dim(`  ${line}`));
+                }
+                logVerbose(ctx, ``);
+                logVerbose(ctx, pc.dim(`  ─── Context Prompt ───`));
+                for (const line of stats.prompts.context.split("\n")) {
+                  logVerbose(ctx, pc.dim(`  ${line}`));
+                }
+                logVerbose(ctx, ``);
               }
             }
 
