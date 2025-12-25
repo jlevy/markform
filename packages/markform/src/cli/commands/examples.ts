@@ -36,6 +36,7 @@ import { resolveModel, getProviderInfo, type ProviderName } from "../../harness/
 import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
+  getExamplePath,
   loadExampleContent,
 } from "../examples/exampleRegistry.js";
 import { formatPath, getCommandContext, logError, logTiming } from "../lib/shared.js";
@@ -55,7 +56,7 @@ function printExamplesList(): void {
     console.log(`  ${pc.cyan(example.id)}`);
     console.log(`    ${pc.bold(example.title)}`);
     console.log(`    ${pc.dim(example.description)}`);
-    console.log(`    Default filename: ${example.filename}`);
+    console.log(`    Source: ${formatPath(getExamplePath(example.id))}`);
     console.log("");
   }
 }

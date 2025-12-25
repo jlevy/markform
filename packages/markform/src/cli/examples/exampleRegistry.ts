@@ -107,3 +107,17 @@ export function getExampleIds(): string[] {
 export function getExampleById(id: string): ExampleDefinition | undefined {
   return EXAMPLE_DEFINITIONS.find((e) => e.id === id);
 }
+
+/**
+ * Get the absolute path to an example's source file.
+ * @param exampleId - The example ID (e.g., 'simple', 'political-research')
+ * @returns The absolute path to the example form file
+ * @throws Error if the example is not found
+ */
+export function getExamplePath(exampleId: string): string {
+  const example = EXAMPLE_DEFINITIONS.find((e) => e.id === exampleId);
+  if (!example) {
+    throw new Error(`Unknown example: ${exampleId}`);
+  }
+  return join(getExamplesDir(), example.path);
+}
