@@ -535,4 +535,147 @@ Additional context.
       expect(result.docs[2]?.tag).toBe("documentation");
     });
   });
+
+  describe("checkbox mode/required constraints", () => {
+    it("rejects explicit mode with required=false", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test_form" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="confirms" label="Confirms" checkboxMode="explicit" required=false %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/explicit.*inherently required/i);
+    });
+
+    it("accepts explicit mode without required attribute (defaults to true)", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="confirms" label="Confirms" checkboxMode="explicit" %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+      expect(field?.kind).toBe("checkboxes");
+      if (field?.kind === "checkboxes") {
+        expect(field.required).toBe(true);
+      }
+    });
+
+    it("accepts explicit mode with required=true (redundant but valid)", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="confirms" label="Confirms" checkboxMode="explicit" required=true %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+      expect(field?.kind).toBe("checkboxes");
+      if (field?.kind === "checkboxes") {
+        expect(field.required).toBe(true);
+      }
+    });
+
+    it("multi mode defaults to optional", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" checkboxMode="multi" %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+      expect(field?.kind).toBe("checkboxes");
+      if (field?.kind === "checkboxes") {
+        expect(field.required).toBe(false);
+      }
+    });
+
+    it("simple mode defaults to optional", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="items" label="Items" checkboxMode="simple" %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+      expect(field?.kind).toBe("checkboxes");
+      if (field?.kind === "checkboxes") {
+        expect(field.required).toBe(false);
+      }
+    });
+
+    it("default checkboxMode (multi) defaults to optional", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" %}
+- [ ] Option 1 {% #opt1 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+      expect(field?.kind).toBe("checkboxes");
+      if (field?.kind === "checkboxes") {
+        expect(field.required).toBe(false);
+        expect(field.checkboxMode).toBe("multi");
+      }
+    });
+  });
 });
