@@ -38,6 +38,14 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     filename: "earnings-analysis.form.md",
     path: "earnings-analysis/earnings-analysis.form.md",
   },
+  {
+    id: "startup-deep-research",
+    title: "Startup Deep Research",
+    description:
+      "Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.",
+    filename: "startup-deep-research.form.md",
+    path: "startup-deep-research/startup-deep-research.form.md",
+  },
 ];
 
 /**
