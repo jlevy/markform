@@ -144,13 +144,17 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
   // 2. Resolve model if string (skip if _testAgent provided)
   let model: LanguageModel | undefined;
+  let provider: string | undefined;
   if (!options._testAgent) {
     try {
       if (typeof options.model === "string") {
         const resolved = await resolveModel(options.model);
         model = resolved.model;
+        provider = resolved.provider;
       } else {
         model = options.model;
+        // When a LanguageModel is passed directly, we can't determine provider
+        // Web search will be disabled in this case
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -197,6 +201,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     model: model!,
     systemPromptAddition: options.systemPromptAddition,
     targetRole: targetRoles[0] ?? AGENT_ROLE,
+    provider,
+    enableWebSearch: true,
   });
 
   // 5. Run harness loop

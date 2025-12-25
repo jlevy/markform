@@ -5,7 +5,7 @@
  * by analyzing issues and generating appropriate patches.
  */
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import { generateText, stepCountIs, zodSchema } from "ai";
 import { z } from "zod";
 
@@ -16,7 +16,7 @@ import type {
   Patch,
 } from "../engine/coreTypes.js";
 import { PatchSchema } from "../engine/coreTypes.js";
-import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from "../settings.js";
+import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, getWebSearchConfig } from "../settings.js";
 import type { Agent, LiveAgentConfig } from "./harnessTypes.js";
 
 // Re-export types for backwards compatibility
@@ -34,12 +34,17 @@ export class LiveAgent implements Agent {
   private maxStepsPerTurn: number;
   private systemPromptAddition?: string;
   private targetRole: string;
+  private provider?: string;
+  private enableWebSearch: boolean;
+  private webSearchTools: Record<string, Tool> | null = null;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
     this.maxStepsPerTurn = config.maxStepsPerTurn ?? 3;
     this.systemPromptAddition = config.systemPromptAddition;
     this.targetRole = config.targetRole ?? AGENT_ROLE;
+    this.provider = config.provider;
+    this.enableWebSearch = config.enableWebSearch ?? true;
   }
 
   /**
@@ -64,6 +69,19 @@ export class LiveAgent implements Agent {
       systemPrompt += "\n\n# Additional Context\n" + this.systemPromptAddition;
     }
 
+    // Load web search tools if enabled and not already loaded
+    if (this.enableWebSearch && this.provider && !this.webSearchTools) {
+      this.webSearchTools = await loadWebSearchTools(this.provider);
+    }
+
+    // If web search is available, add instructions to use it
+    if (this.webSearchTools && Object.keys(this.webSearchTools).length > 0) {
+      systemPrompt += "\n\n# Web Search\n" +
+        "You have access to web search tools. Use them to research and find accurate, up-to-date information " +
+        "for the form fields. Search for company websites, news articles, LinkedIn profiles, and other sources " +
+        "to gather real data rather than using placeholder values.";
+    }
+
     // Define the patch tool with properly typed parameters
     const patchesSchema = z.object({
       patches: z.array(PatchSchema).max(maxPatches).describe(
@@ -72,11 +90,17 @@ export class LiveAgent implements Agent {
     });
 
     // Create tool using zodSchema wrapper for AI SDK v6 compatibility
-    const generatePatchesTool = {
+    const generatePatchesTool: Tool = {
       description:
         "Generate patches to fill form fields. Each patch sets a field value. " +
         "Use the field IDs from the issues list. Return patches for all issues you can address.",
       inputSchema: zodSchema(patchesSchema),
+    };
+
+    // Combine all tools
+    const tools: Record<string, Tool> = {
+      generatePatches: generatePatchesTool,
+      ...this.webSearchTools,
     };
 
     // Call the model
@@ -84,7 +108,7 @@ export class LiveAgent implements Agent {
       model: this.model,
       system: systemPrompt,
       prompt: contextPrompt,
-      tools: { generatePatches: generatePatchesTool },
+      tools,
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
 
@@ -267,6 +291,71 @@ function findField(form: ParsedForm, fieldId: string) {
     }
   }
   return null;
+}
+
+// =============================================================================
+// Web Search Tools
+// =============================================================================
+
+/**
+ * Load web search tools for a provider.
+ *
+ * Dynamically imports provider-specific web search tools if available.
+ * Returns empty object if provider doesn't support web search or tools fail to load.
+ */
+async function loadWebSearchTools(provider: string): Promise<Record<string, Tool>> {
+  const config = getWebSearchConfig(provider);
+  if (!config) {
+    return {};
+  }
+
+  try {
+    switch (provider) {
+      case "openai": {
+        // OpenAI web search preview tool
+        // Dynamic import - module structure varies by version
+        const openaiModule = await import("@ai-sdk/openai");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+        const webSearch = (openaiModule as any).openaiTools?.webSearchPreview;
+        if (webSearch) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          return { web_search: webSearch() as Tool };
+        }
+        // Try alternative export path
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+        const altWebSearch = (openaiModule as any).webSearchPreview;
+        if (altWebSearch) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          return { web_search: altWebSearch() as Tool };
+        }
+        return {};
+      }
+
+      case "google": {
+        // Google search grounding tool
+        const googleModule = await import("@ai-sdk/google");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+        const googleSearch = (googleModule as any).googleSearch;
+        if (googleSearch) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          return { google_search: googleSearch() as Tool };
+        }
+        return {};
+      }
+
+      case "xai": {
+        // xAI Grok has built-in web search - no separate tool needed
+        // The model itself handles search when prompted
+        return {};
+      }
+
+      default:
+        return {};
+    }
+  } catch {
+    // If tools fail to load, continue without web search
+    return {};
+  }
 }
 
 // =============================================================================

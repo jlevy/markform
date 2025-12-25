@@ -58,6 +58,10 @@ export interface LiveAgentConfig {
   systemPromptAddition?: string;
   /** Target role for instruction lookup (default: AGENT_ROLE) */
   targetRole?: string;
+  /** Provider name (needed for web search tool selection) */
+  provider?: string;
+  /** Enable web search for providers that support it (default: true) */
+  enableWebSearch?: boolean;
 }
 
 // =============================================================================
