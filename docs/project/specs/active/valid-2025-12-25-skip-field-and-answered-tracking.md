@@ -16,7 +16,11 @@ The feature adds explicit field acknowledgment semantics to markform.
 
 - Fix `hasReachedMaxTurns()` logic to check if turn is *completed*, not just reached
 
-- Add message history tracking in `LiveAgent` for better multi-turn context
+- Stateless agent design: full form markdown included in each turn’s context prompt
+
+- Per-turn stats tracking: token usage, tool calls, form progress metrics
+
+- Verbose mode (`--verbose`) logs full LLM prompts (system + context)
 
 - Export multi-format files (form, raw, YAML) in interactive fill mode
 
@@ -152,13 +156,31 @@ The feature adds explicit field acknowledgment semantics to markform.
 
 - ✅ Harness loop runs exactly N times when maxTurns=N
 
-#### 7. LiveAgent Multi-Turn History (`tests/unit/harness/programmaticFill.test.ts`)
+#### 7. LiveAgent Stateless Design (`packages/markform/src/harness/liveAgent.ts`)
 
-**Conversation history:**
+**Stateless form context:**
 
-- ✅ LiveAgent maintains message history across turns
+- ✅ Each turn includes full form markdown in context prompt
 
-- ✅ Previous context is available for better multi-turn reasoning
+- ✅ Agent sees complete form state (filled values, remaining issues) each turn
+
+- ✅ No conversation history needed - state is in the form itself
+
+**Per-turn stats tracking:**
+
+- ✅ `TurnStats` type captures inputTokens, outputTokens, toolCalls, formProgress
+
+- ✅ `AgentResponse` wraps patches with optional stats
+
+- ✅ Stats passed to `TurnProgress` callback
+
+- ✅ `SessionTurnStats` recorded in session logs for golden tests
+
+**Verbose logging:**
+
+- ✅ `--verbose` mode displays full system prompt
+
+- ✅ `--verbose` mode displays full context prompt (with form markdown)
 
 #### 8. Interactive Fill Multi-Format Export
 
@@ -315,3 +337,4 @@ pnpm test -- --testPathPattern=golden
 | 2025-12-25 | Claude | Initial validation spec |
 | 2025-12-25 | Claude | Expanded manual web serve testing (skip button functionality, form submission) |
 | 2025-12-25 | Claude | Added harness fixes: max turns logic, LiveAgent history, multi-format export |
+| 2025-12-25 | Claude | Stateless agent design: full form context, per-turn stats, verbose LLM logging |
