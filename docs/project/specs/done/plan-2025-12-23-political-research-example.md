@@ -241,7 +241,7 @@ markform inspect lincoln.form.md
 
 # 5. Stage 2: Agent fills remaining fields (default role="agent")
 markform fill lincoln.form.md \
-  --agent=live \
+  \
   --model=openai/gpt-4.1 \
   -o lincoln-filled.form.md \
   --record /tmp/lincoln-session.yaml
@@ -296,7 +296,7 @@ For testing or when user provides name via patch:
 # Fill all roles at once (user skipped, agent fills everything)
 markform fill political-research.form.md \
   --roles=* \
-  --agent=live \
+  \
   -o lincoln-filled.form.md
 ```
 
@@ -388,7 +388,7 @@ markform fill political-research.form.md \
 
 - [ ] Mock form parses and validates as complete
 
-- [ ] `markform fill --agent=mock` completes successfully
+- [ ] `markform fill --mock` completes successfully
 
 - [ ] `markform dump` outputs expected format
 

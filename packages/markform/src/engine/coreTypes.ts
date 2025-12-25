@@ -55,6 +55,13 @@ export type CheckboxMode = "multi" | "simple" | "explicit";
 export type FillMode = "continue" | "overwrite";
 
 /**
+ * Agent mode for fill operations.
+ * - 'mock': Use mock agent (for testing, requires mock source file)
+ * - 'live': Use live LLM agent (default, requires model)
+ */
+export type MockMode = "mock" | "live";
+
+/**
  * Controls whether a checkbox field acts as a blocking checkpoint.
  * - 'none': No blocking behavior (default)
  * - 'blocking': Fields after this cannot be filled until checkbox is complete
@@ -602,7 +609,7 @@ export interface SessionFinal {
 /** Session transcript for golden testing */
 export interface SessionTranscript {
   sessionVersion: string;
-  mode: "mock" | "live";
+  mode: MockMode;
   form: {
     path: string;
   };
@@ -685,6 +692,8 @@ export const CheckboxValueSchema = z.union([
 export const CheckboxModeSchema = z.enum(["multi", "simple", "explicit"]);
 
 export const FillModeSchema = z.enum(["continue", "overwrite"]);
+
+export const MockModeSchema = z.enum(["mock", "live"]);
 
 export const ApprovalModeSchema = z.enum(["none", "blocking"]);
 
@@ -1135,7 +1144,7 @@ export const SessionFinalSchema = z.object({
 
 export const SessionTranscriptSchema = z.object({
   sessionVersion: z.string(),
-  mode: z.enum(["mock", "live"]),
+  mode: MockModeSchema,
   form: z.object({
     path: z.string(),
   }),

@@ -127,7 +127,7 @@ Each field type requires changes in these files:
 - Parser, serializer, validator, apply, inspect support
 - Unit tests for all components
 - Update `simple.form.md` example to include URL fields
-- New `startup-research.form.md` example demonstrating citation patterns
+- New `startup-deep-research.form.md` example demonstrating citation patterns
 - Golden E2E test for the new example
 
 **Out of Scope (Explicit Non-Goals):**
@@ -147,7 +147,7 @@ Each field type requires changes in these files:
 5. Patches (`set_url`, `set_url_list`) work correctly
 6. Inspect reports issues for empty required URL fields
 7. `simple.form.md` updated with URL field examples
-8. `startup-research.form.md` example created with citation patterns
+8. `startup-deep-research.form.md` example created with citation patterns
 9. All existing tests continue to pass
 10. New unit tests cover URL field scenarios
 11. Golden E2E test validates end-to-end behavior
@@ -210,8 +210,8 @@ Each field type requires changes in these files:
 #### 7. Integration Tests
 
 - [ ] Parse and fill `simple.form.md` with URL fields
-- [ ] Parse and fill `startup-research.form.md`
-- [ ] Golden session test for startup-research form
+- [ ] Parse and fill `startup-deep-research.form.md`
+- [ ] Golden session test for startup-deep-research form
 
 ## Stage 2: Architecture Stage
 
@@ -355,10 +355,10 @@ JavaScript and handles edge cases correctly.
 
 | File | Purpose |
 | --- | --- |
-| `packages/markform/examples/startup-research/startup-research.form.md` | Template form |
-| `packages/markform/examples/startup-research/startup-research.mock.filled.form.md` | Mock filled form |
-| `packages/markform/examples/startup-research/README.md` | Example description |
-| `tests/golden/sessions/startup-research.session.yaml` | Golden E2E test |
+| `packages/markform/examples/startup-deep-research/startup-deep-research.form.md` | Template form |
+| `packages/markform/examples/startup-deep-research/startup-deep-research.mock.filled.form.md` | Mock filled form |
+| `packages/markform/examples/startup-deep-research/README.md` | Example description |
+| `tests/golden/sessions/startup-deep-research.session.yaml` | Golden E2E test |
 
 ## Stage 3: Refine Architecture
 
@@ -397,7 +397,7 @@ Implementation should proceed in dependency order:
 
 9. **Update simple.form.md** - Add URL field examples
 
-10. **Create startup-research example** - New example form
+10. **Create startup-deep-research example** - New example form
 
 11. **Golden E2E test** - End-to-end validation
 
@@ -425,7 +425,7 @@ Add relevant reference URLs. At least one is required.
 {% /field-group %}
 ```
 
-#### startup-research.form.md Structure
+#### startup-deep-research.form.md Structure
 
 ```markdown
 {% form id="startup_research" title="Startup Research Form" %}
@@ -492,7 +492,7 @@ This spec is tracked by epic **markform-192** and its sub-tasks:
 | markform-192.6 | Apply: Handle URL patches |
 | markform-192.7 | Inspect: URL field progress/issues |
 | markform-192.8 | Unit tests |
-| markform-192.9 | Example: startup-research.form.md |
+| markform-192.9 | Example: startup-deep-research.form.md |
 | markform-192.10 | Golden E2E test |
 | markform-192.11 | Update simple.form.md with URL field examples |
 
@@ -508,7 +508,7 @@ markform-192.1 (Core types)
             └── markform-192.6 (Apply)
 
 markform-192.2, 192.3, 192.4 ──► markform-192.8 (Unit tests)
-                                        ├── markform-192.9 (startup-research example)
+                                        ├── markform-192.9 (startup-deep-research example)
                                         └── markform-192.11 (simple.form.md update)
 
 markform-192.6, 192.7, 192.9, 192.11 ──► markform-192.10 (Golden E2E test)

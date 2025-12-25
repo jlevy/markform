@@ -164,7 +164,7 @@ Run inspect on a filled form with skipped fields:
 
 ```bash
 # First, fill the form using mock with skips
-pnpm markform fill packages/markform/examples/simple/simple.form.md --agent=mock \
+pnpm markform fill packages/markform/examples/simple/simple.form.md --mock \
   --mock-source packages/markform/examples/simple/simple-skipped-filled.form.md \
   --output /tmp/test-skipped.form.md
 
@@ -183,7 +183,7 @@ pnpm markform inspect /tmp/test-skipped.form.md
 Run fill with mock agent and verify transcript output:
 
 ```bash
-pnpm markform fill packages/markform/examples/simple/simple.form.md --agent=mock \
+pnpm markform fill packages/markform/examples/simple/simple.form.md --mock \
   --mock-source packages/markform/examples/simple/simple-skipped-filled.form.md \
   --verbose
 ```

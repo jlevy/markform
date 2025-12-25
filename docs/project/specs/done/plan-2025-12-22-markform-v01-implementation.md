@@ -1171,7 +1171,7 @@ Agent should pause and ask user to verify:
 
 > **Note:** The `run` command documented in this plan is being replaced by `fill` in
 > [plan-2025-12-23-fill-command-live-agent.md](plan-2025-12-23-fill-command-live-agent.md).
-> The `fill` command adds live agent support with `--agent` and `--model` flags.
+> The `fill` command adds live agent support with `--model` flag (live by default, `--mock` for testing).
 
 - **225 tests** across 14 test files, all passing
 
