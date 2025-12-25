@@ -198,6 +198,13 @@ function formDataToPatches(
   for (const field of fields) {
     const fieldId = field.id;
 
+    // Check if this field was explicitly skipped
+    const skipKey = `__skip__${fieldId}`;
+    if (formData[skipKey] === "1" && !field.required) {
+      patches.push({ op: "skip_field", fieldId });
+      continue; // Don't process other patches for this field
+    }
+
     switch (field.kind) {
       case "string": {
         const value = formData[fieldId];
@@ -562,10 +569,50 @@ export function renderFormHtml(form: ParsedForm): string {
     </div>
   </form>
   <script>
+    // Track fields marked for skip
+    const skippedFields = new Set();
+
+    // Handle skip button clicks
+    document.querySelectorAll('.btn-skip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const fieldId = e.target.dataset.skipField;
+        if (!fieldId) return;
+
+        // Toggle skip state
+        if (skippedFields.has(fieldId)) {
+          skippedFields.delete(fieldId);
+          e.target.textContent = 'Skip';
+          e.target.classList.remove('btn-skip-active');
+          // Re-enable the field input
+          const fieldDiv = e.target.closest('.field');
+          fieldDiv.classList.remove('field-skipped');
+          fieldDiv.querySelectorAll('input, select, textarea').forEach(input => {
+            input.disabled = false;
+          });
+        } else {
+          skippedFields.add(fieldId);
+          e.target.textContent = 'Unskip';
+          e.target.classList.add('btn-skip-active');
+          // Disable the field input to show it's skipped
+          const fieldDiv = e.target.closest('.field');
+          fieldDiv.classList.add('field-skipped');
+          fieldDiv.querySelectorAll('input, select, textarea').forEach(input => {
+            input.disabled = true;
+          });
+        }
+      });
+    });
+
     document.getElementById('markform').addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const params = new URLSearchParams();
+
+      // Add skip markers for skipped fields
+      for (const fieldId of skippedFields) {
+        params.append('__skip__' + fieldId, '1');
+      }
+
       for (const [key, value] of formData) {
         params.append(key, value);
       }
