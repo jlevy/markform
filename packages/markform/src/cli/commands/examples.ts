@@ -85,8 +85,7 @@ function buildModelOptions(): { value: string; label: string; hint?: string }[] 
     const hasKey = !!process.env[info.envVar];
     const keyStatus = hasKey ? pc.green("✓") : pc.dim("○");
 
-    for (const model of models.slice(0, 2)) {
-      // Show top 2 models per provider
+    for (const model of models) {
       options.push({
         value: `${provider}/${model}`,
         label: `${provider}/${model}`,
