@@ -421,7 +421,7 @@ Please verify company name spelling before finalizing.
 | Examples | Instructions, examples | Skip/abort reasons, observations |
 | `id` attr | — | Required (n1, n2, ...) |
 | `role` attr | — | Required (agent, user, ...) |
-| `kind` attr | description, instructions, notes, examples | — |
+| `tag` attr | description, instructions, notes, examples | — |
 | `state` attr | — | skipped, aborted, or omitted |
 | Deletable | No (part of schema) | Yes (via remove_note) |
 
