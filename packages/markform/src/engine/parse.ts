@@ -838,7 +838,7 @@ function parseFieldGroup(
     throw new ParseError(`Duplicate ID '${id}'`);
   }
 
-  idIndex.set(id, { kind: "group", parentId });
+  idIndex.set(id, { nodeType: "group", parentId });
 
   const children: Field[] = [];
 
@@ -854,7 +854,7 @@ function parseFieldGroup(
         throw new ParseError(`Duplicate ID '${result.field.id}'`);
       }
 
-      idIndex.set(result.field.id, { kind: "field", parentId: id });
+      idIndex.set(result.field.id, { nodeType: "field", parentId: id });
       children.push(result.field);
       valuesByFieldId[result.field.id] = result.value;
       orderIndex.push(result.field.id);
@@ -867,7 +867,7 @@ function parseFieldGroup(
             throw new ParseError(`Duplicate option ref '${qualifiedRef}'`);
           }
           idIndex.set(qualifiedRef, {
-            kind: "option",
+            nodeType: "option",
             parentId: id,
             fieldId: result.field.id,
           });
@@ -889,7 +889,6 @@ function parseFieldGroup(
   }
 
   return {
-    kind: "field_group",
     id,
     title,
     validate: getValidateAttr(node),
@@ -917,7 +916,7 @@ function parseFormTag(
     throw new ParseError(`Duplicate ID '${id}'`);
   }
 
-  idIndex.set(id, { kind: "form" });
+  idIndex.set(id, { nodeType: "form" });
 
   const groups: FieldGroup[] = [];
 

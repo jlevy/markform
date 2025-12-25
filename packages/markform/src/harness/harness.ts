@@ -383,7 +383,7 @@ return undefined;
     // If the field has a parent and that parent is a group, return it
     if (entry.parentId) {
       const parentEntry = this.form.idIndex.get(entry.parentId);
-      if (parentEntry?.kind === "group") {
+      if (parentEntry?.nodeType === "group") {
         return entry.parentId;
       }
     }

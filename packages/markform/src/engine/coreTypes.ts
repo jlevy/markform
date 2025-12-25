@@ -181,9 +181,10 @@ export type Field =
 // Form Structure Types
 // =============================================================================
 
-/** Field group - container for fields (nested groups deferred to future) */
+/**
+ * Field group: container for fields (nested groups deferred to future).
+ */
 export interface FieldGroup {
-  kind: "field_group";
   id: Id;
   title?: string;
   validate?: ValidatorRef[];
@@ -291,9 +292,12 @@ export interface FormMetadata {
 // Parsed Form
 // =============================================================================
 
+/** Node type for ID index entries - identifies what structural element an ID refers to */
+export type NodeType = "form" | "group" | "field" | "option";
+
 /** ID index entry for fast lookup and validation */
 export interface IdIndexEntry {
-  kind: "form" | "group" | "field" | "option";
+  nodeType: NodeType; // what this ID refers to 
   parentId?: Id;
   fieldId?: Id;
 }
@@ -815,9 +819,8 @@ export const FieldSchema = z.discriminatedUnion("kind", [
   UrlListFieldSchema,
 ]);
 
-// Field group schema
+// Field group schema (no 'kind' property - reserved for Field/FieldValue types)
 export const FieldGroupSchema = z.object({
-  kind: z.literal("field_group"),
   id: IdSchema,
   title: z.string().optional(),
   validate: z.array(ValidatorRefSchema).optional(),

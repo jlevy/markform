@@ -63,7 +63,6 @@ function createTestForm(fields: Field[]): ParsedForm {
       title: "Test Form",
       groups: [
         {
-          kind: "field_group",
           id: "test_group",
           title: "Test Group",
           children: fields,

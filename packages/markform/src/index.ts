@@ -50,6 +50,7 @@ export type {
   DocumentationTag,
   DocumentationBlock,
   // Parsed form
+  NodeType,
   IdIndexEntry,
   ParsedForm,
   // Validation

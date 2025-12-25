@@ -178,7 +178,6 @@ describe("engine/coreTypes", () => {
         title: "Quarterly Earnings Analysis",
         groups: [
           {
-            kind: "field_group",
             id: "company_info",
             title: "Company Info",
             children: [

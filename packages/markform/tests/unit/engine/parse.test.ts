@@ -272,12 +272,12 @@ markform:
 `;
       const result = parseForm(markdown);
 
-      expect(result.idIndex.get("test_form")?.kind).toBe("form");
-      expect(result.idIndex.get("group1")?.kind).toBe("group");
-      expect(result.idIndex.get("field1")?.kind).toBe("field");
-      expect(result.idIndex.get("select1")?.kind).toBe("field");
-      expect(result.idIndex.get("select1.opt_a")?.kind).toBe("option");
-      expect(result.idIndex.get("select1.opt_b")?.kind).toBe("option");
+      expect(result.idIndex.get("test_form")?.nodeType).toBe("form");
+      expect(result.idIndex.get("group1")?.nodeType).toBe("group");
+      expect(result.idIndex.get("field1")?.nodeType).toBe("field");
+      expect(result.idIndex.get("select1")?.nodeType).toBe("field");
+      expect(result.idIndex.get("select1.opt_a")?.nodeType).toBe("option");
+      expect(result.idIndex.get("select1.opt_b")?.nodeType).toBe("option");
     });
 
     it("maintains order in orderIndex", () => {
@@ -414,10 +414,10 @@ No form here.
       expect(fieldIds).toContain("confirmations");
 
       // Check idIndex has form, groups, fields, and options
-      expect(result.idIndex.get("simple_test")?.kind).toBe("form");
-      expect(result.idIndex.get("basic_fields")?.kind).toBe("group");
-      expect(result.idIndex.get("name")?.kind).toBe("field");
-      expect(result.idIndex.get("priority.low")?.kind).toBe("option");
+      expect(result.idIndex.get("simple_test")?.nodeType).toBe("form");
+      expect(result.idIndex.get("basic_fields")?.nodeType).toBe("group");
+      expect(result.idIndex.get("name")?.nodeType).toBe("field");
+      expect(result.idIndex.get("priority.low")?.nodeType).toBe("option");
     });
   });
 

@@ -61,7 +61,7 @@ export interface CoerceInputContextResult {
 export function findFieldById(form: ParsedForm, fieldId: string): Field | undefined {
   // O(1) check: verify the ID exists and is a field
   const entry = form.idIndex.get(fieldId);
-  if (entry?.kind !== "field") {
+  if (entry?.nodeType !== "field") {
     return undefined;
   }
 

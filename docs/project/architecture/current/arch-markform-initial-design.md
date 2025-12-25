@@ -103,6 +103,13 @@ workflows:
 | **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic "correct" values for testing. |
 | **Sidecar file** | A companion file with the same basename but different extension (e.g., `X.form.md` → `X.valid.ts`). |
 
+**Type system:**
+
+| Term | Definition |
+| --- | --- |
+| **FieldKind** | The type discriminant for fields. One of: `'string'`, `'number'`, `'string_list'`, `'checkboxes'`, `'single_select'`, `'multi_select'`, `'url'`, `'url_list'`. Used as the `kind` property on `Field` and `FieldValue` types for discriminated unions. |
+| **kind** | Reserved property name used exclusively on `Field` and `FieldValue` types to indicate the field type. Always holds a `FieldKind` value. Other structural elements use different property names (e.g., `nodeType` for ID index entries, `tag` for documentation blocks). |
+
 * * *
 
 ## v0.1 Scope
@@ -269,16 +276,20 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 [Markdoc Config][markdoc-config] for how to register custom tags.
 
-| Tag | Description |
-| --- | --- |
-| `string-field` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
-| `number-field` | Numeric value; optional `min`, `max`, `integer` |
-| `string-list` | Array of strings (open-ended list); supports `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
-| `single-select` | Select one option from enumerated list |
-| `multi-select` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
-| `checkboxes` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no); optional `minDone` for completion threshold |
-| `url-field` | Single URL value with built-in format validation |
-| `url-list` | Array of URLs (for citations, sources, references); supports `minItems`, `maxItems`, `uniqueItems` |
+Each field tag maps to a **FieldKind** value used as the `kind` discriminant in the type
+system. The `kind` property is reserved exclusively for field types—it identifies what
+type of field a `Field` or `FieldValue` represents.
+
+| Tag | FieldKind | Description |
+| --- | --- | --- |
+| `string-field` | `'string'` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
+| `number-field` | `'number'` | Numeric value; optional `min`, `max`, `integer` |
+| `string-list` | `'string_list'` | Array of strings (open-ended list); supports `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
+| `single-select` | `'single_select'` | Select one option from enumerated list |
+| `multi-select` | `'multi_select'` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
+| `checkboxes` | `'checkboxes'` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no); optional `minDone` for completion threshold |
+| `url-field` | `'url'` | Single URL value with built-in format validation |
+| `url-list` | `'url_list'` | Array of URLs (for citations, sources, references); supports `minItems`, `maxItems`, `uniqueItems` |
 
 **Note on `pattern`:** The `pattern` attribute accepts a JavaScript-compatible regular
 expression string (without delimiters).
@@ -447,8 +458,8 @@ Example values or usage...
 
 - `ref` (*required*): References the ID of a form, group, field, or option
 
-- The tag name determines the documentation kind (`description`, `instructions`,
-  `notes`, `examples`, or `documentation` for general content)
+- The Markdoc tag name determines the documentation `tag` property (`description`,
+  `instructions`, `notes`, `examples`, or `documentation` for general content)
 
 **Placement rules (v0.1):**
 
@@ -879,7 +890,6 @@ interface FormSchema {
 }
 
 interface FieldGroup {
-  kind: 'field_group';
   id: Id;
   title?: string;
   // Note: `required` on groups is not supported in v0.1 (ignored with warning)
@@ -981,17 +991,23 @@ type FieldValue =
 // QualifiedOptionRef is used when referencing options externally (e.g., in doc blocks)
 type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
 
+/** Documentation tag types (from Markdoc tag name) */
+type DocumentationTag = 'description' | 'instructions' | 'notes' | 'examples' | 'documentation';
+
 interface DocumentationBlock {
   ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
-  kind: 'description' | 'instructions' | 'notes' | 'examples' | 'documentation';  // from tag name
+  tag: DocumentationTag;         // the Markdoc tag name
   bodyMarkdown: string;
 }
+
+/** Node type for ID index entries - identifies what structural element an ID refers to */
+type NodeType = 'form' | 'group' | 'field';
 
 // IdIndexEntry: lookup entry for fast ID resolution and validation
 // NOTE: Options are NOT indexed here (they are field-scoped, not globally unique)
 // Use StructureSummary.optionsById for option lookup via QualifiedOptionRef
 interface IdIndexEntry {
-  kind: 'form' | 'group' | 'field';
+  nodeType: NodeType;      // what this ID refers to
   parentId?: Id;           // parent group/form ID (undefined for form)
 }
 
@@ -1419,13 +1435,21 @@ schema representations for all field types.
 | JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
 | IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
 | YAML keys (frontmatter, session transcripts) | snake_case | `markform_version`, `form_summary`, `field_count_by_kind` |
-| TypeScript kind values | snake_case | `'string'`, `'single_select'` |
+| FieldKind values | snake_case | `'string'`, `'single_select'` |
 | Patch operations | snake_case | `set_string`, `set_single_select` |
 
 **Rationale:** Using camelCase for Markdoc attributes aligns with JSON Schema keywords
 and TypeScript conventions, eliminating translation overhead.
 IDs remain snake_case as they are data values, not code identifiers.
 YAML keys use snake_case for readability and consistency with common YAML conventions.
+
+**Reserved property names:**
+
+| Property | Used on | Values | Notes |
+| --- | --- | --- | --- |
+| `kind` | `Field`, `FieldValue` | `FieldKind` values | Reserved for field type discrimination only |
+| `tag` | `DocumentationBlock` | `DocumentationTag` values | Identifies doc block type |
+| `nodeType` | `IdIndexEntry` | `'form' \| 'group' \| 'field'` | Identifies structural element type |
 
 ##### Field Type Mappings
 

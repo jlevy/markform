@@ -423,11 +423,11 @@ markform:
       expect(reparsed.orderIndex).toContain("priority");
       expect(reparsed.orderIndex).toContain("categories");
 
-      // Check idIndex has correct types
-      expect(reparsed.idIndex.get("simple_test")?.kind).toBe("form");
-      expect(reparsed.idIndex.get("basic_fields")?.kind).toBe("group");
-      expect(reparsed.idIndex.get("name")?.kind).toBe("field");
-      expect(reparsed.idIndex.get("priority.low")?.kind).toBe("option");
+      // Check idIndex has correct nodeType values
+      expect(reparsed.idIndex.get("simple_test")?.nodeType).toBe("form");
+      expect(reparsed.idIndex.get("basic_fields")?.nodeType).toBe("group");
+      expect(reparsed.idIndex.get("name")?.nodeType).toBe("field");
+      expect(reparsed.idIndex.get("priority.low")?.nodeType).toBe("option");
     });
   });
 
