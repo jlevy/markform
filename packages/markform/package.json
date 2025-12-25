@@ -47,7 +47,8 @@
   },
   "files": [
     "dist",
-    "examples"
+    "examples",
+    "README.md"
   ],
   "engines": {
     "node": ">=24"

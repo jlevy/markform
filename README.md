@@ -1,76 +1,75 @@
 # Markform
 
-Agent-friendly, human-readable, editable forms stored as `.form.md` files.
+Agent-friendly, human-readable forms stored as `.form.md` files.
 
-Markform enables AI agents to fill out forms using structured patches, while keeping the
-form source in human-readable Markdown.
+Markform enables AI agents to fill out structured forms using patches, while keeping the
+form source in human-readable Markdown with [Markdoc](https://markdoc.dev/) tags.
+
+## Try It
+
+```bash
+npx markform examples
+```
+
+This walks you through an example form interactively, with optional AI agent filling.
+
+## Install
+
+```bash
+npm install markform
+# or
+pnpm add markform
+```
+
+## Usage
+
+```bash
+# Interactive examples with optional agent fill
+markform examples
+
+# Inspect a form's structure and validation
+markform inspect my-form.form.md
+
+# Fill user fields interactively
+markform fill my-form.form.md --interactive
+
+# Fill with an AI agent
+markform fill my-form.form.md --agent=live --model=anthropic/claude-sonnet-4-5
+
+# Export as readable markdown, JSON, or YAML
+markform export my-form.form.md --format=markdown
+
+# See all commands
+markform --help
+
+# View full documentation
+markform instructions
+```
 
 ## Documentation
 
-- [Development Guide](docs/development.md) - Getting started, workflows, and AI SDK
-  integration
+- **[How to Use Markform](packages/markform/README.md)** - Full CLI reference and
+  programmatic API (also available via `markform instructions`)
 
-- [Publishing](docs/publishing.md) - Release workflow and npm publishing
+- **[Developer Workflows](docs/development.md)** - Build, test, and contributing
 
-- [Architecture Design](docs/project/architecture/current/arch-markform-initial-design.md)
-  \- Technical specification
+- **[Publishing](docs/publishing.md)** - Release workflow
 
-## Project Structure
-
-```
-packages/markform/     # Main package
-  src/engine/          # Core: parsing, validation, serialization
-  src/cli/             # CLI commands (inspect, export, serve, fill)
-  src/harness/         # Execution harness for agents
-  src/integrations/    # AI SDK tools
-  examples/            # Example forms
-```
-
-## Quick Start
-
-```bash
-# Install dependencies
-pnpm install
-
-# Build
-pnpm build
-
-# Run tests
-pnpm test
-
-# CLI usage (use pnpm markform in development)
-pnpm markform inspect packages/markform/examples/simple/simple.form.md
-pnpm markform export packages/markform/examples/simple/simple.form.md --format=json
-pnpm markform serve packages/markform/examples/simple/simple.form.md
-
-# Fill a form with live agent (requires API key for chosen provider)
-pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=live --model=openai/gpt-5.2
-
-# Fill a form with mock agent (for testing)
-pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=mock \
-  --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
-
-# See available providers and models
-pnpm markform fill --help
-```
+- **[Architecture](docs/project/architecture/current/arch-markform-initial-design.md)**
+  \- Technical design
 
 ## Supported Providers
 
 | Provider | Env Variable | Example Models |
 | --- | --- | --- |
-| openai | `OPENAI_API_KEY` | gpt-5.2, gpt-5-mini, gpt-5.2-pro |
-| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.0-flash |
-| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-haiku-4-5 |
+| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
+| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
+| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
 | xai | `XAI_API_KEY` | grok-4, grok-4-fast |
 | deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
 
-## Example Form
-
-See
-[`packages/markform/examples/simple/simple.form.md`](packages/markform/examples/simple/simple.form.md)
-for a working example.
+See [`packages/markform/src/settings.ts`](packages/markform/src/settings.ts) for the
+full list.
 
 ## License
 
