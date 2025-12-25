@@ -160,6 +160,19 @@ This project uses npm’s trusted publishing via OIDC (OpenID Connect):
 The release workflow (`.github/workflows/release.yml`) triggers on `v*` tags and
 publishes automatically without requiring an `NPM_TOKEN` secret.
 
+## GitHub Releases
+
+The release workflow automatically creates a GitHub Release when a tag is pushed:
+
+- **Release name**: Matches the tag (e.g., `v0.1.1`)
+
+- **Release notes**: Extracted from the CHANGELOG for the tagged version
+
+- **Pre-release flag**: Automatically set for versions containing `-` (e.g., `1.0.0-beta.1`)
+
+After pushing a tag, verify the release appears at:
+`https://github.com/OWNER/PACKAGE/releases`
+
 ## Troubleshooting
 
 **Release workflow not running?**
