@@ -218,6 +218,9 @@ type Patch =
 10. `checkboxMode="explicit"` fields default to `required=true`
 11. Parse error when `checkboxMode="explicit"` with `required=false`
 12. `checkboxMode="multi"` and `checkboxMode="simple"` default to `required=false`
+13. Console interactive mode supports explicit `skip_field` for optional fields
+14. Web serve mode supports skip button for optional fields
+15. Skipped fields display with visual indicator in both console and web
 
 ### Testing Plan
 
@@ -862,6 +865,196 @@ To:
   required=false); validates all options answered
 ```
 
+## UI Parity: Console and Web Skip Support
+
+### Principle
+
+The `skip_field` operation and answered/skipped tracking must work equivalently for:
+1. **Agent tool APIs** — `skip_field` patch via `applyPatches()`
+2. **Console interactive mode** — `markform fill` command
+3. **Web serve mode** — `markform serve` browser UI
+
+Users should have the same ability to explicitly skip optional fields that agents have.
+
+### Current Console Behavior
+
+In `src/cli/lib/interactivePrompts.ts`:
+
+- **String/Number fields:** Pressing Enter without a value on optional field returns null
+  (no patch applied). This is implicit skip, not recorded.
+
+- **String list:** Same - empty list on optional field just doesn't generate a patch.
+
+- **Single/Multi select:** Optional fields don't force selection, but no explicit skip.
+
+- **Explicit checkboxes:** Individual options have "Skip" choice that sets `unfilled`, but
+  this is per-option, not field-level skip.
+
+**Gap:** Console has no explicit "skip this field" action that generates a `skip_field` patch.
+
+### Current Web Behavior
+
+In `src/cli/commands/serve.ts`:
+
+- Required fields show `*` marker and `required` HTML attribute
+- Optional fields just don't show the marker
+- No explicit skip button or link
+
+**Gap:** Web has no way to explicitly skip a field.
+
+### Proposed Changes
+
+#### Console Interactive Mode (`interactivePrompts.ts`)
+
+Add explicit skip option for optional fields:
+
+```typescript
+async function promptForString(ctx: FieldPromptContext): Promise<Patch | null> {
+  const field = ctx.field as StringField;
+
+  // For optional fields, show skip option first
+  if (!field.required) {
+    const action = await p.select({
+      message: `${field.label} (optional)`,
+      options: [
+        { value: "fill", label: "Enter value" },
+        { value: "skip", label: "Skip this field" },
+      ],
+    });
+
+    if (p.isCancel(action)) return null;
+
+    if (action === "skip") {
+      return {
+        op: "skip_field",
+        fieldId: field.id,
+        reason: "User skipped in console",
+      };
+    }
+  }
+
+  // Proceed to prompt for value...
+}
+```
+
+Alternative: Add a special input (e.g., `/skip`) that can be entered in text fields:
+
+```typescript
+if (result.toLowerCase() === "/skip" && !field.required) {
+  return {
+    op: "skip_field",
+    fieldId: field.id,
+  };
+}
+```
+
+#### Web Serve Mode (`serve.ts`)
+
+Add skip button for optional fields:
+
+```html
+<!-- For optional fields, add skip button -->
+<div class="field-actions">
+  <button type="button" class="skip-btn" data-field-id="${field.id}">
+    Skip this field
+  </button>
+</div>
+```
+
+Handle skip in form submission:
+
+```typescript
+// In form data processing
+if (formData.get(`skip_${field.id}`)) {
+  patches.push({
+    op: "skip_field",
+    fieldId: field.id,
+  });
+}
+```
+
+#### Visual Indicators
+
+**Console:**
+- Optional fields show "(optional)" or "(can skip)" label
+- Skipped fields show "⊘ Skipped" or similar indicator when reviewing
+
+**Web:**
+- Optional fields show "optional" label or lighter styling
+- Skip button visible for optional fields
+- Skipped fields show disabled state with "Skipped" indicator
+- Clear skip (unskip) by entering a value
+
+### Test Cases
+
+#### Console Interactive Tests (`tests/unit/cli/interactivePrompts.test.ts`)
+
+```typescript
+describe("skip_field support", () => {
+  it("shows skip option for optional string field", async () => {
+    // Mock interaction selecting "skip"
+    // Verify skip_field patch is returned
+  });
+
+  it("does not show skip option for required field", async () => {
+    // Verify required fields go straight to value input
+  });
+
+  it("shows skipped status when reviewing form", async () => {
+    // Verify skipped fields display correctly
+  });
+});
+```
+
+#### Web Serve Tests (`tests/unit/web/serve-render.test.ts`)
+
+```typescript
+describe("skip_field support", () => {
+  it("renders skip button for optional fields", () => {
+    // Verify HTML includes skip button for optional fields
+  });
+
+  it("does not render skip button for required fields", () => {
+    // Verify required fields have no skip button
+  });
+
+  it("processes skip button submission correctly", async () => {
+    // Submit form with skip action, verify skip_field patch applied
+  });
+
+  it("renders skipped state for previously skipped fields", () => {
+    // Verify skipped fields show disabled/skipped indicator
+  });
+});
+```
+
+### Architecture Documentation Changes
+
+Add to `arch-markform-initial-design.md`:
+
+#### In Console Fill section
+
+```markdown
+### Skip Field Support
+
+Optional fields can be explicitly skipped:
+- Console: Shows "Skip this field" option for optional fields
+- Generates `skip_field` patch with reason "User skipped in console"
+- Skipped fields display with ⊘ indicator when reviewing
+```
+
+#### In Web Serve section
+
+```markdown
+### Skip Field Support
+
+Optional fields in web forms:
+- Show "Skip" button adjacent to field input
+- Clicking skip generates `skip_field` patch
+- Skipped fields display as disabled with "Skipped" label
+- Entering a value clears skip state
+```
+
 ### Existing Code to Update
 
 The following test files have explicit checkboxes without `required=true` and need updating:
@@ -915,3 +1108,4 @@ they should be updated for clarity to explicitly show `required=true`.
 | 2025-12-25 | Claude | Completion = answered + skipped == totalFields |
 | 2025-12-25 | Claude | Added Architecture Documentation Changes section |
 | 2025-12-25 | Claude | Added Checkbox Mode and Required Attribute Constraints section |
+| 2025-12-25 | Claude | Added UI Parity section for Console and Web skip support |
