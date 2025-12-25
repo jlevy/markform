@@ -433,6 +433,90 @@ describe("MockAgent", () => {
 
     expect(patches.length).toBe(0);
   });
+
+  it("generates patches for url fields", async () => {
+    const URL_FORM_EMPTY = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test_form" %}
+
+{% field-group id="urls" %}
+
+{% url-field id="website" label="Website" required=true %}{% /url-field %}
+
+{% url-list id="sources" label="Sources" required=true %}{% /url-list %}
+
+{% /field-group %}
+
+{% /form %}
+`;
+
+    const URL_FORM_FILLED = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test_form" %}
+
+{% field-group id="urls" %}
+
+{% url-field id="website" label="Website" required=true %}
+\`\`\`value
+https://example.com
+\`\`\`
+{% /url-field %}
+
+{% url-list id="sources" label="Sources" required=true %}
+\`\`\`value
+https://docs.example.com
+https://github.com/example
+\`\`\`
+{% /url-list %}
+
+{% /field-group %}
+
+{% /form %}
+`;
+
+    const emptyForm = parseForm(URL_FORM_EMPTY);
+    const filledForm = parseForm(URL_FORM_FILLED);
+    const agent = createMockAgent(filledForm);
+
+    const issues = [
+      {
+        ref: "website",
+        scope: "field" as const,
+        reason: "required_missing" as const,
+        message: "Required field is empty",
+        severity: "required" as const,
+        priority: 1,
+      },
+      {
+        ref: "sources",
+        scope: "field" as const,
+        reason: "required_missing" as const,
+        message: "Required field is empty",
+        severity: "required" as const,
+        priority: 2,
+      },
+    ];
+
+    const patches = await agent.generatePatches(issues, emptyForm, 10);
+
+    expect(patches.length).toBe(2);
+    expect(patches[0]).toEqual({
+      op: "set_url",
+      fieldId: "website",
+      value: "https://example.com",
+    });
+    expect(patches[1]).toEqual({
+      op: "set_url_list",
+      fieldId: "sources",
+      items: ["https://docs.example.com", "https://github.com/example"],
+    });
+  });
 });
 
 // =============================================================================
