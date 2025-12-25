@@ -277,6 +277,8 @@ Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 | `single-select` | Select one option from enumerated list |
 | `multi-select` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
 | `checkboxes` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no); optional `minDone` for completion threshold |
+| `url-field` | Single URL value with built-in format validation |
+| `url-list` | Array of URLs (for citations, sources, references); supports `minItems`, `maxItems`, `uniqueItems` |
 
 **Note on `pattern`:** The `pattern` attribute accepts a JavaScript-compatible regular
 expression string (without delimiters).
@@ -852,7 +854,9 @@ type Field =
   | StringListField
   | CheckboxesField
   | SingleSelectField
-  | MultiSelectField;
+  | MultiSelectField
+  | UrlField
+  | UrlListField;
 
 interface FormSchema {
   id: Id;
@@ -935,6 +939,18 @@ interface MultiSelectField extends FieldBase {
   maxSelections?: number;
 }
 
+interface UrlField extends FieldBase {
+  kind: 'url';
+  // No additional constraints - URL format validation is built-in
+}
+
+interface UrlListField extends FieldBase {
+  kind: 'url_list';
+  minItems?: number;
+  maxItems?: number;
+  uniqueItems?: boolean;
+}
+
 // OptionId is local to the containing field (e.g., "ten_k", "bullish")
 type OptionId = string;
 
@@ -944,7 +960,9 @@ type FieldValue =
   | { kind: 'string_list'; items: string[] }
   | { kind: 'checkboxes'; values: Record<OptionId, CheckboxValue> }  // keys are local option IDs
   | { kind: 'single_select'; selected: OptionId | null }             // local option ID
-  | { kind: 'multi_select'; selected: OptionId[] };                  // local option IDs
+  | { kind: 'multi_select'; selected: OptionId[] }                   // local option IDs
+  | { kind: 'url'; value: string | null }                            // validated URL string
+  | { kind: 'url_list'; items: string[] };                           // array of URL strings
 
 // QualifiedOptionRef is used when referencing options externally (e.g., in doc blocks)
 type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
@@ -1019,7 +1037,7 @@ Describes the static structure of the form schema:
 
 ```ts
 // FieldKind matches the 'kind' discriminant on Field types
-type FieldKind = 'string' | 'number' | 'string_list' | 'checkboxes' | 'single_select' | 'multi_select';
+type FieldKind = 'string' | 'number' | 'string_list' | 'checkboxes' | 'single_select' | 'multi_select' | 'url' | 'url_list';
 
 interface StructureSummary {
   groupCount: number;           // total field-groups
@@ -1272,7 +1290,7 @@ Zod schemas for the frontmatter summary types:
 
 ```ts
 const FieldKindSchema = z.enum([
-  'string', 'number', 'string_list', 'checkboxes', 'single_select', 'multi_select'
+  'string', 'number', 'string_list', 'checkboxes', 'single_select', 'multi_select', 'url', 'url_list'
 ]);
 
 const StructureSummarySchema = z.object({
@@ -1474,6 +1492,32 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | Patch operation | `{ op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }` |
 | Zod | `z.record(z.enum([...states]))` |
 | JSON Schema | `{ type: "object", additionalProperties: { enum: [...states] } }` |
+
+**`url-field`** — Single URL value
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `url-field` |
+| TypeScript interface | `UrlField` |
+| TypeScript kind | `'url'` |
+| Attributes | `id`, `label`, `required` |
+| FieldValue | `{ kind: 'url'; value: string \| null }` |
+| Patch operation | `{ op: 'set_url'; fieldId: Id; value: string \| null }` |
+| Zod | `z.string().url()` |
+| JSON Schema | `{ type: "string", format: "uri" }` |
+
+**`url-list`** — Array of URLs (for citations, sources, references)
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `url-list` |
+| TypeScript interface | `UrlListField` |
+| TypeScript kind | `'url_list'` |
+| Attributes | `id`, `label`, `required`, `minItems`, `maxItems`, `uniqueItems` |
+| FieldValue | `{ kind: 'url_list'; items: string[] }` |
+| Patch operation | `{ op: 'set_url_list'; fieldId: Id; items: string[] }` |
+| Zod | `z.array(z.string().url()).min(n).max(m)` |
+| JSON Schema | `{ type: "array", items: { type: "string", format: "uri" }, minItems, maxItems, uniqueItems }` |
 
 **Note:** `OptionId` values are local to the field (e.g., `"ten_k"`, `"bullish"`). They
 are NOT qualified with the field ID in patches or FieldValue—the field context is

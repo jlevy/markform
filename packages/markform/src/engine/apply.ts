@@ -352,7 +352,7 @@ function applyClearField(
 return;
 }
 
-  // Create empty value based on field kind
+  // Create empty value based on field kind (exhaustiveness checked at compile time)
   switch (field.kind) {
     case "string":
       values[patch.fieldId] = { kind: "string", value: null } as StringValue;
@@ -378,6 +378,11 @@ return;
     case "url_list":
       values[patch.fieldId] = { kind: "url_list", items: [] } as UrlListValue;
       break;
+    default: {
+      // Exhaustiveness check: TypeScript will error if a FieldKind case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unexpected field kind: ${(_exhaustive as Field).kind}`);
+    }
   }
 }
 
