@@ -27,6 +27,8 @@ import type {
   SetUrlListPatch,
   SetUrlPatch,
   SingleSelectValue,
+  SkipFieldPatch,
+  SkipInfo,
   StringListValue,
   StringValue,
   UrlListValue,
@@ -187,6 +189,16 @@ function validatePatch(
 
     case "clear_field":
       // Any field can be cleared
+      break;
+
+    case "skip_field":
+      // Can only skip optional fields
+      if (field.required) {
+        return {
+          patchIndex: index,
+          message: `Cannot skip required field "${field.id}"`,
+        };
+      }
       break;
   }
 
@@ -370,31 +382,64 @@ return;
 }
 
 /**
- * Apply a single patch to the values.
+ * Apply a skip_field patch.
+ * Marks the field as skipped and clears any existing value.
+ */
+function applySkipField(
+  form: ParsedForm,
+  values: Record<Id, FieldValue>,
+  skips: Record<Id, SkipInfo>,
+  patch: SkipFieldPatch,
+): void {
+  const field = findField(form, patch.fieldId);
+  if (!field) {
+    return;
+  }
+
+  // Mark field as skipped
+  skips[patch.fieldId] = {
+    skipped: true,
+    reason: patch.reason,
+  };
+
+  // Clear any existing value (skipped fields have no value)
+  delete values[patch.fieldId];
+}
+
+/**
+ * Apply a single patch to the values and skips.
  */
 function applyPatch(
   form: ParsedForm,
   values: Record<Id, FieldValue>,
+  skips: Record<Id, SkipInfo>,
   patch: Patch,
 ): void {
   switch (patch.op) {
     case "set_string":
       applySetString(values, patch);
+      // Setting a value un-skips the field
+      delete skips[patch.fieldId];
       break;
     case "set_number":
       applySetNumber(values, patch);
+      delete skips[patch.fieldId];
       break;
     case "set_string_list":
       applySetStringList(values, patch);
+      delete skips[patch.fieldId];
       break;
     case "set_single_select":
       applySetSingleSelect(values, patch);
+      delete skips[patch.fieldId];
       break;
     case "set_multi_select":
       applySetMultiSelect(values, patch);
+      delete skips[patch.fieldId];
       break;
     case "set_checkboxes":
       applySetCheckboxes(values, patch);
+      delete skips[patch.fieldId];
       break;
     case "set_url":
       applySetUrl(values, patch);
@@ -404,6 +449,11 @@ function applyPatch(
       break;
     case "clear_field":
       applyClearField(form, values, patch);
+      // Clearing also un-skips (different from skip)
+      delete skips[patch.fieldId];
+      break;
+    case "skip_field":
+      applySkipField(form, values, skips, patch);
       break;
   }
 }
@@ -457,7 +507,7 @@ export function applyPatches(
   const errors = validatePatches(form, patches);
   if (errors.length > 0) {
     // Reject - compute summaries from current state
-    const summaries = computeAllSummaries(form.schema, form.valuesByFieldId, []);
+    const summaries = computeAllSummaries(form.schema, form.valuesByFieldId, [], form.skipsByFieldId);
     const issues = convertToInspectIssues(form);
 
     return {
@@ -470,20 +520,22 @@ export function applyPatches(
     };
   }
 
-  // Create new values object (don't mutate original)
+  // Create new values and skips objects (don't mutate original)
   const newValues: Record<Id, FieldValue> = { ...form.valuesByFieldId };
+  const newSkips: Record<Id, SkipInfo> = { ...form.skipsByFieldId };
 
   // Apply all patches
   for (const patch of patches) {
-    applyPatch(form, newValues, patch);
+    applyPatch(form, newValues, newSkips, patch);
   }
 
-  // Update form with new values
+  // Update form with new values and skips
   form.valuesByFieldId = newValues;
+  form.skipsByFieldId = newSkips;
 
   // Compute new summaries
   const issues = convertToInspectIssues(form);
-  const summaries = computeAllSummaries(form.schema, newValues, issues);
+  const summaries = computeAllSummaries(form.schema, newValues, issues, newSkips);
 
   return {
     applyStatus: "applied",

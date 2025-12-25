@@ -99,7 +99,7 @@ pnpm markform inspect packages/markform/examples/simple/simple.form.md
 
 # Run fill with mock agent
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=mock \
+  --mock \
   --mock-source packages/markform/examples/simple/simple-mock-filled.form.md \
   -o /tmp/simple-filled.form.md
 
@@ -120,7 +120,7 @@ export ANTHROPIC_API_KEY=your-key-here
 
 # Run fill with live agent on a simple form
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=live \
+  \
   --model=anthropic/claude-sonnet-4-5 \
   -o /tmp/simple-live-filled.form.md \
   --record /tmp/simple-session.yaml
@@ -162,7 +162,7 @@ Test automatic versioned filename generation:
 ```bash
 # First fill should create -v1
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=mock \
+  --mock \
   --mock-source packages/markform/examples/simple/simple.completed.mock.form.md
 
 # Should output to simple-v1.form.md (or next available version)
@@ -181,18 +181,15 @@ Test error cases:
 ```bash
 # Missing mock source file
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=mock
+  --mock
 # Expected: Error message about missing --mock-source
 
-# Invalid agent type
-pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=invalid
-# Expected: Error message listing valid agent types
+# NOTE: Invalid agent type test no longer applies (--agent removed)
+# --mock flag is the only agent mode flag now
 
 # Missing API key for live agent (unset ANTHROPIC_API_KEY first)
 unset ANTHROPIC_API_KEY
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=live
 # Expected: Helpful error about missing API key
 ```
 
@@ -203,15 +200,15 @@ Test model ID parsing:
 ```bash
 # Full format
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=live --model=anthropic/claude-sonnet-4-5 --dry-run
+  --model=anthropic/claude-sonnet-4-5 --dry-run
 
 # Short format (if unique)
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=live --model=claude-sonnet-4-5 --dry-run
+  --model=claude-sonnet-4-5 --dry-run
 
 # Invalid model
 pnpm markform fill packages/markform/examples/simple/simple.form.md \
-  --agent=live --model=invalid/model --dry-run
+  --model=invalid/model --dry-run
 # Expected: Clear error about unsupported model
 ```
 
@@ -245,7 +242,7 @@ Global Options:
 
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
-    --agent=mock \
+    --mock \
     --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
 
 Filling form: simple.form.md
@@ -262,7 +259,7 @@ Successfully tested live agent with OpenAI gpt-4o model:
 
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
-    --agent=live --model=openai/gpt-4o \
+    --model=openai/gpt-4o \
     -o /tmp/simple-live-filled.form.md --record /tmp/simple-session.yaml
 Filling form: simple.form.md
 Form completed in 1 turn(s)
@@ -281,7 +278,7 @@ API credit error (not missing key error) confirms dotenv integration works:
 
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
-    --agent=live --model=anthropic/claude-sonnet-4-5
+    --model=anthropic/claude-sonnet-4-5
 Error: Your credit balance is too low to access the Anthropic API.
 ```
 
@@ -302,8 +299,8 @@ Keys are snake_case (`field_count`, `group_count`, etc.)
 ### Error Handling - PASS
 
 ```bash
-$ pnpm markform fill packages/markform/examples/simple/simple.form.md --agent=mock
-Error: --agent=mock requires --mock-source <file>
+$ pnpm markform fill packages/markform/examples/simple/simple.form.md --mock
+Error: --mock requires --mock-source <file>
 ```
 
 ### Precommit - PASS
@@ -314,12 +311,12 @@ All 244 tests pass, TypeScript compiles, ESLint passes.
 
 ```bash
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
-    --agent=mock --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
+    --mock --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
 Form written to: simple-v1.form.md
 
 # Running again increments version:
 $ pnpm markform fill packages/markform/examples/simple/simple.form.md \
-    --agent=mock --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
+    --mock --mock-source packages/markform/examples/simple/simple-mock-filled.form.md
 Form written to: simple-v2.form.md
 ```
 

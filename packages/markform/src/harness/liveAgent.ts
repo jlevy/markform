@@ -5,9 +5,11 @@
  * by analyzing issues and generating appropriate patches.
  */
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel, Tool } from "ai";
 import { generateText, stepCountIs, zodSchema } from "ai";
 import { z } from "zod";
+import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 
 import type {
   DocumentationBlock,
@@ -16,8 +18,18 @@ import type {
   Patch,
 } from "../engine/coreTypes.js";
 import { PatchSchema } from "../engine/coreTypes.js";
-import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from "../settings.js";
-import type { Agent, LiveAgentConfig } from "./harnessTypes.js";
+import { serialize } from "../engine/serialize.js";
+import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, getWebSearchConfig } from "../settings.js";
+import type { Agent, AgentResponse, LiveAgentConfig, TurnStats } from "./harnessTypes.js";
+import {
+  DEFAULT_SYSTEM_PROMPT,
+  WEB_SEARCH_INSTRUCTIONS,
+  GENERATE_PATCHES_TOOL_DESCRIPTION,
+  ISSUES_HEADER,
+  getIssuesIntro,
+  PATCH_FORMAT_INSTRUCTIONS,
+  SECTION_HEADERS,
+} from "./prompts.js";
 
 // Re-export types for backwards compatibility
 export type { LiveAgentConfig } from "./harnessTypes.js";
@@ -34,25 +46,48 @@ export class LiveAgent implements Agent {
   private maxStepsPerTurn: number;
   private systemPromptAddition?: string;
   private targetRole: string;
+  private provider?: string;
+  private enableWebSearch: boolean;
+  private webSearchTools: Record<string, Tool> | null = null;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
     this.maxStepsPerTurn = config.maxStepsPerTurn ?? 3;
     this.systemPromptAddition = config.systemPromptAddition;
     this.targetRole = config.targetRole ?? AGENT_ROLE;
+    this.provider = config.provider;
+    this.enableWebSearch = config.enableWebSearch ?? true;
+
+    // Eagerly load web search tools to enable early logging
+    if (this.enableWebSearch && this.provider) {
+      this.webSearchTools = loadWebSearchTools(this.provider);
+    }
+  }
+
+  /**
+   * Get list of available tool names for this agent.
+   * Useful for logging what capabilities the agent has.
+   */
+  getAvailableToolNames(): string[] {
+    const tools = ["generatePatches"];
+    if (this.webSearchTools) {
+      tools.push(...Object.keys(this.webSearchTools));
+    }
+    return tools;
   }
 
   /**
    * Generate patches using the LLM.
    *
-   * Calls the model with the current form state and issues,
-   * and extracts patches from the tool calls.
+   * Each call is stateless - the full form context is provided fresh each turn.
+   * The form itself carries all state (filled values, remaining issues).
+   * Returns patches and per-turn stats for observability.
    */
   async generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number
-  ): Promise<Patch[]> {
+  ): Promise<AgentResponse> {
     // Build context prompt with issues and form schema
     const contextPrompt = buildContextPrompt(issues, form, maxPatches);
 
@@ -64,6 +99,16 @@ export class LiveAgent implements Agent {
       systemPrompt += "\n\n# Additional Context\n" + this.systemPromptAddition;
     }
 
+    // Web search tools are loaded in constructor, but check again for runtime changes
+    if (this.enableWebSearch && this.provider && !this.webSearchTools) {
+      this.webSearchTools = loadWebSearchTools(this.provider);
+    }
+
+    // If web search is available, add instructions to use it
+    if (this.webSearchTools && Object.keys(this.webSearchTools).length > 0) {
+      systemPrompt += "\n\n" + WEB_SEARCH_INSTRUCTIONS;
+    }
+
     // Define the patch tool with properly typed parameters
     const patchesSchema = z.object({
       patches: z.array(PatchSchema).max(maxPatches).describe(
@@ -72,26 +117,37 @@ export class LiveAgent implements Agent {
     });
 
     // Create tool using zodSchema wrapper for AI SDK v6 compatibility
-    const generatePatchesTool = {
-      description:
-        "Generate patches to fill form fields. Each patch sets a field value. " +
-        "Use the field IDs from the issues list. Return patches for all issues you can address.",
+    const generatePatchesTool: Tool = {
+      description: GENERATE_PATCHES_TOOL_DESCRIPTION,
       inputSchema: zodSchema(patchesSchema),
     };
 
-    // Call the model
+    // Combine all tools
+    const tools: Record<string, Tool> = {
+      generatePatches: generatePatchesTool,
+      ...this.webSearchTools,
+    };
+
+    // Call the model (stateless - full context provided each turn)
     const result = await generateText({
       model: this.model,
       system: systemPrompt,
       prompt: contextPrompt,
-      tools: { generatePatches: generatePatchesTool },
+      tools,
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
 
-    // Extract patches from tool calls
+    // Extract patches from tool calls and count tool usage
     const patches: Patch[] = [];
+    const toolCallCounts = new Map<string, number>();
+
     for (const step of result.steps) {
       for (const toolCall of step.toolCalls) {
+        // Count tool calls
+        const count = toolCallCounts.get(toolCall.toolName) ?? 0;
+        toolCallCounts.set(toolCall.toolName, count + 1);
+
+        // Extract patches from generatePatches calls
         if (toolCall.toolName === "generatePatches" && "input" in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
           patches.push(...input.patches);
@@ -99,31 +155,50 @@ export class LiveAgent implements Agent {
       }
     }
 
-    // Limit to maxPatches
-    return patches.slice(0, maxPatches);
+    // Build tool call stats
+    const toolCalls: TurnStats["toolCalls"] = [];
+    for (const [name, count] of toolCallCounts) {
+      toolCalls.push({ name, count });
+    }
+
+    // Count remaining issues by severity
+    const requiredRemaining = issues.filter((i) => i.severity === "required").length;
+    const optionalRemaining = issues.filter((i) => i.severity === "recommended").length;
+
+    // Build stats
+    const stats: TurnStats = {
+      inputTokens: result.usage?.inputTokens,
+      outputTokens: result.usage?.outputTokens,
+      toolCalls,
+      formProgress: {
+        // Note: these are the counts BEFORE this turn's patches are applied
+        // The caller will update these after applying patches
+        answeredFields: Object.keys(form.valuesByFieldId).filter(
+          (id) => form.valuesByFieldId[id] !== null
+        ).length,
+        skippedFields: Object.keys(form.skipsByFieldId ?? {}).filter(
+          (id) => form.skipsByFieldId?.[id]?.skipped
+        ).length,
+        requiredRemaining,
+        optionalRemaining,
+      },
+      prompts: {
+        system: systemPrompt,
+        context: contextPrompt,
+      },
+    };
+
+    // Limit to maxPatches and return with stats
+    return {
+      patches: patches.slice(0, maxPatches),
+      stats,
+    };
   }
 }
 
 // =============================================================================
 // Context Building
 // =============================================================================
-
-/**
- * Default system prompt for the live agent.
- */
-const DEFAULT_SYSTEM_PROMPT = `You are a form-filling assistant. Your task is to analyze form issues and generate patches to fill in the required fields.
-
-Guidelines:
-1. Focus on required fields first (severity: "required")
-2. Use realistic but generic values when specific data is not provided
-3. Match the expected field types exactly
-4. For string fields: use appropriate text
-5. For number fields: use appropriate numeric values
-6. For single_select: choose one valid option ID
-7. For multi_select: choose one or more valid option IDs
-8. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
-
-Always use the generatePatches tool to submit your field values.`;
 
 /**
  * Extract doc blocks of a specific tag type for a given ref.
@@ -159,7 +234,7 @@ function buildSystemPrompt(
   const formInstructions = getDocBlocks(form.docs, form.schema.id, "instructions");
   if (formInstructions.length > 0) {
     sections.push("");
-    sections.push("# Form Instructions");
+    sections.push(SECTION_HEADERS.formInstructions);
     for (const doc of formInstructions) {
       sections.push(doc.bodyMarkdown.trim());
     }
@@ -169,14 +244,14 @@ function buildSystemPrompt(
   const roleInstructions = form.metadata?.roleInstructions?.[targetRole];
   if (roleInstructions) {
     sections.push("");
-    sections.push(`# Instructions for ${targetRole} role`);
+    sections.push(SECTION_HEADERS.roleInstructions(targetRole));
     sections.push(roleInstructions);
   } else {
     // Fallback to default role instructions
     const defaultRoleInstr = DEFAULT_ROLE_INSTRUCTIONS[targetRole];
     if (defaultRoleInstr) {
       sections.push("");
-      sections.push(`# Role guidance`);
+      sections.push(SECTION_HEADERS.roleGuidance);
       sections.push(defaultRoleInstr);
     }
   }
@@ -198,7 +273,7 @@ function buildSystemPrompt(
 
   if (fieldInstructions.length > 0) {
     sections.push("");
-    sections.push("# Field-specific instructions");
+    sections.push(SECTION_HEADERS.fieldInstructions);
     sections.push(...fieldInstructions);
   }
 
@@ -206,7 +281,10 @@ function buildSystemPrompt(
 }
 
 /**
- * Build a context prompt with issues and form information.
+ * Build a context prompt with full form state and remaining issues.
+ *
+ * The form markdown shows the agent exactly what's been filled so far,
+ * making each turn stateless - all state is in the form itself.
  */
 function buildContextPrompt(
   issues: InspectIssue[],
@@ -215,9 +293,21 @@ function buildContextPrompt(
 ): string {
   const lines: string[] = [];
 
-  lines.push("# Current Form Issues");
+  // Include full form markdown so agent sees current state
+  lines.push("# Current Form State");
   lines.push("");
-  lines.push(`You need to address up to ${maxPatches} issues. Here are the current issues:`);
+  lines.push("Below is the complete form with all currently filled values.");
+  lines.push("Fields marked with `[ ]` or empty values still need to be filled.");
+  lines.push("");
+  lines.push("```markdown");
+  lines.push(serialize(form));
+  lines.push("```");
+  lines.push("");
+
+  // List remaining issues
+  lines.push(ISSUES_HEADER);
+  lines.push("");
+  lines.push(getIssuesIntro(maxPatches));
   lines.push("");
 
   for (const issue of issues) {
@@ -241,16 +331,7 @@ function buildContextPrompt(
     lines.push("");
   }
 
-  lines.push("# Instructions");
-  lines.push("");
-  lines.push("Use the generatePatches tool to submit patches for the fields above.");
-  lines.push("Each patch should match the field type:");
-  lines.push("- string: { op: \"set_string\", fieldId: \"...\", value: \"...\" }");
-  lines.push("- number: { op: \"set_number\", fieldId: \"...\", value: 123 }");
-  lines.push("- string_list: { op: \"set_string_list\", fieldId: \"...\", items: [\"...\", \"...\"] }");
-  lines.push("- single_select: { op: \"set_single_select\", fieldId: \"...\", selected: \"option_id\" }");
-  lines.push("- multi_select: { op: \"set_multi_select\", fieldId: \"...\", selected: [\"opt1\", \"opt2\"] }");
-  lines.push("- checkboxes: { op: \"set_checkboxes\", fieldId: \"...\", values: { \"opt1\": \"done\", \"opt2\": \"todo\" } }");
+  lines.push(PATCH_FORMAT_INSTRUCTIONS);
 
   return lines.join("\n");
 }
@@ -267,6 +348,54 @@ function findField(form: ParsedForm, fieldId: string) {
     }
   }
   return null;
+}
+
+// =============================================================================
+// Web Search Tools
+// =============================================================================
+
+/**
+ * Load web search tools for a provider.
+ *
+ * Uses statically imported provider modules to get web search tools.
+ * Returns empty object if provider doesn't support web search.
+ */
+function loadWebSearchTools(provider: string): Record<string, Tool> {
+  const config = getWebSearchConfig(provider);
+  if (!config) {
+    return {};
+  }
+
+  switch (provider) {
+    case "openai": {
+      // OpenAI web search tool via openai.tools
+      // Prefer webSearch (newer) over webSearchPreview (legacy)
+      if (openai.tools?.webSearch) {
+        return { web_search: openai.tools.webSearch({}) as Tool };
+      }
+      if (openai.tools?.webSearchPreview) {
+        return { web_search: openai.tools.webSearchPreview({}) as Tool };
+      }
+      return {};
+    }
+
+    case "google": {
+      // Google search grounding tool via google.tools
+      if (google.tools?.googleSearch) {
+        return { google_search: google.tools.googleSearch({}) as Tool };
+      }
+      return {};
+    }
+
+    case "xai": {
+      // xAI Grok has built-in web search - no separate tool needed
+      // The model itself handles search when prompted
+      return {};
+    }
+
+    default:
+      return {};
+  }
 }
 
 // =============================================================================

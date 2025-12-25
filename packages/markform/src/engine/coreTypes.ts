@@ -55,6 +55,13 @@ export type CheckboxMode = "multi" | "simple" | "explicit";
 export type FillMode = "continue" | "overwrite";
 
 /**
+ * Agent mode for fill operations.
+ * - 'mock': Use mock agent (for testing, requires mock source file)
+ * - 'live': Use live LLM agent (default, requires model)
+ */
+export type MockMode = "mock" | "live";
+
+/**
  * Controls whether a checkbox field acts as a blocking checkpoint.
  * - 'none': No blocking behavior (default)
  * - 'blocking': Fields after this cannot be filled until checkbox is complete
@@ -291,10 +298,17 @@ export interface IdIndexEntry {
   fieldId?: Id;
 }
 
+/** Skip state for a field */
+export interface SkipInfo {
+  skipped: boolean;
+  reason?: string;
+}
+
 /** Canonical internal representation returned by parseForm() */
 export interface ParsedForm {
   schema: FormSchema;
   valuesByFieldId: Record<Id, FieldValue>;
+  skipsByFieldId: Record<Id, SkipInfo>; // Track skip state per field
   docs: DocumentationBlock[];
   orderIndex: Id[];
   idIndex: Map<Id, IdIndexEntry>;
@@ -403,6 +417,8 @@ export interface FieldProgress {
   valid: boolean;
   issueCount: number;
   checkboxProgress?: CheckboxProgressCounts;
+  skipped: boolean; // True if explicitly skipped via skip_field
+  skipReason?: string; // Reason provided in skip_field patch
 }
 
 /** Progress counts rollup */
@@ -415,6 +431,8 @@ export interface ProgressCounts {
   invalidFields: number;
   emptyRequiredFields: number;
   emptyOptionalFields: number;
+  answeredFields: number; // Fields with values (same as submittedFields, clearer name)
+  skippedFields: number; // Fields explicitly skipped via skip_field
 }
 
 /** Progress summary - tracks filling progress */
@@ -512,6 +530,13 @@ export interface ClearFieldPatch {
   fieldId: Id;
 }
 
+/** Skip field - explicitly skip an optional field without providing a value */
+export interface SkipFieldPatch {
+  op: "skip_field";
+  fieldId: Id;
+  reason?: string; // Optional reason for skipping
+}
+
 /** Union of all patch types */
 export type Patch =
   | SetStringPatch
@@ -522,7 +547,8 @@ export type Patch =
   | SetMultiSelectPatch
   | SetUrlPatch
   | SetUrlListPatch
-  | ClearFieldPatch;
+  | ClearFieldPatch
+  | SkipFieldPatch;
 
 // =============================================================================
 // Harness Types
@@ -557,6 +583,16 @@ export interface HarnessConfig {
   fillMode?: FillMode;
 }
 
+/** LLM stats for a turn (from live agent) */
+export interface SessionTurnStats {
+  /** Input tokens for this turn */
+  inputTokens?: number;
+  /** Output tokens for this turn */
+  outputTokens?: number;
+  /** Tool calls made during this turn */
+  toolCalls?: { name: string; count: number }[];
+}
+
 /** Session turn - one iteration of the harness loop */
 export interface SessionTurn {
   turn: number;
@@ -569,7 +605,11 @@ export interface SessionTurn {
   after: {
     requiredIssueCount: number;
     markdownSha256: string;
+    answeredFieldCount: number;
+    skippedFieldCount: number;
   };
+  /** LLM stats (only present for live agent sessions) */
+  llm?: SessionTurnStats;
 }
 
 /** Final session expectations */
@@ -581,7 +621,7 @@ export interface SessionFinal {
 /** Session transcript for golden testing */
 export interface SessionTranscript {
   sessionVersion: string;
-  mode: "mock" | "live";
+  mode: MockMode;
   form: {
     path: string;
   };
@@ -664,6 +704,8 @@ export const CheckboxValueSchema = z.union([
 export const CheckboxModeSchema = z.enum(["multi", "simple", "explicit"]);
 
 export const FillModeSchema = z.enum(["continue", "overwrite"]);
+
+export const MockModeSchema = z.enum(["mock", "live"]);
 
 export const ApprovalModeSchema = z.enum(["none", "blocking"]);
 
@@ -941,6 +983,8 @@ export const FieldProgressSchema = z.object({
   valid: z.boolean(),
   issueCount: z.number().int().nonnegative(),
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
+  skipped: z.boolean(),
+  skipReason: z.string().optional(),
 });
 
 export const ProgressCountsSchema = z.object({
@@ -952,6 +996,8 @@ export const ProgressCountsSchema = z.object({
   invalidFields: z.number().int().nonnegative(),
   emptyRequiredFields: z.number().int().nonnegative(),
   emptyOptionalFields: z.number().int().nonnegative(),
+  answeredFields: z.number().int().nonnegative(),
+  skippedFields: z.number().int().nonnegative(),
 });
 
 export const ProgressSummarySchema = z.object({
@@ -1047,6 +1093,12 @@ export const ClearFieldPatchSchema = z.object({
   fieldId: IdSchema,
 });
 
+export const SkipFieldPatchSchema = z.object({
+  op: z.literal("skip_field"),
+  fieldId: IdSchema,
+  reason: z.string().optional(),
+});
+
 export const PatchSchema = z.discriminatedUnion("op", [
   SetStringPatchSchema,
   SetNumberPatchSchema,
@@ -1057,6 +1109,7 @@ export const PatchSchema = z.discriminatedUnion("op", [
   SetUrlPatchSchema,
   SetUrlListPatchSchema,
   ClearFieldPatchSchema,
+  SkipFieldPatchSchema,
 ]);
 
 // Harness schemas
@@ -1080,6 +1133,15 @@ export const HarnessConfigSchema = z.object({
   fillMode: FillModeSchema.optional(),
 });
 
+export const SessionTurnStatsSchema = z.object({
+  inputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative().optional(),
+  toolCalls: z.array(z.object({
+    name: z.string(),
+    count: z.number().int().positive(),
+  })).optional(),
+});
+
 export const SessionTurnSchema = z.object({
   turn: z.number().int().positive(),
   inspect: z.object({
@@ -1091,7 +1153,10 @@ export const SessionTurnSchema = z.object({
   after: z.object({
     requiredIssueCount: z.number().int().nonnegative(),
     markdownSha256: z.string(),
+    answeredFieldCount: z.number().int().nonnegative(),
+    skippedFieldCount: z.number().int().nonnegative(),
   }),
+  llm: SessionTurnStatsSchema.optional(),
 });
 
 export const SessionFinalSchema = z.object({
@@ -1101,7 +1166,7 @@ export const SessionFinalSchema = z.object({
 
 export const SessionTranscriptSchema = z.object({
   sessionVersion: z.string(),
-  mode: z.enum(["mock", "live"]),
+  mode: MockModeSchema,
   form: z.object({
     path: z.string(),
   }),

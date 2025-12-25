@@ -10,7 +10,7 @@ import type { LanguageModel } from "ai";
 import { applyPatches } from "../engine/apply.js";
 import { parseForm } from "../engine/parse.js";
 import { serialize } from "../engine/serialize.js";
-import type { InspectIssue, ParsedForm } from "../engine/coreTypes.js";
+import type { InspectIssue, ParsedForm, SessionTurnStats } from "../engine/coreTypes.js";
 import { coerceInputContext } from "../engine/valueCoercion.js";
 import {
   AGENT_ROLE,
@@ -136,7 +136,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       status: { ok: false, reason: "error", message: `Form parse error: ${message}` },
       markdown: typeof options.form === "string" ? options.form : "",
       values: {},
-      form: { schema: { id: "", groups: [] }, valuesByFieldId: {}, docs: [], orderIndex: [], idIndex: new Map() },
+      form: { schema: { id: "", groups: [] }, valuesByFieldId: {}, skipsByFieldId: {}, docs: [], orderIndex: [], idIndex: new Map() },
       turns: 0,
       totalPatches: 0,
     };
@@ -144,13 +144,17 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
   // 2. Resolve model if string (skip if _testAgent provided)
   let model: LanguageModel | undefined;
+  let provider: string | undefined;
   if (!options._testAgent) {
     try {
       if (typeof options.model === "string") {
         const resolved = await resolveModel(options.model);
         model = resolved.model;
+        provider = resolved.provider;
       } else {
         model = options.model;
+        // When a LanguageModel is passed directly, we can't determine provider
+        // Web search will be disabled in this case
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -197,6 +201,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     model: model!,
     systemPromptAddition: options.systemPromptAddition,
     targetRole: targetRoles[0] ?? AGENT_ROLE,
+    provider,
+    enableWebSearch: true,
   });
 
   // 5. Run harness loop
@@ -217,11 +223,12 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
 
     // Generate patches using agent
-    const patches = await agent.generatePatches(
+    const response = await agent.generatePatches(
       stepResult.issues,
       form,
       maxPatchesPerTurn,
     );
+    const { patches, stats } = response;
 
     // Re-check for cancellation after agent call (signal may have fired during LLM call)
     if (options.signal?.aborted) {
@@ -235,8 +242,18 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       );
     }
 
+    // Convert TurnStats to SessionTurnStats (only include fields relevant for session logs)
+    let llmStats: SessionTurnStats | undefined;
+    if (stats) {
+      llmStats = {
+        inputTokens: stats.inputTokens,
+        outputTokens: stats.outputTokens,
+        toolCalls: stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
+      };
+    }
+
     // Apply patches
-    stepResult = harness.apply(patches, stepResult.issues);
+    stepResult = harness.apply(patches, stepResult.issues, llmStats);
     totalPatches += patches.length;
     turnCount++;
 
@@ -252,14 +269,15 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           patchesApplied: patches.length,
           requiredIssuesRemaining: requiredIssues.length,
           isComplete: stepResult.isComplete,
+          stats,
         });
       } catch {
         // Ignore callback errors
       }
     }
 
-    // If not complete, step again
-    if (!stepResult.isComplete) {
+    // If not complete and not at max turns, step again
+    if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
       stepResult = harness.step();
     }
   }

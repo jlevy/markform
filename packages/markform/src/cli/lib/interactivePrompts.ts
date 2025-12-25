@@ -8,18 +8,20 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
 
-import { formatPath } from "./shared.js";
 
 import type {
   Field,
   FieldValue,
   Patch,
+  SkipFieldPatch,
   StringField,
   NumberField,
   StringListField,
   SingleSelectField,
   MultiSelectField,
   CheckboxesField,
+  UrlField,
+  UrlListField,
   ParsedForm,
   InspectIssue,
 } from "../../engine/coreTypes.js";
@@ -65,6 +67,49 @@ function formatFieldLabel(ctx: FieldPromptContext): string {
   const required = ctx.field.required ? pc.red("*") : "";
   const progress = pc.dim(`(${ctx.index} of ${ctx.total})`);
   return `${ctx.field.label}${required} ${progress}`;
+}
+
+/**
+ * Create a skip_field patch for the given field.
+ */
+function createSkipPatch(field: Field): SkipFieldPatch {
+  return {
+    op: "skip_field",
+    fieldId: field.id,
+    reason: "User skipped in console",
+  };
+}
+
+/**
+ * For optional fields, prompt user to choose between filling or skipping.
+ * Returns "fill" if user wants to enter a value, or a skip_field patch if skipping.
+ * Returns null if user cancelled.
+ */
+async function promptSkipOrFill(ctx: FieldPromptContext): Promise<"fill" | SkipFieldPatch | null> {
+  const field = ctx.field;
+
+  // Required fields must be filled - no skip option
+  if (field.required) {
+    return "fill";
+  }
+
+  const result = await p.select({
+    message: `${formatFieldLabel(ctx)} ${pc.dim("(optional)")}`,
+    options: [
+      { value: "fill", label: "Enter value" },
+      { value: "skip", label: "Skip this field" },
+    ],
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  if (result === "skip") {
+    return createSkipPatch(field);
+  }
+
+  return "fill";
 }
 
 /**
@@ -396,8 +441,118 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
 }
 
 /**
+ * Prompt for a URL field value.
+ */
+async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
+  const field = ctx.field as UrlField;
+  const currentVal =
+    ctx.currentValue?.kind === "url" ? ctx.currentValue.value : null;
+
+  const result = await p.text({
+    message: formatFieldLabel(ctx),
+    placeholder: currentVal ?? "https://example.com",
+    initialValue: currentVal ?? "",
+    validate: (value) => {
+      if (field.required && !value.trim()) {
+        return "This field is required";
+      }
+      if (!value.trim()) {
+        return undefined; // Allow empty for optional
+      }
+      // Basic URL validation
+      try {
+        new URL(value);
+      } catch {
+        return "Please enter a valid URL (e.g., https://example.com)";
+      }
+      return undefined;
+    },
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  // Skip if empty and not required (user pressed Enter to skip)
+  if (!result && !field.required) {
+    return null;
+  }
+
+  return {
+    op: "set_url",
+    fieldId: field.id,
+    value: result || null,
+  };
+}
+
+/**
+ * Prompt for a URL list field value.
+ */
+async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> {
+  const field = ctx.field as UrlListField;
+  const currentItems =
+    ctx.currentValue?.kind === "url_list" ? ctx.currentValue.items : [];
+
+  const hint = ctx.description
+    ? `${ctx.description.slice(0, 50)}... (one URL per line)`
+    : "Enter URLs, one per line. Press Enter twice when done.";
+
+  const result = await p.text({
+    message: formatFieldLabel(ctx),
+    placeholder: hint,
+    initialValue: currentItems.join("\n"),
+    validate: (value) => {
+      const items = value
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (field.required && items.length === 0) {
+        return "At least one URL is required";
+      }
+      if (field.minItems && items.length < field.minItems) {
+        return `Minimum ${field.minItems} URLs required`;
+      }
+      if (field.maxItems && items.length > field.maxItems) {
+        return `Maximum ${field.maxItems} URLs allowed`;
+      }
+      // Validate each URL
+      for (const item of items) {
+        try {
+          new URL(item);
+        } catch {
+          return `Invalid URL: ${item}`;
+        }
+      }
+      return undefined;
+    },
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  const items = (result)
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Skip if empty and not required
+  if (items.length === 0 && !field.required) {
+    return null;
+  }
+
+  return {
+    op: "set_url_list",
+    fieldId: field.id,
+    items,
+  };
+}
+
+/**
  * Prompt user for a single field value based on field type.
  * Returns a Patch to set the value, or null if skipped/cancelled.
+ *
+ * For optional fields, first offers a choice to skip or fill.
  */
 export async function promptForField(
   ctx: FieldPromptContext
@@ -407,6 +562,20 @@ export async function promptForField(
     p.note(ctx.description, pc.dim("Instructions"));
   }
 
+  // For optional fields, offer skip/fill choice first
+  const skipOrFillResult = await promptSkipOrFill(ctx);
+
+  if (skipOrFillResult === null) {
+    // User cancelled
+    return null;
+  }
+
+  if (typeof skipOrFillResult !== "string") {
+    // User chose to skip - return the skip_field patch
+    return skipOrFillResult;
+  }
+
+  // User chose to fill - proceed to field-specific prompt
   switch (ctx.field.kind) {
     case "string":
       return promptForString(ctx);
@@ -420,6 +589,10 @@ export async function promptForField(
       return promptForMultiSelect(ctx);
     case "checkboxes":
       return promptForCheckboxes(ctx);
+    case "url":
+      return promptForUrl(ctx);
+    case "url_list":
+      return promptForUrlList(ctx);
     default:
       // Unknown field type - skip
       return null;
@@ -523,7 +696,6 @@ export function showInteractiveIntro(
  */
 export function showInteractiveOutro(
   patchCount: number,
-  outputPath: string,
   cancelled: boolean
 ): void {
   if (cancelled) {
@@ -536,5 +708,5 @@ export function showInteractiveOutro(
     return;
   }
 
-  p.outro(`✓ ${patchCount} field(s) updated. Saved to ${formatPath(outputPath)}`);
+  p.outro(`✓ ${patchCount} field(s) updated.`);
 }

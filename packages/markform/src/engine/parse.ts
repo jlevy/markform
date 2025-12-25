@@ -651,11 +651,28 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; value: Chec
     approvalMode = "blocking";
   }
 
+  // Handle required attribute based on checkboxMode:
+  // - explicit mode is inherently required (cannot be set to false)
+  // - multi/simple modes default to optional (false)
+  const explicitRequired = getBooleanAttr(node, "required");
+  let required: boolean;
+  if (checkboxMode === "explicit") {
+    if (explicitRequired === false) {
+      throw new ParseError(
+        `Checkbox field "${label}" has checkboxMode="explicit" which is inherently required. ` +
+          `Cannot set required=false. Remove required attribute or change checkboxMode.`
+      );
+    }
+    required = true; // explicit mode is always required
+  } else {
+    required = explicitRequired ?? false; // multi/simple default to optional
+  }
+
   const field: CheckboxesField = {
     kind: "checkboxes",
     id,
     label,
-    required: getBooleanAttr(node, "required") ?? false,
+    required,
     priority: getPriorityAttr(node),
     role: getStringAttr(node, "role") ?? AGENT_ROLE,
     checkboxMode,
@@ -1074,6 +1091,7 @@ export function parseForm(markdown: string): ParsedForm {
   return {
     schema: formSchema,
     valuesByFieldId,
+    skipsByFieldId: {}, // Initially empty; skip_field patches populate this
     docs,
     orderIndex,
     idIndex,

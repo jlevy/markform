@@ -419,4 +419,282 @@ John Doe
       expect(html).toMatch(/<option[^>]*value="low"[^>]*selected[^>]*>/);
     });
   });
+
+  describe("url field rendering", () => {
+    const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% url-field id="website" label="Website" required=true %}{% /url-field %}
+{% /field-group %}
+{% /form %}`;
+
+    it("should render url field as url input", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('<input');
+      expect(html).toContain('type="url"');
+      expect(html).toContain('name="website"');
+      expect(html).toContain('id="field-website"');
+    });
+
+    it("should include placeholder for url format", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('placeholder="https://example.com"');
+    });
+
+    it("should mark required url fields", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain("required");
+    });
+
+    it("should show type badge as url", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('type-badge">url</span>');
+    });
+  });
+
+  describe("url_list field rendering", () => {
+    const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% url-list id="references" label="References" required=true %}{% /url-list %}
+{% /field-group %}
+{% /form %}`;
+
+    it("should render url_list as textarea", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('<textarea');
+      expect(html).toContain('name="references"');
+    });
+
+    it("should include placeholder explaining format", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toMatch(/placeholder="[^"]*URL.*line/i);
+    });
+
+    it("should show type badge as url_list", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('type-badge">url_list</span>');
+    });
+  });
+
+  describe("url pre-filled values", () => {
+    const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% url-field id="website" label="Website" %}
+\`\`\`value
+https://example.com
+\`\`\`
+{% /url-field %}
+{% url-list id="references" label="References" %}
+\`\`\`value
+https://example1.com
+https://example2.com
+\`\`\`
+{% /url-list %}
+{% /field-group %}
+{% /form %}`;
+
+    it("should pre-fill url value", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('value="https://example.com"');
+    });
+
+    it("should pre-fill url_list values", () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain("https://example1.com");
+      expect(html).toContain("https://example2.com");
+    });
+  });
+
+  describe("skip_field support", () => {
+    describe("optional fields", () => {
+      const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% string-field id="notes" label="Notes" required=false %}{% /string-field %}
+{% number-field id="score" label="Score" required=false %}{% /number-field %}
+{% /field-group %}
+{% /form %}`;
+
+      it("should render skip button for optional string field", () => {
+        const form = parseForm(formContent);
+        const html = renderFormHtml(form);
+
+        // Should have a skip button with data-skip-field attribute
+        expect(html).toContain('data-skip-field="notes"');
+        expect(html).toMatch(/Skip/i);
+      });
+
+      it("should render skip button for optional number field", () => {
+        const form = parseForm(formContent);
+        const html = renderFormHtml(form);
+
+        expect(html).toContain('data-skip-field="score"');
+      });
+    });
+
+    describe("required fields", () => {
+      const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% /field-group %}
+{% /form %}`;
+
+      it("should not render skip button for required fields", () => {
+        const form = parseForm(formContent);
+        const html = renderFormHtml(form);
+
+        // Should NOT have a skip button for required fields
+        expect(html).not.toContain('data-skip-field="name"');
+      });
+    });
+
+    describe("skipped state display", () => {
+      const formContent = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% string-field id="notes" label="Notes" required=false %}{% /string-field %}
+{% /field-group %}
+{% /form %}`;
+
+      it("should show skipped indicator for previously skipped fields", () => {
+        const form = parseForm(formContent);
+        // Mark the field as skipped
+        form.skipsByFieldId = {
+          notes: { skipped: true, reason: "User skipped" },
+        };
+        const html = renderFormHtml(form);
+
+        // Should show a visual indicator that field is skipped
+        expect(html).toMatch(/skipped/i);
+        expect(html).toContain('disabled');
+      });
+    });
+  });
+
+  describe("field type coverage", () => {
+    // This test ensures ALL field types defined in FieldKind are handled by the web renderer.
+    // If a new field type is added to coreTypes.ts but not to serve.ts, this test will fail.
+
+    // Form that includes ALL field types
+    const allFieldTypesForm = `---
+markform:
+  markform_version: "0.1.0"
+---
+{% form id="all_types" %}
+{% field-group id="g1" title="All Field Types" %}
+{% string-field id="f_string" label="String Field" %}{% /string-field %}
+{% number-field id="f_number" label="Number Field" %}{% /number-field %}
+{% string-list id="f_string_list" label="String List" %}{% /string-list %}
+{% single-select id="f_single_select" label="Single Select" %}
+- [ ] Option A {% #a %}
+- [ ] Option B {% #b %}
+{% /single-select %}
+{% multi-select id="f_multi_select" label="Multi Select" %}
+- [ ] Option A {% #a %}
+- [ ] Option B {% #b %}
+{% /multi-select %}
+{% checkboxes id="f_checkboxes" label="Checkboxes" checkboxMode="simple" %}
+- [ ] Item A {% #a %}
+- [ ] Item B {% #b %}
+{% /checkboxes %}
+{% url-field id="f_url" label="URL Field" %}{% /url-field %}
+{% url-list id="f_url_list" label="URL List" %}{% /url-list %}
+{% /field-group %}
+{% /form %}`;
+
+    it("should not have any unknown field types in output", () => {
+      const form = parseForm(allFieldTypesForm);
+      const html = renderFormHtml(form);
+
+      // The "(unknown field type)" message indicates a field type wasn't handled
+      expect(html).not.toContain("unknown field type");
+    });
+
+    it("should show correct type badges for all field types", () => {
+      const form = parseForm(allFieldTypesForm);
+      const html = renderFormHtml(form);
+
+      // Verify each field type badge is present
+      expect(html).toContain('type-badge">string</span>');
+      expect(html).toContain('type-badge">number</span>');
+      expect(html).toContain('type-badge">string_list</span>');
+      expect(html).toContain('type-badge">single_select</span>');
+      expect(html).toContain('type-badge">multi_select</span>');
+      expect(html).toContain('type-badge">checkboxes</span>');
+      expect(html).toContain('type-badge">url</span>');
+      expect(html).toContain('type-badge">url_list</span>');
+    });
+
+    it("should render appropriate input elements for all field types", () => {
+      const form = parseForm(allFieldTypesForm);
+      const html = renderFormHtml(form);
+
+      // string -> text input
+      expect(html).toContain('type="text"');
+      expect(html).toContain('name="f_string"');
+
+      // number -> number input
+      expect(html).toContain('type="number"');
+      expect(html).toContain('name="f_number"');
+
+      // string_list -> textarea
+      expect(html).toContain('name="f_string_list"');
+      expect(html).toMatch(/<textarea[^>]*name="f_string_list"/);
+
+      // single_select -> select
+      expect(html).toMatch(/<select[^>]*name="f_single_select"/);
+
+      // multi_select -> checkboxes
+      expect(html).toContain('name="f_multi_select"');
+
+      // checkboxes -> checkboxes (simple mode)
+      expect(html).toContain('name="f_checkboxes"');
+
+      // url -> url input
+      expect(html).toContain('type="url"');
+      expect(html).toContain('name="f_url"');
+
+      // url_list -> textarea
+      expect(html).toMatch(/<textarea[^>]*name="f_url_list"/);
+    });
+  });
 });

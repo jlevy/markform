@@ -22,6 +22,7 @@ import type {
   ProgressSummary,
   QualifiedOptionRef,
   SingleSelectValue,
+  SkipInfo,
   StringListValue,
   StringValue,
   StructureSummary,
@@ -265,13 +266,15 @@ function computeFieldState(
 function computeFieldProgress(
   field: Field,
   value: FieldValue | undefined,
-  issues: InspectIssue[]
+  issues: InspectIssue[],
+  skipInfo?: SkipInfo
 ): FieldProgress {
   const fieldIssues = issues.filter((i) => i.ref === field.id);
   const issueCount = fieldIssues.length;
   const submitted = isFieldSubmitted(field, value);
   const valid = issueCount === 0;
   const state = computeFieldState(field, value, issueCount);
+  const skipped = skipInfo?.skipped ?? false;
 
   const progress: FieldProgress = {
     kind: field.kind,
@@ -280,6 +283,8 @@ function computeFieldProgress(
     state,
     valid,
     issueCount,
+    skipped,
+    skipReason: skipInfo?.reason,
   };
 
   // Add checkbox progress for checkboxes fields
@@ -303,12 +308,14 @@ function computeFieldProgress(
  * @param schema - The form schema
  * @param values - Current field values
  * @param issues - Validation issues (from inspect)
+ * @param skips - Skip state per field (from skip_field patches)
  * @returns Progress summary with field states and counts
  */
 export function computeProgressSummary(
   schema: FormSchema,
   values: Record<Id, FieldValue>,
-  issues: InspectIssue[]
+  issues: InspectIssue[],
+  skips: Record<Id, SkipInfo> = {}
 ): ProgressSummary {
   const fields: Record<Id, FieldProgress> = {};
   const counts: ProgressCounts = {
@@ -320,12 +327,15 @@ export function computeProgressSummary(
     invalidFields: 0,
     emptyRequiredFields: 0,
     emptyOptionalFields: 0,
+    answeredFields: 0, // Fields with values (same as submittedFields)
+    skippedFields: 0, // Fields explicitly skipped via skip_field
   };
 
   for (const group of schema.groups) {
     for (const field of group.children) {
       const value = values[field.id];
-      const progress = computeFieldProgress(field, value, issues);
+      const skipInfo = skips[field.id];
+      const progress = computeFieldProgress(field, value, issues, skipInfo);
       fields[field.id] = progress;
 
       // Update counts
@@ -335,6 +345,10 @@ export function computeProgressSummary(
       }
       if (progress.submitted) {
         counts.submittedFields++;
+        counts.answeredFields++; // Track answered (same as submitted)
+      }
+      if (progress.skipped) {
+        counts.skippedFields++;
       }
       if (progress.state === "complete") {
         counts.completeFields++;
@@ -395,15 +409,32 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 /**
  * Determine if the form is complete (ready for submission).
  *
+ * A form is complete when:
+ * 1. No required fields are empty
+ * 2. No fields have validation errors
+ * 3. No fields are in incomplete state (e.g., partial checkbox completion)
+ * 4. All fields must be addressed (answered + skipped == total)
+ *
+ * Every field must be explicitly addressed - either filled with a value or
+ * skipped with a reason. This ensures agents fully process all fields.
+ *
  * @param progress - The progress summary
  * @returns True if the form is complete
  */
 export function isFormComplete(progress: ProgressSummary): boolean {
-  return (
-    progress.counts.invalidFields === 0 &&
-    progress.counts.incompleteFields === 0 &&
-    progress.counts.emptyRequiredFields === 0
-  );
+  const { counts } = progress;
+
+  // Basic requirements: no invalid/incomplete fields, all required fields filled
+  const baseComplete =
+    counts.invalidFields === 0 &&
+    counts.incompleteFields === 0 &&
+    counts.emptyRequiredFields === 0;
+
+  // All fields must be addressed (filled or skipped)
+  const allFieldsAccountedFor =
+    (counts.answeredFields + counts.skippedFields) === counts.totalFields;
+
+  return baseComplete && allFieldsAccountedFor;
 }
 
 // =============================================================================
@@ -423,15 +454,17 @@ export interface ComputedSummaries {
  * @param schema - The form schema
  * @param values - Current field values
  * @param issues - Validation issues
+ * @param skips - Skip state per field (from skip_field patches)
  * @returns All computed summaries
  */
 export function computeAllSummaries(
   schema: FormSchema,
   values: Record<Id, FieldValue>,
-  issues: InspectIssue[]
+  issues: InspectIssue[],
+  skips: Record<Id, SkipInfo> = {}
 ): ComputedSummaries {
   const structureSummary = computeStructureSummary(schema);
-  const progressSummary = computeProgressSummary(schema, values, issues);
+  const progressSummary = computeProgressSummary(schema, values, issues, skips);
   const formState = computeFormState(progressSummary);
   const isComplete = isFormComplete(progressSummary);
 

@@ -171,8 +171,8 @@ pnpm markform dump <file>
 pnpm markform apply <file> --patch '<json>'
 pnpm markform serve <file>
 pnpm markform fill <file> --interactive  # Interactive mode for user role fields
-pnpm markform fill <file> --agent=mock --mock-source <mock-file>
-pnpm markform fill <file> --agent=live --model=anthropic/claude-sonnet-4-5
+pnpm markform fill <file> --mock --mock-source <mock-file>
+pnpm markform fill <file> --model=anthropic/claude-sonnet-4-5
 ```
 
 ### CLI Commands

@@ -282,6 +282,21 @@ Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 expression string (without delimiters).
 Example: `pattern="^[A-Z]{1,5}$"` for a ticker symbol.
 
+**Common attributes (all field types):**
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| `id` | string | Required. Unique identifier (snake_case) |
+| `label` | string | Required. Human-readable field name |
+| `required` | boolean | Whether field must be filled for form completion |
+| `role` | string | Target actor (e.g., `"user"`, `"agent"`). See role-filtered completion |
+
+The `role` attribute enables multi-actor workflows where different fields are assigned
+to different actors.
+When running the fill harness with `targetRoles`, only fields matching those roles are
+considered for completion.
+See **Role-filtered completion** in the ProgressState Definitions section.
+
 #### Option Syntax (Markform-specific)
 
 Markdoc does **not** natively support GFM-style task list checkbox syntax.
@@ -379,6 +394,24 @@ Example with partial completion allowed:
 **Note:** `minDone` only applies to `simple` mode.
 For `multi` mode, completion requires all options in terminal states (`done` or `na`).
 For `explicit` mode, all options must have explicit `yes` or `no` answers.
+
+**Checkbox mode and `required` attribute:**
+
+Fields with `checkboxMode="explicit"` are inherently required—every option must receive
+an explicit `yes` or `no` answer.
+The parser enforces this:
+
+- Omitting `required` → defaults to `true`
+
+- Setting `required=true` → redundant but valid
+
+- Setting `required=false` → **parse error** (explicit mode cannot be optional)
+
+| Checkbox Mode | `required` Effect |
+| --- | --- |
+| `simple` | Optional by default; when required, `minDone` threshold must be met |
+| `multi` | Optional by default; when required, all options in terminal state (`done`/`na`) |
+| `explicit` | Always required (enforced by parser; `required=false` is an error) |
 
 **Distinction between `incomplete` and `active`:**
 
@@ -930,10 +963,17 @@ interface IdIndexEntry {
   parentId?: Id;           // parent group/form ID (undefined for form)
 }
 
+// Skip state for a field (stored separately from values)
+interface SkipInfo {
+  skipped: boolean;
+  reason?: string;
+}
+
 // ParsedForm: canonical internal representation returned by parseForm()
 interface ParsedForm {
   schema: FormSchema;
   valuesByFieldId: Record<Id, FieldValue>;
+  skipsByFieldId: Record<Id, SkipInfo>;   // skip state per field (runtime metadata)
   docs: DocumentationBlock[];
   orderIndex: Id[];                       // fieldIds in document order (deterministic)
   idIndex: Map<Id, IdIndexEntry>;         // fast lookup for form/group/field (NOT options)
@@ -1027,10 +1067,13 @@ interface FieldProgress {
   kind: FieldKind;             // field type
   required: boolean;           // whether field has required=true
 
-  submitted: boolean;          // whether any value has been provided
+  submitted: boolean;          // whether any value has been provided ("answered")
   state: ProgressState;        // computed progress state
   valid: boolean;              // true iff no validation issues for this field
   issueCount: number;          // count of ValidationIssues referencing this field
+
+  skipped: boolean;            // true if explicitly skipped via skip_field patch
+  skipReason?: string;         // reason provided in skip_field patch
 
   /**
    * Checkbox state rollup (only present for checkboxes fields).
@@ -1078,6 +1121,9 @@ interface ProgressCounts {
 
   emptyRequiredFields: number;   // required fields with no value
   emptyOptionalFields: number;   // optional fields with no value
+
+  answeredFields: number;        // same as submittedFields (clearer terminology)
+  skippedFields: number;         // fields explicitly skipped via skip_field
 }
 ```
 
@@ -1160,6 +1206,45 @@ These fields contribute to `emptyRequiredFields` count even without explicit
 `required=true`. This ensures `form_state` accurately reflects whether all constraints
 are satisfied.
 
+**Role-filtered completion (for multi-role forms):**
+
+When running the fill harness with a specific `targetRoles` parameter (e.g., just the
+`agent` role), completion should be determined by only the fields assignable to those
+roles, not all fields in the form.
+The completion formula becomes:
+
+```
+Role-filtered completion for targetRoles:
+  roleFilteredFields = fields.filter(f => targetRoles.includes(f.role) || !f.role)
+
+  isComplete = for all f in roleFilteredFields:
+    f.state == 'complete'  OR
+    f.state == 'skipped'   OR
+    (!f.required && f.state == 'empty')
+```
+
+This is critical for forms where the user fills some fields first, then the agent fills
+the remaining agent-role fields.
+Without role filtering, the harness would incorrectly report the form as incomplete even
+after all agent fields are filled, because user fields (intended for a different actor)
+would still be empty.
+
+**Field states for completion purposes:**
+
+| State | Counts as Complete | Notes |
+| --- | --- | --- |
+| `complete` | Yes | Field has valid value (answered) |
+| `skipped` | Yes | Explicitly skipped via `skip_field` patch (tracked in `FieldProgress.skipped`, not a `ProgressState` value) |
+| `empty` (non-required) | No | Optional field left unfilled—must be answered OR skipped |
+| `empty` (required) | No | Required field must be answered (cannot be skipped) |
+| `incomplete` | No | Partially filled (e.g., list with fewer items than `minItems`) |
+| `invalid` | No | Has validation errors |
+
+**Note:** The completion formula requires every field to be either *answered* (has
+value) or *skipped* (explicitly marked).
+Simply leaving an optional field empty does NOT count toward completion—the agent must
+actively skip it. This ensures agents acknowledge every field in the form.
+
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
 alignment with JSON Schema keywords reduces translation complexity.
@@ -1205,6 +1290,11 @@ const StructureSummarySchema = z.object({
 
 const ProgressStateSchema = z.enum(['empty', 'incomplete', 'invalid', 'complete']);
 
+const SkipInfoSchema = z.object({
+  skipped: z.boolean(),
+  reason: z.string().optional(),
+});
+
 const CheckboxProgressCountsSchema = z.object({
   total: z.number().int().nonnegative(),
   // Multi mode
@@ -1226,6 +1316,8 @@ const FieldProgressSchema = z.object({
   state: ProgressStateSchema,
   valid: z.boolean(),
   issueCount: z.number().int().nonnegative(),
+  skipped: z.boolean(),                          // true if explicitly skipped
+  skipReason: z.string().optional(),             // reason from skip_field patch
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
 });
 
@@ -1238,6 +1330,8 @@ const ProgressCountsSchema = z.object({
   invalidFields: z.number().int().nonnegative(),
   emptyRequiredFields: z.number().int().nonnegative(),
   emptyOptionalFields: z.number().int().nonnegative(),
+  answeredFields: z.number().int().nonnegative(),   // same as submittedFields
+  skippedFields: z.number().int().nonnegative(),    // explicitly skipped fields
 });
 
 const ProgressSummarySchema = z.object({
@@ -1718,7 +1812,7 @@ interface InspectResult {
   structureSummary: StructureSummary;   // form structure overview
   progressSummary: ProgressSummary;     // filling progress per field
   issues: InspectIssue[];               // unified list sorted by priority (ascending, 1 = highest)
-  isComplete: boolean;                  // true when no issues with severity: 'required'
+  isComplete: boolean;                  // see completion formula below
   formState: ProgressState;             // overall progress state; mirrors frontmatter form_state
 }
 
@@ -1727,7 +1821,7 @@ interface ApplyResult {
   structureSummary: StructureSummary;
   progressSummary: ProgressSummary;
   issues: InspectIssue[];               // unified list sorted by priority (ascending, 1 = highest)
-  isComplete: boolean;                  // true when no issues with severity: 'required'
+  isComplete: boolean;                  // see completion formula below
   formState: ProgressState;             // overall progress state; mirrors frontmatter form_state
 }
 ```
@@ -1746,6 +1840,20 @@ interface ApplyResult {
 - Summaries are serialized to frontmatter on every form write
 
 - `formState` is derived from `progressSummary.counts` (see ProgressState definitions)
+
+**Completion formula:**
+
+`isComplete` is true when all target-role fields are either answered or skipped, and
+there are no issues with `severity: 'required'`:
+
+```
+isComplete = (answeredFields + skippedFields == totalFields for target roles)
+             AND (no issues with severity == 'required')
+```
+
+This formula ensures agents must actively respond to every field (either fill it or
+explicitly skip it) before the form is considered complete.
+Skipped fields won’t have values, but they won’t block completion either.
 
 **Operation availability by interface:**
 
@@ -1768,7 +1876,10 @@ type Patch =
   | { op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }
   | { op: 'set_single_select'; fieldId: Id; selected: OptionId | null }
   | { op: 'set_multi_select'; fieldId: Id; selected: OptionId[] }
-  | { op: 'clear_field'; fieldId: Id };
+  | { op: 'set_url'; fieldId: Id; value: string | null }
+  | { op: 'set_url_list'; fieldId: Id; items: string[] }
+  | { op: 'clear_field'; fieldId: Id }
+  | { op: 'skip_field'; fieldId: Id; reason?: string };
 
 // OptionId is just the local ID within the field (e.g., "ten_k", "bullish")
 // NOT the qualified form—the fieldId provides the scope
@@ -1812,6 +1923,33 @@ scope. For example:
   are updated)
 
 - `set_multi_select`: Replaces entire selection array (not additive)
+
+- `skip_field`: Explicitly skip an optional field without providing a value.
+  Used when an agent cannot or should not fill a field (e.g., information not available,
+  field not applicable).
+  The optional `reason` field provides context.
+
+  **Constraints:**
+
+  - Can only skip **optional** fields (required fields reject with error)
+
+  - Skipping a field clears any existing value
+
+  - A skipped field counts toward completion but has no value
+
+  **Behavior:**
+
+  - Skip state is stored in `skipsByFieldId` on ParsedForm (runtime metadata)
+
+  - Skipped fields no longer appear in the issues list (not blocking completion)
+
+  - Setting a value on a skipped field clears the skip state (field becomes answered)
+
+  - Skip state is not serialized to the form markdown file
+
+  **Completion semantics:** Form completion requires: `answeredFields + skippedFields ==
+  totalFields` (for target roles) AND no required issues.
+  This ensures agents actively respond to every field, even if just to skip it.
 
 **Patch validation layers (*required*):**
 
@@ -1967,6 +2105,9 @@ interface ExportedOption {
 ### Layer 5: Execution (Harness Loop)
 
 The harness wraps the engine with a stable “step” protocol for bite-sized actions.
+**Each turn is stateless:** the agent receives the full serialized form plus remaining
+issues each turn—no conversation history is maintained.
+The form itself IS the state.
 
 #### Harness State Machine
 
@@ -2021,16 +2162,21 @@ console output.
 
 #### Harness Contract
 
+The harness manages the form-filling loop but does not maintain session state beyond the
+form itself. **The serialized form is the single source of truth.**
+
 ```ts
 interface StepResult {
   structureSummary: StructureSummary;   // form structure overview (static)
-  progressSummary: ProgressSummary;     // current filling progress
+  progressSummary: ProgressSummary;     // current filling progress (includes answeredFields, skippedFields)
   issues: InspectIssue[];               // unified list sorted by priority (ascending, 1 = highest)
   stepBudget: number;                   // suggested patches this turn (from config)
-  isComplete: boolean;                  // true when no issues with severity: 'required'
+  isComplete: boolean;                  // true per completion formula (all fields answered/skipped, no required issues)
   turnNumber: number;
 }
 ```
+
+**Key behaviors:**
 
 - `harness.step()` returns current state including summaries + issues
 
@@ -2044,7 +2190,21 @@ interface StepResult {
 
 - Summaries allow agents/UIs to quickly display progress without parsing the full form
 
-This keeps turns short and controlled for long-lived sessions.
+**Form-as-state principle:**
+
+The harness does not track conversation history or accumulate context across turns.
+Instead:
+
+- Each turn, the agent receives the full serialized form (current state) + issues
+
+- This is structurally equivalent to `markform inspect` output
+
+- After patches are applied, the form is re-serialized with updated values
+
+- The next turn sees the updated form, not a diff or delta
+
+This design keeps turns short and controlled, enables easy debugging (any turn can be
+replayed from its form snapshot), and avoids context window growth in long sessions.
 
 #### Mocked Mode
 
@@ -2057,23 +2217,128 @@ This keeps turns short and controlled for long-lived sessions.
 
 - No LLM calls required
 
+#### Stateless Turn Context Design
+
+A key architectural decision is that **each agent turn is stateless**. The agent does
+not maintain conversation history across turns.
+Instead, the full form context is provided fresh each turn:
+
+**Turn Context = Full Form Markdown + Remaining Issues**
+
+This mirrors what `markform inspect` outputs, making each turn self-contained:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Turn N Context (User Prompt)                                                 │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ # Current Form State                                                         │
+│                                                                              │
+│ Below is the complete form with all currently filled values.                 │
+│ Fields marked with `[ ]` or empty values still need to be filled.            │
+│                                                                              │
+│ ```markdown                                                                  │
+│ ---                                                                          │
+│ markform:                                                                    │
+│   markform_version: "0.1.0"                                                  │
+│   form_state: incomplete                                                     │
+│   ...                                                                        │
+│ ---                                                                          │
+│ {% form id="example" %}                                                      │
+│ {% string-field id="name" label="Name" %}                                    │
+│ ```value                                                                     │
+│ Alice                                                                        │
+│ ```                                                                          │
+│ {% /string-field %}                                                          │
+│ {% string-field id="email" label="Email" %}{% /string-field %}              │
+│ ...                                                                          │
+│ {% /form %}                                                                  │
+│ ```                                                                          │
+│                                                                              │
+│ # Remaining Issues                                                           │
+│                                                                              │
+│ - **email** (field): Required field 'Email' has no value                     │
+│   Severity: required, Priority: P1                                           │
+│   Type: string                                                               │
+│ ...                                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Why stateless turns?**
+
+1. **The form IS the state** — All filled values, progress, and structure are encoded in
+   the serialized form markdown.
+   No separate state tracking needed.
+
+2. **Simpler implementation** — No conversation history management, memory limits, or
+   context window concerns across turns.
+
+3. **Debuggable** — Each turn’s context is complete and self-contained.
+   You can replay any turn by providing its form snapshot.
+
+4. **Consistent with inspect** — The turn context is structurally identical to what
+   `markform inspect` outputs, enabling agents to understand form state the same way
+   humans do via CLI.
+
+5. **Token efficient for iterative fills** — While each turn includes the full form,
+   this is typically smaller than accumulated conversation history for multi-turn
+   sessions.
+
+**Implementation:**
+
+The agent receives the serialized form (via `serialize(form)`) plus the remaining issues
+list as its prompt each turn.
+After generating patches, the harness applies them, revalidates, and provides the
+updated form for the next turn.
+
 #### Live Mode (AI SDK)
 
 Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 [AI SDK 5][ai-sdk-5] and [AI SDK 6][ai-sdk-6]:
 
-- Define Markform tools using AI SDK `tool({ inputSchema: zod, execute })`
+- Each turn is stateless—the agent sees the full form markdown + remaining issues
 
-- Control multi-step behavior with `stopWhen: stepCountIs(k)` for “1–3 actions per
-  iteration” (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
+- The form itself carries all state (filled values, validation status, progress)
 
-- Harness builds the “user message” (current state + next steps)
+- No conversation history is accumulated between turns
 
-- Call `streamText`/`generateText` with tools enabled
+- Define a `generatePatches` tool using AI SDK `tool({ inputSchema: zod })`
 
-- Execute tool calls (apply patches)
+- Control multi-step behavior with `stopWhen: stepCountIs(k)` for “1–3 tool calls per
+  turn” (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
 
-- Repeat until complete
+- Agent analyzes form state and issues, then calls `generatePatches` with patches
+
+- Harness applies patches, revalidates, serializes updated form
+
+- Next turn receives fresh context with updated form state
+
+- Repeat until complete (no required issues remaining)
+
+**Turn flow:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Turn N                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   1. Harness serializes current form state                                  │
+│      └─► Full markdown with frontmatter, values, structure                  │
+│                                                                             │
+│   2. Harness provides context prompt                                        │
+│      └─► Form markdown + remaining issues (like `inspect` output)           │
+│                                                                             │
+│   3. LLM analyzes context, calls generatePatches tool                       │
+│      └─► Returns array of Patch objects                                     │
+│                                                                             │
+│   4. Harness applies patches to form                                        │
+│      └─► Updates values, revalidates, computes new progress                 │
+│                                                                             │
+│   5. Check completion                                                       │
+│      └─► If no required issues: DONE                                        │
+│      └─► Otherwise: Go to Turn N+1 with updated form                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 * * *
 
@@ -2092,6 +2357,10 @@ A golden test is a YAML file containing:
 
 #### Session Transcript Schema
 
+Session transcripts record the form state at each turn, not conversation history.
+Since each turn is stateless, the transcript captures the form snapshot (or hash) and
+patches applied at each step.
+
 ```yaml
 session_version: 0.1
 mode: mock  # mock | live (see explanation below)
@@ -2109,19 +2378,22 @@ harness:
 
 turns:
   - turn: 1
-    inspect:
-      issues:
-        - fieldId: company_name
-          reason: required_missing
-          message: "Required field 'Company name' has no value"
-          severity: required
-          priority: 2
-    apply:
-      patches:
-        - { op: set_string, fieldId: company_name, value: "ACME Corp" }
+    # Form state at start of turn (what agent sees)
+    form_state: incomplete          # from frontmatter form_state
+    required_issues_before: 5       # count of severity: required issues
+    # Patches generated by agent
+    patches:
+      - { op: set_string, fieldId: company_name, value: "ACME Corp" }
+    # State after patches applied
     after:
-      required_issue_count: 0
-      markdown_sha256: "..."
+      required_issues_remaining: 4
+      form_state: incomplete
+      markdown_sha256: "..."        # for deterministic verification
+    # Optional: LLM stats for live sessions
+    stats:
+      input_tokens: 1234
+      output_tokens: 456
+      tool_calls: 1
 
 final:
   expect_complete: true
@@ -2137,6 +2409,11 @@ final:
 
 For `mode: live`, the session transcript is an **output** (recorded log), not an input
 for replay. Live sessions are useful for debugging but not for CI assertions.
+
+**Note on stateless recording:** Since each turn is stateless (agent receives full form
+each time), the transcript does not need to record conversation messages.
+The form markdown at each turn can be reconstructed by applying patches sequentially
+from the initial template, or by storing the `markdown_sha256` for verification.
 
 #### Test Modes
 
@@ -2205,11 +2482,11 @@ Thin wrapper around the tool contract:
 
     - `draft v12.form.md` → `draft v13.form.md`
 
-- `markform fill <file.form.md> --agent=mock --mock-source <file>` — fill form using
-  mock agent, write session transcript
+- `markform fill <file.form.md> --mock --mock-source <file>` — fill form using mock
+  agent, write session transcript
 
-- `markform fill <file.form.md> --agent=live --model=anthropic/claude-sonnet-4-5` — fill
-  form using live LLM agent
+- `markform fill <file.form.md> --model=anthropic/claude-sonnet-4-5` — fill form using
+  live LLM agent
 
 **Deferred to v0.2:**
 
@@ -2453,7 +2730,7 @@ Full specification included above.
      `quarterly-v1.form.md`); run `markform inspect` separately at any time to check
      status
 
-   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --agent=mock
+   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --mock
      --mock-source examples/earnings-analysis/earnings-analysis.mock.filled.form.md
      --record examples/earnings-analysis/earnings-analysis.session.yaml`
 
@@ -2793,6 +3070,33 @@ subsection.
    “at least one done” semantics, and `minDone=0` makes the field effectively optional.
    This flexible approach avoids needing separate modes like `simple_strict` vs
    `simple_optional`.
+
+6. **Skip field semantics** — The `skip_field` patch operation provides a way for agents
+   to explicitly skip optional fields without providing a value.
+   Key design decisions:
+
+   - **Only optional fields can be skipped:** Required fields reject `skip_field` with a
+     validation error. This ensures critical data is always provided.
+
+   - **Skip state is runtime metadata, not persisted to markdown:** Skipped fields
+     remain empty in the serialized form.
+     The skip state is tracked in `ParsedForm.skipsByFieldId` and reflected in
+     `FieldProgress.skipped` and `ProgressCounts.skippedFields`.
+
+   - **Completion formula:** `isComplete = (answeredFields + skippedFields ==
+     totalFields)` AND no required issues.
+     This requires agents to actively respond to every field.
+
+   - **Skip clears existing value:** Skipping a field that already has a value clears
+     the value. The field transitions from answered → skipped.
+
+   - **Setting value clears skip:** Applying a value patch to a skipped field removes
+     the skip state. The field transitions from skipped → answered.
+
+   - **Agent visibility in stateless turns:** While skipped fields appear empty in
+     markdown, agents see their state via the issues list (skipped fields removed from
+     issues) and progress counts (skippedFields count).
+     This provides implicit feedback that skipping was successful.
 
 ### string-list Field (v0.1)
 

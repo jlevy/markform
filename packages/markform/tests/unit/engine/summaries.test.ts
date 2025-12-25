@@ -472,6 +472,170 @@ X
     });
   });
 
+  describe("skipped field progress", () => {
+    it("tracks skipped fields in progress", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const skips = { notes: { skipped: true, reason: "Not applicable" } };
+      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      expect(progress.fields.notes?.skipped).toBe(true);
+      expect(progress.fields.notes?.skipReason).toBe("Not applicable");
+      expect(progress.fields.name?.skipped).toBe(false);
+      expect(progress.counts.skippedFields).toBe(1);
+      expect(progress.counts.answeredFields).toBe(1);
+    });
+
+    it("counts answered and skipped separately", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="email" label="Email" %}
+\`\`\`value
+alice@example.com
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const skips = {
+        notes: { skipped: true },
+        bio: { skipped: true, reason: "Too long to write" },
+      };
+      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      expect(progress.counts.totalFields).toBe(4);
+      expect(progress.counts.answeredFields).toBe(2); // name and email
+      expect(progress.counts.skippedFields).toBe(2); // notes and bio
+    });
+
+    it("computes all summaries with skips", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const skips = { notes: { skipped: true } };
+      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      expect(result.progressSummary.fields.notes?.skipped).toBe(true);
+      expect(result.progressSummary.counts.skippedFields).toBe(1);
+      expect(result.formState).toBe("complete");
+      expect(result.isComplete).toBe(true);
+    });
+
+    it("requires all fields addressed when skip_field is used", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Skip only one optional field, leave another unskipped and empty
+      const skips = { notes: { skipped: true } };
+      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      // With skip_field in use, form is not complete because bio is neither answered nor skipped
+      expect(result.isComplete).toBe(false);
+      expect(result.progressSummary.counts.answeredFields).toBe(1); // name
+      expect(result.progressSummary.counts.skippedFields).toBe(1); // notes
+      expect(result.progressSummary.counts.totalFields).toBe(3);
+    });
+
+    it("is complete when all fields addressed with skip_field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Skip both optional fields
+      const skips = {
+        notes: { skipped: true },
+        bio: { skipped: true, reason: "No bio provided" },
+      };
+      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      // All fields addressed: 1 answered + 2 skipped = 3 total
+      expect(result.isComplete).toBe(true);
+      expect(result.progressSummary.counts.answeredFields).toBe(1);
+      expect(result.progressSummary.counts.skippedFields).toBe(2);
+    });
+  });
+
   describe("computeAllSummaries", () => {
     it("computes all summaries at once", () => {
       const markdown = `---
@@ -503,9 +667,10 @@ John
       expect(result.progressSummary.counts.totalFields).toBe(2);
       expect(result.progressSummary.counts.submittedFields).toBe(1);
 
-      // Form state
+      // Form state (formState is based on required fields, isComplete requires all fields addressed)
       expect(result.formState).toBe("complete");
-      expect(result.isComplete).toBe(true);
+      // isComplete is false because the optional 'age' field is not addressed (filled or skipped)
+      expect(result.isComplete).toBe(false);
     });
   });
 });

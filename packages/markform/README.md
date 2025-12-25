@@ -68,10 +68,10 @@ markform inspect my-form.form.md --format=json
 markform fill my-form.form.md --interactive
 
 # Agent mode: use an LLM to fill agent-role fields
-markform fill my-form.form.md --agent=live --model=anthropic/claude-sonnet-4-5
+markform fill my-form.form.md --model=anthropic/claude-sonnet-4-5
 
 # Mock agent for testing (uses pre-filled form as source)
-markform fill my-form.form.md --agent=mock --mock-source filled.form.md
+markform fill my-form.form.md --mock --mock-source filled.form.md
 ```
 
 ### Export and Transform
@@ -131,8 +131,8 @@ markform instructions --raw
 | xai | `XAI_API_KEY` | grok-4, grok-4-fast |
 | deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
 
-Set the appropriate environment variable for your provider before running `markform fill
---agent=live`. See [`src/settings.ts`](src/settings.ts) for the full list of models.
+Set the appropriate environment variable for your provider before running `markform fill`.
+See [`src/settings.ts`](src/settings.ts) for the full list of models.
 
 ## Programmatic Usage
 

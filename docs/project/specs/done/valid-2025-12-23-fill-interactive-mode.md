@@ -115,7 +115,7 @@ Test the complete user → agent workflow:
 pnpm markform fill packages/markform/examples/earnings-analysis/earnings-analysis.form.md --interactive -o /tmp/earnings-user-filled.form.md
 
 # Stage 2: Fill agent fields (requires API key)
-pnpm markform fill /tmp/earnings-user-filled.form.md --agent=live --model=openai/gpt-4o
+pnpm markform fill /tmp/earnings-user-filled.form.md --model=openai/gpt-4o
 ```
 
 **Expected:**

@@ -153,3 +153,71 @@ export function formatSuggestedLlms(): string {
   }
   return lines.join("\n");
 }
+
+// =============================================================================
+// Web Search Configuration
+// =============================================================================
+
+/**
+ * Web search support configuration by provider.
+ *
+ * Providers with native web search:
+ * - openai: webSearchPreview tool (models: gpt-4o and later)
+ * - google: googleSearch grounding (all Gemini models)
+ * - xai: native search in Grok models
+ *
+ * Providers without native web search:
+ * - anthropic: requires external tool (e.g., Tavily)
+ * - deepseek: no web search support
+ */
+export interface WebSearchConfig {
+  /** Whether the provider has native web search */
+  supported: boolean;
+  /** Tool name for web search (provider-specific) */
+  toolName?: string;
+  /** Package export name for the web search tool */
+  exportName?: string;
+}
+
+/**
+ * Web search configuration per provider.
+ */
+export const WEB_SEARCH_CONFIG: Record<string, WebSearchConfig> = {
+  openai: {
+    supported: true,
+    toolName: "web_search_preview",
+    exportName: "openaiTools",
+  },
+  google: {
+    supported: true,
+    toolName: "googleSearch",
+    exportName: "googleTools",
+  },
+  xai: {
+    supported: true,
+    // xAI Grok has built-in web search, enabled via model settings
+    toolName: "xai_search",
+  },
+  anthropic: {
+    supported: false,
+  },
+  deepseek: {
+    supported: false,
+  },
+};
+
+/**
+ * Check if a provider supports native web search.
+ */
+export function hasWebSearchSupport(provider: string): boolean {
+  return WEB_SEARCH_CONFIG[provider]?.supported ?? false;
+}
+
+/**
+ * Get web search tool configuration for a provider.
+ * Returns undefined if provider doesn't support web search.
+ */
+export function getWebSearchConfig(provider: string): WebSearchConfig | undefined {
+  const config = WEB_SEARCH_CONFIG[provider];
+  return config?.supported ? config : undefined;
+}

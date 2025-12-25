@@ -322,7 +322,7 @@ Integration points:
 
   - [ ] Show next steps hint
 
-- [ ] Ensure `--interactive` conflicts with `--agent=mock/live`
+- [ ] Ensure `--interactive` conflicts with `--mock`
 
 ### Phase 3: Role System Integration
 

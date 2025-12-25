@@ -5,6 +5,10 @@
 This plan covers refactoring the `run` command into a more general `fill` command that
 supports both mock and live agent modes for autonomous form filling.
 
+> **Note:** This plan originally specified `--agent=mock|live` syntax. This was later
+> simplified to `--mock` flag (live is the default). The plan text below reflects the
+> original design; see the actual CLI implementation for current syntax.
+
 **Related Docs:**
 
 - [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
@@ -70,7 +74,7 @@ This plan depends on:
 
 - `--model <id>` flag for live agent model selection
 
-- `--mock-source <file>` for mock agent (required when `--agent=mock`)
+- `--mock-source <file>` for mock agent (required when `--mock`)
 
 - `--record <file>` to output session transcript
 
@@ -94,7 +98,7 @@ This plan depends on:
 
 **Explicitly Not Included:**
 
-- Custom agent implementations (future `--agent=custom`)
+- Custom agent implementations (future feature)
 
 - MCP server agent mode (deferred to v0.2)
 
@@ -102,10 +106,10 @@ This plan depends on:
 
 ### Acceptance Criteria
 
-1. `markform fill <file> --agent=mock --mock-source <mock>` works identically to current
+1. `markform fill <file> --mock --mock-source <mock>` works identically to current
    `run --mock`
 
-2. `markform fill <file> --agent=live --model=anthropic/claude-sonnet-4-5` fills form
+2. `markform fill <file> --model --model=anthropic/claude-sonnet-4-5` fills form
    using Anthropic API (short form `--model=claude-sonnet-4-5` also works)
 
 3. Session transcripts record all turns for both modes
@@ -131,7 +135,7 @@ Options:
   --model <id>            Model ID for live agent (format: provider/model-name)
                           Examples: anthropic/claude-sonnet-4-5, grok-4-fast
                           Default: anthropic/claude-sonnet-4-5
-  --mock-source <file>    Path to completed mock file (required for --agent=mock)
+  --mock-source <file>    Path to completed mock file (required for --mock)
   --record <file>         Record session transcript to file
   --max-turns <n>         Maximum turns (default: 100)
   --max-patches <n>       Maximum patches per turn (default: 20)
@@ -256,9 +260,9 @@ packages/markform/src/harness/
 
 **Tests:**
 
-- [ ] Existing mock mode tests pass with `fill --agent=mock`
+- [ ] Existing mock mode tests pass with `fill --mock`
 
-- [ ] `--agent=mock` without `--mock-source` shows helpful error
+- [ ] `--mock` without `--mock-source` shows helpful error
 
 - [ ] Invalid `--agent` value shows error with valid options
 
@@ -428,7 +432,7 @@ class LiveAgent implements Agent {
 
 - [ ] `markform fill --help` shows correct options
 
-- [ ] `markform fill <file> --agent=mock --mock-source <mock>` completes form
+- [ ] `markform fill <file> --mock --mock-source <mock>` completes form
 
 - [ ] Mock mode session transcripts match expected format
 
@@ -440,7 +444,7 @@ class LiveAgent implements Agent {
 
 ### Manual Tests
 
-- [ ] `markform fill examples/simple/simple.form.md --agent=live` fills form
+- [ ] `markform fill examples/simple/simple.form.md --model` fills form
 
 - [ ] Progress output is readable during execution
 

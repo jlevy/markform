@@ -341,9 +341,9 @@ describe("fillForm", () => {
           generatePatchesCalled = true;
           // Simulate abort happening during the LLM call
           controller.abort();
-          return Promise.resolve([
-            { op: "set_number" as const, fieldId: "age", value: 42 },
-          ]);
+          return Promise.resolve({
+            patches: [{ op: "set_number" as const, fieldId: "age", value: 42 }],
+          });
         },
       };
 
@@ -377,7 +377,7 @@ describe("fillForm", () => {
       // Create a mock agent that never completes
       const emptyMockAgent = {
         generatePatches() {
-          return Promise.resolve([]); // Never generates patches
+          return Promise.resolve({ patches: [] }); // Never generates patches
         },
       };
 
@@ -398,7 +398,7 @@ describe("fillForm", () => {
     it("remainingIssues populated when not complete", async () => {
       const emptyMockAgent = {
         generatePatches() {
-          return Promise.resolve([]);
+          return Promise.resolve({ patches: [] });
         },
       };
 

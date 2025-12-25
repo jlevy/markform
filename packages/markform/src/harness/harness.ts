@@ -5,7 +5,9 @@
  * INIT -> STEP -> WAIT -> APPLY -> (repeat) -> COMPLETE
  */
 
-import { createHash } from "node:crypto";
+// Use pure JS sha256 to avoid node:crypto dependency, enabling use in
+// browsers, edge runtimes (Cloudflare Workers, Convex), and other non-Node environments.
+import { sha256 } from "js-sha256";
 
 import { applyPatches } from "../engine/apply.js";
 import { inspect, getFieldsForRoles } from "../engine/inspect.js";
@@ -17,6 +19,7 @@ import type {
   ParsedForm,
   Patch,
   SessionTurn,
+  SessionTurnStats,
   StepResult,
 } from "../engine/coreTypes.js";
 import {
@@ -91,9 +94,24 @@ export class FormHarness {
 
   /**
    * Check if the harness has reached max turns.
+   *
+   * Returns true when we've completed all allowed turns. This happens when:
+   * - turnNumber >= maxTurns AND we've already applied (state is "complete")
+   * - OR turnNumber > maxTurns (we've exceeded the limit)
+   *
+   * This allows the harness loop to run N times when maxTurns=N by returning
+   * false when we're at turn N but haven't applied yet (state is "wait").
    */
   hasReachedMaxTurns(): boolean {
-    return this.turnNumber >= this.config.maxTurns;
+    // If we've exceeded the limit, always return true
+    if (this.turnNumber > this.config.maxTurns) {
+      return true;
+    }
+    // At the last turn, check if we've completed it (state transitioned to "complete")
+    if (this.turnNumber === this.config.maxTurns && this.state === "complete") {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -134,27 +152,75 @@ export class FormHarness {
 
     this.state = "step";
 
-    // Inspect form to get all issues (filtered by target roles if configured)
+    // Inspect form and compute step result
     const result = inspect(this.form, { targetRoles: this.config.targetRoles });
+    const stepResult = this.computeStepResult(result);
 
+    // Transition state based on whether there's more work
+    this.state = stepResult.issues.length === 0 ? "complete" : "wait";
+
+    return stepResult;
+  }
+
+  /**
+   * Apply patches to the form.
+   *
+   * This transitions from WAIT -> STEP/COMPLETE state.
+   * Records the turn in the session transcript.
+   *
+   * @param patches - Patches to apply
+   * @param issues - Issues that were shown to the agent (for recording)
+   * @param llmStats - Optional LLM stats for session logging
+   * @returns StepResult after applying patches
+   */
+  apply(patches: Patch[], issues: InspectIssue[], llmStats?: SessionTurnStats): StepResult {
+    if (this.state !== "wait") {
+      throw new Error(`Cannot apply in state: ${this.state}`);
+    }
+
+    if (patches.length > this.config.maxPatchesPerTurn) {
+      throw new Error(
+        `Too many patches: ${patches.length} > ${this.config.maxPatchesPerTurn}`
+      );
+    }
+
+    // Apply patches
+    applyPatches(this.form, patches);
+
+    // Re-inspect after applying patches to get full issue list including optional_empty
+    const result = inspect(this.form, { targetRoles: this.config.targetRoles });
+    const stepResult = this.computeStepResult(result);
+
+    // Record turn in session transcript
+    this.recordTurn(issues, patches, result, llmStats);
+
+    // Transition state: complete if no more work OR max turns reached
+    const noMoreWork = stepResult.issues.length === 0;
+    if (noMoreWork || this.turnNumber >= this.config.maxTurns) {
+      this.state = "complete";
+    } else {
+      this.state = "wait";
+    }
+
+    return stepResult;
+  }
+
+  /**
+   * Compute step result from inspect result.
+   * Applies issue filtering and computes step budget.
+   */
+  private computeStepResult(result: ReturnType<typeof inspect>): StepResult {
     // Issue filtering pipeline (order matters):
     // 1. Filter by maxGroupsPerTurn/maxFieldsPerTurn - limits scope diversity
     // 2. Cap by maxIssues - limits total count shown to agent
     const filteredIssues = this.filterIssuesByScope(result.issues);
     const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
 
-    // Calculate step budget
+    // Step budget = min of max patches per turn and issues to address
     const stepBudget = Math.min(
       this.config.maxPatchesPerTurn,
-      limitedIssues.filter((i) => i.severity === "required").length
+      limitedIssues.length
     );
-
-    // If complete, transition to complete state
-    if (result.isComplete) {
-      this.state = "complete";
-    } else {
-      this.state = "wait";
-    }
 
     return {
       structureSummary: result.structureSummary,
@@ -167,75 +233,38 @@ export class FormHarness {
   }
 
   /**
-   * Apply patches to the form.
-   *
-   * This transitions from WAIT -> STEP/COMPLETE state.
-   * Records the turn in the session transcript.
-   *
-   * @param patches - Patches to apply
-   * @param issues - Issues that were shown to the agent (for recording)
-   * @returns StepResult after applying patches
+   * Record a turn in the session transcript.
    */
-  apply(patches: Patch[], issues: InspectIssue[]): StepResult {
-    if (this.state !== "wait") {
-      throw new Error(`Cannot apply in state: ${this.state}`);
-    }
-
-    if (patches.length > this.config.maxPatchesPerTurn) {
-      throw new Error(
-        `Too many patches: ${patches.length} > ${this.config.maxPatchesPerTurn}`
-      );
-    }
-
-    // Apply patches
-    const result = applyPatches(this.form, patches);
-
-    // Compute markdown hash
+  private recordTurn(
+    issues: InspectIssue[],
+    patches: Patch[],
+    result: ReturnType<typeof inspect>,
+    llmStats?: SessionTurnStats
+  ): void {
     const markdown = serialize(this.form);
-    const hash = createHash("sha256").update(markdown).digest("hex");
+    const hash = sha256(markdown);
 
-    // Record turn
     const requiredIssueCount = result.issues.filter(
       (i) => i.severity === "required"
     ).length;
 
-    this.turns.push({
+    const turn: SessionTurn = {
       turn: this.turnNumber,
       inspect: { issues },
       apply: { patches },
       after: {
         requiredIssueCount,
         markdownSha256: hash,
+        answeredFieldCount: result.progressSummary.counts.answeredFields,
+        skippedFieldCount: result.progressSummary.counts.skippedFields,
       },
-    });
+    };
 
-    // Issue filtering pipeline for next turn (same as step())
-    const filteredIssues = this.filterIssuesByScope(result.issues);
-    const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
-
-    // Calculate step budget for next turn
-    const stepBudget = Math.min(
-      this.config.maxPatchesPerTurn,
-      limitedIssues.filter((i) => i.severity === "required").length
-    );
-
-    // Check if complete
-    if (result.isComplete) {
-      this.state = "complete";
-    } else if (this.turnNumber >= this.config.maxTurns) {
-      this.state = "complete";
-    } else {
-      this.state = "wait";
+    if (llmStats) {
+      turn.llm = llmStats;
     }
 
-    return {
-      structureSummary: result.structureSummary,
-      progressSummary: result.progressSummary,
-      issues: limitedIssues,
-      stepBudget,
-      isComplete: result.isComplete,
-      turnNumber: this.turnNumber,
-    };
+    this.turns.push(turn);
   }
 
   /**
@@ -258,7 +287,7 @@ export class FormHarness {
    */
   getMarkdownHash(): string {
     const markdown = serialize(this.form);
-    return createHash("sha256").update(markdown).digest("hex");
+    return sha256(markdown);
   }
 
   /**

@@ -34,7 +34,7 @@ markform inspect my-form.form.md
 markform fill my-form.form.md --interactive
 
 # Fill with an AI agent
-markform fill my-form.form.md --agent=live --model=anthropic/claude-sonnet-4-5
+markform fill my-form.form.md --model=anthropic/claude-sonnet-4-5
 
 # Export as readable markdown, JSON, or YAML
 markform export my-form.form.md --format=markdown

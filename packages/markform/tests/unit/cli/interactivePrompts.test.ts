@@ -14,6 +14,8 @@ import type {
   SingleSelectField,
   MultiSelectField,
   CheckboxesField,
+  UrlField,
+  UrlListField,
   ParsedForm,
   InspectIssue,
 } from "../../../src/engine/coreTypes.js";
@@ -69,6 +71,7 @@ function createTestForm(fields: Field[]): ParsedForm {
       ],
     },
     valuesByFieldId: {},
+    skipsByFieldId: {},
     docs: [],
     orderIndex: fields.map((f) => f.id),
     idIndex: new Map(),
@@ -366,8 +369,9 @@ describe("interactivePrompts", () => {
 
         it("returns set_checkboxes patch with 5-state values", async () => {
           vi.mocked(p.select)
-            .mockResolvedValueOnce("done")
-            .mockResolvedValueOnce("active");
+            .mockResolvedValueOnce("fill") // First call: skip/fill choice
+            .mockResolvedValueOnce("done") // Second call: item1 state
+            .mockResolvedValueOnce("active"); // Third call: item2 state
           vi.mocked(p.isCancel).mockReturnValue(false);
 
           const patch = await promptForField(createContext(multiCheckboxes));
@@ -381,6 +385,87 @@ describe("interactivePrompts", () => {
             },
           });
         });
+      });
+    });
+
+    describe("url field", () => {
+      const urlField: UrlField = {
+        kind: "url",
+        id: "website",
+        label: "Website",
+        required: true,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("returns set_url patch for url field", async () => {
+        vi.mocked(p.text).mockResolvedValue("https://example.com");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(urlField));
+
+        expect(patch).toEqual({
+          op: "set_url",
+          fieldId: "website",
+          value: "https://example.com",
+        });
+      });
+
+      it("returns null for optional url field with empty input", async () => {
+        const optionalField: UrlField = { ...urlField, required: false };
+        vi.mocked(p.text).mockResolvedValue("");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalField));
+
+        expect(patch).toBeNull();
+      });
+    });
+
+    describe("url_list field", () => {
+      const urlListField: UrlListField = {
+        kind: "url_list",
+        id: "references",
+        label: "References",
+        required: true,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("returns set_url_list patch with items", async () => {
+        vi.mocked(p.text).mockResolvedValue("https://example1.com\nhttps://example2.com");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(urlListField));
+
+        expect(patch).toEqual({
+          op: "set_url_list",
+          fieldId: "references",
+          items: ["https://example1.com", "https://example2.com"],
+        });
+      });
+
+      it("filters empty lines from URL list", async () => {
+        vi.mocked(p.text).mockResolvedValue("https://example1.com\n\nhttps://example2.com\n  ");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(urlListField));
+
+        expect(patch).toEqual({
+          op: "set_url_list",
+          fieldId: "references",
+          items: ["https://example1.com", "https://example2.com"],
+        });
+      });
+
+      it("returns null for optional url_list field with empty input", async () => {
+        const optionalField: UrlListField = { ...urlListField, required: false };
+        vi.mocked(p.text).mockResolvedValue("");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalField));
+
+        expect(patch).toBeNull();
       });
     });
 
@@ -564,23 +649,398 @@ describe("interactivePrompts", () => {
 
   describe("showInteractiveOutro", () => {
     it("shows cancel message when cancelled", () => {
-      showInteractiveOutro(0, "", true);
+      showInteractiveOutro(0, true);
 
       expect(p.cancel).toHaveBeenCalledWith("Interactive fill cancelled.");
     });
 
     it("shows no changes message when patch count is 0", () => {
-      showInteractiveOutro(0, "", false);
+      showInteractiveOutro(0, false);
 
       expect(p.outro).toHaveBeenCalledWith("No changes made.");
     });
 
     it("shows success message with patch count", () => {
-      showInteractiveOutro(3, "/path/to/form.form.md", false);
+      showInteractiveOutro(3, false);
 
-      expect(p.outro).toHaveBeenCalledWith(
-        "✓ 3 field(s) updated. Saved to /path/to/form.form.md"
-      );
+      expect(p.outro).toHaveBeenCalledWith("✓ 3 field(s) updated.");
+    });
+  });
+
+  describe("skip_field support", () => {
+    describe("optional string field", () => {
+      const optionalStringField: StringField = {
+        kind: "string",
+        id: "notes",
+        label: "Notes",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option for optional field and returns skip_field patch when selected", async () => {
+        // User selects "skip" option
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalStringField));
+
+        expect(p.select).toHaveBeenCalled();
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "notes",
+          reason: "User skipped in console",
+        });
+      });
+
+      it("prompts for value when fill option is selected", async () => {
+        // User selects "fill" then enters a value
+        vi.mocked(p.select).mockResolvedValue("fill");
+        vi.mocked(p.text).mockResolvedValue("My notes");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalStringField));
+
+        expect(p.select).toHaveBeenCalled();
+        expect(p.text).toHaveBeenCalled();
+        expect(patch).toEqual({
+          op: "set_string",
+          fieldId: "notes",
+          value: "My notes",
+        });
+      });
+    });
+
+    describe("optional number field", () => {
+      const optionalNumberField: NumberField = {
+        kind: "number",
+        id: "score",
+        label: "Score",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalNumberField));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "score",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional string_list field", () => {
+      const optionalStringListField: StringListField = {
+        kind: "string_list",
+        id: "tags",
+        label: "Tags",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalStringListField));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "tags",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional single_select field", () => {
+      const optionalSingleSelect: SingleSelectField = {
+        kind: "single_select",
+        id: "priority",
+        label: "Priority",
+        required: false,
+        priority: "medium",
+        role: "user",
+        options: [
+          { id: "low", label: "Low" },
+          { id: "high", label: "High" },
+        ],
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalSingleSelect));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "priority",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional multi_select field", () => {
+      const optionalMultiSelect: MultiSelectField = {
+        kind: "multi_select",
+        id: "categories",
+        label: "Categories",
+        required: false,
+        priority: "medium",
+        role: "user",
+        options: [
+          { id: "a", label: "A" },
+          { id: "b", label: "B" },
+        ],
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalMultiSelect));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "categories",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional checkboxes field", () => {
+      const optionalCheckboxes: CheckboxesField = {
+        kind: "checkboxes",
+        id: "tasks",
+        label: "Tasks",
+        required: false,
+        priority: "medium",
+        role: "user",
+        checkboxMode: "simple",
+        approvalMode: "none",
+        options: [
+          { id: "task1", label: "Task 1" },
+        ],
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalCheckboxes));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "tasks",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional url field", () => {
+      const optionalUrlField: UrlField = {
+        kind: "url",
+        id: "website",
+        label: "Website",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalUrlField));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "website",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("optional url_list field", () => {
+      const optionalUrlListField: UrlListField = {
+        kind: "url_list",
+        id: "references",
+        label: "References",
+        required: false,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("shows skip option and returns skip_field patch when selected", async () => {
+        vi.mocked(p.select).mockResolvedValue("skip");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalUrlListField));
+
+        expect(patch).toEqual({
+          op: "skip_field",
+          fieldId: "references",
+          reason: "User skipped in console",
+        });
+      });
+    });
+
+    describe("required fields", () => {
+      const requiredStringField: StringField = {
+        kind: "string",
+        id: "name",
+        label: "Name",
+        required: true,
+        priority: "medium",
+        role: "user",
+      };
+
+      it("does not show skip option for required fields", async () => {
+        vi.mocked(p.text).mockResolvedValue("Alice");
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        await promptForField(createContext(requiredStringField));
+
+        // Should go straight to text prompt, not select for skip/fill
+        expect(p.text).toHaveBeenCalled();
+        // select should not be called for required fields
+        expect(p.select).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("field type coverage", () => {
+    // This test ensures ALL field types defined in FieldKind are handled by promptForField.
+    // If a new field type is added to coreTypes.ts but not to interactivePrompts.ts,
+    // this test will fail.
+
+    // All field type definitions
+    const allFieldTypes: Field[] = [
+      {
+        kind: "string",
+        id: "f_string",
+        label: "String",
+        required: true,
+        priority: "medium",
+        role: "user",
+      },
+      {
+        kind: "number",
+        id: "f_number",
+        label: "Number",
+        required: true,
+        priority: "medium",
+        role: "user",
+      },
+      {
+        kind: "string_list",
+        id: "f_string_list",
+        label: "String List",
+        required: true,
+        priority: "medium",
+        role: "user",
+      },
+      {
+        kind: "single_select",
+        id: "f_single_select",
+        label: "Single Select",
+        required: true,
+        priority: "medium",
+        role: "user",
+        options: [{ id: "a", label: "A" }],
+      },
+      {
+        kind: "multi_select",
+        id: "f_multi_select",
+        label: "Multi Select",
+        required: true,
+        priority: "medium",
+        role: "user",
+        options: [{ id: "a", label: "A" }],
+      },
+      {
+        kind: "checkboxes",
+        id: "f_checkboxes",
+        label: "Checkboxes",
+        required: true,
+        priority: "medium",
+        role: "user",
+        checkboxMode: "simple",
+        approvalMode: "none",
+        options: [{ id: "a", label: "A" }],
+      },
+      {
+        kind: "url",
+        id: "f_url",
+        label: "URL",
+        required: true,
+        priority: "medium",
+        role: "user",
+      },
+      {
+        kind: "url_list",
+        id: "f_url_list",
+        label: "URL List",
+        required: true,
+        priority: "medium",
+        role: "user",
+      },
+    ];
+
+    it("handles all FieldKind types without returning null unexpectedly", async () => {
+      // Set up mocks to return valid values for all field types
+      vi.mocked(p.text).mockResolvedValue("test value");
+      vi.mocked(p.select).mockResolvedValue("a");
+      vi.mocked(p.multiselect).mockResolvedValue(["a"]);
+      vi.mocked(p.isCancel).mockReturnValue(false);
+
+      for (const field of allFieldTypes) {
+        const patch = await promptForField(createContext(field));
+
+        // Every field type should return a valid patch, not null
+        // (null means unknown field type in default case)
+        expect(patch).not.toBeNull();
+        expect(patch).toHaveProperty("op");
+        expect(patch).toHaveProperty("fieldId", field.id);
+      }
+    });
+
+    it("returns correct patch operations for each field type", async () => {
+      vi.mocked(p.text).mockResolvedValue("test");
+      vi.mocked(p.select).mockResolvedValue("a");
+      vi.mocked(p.multiselect).mockResolvedValue(["a"]);
+      vi.mocked(p.isCancel).mockReturnValue(false);
+
+      const expectedOps: Record<string, string> = {
+        string: "set_string",
+        number: "set_number",
+        string_list: "set_string_list",
+        single_select: "set_single_select",
+        multi_select: "set_multi_select",
+        checkboxes: "set_checkboxes",
+        url: "set_url",
+        url_list: "set_url_list",
+      };
+
+      for (const field of allFieldTypes) {
+        vi.clearAllMocks();
+        vi.mocked(p.text).mockResolvedValue("test");
+        vi.mocked(p.select).mockResolvedValue("a");
+        vi.mocked(p.multiselect).mockResolvedValue(["a"]);
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(field));
+
+        expect(patch).not.toBeNull();
+        expect(patch!.op).toBe(expectedOps[field.kind]);
+      }
     });
   });
 });
