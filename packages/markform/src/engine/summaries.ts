@@ -268,6 +268,7 @@ function computeFieldProgress(
     state,
     valid,
     issueCount,
+    skipped: false, // Default to not skipped; skip_field patches update this
   };
 
   // Add checkbox progress for checkboxes fields
@@ -308,6 +309,8 @@ export function computeProgressSummary(
     invalidFields: 0,
     emptyRequiredFields: 0,
     emptyOptionalFields: 0,
+    answeredFields: 0, // Same as submittedFields; clearer name for skip tracking
+    skippedFields: 0, // Fields explicitly skipped via skip_field
   };
 
   for (const group of schema.groups) {

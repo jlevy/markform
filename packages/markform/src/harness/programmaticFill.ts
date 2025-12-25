@@ -136,7 +136,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       status: { ok: false, reason: "error", message: `Form parse error: ${message}` },
       markdown: typeof options.form === "string" ? options.form : "",
       values: {},
-      form: { schema: { id: "", groups: [] }, valuesByFieldId: {}, docs: [], orderIndex: [], idIndex: new Map() },
+      form: { schema: { id: "", groups: [] }, valuesByFieldId: {}, skipsByFieldId: {}, docs: [], orderIndex: [], idIndex: new Map() },
       turns: 0,
       totalPatches: 0,
     };

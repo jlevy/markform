@@ -69,6 +69,7 @@ function createTestForm(fields: Field[]): ParsedForm {
       ],
     },
     valuesByFieldId: {},
+    skipsByFieldId: {},
     docs: [],
     orderIndex: fields.map((f) => f.id),
     idIndex: new Map(),

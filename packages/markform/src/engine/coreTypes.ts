@@ -259,10 +259,17 @@ export interface IdIndexEntry {
   fieldId?: Id;
 }
 
+/** Skip state for a field */
+export interface SkipInfo {
+  skipped: boolean;
+  reason?: string;
+}
+
 /** Canonical internal representation returned by parseForm() */
 export interface ParsedForm {
   schema: FormSchema;
   valuesByFieldId: Record<Id, FieldValue>;
+  skipsByFieldId: Record<Id, SkipInfo>; // Track skip state per field
   docs: DocumentationBlock[];
   orderIndex: Id[];
   idIndex: Map<Id, IdIndexEntry>;
@@ -371,6 +378,8 @@ export interface FieldProgress {
   valid: boolean;
   issueCount: number;
   checkboxProgress?: CheckboxProgressCounts;
+  skipped: boolean; // True if explicitly skipped via skip_field
+  skipReason?: string; // Reason provided in skip_field patch
 }
 
 /** Progress counts rollup */
@@ -383,6 +392,8 @@ export interface ProgressCounts {
   invalidFields: number;
   emptyRequiredFields: number;
   emptyOptionalFields: number;
+  answeredFields: number; // Fields with values (same as submittedFields, clearer name)
+  skippedFields: number; // Fields explicitly skipped via skip_field
 }
 
 /** Progress summary - tracks filling progress */
@@ -466,6 +477,13 @@ export interface ClearFieldPatch {
   fieldId: Id;
 }
 
+/** Skip field - explicitly skip an optional field without providing a value */
+export interface SkipFieldPatch {
+  op: "skip_field";
+  fieldId: Id;
+  reason?: string; // Optional reason for skipping
+}
+
 /** Union of all patch types */
 export type Patch =
   | SetStringPatch
@@ -474,7 +492,8 @@ export type Patch =
   | SetCheckboxesPatch
   | SetSingleSelectPatch
   | SetMultiSelectPatch
-  | ClearFieldPatch;
+  | ClearFieldPatch
+  | SkipFieldPatch;
 
 // =============================================================================
 // Harness Types
@@ -864,6 +883,8 @@ export const FieldProgressSchema = z.object({
   valid: z.boolean(),
   issueCount: z.number().int().nonnegative(),
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
+  skipped: z.boolean(),
+  skipReason: z.string().optional(),
 });
 
 export const ProgressCountsSchema = z.object({
@@ -875,6 +896,8 @@ export const ProgressCountsSchema = z.object({
   invalidFields: z.number().int().nonnegative(),
   emptyRequiredFields: z.number().int().nonnegative(),
   emptyOptionalFields: z.number().int().nonnegative(),
+  answeredFields: z.number().int().nonnegative(),
+  skippedFields: z.number().int().nonnegative(),
 });
 
 export const ProgressSummarySchema = z.object({
@@ -958,6 +981,12 @@ export const ClearFieldPatchSchema = z.object({
   fieldId: IdSchema,
 });
 
+export const SkipFieldPatchSchema = z.object({
+  op: z.literal("skip_field"),
+  fieldId: IdSchema,
+  reason: z.string().optional(),
+});
+
 export const PatchSchema = z.discriminatedUnion("op", [
   SetStringPatchSchema,
   SetNumberPatchSchema,
@@ -966,6 +995,7 @@ export const PatchSchema = z.discriminatedUnion("op", [
   SetSingleSelectPatchSchema,
   SetMultiSelectPatchSchema,
   ClearFieldPatchSchema,
+  SkipFieldPatchSchema,
 ]);
 
 // Harness schemas

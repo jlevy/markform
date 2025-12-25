@@ -81,6 +81,8 @@ function formatPatchValue(patch: Patch): string {
         .join(", ");
     case "clear_field":
       return "(cleared)";
+    case "skip_field":
+      return patch.reason ? `(skipped: ${patch.reason})` : "(skipped)";
   }
 }
 

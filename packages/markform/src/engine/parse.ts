@@ -1002,6 +1002,7 @@ export function parseForm(markdown: string): ParsedForm {
   return {
     schema: formSchema,
     valuesByFieldId,
+    skipsByFieldId: {}, // Initially empty; skip_field patches populate this
     docs,
     orderIndex,
     idIndex,
