@@ -33,6 +33,8 @@ import type {
   SkipInfo,
   StringField,
   StringListField,
+  UrlField,
+  UrlListField,
 } from "../../engine/coreTypes.js";
 import {
   type CommandContext,
@@ -412,7 +414,7 @@ export function renderFormHtml(form: ParsedForm): string {
       color: #212529;
     }
     h1 { color: #495057; border-bottom: 2px solid #dee2e6; padding-bottom: 0.5rem; }
-    h2 { color: #6c757d; margin-top: 2rem; font-size: 1.25rem; }
+    h2 { color: #6c757d; font-size: 1.25rem; }
     .group {
       background: white;
       border-radius: 8px;
@@ -707,6 +709,12 @@ export function renderFieldHtml(
         disabledAttr
       );
       break;
+    case "url":
+      inputHtml = renderUrlInput(field, value, disabledAttr);
+      break;
+    case "url_list":
+      inputHtml = renderUrlListInput(field, value, disabledAttr);
+      break;
     default:
       inputHtml = '<div class="field-help">(unknown field type)</div>';
   }
@@ -779,6 +787,36 @@ function renderStringListInput(
   const requiredAttr = field.required ? " required" : "";
 
   return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one item per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
+}
+
+/**
+ * Render a URL field as url input.
+ */
+function renderUrlInput(
+  field: UrlField,
+  value: FieldValue | undefined,
+  disabledAttr: string
+): string {
+  const currentValue =
+    value?.kind === "url" && value.value !== null ? value.value : "";
+  const requiredAttr = field.required ? " required" : "";
+
+  return `<input type="url" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}" placeholder="https://example.com"${requiredAttr}${disabledAttr}>`;
+}
+
+/**
+ * Render a URL list field as textarea.
+ */
+function renderUrlListInput(
+  field: UrlListField,
+  value: FieldValue | undefined,
+  disabledAttr: string
+): string {
+  const items = value?.kind === "url_list" ? value.items : [];
+  const currentValue = items.join("\n");
+  const requiredAttr = field.required ? " required" : "";
+
+  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one URL per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
 }
 
 /**
