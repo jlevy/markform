@@ -22,6 +22,7 @@ import type {
   ProgressSummary,
   QualifiedOptionRef,
   SingleSelectValue,
+  SkipInfo,
   StringListValue,
   StringValue,
   StructureSummary,
@@ -253,13 +254,15 @@ function computeFieldState(
 function computeFieldProgress(
   field: Field,
   value: FieldValue | undefined,
-  issues: InspectIssue[]
+  issues: InspectIssue[],
+  skipInfo?: SkipInfo
 ): FieldProgress {
   const fieldIssues = issues.filter((i) => i.ref === field.id);
   const issueCount = fieldIssues.length;
   const submitted = isFieldSubmitted(field, value);
   const valid = issueCount === 0;
   const state = computeFieldState(field, value, issueCount);
+  const skipped = skipInfo?.skipped ?? false;
 
   const progress: FieldProgress = {
     kind: field.kind,
@@ -268,7 +271,8 @@ function computeFieldProgress(
     state,
     valid,
     issueCount,
-    skipped: false, // Default to not skipped; skip_field patches update this
+    skipped,
+    skipReason: skipInfo?.reason,
   };
 
   // Add checkbox progress for checkboxes fields
@@ -292,12 +296,14 @@ function computeFieldProgress(
  * @param schema - The form schema
  * @param values - Current field values
  * @param issues - Validation issues (from inspect)
+ * @param skips - Skip state per field (from skip_field patches)
  * @returns Progress summary with field states and counts
  */
 export function computeProgressSummary(
   schema: FormSchema,
   values: Record<Id, FieldValue>,
-  issues: InspectIssue[]
+  issues: InspectIssue[],
+  skips: Record<Id, SkipInfo> = {}
 ): ProgressSummary {
   const fields: Record<Id, FieldProgress> = {};
   const counts: ProgressCounts = {
@@ -309,14 +315,15 @@ export function computeProgressSummary(
     invalidFields: 0,
     emptyRequiredFields: 0,
     emptyOptionalFields: 0,
-    answeredFields: 0, // Same as submittedFields; clearer name for skip tracking
+    answeredFields: 0, // Fields with values (same as submittedFields)
     skippedFields: 0, // Fields explicitly skipped via skip_field
   };
 
   for (const group of schema.groups) {
     for (const field of group.children) {
       const value = values[field.id];
-      const progress = computeFieldProgress(field, value, issues);
+      const skipInfo = skips[field.id];
+      const progress = computeFieldProgress(field, value, issues, skipInfo);
       fields[field.id] = progress;
 
       // Update counts
@@ -326,6 +333,10 @@ export function computeProgressSummary(
       }
       if (progress.submitted) {
         counts.submittedFields++;
+        counts.answeredFields++; // Track answered (same as submitted)
+      }
+      if (progress.skipped) {
+        counts.skippedFields++;
       }
       if (progress.state === "complete") {
         counts.completeFields++;
@@ -414,15 +425,17 @@ export interface ComputedSummaries {
  * @param schema - The form schema
  * @param values - Current field values
  * @param issues - Validation issues
+ * @param skips - Skip state per field (from skip_field patches)
  * @returns All computed summaries
  */
 export function computeAllSummaries(
   schema: FormSchema,
   values: Record<Id, FieldValue>,
-  issues: InspectIssue[]
+  issues: InspectIssue[],
+  skips: Record<Id, SkipInfo> = {}
 ): ComputedSummaries {
   const structureSummary = computeStructureSummary(schema);
-  const progressSummary = computeProgressSummary(schema, values, issues);
+  const progressSummary = computeProgressSummary(schema, values, issues, skips);
   const formState = computeFormState(progressSummary);
   const isComplete = isFormComplete(progressSummary);
 

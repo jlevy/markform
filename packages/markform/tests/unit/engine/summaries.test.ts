@@ -472,6 +472,104 @@ X
     });
   });
 
+  describe("skipped field progress", () => {
+    it("tracks skipped fields in progress", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const skips = { notes: { skipped: true, reason: "Not applicable" } };
+      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      expect(progress.fields.notes?.skipped).toBe(true);
+      expect(progress.fields.notes?.skipReason).toBe("Not applicable");
+      expect(progress.fields.name?.skipped).toBe(false);
+      expect(progress.counts.skippedFields).toBe(1);
+      expect(progress.counts.answeredFields).toBe(1);
+    });
+
+    it("counts answered and skipped separately", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="email" label="Email" %}
+\`\`\`value
+alice@example.com
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const skips = {
+        notes: { skipped: true },
+        bio: { skipped: true, reason: "Too long to write" },
+      };
+      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      expect(progress.counts.totalFields).toBe(4);
+      expect(progress.counts.answeredFields).toBe(2); // name and email
+      expect(progress.counts.skippedFields).toBe(2); // notes and bio
+    });
+
+    it("computes all summaries with skips", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const skips = { notes: { skipped: true } };
+      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+
+      expect(result.progressSummary.fields.notes?.skipped).toBe(true);
+      expect(result.progressSummary.counts.skippedFields).toBe(1);
+      expect(result.formState).toBe("complete");
+      expect(result.isComplete).toBe(true);
+    });
+  });
+
   describe("computeAllSummaries", () => {
     it("computes all summaries at once", () => {
       const markdown = `---

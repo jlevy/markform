@@ -447,7 +447,7 @@ export function applyPatches(
   const errors = validatePatches(form, patches);
   if (errors.length > 0) {
     // Reject - compute summaries from current state
-    const summaries = computeAllSummaries(form.schema, form.valuesByFieldId, []);
+    const summaries = computeAllSummaries(form.schema, form.valuesByFieldId, [], form.skipsByFieldId);
     const issues = convertToInspectIssues(form);
 
     return {
@@ -475,7 +475,7 @@ export function applyPatches(
 
   // Compute new summaries
   const issues = convertToInspectIssues(form);
-  const summaries = computeAllSummaries(form.schema, newValues, issues);
+  const summaries = computeAllSummaries(form.schema, newValues, issues, newSkips);
 
   return {
     applyStatus: "applied",
