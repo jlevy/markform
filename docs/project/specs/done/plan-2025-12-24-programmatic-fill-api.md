@@ -587,7 +587,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
 **New Single Source of Truth:** `src/engine/values.ts`
 
-- `findFieldById()` - uses `idIndex` lookup (O(1) vs O(n))
+- `findFieldById()` - uses `idIndex` for validation, then retrieves Field object
 
 - `coerceToFieldPatch()` - raw value → typed Patch with validation
 
@@ -675,7 +675,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
 8. **Nested Field Lookup** ✅ RESOLVED
 
-   - **Decision:** `findFieldById()` uses `idIndex` (O(1) lookup)
+   - **Decision:** `findFieldById()` uses `idIndex` for validation
 
    - Single source of truth in `src/engine/values.ts`
 
