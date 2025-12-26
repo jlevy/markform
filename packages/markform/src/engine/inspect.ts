@@ -65,12 +65,12 @@ export function inspect(
   // Compute structure summary
   const structureSummary = computeStructureSummary(form.schema);
 
-  // Compute progress summary with the converted issues and skips
+  // Compute progress summary with the converted issues and responses
   const progressSummary = computeProgressSummary(
     form.schema,
-    form.valuesByFieldId,
-    validationInspectIssues,
-    form.skipsByFieldId
+    form.responsesByFieldId,
+    form.notes,
+    validationInspectIssues
   );
   const formState = computeFormState(progressSummary);
 
@@ -418,7 +418,14 @@ export function isCheckboxComplete(form: ParsedForm, fieldId: Id): boolean {
   }
 
   const checkboxField = field;
-  const value = form.valuesByFieldId[fieldId];
+  const response = form.responsesByFieldId[fieldId];
+
+  // If no response or not answered, checkbox is not complete
+  if (response?.state !== "answered") {
+    return false;
+  }
+
+  const value = response.value;
   if (value?.kind !== "checkboxes") {
     return false;
   }

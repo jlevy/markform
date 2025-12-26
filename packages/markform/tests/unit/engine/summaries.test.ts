@@ -106,11 +106,11 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(progress.fields.name?.state).toBe("empty");
-      expect(progress.fields.name?.submitted).toBe(false);
-      expect(progress.counts.submittedFields).toBe(0);
+      expect(progress.fields.name?.responseState === "answered").toBe(false);
+      expect(progress.counts.answeredFields).toBe(0);
     });
 
     it("tracks submitted fields as complete when valid", () => {
@@ -132,11 +132,11 @@ John Doe
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(progress.fields.name?.state).toBe("complete");
-      expect(progress.fields.name?.submitted).toBe(true);
-      expect(progress.counts.submittedFields).toBe(1);
+      expect(progress.fields.name?.responseState === "answered").toBe(true);
+      expect(progress.counts.answeredFields).toBe(1);
       expect(progress.counts.completeFields).toBe(1);
     });
 
@@ -172,7 +172,7 @@ X
         },
       ];
 
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, issues);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, issues);
 
       expect(progress.fields.name?.state).toBe("invalid");
       expect(progress.fields.name?.issueCount).toBe(1);
@@ -200,7 +200,7 @@ John
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(progress.counts.requiredFields).toBe(1);
       expect(progress.counts.emptyRequiredFields).toBe(0);
@@ -225,7 +225,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(progress.fields.tasks?.checkboxProgress).toBeDefined();
       expect(progress.fields.tasks?.checkboxProgress?.done).toBe(1);
@@ -251,7 +251,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       // In multi mode, having a "todo" item means incomplete
       expect(progress.fields.tasks?.state).toBe("incomplete");
@@ -275,7 +275,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       // In explicit mode, having an "unfilled" item means incomplete
       expect(progress.fields.confirms?.state).toBe("incomplete");
@@ -298,7 +298,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
       const state = computeFormState(progress);
 
       expect(state).toBe("complete"); // No required fields, so complete
@@ -323,7 +323,7 @@ John
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
       const state = computeFormState(progress);
 
       expect(state).toBe("complete");
@@ -358,7 +358,7 @@ X
           priority: 1,
         },
       ];
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, issues);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, issues);
       const state = computeFormState(progress);
 
       expect(state).toBe("invalid");
@@ -384,7 +384,7 @@ John
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
       const state = computeFormState(progress);
 
       // Some submitted but not all required complete
@@ -412,7 +412,7 @@ John
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(isFormComplete(progress)).toBe(true);
     });
@@ -432,7 +432,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, []);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(isFormComplete(progress)).toBe(false);
     });
@@ -466,7 +466,7 @@ X
           priority: 1,
         },
       ];
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, issues);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, issues);
 
       expect(isFormComplete(progress)).toBe(false);
     });
@@ -493,12 +493,12 @@ John
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const skips = { notes: { skipped: true, reason: "Not applicable" } };
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, [], skips);
+      // Set notes field to skipped state
+      parsed.responsesByFieldId.notes = { state: "skipped" };
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      expect(progress.fields.notes?.skipped).toBe(true);
-      expect(progress.fields.notes?.skipReason).toBe("Not applicable");
-      expect(progress.fields.name?.skipped).toBe(false);
+      expect(progress.fields.notes?.responseState).toBe("skipped");
+      expect(progress.fields.name?.responseState).not.toBe("skipped");
       expect(progress.counts.skippedFields).toBe(1);
       expect(progress.counts.answeredFields).toBe(1);
     });
@@ -529,11 +529,10 @@ alice@example.com
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const skips = {
-        notes: { skipped: true },
-        bio: { skipped: true, reason: "Too long to write" },
-      };
-      const progress = computeProgressSummary(parsed.schema, parsed.valuesByFieldId, [], skips);
+      // Set notes and bio fields to skipped state
+      parsed.responsesByFieldId.notes = { state: "skipped" };
+      parsed.responsesByFieldId.bio = { state: "skipped" };
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(progress.counts.totalFields).toBe(4);
       expect(progress.counts.answeredFields).toBe(2); // name and email
@@ -560,10 +559,11 @@ John
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const skips = { notes: { skipped: true } };
-      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+      // Set notes field to skipped state
+      parsed.responsesByFieldId.notes = { state: "skipped" };
+      const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      expect(result.progressSummary.fields.notes?.skipped).toBe(true);
+      expect(result.progressSummary.fields.notes?.responseState).toBe("skipped");
       expect(result.progressSummary.counts.skippedFields).toBe(1);
       expect(result.formState).toBe("complete");
       expect(result.isComplete).toBe(true);
@@ -591,8 +591,8 @@ John
 `;
       const parsed = parseForm(markdown);
       // Skip only one optional field, leave another unskipped and empty
-      const skips = { notes: { skipped: true } };
-      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+      parsed.responsesByFieldId.notes = { state: "skipped" };
+      const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       // With skip_field in use, form is not complete because bio is neither answered nor skipped
       expect(result.isComplete).toBe(false);
@@ -623,11 +623,9 @@ John
 `;
       const parsed = parseForm(markdown);
       // Skip both optional fields
-      const skips = {
-        notes: { skipped: true },
-        bio: { skipped: true, reason: "No bio provided" },
-      };
-      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, [], skips);
+      parsed.responsesByFieldId.notes = { state: "skipped" };
+      parsed.responsesByFieldId.bio = { state: "skipped" };
+      const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       // All fields addressed: 1 answered + 2 skipped = 3 total
       expect(result.isComplete).toBe(true);
@@ -657,7 +655,7 @@ John
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const result = computeAllSummaries(parsed.schema, parsed.valuesByFieldId, []);
+      const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       // Structure summary
       expect(result.structureSummary.fieldCount).toBe(2);
@@ -665,7 +663,7 @@ John
 
       // Progress summary
       expect(result.progressSummary.counts.totalFields).toBe(2);
-      expect(result.progressSummary.counts.submittedFields).toBe(1);
+      expect(result.progressSummary.counts.answeredFields).toBe(1);
 
       // Form state (formState is based on required fields, isComplete requires all fields addressed)
       expect(result.formState).toBe("complete");

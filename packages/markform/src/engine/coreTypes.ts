@@ -24,6 +24,41 @@ export type QualifiedOptionRef = `${Id}.${OptionId}`;
 export type ValidatorRef = string | { id: string; [key: string]: unknown };
 
 // =============================================================================
+// Response State Types (markform-204)
+// =============================================================================
+
+/**
+ * Response state for a field.
+ * Orthogonal to field type — any field can be in any response state.
+ */
+export type ResponseState = "empty" | "answered" | "skipped" | "aborted";
+
+/**
+ * Field response: combines response state with optional value.
+ * Used in responsesByFieldId for all fields.
+ */
+export interface FieldResponse {
+  state: ResponseState;
+  value?: FieldValue; // present only when state === 'answered'
+}
+
+// =============================================================================
+// Note Types (markform-205)
+// =============================================================================
+
+/** Unique note ID (implementation uses n1, n2, n3...) */
+export type NoteId = string;
+
+/** Note attached to a field, group, or form */
+export interface Note {
+  id: NoteId;
+  ref: Id; // target ID (field, group, or form)
+  role: string; // who created (agent, user, ...)
+  state?: "skipped" | "aborted"; // optional: links note to action
+  text: string; // markdown content
+}
+
+// =============================================================================
 // Checkbox Types
 // =============================================================================
 
@@ -302,17 +337,11 @@ export interface IdIndexEntry {
   fieldId?: Id;
 }
 
-/** Skip state for a field */
-export interface SkipInfo {
-  skipped: boolean;
-  reason?: string;
-}
-
 /** Canonical internal representation returned by parseForm() */
 export interface ParsedForm {
   schema: FormSchema;
-  valuesByFieldId: Record<Id, FieldValue>;
-  skipsByFieldId: Record<Id, SkipInfo>; // Track skip state per field
+  responsesByFieldId: Record<Id, FieldResponse>; // replaces valuesByFieldId + skipsByFieldId
+  notes: Note[]; // agent/user notes
   docs: DocumentationBlock[];
   orderIndex: Id[];
   idIndex: Map<Id, IdIndexEntry>;
@@ -349,6 +378,35 @@ export interface ValidationIssue {
   validatorId?: string;
   source: "builtin" | "code" | "llm";
 }
+
+// =============================================================================
+// Error Types (markform-210)
+// =============================================================================
+
+/** Location information for error reporting */
+export interface ErrorLocation {
+  line?: number;
+  column?: number;
+  fieldId?: Id;
+  noteId?: NoteId;
+}
+
+/** Markdown/Markdoc syntax error */
+export interface ParseError {
+  type: "parse";
+  message: string;
+  location?: ErrorLocation;
+}
+
+/** Markform model consistency error */
+export interface MarkformValidationError {
+  type: "validation";
+  message: string;
+  location?: ErrorLocation;
+}
+
+/** Union of all Markform error types */
+export type MarkformError = ParseError | MarkformValidationError;
 
 // =============================================================================
 // Inspect Types
@@ -416,27 +474,34 @@ export interface CheckboxProgressCounts {
 export interface FieldProgress {
   kind: FieldKind;
   required: boolean;
-  submitted: boolean;
+  responseState: ResponseState; // replaces submitted + skipped booleans
+  hasNotes: boolean;
+  noteCount: number;
   state: ProgressState;
   valid: boolean;
   issueCount: number;
   checkboxProgress?: CheckboxProgressCounts;
-  skipped: boolean; // True if explicitly skipped via skip_field
-  skipReason?: string; // Reason provided in skip_field patch
 }
 
 /** Progress counts rollup */
 export interface ProgressCounts {
   totalFields: number;
   requiredFields: number;
-  submittedFields: number;
+
+  // Response state counts (mutually exclusive, sum to totalFields)
+  answeredFields: number;
+  skippedFields: number;
+  abortedFields: number;
+  emptyFields: number;
+
+  totalNotes: number;
+
+  // Validation counts (unchanged)
   completeFields: number;
   incompleteFields: number;
   invalidFields: number;
   emptyRequiredFields: number;
   emptyOptionalFields: number;
-  answeredFields: number; // Fields with values (same as submittedFields, clearer name)
-  skippedFields: number; // Fields explicitly skipped via skip_field
 }
 
 /** Progress summary - tracks filling progress */
@@ -538,7 +603,38 @@ export interface ClearFieldPatch {
 export interface SkipFieldPatch {
   op: "skip_field";
   fieldId: Id;
-  reason?: string; // Optional reason for skipping
+  role: string; // required: who is skipping
+  reason?: string; // optional reason for skipping
+}
+
+/** Abort field - mark a field as unable to be completed */
+export interface AbortFieldPatch {
+  op: "abort_field";
+  fieldId: Id;
+  role: string;
+  reason?: string;
+}
+
+/** Add note - attach a note to a form element */
+export interface AddNotePatch {
+  op: "add_note";
+  ref: Id;
+  role: string;
+  text: string;
+  state?: "skipped" | "aborted";
+}
+
+/** Remove note - remove a specific note by ID */
+export interface RemoveNotePatch {
+  op: "remove_note";
+  noteId: NoteId;
+}
+
+/** Remove notes - remove all notes matching ref and role */
+export interface RemoveNotesPatch {
+  op: "remove_notes";
+  ref: Id;
+  role: string;
 }
 
 /** Union of all patch types */
@@ -552,7 +648,11 @@ export type Patch =
   | SetUrlPatch
   | SetUrlListPatch
   | ClearFieldPatch
-  | SkipFieldPatch;
+  | SkipFieldPatch
+  | AbortFieldPatch
+  | AddNotePatch
+  | RemoveNotePatch
+  | RemoveNotesPatch;
 
 // =============================================================================
 // Harness Types
@@ -681,11 +781,18 @@ export type ValidatorRegistry = Record<string, ValidatorFn>;
 // Basic schemas
 export const IdSchema = z.string().min(1);
 export const OptionIdSchema = z.string().min(1);
+export const NoteIdSchema = z.string().min(1);
 
 export const ValidatorRefSchema = z.union([
   z.string(),
   z.object({ id: z.string() }).passthrough(),
 ]);
+
+// Response state schema (markform-204)
+export const ResponseStateSchema = z.enum(["empty", "answered", "skipped", "aborted"]);
+
+// Note state schema (subset for note.state)
+export const NoteStateSchema = z.enum(["skipped", "aborted"]);
 
 // Checkbox state schemas
 export const MultiCheckboxStateSchema = z.enum([
@@ -886,6 +993,21 @@ export const FieldValueSchema = z.discriminatedUnion("kind", [
   UrlListValueSchema,
 ]);
 
+// FieldResponse schema (markform-204)
+export const FieldResponseSchema = z.object({
+  state: ResponseStateSchema,
+  value: FieldValueSchema.optional(),
+});
+
+// Note schema (markform-205)
+export const NoteSchema = z.object({
+  id: NoteIdSchema,
+  ref: IdSchema,
+  role: z.string(),
+  state: NoteStateSchema.optional(),
+  text: z.string(),
+});
+
 // Documentation block schema
 export const DocumentationTagSchema = z.enum([
   "description",
@@ -929,6 +1051,32 @@ export const ValidationIssueSchema = z.object({
   validatorId: z.string().optional(),
   source: z.enum(["builtin", "code", "llm"]),
 });
+
+// Error location schema (markform-210)
+export const ErrorLocationSchema = z.object({
+  line: z.number().int().positive().optional(),
+  column: z.number().int().positive().optional(),
+  fieldId: IdSchema.optional(),
+  noteId: NoteIdSchema.optional(),
+});
+
+// Error type schemas (markform-210)
+export const ParseErrorSchema = z.object({
+  type: z.literal("parse"),
+  message: z.string(),
+  location: ErrorLocationSchema.optional(),
+});
+
+export const MarkformValidationErrorSchema = z.object({
+  type: z.literal("validation"),
+  message: z.string(),
+  location: ErrorLocationSchema.optional(),
+});
+
+export const MarkformErrorSchema = z.discriminatedUnion("type", [
+  ParseErrorSchema,
+  MarkformValidationErrorSchema,
+]);
 
 // Inspect issue schema
 export const IssueReasonSchema = z.enum([
@@ -981,26 +1129,30 @@ export const CheckboxProgressCountsSchema = z.object({
 export const FieldProgressSchema = z.object({
   kind: FieldKindSchema,
   required: z.boolean(),
-  submitted: z.boolean(),
+  responseState: ResponseStateSchema,
+  hasNotes: z.boolean(),
+  noteCount: z.number().int().nonnegative(),
   state: ProgressStateSchema,
   valid: z.boolean(),
   issueCount: z.number().int().nonnegative(),
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
-  skipped: z.boolean(),
-  skipReason: z.string().optional(),
 });
 
 export const ProgressCountsSchema = z.object({
   totalFields: z.number().int().nonnegative(),
   requiredFields: z.number().int().nonnegative(),
-  submittedFields: z.number().int().nonnegative(),
+  // Response state counts (mutually exclusive, sum to totalFields)
+  answeredFields: z.number().int().nonnegative(),
+  skippedFields: z.number().int().nonnegative(),
+  abortedFields: z.number().int().nonnegative(),
+  emptyFields: z.number().int().nonnegative(),
+  totalNotes: z.number().int().nonnegative(),
+  // Validation counts
   completeFields: z.number().int().nonnegative(),
   incompleteFields: z.number().int().nonnegative(),
   invalidFields: z.number().int().nonnegative(),
   emptyRequiredFields: z.number().int().nonnegative(),
   emptyOptionalFields: z.number().int().nonnegative(),
-  answeredFields: z.number().int().nonnegative(),
-  skippedFields: z.number().int().nonnegative(),
 });
 
 export const ProgressSummarySchema = z.object({
@@ -1099,7 +1251,34 @@ export const ClearFieldPatchSchema = z.object({
 export const SkipFieldPatchSchema = z.object({
   op: z.literal("skip_field"),
   fieldId: IdSchema,
+  role: z.string(),
   reason: z.string().optional(),
+});
+
+export const AbortFieldPatchSchema = z.object({
+  op: z.literal("abort_field"),
+  fieldId: IdSchema,
+  role: z.string(),
+  reason: z.string().optional(),
+});
+
+export const AddNotePatchSchema = z.object({
+  op: z.literal("add_note"),
+  ref: IdSchema,
+  role: z.string(),
+  text: z.string(),
+  state: NoteStateSchema.optional(),
+});
+
+export const RemoveNotePatchSchema = z.object({
+  op: z.literal("remove_note"),
+  noteId: NoteIdSchema,
+});
+
+export const RemoveNotesPatchSchema = z.object({
+  op: z.literal("remove_notes"),
+  ref: IdSchema,
+  role: z.string(),
 });
 
 export const PatchSchema = z.discriminatedUnion("op", [
@@ -1113,6 +1292,10 @@ export const PatchSchema = z.discriminatedUnion("op", [
   SetUrlListPatchSchema,
   ClearFieldPatchSchema,
   SkipFieldPatchSchema,
+  AbortFieldPatchSchema,
+  AddNotePatchSchema,
+  RemoveNotePatchSchema,
+  RemoveNotesPatchSchema,
 ]);
 
 // Harness schemas

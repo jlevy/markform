@@ -193,7 +193,13 @@ async function runAgentFill(
       for (const patch of patches) {
         const typeName = formatPatchType(patch);
         const value = formatPatchValue(patch);
-        console.log(pc.dim(`    ${pc.cyan(patch.fieldId)} (${typeName}) = ${pc.green(value)}`));
+        // Some patches (add_note, remove_note, remove_notes) don't have fieldId
+        const fieldId = "fieldId" in patch ? patch.fieldId : (patch.op === "add_note" || patch.op === "remove_notes" ? patch.ref : "");
+        if (fieldId) {
+          console.log(pc.dim(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`));
+        } else {
+          console.log(pc.dim(`    (${typeName}) = ${pc.green(value)}`));
+        }
       }
 
       // Apply patches

@@ -125,9 +125,17 @@ export function registerExportCommand(program: Command): void {
             })),
           };
 
+          // Extract values from responses for export
+          const values: Record<string, FieldValue> = {};
+          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+            if (response.state === "answered" && response.value) {
+              values[fieldId] = response.value;
+            }
+          }
+
           const output: ExportOutput = {
             schema,
-            values: form.valuesByFieldId,
+            values,
             markdown: serialize(form),
           };
 

@@ -233,11 +233,12 @@ describe("markform_apply tool", () => {
 
     const updatedForm = store.getForm();
     // eslint-disable-next-line @typescript-eslint/dot-notation
-    const nameValue = updatedForm.valuesByFieldId["name"];
-    expect(nameValue).toBeDefined();
-    expect(nameValue?.kind).toBe("string");
-    if (nameValue?.kind === "string") {
-      expect(nameValue.value).toBe("Charlie");
+    const nameResponse = updatedForm.responsesByFieldId["name"];
+    expect(nameResponse).toBeDefined();
+    expect(nameResponse?.state).toBe("answered");
+    expect(nameResponse?.value?.kind).toBe("string");
+    if (nameResponse?.value?.kind === "string") {
+      expect(nameResponse.value.value).toBe("Charlie");
     }
   });
 
@@ -314,7 +315,9 @@ describe("markform_export tool", () => {
 
     expect(result.success).toBe(true);
     // eslint-disable-next-line @typescript-eslint/dot-notation
-    expect(result.data.values["name"]).toBeDefined();
+    const nameResponse = result.data.values["name"];
+    expect(nameResponse).toBeDefined();
+    expect(nameResponse?.state).toBe("answered");
   });
 
   it("includes group count in message", async () => {
@@ -402,8 +405,12 @@ describe("AI SDK tools workflow", () => {
     // 4. Export final form
     const exportResult = await tools.markform_export.execute({});
     /* eslint-disable @typescript-eslint/dot-notation */
-    expect(exportResult.data.values["name"]).toBeDefined();
-    expect(exportResult.data.values["age"]).toBeDefined();
+    const nameResponse = exportResult.data.values["name"];
+    const ageResponse = exportResult.data.values["age"];
+    expect(nameResponse).toBeDefined();
+    expect(nameResponse?.state).toBe("answered");
+    expect(ageResponse).toBeDefined();
+    expect(ageResponse?.state).toBe("answered");
     /* eslint-enable @typescript-eslint/dot-notation */
 
     // 5. Get final markdown

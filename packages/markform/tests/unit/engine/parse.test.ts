@@ -55,7 +55,7 @@ ACME Corp
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId.company;
+      const value = result.responsesByFieldId.company?.value;
 
       expect(value).toBeDefined();
       expect(value?.kind).toBe("string");
@@ -83,7 +83,7 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId.revenue;
+      const value = result.responsesByFieldId.revenue?.value;
 
       expect(value).toBeDefined();
       expect(value?.kind).toBe("number");
@@ -113,7 +113,7 @@ Tag Three
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId.tags;
+      const value = result.responsesByFieldId.tags?.value;
 
       expect(value).toBeDefined();
       expect(value?.kind).toBe("string_list");
@@ -154,7 +154,7 @@ markform:
       }
 
       // Check value
-      const value = result.valuesByFieldId.rating;
+      const value = result.responsesByFieldId.rating?.value;
       expect(value?.kind).toBe("single_select");
       if (value?.kind === "single_select") {
         expect(value.selected).toBe("neutral");
@@ -180,7 +180,7 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId.categories;
+      const value = result.responsesByFieldId.categories?.value;
 
       expect(value?.kind).toBe("multi_select");
       if (value?.kind === "multi_select") {
@@ -211,7 +211,7 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId.tasks;
+      const value = result.responsesByFieldId.tasks?.value;
 
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
@@ -242,7 +242,7 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const value = result.valuesByFieldId.confirms;
+      const value = result.responsesByFieldId.confirms?.value;
 
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {

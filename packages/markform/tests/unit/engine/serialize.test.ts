@@ -53,7 +53,7 @@ ACME Corp
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId.company;
+      const value = reparsed.responsesByFieldId.company?.value;
       expect(value?.kind).toBe("string");
       if (value?.kind === "string") {
         expect(value.value).toBe("ACME Corp");
@@ -82,7 +82,7 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId.revenue;
+      const value = reparsed.responsesByFieldId.revenue?.value;
       expect(value?.kind).toBe("number");
       if (value?.kind === "number") {
         expect(value.value).toBe(1234.56);
@@ -113,7 +113,7 @@ Tag Three
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId.tags;
+      const value = reparsed.responsesByFieldId.tags?.value;
       expect(value?.kind).toBe("string_list");
       if (value?.kind === "string_list") {
         expect(value.items).toEqual(["Tag One", "Tag Two", "Tag Three"]);
@@ -151,7 +151,7 @@ markform:
       }
 
       // Check value preserved
-      const value = reparsed.valuesByFieldId.rating;
+      const value = reparsed.responsesByFieldId.rating?.value;
       expect(value?.kind).toBe("single_select");
       if (value?.kind === "single_select") {
         expect(value.selected).toBe("neutral");
@@ -180,7 +180,7 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId.categories;
+      const value = reparsed.responsesByFieldId.categories?.value;
       expect(value?.kind).toBe("multi_select");
       if (value?.kind === "multi_select") {
         expect(value.selected).toContain("tech");
@@ -213,7 +213,7 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId.tasks;
+      const value = reparsed.responsesByFieldId.tasks?.value;
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
         expect(value.values.done_task).toBe("done");
@@ -246,7 +246,7 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      const value = reparsed.valuesByFieldId.confirms;
+      const value = reparsed.responsesByFieldId.confirms?.value;
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
         expect(value.values.yes_item).toBe("yes");

@@ -290,36 +290,35 @@ return true;
 /**
  * Compare form values between two parsed forms.
  *
- * Handles skipped fields: if actual form has a field skipped (in skipsByFieldId),
+ * Handles skipped fields: if actual form has a field skipped (state: "skipped"),
  * it matches expected fields with null/empty values.
  */
 function compareFormValues(actual: ParsedForm, expected: ParsedForm): boolean {
-  const actualValues = actual.valuesByFieldId;
-  const expectedValues = expected.valuesByFieldId;
-  const actualSkips = actual.skipsByFieldId ?? {};
+  const actualResponses = actual.responsesByFieldId;
+  const expectedResponses = expected.responsesByFieldId;
 
   // Get all field IDs from both
   const allIds = new Set([
-    ...Object.keys(actualValues),
-    ...Object.keys(expectedValues),
-    ...Object.keys(actualSkips),
+    ...Object.keys(actualResponses),
+    ...Object.keys(expectedResponses),
   ]);
 
   for (const id of allIds) {
-    const actualValue = actualValues[id];
-    const expectedValue = expectedValues[id];
-    const isSkipped = actualSkips[id]?.skipped === true;
+    const actualResponse = actualResponses[id];
+    const expectedResponse = expectedResponses[id];
+    const isSkipped = actualResponse?.state === "skipped";
 
     // If field is skipped in actual, it should match empty/null in expected
     if (isSkipped) {
-      if (!isEmptyValue(expectedValue)) {
+      const expectedValue = expectedResponse?.state === "answered" ? expectedResponse.value : undefined;
+      if (expectedValue && !isEmptyValue(expectedValue)) {
         return false; // Expected has a value but actual skipped it
       }
       continue; // Match: skipped === empty
     }
 
-    // Normal comparison
-    if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
+    // Normal comparison: compare the entire response objects
+    if (JSON.stringify(actualResponse) !== JSON.stringify(expectedResponse)) {
       return false;
     }
   }

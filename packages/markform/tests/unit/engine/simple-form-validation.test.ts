@@ -143,8 +143,8 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
 
       // Values should be preserved
       for (const fieldId of original.orderIndex) {
-        const originalValue = original.valuesByFieldId[fieldId];
-        const reparsedValue = reparsed.valuesByFieldId[fieldId];
+        const originalValue = original.responsesByFieldId[fieldId]?.value;
+        const reparsedValue = reparsed.responsesByFieldId[fieldId]?.value;
 
         if (originalValue) {
           expect(reparsedValue?.kind).toBe(originalValue.kind);
@@ -227,10 +227,10 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
 
       expect(result.applyStatus).toBe("applied");
       // applyPatches mutates the form on success
-      expect(form.valuesByFieldId.name?.kind).toBe("string");
+      expect(form.responsesByFieldId.name?.value?.kind).toBe("string");
       expect(
-        form.valuesByFieldId.name?.kind === "string"
-          ? form.valuesByFieldId.name.value
+        form.responsesByFieldId.name?.value?.kind === "string"
+          ? form.responsesByFieldId.name?.value.value
           : null
       ).toBe("John Doe");
     });
@@ -251,7 +251,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       const form = await loadSimpleForm();
 
       // Get initial state of name field (may be null or undefined)
-      const initialNameValue = form.valuesByFieldId.name;
+      const initialNameValue = form.responsesByFieldId.name?.value;
 
       const patches: Patch[] = [
         { op: "set_string", fieldId: "name", value: "John Doe" }, // valid
@@ -264,9 +264,9 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       // Form should remain unchanged - name should still have original value
       // (could be null/undefined or the parsed initial value)
       if (initialNameValue === undefined) {
-        expect(form.valuesByFieldId.name).toBeUndefined();
+        expect(form.responsesByFieldId.name?.value).toBeUndefined();
       } else {
-        expect(form.valuesByFieldId.name).toEqual(initialNameValue);
+        expect(form.responsesByFieldId.name?.value).toEqual(initialNameValue);
       }
     });
   });

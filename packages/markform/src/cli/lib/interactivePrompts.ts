@@ -76,6 +76,7 @@ function createSkipPatch(field: Field): SkipFieldPatch {
   return {
     op: "skip_field",
     fieldId: field.id,
+    role: "user",
     reason: "User skipped in console",
   };
 }
@@ -639,9 +640,10 @@ continue;
 }
 
     index++;
+    const response = form.responsesByFieldId[field.id];
     const ctx: FieldPromptContext = {
       field,
-      currentValue: form.valuesByFieldId[field.id],
+      currentValue: response?.state === "answered" ? response.value : undefined,
       description: getFieldDescription(form, field.id),
       index,
       total: uniqueFieldIssues.length,

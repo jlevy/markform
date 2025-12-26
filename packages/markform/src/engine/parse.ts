@@ -18,6 +18,7 @@ import type {
   DocumentationTag,
   Field,
   FieldGroup,
+  FieldResponse,
   FieldValue,
   FormSchema,
   Id,
@@ -345,6 +346,42 @@ function extractFenceValue(node: Node): string | null {
 // =============================================================================
 // Field Parsing
 // =============================================================================
+
+/**
+ * Determine if a field value is empty.
+ * For old forms without state attributes, this infers whether the field has been filled.
+ */
+function isValueEmpty(value: FieldValue): boolean {
+  switch (value.kind) {
+    case "string":
+    case "number":
+    case "url":
+      return value.value === null;
+    case "string_list":
+    case "url_list":
+      return value.items.length === 0;
+    case "single_select":
+      return value.selected === null;
+    case "multi_select":
+      return value.selected.length === 0;
+    case "checkboxes": {
+      // Empty if all checkboxes are in default unchecked state (todo/unfilled)
+      const values = Object.values(value.values);
+      return values.every(v => v === "todo" || v === "unfilled");
+    }
+  }
+}
+
+/**
+ * Create a FieldResponse from a FieldValue.
+ * For old forms without state attributes, infers state from value content.
+ */
+function createFieldResponse(value: FieldValue): FieldResponse {
+  if (isValueEmpty(value)) {
+    return { state: "empty" };
+  }
+  return { state: "answered", value };
+}
 
 /**
  * Get priority attribute value or default to DEFAULT_PRIORITY.
@@ -822,7 +859,7 @@ function parseField(node: Node): { field: Field; value: FieldValue } | null {
  */
 function parseFieldGroup(
   node: Node,
-  valuesByFieldId: Record<Id, FieldValue>,
+  responsesByFieldId: Record<Id, FieldResponse>,
   orderIndex: Id[],
   idIndex: Map<Id, IdIndexEntry>,
   parentId?: Id
@@ -856,7 +893,7 @@ function parseFieldGroup(
 
       idIndex.set(result.field.id, { nodeType: "field", parentId: id });
       children.push(result.field);
-      valuesByFieldId[result.field.id] = result.value;
+      responsesByFieldId[result.field.id] = createFieldResponse(result.value);
       orderIndex.push(result.field.id);
 
       // Add options to idIndex for select/checkbox fields
@@ -901,7 +938,7 @@ function parseFieldGroup(
  */
 function parseFormTag(
   node: Node,
-  valuesByFieldId: Record<Id, FieldValue>,
+  responsesByFieldId: Record<Id, FieldResponse>,
   orderIndex: Id[],
   idIndex: Map<Id, IdIndexEntry>
 ): FormSchema {
@@ -929,7 +966,7 @@ function parseFormTag(
     if (isTagNode(child, "field-group")) {
       const group = parseFieldGroup(
         child,
-        valuesByFieldId,
+        responsesByFieldId,
         orderIndex,
         idIndex,
         id
@@ -1054,7 +1091,7 @@ export function parseForm(markdown: string): ParsedForm {
 
   // Step 3: Find the form tag in the raw AST
   let formSchema: FormSchema | null = null;
-  const valuesByFieldId: Record<Id, FieldValue> = {};
+  const responsesByFieldId: Record<Id, FieldResponse> = {};
   const orderIndex: Id[] = [];
   const idIndex = new Map<Id, IdIndexEntry>();
 
@@ -1067,7 +1104,7 @@ export function parseForm(markdown: string): ParsedForm {
       if (formSchema) {
         throw new ParseError("Multiple form tags found - only one allowed");
       }
-      formSchema = parseFormTag(node, valuesByFieldId, orderIndex, idIndex);
+      formSchema = parseFormTag(node, responsesByFieldId, orderIndex, idIndex);
       return;
     }
 
@@ -1089,8 +1126,8 @@ export function parseForm(markdown: string): ParsedForm {
 
   return {
     schema: formSchema,
-    valuesByFieldId,
-    skipsByFieldId: {}, // Initially empty; skip_field patches populate this
+    responsesByFieldId,
+    notes: [], // Phase 2 will parse notes from markdown
     docs,
     orderIndex,
     idIndex,

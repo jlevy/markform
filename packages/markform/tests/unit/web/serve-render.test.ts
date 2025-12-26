@@ -598,8 +598,8 @@ markform:
       it("should show skipped indicator for previously skipped fields", () => {
         const form = parseForm(formContent);
         // Mark the field as skipped
-        form.skipsByFieldId = {
-          notes: { skipped: true, reason: "User skipped" },
+        form.responsesByFieldId = {
+          notes: { state: "skipped" },
         };
         const html = renderFormHtml(form);
 

@@ -309,6 +309,14 @@ export function registerInspectCommand(program: Command): void {
           logVerbose(ctx, "Running inspection...");
           const result = inspect(form, { targetRoles });
 
+          // Extract values from responses for report
+          const values: Record<string, FieldValue> = {};
+          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+            if (response.state === "answered" && response.value) {
+              values[fieldId] = response.value;
+            }
+          }
+
           // Build the report structure
           const report: InspectReport = {
             title: form.schema.title,
@@ -326,7 +334,7 @@ export function registerInspectCommand(program: Command): void {
                 role: field.role,
               })),
             })),
-            values: form.valuesByFieldId,
+            values,
             issues: result.issues.map((issue: InspectIssue) => ({
               ref: issue.ref,
               scope: issue.scope,

@@ -26,7 +26,13 @@ export type { ExportResult } from "./cliTypes.js";
 export function toPlainValues(form: ParsedForm): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
-  for (const [fieldId, value] of Object.entries(form.valuesByFieldId)) {
+  for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+    // Only export values for answered fields
+    if (response.state !== "answered" || !response.value) {
+      continue;
+    }
+
+    const value = response.value;
     switch (value.kind) {
       case "string":
         result[fieldId] = value.value ?? null;

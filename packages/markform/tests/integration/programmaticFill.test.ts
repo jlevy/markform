@@ -135,7 +135,9 @@ describe("programmatic fill API - integration tests", () => {
       expect(reparsedForm.schema.groups.length).toBe(6);
 
       // Values should be preserved
-      expect(reparsedForm.valuesByFieldId.name).toEqual({ kind: "string", value: "Test User" });
+      const nameResponse = reparsedForm.responsesByFieldId.name;
+      expect(nameResponse?.state).toBe("answered");
+      expect(nameResponse?.value).toEqual({ kind: "string", value: "Test User" });
     });
   });
 

@@ -28,7 +28,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId.name).toEqual({
+      expect(form.responsesByFieldId.name?.value).toEqual({
         kind: "string",
         value: "John Doe",
       });
@@ -80,7 +80,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId.age).toEqual({
+      expect(form.responsesByFieldId.age?.value).toEqual({
         kind: "number",
         value: 25,
       });
@@ -110,7 +110,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId.tags).toEqual({
+      expect(form.responsesByFieldId.tags?.value).toEqual({
         kind: "string_list",
         items: ["a", "b", "c"],
       });
@@ -143,7 +143,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId.priority).toEqual({
+      expect(form.responsesByFieldId.priority?.value).toEqual({
         kind: "single_select",
         selected: "high",
       });
@@ -204,7 +204,7 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId.categories).toEqual({
+      expect(form.responsesByFieldId.categories?.value).toEqual({
         kind: "multi_select",
         selected: ["tech", "health"],
       });
@@ -243,7 +243,8 @@ markform:
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      const value = form.valuesByFieldId.tasks;
+      const response = form.responsesByFieldId.tasks;
+      const value = response?.value;
       expect(value?.kind).toBe("checkboxes");
       if (value?.kind === "checkboxes") {
         // First should still be done (from original)
@@ -279,10 +280,7 @@ John
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.valuesByFieldId.name).toEqual({
-        kind: "string",
-        value: null,
-      });
+      expect(form.responsesByFieldId.name?.state).toBe("empty");
     });
   });
 
@@ -312,9 +310,8 @@ markform:
 
       expect(result.applyStatus).toBe("rejected");
       // Name should NOT be updated due to transaction rollback
-      // The value should remain undefined (not set to "John")
-      const nameValue = form.valuesByFieldId.name;
-      expect(nameValue === undefined || (nameValue.kind === "string" && nameValue.value === null)).toBe(true);
+      const nameResponse = form.responsesByFieldId.name;
+      expect(nameResponse?.state === "empty" || nameResponse === undefined).toBe(true);
     });
 
     it("rejects if field does not exist", () => {
@@ -359,18 +356,16 @@ markform:
 `;
       const form = parseForm(markdown);
       const patches: Patch[] = [
-        { op: "skip_field", fieldId: "notes", reason: "Not applicable" },
+        { op: "skip_field", fieldId: "notes", role: "agent", reason: "Not applicable" },
       ];
 
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.skipsByFieldId.notes).toEqual({
-        skipped: true,
-        reason: "Not applicable",
-      });
-      // Value should be cleared
-      expect(form.valuesByFieldId.notes).toBeUndefined();
+      expect(form.responsesByFieldId.notes?.state).toBe("skipped");
+      // Check that a note was added with the reason
+      const note = form.notes.find(n => n.ref === "notes" && n.state === "skipped");
+      expect(note?.text).toContain("Not applicable");
     });
 
     it("rejects skip_field on required field", () => {
@@ -389,13 +384,13 @@ markform:
 `;
       const form = parseForm(markdown);
       const patches: Patch[] = [
-        { op: "skip_field", fieldId: "name", reason: "Can't skip required" },
+        { op: "skip_field", fieldId: "name", role: "agent", reason: "Can't skip required" },
       ];
 
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("rejected");
-      expect(form.skipsByFieldId.name).toBeUndefined();
+      expect(form.responsesByFieldId.name?.state).not.toBe("skipped");
     });
 
     it("clears existing value when skipping", () => {
@@ -418,21 +413,17 @@ Some existing value
 `;
       const form = parseForm(markdown);
       // Verify value exists initially
-      expect(form.valuesByFieldId.notes).toBeDefined();
+      expect(form.responsesByFieldId.notes?.state).toBe("answered");
 
       const patches: Patch[] = [
-        { op: "skip_field", fieldId: "notes" },
+        { op: "skip_field", fieldId: "notes", role: "agent" },
       ];
 
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.skipsByFieldId.notes).toEqual({
-        skipped: true,
-        reason: undefined,
-      });
-      // Value should be cleared
-      expect(form.valuesByFieldId.notes).toBeUndefined();
+      expect(form.responsesByFieldId.notes?.state).toBe("skipped");
+      expect(form.responsesByFieldId.notes?.value).toBeUndefined();
     });
 
     it("un-skips field when setting a value", () => {
@@ -452,8 +443,8 @@ markform:
       const form = parseForm(markdown);
 
       // First skip the field
-      applyPatches(form, [{ op: "skip_field", fieldId: "notes" }]);
-      expect(form.skipsByFieldId.notes?.skipped).toBe(true);
+      applyPatches(form, [{ op: "skip_field", fieldId: "notes", role: "agent" }]);
+      expect(form.responsesByFieldId.notes?.state).toBe("skipped");
 
       // Then set a value
       const result = applyPatches(form, [
@@ -461,8 +452,8 @@ markform:
       ]);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.skipsByFieldId.notes).toBeUndefined();
-      expect(form.valuesByFieldId.notes).toEqual({
+      expect(form.responsesByFieldId.notes?.state).toBe("answered");
+      expect(form.responsesByFieldId.notes?.value).toEqual({
         kind: "string",
         value: "New value",
       });
@@ -493,7 +484,7 @@ markform:
 
       expect(result.applyStatus).toBe("applied");
       expect(result.structureSummary.fieldCount).toBe(1);
-      expect(result.progressSummary.counts.submittedFields).toBe(1);
+      expect(result.progressSummary.counts.answeredFields).toBe(1);
       expect(result.formState).toBe("complete");
       expect(result.isComplete).toBe(true);
     });

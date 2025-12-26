@@ -12,7 +12,7 @@ import type {
   DocumentationBlock,
   Field,
   FieldGroup,
-  FieldValue,
+  FieldResponse,
   FormSchema,
   Id,
   MultiSelectField,
@@ -138,7 +138,7 @@ function getMarker(state: CheckboxValue): string {
  */
 function serializeStringField(
   field: StringField,
-  value: StringValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -169,8 +169,12 @@ function serializeStringField(
   const attrStr = serializeAttrs(attrs);
   let content = "";
 
-  if (value?.value) {
-    content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+  // Extract value from response if state is "answered"
+  if (response?.state === "answered" && response.value) {
+    const value = response.value as StringValue;
+    if (value.value) {
+      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+    }
   }
 
   return `{% string-field ${attrStr} %}${content}{% /string-field %}`;
@@ -181,7 +185,7 @@ function serializeStringField(
  */
 function serializeNumberField(
   field: NumberField,
-  value: NumberValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -209,8 +213,12 @@ function serializeNumberField(
   const attrStr = serializeAttrs(attrs);
   let content = "";
 
-  if (value?.value !== null && value?.value !== undefined) {
-    content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+  // Extract value from response if state is "answered"
+  if (response?.state === "answered" && response.value) {
+    const value = response.value as NumberValue;
+    if (value.value !== null && value.value !== undefined) {
+      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+    }
   }
 
   return `{% number-field ${attrStr} %}${content}{% /number-field %}`;
@@ -221,7 +229,7 @@ function serializeNumberField(
  */
 function serializeStringListField(
   field: StringListField,
-  value: StringListValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -255,8 +263,12 @@ function serializeStringListField(
   const attrStr = serializeAttrs(attrs);
   let content = "";
 
-  if (value?.items && value.items.length > 0) {
-    content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
+  // Extract value from response if state is "answered"
+  if (response?.state === "answered" && response.value) {
+    const value = response.value as StringListValue;
+    if (value.items && value.items.length > 0) {
+      content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
+    }
   }
 
   return `{% string-list ${attrStr} %}${content}{% /string-list %}`;
@@ -285,7 +297,7 @@ function serializeOptions(
  */
 function serializeSingleSelectField(
   field: SingleSelectField,
-  value: SingleSelectValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -303,6 +315,12 @@ function serializeSingleSelectField(
 
   const attrStr = serializeAttrs(attrs);
 
+  // Extract value from response if state is "answered"
+  let value: SingleSelectValue | undefined;
+  if (response?.state === "answered" && response.value) {
+    value = response.value as SingleSelectValue;
+  }
+
   // Convert selected to checkbox state format
   const selected: Record<string, CheckboxValue> = {};
   for (const opt of field.options) {
@@ -318,7 +336,7 @@ function serializeSingleSelectField(
  */
 function serializeMultiSelectField(
   field: MultiSelectField,
-  value: MultiSelectValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -342,6 +360,12 @@ function serializeMultiSelectField(
 
   const attrStr = serializeAttrs(attrs);
 
+  // Extract value from response if state is "answered"
+  let value: MultiSelectValue | undefined;
+  if (response?.state === "answered" && response.value) {
+    value = response.value as MultiSelectValue;
+  }
+
   // Convert selected to checkbox state format
   const selected: Record<string, CheckboxValue> = {};
   const selectedSet = new Set(value?.selected ?? []);
@@ -358,7 +382,7 @@ function serializeMultiSelectField(
  */
 function serializeCheckboxesField(
   field: CheckboxesField,
-  value: CheckboxesValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -385,6 +409,12 @@ function serializeCheckboxesField(
 
   const attrStr = serializeAttrs(attrs);
 
+  // Extract value from response if state is "answered"
+  let value: CheckboxesValue | undefined;
+  if (response?.state === "answered" && response.value) {
+    value = response.value as CheckboxesValue;
+  }
+
   const options = serializeOptions(field.options, value?.values ?? {});
   return `{% checkboxes ${attrStr} %}\n${options}\n{% /checkboxes %}`;
 }
@@ -394,7 +424,7 @@ function serializeCheckboxesField(
  */
 function serializeUrlField(
   field: UrlField,
-  value: UrlValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -413,8 +443,12 @@ function serializeUrlField(
   const attrStr = serializeAttrs(attrs);
   let content = "";
 
-  if (value?.value) {
-    content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+  // Extract value from response if state is "answered"
+  if (response?.state === "answered" && response.value) {
+    const value = response.value as UrlValue;
+    if (value.value) {
+      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+    }
   }
 
   return `{% url-field ${attrStr} %}${content}{% /url-field %}`;
@@ -425,7 +459,7 @@ function serializeUrlField(
  */
 function serializeUrlListField(
   field: UrlListField,
-  value: UrlListValue | undefined,
+  response: FieldResponse | undefined,
 ): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
@@ -453,8 +487,12 @@ function serializeUrlListField(
   const attrStr = serializeAttrs(attrs);
   let content = "";
 
-  if (value?.items && value.items.length > 0) {
-    content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
+  // Extract value from response if state is "answered"
+  if (response?.state === "answered" && response.value) {
+    const value = response.value as UrlListValue;
+    if (value.items && value.items.length > 0) {
+      content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
+    }
   }
 
   return `{% url-list ${attrStr} %}${content}{% /url-list %}`;
@@ -463,38 +501,26 @@ function serializeUrlListField(
 /**
  * Serialize a field to Markdoc format.
  */
-function serializeField(field: Field, values: Record<Id, FieldValue>): string {
-  const value = values[field.id];
+function serializeField(field: Field, responses: Record<Id, FieldResponse>): string {
+  const response = responses[field.id];
 
   switch (field.kind) {
     case "string":
-      return serializeStringField(field, value as StringValue | undefined);
+      return serializeStringField(field, response);
     case "number":
-      return serializeNumberField(field, value as NumberValue | undefined);
+      return serializeNumberField(field, response);
     case "string_list":
-      return serializeStringListField(
-        field,
-        value as StringListValue | undefined,
-      );
+      return serializeStringListField(field, response);
     case "single_select":
-      return serializeSingleSelectField(
-        field,
-        value as SingleSelectValue | undefined,
-      );
+      return serializeSingleSelectField(field, response);
     case "multi_select":
-      return serializeMultiSelectField(
-        field,
-        value as MultiSelectValue | undefined,
-      );
+      return serializeMultiSelectField(field, response);
     case "checkboxes":
-      return serializeCheckboxesField(
-        field,
-        value as CheckboxesValue | undefined,
-      );
+      return serializeCheckboxesField(field, response);
     case "url":
-      return serializeUrlField(field, value as UrlValue | undefined);
+      return serializeUrlField(field, response);
     case "url_list":
-      return serializeUrlListField(field, value as UrlListValue | undefined);
+      return serializeUrlListField(field, response);
   }
 }
 
@@ -521,7 +547,7 @@ function serializeDocBlock(doc: DocumentationBlock): string {
  */
 function serializeFieldGroup(
   group: FieldGroup,
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   docs: DocumentationBlock[],
 ): string {
   const attrs: Record<string, unknown> = { id: group.id };
@@ -545,7 +571,7 @@ function serializeFieldGroup(
 
   for (const field of group.children) {
     lines.push("");
-    lines.push(serializeField(field, values));
+    lines.push(serializeField(field, responses));
 
     // Add any doc blocks for this field
     const fieldDocs = docsByRef.get(field.id);
@@ -568,7 +594,7 @@ function serializeFieldGroup(
  */
 function serializeFormSchema(
   schema: FormSchema,
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   docs: DocumentationBlock[],
 ): string {
   const attrs: Record<string, unknown> = { id: schema.id };
@@ -598,7 +624,7 @@ function serializeFormSchema(
 
   for (const group of schema.groups) {
     lines.push("");
-    lines.push(serializeFieldGroup(group, values, docs));
+    lines.push(serializeFieldGroup(group, responses, docs));
   }
 
   lines.push("");
@@ -630,7 +656,7 @@ markform:
   // Serialize form body
   const body = serializeFormSchema(
     form.schema,
-    form.valuesByFieldId,
+    form.responsesByFieldId,
     form.docs,
   );
 
@@ -660,12 +686,15 @@ const STATE_TO_GFM_MARKER: Record<CheckboxValue, string> = {
  */
 function serializeFieldRaw(
   field: Field,
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
 ): string {
-  const value = values[field.id];
+  const response = responses[field.id];
   const lines: string[] = [];
 
   lines.push(`**${field.label}:**`);
+
+  // Extract value from response if state is "answered"
+  const value = response?.state === "answered" ? response.value : undefined;
 
   switch (field.kind) {
     case "string": {
@@ -812,7 +841,7 @@ export function serializeRawMarkdown(form: ParsedForm): string {
 
     // Process fields
     for (const field of group.children) {
-      lines.push(serializeFieldRaw(field, form.valuesByFieldId));
+      lines.push(serializeFieldRaw(field, form.responsesByFieldId));
       lines.push("");
 
       // Add field-level docs

@@ -9,6 +9,7 @@ import type {
   CheckboxesValue,
   Field,
   FieldGroup,
+  FieldResponse,
   FieldValue,
   FormSchema,
   Id,
@@ -606,9 +607,10 @@ function validateUrlListField(
  */
 function validateField(
   field: Field,
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
 ): ValidationIssue[] {
-  const value = values[field.id];
+  const response = responses[field.id];
+  const value = response?.state === "answered" ? response.value : undefined;
 
   switch (field.kind) {
     case "string":
@@ -666,7 +668,7 @@ function parseValidatorRef(ref: ValidatorRef): {
 function runCodeValidators(
   field: Field,
   schema: FormSchema,
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   registry: ValidatorRegistry,
 ): ValidationIssue[] {
   if (!field.validate) {
@@ -677,6 +679,14 @@ function runCodeValidators(
     ? field.validate
     : [field.validate];
   const issues: ValidationIssue[] = [];
+
+  // Convert responses to values for validator context
+  const values: Record<Id, FieldValue> = {};
+  for (const [id, response] of Object.entries(responses)) {
+    if (response.state === "answered" && response.value !== undefined) {
+      values[id] = response.value;
+    }
+  }
 
   for (const ref of refs) {
     const { id, params } = parseValidatorRef(ref);
@@ -724,7 +734,7 @@ function runCodeValidators(
 function runGroupValidators(
   group: FieldGroup,
   schema: FormSchema,
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   registry: ValidatorRegistry,
 ): ValidationIssue[] {
   if (!group.validate) {
@@ -735,6 +745,14 @@ function runGroupValidators(
     ? group.validate
     : [group.validate];
   const issues: ValidationIssue[] = [];
+
+  // Convert responses to values for validator context
+  const values: Record<Id, FieldValue> = {};
+  for (const [id, response] of Object.entries(responses)) {
+    if (response.state === "answered" && response.value !== undefined) {
+      values[id] = response.value;
+    }
+  }
 
   for (const ref of refs) {
     const { id, params } = parseValidatorRef(ref);
@@ -798,7 +816,7 @@ export function validate(
   for (const group of form.schema.groups) {
     for (const field of group.children) {
       // Built-in validation
-      issues.push(...validateField(field, form.valuesByFieldId));
+      issues.push(...validateField(field, form.responsesByFieldId));
 
       // Code validators
       if (!opts?.skipCodeValidators) {
@@ -806,7 +824,7 @@ export function validate(
           ...runCodeValidators(
             field,
             form.schema,
-            form.valuesByFieldId,
+            form.responsesByFieldId,
             registry,
           ),
         );
@@ -819,7 +837,7 @@ export function validate(
         ...runGroupValidators(
           group,
           form.schema,
-          form.valuesByFieldId,
+          form.responsesByFieldId,
           registry,
         ),
       );

@@ -5,19 +5,25 @@
  */
 
 import type {
+  AbortFieldPatch,
+  AddNotePatch,
   ApplyResult,
   CheckboxesValue,
   CheckboxValue,
   ClearFieldPatch,
   Field,
-  FieldValue,
+  FieldResponse,
   Id,
   InspectIssue,
   MultiSelectValue,
+  Note,
+  NoteId,
   NumberValue,
   OptionId,
   ParsedForm,
   Patch,
+  RemoveNotePatch,
+  RemoveNotesPatch,
   SetCheckboxesPatch,
   SetMultiSelectPatch,
   SetNumberPatch,
@@ -28,7 +34,6 @@ import type {
   SetUrlPatch,
   SingleSelectValue,
   SkipFieldPatch,
-  SkipInfo,
   StringListValue,
   StringValue,
   UrlListValue,
@@ -72,12 +77,26 @@ function validatePatch(
   patch: Patch,
   index: number,
 ): PatchError | null {
-  const field = findField(form, patch.fieldId);
+  // Handle patches without fieldId
+  if (patch.op === "add_note" || patch.op === "remove_notes") {
+    // These patches use 'ref' instead of 'fieldId'
+    // For now, just accept them (full validation can be added later)
+    return null;
+  }
+
+  if (patch.op === "remove_note") {
+    // This patch uses 'noteId' instead of 'fieldId'
+    return null;
+  }
+
+  // All other patches have fieldId
+  const fieldId = patch.fieldId;
+  const field = findField(form, fieldId);
 
   if (!field) {
     return {
       patchIndex: index,
-      message: `Field "${patch.fieldId}" not found`,
+      message: `Field "${fieldId}" not found`,
     };
   }
 
@@ -200,6 +219,10 @@ function validatePatch(
         };
       }
       break;
+
+    case "abort_field":
+      // Any field can be aborted
+      break;
   }
 
   return null;
@@ -227,79 +250,107 @@ function validatePatches(form: ParsedForm, patches: Patch[]): PatchError[] {
 // =============================================================================
 
 /**
+ * Generate a unique note ID for the form.
+ */
+function generateNoteId(form: ParsedForm): NoteId {
+  const existingIds = new Set(form.notes.map((n) => n.id));
+  let counter = 1;
+  while (existingIds.has(`n${counter}`)) {
+    counter++;
+  }
+  return `n${counter}`;
+}
+
+/**
  * Apply a set_string patch.
  */
 function applySetString(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetStringPatch,
 ): void {
-  values[patch.fieldId] = {
-    kind: "string",
-    value: patch.value,
-  } as StringValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "string",
+      value: patch.value,
+    } as StringValue,
+  };
 }
 
 /**
  * Apply a set_number patch.
  */
 function applySetNumber(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetNumberPatch,
 ): void {
-  values[patch.fieldId] = {
-    kind: "number",
-    value: patch.value,
-  } as NumberValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "number",
+      value: patch.value,
+    } as NumberValue,
+  };
 }
 
 /**
  * Apply a set_string_list patch.
  */
 function applySetStringList(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetStringListPatch,
 ): void {
-  values[patch.fieldId] = {
-    kind: "string_list",
-    items: patch.items,
-  } as StringListValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "string_list",
+      items: patch.items,
+    } as StringListValue,
+  };
 }
 
 /**
  * Apply a set_single_select patch.
  */
 function applySetSingleSelect(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetSingleSelectPatch,
 ): void {
-  values[patch.fieldId] = {
-    kind: "single_select",
-    selected: patch.selected,
-  } as SingleSelectValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "single_select",
+      selected: patch.selected,
+    } as SingleSelectValue,
+  };
 }
 
 /**
  * Apply a set_multi_select patch.
  */
 function applySetMultiSelect(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetMultiSelectPatch,
 ): void {
-  values[patch.fieldId] = {
-    kind: "multi_select",
-    selected: patch.selected,
-  } as MultiSelectValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "multi_select",
+      selected: patch.selected,
+    } as MultiSelectValue,
+  };
 }
 
 /**
  * Apply a set_checkboxes patch (merges with existing values).
  */
 function applySetCheckboxes(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetCheckboxesPatch,
 ): void {
-  const existing = values[patch.fieldId] as CheckboxesValue | undefined;
-  const existingValues = existing?.values ?? {};
+  const existingResponse = responses[patch.fieldId];
+  const existingValue = existingResponse?.value as CheckboxesValue | undefined;
+  const existingValues = existingValue?.values ?? {};
 
   // Merge patch values with existing
   const merged: Record<OptionId, CheckboxValue> = {
@@ -307,158 +358,208 @@ function applySetCheckboxes(
     ...patch.values,
   };
 
-  values[patch.fieldId] = {
-    kind: "checkboxes",
-    values: merged,
-  } as CheckboxesValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "checkboxes",
+      values: merged,
+    } as CheckboxesValue,
+  };
 }
 
 /**
  * Apply a set_url patch.
  */
 function applySetUrl(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetUrlPatch,
 ): void {
-  values[patch.fieldId] = {
-    kind: "url",
-    value: patch.value,
-  } as UrlValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "url",
+      value: patch.value,
+    } as UrlValue,
+  };
 }
 
 /**
  * Apply a set_url_list patch.
  */
 function applySetUrlList(
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: SetUrlListPatch,
 ): void {
-  values[patch.fieldId] = {
-    kind: "url_list",
-    items: patch.items,
-  } as UrlListValue;
+  responses[patch.fieldId] = {
+    state: "answered",
+    value: {
+      kind: "url_list",
+      items: patch.items,
+    } as UrlListValue,
+  };
 }
 
 /**
  * Apply a clear_field patch.
  */
 function applyClearField(
-  form: ParsedForm,
-  values: Record<Id, FieldValue>,
+  responses: Record<Id, FieldResponse>,
   patch: ClearFieldPatch,
 ): void {
-  const field = findField(form, patch.fieldId);
-  if (!field) {
-return;
-}
-
-  // Create empty value based on field kind (exhaustiveness checked at compile time)
-  switch (field.kind) {
-    case "string":
-      values[patch.fieldId] = { kind: "string", value: null } as StringValue;
-      break;
-    case "number":
-      values[patch.fieldId] = { kind: "number", value: null } as NumberValue;
-      break;
-    case "string_list":
-      values[patch.fieldId] = { kind: "string_list", items: [] } as StringListValue;
-      break;
-    case "single_select":
-      values[patch.fieldId] = { kind: "single_select", selected: null } as SingleSelectValue;
-      break;
-    case "multi_select":
-      values[patch.fieldId] = { kind: "multi_select", selected: [] } as MultiSelectValue;
-      break;
-    case "checkboxes":
-      values[patch.fieldId] = { kind: "checkboxes", values: {} } as CheckboxesValue;
-      break;
-    case "url":
-      values[patch.fieldId] = { kind: "url", value: null } as UrlValue;
-      break;
-    case "url_list":
-      values[patch.fieldId] = { kind: "url_list", items: [] } as UrlListValue;
-      break;
-    default: {
-      // Exhaustiveness check: TypeScript will error if a FieldKind case is missing
-      const _exhaustive: never = field;
-      throw new Error(`Unexpected field kind: ${(_exhaustive as Field).kind}`);
-    }
-  }
+  responses[patch.fieldId] = {
+    state: "empty",
+  };
 }
 
 /**
  * Apply a skip_field patch.
- * Marks the field as skipped and clears any existing value.
+ * Marks the field as skipped and optionally adds a note if a reason is provided.
  */
 function applySkipField(
   form: ParsedForm,
-  values: Record<Id, FieldValue>,
-  skips: Record<Id, SkipInfo>,
+  responses: Record<Id, FieldResponse>,
   patch: SkipFieldPatch,
 ): void {
-  const field = findField(form, patch.fieldId);
-  if (!field) {
-    return;
-  }
-
-  // Mark field as skipped
-  skips[patch.fieldId] = {
-    skipped: true,
-    reason: patch.reason,
+  // Set response state to skipped
+  responses[patch.fieldId] = {
+    state: "skipped",
   };
 
-  // Clear any existing value (skipped fields have no value)
-  delete values[patch.fieldId];
+  // If a reason is provided, add a note
+  if (patch.reason) {
+    const noteId = generateNoteId(form);
+    form.notes.push({
+      id: noteId,
+      ref: patch.fieldId,
+      role: patch.role,
+      state: "skipped",
+      text: patch.reason,
+    });
+  }
 }
 
 /**
- * Apply a single patch to the values and skips.
+ * Apply an abort_field patch.
+ * Marks the field as aborted and optionally adds a note if a reason is provided.
+ */
+function applyAbortField(
+  form: ParsedForm,
+  responses: Record<Id, FieldResponse>,
+  patch: AbortFieldPatch,
+): void {
+  // Set response state to aborted
+  responses[patch.fieldId] = {
+    state: "aborted",
+  };
+
+  // If a reason is provided, add a note
+  if (patch.reason) {
+    const noteId = generateNoteId(form);
+    form.notes.push({
+      id: noteId,
+      ref: patch.fieldId,
+      role: patch.role,
+      state: "aborted",
+      text: patch.reason,
+    });
+  }
+}
+
+/**
+ * Apply an add_note patch.
+ * Adds a note to the form.
+ */
+function applyAddNote(
+  form: ParsedForm,
+  patch: AddNotePatch,
+): void {
+  const noteId = generateNoteId(form);
+  form.notes.push({
+    id: noteId,
+    ref: patch.ref,
+    role: patch.role,
+    state: patch.state,
+    text: patch.text,
+  });
+}
+
+/**
+ * Apply a remove_note patch.
+ * Removes a specific note by ID.
+ */
+function applyRemoveNote(
+  form: ParsedForm,
+  patch: RemoveNotePatch,
+): void {
+  const index = form.notes.findIndex((n) => n.id === patch.noteId);
+  if (index >= 0) {
+    form.notes.splice(index, 1);
+  }
+}
+
+/**
+ * Apply a remove_notes patch.
+ * Removes all notes matching the ref and role.
+ */
+function applyRemoveNotes(
+  form: ParsedForm,
+  patch: RemoveNotesPatch,
+): void {
+  form.notes = form.notes.filter(
+    (n) => !(n.ref === patch.ref && n.role === patch.role)
+  );
+}
+
+/**
+ * Apply a single patch to the form.
  */
 function applyPatch(
   form: ParsedForm,
-  values: Record<Id, FieldValue>,
-  skips: Record<Id, SkipInfo>,
+  responses: Record<Id, FieldResponse>,
   patch: Patch,
 ): void {
   switch (patch.op) {
     case "set_string":
-      applySetString(values, patch);
-      // Setting a value un-skips the field
-      delete skips[patch.fieldId];
+      applySetString(responses, patch);
       break;
     case "set_number":
-      applySetNumber(values, patch);
-      delete skips[patch.fieldId];
+      applySetNumber(responses, patch);
       break;
     case "set_string_list":
-      applySetStringList(values, patch);
-      delete skips[patch.fieldId];
+      applySetStringList(responses, patch);
       break;
     case "set_single_select":
-      applySetSingleSelect(values, patch);
-      delete skips[patch.fieldId];
+      applySetSingleSelect(responses, patch);
       break;
     case "set_multi_select":
-      applySetMultiSelect(values, patch);
-      delete skips[patch.fieldId];
+      applySetMultiSelect(responses, patch);
       break;
     case "set_checkboxes":
-      applySetCheckboxes(values, patch);
-      delete skips[patch.fieldId];
+      applySetCheckboxes(responses, patch);
       break;
     case "set_url":
-      applySetUrl(values, patch);
+      applySetUrl(responses, patch);
       break;
     case "set_url_list":
-      applySetUrlList(values, patch);
+      applySetUrlList(responses, patch);
       break;
     case "clear_field":
-      applyClearField(form, values, patch);
-      // Clearing also un-skips (different from skip)
-      delete skips[patch.fieldId];
+      applyClearField(responses, patch);
       break;
     case "skip_field":
-      applySkipField(form, values, skips, patch);
+      applySkipField(form, responses, patch);
+      break;
+    case "abort_field":
+      applyAbortField(form, responses, patch);
+      break;
+    case "add_note":
+      applyAddNote(form, patch);
+      break;
+    case "remove_note":
+      applyRemoveNote(form, patch);
+      break;
+    case "remove_notes":
+      applyRemoveNotes(form, patch);
       break;
   }
 }
@@ -512,8 +613,8 @@ export function applyPatches(
   const errors = validatePatches(form, patches);
   if (errors.length > 0) {
     // Reject - compute summaries from current state
-    const summaries = computeAllSummaries(form.schema, form.valuesByFieldId, [], form.skipsByFieldId);
     const issues = convertToInspectIssues(form);
+    const summaries = computeAllSummaries(form.schema, form.responsesByFieldId, form.notes, issues);
 
     return {
       applyStatus: "rejected",
@@ -525,22 +626,25 @@ export function applyPatches(
     };
   }
 
-  // Create new values and skips objects (don't mutate original)
-  const newValues: Record<Id, FieldValue> = { ...form.valuesByFieldId };
-  const newSkips: Record<Id, SkipInfo> = { ...form.skipsByFieldId };
+  // Create new responses and notes (don't mutate original)
+  const newResponses: Record<Id, FieldResponse> = { ...form.responsesByFieldId };
+  const newNotes: Note[] = [...form.notes];
+
+  // Save original notes to restore on failure (currently unused in transaction logic)
+  const _originalNotes = form.notes;
+  form.notes = newNotes;
 
   // Apply all patches
   for (const patch of patches) {
-    applyPatch(form, newValues, newSkips, patch);
+    applyPatch(form, newResponses, patch);
   }
 
-  // Update form with new values and skips
-  form.valuesByFieldId = newValues;
-  form.skipsByFieldId = newSkips;
+  // Update form with new responses
+  form.responsesByFieldId = newResponses;
 
   // Compute new summaries
   const issues = convertToInspectIssues(form);
-  const summaries = computeAllSummaries(form.schema, newValues, issues, newSkips);
+  const summaries = computeAllSummaries(form.schema, newResponses, newNotes, issues);
 
   return {
     applyStatus: "applied",
