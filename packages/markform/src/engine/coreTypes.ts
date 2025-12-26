@@ -470,14 +470,19 @@ export interface CheckboxProgressCounts {
   no: number;
 }
 
-/** Field progress tracking */
+/**
+ * Field progress tracking.
+ * Uses orthogonal booleans instead of ProgressState enum.
+ */
 export interface FieldProgress {
   kind: FieldKind;
   required: boolean;
-  responseState: AnswerState; // replaces submitted + skipped booleans
+  answerState: AnswerState;
   hasNotes: boolean;
   noteCount: number;
-  state: ProgressState;
+  /** Whether the field has a value (answered, or has checkbox selections) */
+  empty: boolean;
+  /** Whether the field passes validation (no issues) */
   valid: boolean;
   issueCount: number;
   checkboxProgress?: CheckboxProgressCounts;
@@ -1122,10 +1127,10 @@ export const CheckboxProgressCountsSchema = z.object({
 export const FieldProgressSchema = z.object({
   kind: FieldKindSchema,
   required: z.boolean(),
-  responseState: AnswerStateSchema,
+  answerState: AnswerStateSchema,
   hasNotes: z.boolean(),
   noteCount: z.number().int().nonnegative(),
-  state: ProgressStateSchema,
+  empty: z.boolean(),
   valid: z.boolean(),
   issueCount: z.number().int().nonnegative(),
   checkboxProgress: CheckboxProgressCountsSchema.optional(),

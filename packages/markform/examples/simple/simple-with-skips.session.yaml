@@ -21,6 +21,19 @@ turns:
           message: Required field "Age" is empty
           severity: required
           priority: 1
+        - ref: categories
+          scope: field
+          reason: required_missing
+          message: Required field "Categories" has no selections
+          severity: required
+          priority: 1
+        - ref: confirmations
+          scope: field
+          reason: required_missing
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2
+            unfilled)
+          severity: required
+          priority: 1
         - ref: email
           scope: field
           reason: required_missing
@@ -33,10 +46,28 @@ turns:
           message: Required field "Name" is empty
           severity: required
           priority: 1
+        - ref: priority
+          scope: field
+          reason: required_missing
+          message: Required field "Priority" has no selection
+          severity: required
+          priority: 1
         - ref: tags
           scope: field
           reason: required_missing
           message: Required field "Tags" is empty
+          severity: required
+          priority: 1
+        - ref: tasks_multi
+          scope: field
+          reason: required_missing
+          message: All items in "Tasks (Multi Mode)" must be completed
+          severity: required
+          priority: 1
+        - ref: tasks_simple
+          scope: field
+          reason: required_missing
+          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
           severity: required
           priority: 1
         - ref: website
@@ -45,37 +76,6 @@ turns:
           message: Required field "Website" is empty
           severity: required
           priority: 1
-        - ref: categories
-          scope: field
-          reason: validation_error
-          message: Required field "Categories" has no selections
-          severity: required
-          priority: 2
-        - ref: confirmations
-          scope: field
-          reason: validation_error
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2
-            unfilled)
-          severity: required
-          priority: 2
-        - ref: priority
-          scope: field
-          reason: validation_error
-          message: Required field "Priority" has no selection
-          severity: required
-          priority: 2
-        - ref: tasks_multi
-          scope: field
-          reason: validation_error
-          message: All items in "Tasks (Multi Mode)" must be completed
-          severity: required
-          priority: 2
-        - ref: tasks_simple
-          scope: field
-          reason: validation_error
-          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
-          severity: required
-          priority: 2
     apply:
       patches:
         - op: set_string
@@ -95,10 +95,41 @@ turns:
   - turn: 2
     inspect:
       issues:
+        - ref: categories
+          scope: field
+          reason: required_missing
+          message: Required field "Categories" has no selections
+          severity: required
+          priority: 1
+        - ref: confirmations
+          scope: field
+          reason: required_missing
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2
+            unfilled)
+          severity: required
+          priority: 1
+        - ref: priority
+          scope: field
+          reason: required_missing
+          message: Required field "Priority" has no selection
+          severity: required
+          priority: 1
         - ref: tags
           scope: field
           reason: required_missing
           message: Required field "Tags" is empty
+          severity: required
+          priority: 1
+        - ref: tasks_multi
+          scope: field
+          reason: required_missing
+          message: All items in "Tasks (Multi Mode)" must be completed
+          severity: required
+          priority: 1
+        - ref: tasks_simple
+          scope: field
+          reason: required_missing
+          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
           severity: required
           priority: 1
         - ref: website
@@ -107,37 +138,6 @@ turns:
           message: Required field "Website" is empty
           severity: required
           priority: 1
-        - ref: categories
-          scope: field
-          reason: validation_error
-          message: Required field "Categories" has no selections
-          severity: required
-          priority: 2
-        - ref: confirmations
-          scope: field
-          reason: validation_error
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2
-            unfilled)
-          severity: required
-          priority: 2
-        - ref: priority
-          scope: field
-          reason: validation_error
-          message: Required field "Priority" has no selection
-          severity: required
-          priority: 2
-        - ref: tasks_multi
-          scope: field
-          reason: validation_error
-          message: All items in "Tasks (Multi Mode)" must be completed
-          severity: required
-          priority: 2
-        - ref: tasks_simple
-          scope: field
-          reason: validation_error
-          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
-          severity: required
-          priority: 2
     apply:
       patches:
         - op: set_string_list
@@ -170,23 +170,23 @@ turns:
       issues:
         - ref: confirmations
           scope: field
-          reason: validation_error
+          reason: required_missing
           message: All items in "Confirmations (Explicit Mode)" must be answered (2
             unfilled)
           severity: required
-          priority: 2
+          priority: 1
         - ref: tasks_multi
           scope: field
-          reason: validation_error
+          reason: required_missing
           message: All items in "Tasks (Multi Mode)" must be completed
           severity: required
-          priority: 2
+          priority: 1
         - ref: tasks_simple
           scope: field
-          reason: validation_error
+          reason: required_missing
           message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
           severity: required
-          priority: 2
+          priority: 1
     apply:
       patches:
         - op: set_checkboxes

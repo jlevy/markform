@@ -202,70 +202,10 @@ function computeCheckboxProgress(
 }
 
 /**
- * Check if a checkboxes field is complete based on its mode.
+ * Compute whether a field is empty (has no value).
  */
-function isCheckboxesComplete(
-  field: CheckboxesField,
-  value: CheckboxesValue | undefined
-): boolean {
-  if (!value) {
-    return false;
-  }
-
-  const mode = field.checkboxMode ?? "multi";
-
-  for (const opt of field.options) {
-    const state = value.values[opt.id];
-    if (mode === "explicit") {
-      // Explicit mode: must be yes or no (not unfilled)
-      if (state === "unfilled") {
-        return false;
-      }
-    } else if (mode === "multi") {
-      // Multi mode: must be done or na (not todo, incomplete, or active)
-      if (state === "todo" || state === "incomplete" || state === "active") {
-        return false;
-      }
-    }
-    // Simple mode: any state is valid (just checked or unchecked)
-  }
-
-  return true;
-}
-
-/**
- * Compute the progress state for a field.
- */
-function computeFieldState(
-  field: Field,
-  value: FieldValue | undefined,
-  responseState: AnswerState,
-  issueCount: number
-): ProgressState {
-  const submitted = isFieldSubmitted(field, value);
-
-  // Aborted/skipped fields with issues are invalid (they have been addressed but are problematic)
-  if (!submitted && (responseState === "aborted" || responseState === "skipped") && issueCount > 0) {
-    return "invalid";
-  }
-
-  if (!submitted) {
-    return "empty";
-  }
-
-  if (issueCount > 0) {
-    return "invalid";
-  }
-
-  // For checkboxes, check if all items are in a "complete" state
-  if (field.kind === "checkboxes" && value?.kind === "checkboxes") {
-    const checkboxField = field;
-    if (!isCheckboxesComplete(checkboxField, value)) {
-      return "incomplete";
-    }
-  }
-
-  return "complete";
+function isFieldEmpty(field: Field, value: FieldValue | undefined): boolean {
+  return !isFieldSubmitted(field, value);
 }
 
 /**
@@ -280,8 +220,24 @@ function computeFieldProgress(
   const fieldIssues = issues.filter((i) => i.ref === field.id);
   const issueCount = fieldIssues.length;
   const value = response.value;
-  const valid = issueCount === 0;
-  const state = computeFieldState(field, value, response.state, issueCount);
+  const empty = isFieldEmpty(field, value);
+
+  // Determine validity:
+  // - Skipped/aborted fields with any issues are invalid (they've been addressed but problematic)
+  // - Empty unanswered fields with only "required_missing" issues are NOT invalid (just empty)
+  // - Fields with value validation issues are invalid
+  let valid = true;
+  if (response.state === "skipped" || response.state === "aborted") {
+    // Skipped/aborted fields with any issues are invalid
+    valid = issueCount === 0;
+  } else if (empty) {
+    // Empty unanswered fields: only invalid if they have issues OTHER than required_missing
+    const valueIssues = fieldIssues.filter((i) => i.reason !== "required_missing");
+    valid = valueIssues.length === 0;
+  } else {
+    // Filled fields: invalid if any issues
+    valid = issueCount === 0;
+  }
 
   // Compute note-related fields
   const fieldNotes = notes.filter((n) => n.ref === field.id);
@@ -291,10 +247,10 @@ function computeFieldProgress(
   const progress: FieldProgress = {
     kind: field.kind,
     required: field.required,
-    responseState: response.state,
+    answerState: response.state,
     hasNotes,
     noteCount,
-    state,
+    empty,
     valid,
     issueCount,
   };
@@ -373,27 +329,26 @@ export function computeProgressSummary(
       }
 
       // Count by response state (mutually exclusive)
-      if (progress.responseState === "answered") {
+      if (progress.answerState === "answered") {
         counts.answeredFields++;
-      } else if (progress.responseState === "skipped") {
+      } else if (progress.answerState === "skipped") {
         counts.skippedFields++;
-      } else if (progress.responseState === "aborted") {
+      } else if (progress.answerState === "aborted") {
         counts.abortedFields++;
-      } else if (progress.responseState === "unanswered") {
+      } else if (progress.answerState === "unanswered") {
         counts.emptyFields++;
       }
 
-      // Count by progress state
-      if (progress.state === "complete") {
+      // Count by validity and emptiness (derived from empty and valid booleans)
+      if (!progress.empty && progress.valid) {
         counts.completeFields++;
       }
-      if (progress.state === "incomplete") {
-        counts.incompleteFields++;
-      }
-      if (progress.state === "invalid") {
+      // Note: incompleteFields no longer tracked (was checkbox-specific)
+      // Fields with issues are invalid
+      if (!progress.valid) {
         counts.invalidFields++;
       }
-      if (progress.state === "empty") {
+      if (progress.empty) {
         if (progress.required) {
           counts.emptyRequiredFields++;
         } else {

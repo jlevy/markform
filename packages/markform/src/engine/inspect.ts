@@ -13,6 +13,7 @@ import type {
   IssueReason,
   FieldPriorityLevel,
   Field,
+  FieldProgress,
   Id,
 } from "./coreTypes";
 import { DEFAULT_PRIORITY } from "../settings.js";
@@ -125,19 +126,19 @@ function convertValidationIssues(
 function addOptionalEmptyIssues(
   existingIssues: InspectIssue[],
   form: ParsedForm,
-  fieldProgress: Record<string, { state: string; responseState: string }>
+  fieldProgress: Record<string, FieldProgress>
 ): InspectIssue[] {
   const issues = [...existingIssues];
   const fieldsWithIssues = new Set(existingIssues.map((i) => i.ref));
 
   for (const [fieldId, progress] of Object.entries(fieldProgress)) {
     // Skip if field is already addressed via skip_field or abort_field
-    if (progress.responseState === "skipped" || progress.responseState === "aborted") {
+    if (progress.answerState === "skipped" || progress.answerState === "aborted") {
       continue;
     }
 
     if (
-      progress.state === "empty" &&
+      progress.empty &&
       !fieldsWithIssues.has(fieldId) &&
       !isRequiredField(fieldId, form)
     ) {
@@ -159,21 +160,27 @@ function addOptionalEmptyIssues(
  * Map ValidationIssue to InspectIssue reason code.
  */
 function mapValidationToInspectReason(vi: ValidationIssue): IssueReason {
+  const msg = vi.message.toLowerCase();
+
   // Check for specific patterns in the message or code
-  // Required empty - check both code and message patterns
+  // Required empty - check code and message patterns for various field types
   if (
     vi.code === "REQUIRED_EMPTY" ||
-    (vi.message.toLowerCase().includes("required") &&
-      vi.message.toLowerCase().includes("empty"))
+    (msg.includes("required") && msg.includes("empty")) ||
+    (msg.includes("required") && msg.includes("no selection")) ||
+    (msg.includes("required") && msg.includes("no selections")) ||
+    msg.includes("must be answered") ||
+    msg.includes("must be completed") ||
+    msg.includes("must be checked")
   ) {
     return "required_missing";
   }
 
-  // Invalid checkbox state
+  // Invalid checkbox state (not about being empty)
   if (
     vi.code === "INVALID_CHECKBOX_STATE" ||
     vi.code === "CHECKBOXES_INCOMPLETE" ||
-    vi.message.toLowerCase().includes("checkbox")
+    msg.includes("checkbox")
   ) {
     return "checkbox_incomplete";
   }

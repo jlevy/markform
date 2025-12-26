@@ -113,7 +113,9 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       for (const fieldId of requiredFieldIds) {
         const progress = result.progressSummary.fields[fieldId];
         expect(progress, `Field ${fieldId} should have progress`).toBeDefined();
-        expect(progress!.state, `Field ${fieldId} should be complete`).toBe("complete");
+        // "complete" means: not empty and valid
+        expect(progress!.empty, `Field ${fieldId} should not be empty`).toBe(false);
+        expect(progress!.valid, `Field ${fieldId} should be valid`).toBe(true);
       }
     });
   });

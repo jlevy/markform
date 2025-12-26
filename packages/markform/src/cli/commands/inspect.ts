@@ -236,7 +236,7 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       totalNotes: number;
     };
     fields: Record<string, {
-      responseState: AnswerState;
+      answerState: AnswerState;
       hasNotes: boolean;
       noteCount: number;
     }>;
@@ -263,7 +263,7 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       const roleBadge = field.role !== "agent" ? cyan(`[${field.role}]`) : "";
       const fieldProgress = progress.fields[field.id];
       const responseStateBadge = fieldProgress
-        ? `[${formatAnswerState(fieldProgress.responseState, useColors)}]`
+        ? `[${formatAnswerState(fieldProgress.answerState, useColors)}]`
         : "";
       const notesBadge = fieldProgress?.hasNotes
         ? cyan(`[${fieldProgress.noteCount} note${fieldProgress.noteCount > 1 ? "s" : ""}]`)

@@ -109,8 +109,9 @@ markform:
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      expect(progress.fields.name?.state).toBe("empty");
-      expect(progress.fields.name?.responseState === "answered").toBe(false);
+      expect(progress.fields.name?.empty).toBe(true);
+      expect(progress.fields.name?.valid).toBe(true);
+      expect(progress.fields.name?.answerState === "answered").toBe(false);
       expect(progress.counts.answeredFields).toBe(0);
     });
 
@@ -135,8 +136,9 @@ John Doe
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      expect(progress.fields.name?.state).toBe("complete");
-      expect(progress.fields.name?.responseState === "answered").toBe(true);
+      expect(progress.fields.name?.empty).toBe(false);
+      expect(progress.fields.name?.valid).toBe(true);
+      expect(progress.fields.name?.answerState === "answered").toBe(true);
       expect(progress.counts.answeredFields).toBe(1);
       expect(progress.counts.completeFields).toBe(1);
     });
@@ -175,9 +177,8 @@ X
 
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, issues);
 
-      expect(progress.fields.name?.state).toBe("invalid");
-      expect(progress.fields.name?.issueCount).toBe(1);
       expect(progress.fields.name?.valid).toBe(false);
+      expect(progress.fields.name?.issueCount).toBe(1);
       expect(progress.counts.invalidFields).toBe(1);
     });
 
@@ -254,8 +255,9 @@ markform:
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      // In multi mode, having a "todo" item means incomplete
-      expect(progress.fields.tasks?.state).toBe("incomplete");
+      // In multi mode, having a "todo" item - field is not empty, still valid (no issues)
+      expect(progress.fields.tasks?.empty).toBe(false);
+      expect(progress.fields.tasks?.valid).toBe(true);
     });
 
     it("tracks explicit checkboxes with unfilled as incomplete", () => {
@@ -278,8 +280,9 @@ markform:
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      // In explicit mode, having an "unfilled" item means incomplete
-      expect(progress.fields.confirms?.state).toBe("incomplete");
+      // In explicit mode, having an "unfilled" item - field is not empty, still valid (no issues)
+      expect(progress.fields.confirms?.empty).toBe(false);
+      expect(progress.fields.confirms?.valid).toBe(true);
     });
   });
 
@@ -498,8 +501,8 @@ John
       parsed.responsesByFieldId.notes = { state: "skipped" };
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      expect(progress.fields.notes?.responseState).toBe("skipped");
-      expect(progress.fields.name?.responseState).not.toBe("skipped");
+      expect(progress.fields.notes?.answerState).toBe("skipped");
+      expect(progress.fields.name?.answerState).not.toBe("skipped");
       expect(progress.counts.skippedFields).toBe(1);
       expect(progress.counts.answeredFields).toBe(1);
     });
@@ -564,7 +567,7 @@ John
       parsed.responsesByFieldId.notes = { state: "skipped" };
       const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      expect(result.progressSummary.fields.notes?.responseState).toBe("skipped");
+      expect(result.progressSummary.fields.notes?.answerState).toBe("skipped");
       expect(result.progressSummary.counts.skippedFields).toBe(1);
       expect(result.formState).toBe("complete");
       expect(result.isComplete).toBe(true);
@@ -737,10 +740,10 @@ Alice
       const parsed = parseForm(markdown);
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
-      expect(progress.fields.name?.responseState).toBe("answered");
-      expect(progress.fields.bio?.responseState).toBe("skipped");
-      expect(progress.fields.age?.responseState).toBe("aborted");
-      expect(progress.fields.notes?.responseState).toBe("unanswered");
+      expect(progress.fields.name?.answerState).toBe("answered");
+      expect(progress.fields.bio?.answerState).toBe("skipped");
+      expect(progress.fields.age?.answerState).toBe("aborted");
+      expect(progress.fields.notes?.answerState).toBe("unanswered");
     });
 
     it("counts notes in progress summary", () => {
@@ -799,8 +802,8 @@ markform:
       expect(progress.counts.abortedFields).toBe(1);
       expect(progress.counts.answeredFields).toBe(0);
       // Aborted required fields are invalid (missing required value creates validation issue)
-      expect(progress.fields.name?.state).toBe("invalid");
-      expect(progress.fields.name?.responseState).toBe("aborted");
+      expect(progress.fields.name?.valid).toBe(false);
+      expect(progress.fields.name?.answerState).toBe("aborted");
     });
   });
 
