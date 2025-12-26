@@ -4,52 +4,56 @@ Version: v0.1 (proof of concept)
 
 ## Context & Motivation
 
-### What Markform Is
+### What Is Markform?
 
-**Markform** is a system for **agent-friendly, human-readable, editable forms** stored
-(`.form.md`) that support:
+**Markform** is format, data model, and editing API for **agent-friendly, human-readable
+text forms**.
 
-- **Structured context, schema, and form values in one text file** makes for easy and
-  efficient context engineering for agents that must fill in forms
+The Markform format is **an extension of Markdown** with structured tags defining typed
+fields and validation rules values that are **easily readable by agents and humans**.
 
-- **Incremental filling** (field-by-field or batch) to allow incrementally assembling
-  and validating structured data via multiple channels or input modes (such as a tool or
-  MCP server used by an agent, a CLI, a library used alongside other libraries like
-  Vercel AI SDK tools, or in web UIs for users)
+The data model and editing API let agents fill in forms.
+This enables powerful AI worflows that assemble information in a certain struture.
+
+Key elements of its design:
+
+- **Form content, structure, and field values are all in one text file** for better
+  context engineering.
+  This is a major advantage for LLM agents and for humans reviewing their work.
+
+- **Incremental filling** means an agent or a human can take many iterations, filling
+  and correcting a form if until it is complete and satisfies the validation rules.
+
+- The same API works with **multiple interfaces for humans or agents**. You can interact
+  with a form via a CLI, a programmatic API, from Vercel AI SDK or in an MCP server used
+  by an agent, or in web form UIs for humans.
 
 - **Flexible validation** at multiple scopes (field/group/form), including declarative
-  constraints and external hooks (code or LLM-based)
+  constraints and external hooks to arbitrary code (currently TypeScript) or LLM-based
+  validation instructions.
 
-- A **harness loop** ("auto-execute") that runs step-by-step loops for agents, making
-  powerful agentic tools possible (like deep research agents that assemble validated
-  output in a given structure)
+- A **harness loop** that runs step-by-step loops for agents, making powerful agentic
+  tools possible (like deep research agents that assemble validated output in a given
+  structure)
 
 - A **golden session testing framework** that validates end-to-end behavior across modes
   Markfrom tooling is itself easily tested end to end by agents
 
-> **Why Markdoc?** Markdoc treats documents as structured data with an AST-first
-> approach, enabling reliable programmatic manipulation while preserving human
-> readability. See [What is Markdoc?][markdoc-overview] for the philosophy behind
-> “docs-as-data” that Markform extends to “forms-as-data.”
-> For how Stripe uses this approach at scale, see [How Stripe builds interactive docs
-> with Markdoc][stripe-markdoc].
-
-### Why It Exists
+### Why Another Format?
 
 Plain Markdown checklists and ad-hoc templates are readable, but fragile to update
 programmatically via LLMs or agents.
 Simple to-do list tools are now commonly used by agents, but these do not extend to more
 complex assembly of information.
 
-The core idea is to allow two things that are increasingly essetial for advanced agentic
-workflows:
+## Why extend Markdoc?
 
-- Keep a **readable text file format** (a `.form.md`) a form template or a partially or
-  fully filled-in form and aligns well with existing Markdown, HTML, and React
-  conventions and is token-friendly for LLMs and agents
-
-- Have a clear schema (with field ids and defined tags) that allow **reliable machine
-  edits** to fill in or validate a form via tools or API calls
+Markdoc extends Markdown with documents with structured tags, allowing AST parsing and
+programmatic manipulation while preserving a readable text format for human and LLM
+readability. See [What is Markdoc?][markdoc-overview] for the philosophy behind
+“docs-as-data” that Markform extends to “forms-as-data.”
+For how Stripe uses this approach at scale, see [How Stripe builds interactive docs with
+Markdoc][stripe-markdoc].
 
 ### Example Use Cases
 
