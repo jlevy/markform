@@ -52,8 +52,6 @@ export function formatPatchValue(patch: Patch): string {
       return truncate(`note: ${patch.text}`);
     case "remove_note":
       return `(remove note ${patch.noteId})`;
-    case "remove_notes":
-      return `(remove notes for ${patch.ref})`;
   }
 }
 
@@ -75,6 +73,5 @@ export function formatPatchType(patch: Patch): string {
     case "set_url_list": return "url_list";
     case "add_note": return "note";
     case "remove_note": return "remove_note";
-    case "remove_notes": return "remove_notes";
   }
 }

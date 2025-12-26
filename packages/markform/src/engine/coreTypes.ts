@@ -630,13 +630,6 @@ export interface RemoveNotePatch {
   noteId: NoteId;
 }
 
-/** Remove notes - remove all notes matching ref and role */
-export interface RemoveNotesPatch {
-  op: "remove_notes";
-  ref: Id;
-  role: string;
-}
-
 /** Union of all patch types */
 export type Patch =
   | SetStringPatch
@@ -651,8 +644,7 @@ export type Patch =
   | SkipFieldPatch
   | AbortFieldPatch
   | AddNotePatch
-  | RemoveNotePatch
-  | RemoveNotesPatch;
+  | RemoveNotePatch;
 
 // =============================================================================
 // Harness Types
@@ -1275,12 +1267,6 @@ export const RemoveNotePatchSchema = z.object({
   noteId: NoteIdSchema,
 });
 
-export const RemoveNotesPatchSchema = z.object({
-  op: z.literal("remove_notes"),
-  ref: IdSchema,
-  role: z.string(),
-});
-
 export const PatchSchema = z.discriminatedUnion("op", [
   SetStringPatchSchema,
   SetNumberPatchSchema,
@@ -1295,7 +1281,6 @@ export const PatchSchema = z.discriminatedUnion("op", [
   AbortFieldPatchSchema,
   AddNotePatchSchema,
   RemoveNotePatchSchema,
-  RemoveNotesPatchSchema,
 ]);
 
 // Harness schemas

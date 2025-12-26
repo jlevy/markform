@@ -23,7 +23,6 @@ import type {
   ParsedForm,
   Patch,
   RemoveNotePatch,
-  RemoveNotesPatch,
   SetCheckboxesPatch,
   SetMultiSelectPatch,
   SetNumberPatch,
@@ -79,17 +78,6 @@ function validatePatch(
 ): PatchError | null {
   // Handle patches without fieldId
   if (patch.op === "add_note") {
-    // Validate that ref exists in idIndex
-    if (!form.idIndex.has(patch.ref)) {
-      return {
-        patchIndex: index,
-        message: `Reference "${patch.ref}" not found in form`,
-      };
-    }
-    return null;
-  }
-
-  if (patch.op === "remove_notes") {
     // Validate that ref exists in idIndex
     if (!form.idIndex.has(patch.ref)) {
       return {
@@ -570,19 +558,6 @@ function applyRemoveNote(
 }
 
 /**
- * Apply a remove_notes patch.
- * Removes all notes matching the ref and role.
- */
-function applyRemoveNotes(
-  form: ParsedForm,
-  patch: RemoveNotesPatch,
-): void {
-  form.notes = form.notes.filter(
-    (n) => !(n.ref === patch.ref && n.role === patch.role)
-  );
-}
-
-/**
  * Apply a single patch to the form.
  */
 function applyPatch(
@@ -629,9 +604,6 @@ function applyPatch(
       break;
     case "remove_note":
       applyRemoveNote(form, patch);
-      break;
-    case "remove_notes":
-      applyRemoveNotes(form, patch);
       break;
   }
 }

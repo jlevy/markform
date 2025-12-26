@@ -2459,8 +2459,7 @@ type Patch =
   | { op: 'skip_field'; fieldId: Id; role: string; reason?: string }
   | { op: 'abort_field'; fieldId: Id; role: string; reason?: string }
   | { op: 'add_note'; ref: Id; role: string; text: string; state?: 'skipped' | 'aborted' }
-  | { op: 'remove_note'; noteId: NoteId }
-  | { op: 'remove_notes'; ref: Id; role: string };
+  | { op: 'remove_note'; noteId: NoteId };
 
 // OptionId is just the local ID within the field (e.g., "ten_k", "bullish")
 // NOT the qualified form—the fieldId provides the scope
@@ -2583,14 +2582,6 @@ scope. For example:
   - Note with matching `noteId` is removed from `ParsedForm.notes`
 
   - If note doesn't exist, operation is silently ignored (idempotent)
-
-- `remove_notes`: Remove all notes matching ref and role.
-
-  **Behavior:**
-
-  - All notes with matching `ref` and `role` are removed from `ParsedForm.notes`
-
-  - If no matching notes exist, operation is silently ignored (idempotent)
 
 **Patch validation layers (*required*):**
 
