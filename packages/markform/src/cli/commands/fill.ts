@@ -432,7 +432,13 @@ export function registerFillCommand(program: Command): void {
             for (const patch of patches) {
               const typeName = formatPatchType(patch);
               const value = formatPatchValue(patch);
-              logInfo(ctx, `    ${pc.cyan(patch.fieldId)} ${pc.dim(`(${typeName})`)} ${pc.dim("=")} ${pc.green(value)}`);
+              // Some patches (add_note, remove_note) don't have fieldId
+              const fieldId = "fieldId" in patch ? patch.fieldId : (patch.op === "add_note" ? patch.ref : "");
+              if (fieldId) {
+                logInfo(ctx, `    ${pc.cyan(fieldId)} ${pc.dim(`(${typeName})`)} ${pc.dim("=")} ${pc.green(value)}`);
+              } else {
+                logInfo(ctx, `    ${pc.dim(`(${typeName})`)} ${pc.dim("=")} ${pc.green(value)}`);
+              }
             }
 
             // Log stats and prompts in verbose mode

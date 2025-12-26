@@ -2,15 +2,32 @@
 
 Version: v0.1 (proof of concept)
 
-## Context & Motivation
+## Motivation
 
 ### What Is Markform?
 
 **Markform** is format, data model, and editing API for **agent-friendly, human-readable
 text forms**.
 
-The Markform format is **an extension of Markdown** with structured tags defining typed
-fields and validation rules values that are **easily readable by agents and humans**.
+The Markform format is **a superset of Markdown** based on
+[Markdoc](https://github.com/markdoc/markdoc) that is **easily readable by agents and
+humans**.
+
+The idea is to combine the simple utility of a Markdown document with the addition of
+structured tags that define typed fields and validation rules values.
+
+### Why Another Format?
+
+Plain Markdown checklists and ad-hoc templates are readable, but fragile to update
+programmatically via LLMs or agents.
+Simple to-do list tools are now commonly used by agents, but these do not extend to more
+complex assembly of information.
+
+There are numerous other tools like Typeform and Google forms for collecting data from
+humans, but it seems there isn’t a clean text format for such forms or workflows for
+their use by agents.
+
+### How Do Agents Use Markform?
 
 The data model and editing API let agents fill in forms.
 This enables powerful AI worflows that assemble information in a certain struture.
@@ -39,82 +56,31 @@ Key elements of its design:
 - A **golden session testing framework** that validates end-to-end behavior across modes
   Markfrom tooling is itself easily tested end to end by agents
 
-### Why Another Format?
-
-Plain Markdown checklists and ad-hoc templates are readable, but fragile to update
-programmatically via LLMs or agents.
-Simple to-do list tools are now commonly used by agents, but these do not extend to more
-complex assembly of information.
-
-## Why extend Markdoc?
+### Why Markdoc?
 
 Markdoc extends Markdown with documents with structured tags, allowing AST parsing and
 programmatic manipulation while preserving a readable text format for human and LLM
-readability. See [What is Markdoc?][markdoc-overview] for the philosophy behind
-“docs-as-data” that Markform extends to “forms-as-data.”
-For how Stripe uses this approach at scale, see [How Stripe builds interactive docs with
-Markdoc][stripe-markdoc].
+readability. See Stripe’s [Markdoc overview][markdoc-overview] and
+[blog post][stripe-markdoc] for more on the philosophy behind “docs-as-data” that
+Markform extends to “forms-as-data.”
 
 ### Example Use Cases
 
-- Engineering task execution plans with checklists + structured outputs
+- A clean and readable text format for web UIs that involve filling in forms, supporting
+  strings, lists, numbers, checkboxes, URLs, and other fields
 
-- Quarterly earnings / 10-K analysis forms filled by an agent
+- A format and set of APIs for validating structured values filled into forms
 
-- Incident triage / postmortem templates
+- Deep research tools where agents need to follow codified processes to assemble
+  information
 
-- Research briefs, structured audits, compliance checklists
+- Practical task execution plans with checklists and assembled answers and notes
 
-### Terminology
+- Analysis processes, like assembling insights from unstructured sources in structured
+  form
 
-**Specification keywords:**
-
-| Term | Definition |
-| --- | --- |
-| *required* | A constraint that MUST be satisfied. Enforced by engine validation; violations produce errors. |
-| *recommended* | A convention that SHOULD be followed for consistency and best practices. Not enforced by the engine; violations do not produce errors. |
-
-**Form states:**
-
-| Term | Definition |
-| --- | --- |
-| **Template form** | A form with no values filled in (schema only). Starting point for filling. |
-| **Incomplete form** | A form with some values but not yet complete or valid. |
-| **Completed form** | A form with all required fields filled and passing validation. |
-
-**Checkbox modes:**
-
-| Term | Definition |
-| --- | --- |
-| **Simple checkbox** | Checkbox mode with 2 states: `todo` and `done`. GFM-compatible. |
-| **Multi checkbox** | Checkbox mode with 5 states: `todo`, `done`, `incomplete`, `active`, `na`. Default mode. |
-| **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit "unchecked = no". |
-
-**Execution concepts:**
-
-| Term | Definition |
-| --- | --- |
-| **Harness loop** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. Also called just "harness" or "loop" — these refer to the same component. |
-| **Session** | A single execution run from template form to completed form (or abandonment). |
-| **Turn** | One iteration of the harness loop: inspect → recommend → apply patches → validate. |
-| **Patch** | A single atomic change operation applied to form values (e.g., setting a string field, toggling checkboxes). |
-
-**Testing and files:**
-
-| Term | Definition |
-| --- | --- |
-| **Session transcript** | YAML serialization of a session's turns for golden testing (`.session.yaml`). |
-| **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic "correct" values for testing. |
-| **Sidecar file** | A companion file with the same basename but different extension (e.g., `X.form.md` → `X.valid.ts`). |
-
-**Type system:**
-
-| Term | Definition |
-| --- | --- |
-| **FieldKind** | The type discriminant for fields. One of: `'string'`, `'number'`, `'string_list'`, `'checkboxes'`, `'single_select'`, `'multi_select'`, `'url'`, `'url_list'`. Used as the `kind` property on `Field` and `FieldValue` types for discriminated unions. |
-| **kind** | Reserved property name used exclusively on `Field` and `FieldValue` types to indicate the field type. Always holds a `FieldKind` value. Other structural elements use different property names (e.g., `nodeType` for ID index entries, `tag` for documentation blocks). |
-
-* * *
+- Multi-agent and agent-human workflows, where humans and/or agents fill in different
+  parts of a form, or where humans or agents review each other’s work in structured ways
 
 ## Architecture Roadmap
 
@@ -148,83 +114,83 @@ this TypeScript codebase).
 ### Layer Overview
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                            MARKFORM SPECIFICATION                                      │
-│                         (Portable, Language-Agnostic)                                  │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │ Layer 1: SYNTAX                                                                 │   │
-│  │ The .form.md file format, Markdoc tag syntax, structural/field tags             │   │
-│  │ - File extension, frontmatter structure                                         │   │
-│  │ - Tag definitions: form, field-group, string-field, checkboxes, etc.            │   │
-│  │ - Option syntax, checkbox state tokens, value encoding                          │   │
-│  └─────────────────────────────────────────────────────────────────────────────────┘   │
-│                                      │                                                 │
-│                                      ▼                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │ Layer 2: FORM DATA MODEL                                                        │   │
-│  │ Precise schema definitions for forms, fields, values, and documentation         │   │
-│  │ - FormSchema, FieldGroup, Field (all kinds), FieldValue                         │   │
-│  │ - DocumentationBlock, StructureSummary, ProgressSummary                         │   │
-│  │ - Defined via Zod schemas (mappable to JSON Schema, Pydantic, etc.)             │   │
-│  └─────────────────────────────────────────────────────────────────────────────────┘   │
-│                                      │                                                 │
-│                                      ▼                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │ Layer 3: VALIDATION & FORM FILLING                                              │   │
-│  │ Rules for validation, progress computation, and form manipulation               │   │
-│  │ - ID uniqueness rules (global vs field-scoped)                                  │   │
-│  │ - Required field semantics and completion rules per field kind                  │   │
-│  │ - ProgressState computation (empty/incomplete/invalid/complete)                 │   │
-│  │ - Built-in validation (type/pattern/range checks)                               │   │
-│  │ - Hook validator contract (code validators, LLM validators)                     │   │
-│  │ - Patch data model for operations and their effects on form state               │   │
-│  └─────────────────────────────────────────────────────────────────────────────────┘   │
-│                                      │                                                 │
-│                                      ▼                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │ Layer 4: TOOL API & INTERFACES                                                  │   │
-│  │ Abstract interfaces for agents and humans to interact with forms                │   │
-│  │ - MCP tool definitions: inspect, apply, export, getMarkdown                     │   │
-│  │ - Method signatures and result types                                            │   │
-│  │ - Import/export formats for values (JSON, YAML)                                 │   │
-│  │ - Priority scoring and issue ordering for agent guidance                        │   │
-│  │ - Abstract UI patterns (console, web, agent tools)                              │   │
-│  └─────────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                        │
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│                            MARKFORM SPECIFICATION                                     |
+│                         (Portable, Language-Agnostic)                                 |
+├───────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                       |
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
+│  │ Layer 1: SYNTAX                                                                 │  |
+│  │ The .form.md file format, Markdoc tag syntax, structural/field tags             │  |
+│  │ - File extension, frontmatter structure                                         │  |
+│  │ - Tag definitions: form, field-group, string-field, checkboxes, etc.            │  |
+│  │ - Option syntax, checkbox state tokens, value encoding                          │  |
+│  └─────────────────────────────────────────────────────────────────────────────────┘  |
+│                                      │                                                |
+│                                      ▼                                                |
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
+│  │ Layer 2: FORM DATA MODEL                                                        │  |
+│  │ Precise schema definitions for forms, fields, values, and documentation         │  |
+│  │ - FormSchema, FieldGroup, Field (all kinds), FieldValue                         │  |
+│  │ - DocumentationBlock, StructureSummary, ProgressSummary                         │  |
+│  │ - Defined via Zod schemas (mappable to JSON Schema, Pydantic, etc.)             │  |
+│  └─────────────────────────────────────────────────────────────────────────────────┘  |
+│                                      │                                                |
+│                                      ▼                                                |
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
+│  │ Layer 3: VALIDATION & FORM FILLING                                              │  |
+│  │ Rules for validation, progress computation, and form manipulation               │  |
+│  │ - ID uniqueness rules (global vs field-scoped)                                  │  |
+│  │ - Required field semantics and completion rules per field kind                  │  |
+│  │ - ProgressState computation (empty/incomplete/invalid/complete)                 │  |
+│  │ - Built-in validation (type/pattern/range checks)                               │  |
+│  │ - Hook validator contract (code validators, LLM validators)                     │  |
+│  │ - Patch data model for operations and their effects on form state               │  |
+│  └─────────────────────────────────────────────────────────────────────────────────┘  |
+│                                      │                                                |
+│                                      ▼                                                |
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
+│  │ Layer 4: TOOL API & INTERFACES                                                  │  |
+│  │ Abstract interfaces for agents and humans to interact with forms                │  |
+│  │ - MCP tool definitions: inspect, apply, export, getMarkdown                     │  |
+│  │ - Method signatures and result types                                            │  |
+│  │ - Import/export formats for values (JSON, YAML)                                 │  |
+│  │ - Priority scoring and issue ordering for agent guidance                        │  |
+│  │ - Abstract UI patterns (console, web, agent tools)                              │  |
+│  └─────────────────────────────────────────────────────────────────────────────────┘  |
+│                                                                                       |
 └────────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                         IMPLEMENTATION COMPONENTS                                      │
-│                         (This TypeScript Codebase)                                     │
+│                         IMPLEMENTATION COMPONENTS                                     |
+│                         (This TypeScript Codebase)                                    |
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │ ENGINE IMPLEMENTATION                                                           │   │
-│  │ TypeScript/Zod implementation of the specification                              │   │
-│  │ - Markdoc-based parser and canonical serializer                                 │   │
-│  │ - Validation engine, patch application                                          │   │
-│  │ - jiti-based code validator loading                                             │   │
-│  └─────────────────────────────────────────────────────────────────────────────────┘   │
-│                                      │                                                 │
-│              ┌───────────────────────┼───────────────────────┐                         │
-│              ▼                       ▼                       ▼                         │
-│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐             │
-│  │ USER INTERFACES     │  │ AGENT INTERFACES    │  │ EXECUTION HARNESS   │             │
-│  │ - CLI commands      │  │ - Tool API library  │  │ - Step-by-step loop │             │
-│  │ - Web UI (serve)    │  │ - MCP server        │  │ - Mock agent mode   │             │
-│  │ - Render to HTML    │  │ - AI SDK tools      │  │ - Live agent mode   │             │
-│  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘             │
-│                                      │                                                 │
-│                                      ▼                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐   │
-│  │ TESTING FRAMEWORK                                                               │   │
-│  │ Golden session testing infrastructure                                           │   │
-│  │ - Session transcript format (.session.yaml)                                     │   │
-│  │ - Mock/live mode recording and replay                                           │   │
-│  └─────────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                        │
+│                                                                                       |
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
+│  │ ENGINE IMPLEMENTATION                                                           │  |
+│  │ TypeScript/Zod implementation of the specification                              │  |
+│  │ - Markdoc-based parser and canonical serializer                                 │  |
+│  │ - Validation engine, patch application                                          │  |
+│  │ - jiti-based code validator loading                                             │  |
+│  └─────────────────────────────────────────────────────────────────────────────────┘  |
+│                                      │                                                |
+│              ┌───────────────────────┼───────────────────────┐                        |
+│              ▼                       ▼                       ▼                        |
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐            |
+│  │ USER INTERFACES     │  │ AGENT INTERFACES    │  │ EXECUTION HARNESS   │            |
+│  │ - CLI commands      │  │ - Tool API library  │  │ - Step-by-step loop │            |
+│  │ - Web UI (serve)    │  │ - MCP server        │  │ - Mock agent mode   │            |
+│  │ - Render to HTML    │  │ - AI SDK tools      │  │ - Live agent mode   │            |
+│  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘            |
+│                                      │                                                |
+│                                      ▼                                                |
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
+│  │ TESTING FRAMEWORK                                                               │  |
+│  │ Golden session testing infrastructure                                           │  |
+│  │ - Session transcript format (.session.yaml)                                     │  |
+│  │ - Mock/live mode recording and replay                                           │  |
+│  └─────────────────────────────────────────────────────────────────────────────────┘  |
+│                                                                                       |
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -273,6 +239,60 @@ The **Implementation Components** are specific to this TypeScript codebase:
 | User Interfaces | Engine | (end users) |
 | Agent Interfaces | Engine, Harness | (agents) |
 | Testing Framework | Engine, Harness | (developers) |
+
+### Terminology
+
+**Specification keywords:**
+
+| Term | Definition |
+| --- | --- |
+| *required* | A constraint that MUST be satisfied. Enforced by engine validation; violations produce errors. |
+| *recommended* | A convention that SHOULD be followed for consistency and best practices. Not enforced by the engine; violations do not produce errors. |
+
+**Form concepts:**
+
+| Term | Definition |
+| --- | --- |
+| **Field** | A single data entry point within a form. Fields have a kind (type), label, and optional constraints. |
+| **Kind** | The type of a field. One of: `string`, `number`, `string_list`, `checkboxes`, `single_select`, `multi_select`, `url`, `url_list`. Determines the field's value structure, input behavior, and validation rules. |
+| **Field group** | A container that organizes related fields together. Groups have an id, optional title, and may have custom validators. Currently (v0.1), groups contain only fields (they are not nested groups). |
+| **Template form** | A form with no values filled in (schema only). Starting point for filling. |
+| **Incomplete form** | A form with some values but not yet complete or valid. |
+| **Completed form** | A form with all required fields filled and passing validation. |
+
+**Checkbox modes:**
+
+| Term | Definition |
+| --- | --- |
+| **Simple checkbox** | Checkbox mode with 2 states: `todo` and `done`. GFM-compatible. |
+| **Multi checkbox** | Checkbox mode with 5 states: `todo`, `done`, `incomplete`, `active`, `na`. Default mode. |
+| **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit "unchecked = no". |
+
+**Field state concepts:**
+
+| Term | Definition |
+| --- | --- |
+| **AnswerState** | The action taken on a field: `unanswered` (no action), `answered` (has value), `skipped` (explicitly bypassed), `aborted` (explicitly abandoned). |
+| **ProgressState** | Form-level completion status: `empty`, `incomplete`, `invalid`, `complete`. |
+| **ProgressCounts** | Rollup counts with three orthogonal dimensions: AnswerState (unanswered/answered/skipped/aborted), Validity (valid/invalid), Value presence (empty/filled). |
+| **FieldProgress** | Per-field progress info including `answerState`, `valid`, `empty`, and optional `checkboxProgress`. |
+
+**Execution concepts:**
+
+| Term | Definition |
+| --- | --- |
+| **Harness loop** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. Also called just "harness" or "loop" — these refer to the same component. |
+| **Session** | A single execution run from template form to completed form (or abandonment). |
+| **Turn** | One iteration of the harness loop: inspect → recommend → apply patches → validate. |
+| **Patch** | A single atomic change operation applied to form values (e.g., setting a string field, toggling checkboxes). |
+
+**Testing and files:**
+
+| Term | Definition |
+| --- | --- |
+| **Session transcript** | YAML serialization of a session's turns for golden testing (`.session.yaml`). |
+| **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic "correct" values for testing. |
+| **Sidecar file** | A companion file with the same basename but different extension (e.g., `X.form.md` → `X.valid.ts`). |
 
 ### Future: Extracting the Core Specification
 
@@ -564,11 +584,12 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 [Markdoc Config][markdoc-config] for how to register custom tags.
 
-Each field tag maps to a **FieldKind** value used as the `kind` discriminant in the type
-system. The `kind` property is reserved exclusively for field types—it identifies what
-type of field a `Field` or `FieldValue` represents.
+Each field tag maps to a **kind** value that identifies the field type.
+The `kind` property is reserved exclusively for field types—it identifies what type of
+field a `Field` or `FieldValue` represents.
+(In TypeScript, the type is `FieldKind`.)
 
-| Tag | FieldKind | Description |
+| Tag | Kind | Description |
 | --- | --- | --- |
 | `string-field` | `'string'` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
 | `number-field` | `'number'` | Numeric value; optional `min`, `max`, `integer` |
@@ -928,6 +949,119 @@ Minimum 5; include more if needed.
 
 **Note:** The doc block is a sibling placed after the field, not nested inside it.
 
+##### Field State Attributes
+
+Fields can have a `state` attribute to indicate skip or abort status. The attribute is
+serialized on the opening tag:
+
+**Skipped field (no reason):**
+```md
+{% string-field id="optional_notes" label="Optional notes" state="skipped" %}{% /string-field %}
+```
+
+**Aborted field (no reason):**
+```md
+{% string-field id="company_name" label="Company name" required=true state="aborted" %}{% /string-field %}
+```
+
+**State attribute values:**
+
+- `state="skipped"`: Field was explicitly skipped via `skip_field` patch
+
+- `state="aborted"`: Field was explicitly aborted via `abort_field` patch
+
+**Serialization with sentinel values and reasons (markform-254):**
+
+When a field has a skip or abort state AND a reason was provided via the patch, the
+reason is embedded in the sentinel value using parentheses:
+
+```md
+{% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
+```value
+|SKIP| (Information not publicly available)
+```
+{% /string-field %}
+```
+
+```md
+{% number-field id="projected_revenue" label="Projected revenue" state="aborted" %}
+```value
+|ABORT| (Financial projections cannot be determined from available data)
+```
+{% /number-field %}
+```
+
+**Parsing rules:**
+- If `state="skipped"` is present, field's responseState is `'skipped'`
+- If `state="aborted"` is present, field's responseState is `'aborted'`
+- Otherwise, responseState is determined by value presence (`'answered'` or `'empty'`)
+- Sentinel values (`|SKIP|` or `|ABORT|`) are parsed as metadata, not field values
+- Text in parentheses after sentinel is extracted as `FieldResponse.reason`
+
+**Serialization rules:**
+- Only emit `state` attribute when responseState is `'skipped'` or `'aborted'`
+- If skip/abort has a reason, serialize as sentinel value with parenthesized reason
+- If skip/abort has no reason, omit the value fence entirely
+
+##### Note Serialization Format
+
+Notes are general-purpose runtime annotations by agents/users, serialized at the end of
+the form body (before `{% /form %}`). Notes are sorted numerically by ID for
+deterministic output.
+
+**Note tag syntax:**
+
+```md
+{% note id="n1" ref="field_id" role="agent" %}
+General observation about this field.
+{% /note %}
+
+{% note id="n2" ref="quarterly_earnings" role="agent" %}
+Analysis completed with partial data due to API limitations.
+{% /note %}
+```
+
+**Note attributes:**
+
+| Attribute | Required | Description |
+| --- | --- | --- |
+| `id` | Yes | Unique note identifier (implementation uses n1, n2, n3...) |
+| `ref` | Yes | Target element ID (field, group, or form) |
+| `role` | Yes | Who created the note (e.g., 'agent', 'user') |
+
+> **Note (markform-254):** Notes no longer support a `state` attribute.
+> Skip/abort reasons are now embedded directly in the field value using sentinel syntax
+> like `|SKIP| (reason)`. Notes are purely for general annotations.
+
+**Placement and ordering:**
+
+- Notes appear at the end of the form, before `{% /form %}`
+
+- Notes are sorted numerically by ID suffix (n1, n2, n10 not n1, n10, n2)
+
+- Multiple notes can reference the same target element
+
+- Notes are separated by blank lines for readability
+
+**Example form with notes:**
+
+```md
+{% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
+
+{% field-group id="company_info" title="Company Info" %}
+{% string-field id="company_name" label="Company name" state="skipped" %}
+```value
+|SKIP| (Not applicable for this analysis type)
+```
+{% /string-field %} {% /field-group %}
+
+{% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
+data due to API limitations.
+{% /note %}
+
+{% /form %}
+```
+
 ##### The `process=false` Attribute
 
 **Rule:** Only emit `process=false` when the value contains Markdoc syntax.
@@ -941,10 +1075,11 @@ It is only required when the value contains Markdoc tag syntax:
 
 <!-- ... -->
 
-`), not `{# ... #}`. HTML comments in form values are plain text and don't require `process=false`.
+`), not `{# ... #}`. HTML comments in form values are plain text and don't require
+`process=false`.
 
-**Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check
-is sufficient since false positives are harmless (adding `process=false` when not needed
+**Detection:** Check if the value matches the pattern `/\{%/`. A simple regex check is
+sufficient since false positives are harmless (adding `process=false` when not needed
 has no effect, but we prefer not to clutter the output).
 
 ```ts
@@ -1162,6 +1297,29 @@ type Id = string; // validated snake_case, e.g., /^[a-z][a-z0-9_]*$/
 // Validator reference: simple string ID or parameterized object
 type ValidatorRef = string | { id: string; [key: string]: unknown };
 
+// Answer state for a field - orthogonal to field type
+// Any field can be in any answer state
+type AnswerState = 'unanswered' | 'answered' | 'skipped' | 'aborted';
+
+// Field response: combines answer state with optional value
+// Used in responsesByFieldId for all fields
+interface FieldResponse {
+  state: AnswerState;
+  value?: FieldValue;  // present only when state === 'answered'
+  reason?: string;     // skip/abort reason (embedded in sentinel value)
+}
+
+// Note system for field/group/form annotations
+type NoteId = string;  // unique note ID (implementation uses n1, n2, n3...)
+
+interface Note {
+  id: NoteId;
+  ref: Id;                       // target ID (field, group, or form)
+  role: string;                  // who created (agent, user, ...)
+  state?: 'skipped' | 'aborted'; // optional: links note to action
+  text: string;                  // markdown content
+}
+
 // Multi-checkbox states (checkboxMode="multi", default)
 type MultiCheckboxState = 'todo' | 'done' | 'incomplete' | 'active' | 'na';
 
@@ -1293,7 +1451,7 @@ type FieldValue =
 type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
 
 /** Documentation tag types (from Markdoc tag name) */
-type DocumentationTag = 'description' | 'instructions' | 'notes' | 'examples' | 'documentation';
+type DocumentationTag = 'description' | 'instructions' | 'documentation';
 
 interface DocumentationBlock {
   ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
@@ -1312,20 +1470,22 @@ interface IdIndexEntry {
   parentId?: Id;           // parent group/form ID (undefined for form)
 }
 
-// Skip state for a field (stored separately from values)
-interface SkipInfo {
-  skipped: boolean;
-  reason?: string;
+// FormMetadata: form-level metadata from YAML frontmatter
+interface FormMetadata {
+  markformVersion: string;
+  roles: string[];                        // available roles for field assignment
+  roleInstructions: Record<string, string>; // instructions per role
 }
 
 // ParsedForm: canonical internal representation returned by parseForm()
 interface ParsedForm {
   schema: FormSchema;
-  valuesByFieldId: Record<Id, FieldValue>;
-  skipsByFieldId: Record<Id, SkipInfo>;   // skip state per field (runtime metadata)
+  responsesByFieldId: Record<Id, FieldResponse>;  // unified response state + value
+  notes: Note[];                          // agent/user notes
   docs: DocumentationBlock[];
   orderIndex: Id[];                       // fieldIds in document order (deterministic)
   idIndex: Map<Id, IdIndexEntry>;         // fast lookup for form/group/field (NOT options)
+  metadata?: FormMetadata;                // optional for backward compat with forms without frontmatter
 }
 
 // InspectIssue: unified type for inspect/apply API results
@@ -1409,20 +1569,20 @@ interface StructureSummary {
 Tracks filling progress per field without exposing actual values:
 
 ```ts
-// Progress state for a field or the whole form
+// Progress state for a field or the whole form (derived from dimensions)
 type ProgressState = 'empty' | 'incomplete' | 'invalid' | 'complete';
 
 interface FieldProgress {
   kind: FieldKind;             // field type
   required: boolean;           // whether field has required=true
 
-  submitted: boolean;          // whether any value has been provided ("answered")
-  state: ProgressState;        // computed progress state
+  answerState: AnswerState;    // unified answer state (unanswered/answered/skipped/aborted)
+  hasNotes: boolean;           // whether field has any notes attached
+  noteCount: number;           // count of notes attached to this field
+
+  empty: boolean;              // true if field has no value
   valid: boolean;              // true iff no validation issues for this field
   issueCount: number;          // count of ValidationIssues referencing this field
-
-  skipped: boolean;            // true if explicitly skipped via skip_field patch
-  skipReason?: string;         // reason provided in skip_field patch
 
   /**
    * Checkbox state rollup (only present for checkboxes fields).
@@ -1462,17 +1622,23 @@ interface ProgressCounts {
   totalFields: number;           // all fields in the form
   requiredFields: number;        // fields with required=true
 
-  submittedFields: number;       // fields that have been submitted (have values)
+  // Dimension 1: AnswerState (mutually exclusive, sum to totalFields)
+  unansweredFields: number;      // fields with answerState='unanswered'
+  answeredFields: number;        // fields with answerState='answered' (have values)
+  skippedFields: number;         // fields with answerState='skipped'
+  abortedFields: number;         // fields with answerState='aborted'
 
-  completeFields: number;        // fields in 'complete' state
-  incompleteFields: number;      // fields in 'incomplete' state
-  invalidFields: number;         // fields in 'invalid' state
+  // Dimension 2: Validity (mutually exclusive, sum to totalFields)
+  validFields: number;           // fields with valid=true
+  invalidFields: number;         // fields with valid=false
 
+  // Dimension 3: Value presence (mutually exclusive, sum to totalFields)
+  emptyFields: number;           // fields with empty=true (no value)
+  filledFields: number;          // fields with empty=false (have value)
+
+  // Derived counts
   emptyRequiredFields: number;   // required fields with no value
-  emptyOptionalFields: number;   // optional fields with no value
-
-  answeredFields: number;        // same as submittedFields (clearer terminology)
-  skippedFields: number;         // fields explicitly skipped via skip_field
+  totalNotes: number;            // total notes across all fields/groups/form
 }
 ```
 
@@ -1483,25 +1649,38 @@ result, and completeness rules:
 
 | State | Meaning |
 | --- | --- |
-| `empty` | Not submitted (no value provided) |
-| `incomplete` | Submitted but fails completeness rules (e.g., minItems not met, required checkbox not terminal) |
-| `invalid` | Submitted but fails validation (type/pattern/range errors or hook issues) |
-| `complete` | Satisfies completeness rules and passes validation |
+| `empty` | No fields have values |
+| `incomplete` | Some fields have values but not all required fields are filled or valid |
+| `invalid` | Form has validation errors or aborted fields |
+| `complete` | All required fields are filled and all fields are valid |
 
-**Submission rules (deterministic, per field kind):**
+**AnswerState rules (deterministic, per field):**
 
-| Field Kind | Submitted when |
+The `answerState` is determined by the field’s FieldResponse:
+
+| AnswerState | When |
+| --- | --- |
+| `unanswered` | No value provided and not skipped/aborted |
+| `answered` | FieldResponse has a value (value !== undefined) |
+| `skipped` | Explicitly skipped via skip_field patch |
+| `aborted` | Explicitly aborted via abort_field patch |
+
+For `answered` fields, value presence is determined per field kind:
+
+| Field Kind | Has value when |
 | --- | --- |
 | `string` | `value !== null && value.trim().length > 0` |
 | `number` | `value !== null` |
 | `single_select` | `selected !== null` |
 | `multi_select` | `selected.length > 0` |
 | `string_list` | `items.length > 0` |
+| `url` | `value !== null && value.trim().length > 0` |
+| `url_list` | `items.length > 0` |
 | `checkboxes` | At least one option state differs from initial (`todo` for multi/simple, `unfilled` for explicit) |
 
 **Completeness rules (for required fields):**
 
-Completeness is relevant only when `required=true`. A submitted field is complete if:
+Completeness is relevant only when `required=true`. An answered field is complete if:
 
 | Field Kind | Complete when |
 | --- | --- |
@@ -1515,7 +1694,9 @@ Completeness is relevant only when `required=true`. A submitted field is complet
 **State computation logic:**
 
 ```
-if not submitted:
+if not answered AND (skipped OR aborted) AND has validation errors:
+  state = 'invalid'  // addressed but problematic
+elif not answered:
   state = 'empty'
 elif has validation errors:
   state = 'invalid'
@@ -1530,7 +1711,7 @@ else:
 The overall `form_state: ProgressState` is derived from `ProgressSummary.counts`:
 
 ```
-if counts.submittedFields == 0:
+if counts.answeredFields == 0:
   form_state = 'empty'
 elif counts.invalidFields > 0:
   form_state = 'invalid'
@@ -1566,10 +1747,11 @@ The completion formula becomes:
 Role-filtered completion for targetRoles:
   roleFilteredFields = fields.filter(f => targetRoles.includes(f.role) || !f.role)
 
-  isComplete = for all f in roleFilteredFields:
-    f.state == 'complete'  OR
-    f.state == 'skipped'   OR
-    (!f.required && f.state == 'empty')
+  isComplete =
+    abortedFields == 0  AND
+    for all f in roleFilteredFields:
+      f.responseState == 'answered' (with f.state == 'complete')  OR
+      f.responseState == 'skipped'
 ```
 
 This is critical for forms where the user fills some fields first, then the agent fills
@@ -1578,21 +1760,29 @@ Without role filtering, the harness would incorrectly report the form as incompl
 after all agent fields are filled, because user fields (intended for a different actor)
 would still be empty.
 
-**Field states for completion purposes:**
+**Response states for completion purposes:**
 
-| State | Counts as Complete | Notes |
+| Response State | Counts as Complete | Notes |
 | --- | --- | --- |
-| `complete` | Yes | Field has valid value (answered) |
-| `skipped` | Yes | Explicitly skipped via `skip_field` patch (tracked in `FieldProgress.skipped`, not a `ProgressState` value) |
-| `empty` (non-required) | No | Optional field left unfilled—must be answered OR skipped |
-| `empty` (required) | No | Required field must be answered (cannot be skipped) |
-| `incomplete` | No | Partially filled (e.g., list with fewer items than `minItems`) |
-| `invalid` | No | Has validation errors |
+| `answered` (complete) | Yes | Field has valid value and passes validation |
+| `skipped` | Yes | Explicitly skipped via `skip_field` patch (optional fields only) |
+| `aborted` | No | Field marked as unable to complete—blocks all completion |
+| `empty` | No | Field has no response—must be answered or skipped |
+| `answered` (incomplete) | No | Partially filled (e.g., list with fewer items than `minItems`) |
+| `answered` (invalid) | No | Has validation errors |
 
-**Note:** The completion formula requires every field to be either *answered* (has
-value) or *skipped* (explicitly marked).
+**Note:** The completion formula requires:
+
+1. All fields to be either *answered* (with complete/valid value) or *skipped*
+
+2. No fields can be in *aborted* state (abortedFields == 0)
+
 Simply leaving an optional field empty does NOT count toward completion—the agent must
-actively skip it. This ensures agents acknowledge every field in the form.
+actively skip it or provide a value.
+This ensures agents acknowledge every field.
+
+Aborted fields block completion entirely, requiring manual intervention to either fill
+the field or remove the abort state before the form can be completed.
 
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
@@ -1624,6 +1814,8 @@ const FieldKindSchema = z.enum([
   'string', 'number', 'string_list', 'checkboxes', 'single_select', 'multi_select', 'url', 'url_list'
 ]);
 
+const AnswerStateSchema = z.enum(['unanswered', 'answered', 'skipped', 'aborted']);
+
 const StructureSummarySchema = z.object({
   groupCount: z.number().int().nonnegative(),
   fieldCount: z.number().int().nonnegative(),
@@ -1638,11 +1830,6 @@ const StructureSummarySchema = z.object({
 });
 
 const ProgressStateSchema = z.enum(['empty', 'incomplete', 'invalid', 'complete']);
-
-const SkipInfoSchema = z.object({
-  skipped: z.boolean(),
-  reason: z.string().optional(),
-});
 
 const CheckboxProgressCountsSchema = z.object({
   total: z.number().int().nonnegative(),
@@ -1661,26 +1848,32 @@ const CheckboxProgressCountsSchema = z.object({
 const FieldProgressSchema = z.object({
   kind: FieldKindSchema,
   required: z.boolean(),
-  submitted: z.boolean(),
-  state: ProgressStateSchema,
-  valid: z.boolean(),
+  answerState: AnswerStateSchema,                // unified answer state
+  hasNotes: z.boolean(),
+  noteCount: z.number().int().nonnegative(),
+  empty: z.boolean(),                            // true if field has no value
+  valid: z.boolean(),                            // true if field has no validation errors
   issueCount: z.number().int().nonnegative(),
-  skipped: z.boolean(),                          // true if explicitly skipped
-  skipReason: z.string().optional(),             // reason from skip_field patch
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
 });
 
 const ProgressCountsSchema = z.object({
   totalFields: z.number().int().nonnegative(),
   requiredFields: z.number().int().nonnegative(),
-  submittedFields: z.number().int().nonnegative(),
-  completeFields: z.number().int().nonnegative(),
-  incompleteFields: z.number().int().nonnegative(),
+  // Dimension 1: AnswerState (mutually exclusive, sum to totalFields)
+  unansweredFields: z.number().int().nonnegative(),
+  answeredFields: z.number().int().nonnegative(),
+  skippedFields: z.number().int().nonnegative(),
+  abortedFields: z.number().int().nonnegative(),
+  // Dimension 2: Validity (mutually exclusive, sum to totalFields)
+  validFields: z.number().int().nonnegative(),
   invalidFields: z.number().int().nonnegative(),
+  // Dimension 3: Value presence (mutually exclusive, sum to totalFields)
+  emptyFields: z.number().int().nonnegative(),
+  filledFields: z.number().int().nonnegative(),
+  // Derived counts
   emptyRequiredFields: z.number().int().nonnegative(),
-  emptyOptionalFields: z.number().int().nonnegative(),
-  answeredFields: z.number().int().nonnegative(),   // same as submittedFields
-  skippedFields: z.number().int().nonnegative(),    // explicitly skipped fields
+  totalNotes: z.number().int().nonnegative(),
 });
 
 const ProgressSummarySchema = z.object({
@@ -1736,7 +1929,7 @@ schema representations for all field types.
 | JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
 | IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
 | YAML keys (frontmatter, session transcripts) | snake_case | `markform_version`, `form_summary`, `field_count_by_kind` |
-| FieldKind values | snake_case | `'string'`, `'single_select'` |
+| Kind values (field types) | snake_case | `'string'`, `'single_select'` |
 | Patch operations | snake_case | `set_string`, `set_single_select` |
 
 **Rationale:** Using camelCase for Markdoc attributes aligns with JSON Schema keywords
@@ -2176,6 +2369,101 @@ interface ValidationIssue {
 | `EXPLICIT_CHECKBOX_UNFILLED` | Explicit checkbox has unfilled options (requires yes/no for all) |
 | `INVALID_OPTION_ID` | Selected option ID doesn't exist |
 
+#### Error Taxonomy
+
+Markform distinguishes between two fundamental error types:
+
+**1. ParseError** — Syntax and structural errors
+
+Parse errors occur when the markdown/Markdoc syntax is malformed or the form structure
+is invalid. These are detected during parsing and prevent the form from being loaded.
+
+Examples:
+
+- Invalid Markdoc syntax (unclosed tags, malformed attributes)
+
+- Missing required attributes (e.g., field without `id` or `label`)
+
+- Duplicate IDs within the form
+
+- Invalid field state attribute value (not ‘skipped’ or ‘aborted’)
+
+- Malformed sentinel values in value fences
+
+**Type definition:**
+```ts
+interface ParseError {
+  type: 'parse';
+  message: string;
+  location?: {
+    line?: number;
+    column?: number;
+    fieldId?: Id;
+    noteId?: NoteId;
+  };
+}
+```
+
+**Behavior:**
+
+- Parse errors prevent form loading
+
+- Returned from `parseForm()` as thrown exceptions or error results
+
+- Must be fixed before the form can be used
+
+**2. MarkformValidationError** — Model consistency errors
+
+Validation errors occur when the parsed form model is inconsistent with Markform rules,
+even if the syntax is valid.
+These are semantic errors in the data model.
+
+Examples:
+
+- Option ID referenced in value doesn’t exist in field schema
+
+- Field value type doesn’t match field kind
+
+- Response state inconsistency (e.g., `state='answered'` but no value present)
+
+- Invalid checkbox state for the field’s checkbox mode
+
+**Type definition:**
+```ts
+interface MarkformValidationError {
+  type: 'validation';
+  message: string;
+  location?: {
+    line?: number;
+    column?: number;
+    fieldId?: Id;
+    noteId?: NoteId;
+  };
+}
+```
+
+**Behavior:**
+
+- Validation errors prevent form operations
+
+- Returned from `parseForm()` or `applyPatches()` as errors
+
+- Must be fixed before the form is in a valid state
+
+**Distinction from ValidationIssue:**
+
+`ValidationIssue` represents content validation (required fields, constraints, hook
+validators) and is part of normal form filling workflow.
+These issues don’t prevent form operations—they guide what needs to be filled next.
+
+`ParseError` and `MarkformValidationError` represent structural problems that prevent
+the form from being used at all.
+
+**Union type:**
+```ts
+type MarkformError = ParseError | MarkformValidationError;
+```
+
 * * *
 
 ### Layer 4: Tool API & Interfaces
@@ -2243,17 +2531,22 @@ interface ApplyResult {
 
 **Completion formula:**
 
-`isComplete` is true when all target-role fields are either answered or skipped, and
-there are no issues with `severity: 'required'`:
+`isComplete` is true when all target-role fields are either answered or skipped, there
+are no aborted fields, and there are no issues with `severity: 'required'`:
 
 ```
 isComplete = (answeredFields + skippedFields == totalFields for target roles)
+             AND (abortedFields == 0)
              AND (no issues with severity == 'required')
 ```
 
-This formula ensures agents must actively respond to every field (either fill it or
-explicitly skip it) before the form is considered complete.
-Skipped fields won’t have values, but they won’t block completion either.
+This formula ensures:
+
+- Agents must actively respond to every field (either fill it or explicitly skip it)
+
+- Aborted fields block completion (they represent failures requiring intervention)
+
+- Skipped fields won’t have values, but they won’t block completion
 
 **Operation availability by interface:**
 
@@ -2279,7 +2572,10 @@ type Patch =
   | { op: 'set_url'; fieldId: Id; value: string | null }
   | { op: 'set_url_list'; fieldId: Id; items: string[] }
   | { op: 'clear_field'; fieldId: Id }
-  | { op: 'skip_field'; fieldId: Id; reason?: string };
+  | { op: 'skip_field'; fieldId: Id; role: string; reason?: string }
+  | { op: 'abort_field'; fieldId: Id; role: string; reason?: string }
+  | { op: 'add_note'; ref: Id; role: string; text: string; state?: 'skipped' | 'aborted' }
+  | { op: 'remove_note'; noteId: NoteId };
 
 // OptionId is just the local ID within the field (e.g., "ten_k", "bullish")
 // NOT the qualified form—the fieldId provides the scope
@@ -2328,6 +2624,7 @@ scope. For example:
   Used when an agent cannot or should not fill a field (e.g., information not available,
   field not applicable).
   The optional `reason` field provides context.
+  The required `role` field identifies who is skipping.
 
   **Constraints:**
 
@@ -2339,17 +2636,71 @@ scope. For example:
 
   **Behavior:**
 
-  - Skip state is stored in `skipsByFieldId` on ParsedForm (runtime metadata)
+  - Response state changes to `'skipped'` in `responsesByFieldId`
 
   - Skipped fields no longer appear in the issues list (not blocking completion)
 
   - Setting a value on a skipped field clears the skip state (field becomes answered)
+    and removes any notes with `state="skipped"` for that field (general notes are
+    preserved)
 
-  - Skip state is not serialized to the form markdown file
+  - Skip state is serialized to markdown via `state="skipped"` attribute
 
-  **Completion semantics:** Form completion requires: `answeredFields + skippedFields ==
-  totalFields` (for target roles) AND no required issues.
-  This ensures agents actively respond to every field, even if just to skip it.
+  **Completion semantics:** Form completion requires all fields to be in a terminal
+  state (`answered`, `skipped`, or `aborted` for optional fields) AND `abortedFields ==
+  0`. This ensures agents actively respond to every field, even if just to skip it.
+
+- `abort_field`: Mark a field as unable to be completed (for any reason).
+  Used when a field cannot be answered and should not block form completion.
+  The required `role` field identifies who is aborting.
+  The optional `reason` field provides context.
+
+  **Constraints:**
+
+  - Can be used on both required and optional fields
+
+  - Aborting a field clears any existing value
+
+  - An aborted field does NOT count toward completion
+
+  **Behavior:**
+
+  - Response state changes to `'aborted'` in `responsesByFieldId`
+
+  - Aborted fields appear in the issues list as blocking completion
+
+  - Setting a value on an aborted field clears the abort state (field becomes answered)
+    and removes any notes with `state="aborted"` for that field (general notes are
+    preserved)
+
+  - Abort state is serialized to markdown via `state="aborted"` attribute
+
+  **Completion semantics:** Form completion requires `abortedFields == 0`. Any aborted
+  field blocks completion, requiring manual intervention to either fill the field or
+  remove the abort state.
+
+- `add_note`: Attach a note to a field, group, or form.
+  The `ref` parameter specifies the target ID. The required `role` field identifies who
+  created the note. The `text` field contains markdown content.
+  The optional `state` field links the note to a skip or abort action.
+
+  **Behavior:**
+
+  - Note is added to `ParsedForm.notes` array
+
+  - Note ID is auto-generated (n1, n2, n3 …)
+
+  - Notes are serialized to markdown as comment blocks with metadata
+
+  - Multiple notes can exist for the same ref
+
+- `remove_note`: Remove a specific note by ID.
+
+  **Behavior:**
+
+  - Note with matching `noteId` is removed from `ParsedForm.notes`
+
+  - If note doesn’t exist, operation is silently ignored (idempotent)
 
 **Patch validation layers (*required*):**
 
@@ -2500,6 +2851,101 @@ interface ExportedOption {
 - **Values are typed by kind:** The `values` object maps field IDs to typed value
   objects matching the field’s `kind`.
 
+#### Value Export Formats
+
+Value export supports two formats: **structured** (default) and **friendly** (optional).
+
+**Structured format (default for JSON and YAML):**
+
+The structured format uses explicit objects for each field response, eliminating
+ambiguity between actual values and sentinel strings:
+
+```json
+{
+  "values": {
+    "company_name": { "state": "skipped" },
+    "revenue_m": { "state": "aborted" },
+    "quarterly_growth": { "state": "answered", "value": 12.5 },
+    "ticker": { "state": "answered", "value": "ACME" }
+  },
+  "notes": [
+    {
+      "id": "n1",
+      "ref": "company_name",
+      "role": "agent",
+      "state": "skipped",
+      "text": "Not applicable for this analysis type."
+    }
+  ]
+}
+```
+
+**YAML equivalent:**
+
+```yaml
+values:
+  company_name:
+    state: skipped
+  revenue_m:
+    state: aborted
+  quarterly_growth:
+    state: answered
+    value: 12.5
+  ticker:
+    state: answered
+    value: ACME
+notes:
+  - id: n1
+    ref: company_name
+    role: agent
+    state: skipped
+    text: Not applicable for this analysis type.
+```
+
+**Friendly format (optional, with `--friendly` flag):**
+
+The friendly format uses sentinel strings for human readability:
+
+```yaml
+values:
+  company_name: "|SKIP|"
+  revenue_m: "|ABORT|"
+  quarterly_growth: 12.5
+  ticker: ACME
+```
+
+**Format comparison:**
+
+| Aspect | Structured (default) | Friendly |
+| --- | --- | --- |
+| Ambiguity | None | Possible collision with literal values |
+| Machine interchange | Recommended | Not recommended |
+| Human readability | Verbose | Concise |
+| Notes included | Yes | Yes (separate section) |
+| CLI flag | (default) | `--friendly` |
+
+**Import behavior:**
+
+When importing values (from YAML or JSON):
+
+- Structured format: Parse `state` and `value` properties from each field
+
+- Friendly format: Recognize `|SKIP|` and `|ABORT|` sentinel strings
+
+**Export includes notes:**
+
+All export formats include the `notes` array with all note attributes:
+
+- `id`: Note identifier
+
+- `ref`: Target element ID
+
+- `role`: Who created the note
+
+- `state`: Optional link to skip/abort action
+
+- `text`: Note content
+
 * * *
 
 * * *
@@ -2526,7 +2972,7 @@ The form itself IS the state.
 
 ```
 ┌─────────┐
-│  INIT   │
+│  INIT  |
 └────┬────┘
      │ load form
      ▼
@@ -2537,10 +2983,10 @@ The form itself IS the state.
      ▼
 ┌─────────┐
 │  WAIT   │◄───────────────┐
-└────┬────┘                │
-     │ receive patches     │
-     ▼                     │
-┌─────────┐   revalidate   │
+└────┬────┘               |
+     │ receive patches    |
+     ▼                    |
+┌─────────┐   revalidate  |
 │  APPLY  │────────────────┘
 └─────────┘
 ```
@@ -2642,37 +3088,37 @@ This mirrors what `markform inspect` outputs, making each turn self-contained:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ Turn N Context (User Prompt)                                                 │
+│ Turn N Context (User Prompt)                                                |
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ # Current Form State                                                         │
-│                                                                              │
-│ Below is the complete form with all currently filled values.                 │
-│ Fields marked with `[ ]` or empty values still need to be filled.            │
-│                                                                              │
-│ ```markdown                                                                  │
-│ ---                                                                          │
-│ markform:                                                                    │
-│   markform_version: "0.1.0"                                                  │
-│   form_state: incomplete                                                     │
-│   ...                                                                        │
-│ ---                                                                          │
-│ {% form id="example" %}                                                      │
-│ {% string-field id="name" label="Name" %}                                    │
-│ ```value                                                                     │
-│ Alice                                                                        │
-│ ```                                                                          │
-│ {% /string-field %}                                                          │
-│ {% string-field id="email" label="Email" %}{% /string-field %}              │
-│ ...                                                                          │
-│ {% /form %}                                                                  │
-│ ```                                                                          │
-│                                                                              │
-│ # Remaining Issues                                                           │
-│                                                                              │
-│ - **email** (field): Required field 'Email' has no value                     │
-│   Severity: required, Priority: P1                                           │
-│   Type: string                                                               │
-│ ...                                                                          │
+│ # Current Form State                                                        |
+│                                                                             |
+│ Below is the complete form with all currently filled values.                |
+│ Fields marked with `[ ]` or empty values still need to be filled.           |
+│                                                                             |
+│ ```markdown                                                                 |
+│ ---                                                                         |
+│ markform:                                                                   |
+│   markform_version: "0.1.0"                                                 |
+│   form_state: incomplete                                                    |
+│   ...                                                                       |
+│ ---                                                                         |
+│ {% form id="example" %}                                                     |
+│ {% string-field id="name" label="Name" %}                                   |
+│ ```value                                                                    |
+│ Alice                                                                       |
+│ ```                                                                         |
+│ {% /string-field %}                                                         |
+│ {% string-field id="email" label="Email" %}{% /string-field %}             |
+│ ...                                                                         |
+│ {% /form %}                                                                 |
+│ ```                                                                         |
+│                                                                             |
+│ # Remaining Issues                                                          |
+│                                                                             |
+│ - **email** (field): Required field 'Email' has no value                    |
+│   Severity: required, Priority: P1                                          |
+│   Type: string                                                              |
+│ ...                                                                         |
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -2731,25 +3177,25 @@ Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Turn N                                         │
+│                              Turn N                                        |
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│   1. Harness serializes current form state                                  │
-│      └─► Full markdown with frontmatter, values, structure                  │
-│                                                                             │
-│   2. Harness provides context prompt                                        │
-│      └─► Form markdown + remaining issues (like `inspect` output)           │
-│                                                                             │
-│   3. LLM analyzes context, calls generatePatches tool                       │
-│      └─► Returns array of Patch objects                                     │
-│                                                                             │
-│   4. Harness applies patches to form                                        │
-│      └─► Updates values, revalidates, computes new progress                 │
-│                                                                             │
-│   5. Check completion                                                       │
-│      └─► If no required issues: DONE                                        │
-│      └─► Otherwise: Go to Turn N+1 with updated form                        │
-│                                                                             │
+│                                                                            |
+│   1. Harness serializes current form state                                 |
+│      └─► Full markdown with frontmatter, values, structure                 |
+│                                                                            |
+│   2. Harness provides context prompt                                       |
+│      └─► Form markdown + remaining issues (like `inspect` output)          |
+│                                                                            |
+│   3. LLM analyzes context, calls generatePatches tool                      |
+│      └─► Returns array of Patch objects                                    |
+│                                                                            |
+│   4. Harness applies patches to form                                       |
+│      └─► Updates values, revalidates, computes new progress                |
+│                                                                            |
+│   5. Check completion                                                      |
+│      └─► If no required issues: DONE                                       |
+│      └─► Otherwise: Go to Turn N+1 with updated form                       |
+│                                                                            |
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -3493,14 +3939,13 @@ subsection.
    - **Only optional fields can be skipped:** Required fields reject `skip_field` with a
      validation error. This ensures critical data is always provided.
 
-   - **Skip state is runtime metadata, not persisted to markdown:** Skipped fields
-     remain empty in the serialized form.
-     The skip state is tracked in `ParsedForm.skipsByFieldId` and reflected in
-     `FieldProgress.skipped` and `ProgressCounts.skippedFields`.
+   - **Skip state is serialized to markdown:** Skipped fields are marked with
+     `state="skipped"` attribute and may include a sentinel value with the skip reason.
+     The skip state is tracked in `ParsedForm.responsesByFieldId` (as responseState) and
+     reflected in `FieldProgress.responseState` and `ProgressCounts.skippedFields`.
 
-   - **Completion formula:** `isComplete = (answeredFields + skippedFields ==
-     totalFields)` AND no required issues.
-     This requires agents to actively respond to every field.
+   - **Completion formula:** `isComplete = all fields answered or skipped` AND
+     `abortedFields == 0`. This requires agents to actively respond to every field.
 
    - **Skip clears existing value:** Skipping a field that already has a value clears
      the value. The field transitions from answered → skipped.
@@ -3508,10 +3953,64 @@ subsection.
    - **Setting value clears skip:** Applying a value patch to a skipped field removes
      the skip state. The field transitions from skipped → answered.
 
-   - **Agent visibility in stateless turns:** While skipped fields appear empty in
-     markdown, agents see their state via the issues list (skipped fields removed from
-     issues) and progress counts (skippedFields count).
+   - **Agent visibility in stateless turns:** Agents see field state via the issues list
+     (skipped fields removed from issues) and progress counts (skippedFields count).
      This provides implicit feedback that skipping was successful.
+
+7. **Unified response model (markform-203/204/205)** — The unified response model
+   consolidates field state management into a single, orthogonal system:
+
+   **Design rationale:**
+
+   - **Response state is orthogonal to field type:** Any field can be empty, answered,
+     skipped, or aborted, regardless of its type (string, number, checkboxes, etc.).
+     This separation reduces complexity and makes the model more predictable.
+
+   - **Single source of truth:** `responsesByFieldId` replaces separate
+     `valuesByFieldId` and `skipsByFieldId` maps.
+     Each field has exactly one FieldResponse with a state and optional value,
+     eliminating sync issues between multiple data structures.
+
+   - **Four response states:** The model distinguishes:
+
+     - `empty`: No response provided yet
+
+     - `answered`: Field has a value (value present in FieldResponse)
+
+     - `skipped`: Explicitly skipped (optional fields only)
+
+     - `aborted`: Marked as unable to complete (blocks completion)
+
+   - **Abort vs skip semantics:** Skip is for optional fields that won’t be filled.
+     Abort is for fields that can’t be completed but should be visible as blockers.
+     This distinction allows agents to signal “I can’t answer this” without silently
+     accepting incomplete data.
+
+   - **Notes as first-class data:** Notes are stored separately in `ParsedForm.notes`
+     rather than embedded in field values.
+     This allows:
+
+     - Multiple notes per field/group/form
+
+     - Notes from different roles
+
+     - Notes linked to skip/abort actions via the `state` attribute
+
+     - Clean separation between field values and metadata
+
+   - **Serialization consistency:** Skip and abort states are serialized via `state`
+     attribute on field tags, making them visible in the markdown.
+     Sentinel values (`|SKIP|`, `|ABORT|`) encode reasons when present.
+     This ensures the markdown is self-documenting and human-readable.
+
+   - **Completion semantics:** Completion requires all role-filtered fields to be
+     answered or skipped, AND abortedFields == 0. This ensures:
+
+     - Agents must address every field (no silent ignoring)
+
+     - Aborted fields are visible as blockers requiring intervention
+
+     - Forms can’t be completed with outstanding problems
 
 ### string-list Field (v0.1)
 
@@ -3532,8 +4031,9 @@ subsection.
 
 10. **`ParsedForm` internal shape** — The canonical internal representation returned by
     `parseForm()` is explicitly defined (see `ParsedForm` interface in Layer 2: Data
-    Model). Includes `schema`, `valuesByFieldId`, `docs`, `orderIndex` (for deterministic
-    ordering), and `idIndex` (for fast lookup/validation).
+    Model). Includes `schema`, `responsesByFieldId`, `notes`, `docs`, `orderIndex` (for
+    deterministic ordering), `idIndex` (for fast lookup/validation), and optional
+    `metadata` (for forms with frontmatter).
 
 11. **Source location data in validation issues** — `ValidationIssue` includes optional
     `path` (field/group ID path) and `range` (source position from Markdoc AST) fields

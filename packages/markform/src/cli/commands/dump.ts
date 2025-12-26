@@ -140,14 +140,31 @@ export function registerDumpCommand(program: Command): void {
         if (isStructured) {
           // Convert to plain values for structured output
           const plainValues: Record<string, unknown> = {};
-          for (const [fieldId, value] of Object.entries(form.valuesByFieldId)) {
-            plainValues[fieldId] = toPlainValue(value);
+          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+            // Only include answered fields in structured output
+            if (response.state === "answered" && response.value) {
+              plainValues[fieldId] = toPlainValue(response.value);
+            }
           }
-          const output = formatOutput(ctx, plainValues, () => "");
+
+          // Include notes in structured output
+          const structuredOutput = {
+            values: plainValues,
+            notes: form.notes,
+          };
+
+          const output = formatOutput(ctx, structuredOutput, () => "");
           console.log(output);
         } else {
           // Use formatted output for console/plaintext
-          const output = formatOutput(ctx, form.valuesByFieldId, (data, useColors) =>
+          // Extract values from responses for display
+          const values: Record<string, FieldValue> = {};
+          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+            if (response.state === "answered" && response.value) {
+              values[fieldId] = response.value;
+            }
+          }
+          const output = formatOutput(ctx, values, (data, useColors) =>
             formatConsoleValues(data as Record<string, FieldValue>, useColors)
           );
           console.log(output);

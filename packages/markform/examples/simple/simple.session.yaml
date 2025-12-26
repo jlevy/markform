@@ -21,6 +21,19 @@ turns:
           message: Required field "Age" is empty
           severity: required
           priority: 1
+        - ref: categories
+          scope: field
+          reason: required_missing
+          message: Required field "Categories" has no selections
+          severity: required
+          priority: 1
+        - ref: confirmations
+          scope: field
+          reason: required_missing
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2
+            unfilled)
+          severity: required
+          priority: 1
         - ref: email
           scope: field
           reason: required_missing
@@ -33,10 +46,28 @@ turns:
           message: Required field "Name" is empty
           severity: required
           priority: 1
+        - ref: priority
+          scope: field
+          reason: required_missing
+          message: Required field "Priority" has no selection
+          severity: required
+          priority: 1
         - ref: tags
           scope: field
           reason: required_missing
           message: Required field "Tags" is empty
+          severity: required
+          priority: 1
+        - ref: tasks_multi
+          scope: field
+          reason: required_missing
+          message: All items in "Tasks (Multi Mode)" must be completed
+          severity: required
+          priority: 1
+        - ref: tasks_simple
+          scope: field
+          reason: required_missing
+          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
           severity: required
           priority: 1
         - ref: website
@@ -45,36 +76,6 @@ turns:
           message: Required field "Website" is empty
           severity: required
           priority: 1
-        - ref: categories
-          scope: field
-          reason: validation_error
-          message: Required field "Categories" has no selections
-          severity: required
-          priority: 2
-        - ref: confirmations
-          scope: field
-          reason: validation_error
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
-          severity: required
-          priority: 2
-        - ref: priority
-          scope: field
-          reason: validation_error
-          message: Required field "Priority" has no selection
-          severity: required
-          priority: 2
-        - ref: tasks_multi
-          scope: field
-          reason: validation_error
-          message: All items in "Tasks (Multi Mode)" must be completed
-          severity: required
-          priority: 2
-        - ref: tasks_simple
-          scope: field
-          reason: validation_error
-          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
-          severity: required
-          priority: 2
         - ref: notes
           scope: field
           reason: optional_empty
@@ -159,20 +160,22 @@ turns:
         - op: set_string
           field_id: notes
           value: This is a test note.
-        - op: skip_field
-          field_id: optional_number
-          reason: Optional field not needed for this test
         - op: set_number
           field_id: score
           value: 87.5
         - op: set_url
           field_id: related_url
           value: https://markform.dev/docs
+        - op: add_note
+          id: note-review
+          ref: simple_test
+          role: agent
+          text: Form completed with all required fields. Score assigned based on completeness. References include documentation and project links.
     after:
       required_issue_count: 0
-      markdown_sha256: f2eaf91bd0cefccfca4ae116683626ab9735e00274095373174045527344a8e6
+      markdown_sha256: b1992e1b572b0b9499537d3d6dc947035e4b499c8a736f2ec66ca9d78c732566
       answered_field_count: 14
-      skipped_field_count: 1
+      skipped_field_count: 0
 final:
-  expect_complete: true
+  expect_complete: false
   expected_completed_form: simple-mock-filled.form.md

@@ -10,7 +10,7 @@ import type { LanguageModel } from "ai";
 import { applyPatches } from "../engine/apply.js";
 import { parseForm } from "../engine/parse.js";
 import { serialize } from "../engine/serialize.js";
-import type { InspectIssue, ParsedForm, SessionTurnStats } from "../engine/coreTypes.js";
+import type { FieldValue, InspectIssue, ParsedForm, SessionTurnStats } from "../engine/coreTypes.js";
 import { coerceInputContext } from "../engine/valueCoercion.js";
 import {
   AGENT_ROLE,
@@ -35,6 +35,14 @@ function buildErrorResult(
   errors: string[],
   warnings: string[],
 ): FillResult {
+  // Extract values from responses
+  const values: Record<string, FieldValue> = {};
+  for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+    if (response.state === "answered" && response.value) {
+      values[fieldId] = response.value;
+    }
+  }
+
   return {
     status: {
       ok: false,
@@ -42,7 +50,7 @@ function buildErrorResult(
       message: errors.join("; "),
     },
     markdown: serialize(form),
-    values: { ...form.valuesByFieldId },
+    values,
     form,
     turns: 0,
     totalPatches: 0,
@@ -58,10 +66,18 @@ function buildResult(
   inputContextWarnings?: string[],
   remainingIssues?: InspectIssue[],
 ): FillResult {
+  // Extract values from responses
+  const values: Record<string, FieldValue> = {};
+  for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+    if (response.state === "answered" && response.value) {
+      values[fieldId] = response.value;
+    }
+  }
+
   const result: FillResult = {
     status,
     markdown: serialize(form),
-    values: { ...form.valuesByFieldId },
+    values,
     form,
     turns,
     totalPatches,
@@ -136,7 +152,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       status: { ok: false, reason: "error", message: `Form parse error: ${message}` },
       markdown: typeof options.form === "string" ? options.form : "",
       values: {},
-      form: { schema: { id: "", groups: [] }, valuesByFieldId: {}, skipsByFieldId: {}, docs: [], orderIndex: [], idIndex: new Map() },
+      form: { schema: { id: "", groups: [] }, responsesByFieldId: {}, notes: [], docs: [], orderIndex: [], idIndex: new Map() },
       turns: 0,
       totalPatches: 0,
     };

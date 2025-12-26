@@ -660,10 +660,10 @@ User Value
       expect(requiredIssues[0]?.ref).toBe("agent_field");
 
       // Verify that user_field still has its value
-      const userValue = form.valuesByFieldId.user_field;
-      expect(userValue?.kind).toBe("string");
-      if (userValue?.kind === "string") {
-        expect(userValue.value).toBe("User Value");
+      const userResponse = form.responsesByFieldId.user_field;
+      expect(userResponse?.value?.kind).toBe("string");
+      if (userResponse?.value?.kind === "string") {
+        expect(userResponse.value.value).toBe("User Value");
       }
     });
   });

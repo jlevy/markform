@@ -15,7 +15,7 @@ import YAML from "yaml";
 
 import { parseForm } from "../../engine/parse.js";
 import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
-import type { FieldValue, Id } from "../../engine/coreTypes.js";
+import type { FieldValue, Id, Note } from "../../engine/coreTypes.js";
 import { getCommandContext, logError, logVerbose, readFile } from "../lib/shared.js";
 
 interface ExportField {
@@ -41,6 +41,7 @@ interface ExportSchema {
 interface ExportOutput {
   schema: ExportSchema;
   values: Record<Id, FieldValue>;
+  notes: Note[];
   markdown: string;
 }
 
@@ -125,9 +126,18 @@ export function registerExportCommand(program: Command): void {
             })),
           };
 
+          // Extract values from responses for export
+          const values: Record<string, FieldValue> = {};
+          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+            if (response.state === "answered" && response.value) {
+              values[fieldId] = response.value;
+            }
+          }
+
           const output: ExportOutput = {
             schema,
-            values: form.valuesByFieldId,
+            values,
+            notes: form.notes,
             markdown: serialize(form),
           };
 

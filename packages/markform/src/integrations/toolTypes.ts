@@ -13,7 +13,7 @@ import type { z } from "zod";
 
 import type {
   ApplyResult,
-  FieldValue,
+  FieldResponse,
   FormSchema,
   Id,
   InspectResult,
@@ -49,7 +49,7 @@ export interface ExportToolResult {
   success: boolean;
   data: {
     schema: FormSchema;
-    values: Record<Id, FieldValue>;
+    values: Record<Id, FieldResponse>;
   };
   message: string;
 }

@@ -64,7 +64,7 @@ Update existing types to use the new model.
 | markform-204 | Add `ResponseState` type and `FieldResponse` interface |
 | markform-205 | Add `Note`, `NoteId` types |
 | markform-206 | Update `ParsedForm` — replace `valuesByFieldId` + `skipsByFieldId` with `responsesByFieldId`, add `notes` |
-| markform-207 | Update `Patch` union — add `abort_field`, `add_note`, `remove_note`, `remove_notes`; update `skip_field` with `role` |
+| markform-207 | Update `Patch` union — add `abort_field`, `add_note`, `remove_note`; update `skip_field` with `role` |
 | markform-208 | Update `FieldProgress` — replace `submitted`/`skipped` with `responseState`, add `hasNotes`, `noteCount` |
 | markform-209 | Update `ProgressCounts` — add `abortedFields`, `emptyFields`, `totalNotes`; remove `submittedFields` |
 | markform-210 | Add `ParseError` and `ValidationError` types with error taxonomy |
@@ -177,12 +177,6 @@ interface AddNotePatch {
 interface RemoveNotePatch {
   op: 'remove_note';
   noteId: NoteId;
-}
-
-interface RemoveNotesPatch {
-  op: 'remove_notes';
-  ref: Id;
-  role: string;
 }
 ```
 
@@ -530,8 +524,8 @@ Unit tests in `tests/unit/engine/serialize.test.ts`:
 
 ### Summary
 
-Implement patch handlers for `skip_field`, `abort_field`, `add_note`, `remove_note`,
-`remove_notes`. Add auto-cleanup of state-linked notes when setting values.
+Implement patch handlers for `skip_field`, `abort_field`, `add_note`, `remove_note`.
+Add auto-cleanup of state-linked notes when setting values.
 
 ### Beads
 
@@ -540,7 +534,7 @@ Implement patch handlers for `skip_field`, `abort_field`, `add_note`, `remove_no
 | markform-220 | Update `skip_field` — set response to `{ state: 'skipped' }`; reject on required fields |
 | markform-221 | Implement `abort_field` patch — set response to `{ state: 'aborted' }`; optional note |
 | markform-222 | Implement `add_note` patch — validate ref, generate ID, add to notes array |
-| markform-223 | Implement `remove_note` and `remove_notes` handlers |
+| markform-223 | Implement `remove_note` handler |
 | markform-224 | Auto-cleanup: when setting value on skipped/aborted field, remove state-linked notes |
 | markform-252 | Note ID generation — sequential n1, n2, n3 |
 
@@ -664,8 +658,6 @@ Unit tests in `tests/unit/engine/apply.test.ts`:
 - `add_note` with invalid ref returns error
 
 - `remove_note` removes specific note
-
-- `remove_notes(ref, role)` removes matching notes
 
 - Setting value on skipped field removes state-linked notes
 

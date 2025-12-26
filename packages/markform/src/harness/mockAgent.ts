@@ -43,7 +43,13 @@ export class MockAgent implements Agent {
    * @param completedForm - A fully-filled form to use as source of values
    */
   constructor(completedForm: ParsedForm) {
-    this.completedValues = { ...completedForm.valuesByFieldId };
+    // Extract values from responses
+    this.completedValues = {};
+    for (const [fieldId, response] of Object.entries(completedForm.responsesByFieldId)) {
+      if (response.state === "answered" && response.value) {
+        this.completedValues[fieldId] = response.value;
+      }
+    }
 
     // Build field map for quick lookup
     this.fieldMap = new Map();
@@ -103,6 +109,7 @@ export class MockAgent implements Agent {
           patches.push({
             op: "skip_field",
             fieldId,
+            role: "agent",
             reason: "No value in mock form",
           });
           addressedFields.add(fieldId);

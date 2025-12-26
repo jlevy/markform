@@ -42,10 +42,16 @@ export function formatPatchValue(patch: Patch): string {
       return "(cleared)";
     case "skip_field":
       return patch.reason ? truncate(`(skipped: ${patch.reason})`) : "(skipped)";
+    case "abort_field":
+      return patch.reason ? truncate(`(aborted: ${patch.reason})`) : "(aborted)";
     case "set_url":
       return patch.value ? truncate(`"${patch.value}"`) : "(empty)";
     case "set_url_list":
       return patch.items.length > 0 ? truncate(`[${patch.items.join(", ")}]`) : "(empty)";
+    case "add_note":
+      return truncate(`note: ${patch.text}`);
+    case "remove_note":
+      return `(remove note ${patch.noteId})`;
   }
 }
 
@@ -62,7 +68,10 @@ export function formatPatchType(patch: Patch): string {
     case "set_checkboxes": return "checkboxes";
     case "clear_field": return "clear";
     case "skip_field": return "skip";
+    case "abort_field": return "abort";
     case "set_url": return "url";
     case "set_url_list": return "url_list";
+    case "add_note": return "note";
+    case "remove_note": return "remove_note";
   }
 }

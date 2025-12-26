@@ -19,6 +19,8 @@ import type {
   FieldValue,
   InspectIssue,
   ProgressState,
+  AnswerState,
+  Note,
 } from "../../engine/coreTypes.js";
 import { parseRolesFlag } from "../../settings.js";
 import {
@@ -38,6 +40,20 @@ function formatState(state: ProgressState, useColors: boolean): string {
     incomplete: ["○ incomplete", pc.yellow],
     empty: ["◌ empty", pc.dim],
     invalid: ["✗ invalid", pc.red],
+  };
+  const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
+  return useColors ? colorFn(text) : text;
+}
+
+/**
+ * Format answer state badge for console output.
+ */
+function formatAnswerState(state: AnswerState, useColors: boolean): string {
+  const badges: Record<AnswerState, [string, (s: string) => string]> = {
+    answered: ["answered", pc.green],
+    skipped: ["skipped", pc.yellow],
+    aborted: ["aborted", pc.red],
+    unanswered: ["unanswered", pc.dim],
   };
   const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
   return useColors ? colorFn(text) : text;
@@ -157,6 +173,7 @@ interface InspectReport {
   form_state: ProgressState;
   groups: ReportGroup[];
   values: Record<string, FieldValue>;
+  notes: Note[];
   issues: {
     ref: string;
     scope: string;
@@ -206,26 +223,38 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     counts: {
       totalFields: number;
       requiredFields: number;
-      submittedFields: number;
-      completeFields: number;
-      incompleteFields: number;
-      invalidFields: number;
-      emptyRequiredFields: number;
-      emptyOptionalFields: number;
+      // Dimension 1: AnswerState
+      unansweredFields: number;
       answeredFields: number;
       skippedFields: number;
+      abortedFields: number;
+      // Dimension 2: Validity
+      validFields: number;
+      invalidFields: number;
+      // Dimension 3: Value presence
+      emptyFields: number;
+      filledFields: number;
+      // Derived
+      emptyRequiredFields: number;
+      totalNotes: number;
     };
+    fields: Record<
+      string,
+      {
+        answerState: AnswerState;
+        hasNotes: boolean;
+        noteCount: number;
+      }
+    >;
   };
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
-  lines.push(`  Answered: ${progress.counts.answeredFields}`);
-  lines.push(`  Skipped: ${progress.counts.skippedFields}`);
-  lines.push(`  Complete: ${progress.counts.completeFields}`);
-  lines.push(`  Incomplete: ${progress.counts.incompleteFields}`);
-  lines.push(`  Invalid: ${progress.counts.invalidFields}`);
-  lines.push(`  Empty (required): ${progress.counts.emptyRequiredFields}`);
-  lines.push(`  Empty (optional): ${progress.counts.emptyOptionalFields}`);
+  lines.push(`  AnswerState: answered=${progress.counts.answeredFields}, skipped=${progress.counts.skippedFields}, aborted=${progress.counts.abortedFields}, unanswered=${progress.counts.unansweredFields}`);
+  lines.push(`  Validity: valid=${progress.counts.validFields}, invalid=${progress.counts.invalidFields}`);
+  lines.push(`  Value: filled=${progress.counts.filledFields}, empty=${progress.counts.emptyFields}`);
+  lines.push(`  Empty required: ${progress.counts.emptyRequiredFields}`);
+  lines.push(`  Total notes: ${progress.counts.totalNotes}`);
   lines.push("");
 
   // Form content (groups and fields with values)
@@ -235,13 +264,31 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     for (const field of group.children) {
       const reqBadge = field.required ? yellow("[required]") : dim("[optional]");
       const roleBadge = field.role !== "agent" ? cyan(`[${field.role}]`) : "";
+      const fieldProgress = progress.fields[field.id];
+      const responseStateBadge = fieldProgress
+        ? `[${formatAnswerState(fieldProgress.answerState, useColors)}]`
+        : "";
+      const notesBadge = fieldProgress?.hasNotes
+        ? cyan(`[${fieldProgress.noteCount} note${fieldProgress.noteCount > 1 ? "s" : ""}]`)
+        : "";
       const value = report.values[field.id];
       const valueStr = formatFieldValue(value, useColors);
-      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge} ${roleBadge}`.trim());
+      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge} ${roleBadge} ${responseStateBadge} ${notesBadge}`.trim());
       lines.push(`      ${dim("→")} ${valueStr}`);
     }
   }
   lines.push("");
+
+  // Notes summary
+  if (report.notes.length > 0) {
+    lines.push(bold(`Notes (${report.notes.length}):`));
+    for (const note of report.notes) {
+      const roleBadge = cyan(`[${note.role}]`);
+      const refLabel = dim(`${note.ref}:`);
+      lines.push(`  ${note.id} ${roleBadge} ${refLabel} ${note.text}`.trim());
+    }
+    lines.push("");
+  }
 
   // Issues
   if (report.issues.length > 0) {
@@ -309,6 +356,14 @@ export function registerInspectCommand(program: Command): void {
           logVerbose(ctx, "Running inspection...");
           const result = inspect(form, { targetRoles });
 
+          // Extract values from responses for report
+          const values: Record<string, FieldValue> = {};
+          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+            if (response.state === "answered" && response.value) {
+              values[fieldId] = response.value;
+            }
+          }
+
           // Build the report structure
           const report: InspectReport = {
             title: form.schema.title,
@@ -326,7 +381,8 @@ export function registerInspectCommand(program: Command): void {
                 role: field.role,
               })),
             })),
-            values: form.valuesByFieldId,
+            values,
+            notes: form.notes,
             issues: result.issues.map((issue: InspectIssue) => ({
               ref: issue.ref,
               scope: issue.scope,

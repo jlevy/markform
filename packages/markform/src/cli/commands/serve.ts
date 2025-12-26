@@ -30,7 +30,6 @@ import type {
   ParsedForm,
   SingleSelectField,
   SingleSelectValue,
-  SkipInfo,
   StringField,
   StringListField,
   UrlField,
@@ -203,7 +202,7 @@ function formDataToPatches(
     // Check if this field was explicitly skipped
     const skipKey = `__skip__${fieldId}`;
     if (formData[skipKey] === "1" && !field.required) {
-      patches.push({ op: "skip_field", fieldId });
+      patches.push({ op: "skip_field", fieldId, role: "user" });
       continue; // Don't process other patches for this field
     }
 
@@ -417,11 +416,11 @@ async function handleSave(
  * @public Exported for testing.
  */
 export function renderFormHtml(form: ParsedForm): string {
-  const { schema, valuesByFieldId, skipsByFieldId } = form;
+  const { schema, responsesByFieldId } = form;
   const formTitle = schema.title ?? schema.id;
 
   const groupsHtml = schema.groups
-    .map((group) => renderGroup(group, valuesByFieldId, skipsByFieldId ?? {}))
+    .map((group) => renderGroup(group, responsesByFieldId))
     .join("\n");
 
   return `<!DOCTYPE html>
@@ -673,12 +672,16 @@ export function renderFormHtml(form: ParsedForm): string {
  */
 function renderGroup(
   group: FieldGroup,
-  values: Record<string, FieldValue>,
-  skips: Record<string, SkipInfo>
+  responses: ParsedForm["responsesByFieldId"]
 ): string {
   const groupTitle = group.title ?? group.id;
   const fieldsHtml = group.children
-    .map((field) => renderFieldHtml(field, values[field.id], skips[field.id]))
+    .map((field) => {
+      const response = responses[field.id];
+      const value = response?.state === "answered" ? response.value : undefined;
+      const isSkipped = response?.state === "skipped";
+      return renderFieldHtml(field, value, isSkipped);
+    })
     .join("\n");
 
   return `
@@ -695,14 +698,14 @@ function renderGroup(
 export function renderFieldHtml(
   field: Field,
   value: FieldValue | undefined,
-  skipInfo?: SkipInfo
+  isSkipped?: boolean
 ): string {
-  const isSkipped = skipInfo?.skipped === true;
+  const skipped = isSkipped === true;
   const requiredMark = field.required ? '<span class="required">*</span>' : "";
   const typeLabel = `<span class="type-badge">${field.kind}</span>`;
-  const skippedBadge = isSkipped ? '<span class="skipped-badge">Skipped</span>' : "";
-  const fieldClass = isSkipped ? "field field-skipped" : "field";
-  const disabledAttr = isSkipped ? " disabled" : "";
+  const skippedBadge = skipped ? '<span class="skipped-badge">Skipped</span>' : "";
+  const fieldClass = skipped ? "field field-skipped" : "field";
+  const disabledAttr = skipped ? " disabled" : "";
 
   let inputHtml: string;
 
@@ -748,7 +751,7 @@ export function renderFieldHtml(
   }
 
   // Add skip button for optional, non-skipped fields
-  const skipButton = !field.required && !isSkipped
+  const skipButton = !field.required && !skipped
     ? `<div class="field-actions">
         <button type="button" class="btn-skip" data-skip-field="${field.id}">Skip</button>
       </div>`

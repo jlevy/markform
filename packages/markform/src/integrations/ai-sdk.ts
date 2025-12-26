@@ -262,13 +262,18 @@ export function createMarkformTools(
       execute: () => {
         const form = sessionStore.getForm();
 
+        // Count answered fields
+        const answeredCount = Object.values(form.responsesByFieldId).filter(
+          (response) => response.state === "answered"
+        ).length;
+
         return Promise.resolve({
           success: true,
           data: {
             schema: form.schema,
-            values: form.valuesByFieldId,
+            values: form.responsesByFieldId,
           },
-          message: `Exported form with ${form.schema.groups.length} group(s) and ${Object.keys(form.valuesByFieldId).length} value(s).`,
+          message: `Exported form with ${form.schema.groups.length} group(s) and ${answeredCount} answered field(s).`,
         });
       },
     };

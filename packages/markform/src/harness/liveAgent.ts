@@ -173,11 +173,11 @@ export class LiveAgent implements Agent {
       formProgress: {
         // Note: these are the counts BEFORE this turn's patches are applied
         // The caller will update these after applying patches
-        answeredFields: Object.keys(form.valuesByFieldId).filter(
-          (id) => form.valuesByFieldId[id] !== null
+        answeredFields: Object.values(form.responsesByFieldId).filter(
+          (response) => response?.state === "answered"
         ).length,
-        skippedFields: Object.keys(form.skipsByFieldId ?? {}).filter(
-          (id) => form.skipsByFieldId?.[id]?.skipped
+        skippedFields: Object.values(form.responsesByFieldId).filter(
+          (response) => response?.state === "skipped"
         ).length,
         requiredRemaining,
         optionalRemaining,

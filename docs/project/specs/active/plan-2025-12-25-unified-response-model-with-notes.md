@@ -289,8 +289,7 @@ type Patch =
   | { op: 'skip_field'; fieldId: Id; role: string; reason?: string }
   | { op: 'abort_field'; fieldId: Id; role: string; reason?: string }
   | { op: 'add_note'; ref: Id; role: string; text: string; state?: 'skipped' | 'aborted' }
-  | { op: 'remove_note'; noteId: NoteId }
-  | { op: 'remove_notes'; ref: Id; role: string };
+  | { op: 'remove_note'; noteId: NoteId };
 ```
 
 **Semantics:**
@@ -304,7 +303,6 @@ type Patch =
 | `add_note(ref, role, text)` | Add general note (no state) | note ID |
 | `add_note(ref, role, text, state)` | Add note with state link | note ID |
 | `remove_note(noteId)` | Remove specific note by ID | — |
-| `remove_notes(ref, role)` | Remove all notes for ref + role | count removed |
 
 **Auto-cleanup on value set:**
 
@@ -776,7 +774,7 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
   `valuesByFieldId` and `skipsByFieldId` are replaced by unified `responsesByFieldId`.
 
 - **Library APIs**: DO NOT MAINTAIN — `skip_field` patch now sets response state, not
-  metadata. New `abort_field`, `add_note`, `remove_note`, `remove_notes` patches added.
+  metadata. New `abort_field`, `add_note`, `remove_note` patches added.
   Export format changes to structured by default.
 
 - **Server APIs**: N/A
@@ -813,14 +811,14 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 | `FieldValue` union | `coreTypes.ts` | Unchanged (no sentinel kinds) |
 | New: `ResponseState` | `coreTypes.ts` | Add `'empty' \| 'answered' \| 'skipped' \| 'aborted'` |
 | New: `FieldResponse` | `coreTypes.ts` | Add `{ state: ResponseState; value?: FieldValue }` |
-| `Patch` union | `coreTypes.ts` | Add `abort_field`, `add_note`, `remove_note`, `remove_notes`; update `skip_field` |
+| `Patch` union | `coreTypes.ts` | Add `abort_field`, `add_note`, `remove_note`; update `skip_field` |
 | `ParsedForm` | `coreTypes.ts` | Replace `valuesByFieldId` + `skipsByFieldId` with `responsesByFieldId`; add `notes: Note[]` |
 | `FieldProgress` | `coreTypes.ts` | Replace `submitted`/`skipped` with `responseState`; add `hasNotes`, `noteCount` |
 | `ProgressCounts` | `coreTypes.ts` | Add `abortedFields`, `emptyFields`, `totalNotes`; remove `submittedFields` |
 | Error types | `coreTypes.ts` | Add `ParseError`, `ValidationError`, `MarkformError` types |
 | `parseForm()` | `parse.ts` | Parse `state` attribute on fields, parse `{% note %}` tags; build `responsesByFieldId` |
 | `serialize()` | `serialize.ts` | Emit `state` attribute for skipped/aborted; structured export; emit notes at end |
-| `applyPatches()` | `apply.ts` | Handle `abort_field`, `add_note`, `remove_note`, `remove_notes`; work with `FieldResponse` |
+| `applyPatches()` | `apply.ts` | Handle `abort_field`, `add_note`, `remove_note`; work with `FieldResponse` |
 | `computeProgressSummary()` | `summaries.ts` | Take `responsesByFieldId`; compute new counts from `response.state` |
 | `inspect()` | `inspect.ts` | Update completion logic |
 | Architecture doc | `arch-markform-initial-design.md` | Add error taxonomy section; document ResponseState/FieldResponse |
@@ -845,7 +843,7 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 
 - `skip_field` updated to set response state (not metadata)
 
-- `remove_note` and `remove_notes` patch operations
+- `remove_note` patch operation
 
 - `responseState`, `hasNotes`, and `noteCount` in `FieldProgress`
 
@@ -913,8 +911,6 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 13. `add_note` with invalid ref is rejected with error
 
 14. `remove_note` removes specific note by ID
-
-15. `remove_notes(ref, role)` removes all notes for that ref + role
 
 **Serialization:**
 
@@ -1182,16 +1178,6 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 
 - [ ] Removing note does not affect other notes
 
-**remove_notes:**
-
-- [ ] `remove_notes(ref, role)` removes all matching notes
-
-- [ ] `remove_notes` with invalid ref returns error
-
-- [ ] Returns count of removed notes
-
-- [ ] Notes from other roles are preserved
-
 **Value clears sentinel and state-linked notes:**
 
 - [ ] Setting value on skipped field: value replaces sentinel
@@ -1432,12 +1418,6 @@ interface RemoveNotePatch {
   noteId: NoteId;
 }
 
-interface RemoveNotesPatch {
-  op: 'remove_notes';
-  ref: Id;
-  role: string;
-}
-
 // --- Unchanged Types ---
 
 /**
@@ -1468,8 +1448,7 @@ type Patch =
   | SkipFieldPatch     // updated: now has role
   | AbortFieldPatch    // NEW
   | AddNotePatch       // NEW
-  | RemoveNotePatch    // NEW
-  | RemoveNotesPatch;  // NEW
+  | RemoveNotePatch;   // NEW
 
 interface ParsedForm {
   schema: FormSchema;
@@ -2056,7 +2035,7 @@ function computeFormState(
 
 7. **Aborted blocks completion** — Unlike skipped, aborted is a failure state.
 
-8. **Notes can be deleted** — Via `remove_note(id)` or `remove_notes(ref, role)`.
+8. **Notes can be deleted** — Via `remove_note(id)`.
 
 9. **Value clears sentinel and state-linked notes** — Setting a real value replaces
    skip/abort state and removes notes with matching `state`, but preserves general
@@ -2222,8 +2201,7 @@ type Patch =
   | { op: 'skip_field'; fieldId: Id; role: string; reason?: string }  // updated: role required
   | { op: 'abort_field'; fieldId: Id; role: string; reason?: string } // NEW
   | { op: 'add_note'; ref: Id; role: string; text: string; state?: 'skipped' | 'aborted' }  // NEW
-  | { op: 'remove_note'; noteId: NoteId }                              // NEW
-  | { op: 'remove_notes'; ref: Id; role: string };                     // NEW
+  | { op: 'remove_note'; noteId: NoteId };                             // NEW
 ```
 
 ### 6. Patch Semantics (around line ~1789)
@@ -2253,9 +2231,6 @@ Update documentation:
 
 - `remove_note`: Remove a specific note by ID.
   - Returns error if note ID not found
-
-- `remove_notes`: Remove all notes for a given ref + role combination.
-  - Returns count of notes removed
 ```
 
 ### 7. Serialization: Field State Attribute (markform format)
@@ -2474,7 +2449,7 @@ XX. **Unified response model with notes** — The form response model separates 
 
 3. **Can notes be deleted?**
 
-   - **Decision:** Yes, via `remove_note(noteId)` or `remove_notes(ref, role)`
+   - **Decision:** Yes, via `remove_note(noteId)`
 
 4. **Do notes have unique IDs?**
 
@@ -2532,7 +2507,7 @@ XX. **Unified response model with notes** — The form response model separates 
 | Date | Author | Changes |
 | --- | --- | --- |
 | 2025-12-25 | Claude | Initial draft based on discussion of unified response model |
-| 2025-12-25 | Claude | Added note IDs (n1, n2, n3...), role tracking, remove_note/remove_notes operations |
+| 2025-12-25 | Claude | Added note IDs (n1, n2, n3...), role tracking, remove_note operation |
 | 2025-12-25 | Claude | Added thread-safety requirements for concurrent agents |
 | 2025-12-25 | Claude | Added auto-cleanup of state-linked notes when setting values |
 | 2025-12-25 | Claude | Added requirement to include notes in dump/export |

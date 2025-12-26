@@ -49,6 +49,9 @@ export type {
   // Documentation
   DocumentationTag,
   DocumentationBlock,
+  // Answer state and field response
+  AnswerState,
+  FieldResponse,
   // Parsed form
   NodeType,
   IdIndexEntry,
@@ -144,6 +147,9 @@ export {
   IssueReasonSchema,
   IssueScopeSchema,
   InspectIssueSchema,
+  // Answer state and field response schemas
+  AnswerStateSchema,
+  FieldResponseSchema,
   // Summary schemas
   ProgressStateSchema,
   CheckboxProgressCountsSchema,
