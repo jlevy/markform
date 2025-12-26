@@ -1015,7 +1015,7 @@ Age cannot be determined.
       expect(reparsed.responsesByFieldId.name?.state).toBe("answered");
       expect(reparsed.responsesByFieldId.bio?.state).toBe("skipped");
       expect(reparsed.responsesByFieldId.age?.state).toBe("aborted");
-      expect(reparsed.responsesByFieldId.notes?.state).toBe("empty");
+      expect(reparsed.responsesByFieldId.notes?.state).toBe("unanswered");
 
       // Check notes - state is no longer present on notes per markform-254
       expect(reparsed.notes).toHaveLength(2);

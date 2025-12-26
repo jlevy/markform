@@ -740,7 +740,7 @@ Alice
       expect(progress.fields.name?.responseState).toBe("answered");
       expect(progress.fields.bio?.responseState).toBe("skipped");
       expect(progress.fields.age?.responseState).toBe("aborted");
-      expect(progress.fields.notes?.responseState).toBe("empty");
+      expect(progress.fields.notes?.responseState).toBe("unanswered");
     });
 
     it("counts notes in progress summary", () => {

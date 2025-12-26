@@ -71,7 +71,7 @@ export function toPlainValues(form: ParsedForm): Record<string, unknown> {
  * Convert field responses to structured format for export (markform-218).
  *
  * Includes state for all fields:
- * - { state: 'empty' } for unfilled fields
+ * - { state: 'unanswered' } for unfilled fields
  * - { state: 'skipped' } for skipped fields
  * - { state: 'aborted' } for aborted fields
  * - { state: 'answered', value: ... } for answered fields
@@ -80,8 +80,8 @@ export function toStructuredValues(form: ParsedForm): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-    if (!response || response.state === "empty") {
-      result[fieldId] = { state: "empty" };
+    if (!response || response.state === "unanswered") {
+      result[fieldId] = { state: "unanswered" };
       continue;
     }
 

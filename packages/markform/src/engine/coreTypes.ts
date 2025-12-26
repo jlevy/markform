@@ -24,21 +24,21 @@ export type QualifiedOptionRef = `${Id}.${OptionId}`;
 export type ValidatorRef = string | { id: string; [key: string]: unknown };
 
 // =============================================================================
-// Response State Types (markform-204)
+// Answer State Types (markform-255)
 // =============================================================================
 
 /**
- * Response state for a field.
- * Orthogonal to field type — any field can be in any response state.
+ * Answer state for a field.
+ * What action was taken: no answer yet, answered, skipped, or aborted.
  */
-export type ResponseState = "empty" | "answered" | "skipped" | "aborted";
+export type AnswerState = "unanswered" | "answered" | "skipped" | "aborted";
 
 /**
- * Field response: combines response state with optional value.
+ * Field response: combines answer state with optional value.
  * Used in responsesByFieldId for all fields.
  */
 export interface FieldResponse {
-  state: ResponseState;
+  state: AnswerState;
   value?: FieldValue; // present only when state === 'answered'
   reason?: string; // present when state === 'skipped' or 'aborted'
 }
@@ -474,7 +474,7 @@ export interface CheckboxProgressCounts {
 export interface FieldProgress {
   kind: FieldKind;
   required: boolean;
-  responseState: ResponseState; // replaces submitted + skipped booleans
+  responseState: AnswerState; // replaces submitted + skipped booleans
   hasNotes: boolean;
   noteCount: number;
   state: ProgressState;
@@ -779,8 +779,13 @@ export const ValidatorRefSchema = z.union([
   z.object({ id: z.string() }).passthrough(),
 ]);
 
-// Response state schema (markform-204)
-export const ResponseStateSchema = z.enum(["empty", "answered", "skipped", "aborted"]);
+// Answer state schema (markform-255)
+export const AnswerStateSchema = z.enum([
+  "unanswered",
+  "answered",
+  "skipped",
+  "aborted",
+]);
 
 // Checkbox state schemas
 export const MultiCheckboxStateSchema = z.enum([
@@ -981,9 +986,9 @@ export const FieldValueSchema = z.discriminatedUnion("kind", [
   UrlListValueSchema,
 ]);
 
-// FieldResponse schema (markform-204)
+// FieldResponse schema (markform-255)
 export const FieldResponseSchema = z.object({
-  state: ResponseStateSchema,
+  state: AnswerStateSchema,
   value: FieldValueSchema.optional(),
   reason: z.string().optional(),
 });
@@ -1117,7 +1122,7 @@ export const CheckboxProgressCountsSchema = z.object({
 export const FieldProgressSchema = z.object({
   kind: FieldKindSchema,
   required: z.boolean(),
-  responseState: ResponseStateSchema,
+  responseState: AnswerStateSchema,
   hasNotes: z.boolean(),
   noteCount: z.number().int().nonnegative(),
   state: ProgressStateSchema,

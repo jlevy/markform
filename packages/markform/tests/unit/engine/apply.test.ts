@@ -280,7 +280,7 @@ John
       const result = applyPatches(form, patches);
 
       expect(result.applyStatus).toBe("applied");
-      expect(form.responsesByFieldId.name?.state).toBe("empty");
+      expect(form.responsesByFieldId.name?.state).toBe("unanswered");
     });
   });
 
@@ -311,7 +311,7 @@ markform:
       expect(result.applyStatus).toBe("rejected");
       // Name should NOT be updated due to transaction rollback
       const nameResponse = form.responsesByFieldId.name;
-      expect(nameResponse?.state === "empty" || nameResponse === undefined).toBe(true);
+      expect(nameResponse?.state === "unanswered" || nameResponse === undefined).toBe(true);
     });
 
     it("rejects if field does not exist", () => {

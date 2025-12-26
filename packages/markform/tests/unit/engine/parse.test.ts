@@ -827,7 +827,7 @@ markform:
       const result = parseForm(markdown);
       const response = result.responsesByFieldId.notes;
 
-      expect(response?.state).toBe("empty");
+      expect(response?.state).toBe("unanswered");
       expect(response?.value).toBeUndefined();
     });
 

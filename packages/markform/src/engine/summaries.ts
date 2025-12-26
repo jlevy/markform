@@ -23,7 +23,7 @@ import type {
   ProgressState,
   ProgressSummary,
   QualifiedOptionRef,
-  ResponseState,
+  AnswerState,
   SingleSelectValue,
   StringListValue,
   StringValue,
@@ -239,7 +239,7 @@ function isCheckboxesComplete(
 function computeFieldState(
   field: Field,
   value: FieldValue | undefined,
-  responseState: ResponseState,
+  responseState: AnswerState,
   issueCount: number
 ): ProgressState {
   const submitted = isFieldSubmitted(field, value);
@@ -322,9 +322,9 @@ function computeFieldProgress(
  * @returns The response state
  */
  
-function _getResponseState(response: FieldResponse | undefined): ResponseState {
+function _getAnswerState(response: FieldResponse | undefined): AnswerState {
   if (!response) {
-    return "empty";
+    return "unanswered";
   }
   return response.state;
 }
@@ -362,7 +362,7 @@ export function computeProgressSummary(
 
   for (const group of schema.groups) {
     for (const field of group.children) {
-      const response = responsesByFieldId[field.id] ?? { state: "empty" };
+      const response = responsesByFieldId[field.id] ?? { state: "unanswered" };
       const progress = computeFieldProgress(field, response, notes, issues);
       fields[field.id] = progress;
 
@@ -379,7 +379,7 @@ export function computeProgressSummary(
         counts.skippedFields++;
       } else if (progress.responseState === "aborted") {
         counts.abortedFields++;
-      } else if (progress.responseState === "empty") {
+      } else if (progress.responseState === "unanswered") {
         counts.emptyFields++;
       }
 

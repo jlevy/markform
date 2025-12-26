@@ -431,7 +431,7 @@ function isValueEmpty(value: FieldValue): boolean {
  */
 function createFieldResponse(value: FieldValue): FieldResponse {
   if (isValueEmpty(value)) {
-    return { state: "empty" };
+    return { state: "unanswered" };
   }
   return { state: "answered", value };
 }
@@ -481,7 +481,7 @@ function parseFieldResponse(
       return { state: "aborted" };
     }
     if (stateAttr === "empty") {
-      return { state: "empty" };
+      return { state: "unanswered" };
     }
     if (stateAttr === "answered") {
       if (!isFilled) {

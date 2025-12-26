@@ -419,7 +419,7 @@ function applyClearField(
   patch: ClearFieldPatch,
 ): void {
   responses[patch.fieldId] = {
-    state: "empty",
+    state: "unanswered",
   };
 }
 

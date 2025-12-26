@@ -19,7 +19,7 @@ import type {
   FieldValue,
   InspectIssue,
   ProgressState,
-  ResponseState,
+  AnswerState,
   Note,
 } from "../../engine/coreTypes.js";
 import { parseRolesFlag } from "../../settings.js";
@@ -46,14 +46,14 @@ function formatState(state: ProgressState, useColors: boolean): string {
 }
 
 /**
- * Format response state badge for console output.
+ * Format answer state badge for console output.
  */
-function formatResponseState(state: ResponseState, useColors: boolean): string {
-  const badges: Record<ResponseState, [string, (s: string) => string]> = {
+function formatAnswerState(state: AnswerState, useColors: boolean): string {
+  const badges: Record<AnswerState, [string, (s: string) => string]> = {
     answered: ["answered", pc.green],
     skipped: ["skipped", pc.yellow],
     aborted: ["aborted", pc.red],
-    empty: ["empty", pc.dim],
+    unanswered: ["unanswered", pc.dim],
   };
   const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
   return useColors ? colorFn(text) : text;
@@ -236,7 +236,7 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       totalNotes: number;
     };
     fields: Record<string, {
-      responseState: ResponseState;
+      responseState: AnswerState;
       hasNotes: boolean;
       noteCount: number;
     }>;
@@ -263,7 +263,7 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       const roleBadge = field.role !== "agent" ? cyan(`[${field.role}]`) : "";
       const fieldProgress = progress.fields[field.id];
       const responseStateBadge = fieldProgress
-        ? `[${formatResponseState(fieldProgress.responseState, useColors)}]`
+        ? `[${formatAnswerState(fieldProgress.responseState, useColors)}]`
         : "";
       const notesBadge = fieldProgress?.hasNotes
         ? cyan(`[${fieldProgress.noteCount} note${fieldProgress.noteCount > 1 ? "s" : ""}]`)
