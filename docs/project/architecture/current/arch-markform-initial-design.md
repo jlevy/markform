@@ -268,6 +268,15 @@ The **Implementation Components** are specific to this TypeScript codebase:
 | **Multi checkbox** | Checkbox mode with 5 states: `todo`, `done`, `incomplete`, `active`, `na`. Default mode. |
 | **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit "unchecked = no". |
 
+**Field state concepts:**
+
+| Term | Definition |
+| --- | --- |
+| **AnswerState** | The action taken on a field: `unanswered` (no action), `answered` (has value), `skipped` (explicitly bypassed), `aborted` (explicitly abandoned). |
+| **ProgressState** | Form-level completion status: `empty`, `incomplete`, `invalid`, `complete`. |
+| **ProgressCounts** | Rollup counts with three orthogonal dimensions: AnswerState (unanswered/answered/skipped/aborted), Validity (valid/invalid), Value presence (empty/filled). |
+| **FieldProgress** | Per-field progress info including `answerState`, `valid`, `empty`, and optional `checkboxProgress`. |
+
 **Execution concepts:**
 
 | Term | Definition |
@@ -1640,18 +1649,18 @@ result, and completeness rules:
 
 | State | Meaning |
 | --- | --- |
-| `empty` | Not answered (no value provided, responseState !== 'answered') |
-| `incomplete` | Answered but fails completeness rules (e.g., minItems not met, required checkbox not terminal) |
-| `invalid` | Answered but fails validation (type/pattern/range errors or hook issues) |
-| `complete` | Satisfies completeness rules and passes validation |
+| `empty` | No fields have values |
+| `incomplete` | Some fields have values but not all required fields are filled or valid |
+| `invalid` | Form has validation errors or aborted fields |
+| `complete` | All required fields are filled and all fields are valid |
 
-**Response state rules (deterministic, per field):**
+**AnswerState rules (deterministic, per field):**
 
-The `responseState` is determined by the field’s FieldResponse:
+The `answerState` is determined by the field’s FieldResponse:
 
-| Response State | When |
+| AnswerState | When |
 | --- | --- |
-| `empty` | No value provided and not skipped/aborted |
+| `unanswered` | No value provided and not skipped/aborted |
 | `answered` | FieldResponse has a value (value !== undefined) |
 | `skipped` | Explicitly skipped via skip_field patch |
 | `aborted` | Explicitly aborted via abort_field patch |
@@ -1805,7 +1814,7 @@ const FieldKindSchema = z.enum([
   'string', 'number', 'string_list', 'checkboxes', 'single_select', 'multi_select', 'url', 'url_list'
 ]);
 
-const ResponseStateSchema = z.enum(['empty', 'answered', 'skipped', 'aborted']);
+const AnswerStateSchema = z.enum(['unanswered', 'answered', 'skipped', 'aborted']);
 
 const StructureSummarySchema = z.object({
   groupCount: z.number().int().nonnegative(),
@@ -1839,11 +1848,11 @@ const CheckboxProgressCountsSchema = z.object({
 const FieldProgressSchema = z.object({
   kind: FieldKindSchema,
   required: z.boolean(),
-  responseState: ResponseStateSchema,            // unified response state
+  answerState: AnswerStateSchema,                // unified answer state
   hasNotes: z.boolean(),
   noteCount: z.number().int().nonnegative(),
-  state: ProgressStateSchema,
-  valid: z.boolean(),
+  empty: z.boolean(),                            // true if field has no value
+  valid: z.boolean(),                            // true if field has no validation errors
   issueCount: z.number().int().nonnegative(),
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
 });
@@ -1851,18 +1860,20 @@ const FieldProgressSchema = z.object({
 const ProgressCountsSchema = z.object({
   totalFields: z.number().int().nonnegative(),
   requiredFields: z.number().int().nonnegative(),
-  // Response state counts (mutually exclusive, sum to totalFields)
+  // Dimension 1: AnswerState (mutually exclusive, sum to totalFields)
+  unansweredFields: z.number().int().nonnegative(),
   answeredFields: z.number().int().nonnegative(),
   skippedFields: z.number().int().nonnegative(),
   abortedFields: z.number().int().nonnegative(),
-  emptyFields: z.number().int().nonnegative(),
-  totalNotes: z.number().int().nonnegative(),
-  // Validation counts
-  completeFields: z.number().int().nonnegative(),
-  incompleteFields: z.number().int().nonnegative(),
+  // Dimension 2: Validity (mutually exclusive, sum to totalFields)
+  validFields: z.number().int().nonnegative(),
   invalidFields: z.number().int().nonnegative(),
+  // Dimension 3: Value presence (mutually exclusive, sum to totalFields)
+  emptyFields: z.number().int().nonnegative(),
+  filledFields: z.number().int().nonnegative(),
+  // Derived counts
   emptyRequiredFields: z.number().int().nonnegative(),
-  emptyOptionalFields: z.number().int().nonnegative(),
+  totalNotes: z.number().int().nonnegative(),
 });
 
 const ProgressSummarySchema = z.object({
