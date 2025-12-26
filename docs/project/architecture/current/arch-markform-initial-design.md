@@ -1288,15 +1288,16 @@ type Id = string; // validated snake_case, e.g., /^[a-z][a-z0-9_]*$/
 // Validator reference: simple string ID or parameterized object
 type ValidatorRef = string | { id: string; [key: string]: unknown };
 
-// Response state for a field - orthogonal to field type
-// Any field can be in any response state
-type ResponseState = 'empty' | 'answered' | 'skipped' | 'aborted';
+// Answer state for a field - orthogonal to field type
+// Any field can be in any answer state
+type AnswerState = 'unanswered' | 'answered' | 'skipped' | 'aborted';
 
-// Field response: combines response state with optional value
+// Field response: combines answer state with optional value
 // Used in responsesByFieldId for all fields
 interface FieldResponse {
-  state: ResponseState;
+  state: AnswerState;
   value?: FieldValue;  // present only when state === 'answered'
+  reason?: string;     // skip/abort reason (embedded in sentinel value)
 }
 
 // Note system for field/group/form annotations
@@ -1559,18 +1560,18 @@ interface StructureSummary {
 Tracks filling progress per field without exposing actual values:
 
 ```ts
-// Progress state for a field or the whole form
+// Progress state for a field or the whole form (derived from dimensions)
 type ProgressState = 'empty' | 'incomplete' | 'invalid' | 'complete';
 
 interface FieldProgress {
   kind: FieldKind;             // field type
   required: boolean;           // whether field has required=true
 
-  responseState: ResponseState; // unified response state (empty/answered/skipped/aborted)
+  answerState: AnswerState;    // unified answer state (unanswered/answered/skipped/aborted)
   hasNotes: boolean;           // whether field has any notes attached
   noteCount: number;           // count of notes attached to this field
 
-  state: ProgressState;        // computed progress state
+  empty: boolean;              // true if field has no value
   valid: boolean;              // true iff no validation issues for this field
   issueCount: number;          // count of ValidationIssues referencing this field
 
@@ -1612,21 +1613,23 @@ interface ProgressCounts {
   totalFields: number;           // all fields in the form
   requiredFields: number;        // fields with required=true
 
-  // Response state counts (mutually exclusive, sum to totalFields)
-  answeredFields: number;        // fields with state='answered' (have values)
-  skippedFields: number;         // fields with state='skipped'
-  abortedFields: number;         // fields with state='aborted'
-  emptyFields: number;           // fields with state='empty'
+  // Dimension 1: AnswerState (mutually exclusive, sum to totalFields)
+  unansweredFields: number;      // fields with answerState='unanswered'
+  answeredFields: number;        // fields with answerState='answered' (have values)
+  skippedFields: number;         // fields with answerState='skipped'
+  abortedFields: number;         // fields with answerState='aborted'
 
-  totalNotes: number;            // total notes across all fields/groups/form
+  // Dimension 2: Validity (mutually exclusive, sum to totalFields)
+  validFields: number;           // fields with valid=true
+  invalidFields: number;         // fields with valid=false
 
-  // Validation counts
-  completeFields: number;        // fields in 'complete' state
-  incompleteFields: number;      // fields in 'incomplete' state
-  invalidFields: number;         // fields in 'invalid' state
+  // Dimension 3: Value presence (mutually exclusive, sum to totalFields)
+  emptyFields: number;           // fields with empty=true (no value)
+  filledFields: number;          // fields with empty=false (have value)
 
+  // Derived counts
   emptyRequiredFields: number;   // required fields with no value
-  emptyOptionalFields: number;   // optional fields with no value
+  totalNotes: number;            // total notes across all fields/groups/form
 }
 ```
 
