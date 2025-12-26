@@ -74,9 +74,9 @@ function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
   const counts = report.progress.counts;
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${counts.totalFields}`);
-  lines.push(`  Complete: ${counts.completeFields}`);
-  lines.push(`  Incomplete: ${counts.incompleteFields}`);
-  lines.push(`  Empty (required): ${counts.emptyRequiredFields}`);
+  lines.push(`  Valid: ${counts.validFields}, Invalid: ${counts.invalidFields}`);
+  lines.push(`  Filled: ${counts.filledFields}, Empty: ${counts.emptyFields}`);
+  lines.push(`  Empty required: ${counts.emptyRequiredFields}`);
   lines.push("");
 
   // Issues

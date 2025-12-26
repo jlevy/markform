@@ -133,23 +133,25 @@ function formatConsoleReport(
     counts: {
       totalFields: number;
       requiredFields: number;
-      submittedFields: number;
-      completeFields: number;
-      incompleteFields: number;
+      unansweredFields: number;
+      answeredFields: number;
+      skippedFields: number;
+      abortedFields: number;
+      validFields: number;
       invalidFields: number;
+      emptyFields: number;
+      filledFields: number;
       emptyRequiredFields: number;
-      emptyOptionalFields: number;
+      totalNotes: number;
     };
   };
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
-  lines.push(`  Submitted: ${progress.counts.submittedFields}`);
-  lines.push(`  Complete: ${progress.counts.completeFields}`);
-  lines.push(`  Incomplete: ${progress.counts.incompleteFields}`);
-  lines.push(`  Invalid: ${progress.counts.invalidFields}`);
-  lines.push(`  Empty (required): ${progress.counts.emptyRequiredFields}`);
-  lines.push(`  Empty (optional): ${progress.counts.emptyOptionalFields}`);
+  lines.push(`  AnswerState: answered=${progress.counts.answeredFields}, skipped=${progress.counts.skippedFields}, aborted=${progress.counts.abortedFields}, unanswered=${progress.counts.unansweredFields}`);
+  lines.push(`  Validity: valid=${progress.counts.validFields}, invalid=${progress.counts.invalidFields}`);
+  lines.push(`  Value: filled=${progress.counts.filledFields}, empty=${progress.counts.emptyFields}`);
+  lines.push(`  Empty required: ${progress.counts.emptyRequiredFields}`);
   lines.push("");
 
   // Issues

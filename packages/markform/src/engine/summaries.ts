@@ -304,16 +304,20 @@ export function computeProgressSummary(
   const counts: ProgressCounts = {
     totalFields: 0,
     requiredFields: 0,
+    // Dimension 1: AnswerState
+    unansweredFields: 0,
     answeredFields: 0,
     skippedFields: 0,
     abortedFields: 0,
-    emptyFields: 0,
-    totalNotes: notes.length,
-    completeFields: 0,
-    incompleteFields: 0,
+    // Dimension 2: Validity
+    validFields: 0,
     invalidFields: 0,
+    // Dimension 3: Value presence
+    emptyFields: 0,
+    filledFields: 0,
+    // Derived
     emptyRequiredFields: 0,
-    emptyOptionalFields: 0,
+    totalNotes: notes.length,
   };
 
   for (const group of schema.groups) {
@@ -328,7 +332,7 @@ export function computeProgressSummary(
         counts.requiredFields++;
       }
 
-      // Count by response state (mutually exclusive)
+      // Dimension 1: AnswerState (mutually exclusive)
       if (progress.answerState === "answered") {
         counts.answeredFields++;
       } else if (progress.answerState === "skipped") {
@@ -336,24 +340,24 @@ export function computeProgressSummary(
       } else if (progress.answerState === "aborted") {
         counts.abortedFields++;
       } else if (progress.answerState === "unanswered") {
-        counts.emptyFields++;
+        counts.unansweredFields++;
       }
 
-      // Count by validity and emptiness (derived from empty and valid booleans)
-      if (!progress.empty && progress.valid) {
-        counts.completeFields++;
-      }
-      // Note: incompleteFields no longer tracked (was checkbox-specific)
-      // Fields with issues are invalid
-      if (!progress.valid) {
+      // Dimension 2: Validity (mutually exclusive)
+      if (progress.valid) {
+        counts.validFields++;
+      } else {
         counts.invalidFields++;
       }
+
+      // Dimension 3: Value presence (mutually exclusive)
       if (progress.empty) {
+        counts.emptyFields++;
         if (progress.required) {
           counts.emptyRequiredFields++;
-        } else {
-          counts.emptyOptionalFields++;
         }
+      } else {
+        counts.filledFields++;
       }
     }
   }
@@ -382,17 +386,12 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
     return "invalid";
   }
 
-  // If any field is incomplete, form is incomplete
-  if (progress.counts.incompleteFields > 0) {
-    return "incomplete";
-  }
-
-  // If all required fields are complete and no invalid fields
+  // If all required fields are filled and valid
   if (progress.counts.emptyRequiredFields === 0) {
     return "complete";
   }
 
-  // If any field is answered but not all complete
+  // If any field is answered but not all required fields filled
   if (progress.counts.answeredFields > 0) {
     return "incomplete";
   }
@@ -424,15 +423,13 @@ export function isFormComplete(progress: ProgressSummary): boolean {
     return false;
   }
 
-  // Basic requirements: no invalid/incomplete fields, all required fields filled
+  // Basic requirements: no invalid fields, all required fields filled
   const baseComplete =
-    counts.invalidFields === 0 &&
-    counts.incompleteFields === 0 &&
-    counts.emptyRequiredFields === 0;
+    counts.invalidFields === 0 && counts.emptyRequiredFields === 0;
 
   // All fields must be addressed (filled or skipped)
   const allFieldsAccountedFor =
-    (counts.answeredFields + counts.skippedFields) === counts.totalFields;
+    counts.answeredFields + counts.skippedFields === counts.totalFields;
 
   return baseComplete && allFieldsAccountedFor;
 }

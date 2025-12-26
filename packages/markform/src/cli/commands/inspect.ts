@@ -223,34 +223,37 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     counts: {
       totalFields: number;
       requiredFields: number;
-      submittedFields: number;
-      completeFields: number;
-      incompleteFields: number;
-      invalidFields: number;
-      emptyRequiredFields: number;
-      emptyOptionalFields: number;
+      // Dimension 1: AnswerState
+      unansweredFields: number;
       answeredFields: number;
       skippedFields: number;
       abortedFields: number;
+      // Dimension 2: Validity
+      validFields: number;
+      invalidFields: number;
+      // Dimension 3: Value presence
       emptyFields: number;
+      filledFields: number;
+      // Derived
+      emptyRequiredFields: number;
       totalNotes: number;
     };
-    fields: Record<string, {
-      answerState: AnswerState;
-      hasNotes: boolean;
-      noteCount: number;
-    }>;
+    fields: Record<
+      string,
+      {
+        answerState: AnswerState;
+        hasNotes: boolean;
+        noteCount: number;
+      }
+    >;
   };
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
-  lines.push(`  Answered: ${progress.counts.answeredFields}`);
-  lines.push(`  Skipped: ${progress.counts.skippedFields}`);
-  lines.push(`  Aborted: ${progress.counts.abortedFields}`);
-  lines.push(`  Empty: ${progress.counts.emptyFields}`);
-  lines.push(`  Complete: ${progress.counts.completeFields}`);
-  lines.push(`  Incomplete: ${progress.counts.incompleteFields}`);
-  lines.push(`  Invalid: ${progress.counts.invalidFields}`);
+  lines.push(`  AnswerState: answered=${progress.counts.answeredFields}, skipped=${progress.counts.skippedFields}, aborted=${progress.counts.abortedFields}, unanswered=${progress.counts.unansweredFields}`);
+  lines.push(`  Validity: valid=${progress.counts.validFields}, invalid=${progress.counts.invalidFields}`);
+  lines.push(`  Value: filled=${progress.counts.filledFields}, empty=${progress.counts.emptyFields}`);
+  lines.push(`  Empty required: ${progress.counts.emptyRequiredFields}`);
   lines.push(`  Total notes: ${progress.counts.totalNotes}`);
   lines.push("");
 

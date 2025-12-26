@@ -488,25 +488,30 @@ export interface FieldProgress {
   checkboxProgress?: CheckboxProgressCounts;
 }
 
-/** Progress counts rollup */
+/**
+ * Progress counts rollup with three orthogonal dimensions.
+ */
 export interface ProgressCounts {
   totalFields: number;
   requiredFields: number;
 
-  // Response state counts (mutually exclusive, sum to totalFields)
+  // Dimension 1: AnswerState (mutually exclusive, sum to totalFields)
+  unansweredFields: number;
   answeredFields: number;
   skippedFields: number;
   abortedFields: number;
-  emptyFields: number;
 
-  totalNotes: number;
-
-  // Validation counts (unchanged)
-  completeFields: number;
-  incompleteFields: number;
+  // Dimension 2: Validity (mutually exclusive, sum to totalFields)
+  validFields: number;
   invalidFields: number;
+
+  // Dimension 3: Value presence (mutually exclusive, sum to totalFields)
+  emptyFields: number;
+  filledFields: number;
+
+  // Derived counts
   emptyRequiredFields: number;
-  emptyOptionalFields: number;
+  totalNotes: number;
 }
 
 /** Progress summary - tracks filling progress */
@@ -1139,18 +1144,20 @@ export const FieldProgressSchema = z.object({
 export const ProgressCountsSchema = z.object({
   totalFields: z.number().int().nonnegative(),
   requiredFields: z.number().int().nonnegative(),
-  // Response state counts (mutually exclusive, sum to totalFields)
+  // Dimension 1: AnswerState (mutually exclusive, sum to totalFields)
+  unansweredFields: z.number().int().nonnegative(),
   answeredFields: z.number().int().nonnegative(),
   skippedFields: z.number().int().nonnegative(),
   abortedFields: z.number().int().nonnegative(),
-  emptyFields: z.number().int().nonnegative(),
-  totalNotes: z.number().int().nonnegative(),
-  // Validation counts
-  completeFields: z.number().int().nonnegative(),
-  incompleteFields: z.number().int().nonnegative(),
+  // Dimension 2: Validity (mutually exclusive, sum to totalFields)
+  validFields: z.number().int().nonnegative(),
   invalidFields: z.number().int().nonnegative(),
+  // Dimension 3: Value presence (mutually exclusive, sum to totalFields)
+  emptyFields: z.number().int().nonnegative(),
+  filledFields: z.number().int().nonnegative(),
+  // Derived counts
   emptyRequiredFields: z.number().int().nonnegative(),
-  emptyOptionalFields: z.number().int().nonnegative(),
+  totalNotes: z.number().int().nonnegative(),
 });
 
 export const ProgressSummarySchema = z.object({

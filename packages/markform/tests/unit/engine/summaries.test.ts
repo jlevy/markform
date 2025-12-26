@@ -140,7 +140,8 @@ John Doe
       expect(progress.fields.name?.valid).toBe(true);
       expect(progress.fields.name?.answerState === "answered").toBe(true);
       expect(progress.counts.answeredFields).toBe(1);
-      expect(progress.counts.completeFields).toBe(1);
+      expect(progress.counts.validFields).toBe(1);
+      expect(progress.counts.filledFields).toBe(1);
     });
 
     it("tracks fields with issues as invalid", () => {
@@ -702,18 +703,25 @@ Alice
       const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
 
       expect(progress.counts.totalFields).toBe(4);
-      expect(progress.counts.answeredFields).toBe(1); // name
-      expect(progress.counts.skippedFields).toBe(1); // bio
-      expect(progress.counts.abortedFields).toBe(1); // age
-      expect(progress.counts.emptyFields).toBe(1); // notes
+      expect(progress.counts.answeredFields).toBe(1); // name (has value)
+      expect(progress.counts.skippedFields).toBe(1); // bio (no value)
+      expect(progress.counts.abortedFields).toBe(1); // age (no value)
+      expect(progress.counts.unansweredFields).toBe(1); // notes (no value)
 
-      // Verify invariant: answeredFields + skippedFields + abortedFields + emptyFields == totalFields
-      const total =
+      // Dimension 1 invariant: AnswerState sums to totalFields
+      const answerStateTotal =
         progress.counts.answeredFields +
         progress.counts.skippedFields +
         progress.counts.abortedFields +
-        progress.counts.emptyFields;
-      expect(total).toBe(progress.counts.totalFields);
+        progress.counts.unansweredFields;
+      expect(answerStateTotal).toBe(progress.counts.totalFields);
+
+      // Dimension 3 invariant: Value presence sums to totalFields
+      expect(progress.counts.filledFields).toBe(1); // name has value
+      expect(progress.counts.emptyFields).toBe(3); // bio, age, notes have no value
+      expect(progress.counts.filledFields + progress.counts.emptyFields).toBe(
+        progress.counts.totalFields
+      );
     });
 
     it("tracks field response states in progress", () => {
@@ -969,7 +977,9 @@ Some notes
       expect(result.isComplete).toBe(true);
       expect(result.formState).toBe("complete");
       expect(result.progressSummary.counts.abortedFields).toBe(0);
-      expect(result.progressSummary.counts.emptyFields).toBe(0);
+      // bio is skipped (no value), so emptyFields = 1
+      expect(result.progressSummary.counts.emptyFields).toBe(1);
+      expect(result.progressSummary.counts.filledFields).toBe(2); // name, notes
     });
   });
 });
