@@ -945,12 +945,12 @@ Minimum 5; include more if needed.
 Fields can have a `state` attribute to indicate skip or abort status. The attribute is
 serialized on the opening tag:
 
-**Skipped field:**
+**Skipped field (no reason):**
 ```md
 {% string-field id="optional_notes" label="Optional notes" state="skipped" %}{% /string-field %}
 ```
 
-**Aborted field:**
+**Aborted field (no reason):**
 ```md
 {% string-field id="company_name" label="Company name" required=true state="aborted" %}{% /string-field %}
 ```
@@ -961,15 +961,15 @@ serialized on the opening tag:
 
 - `state="aborted"`: Field was explicitly aborted via `abort_field` patch
 
-**Serialization with sentinel values:**
+**Serialization with sentinel values and reasons (markform-254):**
 
 When a field has a skip or abort state AND a reason was provided via the patch, the
-reason is serialized as a sentinel value in the value fence:
+reason is embedded in the sentinel value using parentheses:
 
 ```md
 {% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
 ```value
-|SKIP| Information not publicly available
+|SKIP| (Information not publicly available)
 ```
 {% /string-field %}
 ```
@@ -977,7 +977,7 @@ reason is serialized as a sentinel value in the value fence:
 ```md
 {% number-field id="projected_revenue" label="Projected revenue" state="aborted" %}
 ```value
-|ABORT| Financial projections cannot be determined from available data
+|ABORT| (Financial projections cannot be determined from available data)
 ```
 {% /number-field %}
 ```
@@ -987,17 +987,18 @@ reason is serialized as a sentinel value in the value fence:
 - If `state="aborted"` is present, field's responseState is `'aborted'`
 - Otherwise, responseState is determined by value presence (`'answered'` or `'empty'`)
 - Sentinel values (`|SKIP|` or `|ABORT|`) are parsed as metadata, not field values
-- Text after sentinel is the skip/abort reason
+- Text in parentheses after sentinel is extracted as `FieldResponse.reason`
 
 **Serialization rules:**
 - Only emit `state` attribute when responseState is `'skipped'` or `'aborted'`
-- If skip/abort has a reason, serialize as sentinel value in fence
+- If skip/abort has a reason, serialize as sentinel value with parenthesized reason
 - If skip/abort has no reason, omit the value fence entirely
 
 ##### Note Serialization Format
 
-Notes are runtime additions by agents/users, serialized at the end of the form body
-(before `{% /form %}`). Notes are sorted numerically by ID for deterministic output.
+Notes are general-purpose runtime annotations by agents/users, serialized at the end of
+the form body (before `{% /form %}`). Notes are sorted numerically by ID for
+deterministic output.
 
 **Note tag syntax:**
 
@@ -1006,12 +1007,8 @@ Notes are runtime additions by agents/users, serialized at the end of the form b
 General observation about this field.
 {% /note %}
 
-{% note id="n2" ref="field_id" role="agent" state="skipped" %}
-Reason why this field was skipped.
-{% /note %}
-
-{% note id="n3" ref="company_info" role="agent" state="aborted" %}
-Reason why agent couldn't fill this field.
+{% note id="n2" ref="quarterly_earnings" role="agent" %}
+Analysis completed with partial data due to API limitations.
 {% /note %}
 ```
 
@@ -1022,7 +1019,10 @@ Reason why agent couldn't fill this field.
 | `id` | Yes | Unique note identifier (implementation uses n1, n2, n3...) |
 | `ref` | Yes | Target element ID (field, group, or form) |
 | `role` | Yes | Who created the note (e.g., 'agent', 'user') |
-| `state` | No | `"skipped"` or `"aborted"` to link note to action |
+
+> **Note (markform-254):** Notes no longer support a `state` attribute.
+> Skip/abort reasons are now embedded directly in the field value using sentinel syntax
+> like `|SKIP| (reason)`. Notes are purely for general annotations.
 
 **Placement and ordering:**
 
@@ -1040,15 +1040,14 @@ Reason why agent couldn't fill this field.
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
 
 {% field-group id="company_info" title="Company Info" %}
-{% string-field id="company_name" label="Company name" state="skipped" %}{% /string-field %}
-{% /field-group %}
+{% string-field id="company_name" label="Company name" state="skipped" %}
+```value
+|SKIP| (Not applicable for this analysis type)
+```
+{% /string-field %} {% /field-group %}
 
-{% note id="n1" ref="company_name" role="agent" state="skipped" %}
-Not applicable for this analysis type.
-{% /note %}
-
-{% note id="n2" ref="quarterly_earnings" role="agent" %}
-Analysis completed with partial data due to API limitations.
+{% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
+data due to API limitations.
 {% /note %}
 
 {% /form %}

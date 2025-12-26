@@ -40,6 +40,7 @@ export type ResponseState = "empty" | "answered" | "skipped" | "aborted";
 export interface FieldResponse {
   state: ResponseState;
   value?: FieldValue; // present only when state === 'answered'
+  reason?: string; // present when state === 'skipped' or 'aborted'
 }
 
 // =============================================================================
@@ -54,7 +55,6 @@ export interface Note {
   id: NoteId;
   ref: Id; // target ID (field, group, or form)
   role: string; // who created (agent, user, ...)
-  state?: "skipped" | "aborted"; // optional: links note to action
   text: string; // markdown content
 }
 
@@ -621,7 +621,6 @@ export interface AddNotePatch {
   ref: Id;
   role: string;
   text: string;
-  state?: "skipped" | "aborted";
 }
 
 /** Remove note - remove a specific note by ID */
@@ -782,9 +781,6 @@ export const ValidatorRefSchema = z.union([
 
 // Response state schema (markform-204)
 export const ResponseStateSchema = z.enum(["empty", "answered", "skipped", "aborted"]);
-
-// Note state schema (subset for note.state)
-export const NoteStateSchema = z.enum(["skipped", "aborted"]);
 
 // Checkbox state schemas
 export const MultiCheckboxStateSchema = z.enum([
@@ -989,6 +985,7 @@ export const FieldValueSchema = z.discriminatedUnion("kind", [
 export const FieldResponseSchema = z.object({
   state: ResponseStateSchema,
   value: FieldValueSchema.optional(),
+  reason: z.string().optional(),
 });
 
 // Note schema (markform-205)
@@ -996,7 +993,6 @@ export const NoteSchema = z.object({
   id: NoteIdSchema,
   ref: IdSchema,
   role: z.string(),
-  state: NoteStateSchema.optional(),
   text: z.string(),
 });
 
@@ -1259,7 +1255,6 @@ export const AddNotePatchSchema = z.object({
   ref: IdSchema,
   role: z.string(),
   text: z.string(),
-  state: NoteStateSchema.optional(),
 });
 
 export const RemoveNotePatchSchema = z.object({

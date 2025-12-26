@@ -166,4 +166,8 @@ Optionally add a URL to related documentation or resources.
 
 {% /field-group %}
 
+{% note id="note-review" ref="simple_test" role="agent" %}
+Form completed with all required fields. Score assigned based on completeness. References include documentation and project links.
+{% /note %}
+
 {% /form %}

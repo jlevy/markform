@@ -281,9 +281,8 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     lines.push(bold(`Notes (${report.notes.length}):`));
     for (const note of report.notes) {
       const roleBadge = cyan(`[${note.role}]`);
-      const stateBadge = note.state ? yellow(`[${note.state}]`) : "";
       const refLabel = dim(`${note.ref}:`);
-      lines.push(`  ${note.id} ${roleBadge} ${stateBadge} ${refLabel} ${note.text}`.trim());
+      lines.push(`  ${note.id} ${roleBadge} ${refLabel} ${note.text}`.trim());
     }
     lines.push("");
   }

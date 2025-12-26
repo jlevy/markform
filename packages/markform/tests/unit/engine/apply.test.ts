@@ -340,7 +340,7 @@ markform:
   });
 
   describe("skip_field patch", () => {
-    it("applies skip_field to optional field", () => {
+    it("applies skip_field to optional field with reason stored in response", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -363,9 +363,9 @@ markform:
 
       expect(result.applyStatus).toBe("applied");
       expect(form.responsesByFieldId.notes?.state).toBe("skipped");
-      // Check that a note was added with the reason
-      const note = form.notes.find(n => n.ref === "notes" && n.state === "skipped");
-      expect(note?.text).toContain("Not applicable");
+      // Per markform-254, reason is stored in FieldResponse.reason, not as a note
+      expect(form.responsesByFieldId.notes?.reason).toBe("Not applicable");
+      expect(form.notes).toHaveLength(0);
     });
 
     it("rejects skip_field on required field", () => {
@@ -542,7 +542,7 @@ markform:
       expect(form.responsesByFieldId.name?.state).toBe("aborted");
     });
 
-    it("applies abort_field with reason, adding note", () => {
+    it("applies abort_field with reason stored in response", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -571,12 +571,9 @@ markform:
       expect(result.applyStatus).toBe("applied");
       expect(form.responsesByFieldId.revenue?.state).toBe("aborted");
 
-      // Check that a note was added with the reason
-      const note = form.notes.find(
-        (n) => n.ref === "revenue" && n.state === "aborted"
-      );
-      expect(note).toBeDefined();
-      expect(note?.text).toContain("not available");
+      // Per markform-254, reason is stored in FieldResponse.reason, not as a note
+      expect(form.responsesByFieldId.revenue?.reason).toBe("Data not available in source document");
+      expect(form.notes).toHaveLength(0);
     });
 
     it("clears existing value when aborting field", () => {
@@ -644,10 +641,9 @@ markform:
       expect(form.notes[0]?.ref).toBe("name");
       expect(form.notes[0]?.role).toBe("user");
       expect(form.notes[0]?.text).toContain("general comment");
-      expect(form.notes[0]?.state).toBeUndefined();
     });
 
-    it("adds note with state attribute", () => {
+    it("adds note without state attribute (notes are general-purpose)", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -668,7 +664,6 @@ markform:
           ref: "notes",
           role: "agent",
           text: "Skipped because not applicable.",
-          state: "skipped",
         },
       ];
 
@@ -676,7 +671,8 @@ markform:
 
       expect(result.applyStatus).toBe("applied");
       expect(form.notes).toHaveLength(1);
-      expect(form.notes[0]?.state).toBe("skipped");
+      // Per markform-254, notes no longer have state attribute
+      expect(form.notes[0]?.text).toContain("not applicable");
     });
 
     it("rejects add_note with invalid ref", () => {
@@ -803,8 +799,8 @@ markform:
     });
   });
 
-  describe("unified response model - auto-cleanup notes (markform-234)", () => {
-    it("removes state-linked notes when setting value on skipped field", () => {
+  describe("unified response model - notes preserved on re-fill (markform-254)", () => {
+    it("preserves all notes when setting value on skipped field", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -816,8 +812,8 @@ markform:
 {% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
 {% /field-group %}
 
-{% note id="n1" ref="notes" role="agent" state="skipped" %}
-Skip reason.
+{% note id="n1" ref="notes" role="agent" %}
+Skip reason note.
 {% /note %}
 
 {% note id="n2" ref="notes" role="user" %}
@@ -840,12 +836,11 @@ General comment.
       expect(result.applyStatus).toBe("applied");
       expect(form.responsesByFieldId.notes?.state).toBe("answered");
 
-      // State-linked note (n1) should be removed
-      expect(form.notes).toHaveLength(1);
-      expect(form.notes[0]?.id).toBe("n2");
+      // All notes preserved - notes are general-purpose per markform-254
+      expect(form.notes).toHaveLength(2);
     });
 
-    it("removes state-linked notes when setting value on aborted field", () => {
+    it("preserves all notes when setting value on aborted field", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -857,8 +852,8 @@ markform:
 {% number-field id="count" label="Count" state="aborted" %}{% /number-field %}
 {% /field-group %}
 
-{% note id="n1" ref="count" role="agent" state="aborted" %}
-Abort reason.
+{% note id="n1" ref="count" role="agent" %}
+Abort reason note.
 {% /note %}
 
 {% /form %}
@@ -876,48 +871,8 @@ Abort reason.
       expect(result.applyStatus).toBe("applied");
       expect(form.responsesByFieldId.count?.state).toBe("answered");
 
-      // State-linked note should be removed
-      expect(form.notes).toHaveLength(0);
-    });
-
-    it("preserves general notes when setting value on skipped field", () => {
-      const markdown = `---
-markform:
-  markform_version: "0.1.0"
----
-
-{% form id="test" %}
-
-{% field-group id="g1" %}
-{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
-{% /field-group %}
-
-{% note id="n1" ref="notes" role="agent" state="skipped" %}
-Skip reason.
-{% /note %}
-
-{% note id="n2" ref="notes" role="user" %}
-This is a general note.
-{% /note %}
-
-{% /form %}
-`;
-      const form = parseForm(markdown);
-      expect(form.notes).toHaveLength(2);
-
-      // Set a value on the skipped field
-      const patches: Patch[] = [
-        { op: "set_string", fieldId: "notes", value: "New value" },
-      ];
-
-      const result = applyPatches(form, patches);
-
-      expect(result.applyStatus).toBe("applied");
-
-      // Only state-linked note should be removed, general note preserved
+      // Note preserved - notes are general-purpose per markform-254
       expect(form.notes).toHaveLength(1);
-      expect(form.notes[0]?.id).toBe("n2");
-      expect(form.notes[0]?.state).toBeUndefined();
     });
   });
 });

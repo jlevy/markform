@@ -33,7 +33,11 @@ test@example.com
 ```
 {% /number-field %}
 
-{% number-field id="score" label="Score" max=100 min=0 %}{% /number-field %}
+{% number-field id="score" label="Score" max=100 min=0 state="skipped" %}
+```value
+|SKIP| (Not needed for this test)
+```
+{% /number-field %}
 
 {% instructions ref="score" %}
 Assign a score between 0 and 100 based on form completeness.
@@ -128,20 +132,32 @@ Add 1-5 unique reference URLs for sources or documentation.
 
 {% field-group id="optional_fields" title="Optional Fields (Agent)" %}
 
-{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% string-field id="notes" label="Notes" state="skipped" %}
+```value
+|SKIP| (No notes required)
+```
+{% /string-field %}
 
 {% instructions ref="notes" %}
 Add any relevant notes or observations about this test form.
 {% /instructions %}
 
-{% number-field id="optional_number" label="Optional Number" %}{% /number-field %}
+{% number-field id="optional_number" label="Optional Number" state="skipped" %}{% /number-field %}
 
-{% url-field id="related_url" label="Related URL" %}{% /url-field %}
+{% url-field id="related_url" label="Related URL" state="skipped" %}
+```value
+|SKIP| (No related URL needed)
+```
+{% /url-field %}
 
 {% instructions ref="related_url" %}
 Optionally add a URL to related documentation or resources.
 {% /instructions %}
 
 {% /field-group %}
+
+{% note id="note-agent-summary" ref="simple_test" role="agent" %}
+All required fields completed successfully. Optional fields skipped as not needed for this test scenario.
+{% /note %}
 
 {% /form %}

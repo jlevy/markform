@@ -221,9 +221,14 @@ turns:
           role: agent
           field_id: related_url
           reason: No related URL needed
+        - op: add_note
+          id: note-agent-summary
+          ref: simple_test
+          role: agent
+          text: All required fields completed successfully. Optional fields skipped as not needed for this test scenario.
     after:
       required_issue_count: 0
-      markdown_sha256: 262d90c2aa0a288a55f836de66ceea58a4cc0642af389d2cb6240409822d6ae0
+      markdown_sha256: 3797e400a972f3e92691a01c42d399f9fce4776e4bbf6900d519088d3c8d9768
       answered_field_count: 11
       skipped_field_count: 4
 final:

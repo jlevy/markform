@@ -806,7 +806,7 @@ markform:
 {% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
 {% /field-group %}
 
-{% note id="n1" ref="notes" role="agent" state="skipped" %}
+{% note id="n1" ref="notes" role="agent" %}
 Not applicable for this analysis.
 {% /note %}
 
@@ -818,7 +818,7 @@ Not applicable for this analysis.
       expect(output).toContain('{% note id="n1"');
       expect(output).toContain('ref="notes"');
       expect(output).toContain('role="agent"');
-      expect(output).toContain('state="skipped"');
+      // Notes no longer have state attribute per markform-254
       expect(output).toContain("Not applicable");
     });
 
@@ -902,7 +902,7 @@ markform:
 {% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
 {% /field-group %}
 
-{% note id="n1" ref="notes" role="agent" state="skipped" %}
+{% note id="n1" ref="notes" role="agent" %}
 Not applicable.
 {% /note %}
 
@@ -916,7 +916,7 @@ Not applicable.
       expect(reparsed.notes[0]?.id).toBe("n1");
       expect(reparsed.notes[0]?.ref).toBe("notes");
       expect(reparsed.notes[0]?.role).toBe("agent");
-      expect(reparsed.notes[0]?.state).toBe("skipped");
+      // Note: state field is no longer present on notes per markform-254
       expect(reparsed.notes[0]?.text).toContain("Not applicable");
     });
   });
@@ -997,11 +997,11 @@ Alice
 {% string-field id="notes" label="Notes" %}{% /string-field %}
 {% /field-group %}
 
-{% note id="n1" ref="bio" role="agent" state="skipped" %}
+{% note id="n1" ref="bio" role="agent" %}
 Bio not available.
 {% /note %}
 
-{% note id="n2" ref="age" role="agent" state="aborted" %}
+{% note id="n2" ref="age" role="agent" %}
 Age cannot be determined.
 {% /note %}
 
@@ -1017,12 +1017,10 @@ Age cannot be determined.
       expect(reparsed.responsesByFieldId.age?.state).toBe("aborted");
       expect(reparsed.responsesByFieldId.notes?.state).toBe("empty");
 
-      // Check notes
+      // Check notes - state is no longer present on notes per markform-254
       expect(reparsed.notes).toHaveLength(2);
       expect(reparsed.notes[0]?.id).toBe("n1");
-      expect(reparsed.notes[0]?.state).toBe("skipped");
       expect(reparsed.notes[1]?.id).toBe("n2");
-      expect(reparsed.notes[1]?.state).toBe("aborted");
     });
   });
 });

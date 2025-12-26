@@ -128,7 +128,7 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
     }
     if (!turnResult.hashMatch) {
       errors.push(
-        `Turn ${turn.turn}: Hash mismatch (expected ${turnResult.expectedHash.slice(0, 16)}..., got ${turnResult.actualHash.slice(0, 16)}...)`
+        `Turn ${turn.turn}: Hash mismatch (expected ${turnResult.expectedHash}, got ${turnResult.actualHash})`
       );
     }
     if (!turnResult.countsMatch) {

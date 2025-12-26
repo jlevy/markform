@@ -1010,10 +1010,9 @@ This field is not applicable for this analysis.
       expect(result.notes[0]?.ref).toBe("notes");
       expect(result.notes[0]?.role).toBe("agent");
       expect(result.notes[0]?.text).toContain("not applicable");
-      expect(result.notes[0]?.state).toBeUndefined();
     });
 
-    it("parses note with optional state attribute", () => {
+    it("rejects note with state attribute", () => {
       const markdown = `---
 markform:
   markform_version: "0.1.0"
@@ -1031,36 +1030,8 @@ Company is private, revenue not disclosed.
 
 {% /form %}
 `;
-      const result = parseForm(markdown);
-
-      expect(result.notes).toHaveLength(1);
-      expect(result.notes[0]?.id).toBe("n1");
-      expect(result.notes[0]?.state).toBe("skipped");
-      expect(result.notes[0]?.text).toContain("private");
-    });
-
-    it("parses note with state=\"aborted\"", () => {
-      const markdown = `---
-markform:
-  markform_version: "0.1.0"
----
-
-{% form id="test" %}
-
-{% field-group id="g1" %}
-{% number-field id="count" label="Count" state="aborted" %}{% /number-field %}
-{% /field-group %}
-
-{% note id="n2" ref="count" role="agent" state="aborted" %}
-Cannot determine count from available data.
-{% /note %}
-
-{% /form %}
-`;
-      const result = parseForm(markdown);
-
-      expect(result.notes).toHaveLength(1);
-      expect(result.notes[0]?.state).toBe("aborted");
+      // Per markform-254, notes no longer support state attribute
+      expect(() => parseForm(markdown)).toThrow(/state.*attribute/i);
     });
 
     it("parses multiple notes", () => {

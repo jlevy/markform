@@ -36,6 +36,31 @@ import type {
 import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
 
 // =============================================================================
+// Sentinel Value Helpers
+// =============================================================================
+
+/**
+ * Format a value fence block with the given content.
+ */
+function formatValueFence(content: string): string {
+  return `\n\`\`\`value\n${content}\n\`\`\`\n`;
+}
+
+/**
+ * Get sentinel value content for skipped/aborted fields with reason.
+ * Returns the fence block if there's a reason, empty string otherwise.
+ */
+function getSentinelContent(response: FieldResponse | undefined): string {
+  if (response?.state === "skipped" && response.reason) {
+    return formatValueFence(`|SKIP| (${response.reason})`);
+  }
+  if (response?.state === "aborted" && response.reason) {
+    return formatValueFence(`|ABORT| (${response.reason})`);
+  }
+  return "";
+}
+
+// =============================================================================
 // Options
 // =============================================================================
 
@@ -183,6 +208,12 @@ function serializeStringField(
     }
   }
 
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
+  }
+
   return `{% string-field ${attrStr} %}${content}{% /string-field %}`;
 }
 
@@ -230,6 +261,12 @@ function serializeNumberField(
     if (value.value !== null && value.value !== undefined) {
       content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
     }
+  }
+
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
   }
 
   return `{% number-field ${attrStr} %}${content}{% /number-field %}`;
@@ -285,6 +322,12 @@ function serializeStringListField(
     if (value.items && value.items.length > 0) {
       content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
     }
+  }
+
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
   }
 
   return `{% string-list ${attrStr} %}${content}{% /string-list %}`;
@@ -487,6 +530,12 @@ function serializeUrlField(
     }
   }
 
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
+  }
+
   return `{% url-field ${attrStr} %}${content}{% /url-field %}`;
 }
 
@@ -534,6 +583,12 @@ function serializeUrlListField(
     if (value.items && value.items.length > 0) {
       content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
     }
+  }
+
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
   }
 
   return `{% url-list ${attrStr} %}${content}{% /url-list %}`;
@@ -606,9 +661,6 @@ function serializeNotes(notes: Note[]): string {
       ref: note.ref,
       role: note.role,
     };
-    if (note.state) {
-      attrs.state = note.state;
-    }
 
     const attrStr = serializeAttrs(attrs);
     lines.push(`{% note ${attrStr} %}\n${note.text}\n{% /note %}`);

@@ -86,12 +86,18 @@ export function toStructuredValues(form: ParsedForm): Record<string, unknown> {
     }
 
     if (response.state === "skipped") {
-      result[fieldId] = { state: "skipped" };
+      result[fieldId] = {
+        state: "skipped",
+        ...(response.reason && { reason: response.reason }),
+      };
       continue;
     }
 
     if (response.state === "aborted") {
-      result[fieldId] = { state: "aborted" };
+      result[fieldId] = {
+        state: "aborted",
+        ...(response.reason && { reason: response.reason }),
+      };
       continue;
     }
 
@@ -145,7 +151,6 @@ export function toNotesArray(form: ParsedForm) {
     id: note.id,
     ref: note.ref,
     role: note.role,
-    ...(note.state && { state: note.state }),
     text: note.text,
   }));
 }

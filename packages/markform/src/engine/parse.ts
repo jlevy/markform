@@ -353,6 +353,54 @@ const SENTINEL_SKIP = "|SKIP|";
 const SENTINEL_ABORT = "|ABORT|";
 
 /**
+ * Parse a sentinel value with optional parenthesized reason.
+ * Formats: `|SKIP|`, `|SKIP| (reason text)`, `|ABORT|`, `|ABORT| (reason text)`
+ * Returns null if the content is not a sentinel.
+ */
+function parseSentinel(
+  content: string | null
+): { type: "skip" | "abort"; reason?: string } | null {
+  if (!content) {
+    return null;
+  }
+
+  const trimmed = content.trim();
+  const reasonPattern = /^\((.+)\)$/s;
+
+  // Check for |SKIP| with optional reason
+  if (trimmed.startsWith(SENTINEL_SKIP)) {
+    const rest = trimmed.slice(SENTINEL_SKIP.length).trim();
+    if (rest === "") {
+      return { type: "skip" };
+    }
+    // Extract reason from parentheses
+    const match = reasonPattern.exec(rest);
+    if (match?.[1]) {
+      return { type: "skip", reason: match[1].trim() };
+    }
+    // Invalid format - just |SKIP| with non-parenthesized content
+    return null;
+  }
+
+  // Check for |ABORT| with optional reason
+  if (trimmed.startsWith(SENTINEL_ABORT)) {
+    const rest = trimmed.slice(SENTINEL_ABORT.length).trim();
+    if (rest === "") {
+      return { type: "abort" };
+    }
+    // Extract reason from parentheses
+    const match = reasonPattern.exec(rest);
+    if (match?.[1]) {
+      return { type: "abort", reason: match[1].trim() };
+    }
+    // Invalid format - just |ABORT| with non-parenthesized content
+    return null;
+  }
+
+  return null;
+}
+
+/**
  * Determine if a field value is empty.
  * For old forms without state attributes, this infers whether the field has been filled.
  */
@@ -496,27 +544,35 @@ function parseStringField(node: Node): { field: StringField; response: FieldResp
   const stateAttr = getStringAttr(node, "state");
 
   // Handle sentinel values
-  if (trimmedContent === SENTINEL_SKIP) {
-    if (stateAttr !== undefined && stateAttr !== "skipped") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
-      );
+  const sentinel = parseSentinel(fenceContent);
+  if (sentinel) {
+    if (sentinel.type === "skip") {
+      if (stateAttr !== undefined && stateAttr !== "skipped") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+        );
+      }
+      if (required) {
+        throw new ParseError(
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+        );
+      }
+      return {
+        field,
+        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    if (required) {
-      throw new ParseError(
-        `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
-      );
+    if (sentinel.type === "abort") {
+      if (stateAttr !== undefined && stateAttr !== "aborted") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+        );
+      }
+      return {
+        field,
+        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    return { field, response: { state: "skipped" } };
-  }
-
-  if (trimmedContent === SENTINEL_ABORT) {
-    if (stateAttr !== undefined && stateAttr !== "aborted") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
-      );
-    }
-    return { field, response: { state: "aborted" } };
   }
 
   // No sentinel - parse normally
@@ -560,34 +616,42 @@ function parseNumberField(node: Node): { field: NumberField; response: FieldResp
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const trimmedContent = fenceContent !== null ? fenceContent.trim() : "";
   const stateAttr = getStringAttr(node, "state");
 
   // Handle sentinel values
-  if (trimmedContent === SENTINEL_SKIP) {
-    if (stateAttr !== undefined && stateAttr !== "skipped") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
-      );
+  const sentinel = parseSentinel(fenceContent);
+  if (sentinel) {
+    if (sentinel.type === "skip") {
+      if (stateAttr !== undefined && stateAttr !== "skipped") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+        );
+      }
+      if (required) {
+        throw new ParseError(
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+        );
+      }
+      return {
+        field,
+        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    if (required) {
-      throw new ParseError(
-        `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
-      );
+    if (sentinel.type === "abort") {
+      if (stateAttr !== undefined && stateAttr !== "aborted") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+        );
+      }
+      return {
+        field,
+        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    return { field, response: { state: "skipped" } };
-  }
-
-  if (trimmedContent === SENTINEL_ABORT) {
-    if (stateAttr !== undefined && stateAttr !== "aborted") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
-      );
-    }
-    return { field, response: { state: "aborted" } };
   }
 
   // No sentinel - parse number normally
+  const trimmedContent = fenceContent !== null ? fenceContent.trim() : "";
   let numValue: number | null = null;
   if (trimmedContent) {
     const parsed = Number(trimmedContent);
@@ -638,31 +702,38 @@ function parseStringListField(node: Node): { field: StringListField; response: F
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const trimmedContent = fenceContent !== null ? fenceContent.trim() : "";
   const stateAttr = getStringAttr(node, "state");
 
   // Handle sentinel values
-  if (trimmedContent === SENTINEL_SKIP) {
-    if (stateAttr !== undefined && stateAttr !== "skipped") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
-      );
+  const sentinel = parseSentinel(fenceContent);
+  if (sentinel) {
+    if (sentinel.type === "skip") {
+      if (stateAttr !== undefined && stateAttr !== "skipped") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+        );
+      }
+      if (required) {
+        throw new ParseError(
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+        );
+      }
+      return {
+        field,
+        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    if (required) {
-      throw new ParseError(
-        `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
-      );
+    if (sentinel.type === "abort") {
+      if (stateAttr !== undefined && stateAttr !== "aborted") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+        );
+      }
+      return {
+        field,
+        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    return { field, response: { state: "skipped" } };
-  }
-
-  if (trimmedContent === SENTINEL_ABORT) {
-    if (stateAttr !== undefined && stateAttr !== "aborted") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
-      );
-    }
-    return { field, response: { state: "aborted" } };
   }
 
   // No sentinel - parse list normally
@@ -930,34 +1001,42 @@ function parseUrlField(node: Node): { field: UrlField; response: FieldResponse }
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const trimmedContent = fenceContent !== null ? fenceContent.trim() : null;
   const stateAttr = getStringAttr(node, "state");
 
   // Handle sentinel values
-  if (trimmedContent === SENTINEL_SKIP) {
-    if (stateAttr !== undefined && stateAttr !== "skipped") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
-      );
+  const sentinel = parseSentinel(fenceContent);
+  if (sentinel) {
+    if (sentinel.type === "skip") {
+      if (stateAttr !== undefined && stateAttr !== "skipped") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+        );
+      }
+      if (required) {
+        throw new ParseError(
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+        );
+      }
+      return {
+        field,
+        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    if (required) {
-      throw new ParseError(
-        `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
-      );
+    if (sentinel.type === "abort") {
+      if (stateAttr !== undefined && stateAttr !== "aborted") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+        );
+      }
+      return {
+        field,
+        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    return { field, response: { state: "skipped" } };
-  }
-
-  if (trimmedContent === SENTINEL_ABORT) {
-    if (stateAttr !== undefined && stateAttr !== "aborted") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
-      );
-    }
-    return { field, response: { state: "aborted" } };
   }
 
   // No sentinel - parse normally
+  const trimmedContent = fenceContent !== null ? fenceContent.trim() : null;
   const value: UrlValue = {
     kind: "url",
     value: trimmedContent,
@@ -998,31 +1077,38 @@ function parseUrlListField(node: Node): { field: UrlListField; response: FieldRe
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const trimmedContent = fenceContent !== null ? fenceContent.trim() : "";
   const stateAttr = getStringAttr(node, "state");
 
   // Handle sentinel values
-  if (trimmedContent === SENTINEL_SKIP) {
-    if (stateAttr !== undefined && stateAttr !== "skipped") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
-      );
+  const sentinel = parseSentinel(fenceContent);
+  if (sentinel) {
+    if (sentinel.type === "skip") {
+      if (stateAttr !== undefined && stateAttr !== "skipped") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+        );
+      }
+      if (required) {
+        throw new ParseError(
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+        );
+      }
+      return {
+        field,
+        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    if (required) {
-      throw new ParseError(
-        `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
-      );
+    if (sentinel.type === "abort") {
+      if (stateAttr !== undefined && stateAttr !== "aborted") {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+        );
+      }
+      return {
+        field,
+        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
     }
-    return { field, response: { state: "skipped" } };
-  }
-
-  if (trimmedContent === SENTINEL_ABORT) {
-    if (stateAttr !== undefined && stateAttr !== "aborted") {
-      throw new ParseError(
-        `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
-      );
-    }
-    return { field, response: { state: "aborted" } };
   }
 
   // No sentinel - parse list normally
@@ -1259,6 +1345,13 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
         throw new ParseError(`note '${id}' missing required 'role' attribute`);
       }
 
+      // Reject state attribute on notes (markform-254: notes are general-purpose only)
+      if (stateAttr !== undefined) {
+        throw new ParseError(
+          `note '${id}' has 'state' attribute. Notes no longer support state linking; use FieldResponse.reason for skip/abort reasons.`
+        );
+      }
+
       // Validate ref exists in idIndex
       if (!idIndex.has(ref)) {
         throw new ParseError(`note '${id}' references unknown ID '${ref}'`);
@@ -1269,17 +1362,6 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
         throw new ParseError(`Duplicate note ID '${id}'`);
       }
       seenIds.add(id);
-
-      // Validate state attribute if present
-      let state: "skipped" | "aborted" | undefined;
-      if (stateAttr !== undefined) {
-        if (stateAttr !== "skipped" && stateAttr !== "aborted") {
-          throw new ParseError(
-            `note '${id}' has invalid state '${stateAttr}'. Must be 'skipped' or 'aborted'`
-          );
-        }
-        state = stateAttr;
-      }
 
       // Extract text content
       let text = "";
@@ -1303,7 +1385,6 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
         id,
         ref,
         role,
-        state,
         text: text.trim(),
       });
     }

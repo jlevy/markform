@@ -756,7 +756,7 @@ markform:
 {% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
 {% /field-group %}
 
-{% note id="n1" ref="bio" role="agent" state="skipped" %}
+{% note id="n1" ref="bio" role="agent" %}
 Not available.
 {% /note %}
 
