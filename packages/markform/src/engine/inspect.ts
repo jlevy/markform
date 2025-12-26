@@ -125,14 +125,14 @@ function convertValidationIssues(
 function addOptionalEmptyIssues(
   existingIssues: InspectIssue[],
   form: ParsedForm,
-  fieldProgress: Record<string, { state: string; skipped?: boolean }>
+  fieldProgress: Record<string, { state: string; responseState: string }>
 ): InspectIssue[] {
   const issues = [...existingIssues];
   const fieldsWithIssues = new Set(existingIssues.map((i) => i.ref));
 
   for (const [fieldId, progress] of Object.entries(fieldProgress)) {
-    // Skip if field is already addressed via skip_field
-    if (progress.skipped) {
+    // Skip if field is already addressed via skip_field or abort_field
+    if (progress.responseState === "skipped" || progress.responseState === "aborted") {
       continue;
     }
 

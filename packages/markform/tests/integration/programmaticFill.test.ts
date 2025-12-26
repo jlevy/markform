@@ -96,8 +96,8 @@ describe("programmatic fill API - integration tests", () => {
       expect(result.values.score).toBeDefined();
       expect(result.values.notes).toBeDefined();
 
-      // User fields should still be empty (not targeted)
-      expect(result.values.name).toEqual({ kind: "string", value: null });
+      // User fields are not included in values (only answered fields are included)
+      expect(result.values.name).toBeUndefined();
     });
 
     it("round-trip: result can be re-parsed", async () => {
