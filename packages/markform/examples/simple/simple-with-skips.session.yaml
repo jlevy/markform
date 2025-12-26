@@ -210,14 +210,18 @@ turns:
             notified: no
         # Skip optional fields explicitly
         - op: skip_field
+          role: agent
           field_id: score
           reason: Not needed for this test
         - op: skip_field
+          role: agent
           field_id: notes
           reason: No notes required
         - op: skip_field
+          role: agent
           field_id: optional_number
         - op: skip_field
+          role: agent
           field_id: related_url
           reason: No related URL needed
     after:

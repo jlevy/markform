@@ -160,6 +160,7 @@ turns:
           field_id: notes
           value: This is a test note.
         - op: skip_field
+          role: agent
           field_id: optional_number
           reason: Optional field not needed for this test
         - op: set_number

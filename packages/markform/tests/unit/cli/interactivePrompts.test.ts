@@ -688,6 +688,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "notes",
+          role: "user",
           reason: "User skipped in console",
         });
       });
@@ -729,6 +730,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "score",
+          role: "user",
           reason: "User skipped in console",
         });
       });
@@ -753,6 +755,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "tags",
+          role: "user",
           reason: "User skipped in console",
         });
       });
@@ -781,6 +784,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "priority",
+          role: "user",
           reason: "User skipped in console",
         });
       });
@@ -809,6 +813,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "categories",
+          role: "user",
           reason: "User skipped in console",
         });
       });
@@ -838,6 +843,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "tasks",
+          role: "user",
           reason: "User skipped in console",
         });
       });
@@ -862,6 +868,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "website",
+          role: "user",
           reason: "User skipped in console",
         });
       });
@@ -886,6 +893,7 @@ describe("interactivePrompts", () => {
         expect(patch).toEqual({
           op: "skip_field",
           fieldId: "references",
+          role: "user",
           reason: "User skipped in console",
         });
       });
