@@ -54,7 +54,8 @@ turns:
         - ref: confirmations
           scope: field
           reason: validation_error
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2
+            unfilled)
           severity: required
           priority: 2
         - ref: priority
@@ -171,7 +172,7 @@ turns:
           value: https://markform.dev/docs
     after:
       required_issue_count: 0
-      markdown_sha256: f2eaf91bd0cefccfca4ae116683626ab9735e00274095373174045527344a8e6
+      markdown_sha256: 5ff05c090d7970c3a97a6a3ea95f4b2a9f37fc0293bd8d0e1bf23bcbcb94a38a
       answered_field_count: 14
       skipped_field_count: 1
 final:

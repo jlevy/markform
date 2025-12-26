@@ -22,6 +22,9 @@ export type { ExportResult } from "./cliTypes.js";
  *
  * Extracts the underlying values from the typed FieldValue wrappers
  * for a cleaner YAML representation.
+ *
+ * NOTE: This is the legacy export format (backward compatibility).
+ * For the new structured format with state, use toStructuredValues().
  */
 export function toPlainValues(form: ParsedForm): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -65,6 +68,89 @@ export function toPlainValues(form: ParsedForm): Record<string, unknown> {
 }
 
 /**
+ * Convert field responses to structured format for export (markform-218).
+ *
+ * Includes state for all fields:
+ * - { state: 'empty' } for unfilled fields
+ * - { state: 'skipped' } for skipped fields
+ * - { state: 'aborted' } for aborted fields
+ * - { state: 'answered', value: ... } for answered fields
+ */
+export function toStructuredValues(form: ParsedForm): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+    if (!response || response.state === "empty") {
+      result[fieldId] = { state: "empty" };
+      continue;
+    }
+
+    if (response.state === "skipped") {
+      result[fieldId] = { state: "skipped" };
+      continue;
+    }
+
+    if (response.state === "aborted") {
+      result[fieldId] = { state: "aborted" };
+      continue;
+    }
+
+    // state === 'answered'
+    if (!response.value) {
+      result[fieldId] = { state: "answered", value: null };
+      continue;
+    }
+
+    const value = response.value;
+    let exportValue: unknown;
+
+    switch (value.kind) {
+      case "string":
+        exportValue = value.value ?? null;
+        break;
+      case "number":
+        exportValue = value.value ?? null;
+        break;
+      case "string_list":
+        exportValue = value.items;
+        break;
+      case "single_select":
+        exportValue = value.selected ?? null;
+        break;
+      case "multi_select":
+        exportValue = value.selected;
+        break;
+      case "checkboxes":
+        exportValue = value.values;
+        break;
+      case "url":
+        exportValue = value.value ?? null;
+        break;
+      case "url_list":
+        exportValue = value.items;
+        break;
+    }
+
+    result[fieldId] = { state: "answered", value: exportValue };
+  }
+
+  return result;
+}
+
+/**
+ * Convert notes to export format (markform-219).
+ */
+export function toNotesArray(form: ParsedForm) {
+  return form.notes.map((note) => ({
+    id: note.id,
+    ref: note.ref,
+    role: note.role,
+    ...(note.state && { state: note.state }),
+    text: note.text,
+  }));
+}
+
+/**
  * Derive export paths from a base form path.
  *
  * @param basePath - Path to the .form.md file
@@ -84,7 +170,7 @@ export function deriveExportPaths(basePath: string): ExportResult {
  * Writes:
  * - Markform format (.form.md) - canonical form with directives
  * - Raw markdown (.raw.md) - plain readable markdown (no directives)
- * - YAML values (.yml) - extracted field values only
+ * - YAML values (.yml) - structured format with state and notes (markform-218, markform-219)
  *
  * @param form - The parsed form to export
  * @param basePath - Base path for the .form.md file (other paths are derived)
@@ -104,9 +190,14 @@ export function exportMultiFormat(
   const rawContent = serializeRawMarkdown(form);
   writeFileSync(paths.rawPath, rawContent, "utf-8");
 
-  // Export YAML values
-  const values = toPlainValues(form);
-  const yamlContent = YAML.stringify(values);
+  // Export YAML values with structured format (markform-218, markform-219)
+  const values = toStructuredValues(form);
+  const notes = toNotesArray(form);
+  const exportData = {
+    values,
+    ...(notes.length > 0 && { notes }),
+  };
+  const yamlContent = YAML.stringify(exportData);
   writeFileSync(paths.yamlPath, yamlContent, "utf-8");
 
   return paths;

@@ -17,6 +17,7 @@ import type {
   Id,
   MultiSelectField,
   MultiSelectValue,
+  Note,
   NumberField,
   NumberValue,
   Option,
@@ -166,6 +167,11 @@ function serializeStringField(
     attrs.validate = field.validate;
   }
 
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
+  }
+
   const attrStr = serializeAttrs(attrs);
   let content = "";
 
@@ -208,6 +214,11 @@ function serializeNumberField(
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
@@ -258,6 +269,11 @@ function serializeStringListField(
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
@@ -313,6 +329,11 @@ function serializeSingleSelectField(
     attrs.validate = field.validate;
   }
 
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
+  }
+
   const attrStr = serializeAttrs(attrs);
 
   // Extract value from response if state is "answered"
@@ -356,6 +377,11 @@ function serializeMultiSelectField(
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
@@ -407,6 +433,11 @@ function serializeCheckboxesField(
     attrs.validate = field.validate;
   }
 
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
+  }
+
   const attrStr = serializeAttrs(attrs);
 
   // Extract value from response if state is "answered"
@@ -438,6 +469,11 @@ function serializeUrlField(
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
@@ -482,6 +518,11 @@ function serializeUrlListField(
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+
+  // Add state attribute for skipped/aborted (markform-216)
+  if (response?.state === "skipped" || response?.state === "aborted") {
+    attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
@@ -536,6 +577,44 @@ function serializeDocBlock(doc: DocumentationBlock): string {
   const attrs: Record<string, unknown> = { ref: doc.ref };
   const attrStr = serializeAttrs(attrs);
   return `{% ${doc.tag} ${attrStr} %}\n${doc.bodyMarkdown}\n{% /${doc.tag} %}`;
+}
+
+// =============================================================================
+// Note Serialization (markform-217)
+// =============================================================================
+
+/**
+ * Serialize notes in sorted order.
+ * Notes are sorted numerically by ID suffix (n1, n2, n10 not n1, n10, n2).
+ */
+function serializeNotes(notes: Note[]): string {
+  if (notes.length === 0) {
+    return "";
+  }
+
+  // Sort numerically by ID suffix (n1, n2, n10 not n1, n10, n2)
+  const sorted = [...notes].sort((a, b) => {
+    const aNum = Number.parseInt(a.id.replace(/^n/, ""), 10) || 0;
+    const bNum = Number.parseInt(b.id.replace(/^n/, ""), 10) || 0;
+    return aNum - bNum;
+  });
+
+  const lines: string[] = [];
+  for (const note of sorted) {
+    const attrs: Record<string, unknown> = {
+      id: note.id,
+      ref: note.ref,
+      role: note.role,
+    };
+    if (note.state) {
+      attrs.state = note.state;
+    }
+
+    const attrStr = serializeAttrs(attrs);
+    lines.push(`{% note ${attrStr} %}\n${note.text}\n{% /note %}`);
+  }
+
+  return lines.join("\n\n");
 }
 
 // =============================================================================
@@ -596,6 +675,7 @@ function serializeFormSchema(
   schema: FormSchema,
   responses: Record<Id, FieldResponse>,
   docs: DocumentationBlock[],
+  notes: Note[],
 ): string {
   const attrs: Record<string, unknown> = { id: schema.id };
   if (schema.title) {
@@ -625,6 +705,13 @@ function serializeFormSchema(
   for (const group of schema.groups) {
     lines.push("");
     lines.push(serializeFieldGroup(group, responses, docs));
+  }
+
+  // Add notes at end of form, before closing tag (markform-217)
+  const notesContent = serializeNotes(notes);
+  if (notesContent) {
+    lines.push("");
+    lines.push(notesContent);
   }
 
   lines.push("");
@@ -658,6 +745,7 @@ markform:
     form.schema,
     form.responsesByFieldId,
     form.docs,
+    form.notes,
   );
 
   return `${frontmatter}\n\n${body}\n`;
