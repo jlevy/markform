@@ -23,6 +23,7 @@ import type {
   ProgressState,
   ProgressSummary,
   QualifiedOptionRef,
+  ResponseState,
   SingleSelectValue,
   StringListValue,
   StringValue,
@@ -308,6 +309,21 @@ function computeFieldProgress(
 // =============================================================================
 
 /**
+ * Get the response state from a field response.
+ * Helper function for progress computation.
+ *
+ * @param response - The field response (may be undefined)
+ * @returns The response state
+ */
+ 
+function _getResponseState(response: FieldResponse | undefined): ResponseState {
+  if (!response) {
+    return "empty";
+  }
+  return response.state;
+}
+
+/**
  * Compute a progress summary for a form.
  *
  * @param schema - The form schema
@@ -395,6 +411,11 @@ export function computeProgressSummary(
  * @returns The overall form state
  */
 export function computeFormState(progress: ProgressSummary): ProgressState {
+  // Aborted fields = invalid state
+  if (progress.counts.abortedFields > 0) {
+    return "invalid";
+  }
+
   // If any field is invalid, form is invalid
   if (progress.counts.invalidFields > 0) {
     return "invalid";
@@ -422,10 +443,11 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
  * Determine if the form is complete (ready for submission).
  *
  * A form is complete when:
- * 1. No required fields are empty
- * 2. No fields have validation errors
- * 3. No fields are in incomplete state (e.g., partial checkbox completion)
- * 4. All fields must be addressed (answered + skipped == total)
+ * 1. No aborted fields (aborted fields block completion)
+ * 2. No required fields are empty
+ * 3. No fields have validation errors
+ * 4. No fields are in incomplete state (e.g., partial checkbox completion)
+ * 5. All fields must be addressed (answered + skipped == total)
  *
  * Every field must be explicitly addressed - either filled with a value or
  * skipped with a reason. This ensures agents fully process all fields.
@@ -435,6 +457,11 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
  */
 export function isFormComplete(progress: ProgressSummary): boolean {
   const { counts } = progress;
+
+  // Aborted fields block completion
+  if (counts.abortedFields > 0) {
+    return false;
+  }
 
   // Basic requirements: no invalid/incomplete fields, all required fields filled
   const baseComplete =
