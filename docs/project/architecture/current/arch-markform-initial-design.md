@@ -249,10 +249,13 @@ The **Implementation Components** are specific to this TypeScript codebase:
 | *required* | A constraint that MUST be satisfied. Enforced by engine validation; violations produce errors. |
 | *recommended* | A convention that SHOULD be followed for consistency and best practices. Not enforced by the engine; violations do not produce errors. |
 
-**Form states:**
+**Form concepts:**
 
 | Term | Definition |
 | --- | --- |
+| **Field** | A single data entry point within a form. Fields have a kind (type), label, and optional constraints. |
+| **Kind** | The type of a field. One of: `string`, `number`, `string_list`, `checkboxes`, `single_select`, `multi_select`, `url`, `url_list`. Determines the field's value structure, input behavior, and validation rules. |
+| **Field group** | A container that organizes related fields together. Groups have an id, optional title, and may have custom validators. Currently (v0.1), groups contain only fields (they are not nested groups). |
 | **Template form** | A form with no values filled in (schema only). Starting point for filling. |
 | **Incomplete form** | A form with some values but not yet complete or valid. |
 | **Completed form** | A form with all required fields filled and passing validation. |
@@ -281,13 +284,6 @@ The **Implementation Components** are specific to this TypeScript codebase:
 | **Session transcript** | YAML serialization of a session's turns for golden testing (`.session.yaml`). |
 | **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic "correct" values for testing. |
 | **Sidecar file** | A companion file with the same basename but different extension (e.g., `X.form.md` → `X.valid.ts`). |
-
-**Type system:**
-
-| Term | Definition |
-| --- | --- |
-| **FieldKind** | The type discriminant for fields. One of: `'string'`, `'number'`, `'string_list'`, `'checkboxes'`, `'single_select'`, `'multi_select'`, `'url'`, `'url_list'`. Used as the `kind` property on `Field` and `FieldValue` types for discriminated unions. |
-| **kind** | Reserved property name used exclusively on `Field` and `FieldValue` types to indicate the field type. Always holds a `FieldKind` value. Other structural elements use different property names (e.g., `nodeType` for ID index entries, `tag` for documentation blocks). |
 
 ### Future: Extracting the Core Specification
 
@@ -579,11 +575,12 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 [Markdoc Config][markdoc-config] for how to register custom tags.
 
-Each field tag maps to a **FieldKind** value used as the `kind` discriminant in the type
-system. The `kind` property is reserved exclusively for field types—it identifies what
-type of field a `Field` or `FieldValue` represents.
+Each field tag maps to a **kind** value that identifies the field type.
+The `kind` property is reserved exclusively for field types—it identifies what type of
+field a `Field` or `FieldValue` represents.
+(In TypeScript, the type is `FieldKind`.)
 
-| Tag | FieldKind | Description |
+| Tag | Kind | Description |
 | --- | --- | --- |
 | `string-field` | `'string'` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
 | `number-field` | `'number'` | Numeric value; optional `min`, `max`, `integer` |
@@ -1919,7 +1916,7 @@ schema representations for all field types.
 | JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
 | IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
 | YAML keys (frontmatter, session transcripts) | snake_case | `markform_version`, `form_summary`, `field_count_by_kind` |
-| FieldKind values | snake_case | `'string'`, `'single_select'` |
+| Kind values (field types) | snake_case | `'string'`, `'single_select'` |
 | Patch operations | snake_case | `set_string`, `set_single_select` |
 
 **Rationale:** Using camelCase for Markdoc attributes aligns with JSON Schema keywords
@@ -2521,17 +2518,22 @@ interface ApplyResult {
 
 **Completion formula:**
 
-`isComplete` is true when all target-role fields are either answered or skipped, and
-there are no issues with `severity: 'required'`:
+`isComplete` is true when all target-role fields are either answered or skipped, there
+are no aborted fields, and there are no issues with `severity: 'required'`:
 
 ```
 isComplete = (answeredFields + skippedFields == totalFields for target roles)
+             AND (abortedFields == 0)
              AND (no issues with severity == 'required')
 ```
 
-This formula ensures agents must actively respond to every field (either fill it or
-explicitly skip it) before the form is considered complete.
-Skipped fields won’t have values, but they won’t block completion either.
+This formula ensures:
+
+- Agents must actively respond to every field (either fill it or explicitly skip it)
+
+- Aborted fields block completion (they represent failures requiring intervention)
+
+- Skipped fields won’t have values, but they won’t block completion
 
 **Operation availability by interface:**
 
@@ -2626,6 +2628,8 @@ scope. For example:
   - Skipped fields no longer appear in the issues list (not blocking completion)
 
   - Setting a value on a skipped field clears the skip state (field becomes answered)
+    and removes any notes with `state="skipped"` for that field (general notes are
+    preserved)
 
   - Skip state is serialized to markdown via `state="skipped"` attribute
 
@@ -2653,6 +2657,8 @@ scope. For example:
   - Aborted fields appear in the issues list as blocking completion
 
   - Setting a value on an aborted field clears the abort state (field becomes answered)
+    and removes any notes with `state="aborted"` for that field (general notes are
+    preserved)
 
   - Abort state is serialized to markdown via `state="aborted"` attribute
 
@@ -2831,6 +2837,101 @@ interface ExportedOption {
 
 - **Values are typed by kind:** The `values` object maps field IDs to typed value
   objects matching the field’s `kind`.
+
+#### Value Export Formats
+
+Value export supports two formats: **structured** (default) and **friendly** (optional).
+
+**Structured format (default for JSON and YAML):**
+
+The structured format uses explicit objects for each field response, eliminating
+ambiguity between actual values and sentinel strings:
+
+```json
+{
+  "values": {
+    "company_name": { "state": "skipped" },
+    "revenue_m": { "state": "aborted" },
+    "quarterly_growth": { "state": "answered", "value": 12.5 },
+    "ticker": { "state": "answered", "value": "ACME" }
+  },
+  "notes": [
+    {
+      "id": "n1",
+      "ref": "company_name",
+      "role": "agent",
+      "state": "skipped",
+      "text": "Not applicable for this analysis type."
+    }
+  ]
+}
+```
+
+**YAML equivalent:**
+
+```yaml
+values:
+  company_name:
+    state: skipped
+  revenue_m:
+    state: aborted
+  quarterly_growth:
+    state: answered
+    value: 12.5
+  ticker:
+    state: answered
+    value: ACME
+notes:
+  - id: n1
+    ref: company_name
+    role: agent
+    state: skipped
+    text: Not applicable for this analysis type.
+```
+
+**Friendly format (optional, with `--friendly` flag):**
+
+The friendly format uses sentinel strings for human readability:
+
+```yaml
+values:
+  company_name: "|SKIP|"
+  revenue_m: "|ABORT|"
+  quarterly_growth: 12.5
+  ticker: ACME
+```
+
+**Format comparison:**
+
+| Aspect | Structured (default) | Friendly |
+| --- | --- | --- |
+| Ambiguity | None | Possible collision with literal values |
+| Machine interchange | Recommended | Not recommended |
+| Human readability | Verbose | Concise |
+| Notes included | Yes | Yes (separate section) |
+| CLI flag | (default) | `--friendly` |
+
+**Import behavior:**
+
+When importing values (from YAML or JSON):
+
+- Structured format: Parse `state` and `value` properties from each field
+
+- Friendly format: Recognize `|SKIP|` and `|ABORT|` sentinel strings
+
+**Export includes notes:**
+
+All export formats include the `notes` array with all note attributes:
+
+- `id`: Note identifier
+
+- `ref`: Target element ID
+
+- `role`: Who created the note
+
+- `state`: Optional link to skip/abort action
+
+- `text`: Note content
 
 * * *
 
