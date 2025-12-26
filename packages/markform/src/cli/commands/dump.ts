@@ -146,7 +146,14 @@ export function registerDumpCommand(program: Command): void {
               plainValues[fieldId] = toPlainValue(response.value);
             }
           }
-          const output = formatOutput(ctx, plainValues, () => "");
+
+          // Include notes in structured output
+          const structuredOutput = {
+            values: plainValues,
+            notes: form.notes,
+          };
+
+          const output = formatOutput(ctx, structuredOutput, () => "");
           console.log(output);
         } else {
           // Use formatted output for console/plaintext

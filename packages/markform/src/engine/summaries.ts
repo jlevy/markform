@@ -239,9 +239,15 @@ function isCheckboxesComplete(
 function computeFieldState(
   field: Field,
   value: FieldValue | undefined,
+  responseState: ResponseState,
   issueCount: number
 ): ProgressState {
   const submitted = isFieldSubmitted(field, value);
+
+  // Aborted/skipped fields with issues are invalid (they have been addressed but are problematic)
+  if (!submitted && (responseState === "aborted" || responseState === "skipped") && issueCount > 0) {
+    return "invalid";
+  }
 
   if (!submitted) {
     return "empty";
@@ -275,7 +281,7 @@ function computeFieldProgress(
   const issueCount = fieldIssues.length;
   const value = response.value;
   const valid = issueCount === 0;
-  const state = computeFieldState(field, value, issueCount);
+  const state = computeFieldState(field, value, response.state, issueCount);
 
   // Compute note-related fields
   const fieldNotes = notes.filter((n) => n.ref === field.id);

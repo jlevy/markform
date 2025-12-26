@@ -924,6 +924,58 @@ Minimum 5; include more if needed.
 
 **Note:** The doc block is a sibling placed after the field, not nested inside it.
 
+##### Field State Attributes
+
+Fields can have a `state` attribute to indicate skip or abort status. The attribute is
+serialized on the opening tag:
+
+**Skipped field:**
+```md
+{% string-field id="optional_notes" label="Optional notes" state="skipped" %}{% /string-field %}
+```
+
+**Aborted field:**
+```md
+{% string-field id="company_name" label="Company name" required=true state="aborted" %}{% /string-field %}
+```
+
+**State attribute values:**
+- `state="skipped"`: Field was explicitly skipped via `skip_field` patch
+- `state="aborted"`: Field was explicitly aborted via `abort_field` patch
+
+**Serialization with sentinel values:**
+
+When a field has a skip or abort state AND a reason was provided via the patch, the
+reason is serialized as a sentinel value in the value fence:
+
+```md
+{% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
+```value
+|SKIP| Information not publicly available
+```
+{% /string-field %}
+```
+
+```md
+{% number-field id="projected_revenue" label="Projected revenue" state="aborted" %}
+```value
+|ABORT| Financial projections cannot be determined from available data
+```
+{% /number-field %}
+```
+
+**Parsing rules:**
+- If `state="skipped"` is present, field's responseState is `'skipped'`
+- If `state="aborted"` is present, field's responseState is `'aborted'`
+- Otherwise, responseState is determined by value presence (`'answered'` or `'empty'`)
+- Sentinel values (`|SKIP|` or `|ABORT|`) are parsed as metadata, not field values
+- Text after sentinel is the skip/abort reason
+
+**Serialization rules:**
+- Only emit `state` attribute when responseState is `'skipped'` or `'aborted'`
+- If skip/abort has a reason, serialize as sentinel value in fence
+- If skip/abort has no reason, omit the value fence entirely
+
 ##### The `process=false` Attribute
 
 **Rule:** Only emit `process=false` when the value contains Markdoc syntax.
@@ -1158,6 +1210,28 @@ type Id = string; // validated snake_case, e.g., /^[a-z][a-z0-9_]*$/
 // Validator reference: simple string ID or parameterized object
 type ValidatorRef = string | { id: string; [key: string]: unknown };
 
+// Response state for a field - orthogonal to field type
+// Any field can be in any response state
+type ResponseState = 'empty' | 'answered' | 'skipped' | 'aborted';
+
+// Field response: combines response state with optional value
+// Used in responsesByFieldId for all fields
+interface FieldResponse {
+  state: ResponseState;
+  value?: FieldValue;  // present only when state === 'answered'
+}
+
+// Note system for field/group/form annotations
+type NoteId = string;  // unique note ID (implementation uses n1, n2, n3...)
+
+interface Note {
+  id: NoteId;
+  ref: Id;                       // target ID (field, group, or form)
+  role: string;                  // who created (agent, user, ...)
+  state?: 'skipped' | 'aborted'; // optional: links note to action
+  text: string;                  // markdown content
+}
+
 // Multi-checkbox states (checkboxMode="multi", default)
 type MultiCheckboxState = 'todo' | 'done' | 'incomplete' | 'active' | 'na';
 
@@ -1289,7 +1363,7 @@ type FieldValue =
 type QualifiedOptionRef = `${Id}.${OptionId}`;  // e.g., "docs_reviewed.ten_k"
 
 /** Documentation tag types (from Markdoc tag name) */
-type DocumentationTag = 'description' | 'instructions' | 'notes' | 'examples' | 'documentation';
+type DocumentationTag = 'description' | 'instructions' | 'documentation';
 
 interface DocumentationBlock {
   ref: Id | QualifiedOptionRef;  // form/group/field ID, or qualified option ref
@@ -1308,20 +1382,22 @@ interface IdIndexEntry {
   parentId?: Id;           // parent group/form ID (undefined for form)
 }
 
-// Skip state for a field (stored separately from values)
-interface SkipInfo {
-  skipped: boolean;
-  reason?: string;
+// FormMetadata: form-level metadata from YAML frontmatter
+interface FormMetadata {
+  markformVersion: string;
+  roles: string[];                        // available roles for field assignment
+  roleInstructions: Record<string, string>; // instructions per role
 }
 
 // ParsedForm: canonical internal representation returned by parseForm()
 interface ParsedForm {
   schema: FormSchema;
-  valuesByFieldId: Record<Id, FieldValue>;
-  skipsByFieldId: Record<Id, SkipInfo>;   // skip state per field (runtime metadata)
+  responsesByFieldId: Record<Id, FieldResponse>;  // unified response state + value
+  notes: Note[];                          // agent/user notes
   docs: DocumentationBlock[];
   orderIndex: Id[];                       // fieldIds in document order (deterministic)
   idIndex: Map<Id, IdIndexEntry>;         // fast lookup for form/group/field (NOT options)
+  metadata?: FormMetadata;                // optional for backward compat with forms without frontmatter
 }
 
 // InspectIssue: unified type for inspect/apply API results
@@ -1412,13 +1488,13 @@ interface FieldProgress {
   kind: FieldKind;             // field type
   required: boolean;           // whether field has required=true
 
-  submitted: boolean;          // whether any value has been provided ("answered")
+  responseState: ResponseState; // unified response state (empty/answered/skipped/aborted)
+  hasNotes: boolean;           // whether field has any notes attached
+  noteCount: number;           // count of notes attached to this field
+
   state: ProgressState;        // computed progress state
   valid: boolean;              // true iff no validation issues for this field
   issueCount: number;          // count of ValidationIssues referencing this field
-
-  skipped: boolean;            // true if explicitly skipped via skip_field patch
-  skipReason?: string;         // reason provided in skip_field patch
 
   /**
    * Checkbox state rollup (only present for checkboxes fields).
@@ -1458,17 +1534,21 @@ interface ProgressCounts {
   totalFields: number;           // all fields in the form
   requiredFields: number;        // fields with required=true
 
-  submittedFields: number;       // fields that have been submitted (have values)
+  // Response state counts (mutually exclusive, sum to totalFields)
+  answeredFields: number;        // fields with state='answered' (have values)
+  skippedFields: number;         // fields with state='skipped'
+  abortedFields: number;         // fields with state='aborted'
+  emptyFields: number;           // fields with state='empty'
 
+  totalNotes: number;            // total notes across all fields/groups/form
+
+  // Validation counts
   completeFields: number;        // fields in 'complete' state
   incompleteFields: number;      // fields in 'incomplete' state
   invalidFields: number;         // fields in 'invalid' state
 
   emptyRequiredFields: number;   // required fields with no value
   emptyOptionalFields: number;   // optional fields with no value
-
-  answeredFields: number;        // same as submittedFields (clearer terminology)
-  skippedFields: number;         // fields explicitly skipped via skip_field
 }
 ```
 
@@ -1479,25 +1559,38 @@ result, and completeness rules:
 
 | State | Meaning |
 | --- | --- |
-| `empty` | Not submitted (no value provided) |
-| `incomplete` | Submitted but fails completeness rules (e.g., minItems not met, required checkbox not terminal) |
-| `invalid` | Submitted but fails validation (type/pattern/range errors or hook issues) |
+| `empty` | Not answered (no value provided, responseState !== 'answered') |
+| `incomplete` | Answered but fails completeness rules (e.g., minItems not met, required checkbox not terminal) |
+| `invalid` | Answered but fails validation (type/pattern/range errors or hook issues) |
 | `complete` | Satisfies completeness rules and passes validation |
 
-**Submission rules (deterministic, per field kind):**
+**Response state rules (deterministic, per field):**
 
-| Field Kind | Submitted when |
+The `responseState` is determined by the field's FieldResponse:
+
+| Response State | When |
+| --- | --- |
+| `empty` | No value provided and not skipped/aborted |
+| `answered` | FieldResponse has a value (value !== undefined) |
+| `skipped` | Explicitly skipped via skip_field patch |
+| `aborted` | Explicitly aborted via abort_field patch |
+
+For `answered` fields, value presence is determined per field kind:
+
+| Field Kind | Has value when |
 | --- | --- |
 | `string` | `value !== null && value.trim().length > 0` |
 | `number` | `value !== null` |
 | `single_select` | `selected !== null` |
 | `multi_select` | `selected.length > 0` |
 | `string_list` | `items.length > 0` |
+| `url` | `value !== null && value.trim().length > 0` |
+| `url_list` | `items.length > 0` |
 | `checkboxes` | At least one option state differs from initial (`todo` for multi/simple, `unfilled` for explicit) |
 
 **Completeness rules (for required fields):**
 
-Completeness is relevant only when `required=true`. A submitted field is complete if:
+Completeness is relevant only when `required=true`. An answered field is complete if:
 
 | Field Kind | Complete when |
 | --- | --- |
@@ -1511,7 +1604,9 @@ Completeness is relevant only when `required=true`. A submitted field is complet
 **State computation logic:**
 
 ```
-if not submitted:
+if not answered AND (skipped OR aborted) AND has validation errors:
+  state = 'invalid'  // addressed but problematic
+elif not answered:
   state = 'empty'
 elif has validation errors:
   state = 'invalid'
@@ -1526,7 +1621,7 @@ else:
 The overall `form_state: ProgressState` is derived from `ProgressSummary.counts`:
 
 ```
-if counts.submittedFields == 0:
+if counts.answeredFields == 0:
   form_state = 'empty'
 elif counts.invalidFields > 0:
   form_state = 'invalid'
@@ -1562,10 +1657,11 @@ The completion formula becomes:
 Role-filtered completion for targetRoles:
   roleFilteredFields = fields.filter(f => targetRoles.includes(f.role) || !f.role)
 
-  isComplete = for all f in roleFilteredFields:
-    f.state == 'complete'  OR
-    f.state == 'skipped'   OR
-    (!f.required && f.state == 'empty')
+  isComplete =
+    abortedFields == 0  AND
+    for all f in roleFilteredFields:
+      f.responseState == 'answered' (with f.state == 'complete')  OR
+      f.responseState == 'skipped'
 ```
 
 This is critical for forms where the user fills some fields first, then the agent fills
@@ -1574,21 +1670,26 @@ Without role filtering, the harness would incorrectly report the form as incompl
 after all agent fields are filled, because user fields (intended for a different actor)
 would still be empty.
 
-**Field states for completion purposes:**
+**Response states for completion purposes:**
 
-| State | Counts as Complete | Notes |
+| Response State | Counts as Complete | Notes |
 | --- | --- | --- |
-| `complete` | Yes | Field has valid value (answered) |
-| `skipped` | Yes | Explicitly skipped via `skip_field` patch (tracked in `FieldProgress.skipped`, not a `ProgressState` value) |
-| `empty` (non-required) | No | Optional field left unfilled—must be answered OR skipped |
-| `empty` (required) | No | Required field must be answered (cannot be skipped) |
-| `incomplete` | No | Partially filled (e.g., list with fewer items than `minItems`) |
-| `invalid` | No | Has validation errors |
+| `answered` (complete) | Yes | Field has valid value and passes validation |
+| `skipped` | Yes | Explicitly skipped via `skip_field` patch (optional fields only) |
+| `aborted` | No | Field marked as unable to complete—blocks all completion |
+| `empty` | No | Field has no response—must be answered or skipped |
+| `answered` (incomplete) | No | Partially filled (e.g., list with fewer items than `minItems`) |
+| `answered` (invalid) | No | Has validation errors |
 
-**Note:** The completion formula requires every field to be either *answered* (has
-value) or *skipped* (explicitly marked).
+**Note:** The completion formula requires:
+1. All fields to be either *answered* (with complete/valid value) or *skipped*
+2. No fields can be in *aborted* state (abortedFields == 0)
+
 Simply leaving an optional field empty does NOT count toward completion—the agent must
-actively skip it. This ensures agents acknowledge every field in the form.
+actively skip it or provide a value. This ensures agents acknowledge every field.
+
+Aborted fields block completion entirely, requiring manual intervention to either fill
+the field or remove the abort state before the form can be completed.
 
 **Naming convention note:** Markdoc attributes and TypeScript properties both use
 `camelCase` (e.g., `checkboxMode`, `minItems`). Only IDs use `snake_case`. This
@@ -1620,6 +1721,8 @@ const FieldKindSchema = z.enum([
   'string', 'number', 'string_list', 'checkboxes', 'single_select', 'multi_select', 'url', 'url_list'
 ]);
 
+const ResponseStateSchema = z.enum(['empty', 'answered', 'skipped', 'aborted']);
+
 const StructureSummarySchema = z.object({
   groupCount: z.number().int().nonnegative(),
   fieldCount: z.number().int().nonnegative(),
@@ -1634,11 +1737,6 @@ const StructureSummarySchema = z.object({
 });
 
 const ProgressStateSchema = z.enum(['empty', 'incomplete', 'invalid', 'complete']);
-
-const SkipInfoSchema = z.object({
-  skipped: z.boolean(),
-  reason: z.string().optional(),
-});
 
 const CheckboxProgressCountsSchema = z.object({
   total: z.number().int().nonnegative(),
@@ -1657,26 +1755,30 @@ const CheckboxProgressCountsSchema = z.object({
 const FieldProgressSchema = z.object({
   kind: FieldKindSchema,
   required: z.boolean(),
-  submitted: z.boolean(),
+  responseState: ResponseStateSchema,            // unified response state
+  hasNotes: z.boolean(),
+  noteCount: z.number().int().nonnegative(),
   state: ProgressStateSchema,
   valid: z.boolean(),
   issueCount: z.number().int().nonnegative(),
-  skipped: z.boolean(),                          // true if explicitly skipped
-  skipReason: z.string().optional(),             // reason from skip_field patch
   checkboxProgress: CheckboxProgressCountsSchema.optional(),
 });
 
 const ProgressCountsSchema = z.object({
   totalFields: z.number().int().nonnegative(),
   requiredFields: z.number().int().nonnegative(),
-  submittedFields: z.number().int().nonnegative(),
+  // Response state counts (mutually exclusive, sum to totalFields)
+  answeredFields: z.number().int().nonnegative(),
+  skippedFields: z.number().int().nonnegative(),
+  abortedFields: z.number().int().nonnegative(),
+  emptyFields: z.number().int().nonnegative(),
+  totalNotes: z.number().int().nonnegative(),
+  // Validation counts
   completeFields: z.number().int().nonnegative(),
   incompleteFields: z.number().int().nonnegative(),
   invalidFields: z.number().int().nonnegative(),
   emptyRequiredFields: z.number().int().nonnegative(),
   emptyOptionalFields: z.number().int().nonnegative(),
-  answeredFields: z.number().int().nonnegative(),   // same as submittedFields
-  skippedFields: z.number().int().nonnegative(),    // explicitly skipped fields
 });
 
 const ProgressSummarySchema = z.object({
@@ -2172,6 +2274,85 @@ interface ValidationIssue {
 | `EXPLICIT_CHECKBOX_UNFILLED` | Explicit checkbox has unfilled options (requires yes/no for all) |
 | `INVALID_OPTION_ID` | Selected option ID doesn't exist |
 
+#### Error Taxonomy
+
+Markform distinguishes between two fundamental error types:
+
+**1. ParseError** — Syntax and structural errors
+
+Parse errors occur when the markdown/Markdoc syntax is malformed or the form structure
+is invalid. These are detected during parsing and prevent the form from being loaded.
+
+Examples:
+- Invalid Markdoc syntax (unclosed tags, malformed attributes)
+- Missing required attributes (e.g., field without `id` or `label`)
+- Duplicate IDs within the form
+- Invalid field state attribute value (not 'skipped' or 'aborted')
+- Malformed sentinel values in value fences
+
+**Type definition:**
+```ts
+interface ParseError {
+  type: 'parse';
+  message: string;
+  location?: {
+    line?: number;
+    column?: number;
+    fieldId?: Id;
+    noteId?: NoteId;
+  };
+}
+```
+
+**Behavior:**
+- Parse errors prevent form loading
+- Returned from `parseForm()` as thrown exceptions or error results
+- Must be fixed before the form can be used
+
+**2. MarkformValidationError** — Model consistency errors
+
+Validation errors occur when the parsed form model is inconsistent with Markform rules,
+even if the syntax is valid. These are semantic errors in the data model.
+
+Examples:
+- Option ID referenced in value doesn't exist in field schema
+- Field value type doesn't match field kind
+- Response state inconsistency (e.g., `state='answered'` but no value present)
+- Invalid checkbox state for the field's checkbox mode
+
+**Type definition:**
+```ts
+interface MarkformValidationError {
+  type: 'validation';
+  message: string;
+  location?: {
+    line?: number;
+    column?: number;
+    fieldId?: Id;
+    noteId?: NoteId;
+  };
+}
+```
+
+**Behavior:**
+- Validation errors prevent form operations
+- Returned from `parseForm()` or `applyPatches()` as errors
+- Must be fixed before the form is in a valid state
+
+**Distinction from ValidationIssue:**
+
+`ValidationIssue` represents content validation (required fields, constraints, hook
+validators) and is part of normal form filling workflow. These issues don't prevent
+form operations—they guide what needs to be filled next.
+
+`ParseError` and `MarkformValidationError` represent structural problems that prevent
+the form from being used at all.
+
+**Union type:**
+```ts
+type MarkformError = ParseError | MarkformValidationError;
+```
+
 * * *
 
 ### Layer 4: Tool API & Interfaces
@@ -2275,7 +2456,11 @@ type Patch =
   | { op: 'set_url'; fieldId: Id; value: string | null }
   | { op: 'set_url_list'; fieldId: Id; items: string[] }
   | { op: 'clear_field'; fieldId: Id }
-  | { op: 'skip_field'; fieldId: Id; reason?: string };
+  | { op: 'skip_field'; fieldId: Id; role: string; reason?: string }
+  | { op: 'abort_field'; fieldId: Id; role: string; reason?: string }
+  | { op: 'add_note'; ref: Id; role: string; text: string; state?: 'skipped' | 'aborted' }
+  | { op: 'remove_note'; noteId: NoteId }
+  | { op: 'remove_notes'; ref: Id; role: string };
 
 // OptionId is just the local ID within the field (e.g., "ten_k", "bullish")
 // NOT the qualified form—the fieldId provides the scope
@@ -2324,6 +2509,7 @@ scope. For example:
   Used when an agent cannot or should not fill a field (e.g., information not available,
   field not applicable).
   The optional `reason` field provides context.
+  The required `role` field identifies who is skipping.
 
   **Constraints:**
 
@@ -2335,17 +2521,76 @@ scope. For example:
 
   **Behavior:**
 
-  - Skip state is stored in `skipsByFieldId` on ParsedForm (runtime metadata)
+  - Response state changes to `'skipped'` in `responsesByFieldId`
 
   - Skipped fields no longer appear in the issues list (not blocking completion)
 
   - Setting a value on a skipped field clears the skip state (field becomes answered)
 
-  - Skip state is not serialized to the form markdown file
+  - Skip state is serialized to markdown via `state="skipped"` attribute
 
-  **Completion semantics:** Form completion requires: `answeredFields + skippedFields ==
-  totalFields` (for target roles) AND no required issues.
+  **Completion semantics:** Form completion requires all fields to be in a terminal state
+  (`answered`, `skipped`, or `aborted` for optional fields) AND `abortedFields == 0`.
   This ensures agents actively respond to every field, even if just to skip it.
+
+- `abort_field`: Mark a field as unable to be completed (for any reason).
+  Used when a field cannot be answered and should not block form completion.
+  The required `role` field identifies who is aborting.
+  The optional `reason` field provides context.
+
+  **Constraints:**
+
+  - Can be used on both required and optional fields
+
+  - Aborting a field clears any existing value
+
+  - An aborted field does NOT count toward completion
+
+  **Behavior:**
+
+  - Response state changes to `'aborted'` in `responsesByFieldId`
+
+  - Aborted fields appear in the issues list as blocking completion
+
+  - Setting a value on an aborted field clears the abort state (field becomes answered)
+
+  - Abort state is serialized to markdown via `state="aborted"` attribute
+
+  **Completion semantics:** Form completion requires `abortedFields == 0`.
+  Any aborted field blocks completion, requiring manual intervention to either fill the
+  field or remove the abort state.
+
+- `add_note`: Attach a note to a field, group, or form.
+  The `ref` parameter specifies the target ID.
+  The required `role` field identifies who created the note.
+  The `text` field contains markdown content.
+  The optional `state` field links the note to a skip or abort action.
+
+  **Behavior:**
+
+  - Note is added to `ParsedForm.notes` array
+
+  - Note ID is auto-generated (n1, n2, n3...)
+
+  - Notes are serialized to markdown as comment blocks with metadata
+
+  - Multiple notes can exist for the same ref
+
+- `remove_note`: Remove a specific note by ID.
+
+  **Behavior:**
+
+  - Note with matching `noteId` is removed from `ParsedForm.notes`
+
+  - If note doesn't exist, operation is silently ignored (idempotent)
+
+- `remove_notes`: Remove all notes matching ref and role.
+
+  **Behavior:**
+
+  - All notes with matching `ref` and `role` are removed from `ParsedForm.notes`
+
+  - If no matching notes exist, operation is silently ignored (idempotent)
 
 **Patch validation layers (*required*):**
 
@@ -3489,13 +3734,13 @@ subsection.
    - **Only optional fields can be skipped:** Required fields reject `skip_field` with a
      validation error. This ensures critical data is always provided.
 
-   - **Skip state is runtime metadata, not persisted to markdown:** Skipped fields
-     remain empty in the serialized form.
-     The skip state is tracked in `ParsedForm.skipsByFieldId` and reflected in
-     `FieldProgress.skipped` and `ProgressCounts.skippedFields`.
+   - **Skip state is serialized to markdown:** Skipped fields are marked with
+     `state="skipped"` attribute and may include a sentinel value with the skip reason.
+     The skip state is tracked in `ParsedForm.responsesByFieldId` (as responseState)
+     and reflected in `FieldProgress.responseState` and `ProgressCounts.skippedFields`.
 
-   - **Completion formula:** `isComplete = (answeredFields + skippedFields ==
-     totalFields)` AND no required issues.
+   - **Completion formula:** `isComplete = all fields answered or skipped` AND
+     `abortedFields == 0`.
      This requires agents to actively respond to every field.
 
    - **Skip clears existing value:** Skipping a field that already has a value clears
@@ -3504,10 +3749,51 @@ subsection.
    - **Setting value clears skip:** Applying a value patch to a skipped field removes
      the skip state. The field transitions from skipped → answered.
 
-   - **Agent visibility in stateless turns:** While skipped fields appear empty in
-     markdown, agents see their state via the issues list (skipped fields removed from
-     issues) and progress counts (skippedFields count).
+   - **Agent visibility in stateless turns:** Agents see field state via the issues list
+     (skipped fields removed from issues) and progress counts (skippedFields count).
      This provides implicit feedback that skipping was successful.
+
+7. **Unified response model (markform-203/204/205)** — The unified response model
+   consolidates field state management into a single, orthogonal system:
+
+   **Design rationale:**
+
+   - **Response state is orthogonal to field type:** Any field can be empty, answered,
+     skipped, or aborted, regardless of its type (string, number, checkboxes, etc.).
+     This separation reduces complexity and makes the model more predictable.
+
+   - **Single source of truth:** `responsesByFieldId` replaces separate `valuesByFieldId`
+     and `skipsByFieldId` maps. Each field has exactly one FieldResponse with a state
+     and optional value, eliminating sync issues between multiple data structures.
+
+   - **Four response states:** The model distinguishes:
+     - `empty`: No response provided yet
+     - `answered`: Field has a value (value present in FieldResponse)
+     - `skipped`: Explicitly skipped (optional fields only)
+     - `aborted`: Marked as unable to complete (blocks completion)
+
+   - **Abort vs skip semantics:** Skip is for optional fields that won't be filled.
+     Abort is for fields that can't be completed but should be visible as blockers.
+     This distinction allows agents to signal "I can't answer this" without silently
+     accepting incomplete data.
+
+   - **Notes as first-class data:** Notes are stored separately in `ParsedForm.notes`
+     rather than embedded in field values. This allows:
+     - Multiple notes per field/group/form
+     - Notes from different roles
+     - Notes linked to skip/abort actions via the `state` attribute
+     - Clean separation between field values and metadata
+
+   - **Serialization consistency:** Skip and abort states are serialized via
+     `state` attribute on field tags, making them visible in the markdown.
+     Sentinel values (`|SKIP|`, `|ABORT|`) encode reasons when present.
+     This ensures the markdown is self-documenting and human-readable.
+
+   - **Completion semantics:** Completion requires all role-filtered fields to be
+     answered or skipped, AND abortedFields == 0. This ensures:
+     - Agents must address every field (no silent ignoring)
+     - Aborted fields are visible as blockers requiring intervention
+     - Forms can't be completed with outstanding problems
 
 ### string-list Field (v0.1)
 
@@ -3528,8 +3814,9 @@ subsection.
 
 10. **`ParsedForm` internal shape** — The canonical internal representation returned by
     `parseForm()` is explicitly defined (see `ParsedForm` interface in Layer 2: Data
-    Model). Includes `schema`, `valuesByFieldId`, `docs`, `orderIndex` (for deterministic
-    ordering), and `idIndex` (for fast lookup/validation).
+    Model). Includes `schema`, `responsesByFieldId`, `notes`, `docs`, `orderIndex` (for
+    deterministic ordering), `idIndex` (for fast lookup/validation), and optional
+    `metadata` (for forms with frontmatter).
 
 11. **Source location data in validation issues** — `ValidationIssue` includes optional
     `path` (field/group ID path) and `range` (source position from Markdoc AST) fields

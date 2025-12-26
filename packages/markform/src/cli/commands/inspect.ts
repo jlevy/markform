@@ -19,6 +19,8 @@ import type {
   FieldValue,
   InspectIssue,
   ProgressState,
+  ResponseState,
+  Note,
 } from "../../engine/coreTypes.js";
 import { parseRolesFlag } from "../../settings.js";
 import {
@@ -38,6 +40,20 @@ function formatState(state: ProgressState, useColors: boolean): string {
     incomplete: ["○ incomplete", pc.yellow],
     empty: ["◌ empty", pc.dim],
     invalid: ["✗ invalid", pc.red],
+  };
+  const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
+  return useColors ? colorFn(text) : text;
+}
+
+/**
+ * Format response state badge for console output.
+ */
+function formatResponseState(state: ResponseState, useColors: boolean): string {
+  const badges: Record<ResponseState, [string, (s: string) => string]> = {
+    answered: ["answered", pc.green],
+    skipped: ["skipped", pc.yellow],
+    aborted: ["aborted", pc.red],
+    empty: ["empty", pc.dim],
   };
   const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
   return useColors ? colorFn(text) : text;
@@ -157,6 +173,7 @@ interface InspectReport {
   form_state: ProgressState;
   groups: ReportGroup[];
   values: Record<string, FieldValue>;
+  notes: Note[];
   issues: {
     ref: string;
     scope: string;
@@ -214,18 +231,27 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       emptyOptionalFields: number;
       answeredFields: number;
       skippedFields: number;
+      abortedFields: number;
+      emptyFields: number;
+      totalNotes: number;
     };
+    fields: Record<string, {
+      responseState: ResponseState;
+      hasNotes: boolean;
+      noteCount: number;
+    }>;
   };
   lines.push(bold("Progress:"));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
   lines.push(`  Answered: ${progress.counts.answeredFields}`);
   lines.push(`  Skipped: ${progress.counts.skippedFields}`);
+  lines.push(`  Aborted: ${progress.counts.abortedFields}`);
+  lines.push(`  Empty: ${progress.counts.emptyFields}`);
   lines.push(`  Complete: ${progress.counts.completeFields}`);
   lines.push(`  Incomplete: ${progress.counts.incompleteFields}`);
   lines.push(`  Invalid: ${progress.counts.invalidFields}`);
-  lines.push(`  Empty (required): ${progress.counts.emptyRequiredFields}`);
-  lines.push(`  Empty (optional): ${progress.counts.emptyOptionalFields}`);
+  lines.push(`  Total notes: ${progress.counts.totalNotes}`);
   lines.push("");
 
   // Form content (groups and fields with values)
@@ -235,13 +261,32 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     for (const field of group.children) {
       const reqBadge = field.required ? yellow("[required]") : dim("[optional]");
       const roleBadge = field.role !== "agent" ? cyan(`[${field.role}]`) : "";
+      const fieldProgress = progress.fields[field.id];
+      const responseStateBadge = fieldProgress
+        ? `[${formatResponseState(fieldProgress.responseState, useColors)}]`
+        : "";
+      const notesBadge = fieldProgress?.hasNotes
+        ? cyan(`[${fieldProgress.noteCount} note${fieldProgress.noteCount > 1 ? "s" : ""}]`)
+        : "";
       const value = report.values[field.id];
       const valueStr = formatFieldValue(value, useColors);
-      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge} ${roleBadge}`.trim());
+      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge} ${roleBadge} ${responseStateBadge} ${notesBadge}`.trim());
       lines.push(`      ${dim("→")} ${valueStr}`);
     }
   }
   lines.push("");
+
+  // Notes summary
+  if (report.notes.length > 0) {
+    lines.push(bold(`Notes (${report.notes.length}):`));
+    for (const note of report.notes) {
+      const roleBadge = cyan(`[${note.role}]`);
+      const stateBadge = note.state ? yellow(`[${note.state}]`) : "";
+      const refLabel = dim(`${note.ref}:`);
+      lines.push(`  ${note.id} ${roleBadge} ${stateBadge} ${refLabel} ${note.text}`.trim());
+    }
+    lines.push("");
+  }
 
   // Issues
   if (report.issues.length > 0) {
@@ -335,6 +380,7 @@ export function registerInspectCommand(program: Command): void {
               })),
             })),
             values,
+            notes: form.notes,
             issues: result.issues.map((issue: InspectIssue) => ({
               ref: issue.ref,
               scope: issue.scope,

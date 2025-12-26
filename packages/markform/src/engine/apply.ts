@@ -102,6 +102,14 @@ function validatePatch(
 
   if (patch.op === "remove_note") {
     // This patch uses 'noteId' instead of 'fieldId'
+    // Validate that the note exists
+    const noteExists = form.notes.some((n) => n.id === patch.noteId);
+    if (!noteExists) {
+      return {
+        patchIndex: index,
+        message: `Note with id '${patch.noteId}' not found`,
+      };
+    }
     return null;
   }
 
@@ -558,6 +566,7 @@ function applyRemoveNote(
   if (index >= 0) {
     form.notes.splice(index, 1);
   }
+  // If index < 0, note not found - validation should have caught this
 }
 
 /**

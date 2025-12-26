@@ -8,6 +8,7 @@ import {
   isFormComplete,
   computeAllSummaries,
 } from "../../../src/engine/summaries.js";
+import { inspect } from "../../../src/engine/inspect.js";
 import type { InspectIssue } from "../../../src/engine/coreTypes.js";
 
 describe("engine/summaries", () => {
@@ -669,6 +670,303 @@ John
       expect(result.formState).toBe("complete");
       // isComplete is false because the optional 'age' field is not addressed (filled or skipped)
       expect(result.isComplete).toBe(false);
+    });
+  });
+
+  describe("unified response model - progress with responseState (markform-235)", () => {
+    it("computes progress counts from response states", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
+{% number-field id="age" label="Age" state="aborted" %}{% /number-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(progress.counts.totalFields).toBe(4);
+      expect(progress.counts.answeredFields).toBe(1); // name
+      expect(progress.counts.skippedFields).toBe(1); // bio
+      expect(progress.counts.abortedFields).toBe(1); // age
+      expect(progress.counts.emptyFields).toBe(1); // notes
+
+      // Verify invariant: answeredFields + skippedFields + abortedFields + emptyFields == totalFields
+      const total =
+        progress.counts.answeredFields +
+        progress.counts.skippedFields +
+        progress.counts.abortedFields +
+        progress.counts.emptyFields;
+      expect(total).toBe(progress.counts.totalFields);
+    });
+
+    it("tracks field response states in progress", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
+{% number-field id="age" label="Age" state="aborted" %}{% /number-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(progress.fields.name?.responseState).toBe("answered");
+      expect(progress.fields.bio?.responseState).toBe("skipped");
+      expect(progress.fields.age?.responseState).toBe("aborted");
+      expect(progress.fields.notes?.responseState).toBe("empty");
+    });
+
+    it("counts notes in progress summary", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="bio" role="agent" state="skipped" %}
+Not available.
+{% /note %}
+
+{% note id="n2" ref="name" role="user" %}
+General comment.
+{% /note %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(progress.counts.totalNotes).toBe(2);
+      expect(progress.fields.bio?.hasNotes).toBe(true);
+      expect(progress.fields.bio?.noteCount).toBe(1);
+      expect(progress.fields.name?.hasNotes).toBe(true);
+      expect(progress.fields.name?.noteCount).toBe(1);
+    });
+
+    it("tracks aborted required field as not complete", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true state="aborted" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Use inspect to include validation issues
+      const result = inspect(parsed);
+      const progress = result.progressSummary;
+
+      expect(progress.counts.requiredFields).toBe(1);
+      expect(progress.counts.abortedFields).toBe(1);
+      expect(progress.counts.answeredFields).toBe(0);
+      // Aborted required fields are invalid (missing required value creates validation issue)
+      expect(progress.fields.name?.state).toBe("invalid");
+      expect(progress.fields.name?.responseState).toBe("aborted");
+    });
+  });
+
+  describe("unified response model - completion with abortedFields (markform-236)", () => {
+    it("isFormComplete returns false when abortedFields > 0", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% number-field id="age" label="Age" state="aborted" %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(isFormComplete(progress)).toBe(false);
+      expect(progress.counts.abortedFields).toBe(1);
+    });
+
+    it("computeFormState returns invalid when abortedFields > 0", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% number-field id="age" label="Age" state="aborted" %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+      const state = computeFormState(progress);
+
+      expect(state).toBe("invalid");
+    });
+
+    it("isFormComplete returns true when all fields answered or skipped (no aborted)", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(isFormComplete(progress)).toBe(true);
+      expect(progress.counts.abortedFields).toBe(0);
+      expect(progress.counts.answeredFields).toBe(1);
+      expect(progress.counts.skippedFields).toBe(2);
+    });
+
+    it("form with aborted required field blocks completion", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true state="aborted" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(result.isComplete).toBe(false);
+      expect(result.formState).toBe("invalid");
+      expect(result.progressSummary.counts.abortedFields).toBe(1);
+    });
+
+    it("form is incomplete when some fields are empty (not answered/skipped)", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(result.isComplete).toBe(false);
+      expect(result.formState).toBe("complete"); // Required fields are complete
+      expect(result.progressSummary.counts.emptyFields).toBe(1);
+      expect(result.progressSummary.counts.abortedFields).toBe(0);
+    });
+
+    it("form is complete when all required fields answered and all optional fields addressed", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
+{% string-field id="notes" label="Notes" %}
+\`\`\`value
+Some notes
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const result = computeAllSummaries(parsed.schema, parsed.responsesByFieldId, parsed.notes, []);
+
+      expect(result.isComplete).toBe(true);
+      expect(result.formState).toBe("complete");
+      expect(result.progressSummary.counts.abortedFields).toBe(0);
+      expect(result.progressSummary.counts.emptyFields).toBe(0);
     });
   });
 });

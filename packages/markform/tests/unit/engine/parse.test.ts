@@ -678,4 +678,507 @@ markform:
       }
     });
   });
+
+  describe("unified response model - parse state attribute (markform-230)", () => {
+    it("parses state=\"skipped\" on unfilled optional string field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.notes;
+
+      expect(response).toBeDefined();
+      expect(response?.state).toBe("skipped");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("parses state=\"aborted\" on unfilled number field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="revenue" label="Revenue" state="aborted" %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.revenue;
+
+      expect(response).toBeDefined();
+      expect(response?.state).toBe("aborted");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("parses state=\"skipped\" on unfilled checkboxes field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" state="skipped" %}
+- [ ] Task 1 {% #t1 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.tasks;
+
+      expect(response).toBeDefined();
+      expect(response?.state).toBe("skipped");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("throws error on state=\"skipped\" for required field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/cannot skip required field/i);
+    });
+
+    it("throws error on state=\"skipped\" with filled field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" state="skipped" %}
+\`\`\`value
+John
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/state.*skipped.*cannot have values/i);
+    });
+
+    it("throws error on state=\"aborted\" with filled field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="count" label="Count" state="aborted" %}
+\`\`\`value
+42
+\`\`\`
+{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/state.*aborted.*cannot have values/i);
+    });
+
+    it("infers state=\"empty\" for unfilled field without state attribute", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.notes;
+
+      expect(response?.state).toBe("empty");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("infers state=\"answered\" for filled field without state attribute", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.name;
+
+      expect(response?.state).toBe("answered");
+      expect(response?.value).toBeDefined();
+      expect(response?.value?.kind).toBe("string");
+    });
+  });
+
+  describe("unified response model - parse sentinels (markform-231)", () => {
+    it("parses |SKIP| sentinel in string field value fence", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.notes;
+
+      expect(response).toBeDefined();
+      expect(response?.state).toBe("skipped");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("parses |ABORT| sentinel in url field value fence", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" %}
+\`\`\`value
+|ABORT|
+\`\`\`
+{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.website;
+
+      expect(response).toBeDefined();
+      expect(response?.state).toBe("aborted");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("parses |SKIP| in number field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="revenue" label="Revenue" %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.revenue;
+
+      expect(response?.state).toBe("skipped");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("parses |ABORT| in string-list field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="tags" label="Tags" %}
+\`\`\`value
+|ABORT|
+\`\`\`
+{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.tags;
+
+      expect(response?.state).toBe("aborted");
+      expect(response?.value).toBeUndefined();
+    });
+
+    it("throws error on |SKIP| sentinel with state=\"aborted\" attribute conflict", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="aborted" %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/conflicting state/i);
+    });
+  });
+
+  describe("unified response model - parse notes (markform-232)", () => {
+    it("parses note with all required attributes", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="notes" role="agent" %}
+This field is not applicable for this analysis.
+{% /note %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.notes).toHaveLength(1);
+      expect(result.notes[0]?.id).toBe("n1");
+      expect(result.notes[0]?.ref).toBe("notes");
+      expect(result.notes[0]?.role).toBe("agent");
+      expect(result.notes[0]?.text).toContain("not applicable");
+      expect(result.notes[0]?.state).toBeUndefined();
+    });
+
+    it("parses note with optional state attribute", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="revenue" label="Revenue" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="revenue" role="agent" state="skipped" %}
+Company is private, revenue not disclosed.
+{% /note %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.notes).toHaveLength(1);
+      expect(result.notes[0]?.id).toBe("n1");
+      expect(result.notes[0]?.state).toBe("skipped");
+      expect(result.notes[0]?.text).toContain("private");
+    });
+
+    it("parses note with state=\"aborted\"", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="count" label="Count" state="aborted" %}{% /number-field %}
+{% /field-group %}
+
+{% note id="n2" ref="count" role="agent" state="aborted" %}
+Cannot determine count from available data.
+{% /note %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.notes).toHaveLength(1);
+      expect(result.notes[0]?.state).toBe("aborted");
+    });
+
+    it("parses multiple notes", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="name" role="agent" %}
+First note.
+{% /note %}
+
+{% note id="n2" ref="bio" role="user" %}
+Second note.
+{% /note %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.notes).toHaveLength(2);
+      expect(result.notes[0]?.id).toBe("n1");
+      expect(result.notes[1]?.id).toBe("n2");
+    });
+
+    it("throws error on note with invalid ref", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="nonexistent" role="agent" %}
+Note text.
+{% /note %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/unknown.*nonexistent/i);
+    });
+
+    it("throws error on note missing required id attribute", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% note ref="name" role="agent" %}
+Note text.
+{% /note %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/missing.*id/i);
+    });
+
+    it("throws error on note missing required ref attribute", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" role="agent" %}
+Note text.
+{% /note %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/missing.*ref/i);
+    });
+
+    it("throws error on note missing required role attribute", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="name" %}
+Note text.
+{% /note %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/missing.*role/i);
+    });
+  });
 });

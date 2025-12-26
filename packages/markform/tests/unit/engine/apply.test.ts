@@ -489,4 +489,505 @@ markform:
       expect(result.isComplete).toBe(true);
     });
   });
+
+  describe("unified response model - abort_field patch (markform-234)", () => {
+    it("applies abort_field to optional field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: "abort_field", fieldId: "notes", role: "agent" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.responsesByFieldId.notes?.state).toBe("aborted");
+      expect(form.responsesByFieldId.notes?.value).toBeUndefined();
+    });
+
+    it("applies abort_field to required field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: "abort_field", fieldId: "name", role: "agent" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.responsesByFieldId.name?.state).toBe("aborted");
+    });
+
+    it("applies abort_field with reason, adding note", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="revenue" label="Revenue" %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: "abort_field",
+          fieldId: "revenue",
+          role: "agent",
+          reason: "Data not available in source document",
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.responsesByFieldId.revenue?.state).toBe("aborted");
+
+      // Check that a note was added with the reason
+      const note = form.notes.find(
+        (n) => n.ref === "revenue" && n.state === "aborted"
+      );
+      expect(note).toBeDefined();
+      expect(note?.text).toContain("not available");
+    });
+
+    it("clears existing value when aborting field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}
+\`\`\`value
+Some existing value
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.responsesByFieldId.notes?.state).toBe("answered");
+
+      const patches: Patch[] = [
+        { op: "abort_field", fieldId: "notes", role: "agent" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.responsesByFieldId.notes?.state).toBe("aborted");
+      expect(form.responsesByFieldId.notes?.value).toBeUndefined();
+    });
+  });
+
+  describe("unified response model - add_note patch (markform-234)", () => {
+    it("adds note with valid ref", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: "add_note",
+          ref: "name",
+          role: "user",
+          text: "This is a general comment.",
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.notes).toHaveLength(1);
+      expect(form.notes[0]?.ref).toBe("name");
+      expect(form.notes[0]?.role).toBe("user");
+      expect(form.notes[0]?.text).toContain("general comment");
+      expect(form.notes[0]?.state).toBeUndefined();
+    });
+
+    it("adds note with state attribute", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: "add_note",
+          ref: "notes",
+          role: "agent",
+          text: "Skipped because not applicable.",
+          state: "skipped",
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.notes).toHaveLength(1);
+      expect(form.notes[0]?.state).toBe("skipped");
+    });
+
+    it("rejects add_note with invalid ref", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: "add_note",
+          ref: "nonexistent",
+          role: "agent",
+          text: "Note text",
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("rejected");
+    });
+
+    it("generates sequential note IDs", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+
+      // Add first note
+      applyPatches(form, [
+        { op: "add_note", ref: "name", role: "agent", text: "First note" },
+      ]);
+      expect(form.notes[0]?.id).toBe("n1");
+
+      // Add second note
+      applyPatches(form, [
+        { op: "add_note", ref: "name", role: "agent", text: "Second note" },
+      ]);
+      expect(form.notes[1]?.id).toBe("n2");
+
+      // Add third note
+      applyPatches(form, [
+        { op: "add_note", ref: "name", role: "agent", text: "Third note" },
+      ]);
+      expect(form.notes[2]?.id).toBe("n3");
+    });
+  });
+
+  describe("unified response model - remove_note patch (markform-234)", () => {
+    it("removes specific note by ID", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="name" role="agent" %}
+Note 1.
+{% /note %}
+
+{% note id="n2" ref="name" role="agent" %}
+Note 2.
+{% /note %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.notes).toHaveLength(2);
+
+      const patches: Patch[] = [{ op: "remove_note", noteId: "n1" }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.notes).toHaveLength(1);
+      expect(form.notes[0]?.id).toBe("n2");
+    });
+
+    it("rejects remove_note with invalid noteId", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: "remove_note", noteId: "n999" }];
+
+      const result = applyPatches(form, patches);
+
+      // Validation ensures note exists before applying
+      expect(result.applyStatus).toBe("rejected");
+    });
+  });
+
+  describe("unified response model - remove_notes patch (markform-234)", () => {
+    it("removes notes matching ref and role", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% string-field id="bio" label="Bio" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="name" role="agent" %}
+Agent note for name.
+{% /note %}
+
+{% note id="n2" ref="name" role="user" %}
+User note for name.
+{% /note %}
+
+{% note id="n3" ref="bio" role="agent" %}
+Agent note for bio.
+{% /note %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.notes).toHaveLength(3);
+
+      const patches: Patch[] = [
+        { op: "remove_notes", ref: "name", role: "agent" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.notes).toHaveLength(2);
+      // Should have removed n1 only
+      expect(form.notes.find((n) => n.id === "n1")).toBeUndefined();
+      expect(form.notes.find((n) => n.id === "n2")).toBeDefined();
+      expect(form.notes.find((n) => n.id === "n3")).toBeDefined();
+    });
+
+    it("succeeds even if no notes match", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: "remove_notes", ref: "name", role: "agent" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+    });
+  });
+
+  describe("unified response model - auto-cleanup notes (markform-234)", () => {
+    it("removes state-linked notes when setting value on skipped field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="notes" role="agent" state="skipped" %}
+Skip reason.
+{% /note %}
+
+{% note id="n2" ref="notes" role="user" %}
+General comment.
+{% /note %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.notes).toHaveLength(2);
+      expect(form.responsesByFieldId.notes?.state).toBe("skipped");
+
+      // Set a value on the skipped field
+      const patches: Patch[] = [
+        { op: "set_string", fieldId: "notes", value: "New value" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.responsesByFieldId.notes?.state).toBe("answered");
+
+      // State-linked note (n1) should be removed
+      expect(form.notes).toHaveLength(1);
+      expect(form.notes[0]?.id).toBe("n2");
+    });
+
+    it("removes state-linked notes when setting value on aborted field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="count" label="Count" state="aborted" %}{% /number-field %}
+{% /field-group %}
+
+{% note id="n1" ref="count" role="agent" state="aborted" %}
+Abort reason.
+{% /note %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.notes).toHaveLength(1);
+
+      // Set a value on the aborted field
+      const patches: Patch[] = [
+        { op: "set_number", fieldId: "count", value: 42 },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+      expect(form.responsesByFieldId.count?.state).toBe("answered");
+
+      // State-linked note should be removed
+      expect(form.notes).toHaveLength(0);
+    });
+
+    it("preserves general notes when setting value on skipped field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="notes" role="agent" state="skipped" %}
+Skip reason.
+{% /note %}
+
+{% note id="n2" ref="notes" role="user" %}
+This is a general note.
+{% /note %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.notes).toHaveLength(2);
+
+      // Set a value on the skipped field
+      const patches: Patch[] = [
+        { op: "set_string", fieldId: "notes", value: "New value" },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe("applied");
+
+      // Only state-linked note should be removed, general note preserved
+      expect(form.notes).toHaveLength(1);
+      expect(form.notes[0]?.id).toBe("n2");
+      expect(form.notes[0]?.state).toBeUndefined();
+    });
+  });
 });

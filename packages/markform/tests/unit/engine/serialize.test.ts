@@ -657,4 +657,372 @@ Enter your full legal name.
       expect(output).toContain("Enter your full legal name.");
     });
   });
+
+  describe("unified response model - serialize state (markform-233)", () => {
+    it("serializes state=\"skipped\" attribute for skipped field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      expect(output).toContain('state="skipped"');
+      expect(output).not.toContain("```value");
+    });
+
+    it("serializes state=\"aborted\" attribute for aborted field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="revenue" label="Revenue" state="aborted" %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      expect(output).toContain('state="aborted"');
+      expect(output).not.toContain("```value");
+    });
+
+    it("does not serialize state attribute for answered field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      expect(output).not.toContain('state=');
+      expect(output).toContain("```value");
+      expect(output).toContain("Alice");
+    });
+
+    it("does not serialize state attribute for empty field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      expect(output).not.toContain('state=');
+      expect(output).not.toContain("```value");
+    });
+
+    it("round-trips state=\"skipped\" correctly", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      expect(reparsed.responsesByFieldId.notes?.state).toBe("skipped");
+      expect(reparsed.responsesByFieldId.notes?.value).toBeUndefined();
+    });
+
+    it("round-trips state=\"aborted\" correctly", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="count" label="Count" state="aborted" %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      expect(reparsed.responsesByFieldId.count?.state).toBe("aborted");
+      expect(reparsed.responsesByFieldId.count?.value).toBeUndefined();
+    });
+  });
+
+  describe("unified response model - serialize notes (markform-233)", () => {
+    it("serializes notes at end of form", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="notes" role="agent" state="skipped" %}
+Not applicable for this analysis.
+{% /note %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      expect(output).toContain('{% note id="n1"');
+      expect(output).toContain('ref="notes"');
+      expect(output).toContain('role="agent"');
+      expect(output).toContain('state="skipped"');
+      expect(output).toContain("Not applicable");
+    });
+
+    it("serializes notes in sorted order by ID", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="field1" label="Field 1" %}{% /string-field %}
+{% string-field id="field2" label="Field 2" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n10" ref="field1" role="agent" %}
+Note 10.
+{% /note %}
+
+{% note id="n2" ref="field2" role="agent" %}
+Note 2.
+{% /note %}
+
+{% note id="n1" ref="field1" role="agent" %}
+Note 1.
+{% /note %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Check that notes appear in numerical order n1, n2, n10
+      const n1Pos = output.indexOf('id="n1"');
+      const n2Pos = output.indexOf('id="n2"');
+      const n10Pos = output.indexOf('id="n10"');
+
+      expect(n1Pos).toBeGreaterThan(0);
+      expect(n2Pos).toBeGreaterThan(n1Pos);
+      expect(n10Pos).toBeGreaterThan(n2Pos);
+    });
+
+    it("serializes note without state attribute when state is undefined", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="name" role="user" %}
+General comment.
+{% /note %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      expect(output).toContain('{% note id="n1"');
+      expect(output).toContain('ref="name"');
+      expect(output).toContain('role="user"');
+      expect(output).not.toContain('state=');
+      expect(output).toContain("General comment");
+    });
+
+    it("round-trips notes correctly", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="notes" role="agent" state="skipped" %}
+Not applicable.
+{% /note %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      expect(reparsed.notes).toHaveLength(1);
+      expect(reparsed.notes[0]?.id).toBe("n1");
+      expect(reparsed.notes[0]?.ref).toBe("notes");
+      expect(reparsed.notes[0]?.role).toBe("agent");
+      expect(reparsed.notes[0]?.state).toBe("skipped");
+      expect(reparsed.notes[0]?.text).toContain("Not applicable");
+    });
+  });
+
+  describe("unified response model - round-trip with sentinels (markform-253)", () => {
+    it("round-trips |SKIP| sentinel in string field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="notes" label="Notes" %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      // After serialization, |SKIP| becomes state="skipped" attribute
+      expect(reparsed.responsesByFieldId.notes?.state).toBe("skipped");
+      expect(output).toContain('state="skipped"');
+      expect(output).not.toContain("|SKIP|");
+    });
+
+    it("round-trips |ABORT| sentinel in url field", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" %}
+\`\`\`value
+|ABORT|
+\`\`\`
+{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      // After serialization, |ABORT| becomes state="aborted" attribute
+      expect(reparsed.responsesByFieldId.website?.state).toBe("aborted");
+      expect(output).toContain('state="aborted"');
+      expect(output).not.toContain("|ABORT|");
+    });
+
+    it("round-trips form with mixed states and notes", () => {
+      const markdown = `---
+markform:
+  markform_version: "0.1.0"
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" required=true %}
+\`\`\`value
+Alice
+\`\`\`
+{% /string-field %}
+{% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
+{% number-field id="age" label="Age" state="aborted" %}{% /number-field %}
+{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field-group %}
+
+{% note id="n1" ref="bio" role="agent" state="skipped" %}
+Bio not available.
+{% /note %}
+
+{% note id="n2" ref="age" role="agent" state="aborted" %}
+Age cannot be determined.
+{% /note %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      // Check responses
+      expect(reparsed.responsesByFieldId.name?.state).toBe("answered");
+      expect(reparsed.responsesByFieldId.bio?.state).toBe("skipped");
+      expect(reparsed.responsesByFieldId.age?.state).toBe("aborted");
+      expect(reparsed.responsesByFieldId.notes?.state).toBe("empty");
+
+      // Check notes
+      expect(reparsed.notes).toHaveLength(2);
+      expect(reparsed.notes[0]?.id).toBe("n1");
+      expect(reparsed.notes[0]?.state).toBe("skipped");
+      expect(reparsed.notes[1]?.id).toBe("n2");
+      expect(reparsed.notes[1]?.state).toBe("aborted");
+    });
+  });
 });
