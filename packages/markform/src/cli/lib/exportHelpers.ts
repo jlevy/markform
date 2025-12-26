@@ -18,56 +18,6 @@ import type { ExportResult } from "./cliTypes.js";
 export type { ExportResult } from "./cliTypes.js";
 
 /**
- * Convert field values to plain values for YAML export.
- *
- * Extracts the underlying values from the typed FieldValue wrappers
- * for a cleaner YAML representation.
- *
- * NOTE: This is the legacy export format (backward compatibility).
- * For the new structured format with state, use toStructuredValues().
- */
-export function toPlainValues(form: ParsedForm): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-
-  for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-    // Only export values for answered fields
-    if (response.state !== "answered" || !response.value) {
-      continue;
-    }
-
-    const value = response.value;
-    switch (value.kind) {
-      case "string":
-        result[fieldId] = value.value ?? null;
-        break;
-      case "number":
-        result[fieldId] = value.value ?? null;
-        break;
-      case "string_list":
-        result[fieldId] = value.items;
-        break;
-      case "single_select":
-        result[fieldId] = value.selected ?? null;
-        break;
-      case "multi_select":
-        result[fieldId] = value.selected;
-        break;
-      case "checkboxes":
-        result[fieldId] = value.values;
-        break;
-      case "url":
-        result[fieldId] = value.value ?? null;
-        break;
-      case "url_list":
-        result[fieldId] = value.items;
-        break;
-    }
-  }
-
-  return result;
-}
-
-/**
  * Convert field responses to structured format for export (markform-218).
  *
  * Includes state for all fields:
