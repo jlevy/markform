@@ -78,9 +78,25 @@ function validatePatch(
   index: number,
 ): PatchError | null {
   // Handle patches without fieldId
-  if (patch.op === "add_note" || patch.op === "remove_notes") {
-    // These patches use 'ref' instead of 'fieldId'
-    // For now, just accept them (full validation can be added later)
+  if (patch.op === "add_note") {
+    // Validate that ref exists in idIndex
+    if (!form.idIndex.has(patch.ref)) {
+      return {
+        patchIndex: index,
+        message: `Reference "${patch.ref}" not found in form`,
+      };
+    }
+    return null;
+  }
+
+  if (patch.op === "remove_notes") {
+    // Validate that ref exists in idIndex
+    if (!form.idIndex.has(patch.ref)) {
+      return {
+        patchIndex: index,
+        message: `Reference "${patch.ref}" not found in form`,
+      };
+    }
     return null;
   }
 
@@ -262,12 +278,45 @@ function generateNoteId(form: ParsedForm): NoteId {
 }
 
 /**
+ * Auto-cleanup: Remove state-linked notes when setting a value on a field
+ * that was previously skipped or aborted.
+ *
+ * This removes notes that:
+ * - Reference the given field (note.ref === fieldId)
+ * - Have a state property that matches the field's current state
+ */
+function autoCleanupStateNotes(
+  form: ParsedForm,
+  responses: Record<Id, FieldResponse>,
+  fieldId: Id,
+): void {
+  const currentResponse = responses[fieldId];
+  if (!currentResponse) {
+    return;
+  }
+
+  const currentState = currentResponse.state;
+
+  // Only clean up if the field is currently skipped or aborted
+  if (currentState !== "skipped" && currentState !== "aborted") {
+    return;
+  }
+
+  // Remove notes that match the field and have the same state
+  form.notes = form.notes.filter(
+    (note) => !(note.ref === fieldId && note.state === currentState)
+  );
+}
+
+/**
  * Apply a set_string patch.
  */
 function applySetString(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetStringPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   responses[patch.fieldId] = {
     state: "answered",
     value: {
@@ -281,9 +330,11 @@ function applySetString(
  * Apply a set_number patch.
  */
 function applySetNumber(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetNumberPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   responses[patch.fieldId] = {
     state: "answered",
     value: {
@@ -297,9 +348,11 @@ function applySetNumber(
  * Apply a set_string_list patch.
  */
 function applySetStringList(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetStringListPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   responses[patch.fieldId] = {
     state: "answered",
     value: {
@@ -313,9 +366,11 @@ function applySetStringList(
  * Apply a set_single_select patch.
  */
 function applySetSingleSelect(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetSingleSelectPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   responses[patch.fieldId] = {
     state: "answered",
     value: {
@@ -329,9 +384,11 @@ function applySetSingleSelect(
  * Apply a set_multi_select patch.
  */
 function applySetMultiSelect(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetMultiSelectPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   responses[patch.fieldId] = {
     state: "answered",
     value: {
@@ -345,9 +402,11 @@ function applySetMultiSelect(
  * Apply a set_checkboxes patch (merges with existing values).
  */
 function applySetCheckboxes(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetCheckboxesPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   const existingResponse = responses[patch.fieldId];
   const existingValue = existingResponse?.value as CheckboxesValue | undefined;
   const existingValues = existingValue?.values ?? {};
@@ -371,9 +430,11 @@ function applySetCheckboxes(
  * Apply a set_url patch.
  */
 function applySetUrl(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetUrlPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   responses[patch.fieldId] = {
     state: "answered",
     value: {
@@ -387,9 +448,11 @@ function applySetUrl(
  * Apply a set_url_list patch.
  */
 function applySetUrlList(
+  form: ParsedForm,
   responses: Record<Id, FieldResponse>,
   patch: SetUrlListPatch,
 ): void {
+  autoCleanupStateNotes(form, responses, patch.fieldId);
   responses[patch.fieldId] = {
     state: "answered",
     value: {
@@ -520,28 +583,28 @@ function applyPatch(
 ): void {
   switch (patch.op) {
     case "set_string":
-      applySetString(responses, patch);
+      applySetString(form, responses, patch);
       break;
     case "set_number":
-      applySetNumber(responses, patch);
+      applySetNumber(form, responses, patch);
       break;
     case "set_string_list":
-      applySetStringList(responses, patch);
+      applySetStringList(form, responses, patch);
       break;
     case "set_single_select":
-      applySetSingleSelect(responses, patch);
+      applySetSingleSelect(form, responses, patch);
       break;
     case "set_multi_select":
-      applySetMultiSelect(responses, patch);
+      applySetMultiSelect(form, responses, patch);
       break;
     case "set_checkboxes":
-      applySetCheckboxes(responses, patch);
+      applySetCheckboxes(form, responses, patch);
       break;
     case "set_url":
-      applySetUrl(responses, patch);
+      applySetUrl(form, responses, patch);
       break;
     case "set_url_list":
-      applySetUrlList(responses, patch);
+      applySetUrlList(form, responses, patch);
       break;
     case "clear_field":
       applyClearField(responses, patch);
