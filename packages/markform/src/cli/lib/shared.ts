@@ -171,12 +171,15 @@ export async function readFile(filePath: string): Promise<string> {
 }
 
 /**
- * Write contents to a file.
+ * Write contents to a file atomically.
+ *
+ * Uses the atomically library to prevent partial or corrupted files
+ * if the process crashes mid-write.
  */
 export async function writeFile(
   filePath: string,
   contents: string
 ): Promise<void> {
-  const { writeFile: fsWriteFile } = await import("node:fs/promises");
-  await fsWriteFile(filePath, contents, "utf-8");
+  const { writeFile: atomicWriteFile } = await import("atomically");
+  await atomicWriteFile(filePath, contents);
 }
