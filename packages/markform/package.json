@@ -62,6 +62,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit",
     "test:golden": "vitest run tests/golden",
+    "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
     "test:coverage": "vitest run --coverage",
     "test:coverage:html": "vitest run --coverage && open coverage/index.html",
     "publint": "publint"

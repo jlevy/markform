@@ -229,7 +229,30 @@ pnpm test:golden
 ```
 
 Golden tests replay recorded agent sessions to validate form filling works correctly.
-Session files are in `tests/golden/sessions/`.
+Session files are in `examples/*/` directories.
+
+### Regenerating Golden Tests
+
+When format changes (like frontmatter updates) cause golden tests to fail with hash
+mismatches, regenerate them:
+
+```bash
+# 1. Review failures to understand what changed
+pnpm test:golden
+
+# 2. Regenerate session files with updated hashes
+pnpm --filter markform test:golden:regen
+
+# 3. Review diffs to verify changes are expected
+git diff packages/markform/examples/
+
+# 4. Run tests again to confirm they pass
+pnpm test:golden
+
+# 5. Commit the updated session files
+git add packages/markform/examples/
+git commit -m "Update golden session hashes after format change"
+```
 
 ### Watch Mode
 
