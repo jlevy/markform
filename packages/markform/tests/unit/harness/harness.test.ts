@@ -14,7 +14,7 @@ import { createMockAgent } from "../../../src/harness/mockAgent.js";
 
 const SIMPLE_FORM = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test_form" %}
@@ -32,7 +32,7 @@ markform:
 
 const FILLED_FORM = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test_form" %}
@@ -249,7 +249,7 @@ describe("FormHarness", () => {
     // Form with 2 groups, 3 fields each (6 required fields total)
     const MULTI_GROUP_FORM = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test_form" %}
@@ -437,7 +437,7 @@ describe("MockAgent", () => {
   it("generates patches for url fields", async () => {
     const URL_FORM_EMPTY = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test_form" %}
@@ -455,7 +455,7 @@ markform:
 
     const URL_FORM_FILLED = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test_form" %}
@@ -615,7 +615,7 @@ describe("fillMode", () => {
       // Form with mixed roles
       const MIXED_ROLE_FORM = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
   roles:
     - agent
     - user

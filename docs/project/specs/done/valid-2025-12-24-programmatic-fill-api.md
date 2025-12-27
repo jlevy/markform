@@ -178,7 +178,7 @@ import { fillForm } from 'markform';
 const result = await fillForm({
   form: `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
   roles:
     - user
     - agent

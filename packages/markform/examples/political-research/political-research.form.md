@@ -1,6 +1,6 @@
 ---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
   roles:
     - user
     - agent

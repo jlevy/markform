@@ -36,49 +36,63 @@ This walks you through an example form interactively, with optional AI agent fil
 
 ## Motivation
 
-### Why Are Forms Important?
+### Why Do Forms Help Agentic Workflows?
 
 Most current agent workflow frameworks emphasize the *flow* of information rather than
 the *structure* of the content.
 What’s often more useful is expressing the *state* of content directly in a way that
 provides clear context to agents and humans at all times.
 
-The key insight of Markform is that *forms* are a natural way to express structured
-workflow state. If state is represented in a context-efficient way, workflows like agent
-loops become much more effective.
+Humans have for centuries used paper forms to systemetize and manage processes.
+The key insight of Markform is that the most natural way to express the state and
+context for a workflow is often *forms*. Just as Markdown is a transparent format for
+documents, Markform is a transparent text format structured information.
 
-Humans have used forms for centuries to manage processes with rigor.
-Just as Markdown is a transparent format for documents, Markform is a transparent text
-format structured information.
+### Goals of Markform
 
-### Why Another Format for Forms?
+Our goals are threefold:
 
-Plain Markdown checklists and ad-hoc templates are readable, but fragile to update
-programmatically via LLMs or agents.
-Simple to-do list tools are now commonly used by agents, but these do not extend to more
-complex assembly of information.
+- **Expressive form state:** Fields can be arbitrary types like checkboxes, strings,
+  numbers, and lists.
 
-There are numerous other tools like Typeform and Google forms for collecting data from
-humans, but it seems there isn’t a clean text format for such forms or workflows for
-their use by agents.
+- **Programmatic editing:** Field state should be updated via APIs or tools.
+
+- **Easily readable by humans and agents:** Both template and field values of a form
+  should have a clear text format (not a binary or obscure XML format only readable by
+  certain applications).
+
+### Does This Already Exist?
+
+No, unfortunately not.
+The closest alternatives are:
+
+- Plain Markdown docs can be used as templates and filledin by agents.
+  These are more expressive, but it is hard to edit them programmatically or use LLMs to
+  update them reliably.
+
+- Agent to-do lists are part of many chat or coding interfaces and are programmatically
+  edited by agents. But these are limited to simple checklists, not forms with other
+  fields.
+
+- Numerous tools like Typeform, Google forms, PDF forms, and Docusign offer
+  human-friendly UI. But these do not have a human-friendly text format for use by
+  agents as well as humans.
 
 ### How Can Agents Use Markform?
 
 The data model and editing API let agents fill in forms.
-This enables powerful AI workflows that assemble information in a defined structure.
+This enables powerful AI workflows that assemble information in a defined structure:
 
-Key elements of its design:
-
-- **Form content, structure, and field values are all in one text file** for better
+- **Form content, structure, and field values are in a single text file** for better
   context engineering.
   This is a major advantage for LLM agents and for humans reviewing their work.
 
 - **Incremental filling** means an agent or a human can take many iterations, filling
   and correcting a form until it is complete and satisfies the validation rules.
 
-- The same API works with **multiple interfaces for humans or agents**. You can interact
-  with a form via a CLI, a programmatic API, from Vercel AI SDK or in an MCP server used
-  by an agent, or in web form UIs for humans.
+- **Multiple interfaces for humans or agents** can work with the same forms.
+  You can interact with a form via a CLI, a programmatic API, from Vercel AI SDK or in
+  an MCP server used by an agent, or in web form UIs for humans.
 
 - **Flexible validation** at multiple scopes (field/group/form), including declarative
   constraints and external hooks to arbitrary code (currently TypeScript) or LLM-based
@@ -86,8 +100,6 @@ Key elements of its design:
 
 - An **agent execution harness** for step-by-step form filling, enabling deep research
   agents that assemble validated output in a structured format.
-
-- A **golden session testing framework** for validating end-to-end behavior
 
 ### Example Use Cases
 

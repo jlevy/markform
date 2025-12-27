@@ -19,7 +19,7 @@ import type { ParsedForm, Patch } from "../../../src/engine/coreTypes.js";
 
 const SIMPLE_FORM = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test_form" %}
@@ -37,7 +37,7 @@ markform:
 
 const FILLED_FORM = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test_form" %}

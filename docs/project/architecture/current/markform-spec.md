@@ -111,7 +111,7 @@ Built on [Markdoc’s tag syntax specification][markdoc-spec] and
 ```yaml
 ---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
   form_summary: { ... }    # derived: structure summary
   form_progress: { ... }   # derived: progress summary
   form_state: complete|incomplete|invalid|empty   # derived: overall progress state
@@ -728,7 +728,7 @@ See [GitHub Discussion #261][markdoc-process-false] for background on the attrib
 ```md
 ---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}

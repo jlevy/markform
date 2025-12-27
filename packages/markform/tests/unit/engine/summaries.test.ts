@@ -16,7 +16,7 @@ describe("engine/summaries", () => {
     it("counts groups and fields correctly", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -44,7 +44,7 @@ markform:
     it("builds group and field indices", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -65,7 +65,7 @@ markform:
     it("counts options for select fields", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -95,7 +95,7 @@ markform:
     it("tracks unsubmitted fields as empty", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -118,7 +118,7 @@ markform:
     it("tracks submitted fields as complete when valid", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -147,7 +147,7 @@ John Doe
     it("tracks fields with issues as invalid", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -186,7 +186,7 @@ X
     it("counts required fields separately", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -212,7 +212,7 @@ John
     it("computes checkbox progress for checkboxes fields", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -239,7 +239,7 @@ markform:
     it("tracks checkboxes with incomplete items as incomplete", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -264,7 +264,7 @@ markform:
     it("tracks explicit checkboxes with unfilled as incomplete", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -291,7 +291,7 @@ markform:
     it("returns empty when no fields submitted", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -312,7 +312,7 @@ markform:
     it("returns complete when all requirements met", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -337,7 +337,7 @@ John
     it("returns invalid when issues present", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -372,7 +372,7 @@ X
     it("returns incomplete when some required fields empty", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -401,7 +401,7 @@ John
     it("returns true when form is complete", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -425,7 +425,7 @@ John
     it("returns false when required fields missing", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -445,7 +445,7 @@ markform:
     it("returns false when issues present", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -481,7 +481,7 @@ X
     it("tracks skipped fields in progress", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -511,7 +511,7 @@ John
     it("counts answered and skipped separately", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -547,7 +547,7 @@ alice@example.com
     it("computes all summaries with skips", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -577,7 +577,7 @@ John
     it("requires all fields addressed when skip_field is used", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -609,7 +609,7 @@ John
     it("is complete when all fields addressed with skip_field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -643,7 +643,7 @@ John
     it("computes all summaries at once", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -681,7 +681,7 @@ John
     it("computes progress counts from response states", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -727,7 +727,7 @@ Alice
     it("tracks field response states in progress", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -757,7 +757,7 @@ Alice
     it("counts notes in progress summary", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -790,7 +790,7 @@ General comment.
     it("tracks aborted required field as not complete", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -819,7 +819,7 @@ markform:
     it("isFormComplete returns false when abortedFields > 0", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -845,7 +845,7 @@ Alice
     it("computeFormState returns invalid when abortedFields > 0", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -871,7 +871,7 @@ Alice
     it("isFormComplete returns true when all fields answered or skipped (no aborted)", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -900,7 +900,7 @@ Alice
     it("form with aborted required field blocks completion", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -922,7 +922,7 @@ markform:
     it("form is incomplete when some fields are empty (not answered/skipped)", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -950,7 +950,7 @@ Alice
     it("form is complete when all required fields answered and all optional fields addressed", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}

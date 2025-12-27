@@ -54,7 +54,7 @@ describe("serve HTML rendering", () => {
   describe("string field rendering", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -84,7 +84,7 @@ markform:
   describe("number field rendering", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -120,7 +120,7 @@ markform:
   describe("string_list field rendering", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -147,7 +147,7 @@ markform:
   describe("single_select field rendering", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -192,7 +192,7 @@ markform:
   describe("multi_select field rendering", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -235,7 +235,7 @@ markform:
   describe("checkboxes field rendering (simple mode)", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -267,7 +267,7 @@ markform:
   describe("checkboxes field rendering (multi mode)", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -304,7 +304,7 @@ markform:
   describe("checkboxes field rendering (explicit mode)", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -338,7 +338,7 @@ markform:
   describe("form structure", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" title="Test Form" %}
 {% field-group id="group1" title="Group 1" %}
@@ -375,7 +375,7 @@ markform:
     // Note: String and number values use ```value fence blocks, not inline text
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -423,7 +423,7 @@ John Doe
   describe("url field rendering", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -466,7 +466,7 @@ markform:
   describe("url_list field rendering", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -500,7 +500,7 @@ markform:
   describe("url pre-filled values", () => {
     const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -538,7 +538,7 @@ https://example2.com
     describe("optional fields", () => {
       const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -567,7 +567,7 @@ markform:
     describe("required fields", () => {
       const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -587,7 +587,7 @@ markform:
     describe("skipped state display", () => {
       const formContent = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="test" %}
 {% field-group id="group1" title="Group 1" %}
@@ -617,7 +617,7 @@ markform:
     // Form that includes ALL field types
     const allFieldTypesForm = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 {% form id="all_types" %}
 {% field-group id="g1" title="All Field Types" %}

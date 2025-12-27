@@ -212,7 +212,7 @@ Create a test form with invalid URLs:
 cat > /tmp/test-url.form.md << 'EOF'
 ---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" title="URL Test" %}

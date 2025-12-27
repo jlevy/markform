@@ -572,7 +572,7 @@ This mirrors what `markform inspect` outputs, making each turn self-contained:
 │ ```markdown                                                                 |
 │ ---                                                                         |
 │ markform:                                                                   |
-│   spec: "MF/0.1"                                                 |
+│   spec: MF/0.1                                                 |
 │   form_state: incomplete                                                    |
 │   ...                                                                       |
 │ ---                                                                         |

@@ -13,7 +13,7 @@ import { parseForm } from "../../../src/engine/parse";
 // =============================================================================
 
 const EMPTY_FORM = `---
-spec: "MF/0.1"
+spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 
@@ -29,7 +29,7 @@ spec: "MF/0.1"
 `;
 
 const FILLED_FORM = `---
-spec: "MF/0.1"
+spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 
@@ -53,7 +53,7 @@ John Doe
 `;
 
 const INVALID_FORM = `---
-spec: "MF/0.1"
+spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 
@@ -71,7 +71,7 @@ spec: "MF/0.1"
 `;
 
 const MULTI_ISSUE_FORM = `---
-spec: "MF/0.1"
+spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 

@@ -9,7 +9,7 @@ describe("engine/validate", () => {
     it("validates required string field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -33,7 +33,7 @@ markform:
     it("passes when required string field has value", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -58,7 +58,7 @@ John Doe
     it("validates minLength constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -83,7 +83,7 @@ abc
     it("validates maxLength constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -108,7 +108,7 @@ hello world
     it("validates pattern constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -133,7 +133,7 @@ not-an-email
     it("passes when pattern matches", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -159,7 +159,7 @@ test@example.com
     it("validates required number field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -180,7 +180,7 @@ markform:
     it("validates min constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -205,7 +205,7 @@ markform:
     it("validates max constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -230,7 +230,7 @@ markform:
     it("validates integer constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -257,7 +257,7 @@ markform:
     it("validates required string-list field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -278,7 +278,7 @@ markform:
     it("validates minItems constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -304,7 +304,7 @@ two
     it("validates maxItems constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -331,7 +331,7 @@ three
     it("validates uniqueItems constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -360,7 +360,7 @@ one
     it("validates required single-select field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -385,7 +385,7 @@ markform:
     it("passes when single-select has selection", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -411,7 +411,7 @@ markform:
     it("validates required multi-select field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -434,7 +434,7 @@ markform:
     it("validates minSelections constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -459,7 +459,7 @@ markform:
     it("validates maxSelections constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -485,7 +485,7 @@ markform:
     it("validates required checkboxes in explicit mode", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -509,7 +509,7 @@ markform:
     it("passes when all checkboxes answered in explicit mode", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -532,7 +532,7 @@ markform:
     it("validates minDone constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -557,7 +557,7 @@ markform:
     it("validates minDone constraint in simple mode", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -582,7 +582,7 @@ markform:
     it("passes minDone when threshold met in simple mode", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -606,7 +606,7 @@ markform:
     it("validates required multi-mode checkboxes fail when incomplete items exist", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -630,7 +630,7 @@ markform:
     it("passes when all required multi-mode checkboxes are done or na", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -655,7 +655,7 @@ markform:
     it("runs code validators from registry", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -691,7 +691,7 @@ test
     it("reports missing validators", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -716,7 +716,7 @@ test
     it("skips code validators when option set", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -757,7 +757,7 @@ test
     it("validates required url field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -781,7 +781,7 @@ markform:
     it("passes when required url field has valid URL", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -806,7 +806,7 @@ https://example.com
     it("rejects invalid URL format", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -831,7 +831,7 @@ not-a-valid-url
     it("rejects non-http(s) URLs", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -856,7 +856,7 @@ ftp://example.com
     it("accepts http URLs", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -882,7 +882,7 @@ http://example.com
     it("validates required url-list field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -903,7 +903,7 @@ markform:
     it("validates minItems constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -929,7 +929,7 @@ https://another.com
     it("validates maxItems constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -956,7 +956,7 @@ https://third.com
     it("validates uniqueItems constraint", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -983,7 +983,7 @@ https://example.com
     it("validates each URL in the list", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -1011,7 +1011,7 @@ https://also-valid.com
     it("passes with valid URL list", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -1039,7 +1039,7 @@ http://third.com
     it("validates a form with multiple field types", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}

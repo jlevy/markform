@@ -10,7 +10,7 @@ import {
 // Test form with various field types
 const TEST_FORM_MD = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
   roles:
     - user
     - agent

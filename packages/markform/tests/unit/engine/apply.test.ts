@@ -9,7 +9,7 @@ describe("engine/apply", () => {
     it("applies set_string to string field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -37,7 +37,7 @@ markform:
     it("rejects set_string on non-string field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -63,7 +63,7 @@ markform:
     it("applies set_number to number field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -91,7 +91,7 @@ markform:
     it("applies set_string_list to string-list field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -121,7 +121,7 @@ markform:
     it("applies set_single_select to single-select field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -152,7 +152,7 @@ markform:
     it("rejects invalid option id", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -181,7 +181,7 @@ markform:
     it("applies set_multi_select to multi-select field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -215,7 +215,7 @@ markform:
     it("applies set_checkboxes with merge behavior", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -259,7 +259,7 @@ markform:
     it("clears string field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -288,7 +288,7 @@ John
     it("rejects all patches if any is invalid", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -317,7 +317,7 @@ markform:
     it("rejects if field does not exist", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -343,7 +343,7 @@ markform:
     it("applies skip_field to optional field with reason stored in response", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -371,7 +371,7 @@ markform:
     it("rejects skip_field on required field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -396,7 +396,7 @@ markform:
     it("clears existing value when skipping", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -429,7 +429,7 @@ Some existing value
     it("un-skips field when setting a value", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -464,7 +464,7 @@ markform:
     it("returns updated summaries after applying patches", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -494,7 +494,7 @@ markform:
     it("applies abort_field to optional field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -520,7 +520,7 @@ markform:
     it("applies abort_field to required field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -545,7 +545,7 @@ markform:
     it("applies abort_field with reason stored in response", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -579,7 +579,7 @@ markform:
     it("clears existing value when aborting field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -613,7 +613,7 @@ Some existing value
     it("adds note with valid ref", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -646,7 +646,7 @@ markform:
     it("adds note without state attribute (notes are general-purpose)", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -678,7 +678,7 @@ markform:
     it("rejects add_note with invalid ref", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -707,7 +707,7 @@ markform:
     it("generates sequential note IDs", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -744,7 +744,7 @@ markform:
     it("removes specific note by ID", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -778,7 +778,7 @@ Note 2.
     it("rejects remove_note with invalid noteId", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -803,7 +803,7 @@ markform:
     it("preserves all notes when setting value on skipped field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
@@ -843,7 +843,7 @@ General comment.
     it("preserves all notes when setting value on aborted field", () => {
       const markdown = `---
 markform:
-  spec: "MF/0.1"
+  spec: MF/0.1
 ---
 
 {% form id="test" %}
