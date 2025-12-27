@@ -131,8 +131,8 @@ markform instructions --raw
 | xai | `XAI_API_KEY` | grok-4, grok-4-fast |
 | deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
 
-Set the appropriate environment variable for your provider before running `markform fill`.
-See [`src/settings.ts`](src/settings.ts) for the full list of models.
+Set the appropriate environment variable for your provider before running `markform
+fill`. See [`src/settings.ts`](src/settings.ts) for the full list of models.
 
 ## Programmatic Usage
 
@@ -246,4 +246,6 @@ For development and contributing, see the
 
 ## License
 
-AGPL-3.0-or-later
+Markform is AGPL-3.0-or-later.
+
+[Contact me](https://github.com/jlevy) for additional licensing options.

@@ -1,5 +1,5 @@
 /**
- * Instructions command - Display the README documentation.
+ * Readme command - Display the README documentation.
  *
  * Shows the package README.md, formatted for the terminal when interactive,
  * or as plain text when piped.
@@ -123,14 +123,13 @@ function displayContent(content: string): void {
 }
 
 /**
- * Register the instructions command.
+ * Register the readme command.
  */
-export function registerInstructionsCommand(program: Command): void {
+export function registerReadmeCommand(program: Command): void {
   program
-    .command("instructions")
-    .alias("readme")
+    .command("readme")
     .alias("docs")
-    .description("Display usage instructions and documentation")
+    .description("Display README documentation")
     .option("--raw", "Output raw markdown without formatting")
     .action((options: { raw?: boolean }, cmd: Command) => {
       const ctx = getCommandContext(cmd);
