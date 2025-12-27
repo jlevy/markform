@@ -55,9 +55,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown",
+    "copy-docs": "cp ../../README.md . && cp ../../SPEC.md .",
+    "build": "pnpm run copy-docs && tsdown",
     "dev": "tsdown --watch",
-    "prepare": "tsdown",
+    "prepare": "pnpm run copy-docs && tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

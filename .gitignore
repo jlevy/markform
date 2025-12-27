@@ -1,5 +1,9 @@
 attic/
 
+# README.md and SPEC.md are copied from root at build time
+packages/markform/README.md
+packages/markform/SPEC.md
+
 examples/*/*.form.html
 *-filled*.form.md
 
