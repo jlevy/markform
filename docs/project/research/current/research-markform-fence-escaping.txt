@@ -265,35 +265,35 @@ Update `SPEC.md` under “Field Values → Value fences” to document this beha
 
 **Example 1: Outer fence uses 4 backticks to allow inner triple-backtick block:**
 
-```markdown
+`````markdown
 ````value
 Text with an inner fenced code block:
 
 ```python
 print("hello")
 ```
-```
-```
+````
+`````
 
 **Example 2: Outer tilde fence to allow backticks inside verbatim:**
 
-```markdown
+````markdown
 ~~~value
 Here is a sample with triple backticks:
 
 ```js
 console.log("ok");
 ```
-```
-```
+~~~
+````
 
 **Example 3: Value containing Markdoc tags (adds `process=false`):**
 
-```markdown
+`````markdown
 ````value {% process=false %}
 Use {% callout %} for emphasis.
-```
-```
+````
+`````
 
 ### Rejected Alternatives
 

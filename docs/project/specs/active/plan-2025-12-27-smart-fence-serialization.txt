@@ -1,0 +1,251 @@
+# Plan Spec: Smart Fence Serialization for Value Fences
+
+## Purpose
+
+Implement safe serialization of value fences in Markform that prevents fence collision
+when values contain Markdown with fenced code blocks (backticks or tildes), including
+nested Markdoc tags.
+
+## Background
+
+- **Research brief**:
+  `docs/project/research/current/research-markform-fence-escaping.md`
+
+- **SPEC.md**: Layer 1 syntax, value fences
+
+- **Problem**: The current serializer (`serialize.ts`) emits fixed triple-backtick
+  fences for all values.
+  When a value contains content with backticks/tildes at line starts (indent ≤ 3), this
+  can cause the fence to terminate prematurely—breaking round-trip parsing.
+
+- **Parser status**: `extractFenceValue()` in `parseHelpers.ts` is already flexible and
+  handles any fence char (backticks or tildes) and any fence length.
+  Only the serializer needs to change.
+
+## Summary of Task
+
+Implement “smart fence selection” in the serializer:
+
+1. **Scan content** for max-run lengths of backticks and tildes at line start (indent ≤
+   3).
+
+2. **Pick the optimal fence**: Use the fence char with the smaller max-run; set fence
+   length to `max(3, maxRun + 1)`. Prefer backticks on tie.
+
+3. **Add `process=false`**: When content contains Markdoc tag syntax (`{% ... %}`), add
+   the `process=false` attribute to prevent tag execution inside the value fence.
+
+4. **Update all call sites**: Replace all uses of `formatValueFence()` with the new
+   smart version.
+
+## Backward Compatibility
+
+**BACKWARD COMPATIBILITY REQUIREMENTS:**
+
+- **Code types, methods, and function signatures**: DO NOT MAINTAIN (internal refactor)
+
+- **Library APIs**: DO NOT MAINTAIN (internal implementation detail; API is serialize())
+
+- **Server APIs**: N/A
+
+- **File formats**: SUPPORT BOTH — The parser already accepts both fence chars and any
+  length, so serializer changes are forward-compatible.
+  Old files still parse correctly.
+
+- **Database schemas**: N/A
+
+## Stage 1: Planning Stage
+
+### Scope
+
+**In scope:**
+
+- Implement `pickFence()` and `maxRunAtLineStart()` helper functions
+
+- Update `formatValueFence()` to use smart selection
+
+- Add `process=false` when Markdoc tags are detected
+
+- Add unit tests for fence selection logic
+
+- Add round-trip integration tests for edge cases
+
+**Out of scope:**
+
+- Changes to parsing logic (already flexible)
+
+- Changes to other serialization logic
+
+### Acceptance Criteria
+
+1. Values containing triple-backtick code blocks serialize and parse correctly
+
+2. Values containing tilde fences serialize and parse correctly
+
+3. Values containing Markdoc tags (`{% ... %}`) get `process=false` attribute
+
+4. Values with both backticks and tildes use optimal fence selection
+
+5. All existing tests pass
+
+6. New tests cover edge cases
+
+### Not Implementing
+
+- No arbitrary fence length cap (rare pathological cases handled naturally)
+
+- No Base64 encoding or indented blocks (poor readability)
+
+## Stage 2: Architecture Stage
+
+### Files to Modify
+
+| File | Changes |
+| --- | --- |
+| `packages/markform/src/engine/serialize.ts` | Add `pickFence()`, `maxRunAtLineStart()`, update `formatValueFence()` |
+
+### New Functions
+
+**`maxRunAtLineStart(value: string, char: string): number`**
+
+- Match lines starting with 0-3 spaces followed by runs of the fence char
+
+- Return the maximum run length found
+
+- Pattern: `/^( {0,3})(char+)/gm`
+
+**`pickFence(value: string): { char: '`' | ‘~’; len: number; processFalse: boolean }`**
+
+- Check if content contains Markdoc tags (`/{%/`)
+
+- Compute max backtick and tilde runs at line start
+
+- Pick char with smaller max-run; length = `max(3, maxRun + 1)`
+
+- Prefer backticks on tie
+
+**Updated `formatValueFence(content: string): string`**
+
+- Call `pickFence()` to determine fence char, length, and process=false flag
+
+- Build fence with appropriate char/length
+
+- Add `{% process=false %}` after language if needed
+
+### Examples of Output
+
+**Content with inner triple backticks:**
+
+`````markdown
+````value
+Text with an inner fenced code block:
+
+```python
+print("hello")
+```
+````
+`````
+
+**Content with Markdoc tags:**
+
+`````markdown
+````value {% process=false %}
+Use {% callout %} for emphasis.
+````
+`````
+
+**Content with many tildes, fewer backticks:**
+
+````markdown
+```value
+Some text with ~~~~ but no backticks
+```
+````
+
+## Stage 3: Refine Architecture
+
+### Reusable Components
+
+- The existing `formatValueFence()` function signature can be preserved (same input/output)
+- All call sites continue to use it unchanged
+
+### Verification
+
+- No database queries involved
+- No performance concerns (single string scan during serialization)
+
+### Simplifications
+
+- No new exported types needed
+- No changes to public API surface
+- Helper functions are internal to serialize.ts
+
+## Implementation Phase
+
+### Phase 1: Core Implementation
+
+- [ ] Add `maxRunAtLineStart()` function
+- [ ] Add `pickFence()` function
+- [ ] Update `formatValueFence()` to use smart selection
+- [ ] Verify existing tests still pass
+
+### Phase 2: Testing
+
+#### Unit Tests to Add (in `tests/unit/`)
+
+- [ ] `serialize-fence.test.ts`:
+  - Test `maxRunAtLineStart()` with various inputs:
+    - No fence chars → returns 0
+    - Triple backticks at line start → returns 3
+    - Four tildes at line start → returns 4
+    - Fence chars with 4+ space indent → returns 0 (not at risk)
+    - Mixed backticks and tildes → returns correct max for each
+  - Test `pickFence()`:
+    - Plain text → returns backticks, length 3, no process=false
+    - Content with ``` → returns backticks, length 4
+    - Content with ```` → returns tildes, length 3 (shorter)
+    - Content with `{% tag %}` → includes process=false
+    - Tie-breaker → prefers backticks
+  - Test `formatValueFence()`:
+    - Plain content → triple backticks
+    - Content with code block → appropriate fence
+    - Content with Markdoc → includes process=false
+
+#### Integration/Round-trip Tests
+
+- [ ] Add test forms with values containing:
+  - Markdown with triple-backtick code blocks
+  - Markdown with tilde code blocks
+  - Markdown with Markdoc tags
+  - Markdown with both backticks and tildes
+  - Pathological case: many runs of both chars
+- [ ] Verify parse → serialize → parse round-trip preserves values exactly
+
+### Edge Cases to Test
+
+1. **Indentation matters**: Fence chars with 4+ space indent don't close fences
+2. **Empty content**: Should still use default triple backticks
+3. **Only whitespace**: Should use default triple backticks
+4. **Sentinel values** (`|SKIP|`, `|ABORT|`): Verify they still work with new fence
+5. **Very long runs**: Content with 10+ consecutive fence chars
+
+### Task Checklist
+
+- [ ] Implement core functions
+- [ ] Run existing tests (`pnpm test`)
+- [ ] Add unit tests
+- [ ] Add integration tests
+- [ ] Run full test suite
+- [ ] Update SPEC.md if needed (document fence selection behavior under "Value fences")
+
+## Stage 4: Validation Stage
+
+- [ ] All tests pass
+- [ ] Manual verification with example forms containing code blocks
+- [ ] Code review
+
+## Notes
+
+The parser (`extractFenceValue()`) is already robust—it accepts any fence char and
+length. This makes the change purely a serializer concern and ensures full backward
+compatibility with existing `.form.md` files.
