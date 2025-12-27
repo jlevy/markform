@@ -1,6 +1,6 @@
 # Research Brief: Modern TypeScript Monorepo Package Architecture
 
-**Last Updated**: 2025-12-23 (Added git hooks/lefthook section)
+**Last Updated**: 2025-12-23 (Added dependency upgrade management with ncu)
 
 **Status**: Complete
 
@@ -33,7 +33,10 @@
 | **actions/setup-node** | v6 | [github.com/actions/setup-node/releases](https://github.com/actions/setup-node/releases) |
 | **pnpm/action-setup** | v4 | [github.com/pnpm/action-setup/releases](https://github.com/pnpm/action-setup/releases) |
 | **changesets/action** | v1 | [github.com/changesets/action](https://github.com/changesets/action) |
-| **lefthook** | ^1.11.0 | [github.com/evilmartians/lefthook/releases](https://github.com/evilmartians/lefthook/releases) |
+| **lefthook** | ^2.0.0 | [github.com/evilmartians/lefthook/releases](https://github.com/evilmartians/lefthook/releases) |
+| **npm-check-updates** | ^19.0.0 | [npmjs.com/package/npm-check-updates](https://www.npmjs.com/package/npm-check-updates) |
+| **prettier** | ^3.0.0 | [github.com/prettier/prettier/releases](https://github.com/prettier/prettier/releases) |
+| **eslint-config-prettier** | ^10.0.0 | [github.com/prettier/eslint-config-prettier/releases](https://github.com/prettier/eslint-config-prettier/releases) |
 
 ### Reminders When Updating
 
@@ -674,8 +677,8 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
+      - run: pnpm format:check
+      - run: pnpm lint:check
       - run: pnpm build
       - run: pnpm publint
       - run: pnpm test
@@ -761,7 +764,112 @@ jobs:
 
 * * *
 
-### 9. Git Hooks & Local Validation
+### 9. Code Formatting
+
+#### Prettier
+
+**Status**: Essential
+
+**Details**:
+
+Prettier provides consistent code formatting across the project.
+Configure it once and let it handle all formatting decisions automatically.
+
+**Installation**:
+```bash
+pnpm add -Dw prettier eslint-config-prettier
+```
+
+**`.prettierrc`**:
+```json
+{
+  "$schema": "https://json.schemastore.org/prettierrc",
+  "printWidth": 100,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "semi": true,
+  "arrowParens": "always",
+  "tabWidth": 2,
+  "useTabs": false
+}
+```
+
+**`.prettierignore`**:
+```
+dist
+node_modules
+pnpm-lock.yaml
+*.min.js
+*.min.css
+coverage
+```
+
+**Key configuration choices**:
+
+| Option | Recommended | Rationale |
+| --- | --- | --- |
+| `printWidth` | 100 | Wider than default 80; fits modern screens |
+| `singleQuote` | true | Common in JS ecosystem, less visual noise |
+| `trailingComma` | "all" | Cleaner diffs, easier reordering |
+| `semi` | true | Explicit; avoids ASI edge cases |
+
+**Assessment**: Prettier eliminates formatting debates and ensures consistency.
+Use `eslint-config-prettier` to disable ESLint rules that conflict with Prettier.
+
+**References**:
+
+- [Prettier Documentation](https://prettier.io/docs/)
+
+- [eslint-config-prettier](https://github.com/prettier/eslint-config-prettier)
+
+* * *
+
+#### Format Scripts Pattern
+
+**Status**: Recommended
+
+**Details**:
+
+Structure format and lint scripts to support both auto-fix and CI verification modes.
+
+**Root `package.json` scripts**:
+```json
+{
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
+    "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
+    "typecheck": "tsc -b",
+    "build": "pnpm format && pnpm lint:check && <build-command>"
+  }
+}
+```
+
+**Script purposes**:
+
+| Script | Purpose | When to use |
+| --- | --- | --- |
+| `format` | Auto-format all files | Local development |
+| `format:check` | Verify formatting (no changes) | CI |
+| `lint` | Lint with auto-fix, then verify zero warnings | Local development |
+| `lint:check` | Lint without fix, zero warnings | CI, pre-build |
+| `build` | Format, lint, then build | Production builds |
+
+**Key insight**: The `lint` script runs ESLint twice: first with `--fix` to auto-fix
+issues, then again with `--max-warnings 0` to catch any unfixable warnings.
+This ensures auto-fix doesn’t mask problems that require manual attention.
+
+**Key insight**: The `build` script runs `format` before `lint:check`. This ensures
+formatting is applied before linting, catching any formatting issues that would fail the
+lint check.
+
+**Assessment**: Separating `--fix` variants (for local use) from `--check` variants (for
+CI) provides the best developer experience while ensuring CI catches issues.
+
+* * *
+
+### 10. Git Hooks & Local Validation
 
 #### Lefthook
 
@@ -974,7 +1082,157 @@ Never skip CI because hooks passed—hooks can be bypassed with `--no-verify`.
 
 * * *
 
-### 10. Private Package Distribution
+### 11. Dependency Upgrade Management
+
+#### npm-check-updates (ncu)
+
+**Status**: Recommended
+
+**Details**:
+
+npm-check-updates (`ncu`) provides a safe, structured approach to keeping dependencies
+current. It supports upgrade targets that let you control how aggressively to upgrade,
+making it easy to separate low-risk minor/patch updates from potentially breaking major
+updates.
+
+**Installation**:
+```bash
+pnpm add -Dw npm-check-updates
+```
+
+**Key flags**:
+
+| Flag | Description |
+| --- | --- |
+| `--target minor` | Only upgrade to latest minor/patch (safe) |
+| `--target patch` | Only upgrade to latest patch (safest) |
+| `--target latest` | Upgrade to latest version (includes major) |
+| `--format group` | Group output by update type (major/minor/patch) |
+| `--interactive` | Select which packages to upgrade |
+| `-u` | Update package.json (otherwise just reports) |
+
+**Upgrade Targets Explained**:
+
+- **patch**: Only upgrade `1.0.0` → `1.0.x` (bug fixes only)
+
+- **minor**: Upgrade `1.0.0` → `1.x.x` (new features, backwards compatible)
+
+- **latest**: Upgrade to latest published version (may include breaking changes)
+
+- **newest**: Upgrade to newest version, even if not latest (e.g., prereleases)
+
+- **greatest**: Upgrade to greatest version number
+
+**Assessment**: Using upgrade targets separates routine maintenance (minor/patch) from
+potentially breaking changes (major), enabling a safer, more frequent upgrade cadence.
+
+**References**:
+
+- [npm-check-updates documentation](https://www.npmjs.com/package/npm-check-updates)
+
+- [ncu GitHub repository](https://github.com/raineorshine/npm-check-updates)
+
+* * *
+
+#### Upgrade Scripts Pattern
+
+**Status**: Recommended
+
+**Details**:
+
+Add structured upgrade scripts to your root `package.json` that encode your upgrade
+workflow. This makes upgrades consistent and discoverable.
+
+**Root `package.json` scripts**:
+```json
+{
+  "scripts": {
+    "upgrade:check": "ncu --format group",
+    "upgrade": "ncu --target minor -u && pnpm install && pnpm test",
+    "upgrade:patch": "ncu --target patch -u && pnpm install && pnpm test",
+    "upgrade:major": "ncu --target latest --interactive --format group"
+  }
+}
+```
+
+**Script descriptions**:
+
+| Script | Purpose |
+| --- | --- |
+| `upgrade:check` | Show available updates grouped by type (no changes) |
+| `upgrade` | Safe upgrade: minor+patch versions, install, and test |
+| `upgrade:patch` | Conservative upgrade: patch versions only |
+| `upgrade:major` | Interactive selection for major version changes |
+
+**Workflow**:
+
+1. **Check for updates**: `pnpm upgrade:check` — see what’s available without changing
+   anything
+
+2. **Safe upgrade**: `pnpm upgrade` — upgrade minor/patch versions and run tests to
+   verify nothing breaks
+
+3. **Major upgrades**: `pnpm upgrade:major` — interactively review major version bumps,
+   select which to apply, then test and review changelogs
+
+**Key insight**: Running tests after `upgrade` catches regressions immediately.
+If tests fail, you can `git checkout package.json pnpm-lock.yaml && pnpm install` to
+rollback before investigating.
+
+**Assessment**: This pattern enables frequent, low-risk dependency updates while
+maintaining control over potentially breaking changes.
+
+* * *
+
+#### Monorepo Considerations
+
+**Status**: Best Practice
+
+**Details**:
+
+In a pnpm monorepo, run ncu from the workspace root to update all packages consistently:
+
+```bash
+# Check all workspace packages
+pnpm ncu --format group -ws
+
+# Upgrade minor versions in all packages
+pnpm ncu --target minor -u -ws && pnpm install && pnpm test
+```
+
+For selective package updates:
+```bash
+# Upgrade specific packages only
+pnpm ncu --filter "@scope/*" --target minor -u
+```
+
+**Handling peer dependency conflicts**:
+
+Some packages may have strict peer dependency requirements that conflict during
+upgrades. Options:
+
+1. **Use `--legacy-peer-deps`** (npm): `npm install --legacy-peer-deps`
+
+2. **Pin conflicting versions**: Lock specific versions in `pnpm.overrides`:
+   ```json
+   {
+     "pnpm": {
+       "overrides": {
+         "react": "^18.3.0"
+       }
+     }
+   }
+   ```
+
+3. **Staged upgrades**: Upgrade conflicting packages together in one commit
+
+**References**:
+
+- [pnpm overrides documentation](https://pnpm.io/package_json#pnpmoverrides)
+
+* * *
+
+### 12. Private Package Distribution
 
 #### Option A: GitHub Packages (Recommended)
 
@@ -1173,6 +1431,18 @@ experience.
     current commit has already passed tests.
     This makes repeated pushes instant.
 
+15. **Use structured upgrade scripts**: Add `upgrade:check`, `upgrade`, and
+    `upgrade:major` scripts to make dependency updates consistent and safe.
+    Separate minor/patch from major upgrades.
+
+16. **Separate format and lint script variants**: Provide `format`/`format:check` and
+    `lint`/`lint:check` scripts.
+    Use `--fix` variants for local development and `--check`/zero-warnings variants for
+    CI.
+
+17. **Run format before lint in builds**: The `build` script should run `format` then
+    `lint:check` to ensure formatting is applied before linting.
+
 * * *
 
 ## Open Research Questions
@@ -1196,7 +1466,8 @@ experience.
 ### Summary
 
 Use a pnpm monorepo with tsdown for building, Changesets for versioning, publint for
-validation, and lefthook for fast local git hooks.
+validation, Prettier for code formatting, lefthook for fast local git hooks, and
+npm-check-updates for structured dependency upgrades.
 Structure code internally for future splits while exposing a stable API through subpath
 exports.
 Start with GitHub Packages for private distribution, then transition to npm when
@@ -1212,13 +1483,17 @@ ready for public release.
 
 4. **Add Changesets** for version management
 
-5. **Configure lefthook** for pre-commit (format, lint, typecheck) and pre-push (tests)
+5. **Configure Prettier** with eslint-config-prettier for consistent formatting
 
-6. **Configure CI** with lint, typecheck, build, publint, and test
+6. **Configure lefthook** for pre-commit (format, lint, typecheck) and pre-push (tests)
 
-7. **Configure release workflow** with Changesets GitHub Action
+7. **Add upgrade scripts** for structured dependency management
 
-8. **Validate with publint** before every release
+8. **Configure CI** with format:check, lint:check, typecheck, build, publint, and test
+
+9. **Configure release workflow** with Changesets GitHub Action
+
+10. **Validate with publint** before every release
 
 **Rationale**:
 
@@ -1258,6 +1533,8 @@ ready for public release.
 - [tsdown Documentation](https://tsdown.dev/)
 
 - [publint Documentation](https://publint.dev/docs/)
+
+- [Prettier Documentation](https://prettier.io/docs/)
 
 - [Changesets GitHub](https://github.com/changesets/changesets)
 
@@ -1384,19 +1661,26 @@ ready for public release.
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "publint": "pnpm -r publint",
-    "lint": "eslint .",
-    "format": "prettier -w .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
+    "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
     "prepare": "lefthook install",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && pnpm publint && changeset publish"
+    "release": "pnpm build && pnpm publint && changeset publish",
+    "upgrade:check": "ncu --format group",
+    "upgrade": "ncu --target minor -u && pnpm install && pnpm test",
+    "upgrade:major": "ncu --target latest --interactive --format group"
   },
   "devDependencies": {
     "@changesets/cli": "^2.28.0",
     "@changesets/changelog-github": "^0.5.0",
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
-    "lefthook": "^1.11.0",
+    "eslint-config-prettier": "^10.0.0",
+    "lefthook": "^2.0.0",
+    "npm-check-updates": "^19.0.0",
     "prettier": "^3.0.0",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.0.0"
@@ -1414,10 +1698,12 @@ For projects just getting started, a minimal configuration:
 // eslint.config.js
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
+import prettier from "eslint-config-prettier";
 
 export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  prettier, // Must be last to override conflicting rules
   {
     ignores: ["**/dist/**", "**/node_modules/**", "**/.pnpm-store/**"],
   },
@@ -1433,6 +1719,7 @@ This catches more bugs but requires tsconfig integration:
 // eslint.config.js
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
+import prettier from "eslint-config-prettier";
 
 // Type-aware ESLint configuration using flat config.
 // Uses TypeScript's project service for precise, cross-project type information.
@@ -1481,6 +1768,9 @@ export default [
   // Type-aware TypeScript rules
   ...typedRecommended,
   ...typedStylistic,
+
+  // Prettier config must be last to override conflicting rules
+  prettier,
 
   // TypeScript-specific rules
   {
@@ -1817,4 +2107,79 @@ pre-commit:
       root: "packages/core/"
       glob: "*.{ts,tsx}"
       run: npx tsc -p tsconfig.json --noEmit --incremental
+```
+
+### Appendix F: Upgrade Scripts with Documentation
+
+For projects with many scripts, a `scripts-info` field provides inline documentation
+that can be queried programmatically:
+
+```json
+{
+  "scripts": {
+    "upgrade:check": "ncu --format group",
+    "upgrade": "ncu --target minor -u && pnpm install && pnpm test",
+    "upgrade:patch": "ncu --target patch -u && pnpm install && pnpm test",
+    "upgrade:major": "ncu --target latest --interactive --format group",
+    "help": "tsx scripts/help.ts"
+  },
+  "scripts-info": {
+    "upgrade:check": "Check for outdated packages grouped by type (no changes)",
+    "upgrade": "Safe upgrade: minor+patch versions, install, and test",
+    "upgrade:patch": "Conservative upgrade: patch versions only, install, and test",
+    "upgrade:major": "Interactive upgrade for major version changes"
+  }
+}
+```
+
+**Simple help script** (`scripts/help.ts`):
+```typescript
+import { readFileSync } from "node:fs";
+
+const pkg = JSON.parse(readFileSync("package.json", "utf-8"));
+const info = pkg["scripts-info"] ?? {};
+
+console.log("\nAvailable scripts:\n");
+for (const [name, desc] of Object.entries(info)) {
+  console.log(`  ${name.padEnd(20)} ${desc}`);
+}
+```
+
+**Additional ncu options for complex projects**:
+
+```json
+{
+  "scripts": {
+    "upgrade:check": "ncu --format group",
+    "upgrade:check:all": "ncu --format group -ws",
+    "upgrade": "ncu --target minor -u && pnpm install && pnpm test",
+    "upgrade:all": "ncu --target minor -u -ws && pnpm install && pnpm test",
+    "upgrade:major": "ncu --target latest --interactive --format group",
+    "upgrade:filter": "ncu --filter"
+  },
+  "scripts-info": {
+    "upgrade:check": "Check root package for updates (grouped by type)",
+    "upgrade:check:all": "Check all workspace packages for updates",
+    "upgrade": "Safe upgrade root: minor+patch, install, test",
+    "upgrade:all": "Safe upgrade all workspaces: minor+patch, install, test",
+    "upgrade:major": "Interactive major version upgrades",
+    "upgrade:filter": "Filter upgrades by pattern, e.g.: pnpm upgrade:filter '@radix-ui/*'"
+  }
+}
+```
+
+**Useful ncu filter patterns**:
+
+```bash
+# Upgrade only Radix UI packages
+ncu --filter "@radix-ui/*" --target minor -u
+
+# Upgrade everything except React (held for compatibility)
+ncu --reject "react,react-dom" --target minor -u
+
+# Check only dev dependencies
+ncu --dep dev --format group
+
+# Upgrade with peer dependency handling
+ncu --target minor -u && pnpm install --force
 ```

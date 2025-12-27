@@ -60,3 +60,5 @@ Create a to-do list with the following items then perform all of them:
 
    - You *MUST* make the build pass.
      If you cannot or don’t know how, tell the user and ask for help.
+
+   1. Update and sync all beads following the standard process.

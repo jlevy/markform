@@ -247,6 +247,46 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
   .option('--output-dir <path>', 'Output directory', './runs')
   ```
 
+## Environment Variables
+
+When supporting environment variables, especially those used by SDK libraries (like
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), also support `.env` loading so CLIs work
+seamlessly in local dev and in remote environments.
+
+- **Add dotenv as a dependency:** Add `dotenv` to your project dependencies for `.env`
+  file loading.
+
+- **Load `.env.local` and `.env` automatically (recommended):** Support both
+  `.env.local` and `.env` automatically, with `.env.local` taking precedence over
+  `.env`.
+
+- **Manual dotenv loading:** For standalone scripts that don’t use `vite-node`, load
+  environment files manually with explicit precedence:
+
+  ```ts
+  import dotenv from 'dotenv';
+  import { existsSync } from 'node:fs';
+  
+  // Load .env.local first (higher priority), then .env (lower priority).
+  // Note: dotenv does NOT override existing values by default, so load higher-priority
+  // first.
+  if (existsSync('.env.local')) {
+    dotenv.config({ path: '.env.local' });
+  }
+  if (existsSync('.env')) {
+    dotenv.config({ path: '.env' });
+  }
+  ```
+
+- **Fail fast with clear errors:** If a required env var is missing, throw immediately
+  with a message listing all accepted variable names.
+
+- **Document required variables:** List required environment variables in the command’s
+  help text or a README.
+
+- **Never commit secrets:** Use `.env.local` for secrets (it’s typically gitignored).
+  `.env` should only contain non-sensitive defaults.
+
 ## Best Practices
 
 - **Don’t reinvent the wheel:** Use established patterns from existing CLI commands in
