@@ -3,7 +3,7 @@
 ## Purpose
 
 This plan spec covers the complete implementation of Markform v0.1 as defined in the
-[architecture design document](../../architecture/current/arch-markform-initial-design.md).
+[architecture design document](../../architecture/current/arch-markform-design.md.md).
 
 The implementation is organized into five phases:
 
@@ -34,8 +34,8 @@ Markform is a system for agent-friendly, human-readable, editable forms stored a
 
 **Key References**:
 
-- [Architecture Design](../../architecture/current/arch-markform-initial-design.md) -
-  Full technical specification
+- [Architecture Design](../../architecture/current/arch-markform-design.md.md) - Full
+  technical specification
 
 - [TypeScript Monorepo Research](../../research/current/research-modern-typescript-monorepo-package.md)
   \- Modern project setup patterns
@@ -1171,7 +1171,8 @@ Agent should pause and ask user to verify:
 
 > **Note:** The `run` command documented in this plan is being replaced by `fill` in
 > [plan-2025-12-23-fill-command-live-agent.md](plan-2025-12-23-fill-command-live-agent.md).
-> The `fill` command adds live agent support with `--model` flag (live by default, `--mock` for testing).
+> The `fill` command adds live agent support with `--model` flag (live by default,
+> `--mock` for testing).
 
 - **225 tests** across 14 test files, all passing
 

@@ -5,13 +5,14 @@
 This plan covers refactoring the `run` command into a more general `fill` command that
 supports both mock and live agent modes for autonomous form filling.
 
-> **Note:** This plan originally specified `--agent=mock|live` syntax. This was later
-> simplified to `--mock` flag (live is the default). The plan text below reflects the
-> original design; see the actual CLI implementation for current syntax.
+> **Note:** This plan originally specified `--agent=mock|live` syntax.
+> This was later simplified to `--mock` flag (live is the default).
+> The plan text below reflects the original design; see the actual CLI implementation
+> for current syntax.
 
 **Related Docs:**
 
-- [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
+- [Architecture Design](../../architecture/current/arch-markform-design.md.md)
 
 - [v0.1 Implementation Plan](../done/plan-2025-12-22-markform-v01-implementation.md)
 
@@ -106,11 +107,11 @@ This plan depends on:
 
 ### Acceptance Criteria
 
-1. `markform fill <file> --mock --mock-source <mock>` works identically to current
-   `run --mock`
+1. `markform fill <file> --mock --mock-source <mock>` works identically to current `run
+   --mock`
 
-2. `markform fill <file> --model --model=anthropic/claude-sonnet-4-5` fills form
-   using Anthropic API (short form `--model=claude-sonnet-4-5` also works)
+2. `markform fill <file> --model --model=anthropic/claude-sonnet-4-5` fills form using
+   Anthropic API (short form `--model=claude-sonnet-4-5` also works)
 
 3. Session transcripts record all turns for both modes
 

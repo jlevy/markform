@@ -43,7 +43,7 @@ URLs are currently represented as `string-field` with an optional regex pattern,
 
 **Related Docs:**
 
-- [arch-markform-initial-design.md](../architecture/current/arch-markform-initial-design.md)
+- [arch-markform-design.md.md](../architecture/current/arch-markform-design.md.md)
 
 ## Summary of Task
 

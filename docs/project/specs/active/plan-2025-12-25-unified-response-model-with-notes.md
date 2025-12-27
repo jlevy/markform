@@ -35,7 +35,7 @@ cleaner, more orthogonal design.
 
 **Related Docs:**
 
-- [arch-markform-initial-design.md](../architecture/current/arch-markform-initial-design.md)
+- [arch-markform-design.md.md](../architecture/current/arch-markform-design.md.md)
 
 - [plan-2025-12-25-skip-field-and-answered-tracking.md](plan-2025-12-25-skip-field-and-answered-tracking.md)
   — superseded by this spec
@@ -80,7 +80,7 @@ markdown syntax issues.
 | --- | --- | --- |
 | `coreTypes.ts` | No formal error types | Add `ParseError` and `ValidationError` types with location info |
 | `parse.ts` | Uses generic errors | Distinguish parse vs validation errors; throw appropriate type |
-| `arch-markform-initial-design.md` | No error taxonomy | Add section on error types and when each applies |
+| `arch-markform-design.md.md` | No error taxonomy | Add section on error types and when each applies |
 | Error messages | Inconsistent terminology | Use "parse error" only for syntax; "validation error" for semantics |
 
 **Error Type Definitions (to add to `coreTypes.ts`):**
@@ -821,7 +821,7 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 | `applyPatches()` | `apply.ts` | Handle `abort_field`, `add_note`, `remove_note`; work with `FieldResponse` |
 | `computeProgressSummary()` | `summaries.ts` | Take `responsesByFieldId`; compute new counts from `response.state` |
 | `inspect()` | `inspect.ts` | Update completion logic |
-| Architecture doc | `arch-markform-initial-design.md` | Add error taxonomy section; document ResponseState/FieldResponse |
+| Architecture doc | `arch-markform-design.md.md` | Add error taxonomy section; document ResponseState/FieldResponse |
 
 ### Feature Scope
 
@@ -2106,7 +2106,7 @@ function computeFormState(
 ## Architecture Documentation Changes
 
 The following changes need to be made to
-`docs/project/architecture/current/arch-markform-initial-design.md`:
+`docs/project/architecture/current/arch-markform-design.md.md`:
 
 ### 1. Response State Type (new, before FieldValue)
 

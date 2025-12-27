@@ -3,8 +3,9 @@
 ## Purpose
 
 This plan creates a comprehensive example form for the `examples` CLI command that
-demonstrates live agent web research capabilities. It uses a real-world use case: a
-political figure biographical form based on Wikipedia's president infobox structure.
+demonstrates live agent web research capabilities.
+It uses a real-world use case: a political figure biographical form based on Wikipedia’s
+president infobox structure.
 
 **Related Docs:**
 
@@ -13,7 +14,7 @@ political figure biographical form based on Wikipedia's president infobox struct
 
 - [Role System](../done/plan-2025-12-23-role-system.md) - Role-based field assignment
 
-- [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
+- [Architecture Design](../../architecture/current/arch-markform-design.md.md)
 
 - [v0.1 Implementation Plan](../done/plan-2025-12-22-markform-v01-implementation.md) -
   Base implementation (complete)
@@ -30,14 +31,15 @@ To validate the live agent implementation, we need a realistic, complex form tha
 
 4. Can be verified against a known source (Wikipedia)
 
-The Wikipedia president infobox provides an ideal template - it's standardized, publicly
-accessible, and contains structured biographical data that an agent must research to fill.
+The Wikipedia president infobox provides an ideal template - it’s standardized, publicly
+accessible, and contains structured biographical data that an agent must research to
+fill.
 
 ## Summary of Task
 
-1. Create `political-research.form.md` based on Wikipedia's president infobox structure
+1. Create `political-research.form.md` based on Wikipedia’s president infobox structure
 
-2. Handle repeating "offices held" with role, dates, and predecessor/successor
+2. Handle repeating “offices held” with role, dates, and predecessor/successor
 
 3. Document test workflow with final `dump` output for verification
 
@@ -69,7 +71,7 @@ None required. This is a new example form.
 
 - All other fields with `role="agent"` (agent fills via web research)
 
-- Repeating group for "offices held" (multiple positions)
+- Repeating group for “offices held” (multiple positions)
 
 - Test workflow ending with `dump` command for text output
 
@@ -115,17 +117,17 @@ None required. This is a new example form.
 
 **Offices Held (repeating group):**
 
-> **Note:** True repeating groups (dynamic add/remove of field sets) are planned for v0.2.
-> For v0.1, we use a fixed number of office slots with indexed field names (e.g.,
+> **Note:** True repeating groups (dynamic add/remove of field sets) are planned for
+> v0.2. For v0.1, we use a fixed number of office slots with indexed field names (e.g.,
 > `office_1_title`, `office_2_title`, etc.).
 
-- `office_title` (string, required) - e.g., "16th President of the United States"
+- `office_title` (string, required) - e.g., “16th President of the United States”
 
 - `term_start` (string, required, `pattern="^\d{4}-\d{2}-\d{2}$"`) - YYYY-MM-DD
 
-- `term_end` (string, required) - YYYY-MM-DD or "Incumbent". Note: The dual format
-  (date OR text) requires either no pattern validation, or a pattern that accepts both:
-  `pattern="^(\d{4}-\d{2}-\d{2}|Incumbent)$"`
+- `term_end` (string, required) - YYYY-MM-DD or “Incumbent”.
+  Note: The dual format (date OR text) requires either no pattern validation, or a
+  pattern that accepts both: `pattern="^(\d{4}-\d{2}-\d{2}|Incumbent)$"`
 
 - `preceded_by` (string, optional, priority=medium) - Previous office holder
 
@@ -135,8 +137,8 @@ None required. This is a new example form.
 
 **Sources and Citations:**
 
-- `sources` (string_list, optional) - List of source URLs or citations used for research.
-  Agent should include Wikipedia and any additional sources consulted.
+- `sources` (string_list, optional) - List of source URLs or citations used for
+  research. Agent should include Wikipedia and any additional sources consulted.
 
 ### Acceptance Criteria
 
@@ -444,13 +446,15 @@ markform fill political-research.form.md \
 
 ## Revision History
 
-- 2025-12-23: Renamed from "political-figure-live-agent-test" to "political-research-example";
-  aligned with examples CLI command framework; added dump command as final step
+- 2025-12-23: Renamed from “political-figure-live-agent-test” to
+  “political-research-example”; aligned with examples CLI command framework; added dump
+  command as final step
 
 - 2025-12-24: Added date pattern validation, term_end dual-format note, sources field,
   repeating groups v0.2 note, and word limit guidance (markform-122)
 
-- 2025-12-23: Updated to use role system (`role="user"` for name field, frontmatter roles)
+- 2025-12-23: Updated to use role system (`role="user"` for name field, frontmatter
+  roles)
 
 - 2025-12-23: Added `dump` command usage in test workflow for value extraction
 

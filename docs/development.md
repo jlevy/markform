@@ -86,8 +86,8 @@ markform/
   .github/workflows/    # CI/CD
 ```
 
-See [Architecture Design](project/architecture/current/arch-markform-initial-design.md)
-for full technical specification.
+See [Architecture Design](project/architecture/current/arch-markform-design.md.md) for
+full technical specification.
 
 ## Common Commands
 
@@ -140,8 +140,8 @@ pnpm --filter markform test
 
 ### Releases
 
-Changesets are created at release time, not per-PR. Just merge your work to `main`.
-See [Publishing](publishing.md) for the release workflow.
+Changesets are created at release time, not per-PR. Just merge your work to `main`. See
+[Publishing](publishing.md) for the release workflow.
 
 ### Pre-commit Checklist
 

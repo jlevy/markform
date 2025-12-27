@@ -31,8 +31,8 @@ This creates:
 
 **Related Docs:**
 
-- [arch-markform-initial-design.md](../architecture/current/arch-markform-initial-design.md)
-  — Section “Field State Attributes” (lines 942-995)
+- [arch-markform-design.md.md](../architecture/current/arch-markform-design.md.md) —
+  Section “Field State Attributes” (lines 942-995)
 
 - [plan-2025-12-25-unified-response-model-with-notes.md](plan-2025-12-25-unified-response-model-with-notes.md)
   — Parent plan this refines

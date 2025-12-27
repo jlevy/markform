@@ -10,7 +10,7 @@ implementation and testing is adequate.
 [plan-2025-12-22-markform-v01-implementation.md](plan-2025-12-22-markform-v01-implementation.md)
 
 **Architecture:**
-[arch-markform-initial-design.md](../../architecture/current/arch-markform-initial-design.md)
+[arch-markform-design.md.md](../../architecture/current/arch-markform-design.md.md)
 
 ## Stage 4: Validation Stage
 

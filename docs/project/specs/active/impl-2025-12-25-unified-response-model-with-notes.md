@@ -524,8 +524,8 @@ Unit tests in `tests/unit/engine/serialize.test.ts`:
 
 ### Summary
 
-Implement patch handlers for `skip_field`, `abort_field`, `add_note`, `remove_note`.
-Add auto-cleanup of state-linked notes when setting values.
+Implement patch handlers for `skip_field`, `abort_field`, `add_note`, `remove_note`. Add
+auto-cleanup of state-linked notes when setting values.
 
 ### Beads
 
@@ -902,7 +902,7 @@ Update the architecture document to reflect the new unified response model.
 
 ### Files to Touch
 
-- `docs/project/architecture/current/arch-markform-initial-design.md`
+- `docs/project/architecture/current/arch-markform-design.md.md`
 
 * * *
 

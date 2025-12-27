@@ -8,7 +8,7 @@ fill different fields.
 
 **Related Docs:**
 
-- [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
+- [Architecture Design](../../architecture/current/arch-markform-design.md.md)
 
 - [Fill Command Spec](valid-2025-12-23-fill-command-live-agent.md)
 

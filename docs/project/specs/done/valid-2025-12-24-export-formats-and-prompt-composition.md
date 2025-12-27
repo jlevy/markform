@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This is a validation spec for changes driven by beads issues (markform-128, markform-146,
-markform-147, markform-123, markform-124) covering export format updates and live agent
-prompt composition.
+This is a validation spec for changes driven by beads issues (markform-128,
+markform-146, markform-147, markform-123, markform-124) covering export format updates
+and live agent prompt composition.
 
 **Feature Plan:** N/A (beads-driven)
 
@@ -12,14 +12,18 @@ prompt composition.
 
 ## Summary of Changes
 
-1. **Export Format Rename (markform-128):** Renamed 'markdown' format to 'markform', added
-   new 'markdown' format for human-readable output without markdoc directives
+1. **Export Format Rename (markform-128):** Renamed ‘markdown’ format to ‘markform’,
+   added new ‘markdown’ format for human-readable output without markdoc directives
+
 2. **Fill Command Prompt Flags (markform-146):** Added `--prompt` and `--instructions`
    flags to fill command for custom system prompts
-3. **Prompt Composition (markform-147):** Live agent now composes prompts from form-level
-   instructions (doc blocks), role instructions (frontmatter), and field-level instructions
-4. **Testing (markform-123, markform-124):** Added unit tests for doc block edge cases and
-   validation edge cases
+
+3. **Prompt Composition (markform-147):** Live agent now composes prompts from
+   form-level instructions (doc blocks), role instructions (frontmatter), and
+   field-level instructions
+
+4. **Testing (markform-123, markform-124):** Added unit tests for doc block edge cases
+   and validation edge cases
 
 ## Stage 4: Validation Stage
 
@@ -29,16 +33,23 @@ prompt composition.
 
 ### Unit Testing
 
-- **serialize.test.ts:** 8 new tests for `serializeRawMarkdown()` covering all field types
+- **serialize.test.ts:** 8 new tests for `serializeRawMarkdown()` covering all field
+  types
+
 - **parse.test.ts:** 4 new tests for doc block uniqueness edge cases
+
 - **validate.test.ts:** 5 new tests for checkboxes minDone/multi-mode validation
+
 - **Total:** 271 tests passing (17 new tests added)
 
 ### Integration and End-to-End Testing
 
 - Build passes with all exports verified
+
 - Lint passes with no warnings
+
 - Pre-commit hooks (typecheck, lint) pass
+
 - Pre-push hooks (test) pass
 
 ### Manual Testing Needed
@@ -65,9 +76,12 @@ pnpm markform export packages/markform/examples/simple/simple.form.md --format y
 ```
 
 **Expected:**
+
 - `--format markform` (or default): Output contains `{%` and `%}` markdoc directives
+
 - `--format markdown`: Output is clean markdown with `# Title`, `## Group`, `**Label:**`
   format, no `{%` directives
+
 - JSON/YAML: Same as before
 
 #### 2. Fill Command Prompt Flags
@@ -80,7 +94,9 @@ pnpm markform fill --help
 ```
 
 **Expected:**
+
 - Help shows `--prompt <file>` option
+
 - Help shows `--instructions <text>` option
 
 #### 3. Visual Inspection of Raw Markdown Output
@@ -92,8 +108,13 @@ pnpm markform export packages/markform/examples/simple/simple.form.md --format m
 ```
 
 **Expected format:**
+
 - Form title as `# Title`
+
 - Group titles as `## Group Title`
+
 - Fields as `**Label:**` followed by value or `_(empty)_`
+
 - Doc blocks included as regular markdown text
+
 - No `{%` or `%}` characters in output

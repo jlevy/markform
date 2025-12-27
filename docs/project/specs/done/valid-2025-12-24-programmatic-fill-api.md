@@ -2,26 +2,33 @@
 
 ## Purpose
 
-This is a validation spec for the Programmatic Fill API feature, documenting automated testing
-that has been completed and manual validation steps for the user to confirm implementation.
+This is a validation spec for the Programmatic Fill API feature, documenting automated
+testing that has been completed and manual validation steps for the user to confirm
+implementation.
 
-**Feature Plan:** [plan-2025-12-24-programmatic-fill-api.md](plan-2025-12-24-programmatic-fill-api.md)
+**Feature Plan:**
+[plan-2025-12-24-programmatic-fill-api.md](plan-2025-12-24-programmatic-fill-api.md)
 
 ## Stage 4: Validation Stage
 
 ## Automated Validation (Testing Performed)
 
-All automated tests pass (382 tests total). The programmatic fill API implementation includes
-comprehensive unit and integration tests covering all major functionality.
+All automated tests pass (382 tests total).
+The programmatic fill API implementation includes comprehensive unit and integration
+tests covering all major functionality.
 
 ### Unit Testing
 
 #### Value Coercion Layer (`tests/unit/values.test.ts`) - 43 tests
 
 **`findFieldById()` tests:**
+
 - [x] Returns field when found via idIndex
+
 - [x] Returns undefined for non-existent field ID
+
 - [x] Returns undefined for group ID (not a field)
+
 - [x] Works with fields in different groups
 
 **`coerceToFieldPatch()` tests per field kind:**
@@ -38,46 +45,71 @@ comprehensive unit and integration tests covering all major functionality.
 | `checkboxes (explicit)` | accepts explicit mode values, rejects done/todo values |
 
 **`coerceInputContext()` tests:**
+
 - [x] Returns patches for valid input context
+
 - [x] Collects warnings from multiple coercions
+
 - [x] Collects errors for missing fields
+
 - [x] Collects errors for incompatible types
+
 - [x] Skips null values
+
 - [x] Handles empty input context
 
 #### Programmatic Fill API (`tests/unit/harness/programmaticFill.test.ts`) - 19 tests
 
 **Basic functionality (with MockAgent):**
+
 - [x] Fills form with minimal options `{ form, model }`
+
 - [x] Returns `status.ok: true` when form completes
+
 - [x] Returns correct values map keyed by field ID
+
 - [x] Returns serialized markdown
+
 - [x] Returns turns count
 
 **Input context:**
+
 - [x] Pre-fills fields from inputContext before agent runs
+
 - [x] Fails fast with `status.ok: false, reason: 'error'` on invalid field ID
+
 - [x] Fails fast on incompatible type
+
 - [x] Includes `inputContextWarnings` for coerced values
 
 **Progress callback:**
+
 - [x] `onTurnComplete` called after each turn
+
 - [x] `TurnProgress` contains correct values
-- [x] Callback errors don't abort fill
+
+- [x] Callback errors don’t abort fill
 
 **Cancellation:**
+
 - [x] `signal.abort()` returns partial result with `reason: cancelled`
+
 - [x] Partial values and markdown are returned on cancellation
 
 **Max turns:**
+
 - [x] Returns `status.ok: false, reason: max_turns` when limit reached
+
 - [x] `remainingIssues` populated when not complete
 
 **Error scenarios:**
+
 - [x] Form parse error returns appropriate error
+
 - [x] Model resolution error returns appropriate error
 
 **Fill modes:**
+
 - [x] `fillMode: continue` skips already-filled fields
 
 ### Integration and End-to-End Testing
@@ -85,25 +117,35 @@ comprehensive unit and integration tests covering all major functionality.
 #### Integration Tests (`tests/integration/programmaticFill.test.ts`) - 10 tests
 
 **End-to-end with MockAgent:**
+
 - [x] Complete fill of `simple.form.md` using mock values with inputContext
+
 - [x] Partial fill with agent role only fills agent fields
+
 - [x] Round-trip: result can be re-parsed
+
 - [x] Complete fill of `political-research.form.md` with inputContext for user field
+
 - [x] Handles complex form structure (string_list fields)
 
 **Error scenarios:**
+
 - [x] Form parse error returns appropriate error
+
 - [x] Model resolution error returns appropriate error
+
 - [x] Invalid inputContext field returns error
 
 **Progress tracking:**
+
 - [x] `onTurnComplete` receives accurate progress info
+
 - [x] Zero turns when form is already complete via inputContext
 
 ## Manual Validation Needed
 
-The following manual validation steps should be performed by the user to confirm the feature
-works correctly in real-world scenarios.
+The following manual validation steps should be performed by the user to confirm the
+feature works correctly in real-world scenarios.
 
 ### 1. Verify Package Exports
 
@@ -127,7 +169,8 @@ import {
 
 ### 2. Test with Real LLM Model
 
-Run a simple programmatic fill with an actual LLM to verify the integration works end-to-end:
+Run a simple programmatic fill with an actual LLM to verify the integration works
+end-to-end:
 
 ```typescript
 import { fillForm } from 'markform';
@@ -160,9 +203,13 @@ console.log('Turns:', result.turns);
 ```
 
 Expected behavior:
+
 - The form should complete with `status.ok: true`
-- The `name` field should contain "Alice" (from inputContext)
+
+- The `name` field should contain “Alice” (from inputContext)
+
 - The `greeting` field should contain an AI-generated greeting
+
 - Turn count should be > 0
 
 ### 3. Verify CLI Still Works
@@ -223,7 +270,9 @@ if (!result.status.ok) {
 ## User Feedback
 
 > (To be filled in after user review)
->
+> 
 > - Feedback from user review:
+>
 > - Issues found:
+>
 > - Additional revisions needed:

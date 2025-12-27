@@ -41,7 +41,7 @@ that supports:
 
 **Related Docs:**
 
-- [arch-markform-initial-design.md](../architecture/current/arch-markform-initial-design.md)
+- [arch-markform-design.md.md](../architecture/current/arch-markform-design.md.md)
 
 - [valid-2025-12-24-export-formats-and-prompt-composition.md](valid-2025-12-24-export-formats-and-prompt-composition.md)
 
@@ -184,7 +184,8 @@ if (result.status.ok) {
 
 ### Testing Plan
 
-Tests have been implemented. See the validation spec for full coverage details.
+Tests have been implemented.
+See the validation spec for full coverage details.
 
 #### 1. Value Coercion Layer Tests (`tests/unit/valueCoercion.test.ts`)
 
@@ -253,7 +254,7 @@ Tests have been implemented. See the validation spec for full coverage details.
 
 - [x] Includes `inputContextWarnings` for coerced values
 
-- [x] Agent sees pre-filled values (doesn't try to fill them again)
+- [x] Agent sees pre-filled values (doesn’t try to fill them again)
 
 **System prompt addition:**
 
@@ -267,7 +268,7 @@ Tests have been implemented. See the validation spec for full coverage details.
 
 - [x] `TurnProgress` contains correct values
 
-- [x] Callback errors don't abort fill (warning logged)
+- [x] Callback errors don’t abort fill (warning logged)
 
 **Cancellation:**
 
@@ -289,9 +290,10 @@ Tests have been implemented. See the validation spec for full coverage details.
 
 #### 3. LiveAgent Enhancement Tests (`tests/unit/liveAgent.test.ts`)
 
-- [x] `systemPromptAddition` is appended to composed prompt (tested via programmaticFill tests)
+- [x] `systemPromptAddition` is appended to composed prompt (tested via programmaticFill
+  tests)
 
-- [x] Null/undefined `systemPromptAddition` doesn't affect prompt
+- [x] Null/undefined `systemPromptAddition` doesn’t affect prompt
 
 #### 4. Integration Tests (`tests/integration/programmaticFill.test.ts`)
 

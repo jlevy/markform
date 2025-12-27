@@ -244,7 +244,7 @@ View them with `markform examples --list` or try them interactively.
 - **[Full Specification](https://github.com/jlevy/markform/blob/main/SPEC.md)** (or run
   `markform spec`) - Complete syntax and semantics
 
-- **[Architecture](https://github.com/jlevy/markform/blob/main/docs/project/architecture/current/arch-markform-initial-design.md)**
+- **[Architecture](https://github.com/jlevy/markform/blob/main/docs/project/architecture/current/arch-markform-design.md.md)**
   \- Technical design and roadmap
 
 - **[Development](https://github.com/jlevy/markform/blob/main/docs/development.md)** -

@@ -45,8 +45,8 @@ Problems:
 
 **Related Docs:**
 
-- [arch-markform-initial-design.md](../architecture/current/arch-markform-initial-design.md)
-  — Section “Layer 2: Form Data Model”
+- [arch-markform-design.md.md](../architecture/current/arch-markform-design.md.md) —
+  Section “Layer 2: Form Data Model”
 
 - [plan-2025-12-26-skip-abort-reason-in-sentinel.md](plan-2025-12-26-skip-abort-reason-in-sentinel.md)
   — Adds `reason?: string` to `FieldResponse` (must be preserved)
@@ -173,7 +173,7 @@ interface ProgressCounts {
 
 | File | Sections |
 | --- | --- |
-| `arch-markform-initial-design.md` | Layer 2 types, ProgressState definitions, terminology |
+| `arch-markform-design.md.md` | Layer 2 types, ProgressState definitions, terminology |
 
 ### Detailed Change Count
 

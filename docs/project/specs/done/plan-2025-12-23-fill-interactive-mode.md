@@ -16,7 +16,7 @@ for users to fill form fields directly in the terminal using `@clack/prompts`.
 - [Fill Command Spec](../done/valid-2025-12-23-fill-command-live-agent.md) ✅
   **COMPLETE** - Fill command with live/mock agent support
 
-- [Architecture Design](../../architecture/current/arch-markform-initial-design.md)
+- [Architecture Design](../../architecture/current/arch-markform-design.md.md)
 
 ## Background
 
