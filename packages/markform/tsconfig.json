@@ -4,6 +4,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "tests", "*.config.ts"],
-  "exclude": ["scripts"]
+  "include": ["src", "tests", "scripts", "*.config.ts"]
 }

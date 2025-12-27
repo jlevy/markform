@@ -7,12 +7,12 @@
  * - YAML values (.yml) - extracted field values
  */
 
-import { writeFileSync } from "node:fs";
 import YAML from "yaml";
 
 import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
 import type { ParsedForm } from "../../engine/coreTypes.js";
 import type { ExportResult } from "./cliTypes.js";
+import { writeFile } from "./shared.js";
 
 // Re-export types for backwards compatibility
 export type { ExportResult } from "./cliTypes.js";
@@ -131,19 +131,19 @@ export function deriveExportPaths(basePath: string): ExportResult {
  * @param basePath - Base path for the .form.md file (other paths are derived)
  * @returns Paths to all exported files
  */
-export function exportMultiFormat(
+export async function exportMultiFormat(
   form: ParsedForm,
   basePath: string,
-): ExportResult {
+): Promise<ExportResult> {
   const paths = deriveExportPaths(basePath);
 
   // Export form markdown
   const formContent = serialize(form);
-  writeFileSync(paths.formPath, formContent, "utf-8");
+  await writeFile(paths.formPath, formContent);
 
   // Export raw markdown
   const rawContent = serializeRawMarkdown(form);
-  writeFileSync(paths.rawPath, rawContent, "utf-8");
+  await writeFile(paths.rawPath, rawContent);
 
   // Export YAML values with structured format (markform-218, markform-219)
   const values = toStructuredValues(form);
@@ -153,7 +153,7 @@ export function exportMultiFormat(
     ...(notes.length > 0 && { notes }),
   };
   const yamlContent = YAML.stringify(exportData);
-  writeFileSync(paths.yamlPath, yamlContent, "utf-8");
+  await writeFile(paths.yamlPath, yamlContent);
 
   return paths;
 }
@@ -169,7 +169,7 @@ export function exportMultiFormat(
  * @param form - The parsed form to export
  * @param outputPath - Path to write the .form.md file
  */
-export function exportFormOnly(form: ParsedForm, outputPath: string): void {
+export async function exportFormOnly(form: ParsedForm, outputPath: string): Promise<void> {
   const formContent = serialize(form);
-  writeFileSync(outputPath, formContent, "utf-8");
+  await writeFile(outputPath, formContent);
 }

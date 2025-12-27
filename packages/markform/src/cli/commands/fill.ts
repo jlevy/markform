@@ -288,7 +288,7 @@ export function registerFillCommand(program: Command): void {
               showInteractiveOutro(patches.length, false);
             } else {
               // Export all formats (form, raw markdown, YAML)
-              const { formPath, rawPath, yamlPath } = exportMultiFormat(form, outputPath);
+              const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, outputPath);
 
               showInteractiveOutro(patches.length, false);
               console.log("");

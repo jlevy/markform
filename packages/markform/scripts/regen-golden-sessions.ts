@@ -8,7 +8,8 @@
  * Usage: pnpm --filter markform test:golden:regen
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { writeFile } from "atomically";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -103,7 +104,7 @@ async function regenSession(config: SessionConfig): Promise<void> {
   };
 
   const outputPath = resolve(EXAMPLES_DIR, config.sessionFile);
-  writeFileSync(outputPath, serializeSession(transcript));
+  await writeFile(outputPath, serializeSession(transcript));
   console.log(`  ✓ Written: ${outputPath}`);
 }
 

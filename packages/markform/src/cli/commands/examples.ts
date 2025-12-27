@@ -12,7 +12,7 @@
 import type { Command } from "commander";
 
 import * as p from "@clack/prompts";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import pc from "picocolors";
 
@@ -39,7 +39,7 @@ import {
   getExamplePath,
   loadExampleContent,
 } from "../examples/exampleRegistry.js";
-import { formatPath, getCommandContext, logError, logTiming } from "../lib/shared.js";
+import { formatPath, getCommandContext, logError, logTiming, writeFile } from "../lib/shared.js";
 import { generateVersionedPath } from "../lib/versioning.js";
 import {
   runInteractiveFill,
@@ -313,7 +313,7 @@ async function runInteractiveFlow(
   let content: string;
   try {
     content = loadExampleContent(selectedId);
-    writeFileSync(outputPath, content, "utf-8");
+    await writeFile(outputPath, content);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     p.cancel(`Failed to write file: ${message}`);
@@ -362,7 +362,7 @@ async function runInteractiveFlow(
     }
 
     // Export filled form in all formats (examples command always exports all formats)
-    const { formPath, rawPath, yamlPath } = exportMultiFormat(form, outputPath);
+    const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, outputPath);
 
     showInteractiveOutro(patches.length, false);
     console.log("");
@@ -430,7 +430,7 @@ async function runInteractiveFlow(
       logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Agent fill time", Date.now() - agentStartTime);
 
       // Step 10: Multi-format export
-      const { formPath, rawPath, yamlPath } = exportMultiFormat(form, agentOutputPath);
+      const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, agentOutputPath);
 
       console.log("");
       p.log.success("Agent fill complete. Outputs:");
