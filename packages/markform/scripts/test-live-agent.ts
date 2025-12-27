@@ -24,7 +24,8 @@
  *   5. Validate final form completeness
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { writeFile } from "atomically";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -190,6 +191,8 @@ async function runMockAgent(config: Config): Promise<void> {
           (i) => i.severity === "required"
         ).length,
         markdownSha256: "mock-sha256",
+        answeredFieldCount: 0,
+        skippedFieldCount: 0,
       },
     });
 
@@ -222,10 +225,11 @@ async function runMockAgent(config: Config): Promise<void> {
       turns,
       final: {
         expectComplete: inspectResult.data.isComplete,
+        expectedCompletedForm: config.outputSessionPath,
       },
     };
     const yaml = serializeSession(session);
-    writeFileSync(config.outputSessionPath, yaml);
+    await writeFile(config.outputSessionPath, yaml);
     console.log(`\nSession written to: ${config.outputSessionPath}`);
   }
 }
@@ -305,12 +309,13 @@ If a field asks for specific format (email, date, etc.), use the correct format.
     const model = anthropic(config.model);
 
     try {
+      // Cast options to bypass strict type checking - AI SDK types are complex
       const result = await generateText({
         model,
         prompt,
-        tools: tools as Parameters<typeof generateText>[0]["tools"],
+        tools: tools as unknown as Parameters<typeof generateText>[0]["tools"],
         maxSteps: 5,
-      });
+      } as Parameters<typeof generateText>[0]);
 
       console.log(`Model response: ${result.text || "(tool calls only)"}`);
 
@@ -349,6 +354,8 @@ If a field asks for specific format (email, date, etc.), use the correct format.
           after: {
             requiredIssueCount: 0, // Will be updated
             markdownSha256: "live-agent",
+            answeredFieldCount: 0,
+            skippedFieldCount: 0,
           },
         });
       }
@@ -362,8 +369,9 @@ If a field asks for specific format (email, date, etc.), use the correct format.
     console.log(`After turn: ${inspectResult.message}`);
 
     // Update last turn with new issue count
-    if (turns.length > 0 && turns[turns.length - 1]) {
-      turns[turns.length - 1].after.requiredIssueCount =
+    const lastTurn = turns[turns.length - 1];
+    if (lastTurn) {
+      lastTurn.after.requiredIssueCount =
         inspectResult.data.issues.filter((i) => i.severity === "required").length;
     }
   }
@@ -388,10 +396,11 @@ If a field asks for specific format (email, date, etc.), use the correct format.
       turns,
       final: {
         expectComplete: inspectResult.data.isComplete,
+        expectedCompletedForm: config.outputSessionPath,
       },
     };
     const yaml = serializeSession(session);
-    writeFileSync(config.outputSessionPath, yaml);
+    await writeFile(config.outputSessionPath, yaml);
     console.log(`\nSession written to: ${config.outputSessionPath}`);
   }
 

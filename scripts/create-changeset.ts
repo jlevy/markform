@@ -10,7 +10,7 @@
  *   pnpm changeset:add major 1.0.0 "Breaking API changes"
  */
 
-import { writeFileSync } from "fs";
+import { writeFile } from "atomically";
 import { join } from "path";
 
 const [bump, version, summary] = process.argv.slice(2);
@@ -39,5 +39,5 @@ ${summary}
 const filename = `v${version}.md`;
 const filepath = join(process.cwd(), ".changeset", filename);
 
-writeFileSync(filepath, content);
+await writeFile(filepath, content);
 console.log(`Created .changeset/${filename}`);
