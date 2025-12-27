@@ -36,90 +36,9 @@ this TypeScript codebase).
 | Agent Interfaces | [Agent Interfaces](#agent-interfaces) |
 | Testing Framework | [Testing Framework](#testing-framework) |
 
-### Layer Overview
-
-```
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                            MARKFORM SPECIFICATION                                     |
-│                         (Portable, Language-Agnostic)                                 |
-├───────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                       |
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
-│  │ Layer 1: SYNTAX                                                                 │  |
-│  │ The .form.md file format, Markdoc tag syntax, structural/field tags             │  |
-│  │ - File extension, frontmatter structure                                         │  |
-│  │ - Tag definitions: form, field-group, string-field, checkboxes, etc.            │  |
-│  │ - Option syntax, checkbox state tokens, value encoding                          │  |
-│  └─────────────────────────────────────────────────────────────────────────────────┘  |
-│                                      │                                                |
-│                                      ▼                                                |
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
-│  │ Layer 2: FORM DATA MODEL                                                        │  |
-│  │ Precise schema definitions for forms, fields, values, and documentation         │  |
-│  │ - FormSchema, FieldGroup, Field (all kinds), FieldValue                         │  |
-│  │ - DocumentationBlock, StructureSummary, ProgressSummary                         │  |
-│  │ - Defined via Zod schemas (mappable to JSON Schema, Pydantic, etc.)             │  |
-│  └─────────────────────────────────────────────────────────────────────────────────┘  |
-│                                      │                                                |
-│                                      ▼                                                |
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
-│  │ Layer 3: VALIDATION & FORM FILLING                                              │  |
-│  │ Rules for validation, progress computation, and form manipulation               │  |
-│  │ - ID uniqueness rules (global vs field-scoped)                                  │  |
-│  │ - Required field semantics and completion rules per field kind                  │  |
-│  │ - ProgressState computation (empty/incomplete/invalid/complete)                 │  |
-│  │ - Built-in validation (type/pattern/range checks)                               │  |
-│  │ - Hook validator contract (code validators, LLM validators)                     │  |
-│  │ - Patch data model for operations and their effects on form state               │  |
-│  └─────────────────────────────────────────────────────────────────────────────────┘  |
-│                                      │                                                |
-│                                      ▼                                                |
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
-│  │ Layer 4: TOOL API & INTERFACES                                                  │  |
-│  │ Abstract interfaces for agents and humans to interact with forms                │  |
-│  │ - MCP tool definitions: inspect, apply, export, getMarkdown                     │  |
-│  │ - Method signatures and result types                                            │  |
-│  │ - Import/export formats for values (JSON, YAML)                                 │  |
-│  │ - Priority scoring and issue ordering for agent guidance                        │  |
-│  │ - Abstract UI patterns (console, web, agent tools)                              │  |
-│  └─────────────────────────────────────────────────────────────────────────────────┘  |
-│                                                                                       |
-└────────────────────────────────────────────────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                         IMPLEMENTATION COMPONENTS                                     |
-│                         (This TypeScript Codebase)                                    |
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                       |
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
-│  │ ENGINE IMPLEMENTATION                                                           │  |
-│  │ TypeScript/Zod implementation of the specification                              │  |
-│  │ - Markdoc-based parser and canonical serializer                                 │  |
-│  │ - Validation engine, patch application                                          │  |
-│  │ - jiti-based code validator loading                                             │  |
-│  └─────────────────────────────────────────────────────────────────────────────────┘  |
-│                                      │                                                |
-│              ┌───────────────────────┼───────────────────────┐                        |
-│              ▼                       ▼                       ▼                        |
-│  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐            |
-│  │ USER INTERFACES     │  │ AGENT INTERFACES    │  │ EXECUTION HARNESS   │            |
-│  │ - CLI commands      │  │ - Tool API library  │  │ - Step-by-step loop │            |
-│  │ - Web UI (serve)    │  │ - MCP server        │  │ - Mock agent mode   │            |
-│  │ - Render to HTML    │  │ - AI SDK tools      │  │ - Live agent mode   │            |
-│  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘            |
-│                                      │                                                |
-│                                      ▼                                                |
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐  |
-│  │ TESTING FRAMEWORK                                                               │  |
-│  │ Golden session testing infrastructure                                           │  |
-│  │ - Session transcript format (.session.yaml)                                     │  |
-│  │ - Mock/live mode recording and replay                                           │  |
-│  └─────────────────────────────────────────────────────────────────────────────────┘  |
-│                                                                                       |
-└────────────────────────────────────────────────────────────────────────────────────────┘
-```
-
 ### Specification vs Implementation Boundary
+
+See [the README](README.md) for architecture diagram.
 
 The **Markform Specification** (Layers 1-4) defines:
 
@@ -444,6 +363,22 @@ The form itself IS the state.
 
 #### Harness State Machine
 
+```mermaid
+stateDiagram-v2
+    [*] --> INIT
+    INIT --> STEP : load form
+
+    STEP --> COMPLETE : no required issues
+    STEP --> WAIT : has required issues
+
+    WAIT --> APPLY : receive patches
+    APPLY --> WAIT : revalidate
+
+    COMPLETE --> [*]
+```
+
+<details> <summary>ASCII version (for comparison)</summary>
+
 ```
 ┌─────────┐
 │  INIT  |
@@ -464,6 +399,8 @@ The form itself IS the state.
 │  APPLY  │────────────────┘
 └─────────┘
 ```
+
+</details>
 
 **Note:** MF/0.1 runs until completion (all required fields valid, no errors).
 A default `max_turns` safety limit (e.g., 100) should be enforced to prevent runaway
@@ -649,6 +586,35 @@ Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 
 **Turn flow:**
 
+```mermaid
+sequenceDiagram
+    participant H as Harness
+    participant L as LLM Agent
+    participant F as Form State
+
+    rect rgb(240, 248, 255)
+        Note over H,F: Turn N
+        H->>F: 1. Serialize current form state
+        F-->>H: Full markdown with frontmatter, values, structure
+
+        H->>L: 2. Provide context prompt<br/>(form markdown + remaining issues)
+
+        L->>L: 3. Analyze context
+        L->>H: Call generatePatches tool<br/>(array of Patch objects)
+
+        H->>F: 4. Apply patches to form
+        F-->>H: Updated values, revalidated, new progress
+
+        alt No required issues
+            H->>H: 5. DONE
+        else Has required issues
+            H->>H: 5. Continue to Turn N+1
+        end
+    end
+```
+
+<details> <summary>ASCII version (for comparison)</summary>
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              Turn N                                        |
@@ -672,6 +638,8 @@ Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 │                                                                            |
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+</details>
 
 * * *
 

@@ -30,6 +30,12 @@ This specification defines the portable, language-agnostic elements of Markform:
 - **Layer 4: Tool API & Interfaces** — Operations for agents and humans to interact with
   forms
 
+## Revision History
+
+| Version | Date | Code Version | Summary |
+| --- | --- | --- | --- |
+| MF/0.1 (draft) | 2025-12-27 | v0.1.2 | Initial draft. Defines core syntax, data model, validation pipeline, and tool API. |
+
 ## Specification Terminology
 
 The keywords MUST, MUST NOT, REQUIRED, SHALL, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and
