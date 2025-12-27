@@ -886,7 +886,8 @@ To ensure deterministic round-tripping without building a full markdown serializ
 | Indentation | 0 spaces for top-level, no nested indentation |
 | Blank lines | One blank line between adjacent blocks (fields, groups, doc blocks) for readability |
 | Value fences | Omit entirely for empty fields |
-| `process=false` | Emit only when value contains Markdoc tag syntax (`/\{%/`) |
+| Fence character | Smart selection: pick backticks or tildes based on content to avoid collision with nested code blocks. Pick the character with smaller max-run at line start (indent ≤ 3); prefer backticks on tie. Length = max(3, maxRun + 1). |
+| `process=false` | Emit only when value contains Markdoc tag syntax (`/{%/`) |
 | Option ordering | Preserved as authored (order is significant) |
 | Line endings | Unix (`\n`) only |
 | Doc block placement | Immediately after the referenced element |
