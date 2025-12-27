@@ -2,10 +2,10 @@
 
 *Markdown forms for token-friendly workflows*
 
-**Markform** is a format, data model, and editing API for **agent-friendly,
-human-readable text forms**. The Markform format is **a superset of Markdown** based on
-[Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files that are
-**easily readable by agents and humans**.
+**Markform** is a **file format**, **data model**, and **editing API** for
+**agent-friendly, human-readable text forms**. Markform syntax is a superset of Markdown
+based on [Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files that
+are easily readable by agents and humans.
 
 The idea is to combine the simple utility of a Markdown document with structured tags
 that define typed fields and validation rules.
@@ -33,6 +33,68 @@ npx markform examples
 ```
 
 This walks you through an example form interactively, with optional AI agent filling.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph SPEC["<b>MARKFORM SPEC</b>"]
+        direction TB
+
+        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, field-group, string-field, checkboxes, etc.)"]
+        end
+
+        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
+        end
+
+        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
+        end
+
+        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
+        end
+
+        L4 --> L3 --> L2 --> L1
+    end
+
+    subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
+        direction TB
+
+        subgraph ENGINE["<b>ENGINE IMPLEMENTATION</b><br/>Markdoc parser, serializer, patch application, validation (uses jiti for TypeScript rules)"]
+        end
+
+        subgraph UI["<b>USER INTERFACES</b><br/>CLI commands, web UI (serve), render to HTML"]
+        end
+
+        subgraph AGENT["<b>AGENT INTERFACES</b><br/>Tool API library, MCP server, AI SDK tools"]
+        end
+
+        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step form-filling agentic loop"]
+        end
+
+        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts"]
+        end
+
+        UI --> ENGINE
+        AGENT --> HARNESS
+        AGENT --> ENGINE
+        HARNESS --> ENGINE
+        ENGINE --> TEST
+    end
+
+    SPEC ~~~ IMPL
+
+    style SPEC fill:#e8f4f8,stroke:#0077b6
+    style L1 fill:#caf0f8,stroke:#0077b6
+    style L2 fill:#caf0f8,stroke:#0077b6
+    style L3 fill:#caf0f8,stroke:#0077b6
+    style L4 fill:#caf0f8,stroke:#0077b6
+    style IMPL fill:#fff3e6,stroke:#fb8500
+    style ENGINE fill:#ffe8cc,stroke:#fb8500
+    style UI fill:#ffe8cc,stroke:#fb8500
+    style AGENT fill:#ffe8cc,stroke:#fb8500
+    style HARNESS fill:#ffe8cc,stroke:#fb8500
+    style TEST fill:#ffe8cc,stroke:#fb8500
+```
 
 ## Motivation
 
@@ -125,65 +187,6 @@ Markdoc extends Markdown with structured tags, allowing AST parsing and programm
 manipulation while preserving human and LLM readability.
 See Stripe’s [Markdoc overview][markdoc-overview] and [blog post][stripe-markdoc] for
 more on the philosophy behind “docs-as-data” that Markform extends to “forms-as-data.”
-
-### Architecture
-
-```mermaid
-flowchart TB
-    subgraph SPEC["<b>MARKFORM SPEC</b>"]
-        direction TB
-
-        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, field-group, string-field, checkboxes, etc.)"]
-        end
-
-        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
-        end
-
-        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
-        end
-
-        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
-        end
-
-        L4 --> L3 --> L2 --> L1
-    end
-
-    subgraph IMPL["<b>IMPLEMENTATION</b>"]
-        direction TB
-
-        subgraph ENGINE["<b>ENGINE IMPLEMENTATION</b><br/>Markdoc parser, serializer, validation engine, patch application, jiti-based validator loading"]
-        end
-
-        subgraph UI["<b>USER INTERFACES</b><br/>CLI commands, web UI (serve), render to HTML"]
-        end
-
-        subgraph AGENT["<b>AGENT INTERFACES</b><br/>Tool API library, MCP server, AI SDK tools"]
-        end
-
-        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step fill loop with mock and live agent modes"]
-        end
-
-        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts, mock/live recording and replay"]
-        end
-
-        UI --> ENGINE
-        AGENT --> ENGINE
-        HARNESS --> ENGINE
-        ENGINE --> TEST
-    end
-
-    style SPEC fill:#e8f4f8,stroke:#0077b6
-    style IMPL fill:#fff3e6,stroke:#fb8500
-    style L1 fill:#caf0f8,stroke:#0077b6
-    style L2 fill:#caf0f8,stroke:#0077b6
-    style L3 fill:#caf0f8,stroke:#0077b6
-    style L4 fill:#caf0f8,stroke:#0077b6
-    style ENGINE fill:#ffe8cc,stroke:#fb8500
-    style UI fill:#ffe8cc,stroke:#fb8500
-    style AGENT fill:#ffe8cc,stroke:#fb8500
-    style HARNESS fill:#ffe8cc,stroke:#fb8500
-    style TEST fill:#ffe8cc,stroke:#fb8500
-```
 
 ## CLI Commands
 
@@ -361,6 +364,10 @@ const result = await generateText({
 
 ## Supported Providers
 
+Standard LLMs can be used to fill in forms or create research reports from form
+templates. The package currently has support for these models built in, and enables web
+search tools for them if possible.
+
 | Provider | Env Variable | Example Models |
 | --- | --- | --- |
 | openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
@@ -389,10 +396,11 @@ View them with `markform examples --list` or try them interactively.
 
 ## Documentation
 
-- **[Full Specification](https://github.com/jlevy/markform/blob/main/SPEC.md)** (or run
+- **[Markform Spec](https://github.com/jlevy/markform/blob/main/SPEC.md)** (or run
   `markform spec`) - Complete syntax and semantics
 
-- **[Architecture](https://github.com/jlevy/markform/blob/main/docs/project/architecture/current/arch-markform-design.md)**
+- **[Design
+  Doc](https://github.com/jlevy/markform/blob/main/docs/project/architecture/current/arch-markform-design.md)**
   \- Technical design and roadmap
 
 - **[Development](https://github.com/jlevy/markform/blob/main/docs/development.md)** -
