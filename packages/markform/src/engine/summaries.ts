@@ -8,6 +8,7 @@ import type {
   CheckboxesField,
   CheckboxesValue,
   CheckboxProgressCounts,
+  DateValue,
   Field,
   FieldKind,
   FieldProgress,
@@ -30,6 +31,7 @@ import type {
   StructureSummary,
   UrlListValue,
   UrlValue,
+  YearValue,
 } from './coreTypes.js';
 
 // =============================================================================
@@ -52,6 +54,8 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
     multi_select: 0,
     url: 0,
     url_list: 0,
+    date: 0,
+    year: 0,
   };
 
   const groupsById: Record<Id, 'field_group'> = {};
@@ -159,6 +163,14 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
     case 'url_list': {
       const v = value as UrlListValue;
       return v.items.length > 0;
+    }
+    case 'date': {
+      const v = value as DateValue;
+      return v.value !== null && v.value.trim() !== '';
+    }
+    case 'year': {
+      const v = value as YearValue;
+      return v.value !== null;
     }
   }
 }

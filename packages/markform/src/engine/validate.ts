@@ -7,6 +7,8 @@
 import type {
   CheckboxesField,
   CheckboxesValue,
+  DateField,
+  DateValue,
   Field,
   FieldGroup,
   FieldResponse,
@@ -32,6 +34,8 @@ import type {
   ValidatorContext,
   ValidatorRef,
   ValidatorRegistry,
+  YearField,
+  YearValue,
 } from './coreTypes.js';
 
 // =============================================================================
@@ -588,6 +592,149 @@ function validateUrlListField(
 }
 
 /**
+ * Check if a string is a valid ISO 8601 date (YYYY-MM-DD).
+ */
+function isValidDate(str: string): boolean {
+  const pattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!pattern.test(str)) {
+    return false;
+  }
+  const date = new Date(str);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+  // Ensure the date components match (guards against invalid dates like 2024-02-30)
+  const [year, month, day] = str.split('-').map(Number);
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === (month ?? 0) - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/**
+ * Parse a date string to compare for min/max validation.
+ * Returns date value or null if invalid.
+ */
+function parseDateForComparison(str: string): number | null {
+  if (!isValidDate(str)) {
+    return null;
+  }
+  return new Date(str).getTime();
+}
+
+/**
+ * Validate a date field.
+ */
+function validateDateField(field: DateField, value: DateValue | undefined): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const dateValue = value?.value ?? null;
+
+  // Required check
+  if (field.required && (dateValue === null || dateValue.trim() === '')) {
+    issues.push({
+      severity: 'error',
+      message: `Required field "${field.label}" is empty`,
+      ref: field.id,
+      source: 'builtin',
+    });
+    return issues;
+  }
+
+  // Skip other checks if no value
+  if (dateValue === null || dateValue === '') {
+    return issues;
+  }
+
+  // Date format validation
+  if (!isValidDate(dateValue)) {
+    issues.push({
+      severity: 'error',
+      message: `"${field.label}" is not a valid date (expected YYYY-MM-DD)`,
+      ref: field.id,
+      source: 'builtin',
+    });
+    return issues; // Skip range checks if format is invalid
+  }
+
+  const dateTime = parseDateForComparison(dateValue);
+
+  // Min date
+  if (field.min !== undefined) {
+    const minTime = parseDateForComparison(field.min);
+    if (minTime !== null && dateTime !== null && dateTime < minTime) {
+      issues.push({
+        severity: 'error',
+        message: `"${field.label}" must be on or after ${field.min} (got ${dateValue})`,
+        ref: field.id,
+        source: 'builtin',
+      });
+    }
+  }
+
+  // Max date
+  if (field.max !== undefined) {
+    const maxTime = parseDateForComparison(field.max);
+    if (maxTime !== null && dateTime !== null && dateTime > maxTime) {
+      issues.push({
+        severity: 'error',
+        message: `"${field.label}" must be on or before ${field.max} (got ${dateValue})`,
+        ref: field.id,
+        source: 'builtin',
+      });
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * Validate a year field.
+ */
+function validateYearField(field: YearField, value: YearValue | undefined): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const yearValue = value?.value ?? null;
+
+  // Required check
+  if (field.required && yearValue === null) {
+    issues.push({
+      severity: 'error',
+      message: `Required field "${field.label}" is empty`,
+      ref: field.id,
+      source: 'builtin',
+    });
+    return issues;
+  }
+
+  // Skip other checks if no value
+  if (yearValue === null) {
+    return issues;
+  }
+
+  // Min year
+  if (field.min !== undefined && yearValue < field.min) {
+    issues.push({
+      severity: 'error',
+      message: `"${field.label}" must be at least ${field.min} (got ${yearValue})`,
+      ref: field.id,
+      source: 'builtin',
+    });
+  }
+
+  // Max year
+  if (field.max !== undefined && yearValue > field.max) {
+    issues.push({
+      severity: 'error',
+      message: `"${field.label}" must be at most ${field.max} (got ${yearValue})`,
+      ref: field.id,
+      source: 'builtin',
+    });
+  }
+
+  return issues;
+}
+
+/**
  * Validate a single field.
  */
 function validateField(field: Field, responses: Record<Id, FieldResponse>): ValidationIssue[] {
@@ -611,6 +758,10 @@ function validateField(field: Field, responses: Record<Id, FieldResponse>): Vali
       return validateUrlField(field, value as UrlValue | undefined);
     case 'url_list':
       return validateUrlListField(field, value as UrlListValue | undefined);
+    case 'date':
+      return validateDateField(field, value as DateValue | undefined);
+    case 'year':
+      return validateYearField(field, value as YearValue | undefined);
   }
 }
 

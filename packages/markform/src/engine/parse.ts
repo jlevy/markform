@@ -14,6 +14,8 @@ import type {
   CheckboxesValue,
   CheckboxMode,
   CheckboxValue,
+  DateField,
+  DateValue,
   DocumentationBlock,
   DocumentationTag,
   Field,
@@ -41,6 +43,8 @@ import type {
   UrlListValue,
   UrlValue,
   ValidatorRef,
+  YearField,
+  YearValue,
 } from './coreTypes.js';
 
 // =============================================================================
@@ -404,6 +408,8 @@ function isValueEmpty(value: FieldValue): boolean {
     case 'string':
     case 'number':
     case 'url':
+    case 'date':
+    case 'year':
       return value.value === null;
     case 'string_list':
     case 'url_list':
@@ -1133,6 +1139,171 @@ function parseUrlListField(node: Node): { field: UrlListField; response: FieldRe
 }
 
 /**
+ * Parse a date-field tag.
+ */
+function parseDateField(node: Node): { field: DateField; response: FieldResponse } {
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
+
+  if (!id) {
+    throw new ParseError("date-field missing required 'id' attribute");
+  }
+  if (!label) {
+    throw new ParseError(`date-field '${id}' missing required 'label' attribute`);
+  }
+
+  const required = getBooleanAttr(node, 'required') ?? false;
+
+  const field: DateField = {
+    kind: 'date',
+    id,
+    label,
+    required,
+    priority: getPriorityAttr(node),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    min: getStringAttr(node, 'min'),
+    max: getStringAttr(node, 'max'),
+    validate: getValidateAttr(node),
+  };
+
+  // Check for sentinel values in text fields
+  const fenceContent = extractFenceValue(node);
+  const stateAttr = getStringAttr(node, 'state');
+
+  // Handle sentinel values
+  const sentinel = parseSentinel(fenceContent);
+  if (sentinel) {
+    if (sentinel.type === 'skip') {
+      if (stateAttr !== undefined && stateAttr !== 'skipped') {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
+        );
+      }
+      if (required) {
+        throw new ParseError(
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
+        );
+      }
+      return {
+        field,
+        response: { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
+    }
+    if (sentinel.type === 'abort') {
+      if (stateAttr !== undefined && stateAttr !== 'aborted') {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
+        );
+      }
+      return {
+        field,
+        response: { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
+    }
+  }
+
+  // No sentinel - parse normally
+  // Convert empty strings to null explicitly (nullish coalescing doesn't work for empty strings)
+  let dateValue: string | null = null;
+  if (fenceContent !== null) {
+    const trimmed = fenceContent.trim();
+    if (trimmed.length > 0) {
+      dateValue = trimmed;
+    }
+  }
+  const value: DateValue = {
+    kind: 'date',
+    value: dateValue,
+  };
+
+  const response = parseFieldResponse(node, value, id, required);
+  return { field, response };
+}
+
+/**
+ * Parse a year-field tag.
+ */
+function parseYearField(node: Node): { field: YearField; response: FieldResponse } {
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
+
+  if (!id) {
+    throw new ParseError("year-field missing required 'id' attribute");
+  }
+  if (!label) {
+    throw new ParseError(`year-field '${id}' missing required 'label' attribute`);
+  }
+
+  const required = getBooleanAttr(node, 'required') ?? false;
+
+  const field: YearField = {
+    kind: 'year',
+    id,
+    label,
+    required,
+    priority: getPriorityAttr(node),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    min: getNumberAttr(node, 'min'),
+    max: getNumberAttr(node, 'max'),
+    validate: getValidateAttr(node),
+  };
+
+  // Check for sentinel values in text fields
+  const fenceContent = extractFenceValue(node);
+  const stateAttr = getStringAttr(node, 'state');
+
+  // Handle sentinel values
+  const sentinel = parseSentinel(fenceContent);
+  if (sentinel) {
+    if (sentinel.type === 'skip') {
+      if (stateAttr !== undefined && stateAttr !== 'skipped') {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
+        );
+      }
+      if (required) {
+        throw new ParseError(
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
+        );
+      }
+      return {
+        field,
+        response: { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
+    }
+    if (sentinel.type === 'abort') {
+      if (stateAttr !== undefined && stateAttr !== 'aborted') {
+        throw new ParseError(
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
+        );
+      }
+      return {
+        field,
+        response: { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) },
+      };
+    }
+  }
+
+  // No sentinel - parse year normally
+  const trimmedContent = fenceContent !== null ? fenceContent.trim() : '';
+  let yearValue: number | null = null;
+  if (trimmedContent) {
+    const parsed = Number.parseInt(trimmedContent, 10);
+    if (!Number.isNaN(parsed)) {
+      yearValue = parsed;
+    }
+  }
+
+  const value: YearValue = {
+    kind: 'year',
+    value: yearValue,
+  };
+
+  const response = parseFieldResponse(node, value, id, required);
+  return { field, response };
+}
+
+/**
  * Parse a field tag and return field schema and response.
  */
 function parseField(node: Node): { field: Field; response: FieldResponse } | null {
@@ -1156,6 +1327,10 @@ function parseField(node: Node): { field: Field; response: FieldResponse } | nul
       return parseUrlField(node);
     case 'url-list':
       return parseUrlListField(node);
+    case 'date-field':
+      return parseDateField(node);
+    case 'year-field':
+      return parseYearField(node);
     default:
       return null;
   }

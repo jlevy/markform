@@ -34,6 +34,8 @@ export const FIELD_KINDS = [
   'multi_select',
   'url',
   'url_list',
+  'date',
+  'year',
 ] as const;
 
 /** Field kind discriminant - derived from the tuple */
@@ -52,6 +54,8 @@ import type {
   MultiSelectField,
   UrlField,
   UrlListField,
+  DateField,
+  YearField,
   StringValue,
   NumberValue,
   StringListValue,
@@ -60,6 +64,8 @@ import type {
   MultiSelectValue,
   UrlValue,
   UrlListValue,
+  DateValue,
+  YearValue,
   SetStringPatch,
   SetNumberPatch,
   SetStringListPatch,
@@ -68,6 +74,8 @@ import type {
   SetMultiSelectPatch,
   SetUrlPatch,
   SetUrlListPatch,
+  SetDatePatch,
+  SetYearPatch,
 } from './coreTypes.js';
 
 /**
@@ -122,6 +130,18 @@ export interface FieldTypeMap {
     value: UrlListValue;
     patch: SetUrlListPatch;
     emptyValue: { kind: 'url_list'; items: [] };
+  };
+  date: {
+    field: DateField;
+    value: DateValue;
+    patch: SetDatePatch;
+    emptyValue: { kind: 'date'; value: null };
+  };
+  year: {
+    field: YearField;
+    value: YearValue;
+    patch: SetYearPatch;
+    emptyValue: { kind: 'year'; value: null };
   };
 }
 
@@ -212,6 +232,10 @@ export function createEmptyValue(kind: FieldKind): FieldValue {
       return { kind: 'url', value: null };
     case 'url_list':
       return { kind: 'url_list', items: [] };
+    case 'date':
+      return { kind: 'date', value: null };
+    case 'year':
+      return { kind: 'year', value: null };
     default:
       return assertNever(kind);
   }
@@ -230,6 +254,8 @@ import {
   MultiSelectFieldSchema,
   UrlFieldSchema,
   UrlListFieldSchema,
+  DateFieldSchema,
+  YearFieldSchema,
   StringValueSchema,
   NumberValueSchema,
   StringListValueSchema,
@@ -238,6 +264,8 @@ import {
   MultiSelectValueSchema,
   UrlValueSchema,
   UrlListValueSchema,
+  DateValueSchema,
+  YearValueSchema,
   SetStringPatchSchema,
   SetNumberPatchSchema,
   SetStringListPatchSchema,
@@ -246,6 +274,8 @@ import {
   SetMultiSelectPatchSchema,
   SetUrlPatchSchema,
   SetUrlListPatchSchema,
+  SetDatePatchSchema,
+  SetYearPatchSchema,
 } from './coreTypes.js';
 
 /**
@@ -292,6 +322,16 @@ export const FIELD_SCHEMAS = {
     field: UrlListFieldSchema,
     value: UrlListValueSchema,
     patch: SetUrlListPatchSchema,
+  },
+  date: {
+    field: DateFieldSchema,
+    value: DateValueSchema,
+    patch: SetDatePatchSchema,
+  },
+  year: {
+    field: YearFieldSchema,
+    value: YearValueSchema,
+    patch: SetYearPatchSchema,
   },
 } as const satisfies Record<
   FieldKind,

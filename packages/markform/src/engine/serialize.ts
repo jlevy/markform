@@ -9,6 +9,8 @@ import type {
   CheckboxesField,
   CheckboxesValue,
   CheckboxValue,
+  DateField,
+  DateValue,
   DocumentationBlock,
   Field,
   FieldGroup,
@@ -32,6 +34,8 @@ import type {
   UrlListField,
   UrlListValue,
   UrlValue,
+  YearField,
+  YearValue,
 } from './coreTypes.js';
 import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
 
@@ -580,6 +584,104 @@ function serializeUrlListField(field: UrlListField, response: FieldResponse | un
 }
 
 /**
+ * Serialize a date-field.
+ */
+function serializeDateField(field: DateField, response: FieldResponse | undefined): string {
+  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  if (field.required) {
+    attrs.required = field.required;
+  }
+  if (field.priority !== DEFAULT_PRIORITY) {
+    attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
+  if (field.min !== undefined) {
+    attrs.min = field.min;
+  }
+  if (field.max !== undefined) {
+    attrs.max = field.max;
+  }
+  if (field.validate) {
+    attrs.validate = field.validate;
+  }
+
+  // Add state attribute for skipped/aborted
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
+    attrs.state = response.state;
+  }
+
+  const attrStr = serializeAttrs(attrs);
+  let content = '';
+
+  // Extract value from response if state is "answered"
+  if (response?.state === 'answered' && response.value) {
+    const value = response.value as DateValue;
+    if (value.value) {
+      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+    }
+  }
+
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
+  }
+
+  return `{% date-field ${attrStr} %}${content}{% /date-field %}`;
+}
+
+/**
+ * Serialize a year-field.
+ */
+function serializeYearField(field: YearField, response: FieldResponse | undefined): string {
+  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  if (field.required) {
+    attrs.required = field.required;
+  }
+  if (field.priority !== DEFAULT_PRIORITY) {
+    attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
+  if (field.min !== undefined) {
+    attrs.min = field.min;
+  }
+  if (field.max !== undefined) {
+    attrs.max = field.max;
+  }
+  if (field.validate) {
+    attrs.validate = field.validate;
+  }
+
+  // Add state attribute for skipped/aborted
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
+    attrs.state = response.state;
+  }
+
+  const attrStr = serializeAttrs(attrs);
+  let content = '';
+
+  // Extract value from response if state is "answered"
+  if (response?.state === 'answered' && response.value) {
+    const value = response.value as YearValue;
+    if (value.value !== null && value.value !== undefined) {
+      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+    }
+  }
+
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
+  }
+
+  return `{% year-field ${attrStr} %}${content}{% /year-field %}`;
+}
+
+/**
  * Serialize a field to Markdoc format.
  */
 function serializeField(field: Field, responses: Record<Id, FieldResponse>): string {
@@ -602,6 +704,10 @@ function serializeField(field: Field, responses: Record<Id, FieldResponse>): str
       return serializeUrlField(field, response);
     case 'url_list':
       return serializeUrlListField(field, response);
+    case 'date':
+      return serializeDateField(field, response);
+    case 'year':
+      return serializeYearField(field, response);
   }
 }
 
@@ -890,6 +996,24 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
         for (const item of urlListValue.items) {
           lines.push(`- ${item}`);
         }
+      } else {
+        lines.push('_(empty)_');
+      }
+      break;
+    }
+    case 'date': {
+      const dateValue = value as DateValue | undefined;
+      if (dateValue?.value) {
+        lines.push(dateValue.value);
+      } else {
+        lines.push('_(empty)_');
+      }
+      break;
+    }
+    case 'year': {
+      const yearValue = value as YearValue | undefined;
+      if (yearValue?.value !== null && yearValue?.value !== undefined) {
+        lines.push(String(yearValue.value));
       } else {
         lines.push('_(empty)_');
       }

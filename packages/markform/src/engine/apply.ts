@@ -11,6 +11,7 @@ import type {
   CheckboxesValue,
   CheckboxValue,
   ClearFieldPatch,
+  DateValue,
   Field,
   FieldResponse,
   Id,
@@ -24,6 +25,7 @@ import type {
   Patch,
   RemoveNotePatch,
   SetCheckboxesPatch,
+  SetDatePatch,
   SetMultiSelectPatch,
   SetNumberPatch,
   SetSingleSelectPatch,
@@ -31,12 +33,14 @@ import type {
   SetStringPatch,
   SetUrlListPatch,
   SetUrlPatch,
+  SetYearPatch,
   SingleSelectValue,
   SkipFieldPatch,
   StringListValue,
   StringValue,
   UrlListValue,
   UrlValue,
+  YearValue,
 } from './coreTypes.js';
 import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
 import { validate } from './validate.js';
@@ -206,6 +210,24 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_url_list to ${field.kind} field "${field.id}"`,
+        };
+      }
+      break;
+
+    case 'set_date':
+      if (field.kind !== 'date') {
+        return {
+          patchIndex: index,
+          message: `Cannot apply set_date to ${field.kind} field "${field.id}"`,
+        };
+      }
+      break;
+
+    case 'set_year':
+      if (field.kind !== 'year') {
+        return {
+          patchIndex: index,
+          message: `Cannot apply set_year to ${field.kind} field "${field.id}"`,
         };
       }
       break;
@@ -386,6 +408,32 @@ function applySetUrlList(responses: Record<Id, FieldResponse>, patch: SetUrlList
 }
 
 /**
+ * Apply a set_date patch.
+ */
+function applySetDate(responses: Record<Id, FieldResponse>, patch: SetDatePatch): void {
+  responses[patch.fieldId] = {
+    state: 'answered',
+    value: {
+      kind: 'date',
+      value: patch.value,
+    } as DateValue,
+  };
+}
+
+/**
+ * Apply a set_year patch.
+ */
+function applySetYear(responses: Record<Id, FieldResponse>, patch: SetYearPatch): void {
+  responses[patch.fieldId] = {
+    state: 'answered',
+    value: {
+      kind: 'year',
+      value: patch.value,
+    } as YearValue,
+  };
+}
+
+/**
  * Apply a clear_field patch.
  */
 function applyClearField(responses: Record<Id, FieldResponse>, patch: ClearFieldPatch): void {
@@ -470,6 +518,12 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
       break;
     case 'set_url_list':
       applySetUrlList(responses, patch);
+      break;
+    case 'set_date':
+      applySetDate(responses, patch);
+      break;
+    case 'set_year':
+      applySetYear(responses, patch);
       break;
     case 'clear_field':
       applyClearField(responses, patch);

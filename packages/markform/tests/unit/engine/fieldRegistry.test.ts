@@ -21,8 +21,8 @@ import { FieldKindSchema, type FieldValue } from '../../../src/engine/coreTypes.
 
 describe('fieldRegistry', () => {
   describe('FIELD_KINDS', () => {
-    it('should contain all 8 field kinds', () => {
-      expect(FIELD_KINDS).toHaveLength(8);
+    it('should contain all 10 field kinds', () => {
+      expect(FIELD_KINDS).toHaveLength(10);
       expect(FIELD_KINDS).toContain('string');
       expect(FIELD_KINDS).toContain('number');
       expect(FIELD_KINDS).toContain('string_list');
@@ -31,6 +31,8 @@ describe('fieldRegistry', () => {
       expect(FIELD_KINDS).toContain('multi_select');
       expect(FIELD_KINDS).toContain('url');
       expect(FIELD_KINDS).toContain('url_list');
+      expect(FIELD_KINDS).toContain('date');
+      expect(FIELD_KINDS).toContain('year');
     });
 
     it('should match FieldKindSchema from coreTypes', () => {
@@ -52,7 +54,7 @@ describe('fieldRegistry', () => {
       type _HasPatch = _Entry['patch'];
       type _HasEmptyValue = _Entry['emptyValue'];
 
-      expect(kinds.length).toBe(8); // If we get here, types are correct
+      expect(kinds.length).toBe(10); // If we get here, types are correct
     });
   });
 
@@ -95,6 +97,16 @@ describe('fieldRegistry', () => {
     it('should create correct empty value for url_list', () => {
       const value = createEmptyValue('url_list');
       expect(value).toEqual({ kind: 'url_list', items: [] });
+    });
+
+    it('should create correct empty value for date', () => {
+      const value = createEmptyValue('date');
+      expect(value).toEqual({ kind: 'date', value: null });
+    });
+
+    it('should create correct empty value for year', () => {
+      const value = createEmptyValue('year');
+      expect(value).toEqual({ kind: 'year', value: null });
     });
 
     it('should handle all field kinds', () => {
@@ -165,6 +177,10 @@ describe('fieldRegistry', () => {
             return 'URL';
           case 'url_list':
             return 'list of URLs';
+          case 'date':
+            return 'date';
+          case 'year':
+            return 'year';
           default: {
             // Exhaustiveness check
             const _exhaustive: never = kind;
