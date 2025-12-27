@@ -15,14 +15,10 @@ import type {
   Field,
   FieldProgress,
   Id,
-} from "./coreTypes";
-import { DEFAULT_PRIORITY } from "../settings.js";
-import { validate } from "./validate";
-import {
-  computeStructureSummary,
-  computeProgressSummary,
-  computeFormState,
-} from "./summaries";
+} from './coreTypes';
+import { DEFAULT_PRIORITY } from '../settings.js';
+import { validate } from './validate';
+import { computeStructureSummary, computeProgressSummary, computeFormState } from './summaries';
 
 /**
  * Inspect options for customizing behavior.
@@ -48,20 +44,14 @@ export interface InspectOptions {
  * @param options - Optional inspection options
  * @returns InspectResult with summaries and prioritized issues
  */
-export function inspect(
-  form: ParsedForm,
-  options: InspectOptions = {}
-): InspectResult {
+export function inspect(form: ParsedForm, options: InspectOptions = {}): InspectResult {
   // Run validation (synchronous)
   const validationResult = validate(form, {
     skipCodeValidators: options.skipCodeValidators,
   });
 
   // Convert validation issues to inspect issues first
-  const validationInspectIssues = convertValidationIssues(
-    validationResult.issues,
-    form
-  );
+  const validationInspectIssues = convertValidationIssues(validationResult.issues, form);
 
   // Compute structure summary
   const structureSummary = computeStructureSummary(form.schema);
@@ -71,16 +61,12 @@ export function inspect(
     form.schema,
     form.responsesByFieldId,
     form.notes,
-    validationInspectIssues
+    validationInspectIssues,
   );
   const formState = computeFormState(progressSummary);
 
   // Add issues for empty optional fields
-  const allIssues = addOptionalEmptyIssues(
-    validationInspectIssues,
-    form,
-    progressSummary.fields
-  );
+  const allIssues = addOptionalEmptyIssues(validationInspectIssues, form, progressSummary.fields);
 
   // Sort and assign priorities
   const sortedIssues = sortAndAssignPriorities(allIssues, form);
@@ -107,14 +93,14 @@ export function inspect(
  */
 function convertValidationIssues(
   validationIssues: ValidationIssue[],
-  form: ParsedForm
+  form: ParsedForm,
 ): InspectIssue[] {
   return validationIssues.map((vi) => ({
-    ref: vi.ref ?? "",
-    scope: determineScope(vi.ref ?? "", form),
+    ref: vi.ref ?? '',
+    scope: determineScope(vi.ref ?? '', form),
     reason: mapValidationToInspectReason(vi),
     message: vi.message,
-    severity: vi.severity === "error" ? "required" : "recommended",
+    severity: vi.severity === 'error' ? 'required' : 'recommended',
     priority: 0, // Will be assigned after sorting
   }));
 }
@@ -126,28 +112,24 @@ function convertValidationIssues(
 function addOptionalEmptyIssues(
   existingIssues: InspectIssue[],
   form: ParsedForm,
-  fieldProgress: Record<string, FieldProgress>
+  fieldProgress: Record<string, FieldProgress>,
 ): InspectIssue[] {
   const issues = [...existingIssues];
   const fieldsWithIssues = new Set(existingIssues.map((i) => i.ref));
 
   for (const [fieldId, progress] of Object.entries(fieldProgress)) {
     // Skip if field is already addressed via skip_field or abort_field
-    if (progress.answerState === "skipped" || progress.answerState === "aborted") {
+    if (progress.answerState === 'skipped' || progress.answerState === 'aborted') {
       continue;
     }
 
-    if (
-      progress.empty &&
-      !fieldsWithIssues.has(fieldId) &&
-      !isRequiredField(fieldId, form)
-    ) {
+    if (progress.empty && !fieldsWithIssues.has(fieldId) && !isRequiredField(fieldId, form)) {
       issues.push({
         ref: fieldId,
-        scope: "field",
-        reason: "optional_empty",
-        message: "Optional field has no value",
-        severity: "recommended",
+        scope: 'field',
+        reason: 'optional_empty',
+        message: 'Optional field has no value',
+        severity: 'recommended',
         priority: 0,
       });
     }
@@ -165,37 +147,37 @@ function mapValidationToInspectReason(vi: ValidationIssue): IssueReason {
   // Check for specific patterns in the message or code
   // Required empty - check code and message patterns for various field types
   if (
-    vi.code === "REQUIRED_EMPTY" ||
-    (msg.includes("required") && msg.includes("empty")) ||
-    (msg.includes("required") && msg.includes("no selection")) ||
-    (msg.includes("required") && msg.includes("no selections")) ||
-    msg.includes("must be answered") ||
-    msg.includes("must be completed") ||
-    msg.includes("must be checked")
+    vi.code === 'REQUIRED_EMPTY' ||
+    (msg.includes('required') && msg.includes('empty')) ||
+    (msg.includes('required') && msg.includes('no selection')) ||
+    (msg.includes('required') && msg.includes('no selections')) ||
+    msg.includes('must be answered') ||
+    msg.includes('must be completed') ||
+    msg.includes('must be checked')
   ) {
-    return "required_missing";
+    return 'required_missing';
   }
 
   // Invalid checkbox state (not about being empty)
   if (
-    vi.code === "INVALID_CHECKBOX_STATE" ||
-    vi.code === "CHECKBOXES_INCOMPLETE" ||
-    msg.includes("checkbox")
+    vi.code === 'INVALID_CHECKBOX_STATE' ||
+    vi.code === 'CHECKBOXES_INCOMPLETE' ||
+    msg.includes('checkbox')
   ) {
-    return "checkbox_incomplete";
+    return 'checkbox_incomplete';
   }
 
   // Min items violations
   if (
-    vi.code === "MULTI_SELECT_TOO_FEW" ||
-    vi.code === "STRING_LIST_MIN_ITEMS" ||
-    vi.message.includes("at least")
+    vi.code === 'MULTI_SELECT_TOO_FEW' ||
+    vi.code === 'STRING_LIST_MIN_ITEMS' ||
+    vi.message.includes('at least')
   ) {
-    return "min_items_not_met";
+    return 'min_items_not_met';
   }
 
   // Default to validation_error for other issues
-  return "validation_error";
+  return 'validation_error';
 }
 
 /**
@@ -203,24 +185,24 @@ function mapValidationToInspectReason(vi: ValidationIssue): IssueReason {
  */
 function determineScope(ref: string, form: ParsedForm): IssueScope {
   // Check if it's an option reference (contains a dot)
-  if (ref.includes(".")) {
-    return "option";
+  if (ref.includes('.')) {
+    return 'option';
   }
 
   // Check if it's the form ID
   if (ref === form.schema.id) {
-    return "form";
+    return 'form';
   }
 
   // Check if it's a group ID
   for (const group of form.schema.groups) {
     if (ref === group.id) {
-      return "group";
+      return 'group';
     }
   }
 
   // Default to field
-  return "field";
+  return 'field';
 }
 
 /**
@@ -280,27 +262,27 @@ const ISSUE_TYPE_SCORES: Record<IssueReason, number> = {
  */
 function scoreToTier(score: number): number {
   if (score >= 5) {
-return 1;
-}
+    return 1;
+  }
   if (score >= 4) {
-return 2;
-}
+    return 2;
+  }
   if (score >= 3) {
-return 3;
-}
+    return 3;
+  }
   if (score >= 2) {
-return 4;
-}
+    return 4;
+  }
   return 5;
 }
 
 /**
  * Get the issue type score, potentially adjusted by severity.
  */
-function getIssueTypeScore(reason: IssueReason, severity: "required" | "recommended"): number {
+function getIssueTypeScore(reason: IssueReason, severity: 'required' | 'recommended'): number {
   const baseScore = ISSUE_TYPE_SCORES[reason];
   // checkbox_incomplete gets +1 when required
-  if (reason === "checkbox_incomplete" && severity === "required") {
+  if (reason === 'checkbox_incomplete' && severity === 'required') {
     return baseScore + 1;
   }
   return baseScore;
@@ -315,10 +297,7 @@ function getIssueTypeScore(reason: IssueReason, severity: "required" | "recommen
  *
  * Within each tier, issues are sorted by severity (required first) then by ref.
  */
-function sortAndAssignPriorities(
-  issues: InspectIssue[],
-  form: ParsedForm
-): InspectIssue[] {
+function sortAndAssignPriorities(issues: InspectIssue[], form: ParsedForm): InspectIssue[] {
   // Calculate scores and assign tier-based priorities
   const scoredIssues = issues.map((issue) => {
     const fieldPriority = getFieldPriority(issue.ref, form);
@@ -341,14 +320,14 @@ function sortAndAssignPriorities(
   // 4. Ref (alphabetically for deterministic output)
   scoredIssues.sort((a, b) => {
     if (a.priority !== b.priority) {
-return a.priority - b.priority;
-}
+      return a.priority - b.priority;
+    }
     if (a.severity !== b.severity) {
-      return a.severity === "required" ? -1 : 1;
+      return a.severity === 'required' ? -1 : 1;
     }
     if (a._score !== b._score) {
-return b._score - a._score;
-}
+      return b._score - a._score;
+    }
     return a.ref.localeCompare(b.ref);
   });
 
@@ -361,7 +340,7 @@ return b._score - a._score;
  */
 function getFieldPriority(ref: string, form: ParsedForm): FieldPriorityLevel {
   // Handle option refs (fieldId.optionId)
-  const fieldId = ref.includes(".") ? ref.split(".")[0] : ref;
+  const fieldId = ref.includes('.') ? ref.split('.')[0] : ref;
 
   for (const group of form.schema.groups) {
     for (const field of group.children) {
@@ -404,7 +383,7 @@ export function findFieldById(form: ParsedForm, fieldId: Id): Field | undefined 
  */
 export function getFieldsForRoles(form: ParsedForm, targetRoles: string[]): Field[] {
   const allFields = getAllFields(form);
-  if (targetRoles.includes("*")) {
+  if (targetRoles.includes('*')) {
     return allFields;
   }
   return allFields.filter((field) => targetRoles.includes(field.role));
@@ -420,7 +399,7 @@ export function getFieldsForRoles(form: ParsedForm, targetRoles: string[]): Fiel
  */
 export function isCheckboxComplete(form: ParsedForm, fieldId: Id): boolean {
   const field = findFieldById(form, fieldId);
-  if (field?.kind !== "checkboxes") {
+  if (field?.kind !== 'checkboxes') {
     return true; // Non-checkbox fields are not blocking
   }
 
@@ -428,12 +407,12 @@ export function isCheckboxComplete(form: ParsedForm, fieldId: Id): boolean {
   const response = form.responsesByFieldId[fieldId];
 
   // If no response or not answered, checkbox is not complete
-  if (response?.state !== "answered") {
+  if (response?.state !== 'answered') {
     return false;
   }
 
   const value = response.value;
-  if (value?.kind !== "checkboxes") {
+  if (value?.kind !== 'checkboxes') {
     return false;
   }
 
@@ -441,26 +420,26 @@ export function isCheckboxComplete(form: ParsedForm, fieldId: Id): boolean {
   const optionIds = checkboxField.options.map((o) => o.id);
   const mode = checkboxField.checkboxMode;
 
-  if (mode === "multi") {
+  if (mode === 'multi') {
     // Multi mode: all options must be done or na (not todo, incomplete, or active)
     // If minDone is set, at least that many must be done
     const minDone = checkboxField.minDone;
     if (minDone !== undefined) {
-      const doneCount = optionIds.filter((id) => values[id] === "done").length;
+      const doneCount = optionIds.filter((id) => values[id] === 'done').length;
       return doneCount >= minDone;
     }
     // Otherwise, all must be done or na
-    return optionIds.every((id) => values[id] === "done" || values[id] === "na");
+    return optionIds.every((id) => values[id] === 'done' || values[id] === 'na');
   }
 
-  if (mode === "simple") {
+  if (mode === 'simple') {
     // Simple mode (GFM-compatible): all options must be done (not todo)
-    return optionIds.every((id) => values[id] === "done");
+    return optionIds.every((id) => values[id] === 'done');
   }
 
-  if (mode === "explicit") {
+  if (mode === 'explicit') {
     // Explicit mode: no unfilled values remain (all must be yes or no)
-    return optionIds.every((id) => values[id] !== "unfilled");
+    return optionIds.every((id) => values[id] !== 'unfilled');
   }
 
   // Default case (shouldn't happen with valid CheckboxMode)
@@ -485,16 +464,16 @@ export function findBlockingCheckpoint(form: ParsedForm): BlockingCheckpointResu
   for (let i = 0; i < form.orderIndex.length; i++) {
     const fieldId = form.orderIndex[i];
     if (!fieldId) {
-continue;
-}
+      continue;
+    }
 
     const field = findFieldById(form, fieldId);
-    if (field?.kind !== "checkboxes") {
-continue;
-}
+    if (field?.kind !== 'checkboxes') {
+      continue;
+    }
 
     const checkboxField = field;
-    if (checkboxField.approvalMode === "blocking" && !isCheckboxComplete(form, fieldId)) {
+    if (checkboxField.approvalMode === 'blocking' && !isCheckboxComplete(form, fieldId)) {
       return { index: i, fieldId };
     }
   }
@@ -507,7 +486,7 @@ continue;
  */
 export function getBlockedFieldIds(
   form: ParsedForm,
-  blockingCheckpoint: BlockingCheckpointResult
+  blockingCheckpoint: BlockingCheckpointResult,
 ): Set<Id> {
   const blocked = new Set<Id>();
   for (let i = blockingCheckpoint.index + 1; i < form.orderIndex.length; i++) {
@@ -526,7 +505,7 @@ export function getBlockedFieldIds(
 export function filterIssuesByRole(
   issues: InspectIssue[],
   form: ParsedForm,
-  targetRoles?: string[]
+  targetRoles?: string[],
 ): InspectIssue[] {
   // Find blocking checkpoint first
   const blockingCheckpoint = findBlockingCheckpoint(form);
@@ -535,32 +514,35 @@ export function filterIssuesByRole(
     : new Set<Id>();
 
   // Get field IDs for target roles
-  const targetFieldIds = targetRoles && !targetRoles.includes("*")
-    ? new Set(getFieldsForRoles(form, targetRoles).map((f) => f.id))
-    : null;
+  const targetFieldIds =
+    targetRoles && !targetRoles.includes('*')
+      ? new Set(getFieldsForRoles(form, targetRoles).map((f) => f.id))
+      : null;
 
-  return issues.map((issue) => {
-    // Extract field ID from ref (handles both field refs and option refs)
-    const fieldId = issue.ref.includes(".") ? issue.ref.split(".")[0] : issue.ref;
+  return issues
+    .map((issue) => {
+      // Extract field ID from ref (handles both field refs and option refs)
+      const fieldId = issue.ref.includes('.') ? issue.ref.split('.')[0] : issue.ref;
 
-    // Check if this field is blocked
-    const isBlocked = fieldId && blockedFieldIds.has(fieldId);
-    const annotatedIssue: InspectIssue = isBlocked
-      ? { ...issue, blockedBy: blockingCheckpoint!.fieldId }
-      : issue;
+      // Check if this field is blocked
+      const isBlocked = fieldId && blockedFieldIds.has(fieldId);
+      const annotatedIssue: InspectIssue = isBlocked
+        ? { ...issue, blockedBy: blockingCheckpoint!.fieldId }
+        : issue;
 
-    return annotatedIssue;
-  }).filter((issue) => {
-    // If no target roles specified, include all issues
-    if (!targetFieldIds) {
-      return true;
-    }
+      return annotatedIssue;
+    })
+    .filter((issue) => {
+      // If no target roles specified, include all issues
+      if (!targetFieldIds) {
+        return true;
+      }
 
-    // Extract field ID and check if it matches target roles
-    const fieldId = issue.ref.includes(".") ? (issue.ref.split(".")[0] ?? issue.ref) : issue.ref;
+      // Extract field ID and check if it matches target roles
+      const fieldId = issue.ref.includes('.') ? (issue.ref.split('.')[0] ?? issue.ref) : issue.ref;
 
-    // Include if field matches target roles, or if it's not a field ref (form/group level)
-    const field = findFieldById(form, fieldId);
-    return !field || targetFieldIds.has(fieldId);
-  });
+      // Include if field matches target roles, or if it's not a field ref (form/group level)
+      const field = findFieldById(form, fieldId);
+      return !field || targetFieldIds.has(fieldId);
+    });
 }

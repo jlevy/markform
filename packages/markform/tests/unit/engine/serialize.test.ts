@@ -1,13 +1,13 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
 
-import { parseForm } from "../../../src/engine/parse.js";
-import { serialize, serializeRawMarkdown } from "../../../src/engine/serialize.js";
+import { parseForm } from '../../../src/engine/parse.js';
+import { serialize, serializeRawMarkdown } from '../../../src/engine/serialize.js';
 
-describe("engine/serialize", () => {
-  describe("serialize", () => {
-    it("serializes a minimal form", () => {
+describe('engine/serialize', () => {
+  describe('serialize', () => {
+    it('serializes a minimal form', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -26,12 +26,12 @@ markform:
 
       // Parse the output to verify it's valid
       const reparsed = parseForm(output);
-      expect(reparsed.schema.id).toBe("test_form");
-      expect(reparsed.schema.title).toBe("Test Form");
+      expect(reparsed.schema.id).toBe('test_form');
+      expect(reparsed.schema.title).toBe('Test Form');
       expect(reparsed.schema.groups).toHaveLength(1);
     });
 
-    it("serializes string field with value", () => {
+    it('serializes string field with value', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -54,13 +54,13 @@ ACME Corp
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.company?.value;
-      expect(value?.kind).toBe("string");
-      if (value?.kind === "string") {
-        expect(value.value).toBe("ACME Corp");
+      expect(value?.kind).toBe('string');
+      if (value?.kind === 'string') {
+        expect(value.value).toBe('ACME Corp');
       }
     });
 
-    it("serializes number field with value", () => {
+    it('serializes number field with value', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -83,13 +83,13 @@ markform:
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.revenue?.value;
-      expect(value?.kind).toBe("number");
-      if (value?.kind === "number") {
+      expect(value?.kind).toBe('number');
+      if (value?.kind === 'number') {
         expect(value.value).toBe(1234.56);
       }
     });
 
-    it("serializes string-list field with values", () => {
+    it('serializes string-list field with values', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -114,13 +114,13 @@ Tag Three
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.tags?.value;
-      expect(value?.kind).toBe("string_list");
-      if (value?.kind === "string_list") {
-        expect(value.items).toEqual(["Tag One", "Tag Two", "Tag Three"]);
+      expect(value?.kind).toBe('string_list');
+      if (value?.kind === 'string_list') {
+        expect(value.items).toEqual(['Tag One', 'Tag Two', 'Tag Three']);
       }
     });
 
-    it("serializes single-select field with selection", () => {
+    it('serializes single-select field with selection', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -145,20 +145,20 @@ markform:
       // Check field schema
       const group = reparsed.schema.groups[0];
       const field = group?.children[0];
-      expect(field?.kind).toBe("single_select");
-      if (field?.kind === "single_select") {
+      expect(field?.kind).toBe('single_select');
+      if (field?.kind === 'single_select') {
         expect(field.options).toHaveLength(3);
       }
 
       // Check value preserved
       const value = reparsed.responsesByFieldId.rating?.value;
-      expect(value?.kind).toBe("single_select");
-      if (value?.kind === "single_select") {
-        expect(value.selected).toBe("neutral");
+      expect(value?.kind).toBe('single_select');
+      if (value?.kind === 'single_select') {
+        expect(value.selected).toBe('neutral');
       }
     });
 
-    it("serializes multi-select field with selections", () => {
+    it('serializes multi-select field with selections', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -181,15 +181,15 @@ markform:
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.categories?.value;
-      expect(value?.kind).toBe("multi_select");
-      if (value?.kind === "multi_select") {
-        expect(value.selected).toContain("tech");
-        expect(value.selected).toContain("finance");
-        expect(value.selected).not.toContain("health");
+      expect(value?.kind).toBe('multi_select');
+      if (value?.kind === 'multi_select') {
+        expect(value.selected).toContain('tech');
+        expect(value.selected).toContain('finance');
+        expect(value.selected).not.toContain('health');
       }
     });
 
-    it("serializes checkboxes field with multi mode", () => {
+    it('serializes checkboxes field with multi mode', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -214,17 +214,17 @@ markform:
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.tasks?.value;
-      expect(value?.kind).toBe("checkboxes");
-      if (value?.kind === "checkboxes") {
-        expect(value.values.done_task).toBe("done");
-        expect(value.values.in_progress).toBe("incomplete");
-        expect(value.values.active_task).toBe("active");
-        expect(value.values.na_task).toBe("na");
-        expect(value.values.todo_task).toBe("todo");
+      expect(value?.kind).toBe('checkboxes');
+      if (value?.kind === 'checkboxes') {
+        expect(value.values.done_task).toBe('done');
+        expect(value.values.in_progress).toBe('incomplete');
+        expect(value.values.active_task).toBe('active');
+        expect(value.values.na_task).toBe('na');
+        expect(value.values.todo_task).toBe('todo');
       }
     });
 
-    it("serializes checkboxes field with explicit mode", () => {
+    it('serializes checkboxes field with explicit mode', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -247,15 +247,15 @@ markform:
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.confirms?.value;
-      expect(value?.kind).toBe("checkboxes");
-      if (value?.kind === "checkboxes") {
-        expect(value.values.yes_item).toBe("yes");
-        expect(value.values.no_item).toBe("no");
-        expect(value.values.unfilled_item).toBe("unfilled");
+      expect(value?.kind).toBe('checkboxes');
+      if (value?.kind === 'checkboxes') {
+        expect(value.values.yes_item).toBe('yes');
+        expect(value.values.no_item).toBe('no');
+        expect(value.values.unfilled_item).toBe('unfilled');
       }
     });
 
-    it("preserves field attributes through round-trip", () => {
+    it('preserves field attributes through round-trip', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -275,20 +275,20 @@ markform:
       const reparsed = parseForm(output);
 
       const group = reparsed.schema.groups[0];
-      expect(group?.title).toBe("Group Title");
+      expect(group?.title).toBe('Group Title');
 
       const emailField = group?.children[0];
-      expect(emailField?.kind).toBe("string");
-      if (emailField?.kind === "string") {
+      expect(emailField?.kind).toBe('string');
+      if (emailField?.kind === 'string') {
         expect(emailField.required).toBe(true);
         expect(emailField.minLength).toBe(5);
         expect(emailField.maxLength).toBe(100);
-        expect(emailField.pattern).toBe("^[^@]+@[^@]+$");
+        expect(emailField.pattern).toBe('^[^@]+@[^@]+$');
       }
 
       const countField = group?.children[1];
-      expect(countField?.kind).toBe("number");
-      if (countField?.kind === "number") {
+      expect(countField?.kind).toBe('number');
+      if (countField?.kind === 'number') {
         expect(countField.required).toBe(true);
         expect(countField.min).toBe(0);
         expect(countField.max).toBe(1000);
@@ -296,7 +296,7 @@ markform:
       }
     });
 
-    it("outputs deterministic format", () => {
+    it('outputs deterministic format', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -316,7 +316,7 @@ markform:
       expect(output1).toBe(output2);
     });
 
-    it("serializes validate attribute with object arrays correctly", () => {
+    it('serializes validate attribute with object arrays correctly', () => {
       // This test ensures we don't regress on the [object Object] bug
       // where validate=[{id: "min_words", min: 50}] was serialized as [[object Object]]
       const markdown = `---
@@ -337,33 +337,35 @@ markform:
       const output = serialize(parsed);
 
       // Must not contain [object Object] - this was the bug
-      expect(output).not.toContain("[object Object]");
+      expect(output).not.toContain('[object Object]');
 
       // Should contain properly serialized validate attributes
       expect(output).toContain('validate=[{id: "min_words", min: 50}]');
-      expect(output).toContain('validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}]');
+      expect(output).toContain(
+        'validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}]',
+      );
 
       // Round-trip: parse the output and verify validate is preserved
       const reparsed = parseForm(output);
       const group = reparsed.schema.groups[0];
 
       const summaryField = group?.children[0];
-      expect(summaryField?.kind).toBe("string");
-      if (summaryField?.kind === "string") {
+      expect(summaryField?.kind).toBe('string');
+      if (summaryField?.kind === 'string') {
         expect(summaryField.validate).toHaveLength(1);
-        expect(summaryField.validate?.[0]).toEqual({ id: "min_words", min: 50 });
+        expect(summaryField.validate?.[0]).toEqual({ id: 'min_words', min: 50 });
       }
 
       const descField = group?.children[1];
-      expect(descField?.kind).toBe("string");
-      if (descField?.kind === "string") {
+      expect(descField?.kind).toBe('string');
+      if (descField?.kind === 'string') {
         expect(descField.validate).toHaveLength(2);
-        expect(descField.validate?.[0]).toEqual({ id: "min_words", min: 25 });
-        expect(descField.validate?.[1]).toEqual({ id: "max_words", max: 100 });
+        expect(descField.validate?.[0]).toEqual({ id: 'min_words', min: 25 });
+        expect(descField.validate?.[1]).toEqual({ id: 'max_words', max: 100 });
       }
     });
 
-    it("serializes nested objects in attributes", () => {
+    it('serializes nested objects in attributes', () => {
       // Test that deeply nested objects are also serialized correctly
       const markdown = `---
 markform:
@@ -381,28 +383,25 @@ markform:
       const parsed = parseForm(markdown);
       const output = serialize(parsed);
 
-      expect(output).not.toContain("[object Object]");
-      expect(output).toContain("config: {threshold: 10, enabled: true}");
+      expect(output).not.toContain('[object Object]');
+      expect(output).toContain('config: {threshold: 10, enabled: true}');
 
       // Verify round-trip
       const reparsed = parseForm(output);
       const field = reparsed.schema.groups[0]?.children[0];
-      if (field?.kind === "string") {
+      if (field?.kind === 'string') {
         expect(field.validate?.[0]).toEqual({
-          id: "custom",
+          id: 'custom',
           config: { threshold: 10, enabled: true },
         });
       }
     });
   });
 
-  describe("serialize with simple.form.md", () => {
-    it("round-trips the simple test form", async () => {
-      const formPath = join(
-        import.meta.dirname,
-        "../../../examples/simple/simple.form.md"
-      );
-      const content = await readFile(formPath, "utf-8");
+  describe('serialize with simple.form.md', () => {
+    it('round-trips the simple test form', async () => {
+      const formPath = join(import.meta.dirname, '../../../examples/simple/simple.form.md');
+      const content = await readFile(formPath, 'utf-8');
       const parsed = parseForm(content);
       const output = serialize(parsed);
       const reparsed = parseForm(output);
@@ -416,23 +415,23 @@ markform:
       expect(reparsed.orderIndex).toEqual(parsed.orderIndex);
 
       // Verify key fields exist
-      expect(reparsed.orderIndex).toContain("name");
-      expect(reparsed.orderIndex).toContain("email");
-      expect(reparsed.orderIndex).toContain("age");
-      expect(reparsed.orderIndex).toContain("tags");
-      expect(reparsed.orderIndex).toContain("priority");
-      expect(reparsed.orderIndex).toContain("categories");
+      expect(reparsed.orderIndex).toContain('name');
+      expect(reparsed.orderIndex).toContain('email');
+      expect(reparsed.orderIndex).toContain('age');
+      expect(reparsed.orderIndex).toContain('tags');
+      expect(reparsed.orderIndex).toContain('priority');
+      expect(reparsed.orderIndex).toContain('categories');
 
       // Check idIndex has correct nodeType values
-      expect(reparsed.idIndex.get("simple_test")?.nodeType).toBe("form");
-      expect(reparsed.idIndex.get("basic_fields")?.nodeType).toBe("group");
-      expect(reparsed.idIndex.get("name")?.nodeType).toBe("field");
-      expect(reparsed.idIndex.get("priority.low")?.nodeType).toBe("option");
+      expect(reparsed.idIndex.get('simple_test')?.nodeType).toBe('form');
+      expect(reparsed.idIndex.get('basic_fields')?.nodeType).toBe('group');
+      expect(reparsed.idIndex.get('name')?.nodeType).toBe('field');
+      expect(reparsed.idIndex.get('priority.low')?.nodeType).toBe('option');
     });
   });
 
-  describe("serializeRawMarkdown", () => {
-    it("outputs plain markdown without markdoc directives for string field", () => {
+  describe('serializeRawMarkdown', () => {
+    it('outputs plain markdown without markdoc directives for string field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -454,20 +453,20 @@ ACME Corp
       const output = serializeRawMarkdown(parsed);
 
       // Should not contain markdoc directives
-      expect(output).not.toContain("{%");
-      expect(output).not.toContain("%}");
-      expect(output).not.toContain("```value");
+      expect(output).not.toContain('{%');
+      expect(output).not.toContain('%}');
+      expect(output).not.toContain('```value');
 
       // Should contain the form title and group header
-      expect(output).toContain("# Test Form");
-      expect(output).toContain("## Basic Info");
+      expect(output).toContain('# Test Form');
+      expect(output).toContain('## Basic Info');
 
       // Should contain field label and value
-      expect(output).toContain("**Company Name:**");
-      expect(output).toContain("ACME Corp");
+      expect(output).toContain('**Company Name:**');
+      expect(output).toContain('ACME Corp');
     });
 
-    it("outputs plain markdown for number field", () => {
+    it('outputs plain markdown for number field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -488,12 +487,12 @@ markform:
       const parsed = parseForm(markdown);
       const output = serializeRawMarkdown(parsed);
 
-      expect(output).not.toContain("{%");
-      expect(output).toContain("**Revenue:**");
-      expect(output).toContain("1234567");
+      expect(output).not.toContain('{%');
+      expect(output).toContain('**Revenue:**');
+      expect(output).toContain('1234567');
     });
 
-    it("outputs plain markdown for string-list field", () => {
+    it('outputs plain markdown for string-list field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -516,14 +515,14 @@ Healthcare
       const parsed = parseForm(markdown);
       const output = serializeRawMarkdown(parsed);
 
-      expect(output).not.toContain("{%");
-      expect(output).toContain("**Tags:**");
-      expect(output).toContain("Technology");
-      expect(output).toContain("Finance");
-      expect(output).toContain("Healthcare");
+      expect(output).not.toContain('{%');
+      expect(output).toContain('**Tags:**');
+      expect(output).toContain('Technology');
+      expect(output).toContain('Finance');
+      expect(output).toContain('Healthcare');
     });
 
-    it("outputs plain markdown for single-select field", () => {
+    it('outputs plain markdown for single-select field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -544,12 +543,12 @@ markform:
       const parsed = parseForm(markdown);
       const output = serializeRawMarkdown(parsed);
 
-      expect(output).not.toContain("{%");
-      expect(output).toContain("**Rating:**");
-      expect(output).toContain("Neutral");
+      expect(output).not.toContain('{%');
+      expect(output).toContain('**Rating:**');
+      expect(output).toContain('Neutral');
     });
 
-    it("outputs plain markdown for multi-select field", () => {
+    it('outputs plain markdown for multi-select field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -570,13 +569,13 @@ markform:
       const parsed = parseForm(markdown);
       const output = serializeRawMarkdown(parsed);
 
-      expect(output).not.toContain("{%");
-      expect(output).toContain("**Sectors:**");
-      expect(output).toContain("Technology");
-      expect(output).toContain("Healthcare");
+      expect(output).not.toContain('{%');
+      expect(output).toContain('**Sectors:**');
+      expect(output).toContain('Technology');
+      expect(output).toContain('Healthcare');
     });
 
-    it("outputs plain markdown for checkboxes field", () => {
+    it('outputs plain markdown for checkboxes field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -597,15 +596,15 @@ markform:
       const parsed = parseForm(markdown);
       const output = serializeRawMarkdown(parsed);
 
-      expect(output).not.toContain("{%");
-      expect(output).toContain("**Tasks:**");
+      expect(output).not.toContain('{%');
+      expect(output).toContain('**Tasks:**');
       // Should show checkboxes in GFM format
-      expect(output).toContain("- [x] Task 1");
-      expect(output).toContain("- [ ] Task 2");
-      expect(output).toContain("- [/] Task 3");
+      expect(output).toContain('- [x] Task 1');
+      expect(output).toContain('- [ ] Task 2');
+      expect(output).toContain('- [/] Task 3');
     });
 
-    it("shows empty placeholder for unfilled fields", () => {
+    it('shows empty placeholder for unfilled fields', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -622,12 +621,12 @@ markform:
       const parsed = parseForm(markdown);
       const output = serializeRawMarkdown(parsed);
 
-      expect(output).not.toContain("{%");
-      expect(output).toContain("**Name:**");
-      expect(output).toContain("_(empty)_");
+      expect(output).not.toContain('{%');
+      expect(output).toContain('**Name:**');
+      expect(output).toContain('_(empty)_');
     });
 
-    it("includes doc blocks as regular markdown", () => {
+    it('includes doc blocks as regular markdown', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -652,14 +651,14 @@ Enter your full legal name.
       const parsed = parseForm(markdown);
       const output = serializeRawMarkdown(parsed);
 
-      expect(output).not.toContain("{%");
-      expect(output).toContain("Please fill out this form carefully.");
-      expect(output).toContain("Enter your full legal name.");
+      expect(output).not.toContain('{%');
+      expect(output).toContain('Please fill out this form carefully.');
+      expect(output).toContain('Enter your full legal name.');
     });
   });
 
-  describe("unified response model - serialize state (markform-233)", () => {
-    it("serializes state=\"skipped\" attribute for skipped field", () => {
+  describe('unified response model - serialize state (markform-233)', () => {
+    it('serializes state="skipped" attribute for skipped field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -677,10 +676,10 @@ markform:
       const output = serialize(parsed);
 
       expect(output).toContain('state="skipped"');
-      expect(output).not.toContain("```value");
+      expect(output).not.toContain('```value');
     });
 
-    it("serializes state=\"aborted\" attribute for aborted field", () => {
+    it('serializes state="aborted" attribute for aborted field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -698,10 +697,10 @@ markform:
       const output = serialize(parsed);
 
       expect(output).toContain('state="aborted"');
-      expect(output).not.toContain("```value");
+      expect(output).not.toContain('```value');
     });
 
-    it("does not serialize state attribute for answered field", () => {
+    it('does not serialize state attribute for answered field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -723,11 +722,11 @@ Alice
       const output = serialize(parsed);
 
       expect(output).not.toContain('state=');
-      expect(output).toContain("```value");
-      expect(output).toContain("Alice");
+      expect(output).toContain('```value');
+      expect(output).toContain('Alice');
     });
 
-    it("does not serialize state attribute for empty field", () => {
+    it('does not serialize state attribute for empty field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -745,10 +744,10 @@ markform:
       const output = serialize(parsed);
 
       expect(output).not.toContain('state=');
-      expect(output).not.toContain("```value");
+      expect(output).not.toContain('```value');
     });
 
-    it("round-trips state=\"skipped\" correctly", () => {
+    it('round-trips state="skipped" correctly', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -766,11 +765,11 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      expect(reparsed.responsesByFieldId.notes?.state).toBe("skipped");
+      expect(reparsed.responsesByFieldId.notes?.state).toBe('skipped');
       expect(reparsed.responsesByFieldId.notes?.value).toBeUndefined();
     });
 
-    it("round-trips state=\"aborted\" correctly", () => {
+    it('round-trips state="aborted" correctly', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -788,13 +787,13 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      expect(reparsed.responsesByFieldId.count?.state).toBe("aborted");
+      expect(reparsed.responsesByFieldId.count?.state).toBe('aborted');
       expect(reparsed.responsesByFieldId.count?.value).toBeUndefined();
     });
   });
 
-  describe("unified response model - serialize notes (markform-233)", () => {
-    it("serializes notes at end of form", () => {
+  describe('unified response model - serialize notes (markform-233)', () => {
+    it('serializes notes at end of form', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -819,10 +818,10 @@ Not applicable for this analysis.
       expect(output).toContain('ref="notes"');
       expect(output).toContain('role="agent"');
       // Notes no longer have state attribute per markform-254
-      expect(output).toContain("Not applicable");
+      expect(output).toContain('Not applicable');
     });
 
-    it("serializes notes in sorted order by ID", () => {
+    it('serializes notes in sorted order by ID', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -862,7 +861,7 @@ Note 1.
       expect(n10Pos).toBeGreaterThan(n2Pos);
     });
 
-    it("serializes note without state attribute when state is undefined", () => {
+    it('serializes note without state attribute when state is undefined', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -887,10 +886,10 @@ General comment.
       expect(output).toContain('ref="name"');
       expect(output).toContain('role="user"');
       expect(output).not.toContain('state=');
-      expect(output).toContain("General comment");
+      expect(output).toContain('General comment');
     });
 
-    it("round-trips notes correctly", () => {
+    it('round-trips notes correctly', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -913,16 +912,16 @@ Not applicable.
       const reparsed = parseForm(output);
 
       expect(reparsed.notes).toHaveLength(1);
-      expect(reparsed.notes[0]?.id).toBe("n1");
-      expect(reparsed.notes[0]?.ref).toBe("notes");
-      expect(reparsed.notes[0]?.role).toBe("agent");
+      expect(reparsed.notes[0]?.id).toBe('n1');
+      expect(reparsed.notes[0]?.ref).toBe('notes');
+      expect(reparsed.notes[0]?.role).toBe('agent');
       // Note: state field is no longer present on notes per markform-254
-      expect(reparsed.notes[0]?.text).toContain("Not applicable");
+      expect(reparsed.notes[0]?.text).toContain('Not applicable');
     });
   });
 
-  describe("unified response model - round-trip with sentinels (markform-253)", () => {
-    it("round-trips |SKIP| sentinel in string field", () => {
+  describe('unified response model - round-trip with sentinels (markform-253)', () => {
+    it('round-trips |SKIP| sentinel in string field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -945,12 +944,12 @@ markform:
       const reparsed = parseForm(output);
 
       // After serialization, |SKIP| becomes state="skipped" attribute
-      expect(reparsed.responsesByFieldId.notes?.state).toBe("skipped");
+      expect(reparsed.responsesByFieldId.notes?.state).toBe('skipped');
       expect(output).toContain('state="skipped"');
-      expect(output).not.toContain("|SKIP|");
+      expect(output).not.toContain('|SKIP|');
     });
 
-    it("round-trips |ABORT| sentinel in url field", () => {
+    it('round-trips |ABORT| sentinel in url field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -973,12 +972,12 @@ markform:
       const reparsed = parseForm(output);
 
       // After serialization, |ABORT| becomes state="aborted" attribute
-      expect(reparsed.responsesByFieldId.website?.state).toBe("aborted");
+      expect(reparsed.responsesByFieldId.website?.state).toBe('aborted');
       expect(output).toContain('state="aborted"');
-      expect(output).not.toContain("|ABORT|");
+      expect(output).not.toContain('|ABORT|');
     });
 
-    it("round-trips form with mixed states and notes", () => {
+    it('round-trips form with mixed states and notes', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1012,15 +1011,15 @@ Age cannot be determined.
       const reparsed = parseForm(output);
 
       // Check responses
-      expect(reparsed.responsesByFieldId.name?.state).toBe("answered");
-      expect(reparsed.responsesByFieldId.bio?.state).toBe("skipped");
-      expect(reparsed.responsesByFieldId.age?.state).toBe("aborted");
-      expect(reparsed.responsesByFieldId.notes?.state).toBe("unanswered");
+      expect(reparsed.responsesByFieldId.name?.state).toBe('answered');
+      expect(reparsed.responsesByFieldId.bio?.state).toBe('skipped');
+      expect(reparsed.responsesByFieldId.age?.state).toBe('aborted');
+      expect(reparsed.responsesByFieldId.notes?.state).toBe('unanswered');
 
       // Check notes - state is no longer present on notes per markform-254
       expect(reparsed.notes).toHaveLength(2);
-      expect(reparsed.notes[0]?.id).toBe("n1");
-      expect(reparsed.notes[1]?.id).toBe("n2");
+      expect(reparsed.notes[0]?.id).toBe('n1');
+      expect(reparsed.notes[1]?.id).toBe('n2');
     });
   });
 });

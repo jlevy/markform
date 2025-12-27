@@ -20,11 +20,11 @@ import type {
   StringValue,
   UrlListValue,
   UrlValue,
-} from "../engine/coreTypes.js";
-import type { Agent, AgentResponse } from "./harnessTypes.js";
+} from '../engine/coreTypes.js';
+import type { Agent, AgentResponse } from './harnessTypes.js';
 
 // Re-export Agent type for backwards compatibility
-export type { Agent, AgentResponse } from "./harnessTypes.js";
+export type { Agent, AgentResponse } from './harnessTypes.js';
 
 // =============================================================================
 // Mock Agent Implementation
@@ -46,7 +46,7 @@ export class MockAgent implements Agent {
     // Extract values from responses
     this.completedValues = {};
     for (const [fieldId, response] of Object.entries(completedForm.responsesByFieldId)) {
-      if (response.state === "answered" && response.value) {
+      if (response.state === 'answered' && response.value) {
         this.completedValues[fieldId] = response.value;
       }
     }
@@ -71,7 +71,7 @@ export class MockAgent implements Agent {
   async generatePatches(
     issues: InspectIssue[],
     _form: ParsedForm,
-    maxPatches: number
+    maxPatches: number,
   ): Promise<AgentResponse> {
     const patches: Patch[] = [];
     const addressedFields = new Set<Id>();
@@ -83,7 +83,7 @@ export class MockAgent implements Agent {
       }
 
       // Skip non-field issues
-      if (issue.scope !== "field") {
+      if (issue.scope !== 'field') {
         continue;
       }
 
@@ -107,10 +107,10 @@ export class MockAgent implements Agent {
       if (!completedValue || !this.hasValue(completedValue)) {
         if (!field.required) {
           patches.push({
-            op: "skip_field",
+            op: 'skip_field',
             fieldId,
-            role: "agent",
-            reason: "No value in mock form",
+            role: 'agent',
+            reason: 'No value in mock form',
           });
           addressedFields.add(fieldId);
         }
@@ -134,21 +134,21 @@ export class MockAgent implements Agent {
    */
   private hasValue(value: FieldValue): boolean {
     switch (value.kind) {
-      case "string":
-        return value.value !== null && value.value !== "";
-      case "number":
+      case 'string':
+        return value.value !== null && value.value !== '';
+      case 'number':
         return value.value !== null;
-      case "string_list":
+      case 'string_list':
         return value.items.length > 0;
-      case "single_select":
+      case 'single_select':
         return value.selected !== null;
-      case "multi_select":
+      case 'multi_select':
         return value.selected.length > 0;
-      case "checkboxes":
+      case 'checkboxes':
         return true; // Checkboxes always have some state
-      case "url":
-        return value.value !== null && value.value !== "";
-      case "url_list":
+      case 'url':
+        return value.value !== null && value.value !== '';
+      case 'url_list':
         return value.items.length > 0;
       default:
         return false;
@@ -158,79 +158,75 @@ export class MockAgent implements Agent {
   /**
    * Create a patch for a field based on its kind and completed value.
    */
-  private createPatch(
-    fieldId: Id,
-    field: Field,
-    value: FieldValue
-  ): Patch | null {
+  private createPatch(fieldId: Id, field: Field, value: FieldValue): Patch | null {
     switch (field.kind) {
-      case "string": {
+      case 'string': {
         const v = value as StringValue;
         return {
-          op: "set_string",
+          op: 'set_string',
           fieldId,
           value: v.value,
         };
       }
 
-      case "number": {
+      case 'number': {
         const v = value as NumberValue;
         return {
-          op: "set_number",
+          op: 'set_number',
           fieldId,
           value: v.value,
         };
       }
 
-      case "string_list": {
+      case 'string_list': {
         const v = value as StringListValue;
         return {
-          op: "set_string_list",
+          op: 'set_string_list',
           fieldId,
           items: v.items,
         };
       }
 
-      case "single_select": {
+      case 'single_select': {
         const v = value as SingleSelectValue;
         return {
-          op: "set_single_select",
+          op: 'set_single_select',
           fieldId,
           selected: v.selected,
         };
       }
 
-      case "multi_select": {
+      case 'multi_select': {
         const v = value as MultiSelectValue;
         return {
-          op: "set_multi_select",
+          op: 'set_multi_select',
           fieldId,
           selected: v.selected,
         };
       }
 
-      case "checkboxes": {
+      case 'checkboxes': {
         const v = value as CheckboxesValue;
         return {
-          op: "set_checkboxes",
+          op: 'set_checkboxes',
           fieldId,
           values: v.values,
         };
       }
 
-      case "url": {
+      case 'url': {
         const v = value as UrlValue;
         return {
-          op: "set_url",
+          op: 'set_url',
           fieldId,
           value: v.value,
         };
       }
 
-      case "url_list": {
+      case 'url_list': {
         const v = value as UrlListValue;
         return {
-          op: "set_url_list",
+          op: 'set_url_list',
           fieldId,
           items: v.items,
         };

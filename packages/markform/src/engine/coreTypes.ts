@@ -5,7 +5,7 @@
  * for forms, fields, values, validation, patches, and session transcripts.
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // =============================================================================
 // Basic Types
@@ -31,7 +31,7 @@ export type ValidatorRef = string | { id: string; [key: string]: unknown };
  * Answer state for a field.
  * What action was taken: no answer yet, answered, skipped, or aborted.
  */
-export type AnswerState = "unanswered" | "answered" | "skipped" | "aborted";
+export type AnswerState = 'unanswered' | 'answered' | 'skipped' | 'aborted';
 
 /**
  * Field response: combines answer state with optional value.
@@ -63,45 +63,40 @@ export interface Note {
 // =============================================================================
 
 /** Multi-checkbox states (checkboxMode="multi", default) - 5 states */
-export type MultiCheckboxState =
-  | "todo"
-  | "done"
-  | "incomplete"
-  | "active"
-  | "na";
+export type MultiCheckboxState = 'todo' | 'done' | 'incomplete' | 'active' | 'na';
 
 /** Simple checkbox states (checkboxMode="simple") - 2 states, GFM-compatible */
-export type SimpleCheckboxState = "todo" | "done";
+export type SimpleCheckboxState = 'todo' | 'done';
 
 /** Explicit checkbox values (checkboxMode="explicit") - requires yes/no answer */
-export type ExplicitCheckboxValue = "unfilled" | "yes" | "no";
+export type ExplicitCheckboxValue = 'unfilled' | 'yes' | 'no';
 
 /** Union type for all checkbox values */
 export type CheckboxValue = MultiCheckboxState | ExplicitCheckboxValue;
 
 /** Checkbox mode determines which states are valid */
-export type CheckboxMode = "multi" | "simple" | "explicit";
+export type CheckboxMode = 'multi' | 'simple' | 'explicit';
 
 /**
  * Controls how fill handles existing values for target role fields.
  * - 'continue': Skip fields that already have values (default)
  * - 'overwrite': Clear and re-fill all fields for the target role
  */
-export type FillMode = "continue" | "overwrite";
+export type FillMode = 'continue' | 'overwrite';
 
 /**
  * Agent mode for fill operations.
  * - 'mock': Use mock agent (for testing, requires mock source file)
  * - 'live': Use live LLM agent (default, requires model)
  */
-export type MockMode = "mock" | "live";
+export type MockMode = 'mock' | 'live';
 
 /**
  * Controls whether a checkbox field acts as a blocking checkpoint.
  * - 'none': No blocking behavior (default)
  * - 'blocking': Fields after this cannot be filled until checkbox is complete
  */
-export type ApprovalMode = "none" | "blocking";
+export type ApprovalMode = 'none' | 'blocking';
 
 // =============================================================================
 // Field Types
@@ -109,31 +104,31 @@ export type ApprovalMode = "none" | "blocking";
 
 /** Field kind discriminant */
 export type FieldKind =
-  | "string"
-  | "number"
-  | "string_list"
-  | "checkboxes"
-  | "single_select"
-  | "multi_select"
-  | "url"
-  | "url_list";
+  | 'string'
+  | 'number'
+  | 'string_list'
+  | 'checkboxes'
+  | 'single_select'
+  | 'multi_select'
+  | 'url'
+  | 'url_list';
 
 /** Field priority level for issue scoring */
-export type FieldPriorityLevel = "high" | "medium" | "low";
+export type FieldPriorityLevel = 'high' | 'medium' | 'low';
 
 /** Base interface for all field types */
 export interface FieldBase {
   id: Id;
   label: string;
-  required: boolean;            // explicit: parser defaults to false if not specified
+  required: boolean; // explicit: parser defaults to false if not specified
   priority: FieldPriorityLevel; // explicit: parser defaults to 'medium' if not specified
-  role: string;                 // explicit: parser defaults to AGENT_ROLE if not specified
+  role: string; // explicit: parser defaults to AGENT_ROLE if not specified
   validate?: ValidatorRef[];
 }
 
 /** String field - single or multiline text */
 export interface StringField extends FieldBase {
-  kind: "string";
+  kind: 'string';
   multiline?: boolean;
   pattern?: string;
   minLength?: number;
@@ -142,7 +137,7 @@ export interface StringField extends FieldBase {
 
 /** Number field - numeric value with optional constraints */
 export interface NumberField extends FieldBase {
-  kind: "number";
+  kind: 'number';
   min?: number;
   max?: number;
   integer?: boolean;
@@ -150,7 +145,7 @@ export interface NumberField extends FieldBase {
 
 /** String list field - array of user-provided strings */
 export interface StringListField extends FieldBase {
-  kind: "string_list";
+  kind: 'string_list';
   minItems?: number;
   maxItems?: number;
   itemMinLength?: number;
@@ -166,7 +161,7 @@ export interface Option {
 
 /** Checkboxes field - stateful checklist with configurable modes */
 export interface CheckboxesField extends FieldBase {
-  kind: "checkboxes";
+  kind: 'checkboxes';
   checkboxMode: CheckboxMode; // explicit: parser defaults to 'multi' if not specified
   minDone?: number;
   options: Option[];
@@ -175,13 +170,13 @@ export interface CheckboxesField extends FieldBase {
 
 /** Single-select field - exactly one option can be selected */
 export interface SingleSelectField extends FieldBase {
-  kind: "single_select";
+  kind: 'single_select';
   options: Option[];
 }
 
 /** Multi-select field - multiple options can be selected */
 export interface MultiSelectField extends FieldBase {
-  kind: "multi_select";
+  kind: 'multi_select';
   options: Option[];
   minSelections?: number;
   maxSelections?: number;
@@ -189,13 +184,13 @@ export interface MultiSelectField extends FieldBase {
 
 /** URL field - single URL value with built-in format validation */
 export interface UrlField extends FieldBase {
-  kind: "url";
+  kind: 'url';
   // No additional constraints - URL format validation is built-in
 }
 
 /** URL list field - multiple URLs (for citations, sources, references) */
 export interface UrlListField extends FieldBase {
-  kind: "url_list";
+  kind: 'url_list';
   minItems?: number;
   maxItems?: number;
   uniqueItems?: boolean;
@@ -239,49 +234,49 @@ export interface FormSchema {
 
 /** String field value */
 export interface StringValue {
-  kind: "string";
+  kind: 'string';
   value: string | null;
 }
 
 /** Number field value */
 export interface NumberValue {
-  kind: "number";
+  kind: 'number';
   value: number | null;
 }
 
 /** String list field value */
 export interface StringListValue {
-  kind: "string_list";
+  kind: 'string_list';
   items: string[];
 }
 
 /** Checkboxes field value */
 export interface CheckboxesValue {
-  kind: "checkboxes";
+  kind: 'checkboxes';
   values: Record<OptionId, CheckboxValue>;
 }
 
 /** Single-select field value */
 export interface SingleSelectValue {
-  kind: "single_select";
+  kind: 'single_select';
   selected: OptionId | null;
 }
 
 /** Multi-select field value */
 export interface MultiSelectValue {
-  kind: "multi_select";
+  kind: 'multi_select';
   selected: OptionId[];
 }
 
 /** URL field value */
 export interface UrlValue {
-  kind: "url";
+  kind: 'url';
   value: string | null; // null if empty, validated URL string otherwise
 }
 
 /** URL list field value */
 export interface UrlListValue {
-  kind: "url_list";
+  kind: 'url_list';
   items: string[]; // Array of URL strings
 }
 
@@ -301,7 +296,7 @@ export type FieldValue =
 // =============================================================================
 
 /** Documentation tag type - determines the semantic purpose of the block */
-export type DocumentationTag = "description" | "instructions" | "documentation";
+export type DocumentationTag = 'description' | 'instructions' | 'documentation';
 
 /** Documentation block attached to form elements */
 export interface DocumentationBlock {
@@ -328,11 +323,11 @@ export interface FormMetadata {
 // =============================================================================
 
 /** Node type for ID index entries - identifies what structural element an ID refers to */
-export type NodeType = "form" | "group" | "field" | "option";
+export type NodeType = 'form' | 'group' | 'field' | 'option';
 
 /** ID index entry for fast lookup and validation */
 export interface IdIndexEntry {
-  nodeType: NodeType; // what this ID refers to 
+  nodeType: NodeType; // what this ID refers to
   parentId?: Id;
   fieldId?: Id;
 }
@@ -353,7 +348,7 @@ export interface ParsedForm {
 // =============================================================================
 
 /** Validation issue severity */
-export type Severity = "error" | "warning" | "info";
+export type Severity = 'error' | 'warning' | 'info';
 
 /** Source position for error locations */
 export interface SourcePosition {
@@ -376,7 +371,7 @@ export interface ValidationIssue {
   path?: string;
   range?: SourceRange;
   validatorId?: string;
-  source: "builtin" | "code" | "llm";
+  source: 'builtin' | 'code' | 'llm';
 }
 
 // =============================================================================
@@ -393,14 +388,14 @@ export interface ErrorLocation {
 
 /** Markdown/Markdoc syntax error */
 export interface ParseError {
-  type: "parse";
+  type: 'parse';
   message: string;
   location?: ErrorLocation;
 }
 
 /** Markform model consistency error */
 export interface MarkformValidationError {
-  type: "validation";
+  type: 'validation';
   message: string;
   location?: ErrorLocation;
 }
@@ -414,14 +409,14 @@ export type MarkformError = ParseError | MarkformValidationError;
 
 /** Standard reason codes for inspect issues */
 export type IssueReason =
-  | "validation_error"
-  | "required_missing"
-  | "checkbox_incomplete"
-  | "min_items_not_met"
-  | "optional_empty";
+  | 'validation_error'
+  | 'required_missing'
+  | 'checkbox_incomplete'
+  | 'min_items_not_met'
+  | 'optional_empty';
 
 /** Issue scope - the level at which the issue applies */
-export type IssueScope = "form" | "group" | "field" | "option";
+export type IssueScope = 'form' | 'group' | 'field' | 'option';
 
 /** Inspect issue - unified type for agent/UI consumption */
 export interface InspectIssue {
@@ -429,7 +424,7 @@ export interface InspectIssue {
   scope: IssueScope;
   reason: IssueReason;
   message: string;
-  severity: "required" | "recommended";
+  severity: 'required' | 'recommended';
   priority: number;
   blockedBy?: Id; // if field is blocked by an incomplete blocking checkpoint
 }
@@ -444,16 +439,13 @@ export interface StructureSummary {
   fieldCount: number;
   optionCount: number;
   fieldCountByKind: Record<FieldKind, number>;
-  groupsById: Record<Id, "field_group">;
+  groupsById: Record<Id, 'field_group'>;
   fieldsById: Record<Id, FieldKind>;
-  optionsById: Record<
-    QualifiedOptionRef,
-    { parentFieldId: Id; parentFieldKind: FieldKind }
-  >;
+  optionsById: Record<QualifiedOptionRef, { parentFieldId: Id; parentFieldKind: FieldKind }>;
 }
 
 /** Progress state for a field or form */
-export type ProgressState = "empty" | "incomplete" | "invalid" | "complete";
+export type ProgressState = 'empty' | 'incomplete' | 'invalid' | 'complete';
 
 /** Checkbox progress counts */
 export interface CheckboxProgressCounts {
@@ -535,7 +527,7 @@ export interface InspectResult {
 
 /** Result from apply operation */
 export interface ApplyResult {
-  applyStatus: "applied" | "rejected";
+  applyStatus: 'applied' | 'rejected';
   structureSummary: StructureSummary;
   progressSummary: ProgressSummary;
   issues: InspectIssue[];
@@ -549,69 +541,69 @@ export interface ApplyResult {
 
 /** Set string field value */
 export interface SetStringPatch {
-  op: "set_string";
+  op: 'set_string';
   fieldId: Id;
   value: string | null;
 }
 
 /** Set number field value */
 export interface SetNumberPatch {
-  op: "set_number";
+  op: 'set_number';
   fieldId: Id;
   value: number | null;
 }
 
 /** Set string list field value */
 export interface SetStringListPatch {
-  op: "set_string_list";
+  op: 'set_string_list';
   fieldId: Id;
   items: string[];
 }
 
 /** Set checkboxes field value (merges with existing) */
 export interface SetCheckboxesPatch {
-  op: "set_checkboxes";
+  op: 'set_checkboxes';
   fieldId: Id;
   values: Record<OptionId, CheckboxValue>;
 }
 
 /** Set single-select field value */
 export interface SetSingleSelectPatch {
-  op: "set_single_select";
+  op: 'set_single_select';
   fieldId: Id;
   selected: OptionId | null;
 }
 
 /** Set multi-select field value */
 export interface SetMultiSelectPatch {
-  op: "set_multi_select";
+  op: 'set_multi_select';
   fieldId: Id;
   selected: OptionId[];
 }
 
 /** Set URL field value */
 export interface SetUrlPatch {
-  op: "set_url";
+  op: 'set_url';
   fieldId: Id;
   value: string | null;
 }
 
 /** Set URL list field value */
 export interface SetUrlListPatch {
-  op: "set_url_list";
+  op: 'set_url_list';
   fieldId: Id;
   items: string[];
 }
 
 /** Clear field value */
 export interface ClearFieldPatch {
-  op: "clear_field";
+  op: 'clear_field';
   fieldId: Id;
 }
 
 /** Skip field - explicitly skip an optional field without providing a value */
 export interface SkipFieldPatch {
-  op: "skip_field";
+  op: 'skip_field';
   fieldId: Id;
   role: string; // required: who is skipping
   reason?: string; // optional reason for skipping
@@ -619,7 +611,7 @@ export interface SkipFieldPatch {
 
 /** Abort field - mark a field as unable to be completed */
 export interface AbortFieldPatch {
-  op: "abort_field";
+  op: 'abort_field';
   fieldId: Id;
   role: string;
   reason?: string;
@@ -627,7 +619,7 @@ export interface AbortFieldPatch {
 
 /** Add note - attach a note to a form element */
 export interface AddNotePatch {
-  op: "add_note";
+  op: 'add_note';
   ref: Id;
   role: string;
   text: string;
@@ -635,7 +627,7 @@ export interface AddNotePatch {
 
 /** Remove note - remove a specific note by ID */
 export interface RemoveNotePatch {
-  op: "remove_note";
+  op: 'remove_note';
   noteId: NoteId;
 }
 
@@ -784,58 +776,41 @@ export const IdSchema = z.string().min(1);
 export const OptionIdSchema = z.string().min(1);
 export const NoteIdSchema = z.string().min(1);
 
-export const ValidatorRefSchema = z.union([
-  z.string(),
-  z.object({ id: z.string() }).passthrough(),
-]);
+export const ValidatorRefSchema = z.union([z.string(), z.object({ id: z.string() }).passthrough()]);
 
 // Answer state schema (markform-255)
-export const AnswerStateSchema = z.enum([
-  "unanswered",
-  "answered",
-  "skipped",
-  "aborted",
-]);
+export const AnswerStateSchema = z.enum(['unanswered', 'answered', 'skipped', 'aborted']);
 
 // Checkbox state schemas
-export const MultiCheckboxStateSchema = z.enum([
-  "todo",
-  "done",
-  "incomplete",
-  "active",
-  "na",
-]);
+export const MultiCheckboxStateSchema = z.enum(['todo', 'done', 'incomplete', 'active', 'na']);
 
-export const SimpleCheckboxStateSchema = z.enum(["todo", "done"]);
+export const SimpleCheckboxStateSchema = z.enum(['todo', 'done']);
 
-export const ExplicitCheckboxValueSchema = z.enum(["unfilled", "yes", "no"]);
+export const ExplicitCheckboxValueSchema = z.enum(['unfilled', 'yes', 'no']);
 
-export const CheckboxValueSchema = z.union([
-  MultiCheckboxStateSchema,
-  ExplicitCheckboxValueSchema,
-]);
+export const CheckboxValueSchema = z.union([MultiCheckboxStateSchema, ExplicitCheckboxValueSchema]);
 
-export const CheckboxModeSchema = z.enum(["multi", "simple", "explicit"]);
+export const CheckboxModeSchema = z.enum(['multi', 'simple', 'explicit']);
 
-export const FillModeSchema = z.enum(["continue", "overwrite"]);
+export const FillModeSchema = z.enum(['continue', 'overwrite']);
 
-export const MockModeSchema = z.enum(["mock", "live"]);
+export const MockModeSchema = z.enum(['mock', 'live']);
 
-export const ApprovalModeSchema = z.enum(["none", "blocking"]);
+export const ApprovalModeSchema = z.enum(['none', 'blocking']);
 
 // Field kind schema
 export const FieldKindSchema = z.enum([
-  "string",
-  "number",
-  "string_list",
-  "checkboxes",
-  "single_select",
-  "multi_select",
-  "url",
-  "url_list",
+  'string',
+  'number',
+  'string_list',
+  'checkboxes',
+  'single_select',
+  'multi_select',
+  'url',
+  'url_list',
 ]);
 
-export const FieldPriorityLevelSchema = z.enum(["high", "medium", "low"]);
+export const FieldPriorityLevelSchema = z.enum(['high', 'medium', 'low']);
 
 // Option schema
 export const OptionSchema = z.object({
@@ -857,7 +832,7 @@ const FieldBaseSchemaPartial = {
 // Field schemas
 export const StringFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("string"),
+  kind: z.literal('string'),
   multiline: z.boolean().optional(),
   pattern: z.string().optional(),
   minLength: z.number().int().nonnegative().optional(),
@@ -866,7 +841,7 @@ export const StringFieldSchema = z.object({
 
 export const NumberFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("number"),
+  kind: z.literal('number'),
   min: z.number().optional(),
   max: z.number().optional(),
   integer: z.boolean().optional(),
@@ -874,7 +849,7 @@ export const NumberFieldSchema = z.object({
 
 export const StringListFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("string_list"),
+  kind: z.literal('string_list'),
   minItems: z.number().int().nonnegative().optional(),
   maxItems: z.number().int().nonnegative().optional(),
   itemMinLength: z.number().int().nonnegative().optional(),
@@ -884,7 +859,7 @@ export const StringListFieldSchema = z.object({
 
 export const CheckboxesFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("checkboxes"),
+  kind: z.literal('checkboxes'),
   checkboxMode: CheckboxModeSchema, // explicit: parser defaults to 'multi'
   minDone: z.number().int().optional(),
   options: z.array(OptionSchema),
@@ -893,13 +868,13 @@ export const CheckboxesFieldSchema = z.object({
 
 export const SingleSelectFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("single_select"),
+  kind: z.literal('single_select'),
   options: z.array(OptionSchema),
 });
 
 export const MultiSelectFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("multi_select"),
+  kind: z.literal('multi_select'),
   options: z.array(OptionSchema),
   minSelections: z.number().int().nonnegative().optional(),
   maxSelections: z.number().int().nonnegative().optional(),
@@ -907,18 +882,18 @@ export const MultiSelectFieldSchema = z.object({
 
 export const UrlFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("url"),
+  kind: z.literal('url'),
 });
 
 export const UrlListFieldSchema = z.object({
   ...FieldBaseSchemaPartial,
-  kind: z.literal("url_list"),
+  kind: z.literal('url_list'),
   minItems: z.number().int().nonnegative().optional(),
   maxItems: z.number().int().nonnegative().optional(),
   uniqueItems: z.boolean().optional(),
 });
 
-export const FieldSchema = z.discriminatedUnion("kind", [
+export const FieldSchema = z.discriminatedUnion('kind', [
   StringFieldSchema,
   NumberFieldSchema,
   StringListFieldSchema,
@@ -946,46 +921,46 @@ export const FormSchemaSchema = z.object({
 
 // Field value schemas
 export const StringValueSchema = z.object({
-  kind: z.literal("string"),
+  kind: z.literal('string'),
   value: z.string().nullable(),
 });
 
 export const NumberValueSchema = z.object({
-  kind: z.literal("number"),
+  kind: z.literal('number'),
   value: z.number().nullable(),
 });
 
 export const StringListValueSchema = z.object({
-  kind: z.literal("string_list"),
+  kind: z.literal('string_list'),
   items: z.array(z.string()),
 });
 
 export const CheckboxesValueSchema = z.object({
-  kind: z.literal("checkboxes"),
+  kind: z.literal('checkboxes'),
   values: z.record(OptionIdSchema, CheckboxValueSchema),
 });
 
 export const SingleSelectValueSchema = z.object({
-  kind: z.literal("single_select"),
+  kind: z.literal('single_select'),
   selected: OptionIdSchema.nullable(),
 });
 
 export const MultiSelectValueSchema = z.object({
-  kind: z.literal("multi_select"),
+  kind: z.literal('multi_select'),
   selected: z.array(OptionIdSchema),
 });
 
 export const UrlValueSchema = z.object({
-  kind: z.literal("url"),
+  kind: z.literal('url'),
   value: z.string().nullable(),
 });
 
 export const UrlListValueSchema = z.object({
-  kind: z.literal("url_list"),
+  kind: z.literal('url_list'),
   items: z.array(z.string()),
 });
 
-export const FieldValueSchema = z.discriminatedUnion("kind", [
+export const FieldValueSchema = z.discriminatedUnion('kind', [
   StringValueSchema,
   NumberValueSchema,
   StringListValueSchema,
@@ -1012,11 +987,7 @@ export const NoteSchema = z.object({
 });
 
 // Documentation block schema
-export const DocumentationTagSchema = z.enum([
-  "description",
-  "instructions",
-  "documentation",
-]);
+export const DocumentationTagSchema = z.enum(['description', 'instructions', 'documentation']);
 
 export const DocumentationBlockSchema = z.object({
   tag: DocumentationTagSchema,
@@ -1032,7 +1003,7 @@ export const FormMetadataSchema = z.object({
 });
 
 // Validation schemas
-export const SeveritySchema = z.enum(["error", "warning", "info"]);
+export const SeveritySchema = z.enum(['error', 'warning', 'info']);
 
 export const SourcePositionSchema = z.object({
   line: z.number().int().positive(),
@@ -1052,7 +1023,7 @@ export const ValidationIssueSchema = z.object({
   path: z.string().optional(),
   range: SourceRangeSchema.optional(),
   validatorId: z.string().optional(),
-  source: z.enum(["builtin", "code", "llm"]),
+  source: z.enum(['builtin', 'code', 'llm']),
 });
 
 // Error location schema (markform-210)
@@ -1065,55 +1036,45 @@ export const ErrorLocationSchema = z.object({
 
 // Error type schemas (markform-210)
 export const ParseErrorSchema = z.object({
-  type: z.literal("parse"),
+  type: z.literal('parse'),
   message: z.string(),
   location: ErrorLocationSchema.optional(),
 });
 
 export const MarkformValidationErrorSchema = z.object({
-  type: z.literal("validation"),
+  type: z.literal('validation'),
   message: z.string(),
   location: ErrorLocationSchema.optional(),
 });
 
-export const MarkformErrorSchema = z.discriminatedUnion("type", [
+export const MarkformErrorSchema = z.discriminatedUnion('type', [
   ParseErrorSchema,
   MarkformValidationErrorSchema,
 ]);
 
 // Inspect issue schema
 export const IssueReasonSchema = z.enum([
-  "validation_error",
-  "required_missing",
-  "checkbox_incomplete",
-  "min_items_not_met",
-  "optional_empty",
+  'validation_error',
+  'required_missing',
+  'checkbox_incomplete',
+  'min_items_not_met',
+  'optional_empty',
 ]);
 
-export const IssueScopeSchema = z.enum([
-  "form",
-  "group",
-  "field",
-  "option",
-]);
+export const IssueScopeSchema = z.enum(['form', 'group', 'field', 'option']);
 
 export const InspectIssueSchema = z.object({
   ref: z.union([IdSchema, z.string()]), // Id or QualifiedOptionRef
   scope: IssueScopeSchema,
   reason: IssueReasonSchema,
   message: z.string(),
-  severity: z.enum(["required", "recommended"]),
+  severity: z.enum(['required', 'recommended']),
   priority: z.number().int().positive(),
   blockedBy: IdSchema.optional(),
 });
 
 // Summary schemas
-export const ProgressStateSchema = z.enum([
-  "empty",
-  "incomplete",
-  "invalid",
-  "complete",
-]);
+export const ProgressStateSchema = z.enum(['empty', 'incomplete', 'invalid', 'complete']);
 
 export const CheckboxProgressCountsSchema = z.object({
   total: z.number().int().nonnegative(),
@@ -1170,14 +1131,14 @@ export const StructureSummarySchema = z.object({
   fieldCount: z.number().int().nonnegative(),
   optionCount: z.number().int().nonnegative(),
   fieldCountByKind: z.record(FieldKindSchema, z.number().int().nonnegative()),
-  groupsById: z.record(IdSchema, z.literal("field_group")),
+  groupsById: z.record(IdSchema, z.literal('field_group')),
   fieldsById: z.record(IdSchema, FieldKindSchema),
   optionsById: z.record(
     z.string(),
     z.object({
       parentFieldId: IdSchema,
       parentFieldKind: FieldKindSchema,
-    })
+    }),
   ),
 });
 
@@ -1191,7 +1152,7 @@ export const InspectResultSchema = z.object({
 });
 
 export const ApplyResultSchema = z.object({
-  applyStatus: z.enum(["applied", "rejected"]),
+  applyStatus: z.enum(['applied', 'rejected']),
   structureSummary: StructureSummarySchema,
   progressSummary: ProgressSummarySchema,
   issues: z.array(InspectIssueSchema),
@@ -1201,85 +1162,85 @@ export const ApplyResultSchema = z.object({
 
 // Patch schemas
 export const SetStringPatchSchema = z.object({
-  op: z.literal("set_string"),
+  op: z.literal('set_string'),
   fieldId: IdSchema,
   value: z.string().nullable(),
 });
 
 export const SetNumberPatchSchema = z.object({
-  op: z.literal("set_number"),
+  op: z.literal('set_number'),
   fieldId: IdSchema,
   value: z.number().nullable(),
 });
 
 export const SetStringListPatchSchema = z.object({
-  op: z.literal("set_string_list"),
+  op: z.literal('set_string_list'),
   fieldId: IdSchema,
   items: z.array(z.string()),
 });
 
 export const SetCheckboxesPatchSchema = z.object({
-  op: z.literal("set_checkboxes"),
+  op: z.literal('set_checkboxes'),
   fieldId: IdSchema,
   values: z.record(OptionIdSchema, CheckboxValueSchema),
 });
 
 export const SetSingleSelectPatchSchema = z.object({
-  op: z.literal("set_single_select"),
+  op: z.literal('set_single_select'),
   fieldId: IdSchema,
   selected: OptionIdSchema.nullable(),
 });
 
 export const SetMultiSelectPatchSchema = z.object({
-  op: z.literal("set_multi_select"),
+  op: z.literal('set_multi_select'),
   fieldId: IdSchema,
   selected: z.array(OptionIdSchema),
 });
 
 export const SetUrlPatchSchema = z.object({
-  op: z.literal("set_url"),
+  op: z.literal('set_url'),
   fieldId: IdSchema,
   value: z.string().nullable(),
 });
 
 export const SetUrlListPatchSchema = z.object({
-  op: z.literal("set_url_list"),
+  op: z.literal('set_url_list'),
   fieldId: IdSchema,
   items: z.array(z.string()),
 });
 
 export const ClearFieldPatchSchema = z.object({
-  op: z.literal("clear_field"),
+  op: z.literal('clear_field'),
   fieldId: IdSchema,
 });
 
 export const SkipFieldPatchSchema = z.object({
-  op: z.literal("skip_field"),
+  op: z.literal('skip_field'),
   fieldId: IdSchema,
   role: z.string(),
   reason: z.string().optional(),
 });
 
 export const AbortFieldPatchSchema = z.object({
-  op: z.literal("abort_field"),
+  op: z.literal('abort_field'),
   fieldId: IdSchema,
   role: z.string(),
   reason: z.string().optional(),
 });
 
 export const AddNotePatchSchema = z.object({
-  op: z.literal("add_note"),
+  op: z.literal('add_note'),
   ref: IdSchema,
   role: z.string(),
   text: z.string(),
 });
 
 export const RemoveNotePatchSchema = z.object({
-  op: z.literal("remove_note"),
+  op: z.literal('remove_note'),
   noteId: NoteIdSchema,
 });
 
-export const PatchSchema = z.discriminatedUnion("op", [
+export const PatchSchema = z.discriminatedUnion('op', [
   SetStringPatchSchema,
   SetNumberPatchSchema,
   SetStringListPatchSchema,
@@ -1319,10 +1280,14 @@ export const HarnessConfigSchema = z.object({
 export const SessionTurnStatsSchema = z.object({
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
-  toolCalls: z.array(z.object({
-    name: z.string(),
-    count: z.number().int().positive(),
-  })).optional(),
+  toolCalls: z
+    .array(
+      z.object({
+        name: z.string(),
+        count: z.number().int().positive(),
+      }),
+    )
+    .optional(),
 });
 
 export const SessionTurnSchema = z.object({

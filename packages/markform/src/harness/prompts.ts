@@ -63,8 +63,8 @@ Guidelines:
  * This tells the model how to use the patch submission tool.
  */
 export const GENERATE_PATCHES_TOOL_DESCRIPTION =
-  "Generate patches to fill form fields. Each patch sets a field value. " +
-  "Use the field IDs from the issues list. Return patches for all issues you can address.";
+  'Generate patches to fill form fields. Each patch sets a field value. ' +
+  'Use the field IDs from the issues list. Return patches for all issues you can address.';
 
 // =============================================================================
 // Context Prompt Templates
@@ -73,7 +73,7 @@ export const GENERATE_PATCHES_TOOL_DESCRIPTION =
 /**
  * Header for the issues section in the context prompt.
  */
-export const ISSUES_HEADER = "# Current Form Issues";
+export const ISSUES_HEADER = '# Current Form Issues';
 
 /**
  * Template for the issues intro text.
@@ -112,9 +112,9 @@ If you cannot find verifiable information for a field, skip it:
  * Section headers used when building the composed system prompt.
  */
 export const SECTION_HEADERS = {
-  formInstructions: "# Form Instructions",
+  formInstructions: '# Form Instructions',
   roleInstructions: (role: string) => `# Instructions for ${role} role`,
-  roleGuidance: "# Role guidance",
-  fieldInstructions: "# Field-specific instructions",
-  additionalContext: "# Additional Context",
+  roleGuidance: '# Role guidance',
+  fieldInstructions: '# Field-specific instructions',
+  additionalContext: '# Additional Context',
 } as const;

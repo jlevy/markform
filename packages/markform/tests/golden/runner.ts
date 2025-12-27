@@ -7,23 +7,23 @@
  * - Final form matches completed mock
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 // Use pure JS sha256 to match harness.ts (avoids node:crypto for portability).
-import { sha256 } from "js-sha256";
+import { sha256 } from 'js-sha256';
 
-import { applyPatches } from "../../src/engine/apply.js";
-import { inspect } from "../../src/engine/inspect.js";
-import { parseForm } from "../../src/engine/parse.js";
-import { serialize } from "../../src/engine/serialize.js";
-import { parseSession } from "../../src/engine/session.js";
+import { applyPatches } from '../../src/engine/apply.js';
+import { inspect } from '../../src/engine/inspect.js';
+import { parseForm } from '../../src/engine/parse.js';
+import { serialize } from '../../src/engine/serialize.js';
+import { parseSession } from '../../src/engine/session.js';
 import type {
   InspectIssue,
   ParsedForm,
   SessionTranscript,
   SessionTurn,
-} from "../../src/engine/coreTypes.js";
+} from '../../src/engine/coreTypes.js';
 
 // =============================================================================
 // Types
@@ -52,7 +52,7 @@ export interface TurnResult {
 }
 
 export interface IssueDiff {
-  type: "missing" | "extra";
+  type: 'missing' | 'extra';
   issue: InspectIssue;
 }
 
@@ -79,7 +79,7 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
   // Load and parse session
   let session: SessionTranscript;
   try {
-    const sessionYaml = readFileSync(sessionPath, "utf-8");
+    const sessionYaml = readFileSync(sessionPath, 'utf-8');
     session = parseSession(sessionYaml);
   } catch (err) {
     return {
@@ -102,7 +102,7 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
   let form: ParsedForm;
   try {
     const formPath = join(baseDir, session.form.path);
-    const formContent = readFileSync(formPath, "utf-8");
+    const formContent = readFileSync(formPath, 'utf-8');
     form = parseForm(formContent);
   } catch (err) {
     return {
@@ -128,12 +128,12 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
     }
     if (!turnResult.hashMatch) {
       errors.push(
-        `Turn ${turn.turn}: Hash mismatch (expected ${turnResult.expectedHash}, got ${turnResult.actualHash})`
+        `Turn ${turn.turn}: Hash mismatch (expected ${turnResult.expectedHash}, got ${turnResult.actualHash})`,
       );
     }
     if (!turnResult.countsMatch) {
       errors.push(
-        `Turn ${turn.turn}: Counts mismatch (answered: expected ${turnResult.expectedAnswered}, got ${turnResult.actualAnswered}; skipped: expected ${turnResult.expectedSkipped}, got ${turnResult.actualSkipped})`
+        `Turn ${turn.turn}: Counts mismatch (answered: expected ${turnResult.expectedAnswered}, got ${turnResult.actualAnswered}; skipped: expected ${turnResult.expectedSkipped}, got ${turnResult.actualSkipped})`,
       );
     }
     // Note: patches are applied within replayTurn, so form is already updated
@@ -148,21 +148,21 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
   if (session.final.expectedCompletedForm) {
     try {
       const expectedPath = join(baseDir, session.final.expectedCompletedForm);
-      const expectedContent = readFileSync(expectedPath, "utf-8");
+      const expectedContent = readFileSync(expectedPath, 'utf-8');
       const expectedForm = parseForm(expectedContent);
 
       // Compare values
       formMatches = compareFormValues(form, expectedForm);
     } catch (err) {
       errors.push(
-        `Failed to load expected form: ${err instanceof Error ? err.message : String(err)}`
+        `Failed to load expected form: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }
 
   // Check completion expectation
   if (session.final.expectComplete && !isComplete) {
-    errors.push("Expected form to be complete, but it is not");
+    errors.push('Expected form to be complete, but it is not');
   }
 
   const success =
@@ -230,10 +230,7 @@ function replayTurn(form: ParsedForm, turn: SessionTurn): TurnResult {
 /**
  * Compare expected and actual issues.
  */
-function compareIssues(
-  expected: InspectIssue[],
-  actual: InspectIssue[]
-): IssueDiff[] {
+function compareIssues(expected: InspectIssue[], actual: InspectIssue[]): IssueDiff[] {
   const diffs: IssueDiff[] = [];
 
   // Create sets for comparison
@@ -243,14 +240,14 @@ function compareIssues(
   // Find missing (expected but not actual)
   for (const issue of expected) {
     if (!actualSet.has(issueKey(issue))) {
-      diffs.push({ type: "missing", issue });
+      diffs.push({ type: 'missing', issue });
     }
   }
 
   // Find extra (actual but not expected)
   for (const issue of actual) {
     if (!expectedSet.has(issueKey(issue))) {
-      diffs.push({ type: "extra", issue });
+      diffs.push({ type: 'extra', issue });
     }
   }
 
@@ -269,21 +266,21 @@ function issueKey(issue: InspectIssue): string {
  */
 function isEmptyValue(value: unknown): boolean {
   if (!value) {
-return true;
-}
+    return true;
+  }
   const v = value as Record<string, unknown>;
   if (v.value === null) {
-return true;
-}
+    return true;
+  }
   if (Array.isArray(v.items) && v.items.length === 0) {
-return true;
-}
+    return true;
+  }
   if (Array.isArray(v.selected) && v.selected.length === 0) {
-return true;
-}
-  if (v.values && typeof v.values === "object" && Object.keys(v.values).length === 0) {
-return true;
-}
+    return true;
+  }
+  if (v.values && typeof v.values === 'object' && Object.keys(v.values).length === 0) {
+    return true;
+  }
   return false;
 }
 
@@ -298,19 +295,17 @@ function compareFormValues(actual: ParsedForm, expected: ParsedForm): boolean {
   const expectedResponses = expected.responsesByFieldId;
 
   // Get all field IDs from both
-  const allIds = new Set([
-    ...Object.keys(actualResponses),
-    ...Object.keys(expectedResponses),
-  ]);
+  const allIds = new Set([...Object.keys(actualResponses), ...Object.keys(expectedResponses)]);
 
   for (const id of allIds) {
     const actualResponse = actualResponses[id];
     const expectedResponse = expectedResponses[id];
-    const isSkipped = actualResponse?.state === "skipped";
+    const isSkipped = actualResponse?.state === 'skipped';
 
     // If field is skipped in actual, it should match empty/null in expected
     if (isSkipped) {
-      const expectedValue = expectedResponse?.state === "answered" ? expectedResponse.value : undefined;
+      const expectedValue =
+        expectedResponse?.state === 'answered' ? expectedResponse.value : undefined;
       if (expectedValue && !isEmptyValue(expectedValue)) {
         return false; // Expected has a value but actual skipped it
       }
@@ -339,7 +334,7 @@ export function findSessionFiles(dir: string): string[] {
       const stat = statSync(fullPath);
       if (stat.isDirectory()) {
         walk(fullPath);
-      } else if (entry.endsWith(".session.yaml")) {
+      } else if (entry.endsWith('.session.yaml')) {
         results.push(fullPath);
       }
     }

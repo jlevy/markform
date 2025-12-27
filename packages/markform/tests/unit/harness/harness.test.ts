@@ -2,11 +2,11 @@
  * Tests for the Form Harness.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { parseForm } from "../../../src/engine/parse.js";
-import { createHarness, FormHarness } from "../../../src/harness/harness.js";
-import { createMockAgent } from "../../../src/harness/mockAgent.js";
+import { parseForm } from '../../../src/engine/parse.js';
+import { createHarness, FormHarness } from '../../../src/harness/harness.js';
+import { createMockAgent } from '../../../src/harness/mockAgent.js';
 
 // =============================================================================
 // Test Fixtures
@@ -60,18 +60,18 @@ John Doe
 // Harness Tests
 // =============================================================================
 
-describe("FormHarness", () => {
-  describe("creation", () => {
-    it("creates harness with default config", () => {
+describe('FormHarness', () => {
+  describe('creation', () => {
+    it('creates harness with default config', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
       expect(harness).toBeInstanceOf(FormHarness);
-      expect(harness.getState()).toBe("init");
+      expect(harness.getState()).toBe('init');
       expect(harness.getTurnNumber()).toBe(0);
     });
 
-    it("creates harness with custom config", () => {
+    it('creates harness with custom config', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form, {
         maxTurns: 5,
@@ -82,8 +82,8 @@ describe("FormHarness", () => {
     });
   });
 
-  describe("step", () => {
-    it("returns step result with issues", () => {
+  describe('step', () => {
+    it('returns step result with issues', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
@@ -95,16 +95,16 @@ describe("FormHarness", () => {
       expect(result.structureSummary.fieldCount).toBe(2);
     });
 
-    it("transitions to wait state after step", () => {
+    it('transitions to wait state after step', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
       harness.step();
 
-      expect(harness.getState()).toBe("wait");
+      expect(harness.getState()).toBe('wait');
     });
 
-    it("increments turn number on each step", () => {
+    it('increments turn number on each step', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
@@ -118,8 +118,8 @@ describe("FormHarness", () => {
     });
   });
 
-  describe("apply", () => {
-    it("applies valid patches", () => {
+  describe('apply', () => {
+    it('applies valid patches', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
@@ -127,23 +127,23 @@ describe("FormHarness", () => {
 
       const result = harness.apply(
         [
-          { op: "set_string", fieldId: "name", value: "Test" },
-          { op: "set_number", fieldId: "age", value: 25 },
+          { op: 'set_string', fieldId: 'name', value: 'Test' },
+          { op: 'set_number', fieldId: 'age', value: 25 },
         ],
-        stepResult.issues
+        stepResult.issues,
       );
 
       expect(result.isComplete).toBe(true);
     });
 
-    it("throws when not in wait state", () => {
+    it('throws when not in wait state', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
-      expect(() => harness.apply([], [])).toThrow("Cannot apply in state");
+      expect(() => harness.apply([], [])).toThrow('Cannot apply in state');
     });
 
-    it("throws when too many patches", () => {
+    it('throws when too many patches', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form, { maxPatchesPerTurn: 1 });
 
@@ -152,23 +152,20 @@ describe("FormHarness", () => {
       expect(() =>
         harness.apply(
           [
-            { op: "set_string", fieldId: "name", value: "Test" },
-            { op: "set_number", fieldId: "age", value: 25 },
+            { op: 'set_string', fieldId: 'name', value: 'Test' },
+            { op: 'set_number', fieldId: 'age', value: 25 },
           ],
-          []
-        )
-      ).toThrow("Too many patches");
+          [],
+        ),
+      ).toThrow('Too many patches');
     });
 
-    it("records turns", () => {
+    it('records turns', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
       const stepResult = harness.step();
-      harness.apply(
-        [{ op: "set_string", fieldId: "name", value: "Test" }],
-        stepResult.issues
-      );
+      harness.apply([{ op: 'set_string', fieldId: 'name', value: 'Test' }], stepResult.issues);
 
       const turns = harness.getTurns();
       expect(turns.length).toBe(1);
@@ -177,29 +174,29 @@ describe("FormHarness", () => {
     });
   });
 
-  describe("completion", () => {
-    it("detects complete form", () => {
+  describe('completion', () => {
+    it('detects complete form', () => {
       const form = parseForm(FILLED_FORM);
       const harness = createHarness(form);
 
       const result = harness.step();
 
       expect(result.isComplete).toBe(true);
-      expect(harness.getState()).toBe("complete");
+      expect(harness.getState()).toBe('complete');
     });
 
-    it("throws on step after complete", () => {
+    it('throws on step after complete', () => {
       const form = parseForm(FILLED_FORM);
       const harness = createHarness(form);
 
       harness.step(); // Completes
 
-      expect(() => harness.step()).toThrow("Harness is complete");
+      expect(() => harness.step()).toThrow('Harness is complete');
     });
   });
 
-  describe("max turns", () => {
-    it("enforces max turns limit", () => {
+  describe('max turns', () => {
+    it('enforces max turns limit', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form, { maxTurns: 2 });
 
@@ -215,25 +212,25 @@ describe("FormHarness", () => {
       // After second step with maxTurns=2, state should be wait still
       // but after apply, should transition to complete
       harness.apply([], []);
-      expect(harness.getState()).toBe("complete");
+      expect(harness.getState()).toBe('complete');
       expect(harness.hasReachedMaxTurns()).toBe(true);
     });
   });
 
-  describe("getMarkdown", () => {
-    it("returns serialized form", () => {
+  describe('getMarkdown', () => {
+    it('returns serialized form', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
       const markdown = harness.getMarkdown();
 
-      expect(markdown).toContain("{% form");
-      expect(markdown).toContain("{% string");
+      expect(markdown).toContain('{% form');
+      expect(markdown).toContain('{% string');
     });
   });
 
-  describe("getMarkdownHash", () => {
-    it("returns consistent hash", () => {
+  describe('getMarkdownHash', () => {
+    it('returns consistent hash', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
@@ -245,7 +242,7 @@ describe("FormHarness", () => {
     });
   });
 
-  describe("issue filtering", () => {
+  describe('issue filtering', () => {
     // Form with 2 groups, 3 fields each (6 required fields total)
     const MULTI_GROUP_FORM = `---
 markform:
@@ -269,31 +266,25 @@ markform:
 {% /form %}
 `;
 
-    it("limits issues by maxFieldsPerTurn", () => {
+    it('limits issues by maxFieldsPerTurn', () => {
       const form = parseForm(MULTI_GROUP_FORM);
       const harness = createHarness(form, { maxFieldsPerTurn: 2 });
 
       const result = harness.step();
 
       // Should have at most 2 unique fields in the issues
-      const fieldIds = new Set(
-        result.issues
-          .filter((i) => i.scope === "field")
-          .map((i) => i.ref)
-      );
+      const fieldIds = new Set(result.issues.filter((i) => i.scope === 'field').map((i) => i.ref));
       expect(fieldIds.size).toBeLessThanOrEqual(2);
     });
 
-    it("limits issues by maxGroupsPerTurn", () => {
+    it('limits issues by maxGroupsPerTurn', () => {
       const form = parseForm(MULTI_GROUP_FORM);
       const harness = createHarness(form, { maxGroupsPerTurn: 1 });
 
       const result = harness.step();
 
       // Get unique group IDs from the field issues
-      const fieldRefs = result.issues
-        .filter((i) => i.scope === "field")
-        .map((i) => i.ref);
+      const fieldRefs = result.issues.filter((i) => i.scope === 'field').map((i) => i.ref);
 
       // Map field refs to their parent groups using the form's idIndex
       const groupIds = new Set<string>();
@@ -308,7 +299,7 @@ markform:
       expect(groupIds.size).toBeLessThanOrEqual(1);
     });
 
-    it("applies both field and group limits together", () => {
+    it('applies both field and group limits together', () => {
       const form = parseForm(MULTI_GROUP_FORM);
       const harness = createHarness(form, {
         maxGroupsPerTurn: 1,
@@ -317,15 +308,13 @@ markform:
 
       const result = harness.step();
 
-      const fieldRefs = result.issues
-        .filter((i) => i.scope === "field")
-        .map((i) => i.ref);
+      const fieldRefs = result.issues.filter((i) => i.scope === 'field').map((i) => i.ref);
 
       // Should have at most 2 fields from 1 group
       expect(fieldRefs.length).toBeLessThanOrEqual(2);
     });
 
-    it("applies maxIssues after field/group filtering", () => {
+    it('applies maxIssues after field/group filtering', () => {
       const form = parseForm(MULTI_GROUP_FORM);
       const harness = createHarness(form, {
         maxFieldsPerTurn: 5, // Would allow 5 fields
@@ -343,8 +332,8 @@ markform:
 // Mock Agent Tests
 // =============================================================================
 
-describe("MockAgent", () => {
-  it("generates patches from completed form", async () => {
+describe('MockAgent', () => {
+  it('generates patches from completed form', async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
     const agent = createMockAgent(filledForm);
@@ -352,19 +341,19 @@ describe("MockAgent", () => {
     // Create fake issues for the empty fields
     const issues = [
       {
-        ref: "name",
-        scope: "field" as const,
-        reason: "required_missing" as const,
-        message: "Required field is empty",
-        severity: "required" as const,
+        ref: 'name',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
         priority: 1,
       },
       {
-        ref: "age",
-        scope: "field" as const,
-        reason: "required_missing" as const,
-        message: "Required field is empty",
-        severity: "required" as const,
+        ref: 'age',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
         priority: 2,
       },
     ];
@@ -373,37 +362,37 @@ describe("MockAgent", () => {
 
     expect(response.patches.length).toBe(2);
     expect(response.patches[0]).toEqual({
-      op: "set_string",
-      fieldId: "name",
-      value: "John Doe",
+      op: 'set_string',
+      fieldId: 'name',
+      value: 'John Doe',
     });
     expect(response.patches[1]).toEqual({
-      op: "set_number",
-      fieldId: "age",
+      op: 'set_number',
+      fieldId: 'age',
       value: 30,
     });
   });
 
-  it("respects maxPatches limit", async () => {
+  it('respects maxPatches limit', async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
     const agent = createMockAgent(filledForm);
 
     const issues = [
       {
-        ref: "name",
-        scope: "field" as const,
-        reason: "required_missing" as const,
-        message: "Required field is empty",
-        severity: "required" as const,
+        ref: 'name',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
         priority: 1,
       },
       {
-        ref: "age",
-        scope: "field" as const,
-        reason: "required_missing" as const,
-        message: "Required field is empty",
-        severity: "required" as const,
+        ref: 'age',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
         priority: 2,
       },
     ];
@@ -413,18 +402,18 @@ describe("MockAgent", () => {
     expect(response.patches.length).toBe(1);
   });
 
-  it("skips non-field issues", async () => {
+  it('skips non-field issues', async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
     const agent = createMockAgent(filledForm);
 
     const issues = [
       {
-        ref: "test_form",
-        scope: "form" as const,
-        reason: "validation_error" as const,
-        message: "Form error",
-        severity: "required" as const,
+        ref: 'test_form',
+        scope: 'form' as const,
+        reason: 'validation_error' as const,
+        message: 'Form error',
+        severity: 'required' as const,
         priority: 1,
       },
     ];
@@ -434,7 +423,7 @@ describe("MockAgent", () => {
     expect(response.patches.length).toBe(0);
   });
 
-  it("generates patches for url fields", async () => {
+  it('generates patches for url fields', async () => {
     const URL_FORM_EMPTY = `---
 markform:
   spec: MF/0.1
@@ -486,19 +475,19 @@ https://github.com/example
 
     const issues = [
       {
-        ref: "website",
-        scope: "field" as const,
-        reason: "required_missing" as const,
-        message: "Required field is empty",
-        severity: "required" as const,
+        ref: 'website',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
         priority: 1,
       },
       {
-        ref: "sources",
-        scope: "field" as const,
-        reason: "required_missing" as const,
-        message: "Required field is empty",
-        severity: "required" as const,
+        ref: 'sources',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
         priority: 2,
       },
     ];
@@ -507,14 +496,14 @@ https://github.com/example
 
     expect(response.patches.length).toBe(2);
     expect(response.patches[0]).toEqual({
-      op: "set_url",
-      fieldId: "website",
-      value: "https://example.com",
+      op: 'set_url',
+      fieldId: 'website',
+      value: 'https://example.com',
     });
     expect(response.patches[1]).toEqual({
-      op: "set_url_list",
-      fieldId: "sources",
-      items: ["https://docs.example.com", "https://github.com/example"],
+      op: 'set_url_list',
+      fieldId: 'sources',
+      items: ['https://docs.example.com', 'https://github.com/example'],
     });
   });
 });
@@ -523,8 +512,8 @@ https://github.com/example
 // Integration Tests
 // =============================================================================
 
-describe("Harness + MockAgent Integration", () => {
-  it("fills form to completion using mock agent", async () => {
+describe('Harness + MockAgent Integration', () => {
+  it('fills form to completion using mock agent', async () => {
     const emptyForm = parseForm(SIMPLE_FORM);
     const filledForm = parseForm(FILLED_FORM);
 
@@ -540,7 +529,7 @@ describe("Harness + MockAgent Integration", () => {
     result = harness.apply(response.patches, result.issues);
 
     expect(result.isComplete).toBe(true);
-    expect(harness.getState()).toBe("complete");
+    expect(harness.getState()).toBe('complete');
 
     // Verify turns recorded
     const turns = harness.getTurns();
@@ -553,9 +542,9 @@ describe("Harness + MockAgent Integration", () => {
 // Fill Mode Tests
 // =============================================================================
 
-describe("fillMode", () => {
-  describe("continue mode (default)", () => {
-    it("skips filled fields - form is immediately complete", () => {
+describe('fillMode', () => {
+  describe('continue mode (default)', () => {
+    it('skips filled fields - form is immediately complete', () => {
       const form = parseForm(FILLED_FORM);
       const harness = createHarness(form);
 
@@ -563,12 +552,12 @@ describe("fillMode", () => {
 
       // Form is already complete with filled fields
       expect(result.isComplete).toBe(true);
-      expect(result.issues.filter((i) => i.severity === "required").length).toBe(0);
+      expect(result.issues.filter((i) => i.severity === 'required').length).toBe(0);
     });
 
-    it("explicitly setting continue mode behaves same as default", () => {
+    it('explicitly setting continue mode behaves same as default', () => {
       const form = parseForm(FILLED_FORM);
-      const harness = createHarness(form, { fillMode: "continue" });
+      const harness = createHarness(form, { fillMode: 'continue' });
 
       const result = harness.step();
 
@@ -577,26 +566,26 @@ describe("fillMode", () => {
     });
   });
 
-  describe("overwrite mode", () => {
-    it("clears target role fields on first step", () => {
+  describe('overwrite mode', () => {
+    it('clears target role fields on first step', () => {
       const form = parseForm(FILLED_FORM);
-      const harness = createHarness(form, { fillMode: "overwrite" });
+      const harness = createHarness(form, { fillMode: 'overwrite' });
 
       const result = harness.step();
 
       // Fields should have been cleared, so form is NOT complete
       expect(result.isComplete).toBe(false);
       // Should have issues for the cleared fields
-      const requiredIssues = result.issues.filter((i) => i.severity === "required");
+      const requiredIssues = result.issues.filter((i) => i.severity === 'required');
       expect(requiredIssues.length).toBe(2); // name and age
     });
 
-    it("allows re-filling cleared fields", async () => {
+    it('allows re-filling cleared fields', async () => {
       const emptyForm = parseForm(SIMPLE_FORM);
       const filledForm = parseForm(FILLED_FORM);
 
       // Start with a filled form in overwrite mode
-      const harness = createHarness(parseForm(FILLED_FORM), { fillMode: "overwrite" });
+      const harness = createHarness(parseForm(FILLED_FORM), { fillMode: 'overwrite' });
       const agent = createMockAgent(filledForm);
 
       // First step - fields should be cleared
@@ -611,7 +600,7 @@ describe("fillMode", () => {
       expect(result.isComplete).toBe(true);
     });
 
-    it("respects targetRoles when clearing", () => {
+    it('respects targetRoles when clearing', () => {
       // Form with mixed roles
       const MIXED_ROLE_FORM = `---
 markform:
@@ -647,23 +636,23 @@ User Value
 
       const form = parseForm(MIXED_ROLE_FORM);
       const harness = createHarness(form, {
-        fillMode: "overwrite",
-        targetRoles: ["agent"],
+        fillMode: 'overwrite',
+        targetRoles: ['agent'],
       });
 
       const result = harness.step();
 
       // Only agent_field should have been cleared and reported as needing fill
       // user_field should be untouched
-      const requiredIssues = result.issues.filter((i) => i.severity === "required");
+      const requiredIssues = result.issues.filter((i) => i.severity === 'required');
       expect(requiredIssues.length).toBe(1);
-      expect(requiredIssues[0]?.ref).toBe("agent_field");
+      expect(requiredIssues[0]?.ref).toBe('agent_field');
 
       // Verify that user_field still has its value
       const userResponse = form.responsesByFieldId.user_field;
-      expect(userResponse?.value?.kind).toBe("string");
-      if (userResponse?.value?.kind === "string") {
-        expect(userResponse.value.value).toBe("User Value");
+      expect(userResponse?.value?.kind).toBe('string');
+      if (userResponse?.value?.kind === 'string') {
+        expect(userResponse.value.value).toBe('User Value');
       }
     });
   });

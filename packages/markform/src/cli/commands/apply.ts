@@ -5,15 +5,15 @@
  * outputting the modified form or a report.
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import pc from "picocolors";
+import pc from 'picocolors';
 
-import { applyPatches } from "../../engine/apply.js";
-import { parseForm } from "../../engine/parse.js";
-import { serialize } from "../../engine/serialize.js";
-import type { ApplyResult, InspectIssue, ProgressState } from "../../engine/coreTypes.js";
-import { PatchSchema } from "../../engine/coreTypes.js";
+import { applyPatches } from '../../engine/apply.js';
+import { parseForm } from '../../engine/parse.js';
+import { serialize } from '../../engine/serialize.js';
+import type { ApplyResult, InspectIssue, ProgressState } from '../../engine/coreTypes.js';
+import { PatchSchema } from '../../engine/coreTypes.js';
 import {
   formatOutput,
   getCommandContext,
@@ -23,14 +23,14 @@ import {
   logVerbose,
   readFile,
   writeFile,
-} from "../lib/shared.js";
+} from '../lib/shared.js';
 
 interface ApplyReport {
-  apply_status: "applied" | "rejected";
+  apply_status: 'applied' | 'rejected';
   form_state: ProgressState;
   is_complete: boolean;
-  structure: ApplyResult["structureSummary"];
-  progress: ApplyResult["progressSummary"];
+  structure: ApplyResult['structureSummary'];
+  progress: ApplyResult['progressSummary'];
   issues: InspectIssue[];
 }
 
@@ -39,10 +39,10 @@ interface ApplyReport {
  */
 function formatState(state: ProgressState, useColors: boolean): string {
   const badges: Record<ProgressState, [string, (s: string) => string]> = {
-    complete: ["✓ complete", pc.green],
-    incomplete: ["○ incomplete", pc.yellow],
-    empty: ["◌ empty", pc.dim],
-    invalid: ["✗ invalid", pc.red],
+    complete: ['✓ complete', pc.green],
+    incomplete: ['○ incomplete', pc.yellow],
+    empty: ['◌ empty', pc.dim],
+    invalid: ['✗ invalid', pc.red],
   };
   const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
   return useColors ? colorFn(text) : text;
@@ -60,24 +60,24 @@ function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
   const red = useColors ? pc.red : (s: string) => s;
 
   // Header
-  lines.push(bold(cyan("Apply Result")));
-  lines.push("");
+  lines.push(bold(cyan('Apply Result')));
+  lines.push('');
 
   // Status
-  const statusColor = report.apply_status === "applied" ? green : red;
-  lines.push(`${bold("Status:")} ${statusColor(report.apply_status)}`);
-  lines.push(`${bold("Form State:")} ${formatState(report.form_state, useColors)}`);
-  lines.push(`${bold("Complete:")} ${report.is_complete ? green("yes") : dim("no")}`);
-  lines.push("");
+  const statusColor = report.apply_status === 'applied' ? green : red;
+  lines.push(`${bold('Status:')} ${statusColor(report.apply_status)}`);
+  lines.push(`${bold('Form State:')} ${formatState(report.form_state, useColors)}`);
+  lines.push(`${bold('Complete:')} ${report.is_complete ? green('yes') : dim('no')}`);
+  lines.push('');
 
   // Progress summary
   const counts = report.progress.counts;
-  lines.push(bold("Progress:"));
+  lines.push(bold('Progress:'));
   lines.push(`  Total fields: ${counts.totalFields}`);
   lines.push(`  Valid: ${counts.validFields}, Invalid: ${counts.invalidFields}`);
   lines.push(`  Filled: ${counts.filledFields}, Empty: ${counts.emptyFields}`);
   lines.push(`  Empty required: ${counts.emptyRequiredFields}`);
-  lines.push("");
+  lines.push('');
 
   // Issues
   if (report.issues.length > 0) {
@@ -87,10 +87,10 @@ function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
       lines.push(`  ${dim(priority)} ${dim(issue.ref)}: ${issue.message}`);
     }
   } else {
-    lines.push(dim("No issues."));
+    lines.push(dim('No issues.'));
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -98,43 +98,43 @@ function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
  */
 export function registerApplyCommand(program: Command): void {
   program
-    .command("apply <file>")
-    .description("Apply patches to a form")
-    .option("--patch <json>", "JSON array of patches to apply")
-    .option("-o, --output <file>", "Output file (defaults to stdout)")
-    .option("--report", "Output apply result report instead of modified form")
+    .command('apply <file>')
+    .description('Apply patches to a form')
+    .option('--patch <json>', 'JSON array of patches to apply')
+    .option('-o, --output <file>', 'Output file (defaults to stdout)')
+    .option('--report', 'Output apply result report instead of modified form')
     .action(
       async (
         file: string,
         options: { patch?: string; output?: string; report?: boolean },
-        cmd: Command
+        cmd: Command,
       ) => {
         const ctx = getCommandContext(cmd);
 
         try {
           // Validate patch option
           if (!options.patch) {
-            logError("--patch option is required");
+            logError('--patch option is required');
             process.exit(1);
           }
 
           logVerbose(ctx, `Reading file: ${file}`);
           const content = await readFile(file);
 
-          logVerbose(ctx, "Parsing form...");
+          logVerbose(ctx, 'Parsing form...');
           const form = parseForm(content);
 
-          logVerbose(ctx, "Parsing patches...");
+          logVerbose(ctx, 'Parsing patches...');
           let parsedJson: unknown;
           try {
             parsedJson = JSON.parse(options.patch) as unknown;
           } catch {
-            logError("Invalid JSON in --patch option");
+            logError('Invalid JSON in --patch option');
             process.exit(1);
           }
 
           if (!Array.isArray(parsedJson)) {
-            logError("--patch must be a JSON array");
+            logError('--patch must be a JSON array');
             process.exit(1);
           }
           const patches = parsedJson as unknown[];
@@ -145,7 +145,7 @@ export function registerApplyCommand(program: Command): void {
             const result = PatchSchema.safeParse(patches[i]);
             if (!result.success) {
               logError(
-                `Invalid patch at index ${i}: ${result.error.issues[0]?.message ?? "Unknown error"}`
+                `Invalid patch at index ${i}: ${result.error.issues[0]?.message ?? 'Unknown error'}`,
               );
               process.exit(1);
             }
@@ -162,8 +162,8 @@ export function registerApplyCommand(program: Command): void {
           logVerbose(ctx, `Applying ${validatedPatches.length} patches...`);
           const result = applyPatches(form, validatedPatches);
 
-          if (result.applyStatus === "rejected") {
-            logError("Patches rejected - structural validation failed");
+          if (result.applyStatus === 'rejected') {
+            logError('Patches rejected - structural validation failed');
             const report: ApplyReport = {
               apply_status: result.applyStatus,
               form_state: result.formState,
@@ -173,7 +173,7 @@ export function registerApplyCommand(program: Command): void {
               issues: result.issues,
             };
             const output = formatOutput(ctx, report, (data, useColors) =>
-              formatConsoleReport(data as ApplyReport, useColors)
+              formatConsoleReport(data as ApplyReport, useColors),
             );
             console.error(output);
             process.exit(1);
@@ -192,7 +192,7 @@ export function registerApplyCommand(program: Command): void {
             };
 
             const output = formatOutput(ctx, report, (data, useColors) =>
-              formatConsoleReport(data as ApplyReport, useColors)
+              formatConsoleReport(data as ApplyReport, useColors),
             );
             if (options.output) {
               await writeFile(options.output, output);
@@ -215,6 +215,6 @@ export function registerApplyCommand(program: Command): void {
           logError(message);
           process.exit(1);
         }
-      }
+      },
     );
 }

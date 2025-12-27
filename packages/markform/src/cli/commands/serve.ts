@@ -4,19 +4,19 @@
  * Starts an HTTP server that renders the form as interactive HTML.
  */
 
-import type { IncomingMessage, ServerResponse } from "node:http";
-import type { Command } from "commander";
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { Command } from 'commander';
 
-import { exec } from "node:child_process";
-import { createServer } from "node:http";
-import { resolve } from "node:path";
+import { exec } from 'node:child_process';
+import { createServer } from 'node:http';
+import { resolve } from 'node:path';
 
-import pc from "picocolors";
+import pc from 'picocolors';
 
-import { applyPatches } from "../../engine/apply.js";
-import { parseForm } from "../../engine/parse.js";
-import { serialize } from "../../engine/serialize.js";
-import { DEFAULT_PORT } from "../../settings.js";
+import { applyPatches } from '../../engine/apply.js';
+import { parseForm } from '../../engine/parse.js';
+import { serialize } from '../../engine/serialize.js';
+import { DEFAULT_PORT } from '../../settings.js';
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -34,7 +34,7 @@ import type {
   StringListField,
   UrlField,
   UrlListField,
-} from "../../engine/coreTypes.js";
+} from '../../engine/coreTypes.js';
 import {
   type CommandContext,
   getCommandContext,
@@ -43,8 +43,8 @@ import {
   logVerbose,
   readFile,
   writeFile,
-} from "../lib/shared.js";
-import { generateVersionedPath } from "../lib/versioning.js";
+} from '../lib/shared.js';
+import { generateVersionedPath } from '../lib/versioning.js';
 
 /**
  * Open a URL in the default browser (cross-platform).
@@ -53,9 +53,9 @@ function openBrowser(url: string): void {
   const platform = process.platform;
 
   let command: string;
-  if (platform === "darwin") {
+  if (platform === 'darwin') {
     command = `open "${url}"`;
-  } else if (platform === "win32") {
+  } else if (platform === 'win32') {
     command = `start "" "${url}"`;
   } else {
     // Linux and other Unix-like systems
@@ -74,62 +74,54 @@ function openBrowser(url: string): void {
  */
 export function registerServeCommand(program: Command): void {
   program
-    .command("serve <file>")
-    .description("Serve a form as a web page for browsing")
-    .option("-p, --port <port>", "Port to serve on", String(DEFAULT_PORT))
-    .option("--no-open", "Don't open browser automatically")
-    .action(
-      async (
-        file: string,
-        options: { port?: string; open?: boolean },
-        cmd: Command
-      ) => {
-        const ctx = getCommandContext(cmd);
-        const port = parseInt(options.port ?? String(DEFAULT_PORT), 10);
-        const filePath = resolve(file);
+    .command('serve <file>')
+    .description('Serve a form as a web page for browsing')
+    .option('-p, --port <port>', 'Port to serve on', String(DEFAULT_PORT))
+    .option('--no-open', "Don't open browser automatically")
+    .action(async (file: string, options: { port?: string; open?: boolean }, cmd: Command) => {
+      const ctx = getCommandContext(cmd);
+      const port = parseInt(options.port ?? String(DEFAULT_PORT), 10);
+      const filePath = resolve(file);
 
-        try {
-          logVerbose(ctx, `Reading file: ${filePath}`);
-          const content = await readFile(filePath);
-          let form = parseForm(content);
+      try {
+        logVerbose(ctx, `Reading file: ${filePath}`);
+        const content = await readFile(filePath);
+        let form = parseForm(content);
 
-          // Start the server
-          const server = createServer(
-            (req: IncomingMessage, res: ServerResponse) => {
-              handleRequest(req, res, form, filePath, ctx, (updatedForm) => {
-                form = updatedForm;
-              }).catch((err) => {
-                console.error("Request error:", err);
-                res.writeHead(500);
-                res.end("Internal Server Error");
-              });
-            }
-          );
-
-          server.listen(port, () => {
-            const url = `http://localhost:${port}`;
-            logInfo(ctx, pc.green(`\n✓ Form server running at ${pc.bold(url)}\n`));
-            logInfo(ctx, pc.dim("Press Ctrl+C to stop\n"));
-
-            // Open browser by default unless --no-open is specified
-            if (options.open !== false) {
-              openBrowser(url);
-            }
+        // Start the server
+        const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+          handleRequest(req, res, form, filePath, ctx, (updatedForm) => {
+            form = updatedForm;
+          }).catch((err) => {
+            console.error('Request error:', err);
+            res.writeHead(500);
+            res.end('Internal Server Error');
           });
+        });
 
-          // Handle graceful shutdown
-          process.on("SIGINT", () => {
-            logInfo(ctx, "\nShutting down server...");
-            server.close();
-            process.exit(0);
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          logError(message);
-          process.exit(1);
-        }
+        server.listen(port, () => {
+          const url = `http://localhost:${port}`;
+          logInfo(ctx, pc.green(`\n✓ Form server running at ${pc.bold(url)}\n`));
+          logInfo(ctx, pc.dim('Press Ctrl+C to stop\n'));
+
+          // Open browser by default unless --no-open is specified
+          if (options.open !== false) {
+            openBrowser(url);
+          }
+        });
+
+        // Handle graceful shutdown
+        process.on('SIGINT', () => {
+          logInfo(ctx, '\nShutting down server...');
+          server.close();
+          process.exit(0);
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logError(message);
+        process.exit(1);
       }
-    );
+    });
 }
 
 /**
@@ -141,25 +133,25 @@ async function handleRequest(
   form: ParsedForm,
   filePath: string,
   ctx: CommandContext,
-  updateForm: (form: ParsedForm) => void
+  updateForm: (form: ParsedForm) => void,
 ): Promise<void> {
-  const url = req.url ?? "/";
+  const url = req.url ?? '/';
 
-  if (req.method === "GET" && url === "/") {
+  if (req.method === 'GET' && url === '/') {
     // Render the form as HTML
     const html = renderFormHtml(form);
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
-  } else if (req.method === "POST" && url === "/save") {
+  } else if (req.method === 'POST' && url === '/save') {
     // Save the form to a new versioned file
     await handleSave(req, res, form, filePath, ctx, updateForm);
-  } else if (url === "/api/form") {
+  } else if (url === '/api/form') {
     // API endpoint for form data
-    res.writeHead(200, { "Content-Type": "application/json" });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ schema: form.schema }));
   } else {
     res.writeHead(404);
-    res.end("Not Found");
+    res.end('Not Found');
   }
 }
 
@@ -189,10 +181,7 @@ function parseFormBody(body: string): Record<string, string | string[]> {
 /**
  * Convert form data to patches.
  */
-function formDataToPatches(
-  formData: Record<string, string | string[]>,
-  form: ParsedForm
-): Patch[] {
+function formDataToPatches(formData: Record<string, string | string[]>, form: ParsedForm): Patch[] {
   const patches: Patch[] = [];
   const fields = form.schema.groups.flatMap((g) => g.children);
 
@@ -201,119 +190,104 @@ function formDataToPatches(
 
     // Check if this field was explicitly skipped
     const skipKey = `__skip__${fieldId}`;
-    if (formData[skipKey] === "1" && !field.required) {
-      patches.push({ op: "skip_field", fieldId, role: "user" });
+    if (formData[skipKey] === '1' && !field.required) {
+      patches.push({ op: 'skip_field', fieldId, role: 'user' });
       continue; // Don't process other patches for this field
     }
 
     switch (field.kind) {
-      case "string": {
+      case 'string': {
         const value = formData[fieldId];
-        if (typeof value === "string" && value.trim() !== "") {
-          patches.push({ op: "set_string", fieldId, value: value.trim() });
-        } else if (!value || (typeof value === "string" && value.trim() === "")) {
-          patches.push({ op: "clear_field", fieldId });
+        if (typeof value === 'string' && value.trim() !== '') {
+          patches.push({ op: 'set_string', fieldId, value: value.trim() });
+        } else if (!value || (typeof value === 'string' && value.trim() === '')) {
+          patches.push({ op: 'clear_field', fieldId });
         }
         break;
       }
 
-      case "number": {
+      case 'number': {
         const value = formData[fieldId];
-        if (typeof value === "string" && value.trim() !== "") {
+        if (typeof value === 'string' && value.trim() !== '') {
           const num = parseFloat(value);
           if (!isNaN(num)) {
-            patches.push({ op: "set_number", fieldId, value: num });
+            patches.push({ op: 'set_number', fieldId, value: num });
           }
         } else {
-          patches.push({ op: "clear_field", fieldId });
+          patches.push({ op: 'clear_field', fieldId });
         }
         break;
       }
 
-      case "string_list": {
+      case 'string_list': {
         const value = formData[fieldId];
-        if (typeof value === "string" && value.trim() !== "") {
+        if (typeof value === 'string' && value.trim() !== '') {
           const items = value
-            .split("\n")
+            .split('\n')
             .map((s) => s.trim())
-            .filter((s) => s !== "");
+            .filter((s) => s !== '');
           if (items.length > 0) {
-            patches.push({ op: "set_string_list", fieldId, items });
+            patches.push({ op: 'set_string_list', fieldId, items });
           } else {
-            patches.push({ op: "clear_field", fieldId });
+            patches.push({ op: 'clear_field', fieldId });
           }
         } else {
-          patches.push({ op: "clear_field", fieldId });
+          patches.push({ op: 'clear_field', fieldId });
         }
         break;
       }
 
-      case "single_select": {
+      case 'single_select': {
         const value = formData[fieldId];
-        if (typeof value === "string" && value !== "") {
-          patches.push({ op: "set_single_select", fieldId, selected: value });
+        if (typeof value === 'string' && value !== '') {
+          patches.push({ op: 'set_single_select', fieldId, selected: value });
         } else {
-          patches.push({ op: "clear_field", fieldId });
+          patches.push({ op: 'clear_field', fieldId });
         }
         break;
       }
 
-      case "multi_select": {
+      case 'multi_select': {
         const value = formData[fieldId];
-        const selected = Array.isArray(value)
-          ? value
-          : value
-            ? [value]
-            : [];
-        if (selected.length > 0 && selected[0] !== "") {
-          patches.push({ op: "set_multi_select", fieldId, selected });
+        const selected = Array.isArray(value) ? value : value ? [value] : [];
+        if (selected.length > 0 && selected[0] !== '') {
+          patches.push({ op: 'set_multi_select', fieldId, selected });
         } else {
-          patches.push({ op: "clear_field", fieldId });
+          patches.push({ op: 'clear_field', fieldId });
         }
         break;
       }
 
-      case "checkboxes": {
-        const mode = field.checkboxMode ?? "multi";
+      case 'checkboxes': {
+        const mode = field.checkboxMode ?? 'multi';
 
-        if (mode === "simple") {
+        if (mode === 'simple') {
           // Simple mode: checkboxes send their value when checked
           const value = formData[fieldId];
-          const checked = Array.isArray(value)
-            ? value
-            : value
-              ? [value]
-              : [];
+          const checked = Array.isArray(value) ? value : value ? [value] : [];
 
-          const values: Record<string, "done" | "todo"> = {};
+          const values: Record<string, 'done' | 'todo'> = {};
           for (const opt of field.options) {
-            values[opt.id] = checked.includes(opt.id) ? "done" : "todo";
+            values[opt.id] = checked.includes(opt.id) ? 'done' : 'todo';
           }
-          patches.push({ op: "set_checkboxes", fieldId, values });
+          patches.push({ op: 'set_checkboxes', fieldId, values });
         } else {
           // Multi or explicit mode: each option has its own select
           const values: Record<string, string> = {};
           for (const opt of field.options) {
             const selectName = `${fieldId}.${opt.id}`;
             const selectValue = formData[selectName];
-            if (typeof selectValue === "string" && selectValue !== "") {
+            if (typeof selectValue === 'string' && selectValue !== '') {
               values[opt.id] = selectValue;
             }
           }
           if (Object.keys(values).length > 0) {
             patches.push({
-              op: "set_checkboxes",
+              op: 'set_checkboxes',
               fieldId,
               values: values as Record<
                 string,
-                | "todo"
-                | "done"
-                | "active"
-                | "incomplete"
-                | "na"
-                | "yes"
-                | "no"
-                | "unfilled"
+                'todo' | 'done' | 'active' | 'incomplete' | 'na' | 'yes' | 'no' | 'unfilled'
               >,
             });
           }
@@ -321,30 +295,30 @@ function formDataToPatches(
         break;
       }
 
-      case "url": {
+      case 'url': {
         const value = formData[fieldId];
-        if (typeof value === "string" && value.trim() !== "") {
-          patches.push({ op: "set_url", fieldId, value: value.trim() });
+        if (typeof value === 'string' && value.trim() !== '') {
+          patches.push({ op: 'set_url', fieldId, value: value.trim() });
         } else {
-          patches.push({ op: "clear_field", fieldId });
+          patches.push({ op: 'clear_field', fieldId });
         }
         break;
       }
 
-      case "url_list": {
+      case 'url_list': {
         const value = formData[fieldId];
-        if (typeof value === "string" && value.trim() !== "") {
+        if (typeof value === 'string' && value.trim() !== '') {
           const items = value
-            .split("\n")
+            .split('\n')
             .map((s) => s.trim())
-            .filter((s) => s !== "");
+            .filter((s) => s !== '');
           if (items.length > 0) {
-            patches.push({ op: "set_url_list", fieldId, items });
+            patches.push({ op: 'set_url_list', fieldId, items });
           } else {
-            patches.push({ op: "clear_field", fieldId });
+            patches.push({ op: 'clear_field', fieldId });
           }
         } else {
-          patches.push({ op: "clear_field", fieldId });
+          patches.push({ op: 'clear_field', fieldId });
         }
         break;
       }
@@ -363,7 +337,7 @@ async function handleSave(
   form: ParsedForm,
   filePath: string,
   ctx: CommandContext,
-  updateForm: (form: ParsedForm) => void
+  updateForm: (form: ParsedForm) => void,
 ): Promise<void> {
   try {
     // Read request body
@@ -371,7 +345,7 @@ async function handleSave(
     for await (const chunk of req) {
       chunks.push(chunk as Buffer);
     }
-    const body = Buffer.concat(chunks).toString("utf-8");
+    const body = Buffer.concat(chunks).toString('utf-8');
 
     // Parse form data
     const formData = parseFormBody(body);
@@ -393,7 +367,7 @@ async function handleSave(
 
     if (ctx.dryRun) {
       logInfo(ctx, `[DRY RUN] Would save to: ${newPath}`);
-      res.writeHead(200, { "Content-Type": "application/json" });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, path: newPath, dryRun: true }));
       return;
     }
@@ -402,11 +376,11 @@ async function handleSave(
     await writeFile(newPath, content);
     logInfo(ctx, pc.green(`Saved to: ${newPath}`));
 
-    res.writeHead(200, { "Content-Type": "application/json" });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, path: newPath }));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    res.writeHead(500, { "Content-Type": "application/json" });
+    res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: message }));
   }
 }
@@ -421,7 +395,7 @@ export function renderFormHtml(form: ParsedForm): string {
 
   const groupsHtml = schema.groups
     .map((group) => renderGroup(group, responsesByFieldId))
-    .join("\n");
+    .join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -670,19 +644,16 @@ export function renderFormHtml(form: ParsedForm): string {
 /**
  * Render a field group as HTML.
  */
-function renderGroup(
-  group: FieldGroup,
-  responses: ParsedForm["responsesByFieldId"]
-): string {
+function renderGroup(group: FieldGroup, responses: ParsedForm['responsesByFieldId']): string {
   const groupTitle = group.title ?? group.id;
   const fieldsHtml = group.children
     .map((field) => {
       const response = responses[field.id];
-      const value = response?.state === "answered" ? response.value : undefined;
-      const isSkipped = response?.state === "skipped";
+      const value = response?.state === 'answered' ? response.value : undefined;
+      const isSkipped = response?.state === 'skipped';
       return renderFieldHtml(field, value, isSkipped);
     })
-    .join("\n");
+    .join('\n');
 
   return `
   <div class="group">
@@ -698,52 +669,48 @@ function renderGroup(
 export function renderFieldHtml(
   field: Field,
   value: FieldValue | undefined,
-  isSkipped?: boolean
+  isSkipped?: boolean,
 ): string {
   const skipped = isSkipped === true;
-  const requiredMark = field.required ? '<span class="required">*</span>' : "";
+  const requiredMark = field.required ? '<span class="required">*</span>' : '';
   const typeLabel = `<span class="type-badge">${field.kind}</span>`;
-  const skippedBadge = skipped ? '<span class="skipped-badge">Skipped</span>' : "";
-  const fieldClass = skipped ? "field field-skipped" : "field";
-  const disabledAttr = skipped ? " disabled" : "";
+  const skippedBadge = skipped ? '<span class="skipped-badge">Skipped</span>' : '';
+  const fieldClass = skipped ? 'field field-skipped' : 'field';
+  const disabledAttr = skipped ? ' disabled' : '';
 
   let inputHtml: string;
 
   switch (field.kind) {
-    case "string":
+    case 'string':
       inputHtml = renderStringInput(field, value, disabledAttr);
       break;
-    case "number":
+    case 'number':
       inputHtml = renderNumberInput(field, value, disabledAttr);
       break;
-    case "string_list":
+    case 'string_list':
       inputHtml = renderStringListInput(field, value, disabledAttr);
       break;
-    case "single_select":
+    case 'single_select':
       inputHtml = renderSingleSelectInput(
         field,
         value as SingleSelectValue | undefined,
-        disabledAttr
+        disabledAttr,
       );
       break;
-    case "multi_select":
+    case 'multi_select':
       inputHtml = renderMultiSelectInput(
         field,
         value as MultiSelectValue | undefined,
-        disabledAttr
+        disabledAttr,
       );
       break;
-    case "checkboxes":
-      inputHtml = renderCheckboxesInput(
-        field,
-        value as CheckboxesValue | undefined,
-        disabledAttr
-      );
+    case 'checkboxes':
+      inputHtml = renderCheckboxesInput(field, value as CheckboxesValue | undefined, disabledAttr);
       break;
-    case "url":
+    case 'url':
       inputHtml = renderUrlInput(field, value, disabledAttr);
       break;
-    case "url_list":
+    case 'url_list':
       inputHtml = renderUrlListInput(field, value, disabledAttr);
       break;
     default:
@@ -751,11 +718,12 @@ export function renderFieldHtml(
   }
 
   // Add skip button for optional, non-skipped fields
-  const skipButton = !field.required && !skipped
-    ? `<div class="field-actions">
+  const skipButton =
+    !field.required && !skipped
+      ? `<div class="field-actions">
         <button type="button" class="btn-skip" data-skip-field="${field.id}">Skip</button>
       </div>`
-    : "";
+      : '';
 
   return `
     <div class="${fieldClass}">
@@ -773,15 +741,12 @@ export function renderFieldHtml(
 function renderStringInput(
   field: StringField,
   value: FieldValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
-  const currentValue =
-    value?.kind === "string" && value.value !== null ? value.value : "";
-  const requiredAttr = field.required ? " required" : "";
-  const minLengthAttr =
-    field.minLength !== undefined ? ` minlength="${field.minLength}"` : "";
-  const maxLengthAttr =
-    field.maxLength !== undefined ? ` maxlength="${field.maxLength}"` : "";
+  const currentValue = value?.kind === 'string' && value.value !== null ? value.value : '';
+  const requiredAttr = field.required ? ' required' : '';
+  const minLengthAttr = field.minLength !== undefined ? ` minlength="${field.minLength}"` : '';
+  const maxLengthAttr = field.maxLength !== undefined ? ` maxlength="${field.maxLength}"` : '';
 
   return `<input type="text" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minLengthAttr}${maxLengthAttr}${disabledAttr}>`;
 }
@@ -792,14 +757,13 @@ function renderStringInput(
 function renderNumberInput(
   field: NumberField,
   value: FieldValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
-  const currentValue =
-    value?.kind === "number" && value.value !== null ? String(value.value) : "";
-  const requiredAttr = field.required ? " required" : "";
-  const minAttr = field.min !== undefined ? ` min="${field.min}"` : "";
-  const maxAttr = field.max !== undefined ? ` max="${field.max}"` : "";
-  const stepAttr = field.integer ? ' step="1"' : "";
+  const currentValue = value?.kind === 'number' && value.value !== null ? String(value.value) : '';
+  const requiredAttr = field.required ? ' required' : '';
+  const minAttr = field.min !== undefined ? ` min="${field.min}"` : '';
+  const maxAttr = field.max !== undefined ? ` max="${field.max}"` : '';
+  const stepAttr = field.integer ? ' step="1"' : '';
 
   return `<input type="number" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minAttr}${maxAttr}${stepAttr}${disabledAttr}>`;
 }
@@ -810,12 +774,11 @@ function renderNumberInput(
 function renderStringListInput(
   field: StringListField,
   value: FieldValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
-  const items =
-    value?.kind === "string_list" ? value.items : [];
-  const currentValue = items.join("\n");
-  const requiredAttr = field.required ? " required" : "";
+  const items = value?.kind === 'string_list' ? value.items : [];
+  const currentValue = items.join('\n');
+  const requiredAttr = field.required ? ' required' : '';
 
   return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one item per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
 }
@@ -826,11 +789,10 @@ function renderStringListInput(
 function renderUrlInput(
   field: UrlField,
   value: FieldValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
-  const currentValue =
-    value?.kind === "url" && value.value !== null ? value.value : "";
-  const requiredAttr = field.required ? " required" : "";
+  const currentValue = value?.kind === 'url' && value.value !== null ? value.value : '';
+  const requiredAttr = field.required ? ' required' : '';
 
   return `<input type="url" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}" placeholder="https://example.com"${requiredAttr}${disabledAttr}>`;
 }
@@ -841,11 +803,11 @@ function renderUrlInput(
 function renderUrlListInput(
   field: UrlListField,
   value: FieldValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
-  const items = value?.kind === "url_list" ? value.items : [];
-  const currentValue = items.join("\n");
-  const requiredAttr = field.required ? " required" : "";
+  const items = value?.kind === 'url_list' ? value.items : [];
+  const currentValue = items.join('\n');
+  const requiredAttr = field.required ? ' required' : '';
 
   return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one URL per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
 }
@@ -856,18 +818,18 @@ function renderUrlListInput(
 function renderSingleSelectInput(
   field: SingleSelectField,
   value: SingleSelectValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
   const selected = value?.selected ?? null;
-  const requiredAttr = field.required ? " required" : "";
+  const requiredAttr = field.required ? ' required' : '';
 
   const options = field.options
     .map((opt) => {
       const isSelected = selected === opt.id;
-      const selectedAttr = isSelected ? " selected" : "";
+      const selectedAttr = isSelected ? ' selected' : '';
       return `<option value="${escapeHtml(opt.id)}"${selectedAttr}>${escapeHtml(opt.label)}</option>`;
     })
-    .join("\n      ");
+    .join('\n      ');
 
   return `<select id="field-${field.id}" name="${field.id}"${requiredAttr}${disabledAttr}>
       <option value="">-- Select --</option>
@@ -881,21 +843,21 @@ function renderSingleSelectInput(
 function renderMultiSelectInput(
   field: MultiSelectField,
   value: MultiSelectValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
   const selected = value?.selected ?? [];
 
   const checkboxes = field.options
     .map((opt) => {
       const isChecked = selected.includes(opt.id);
-      const checkedAttr = isChecked ? " checked" : "";
+      const checkedAttr = isChecked ? ' checked' : '';
       const checkboxId = `field-${field.id}-${opt.id}`;
       return `<div class="checkbox-item">
         <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}${disabledAttr}>
         <label for="${checkboxId}">${escapeHtml(opt.label)}</label>
       </div>`;
     })
-    .join("\n      ");
+    .join('\n      ');
 
   return `<div class="checkbox-group">
       ${checkboxes}
@@ -908,49 +870,49 @@ function renderMultiSelectInput(
 function renderCheckboxesInput(
   field: CheckboxesField,
   value: CheckboxesValue | undefined,
-  disabledAttr: string
+  disabledAttr: string,
 ): string {
   const checkboxValues = value?.values ?? {};
-  const mode = field.checkboxMode ?? "multi";
+  const mode = field.checkboxMode ?? 'multi';
 
-  if (mode === "simple") {
+  if (mode === 'simple') {
     // Simple mode: render as HTML checkboxes
     const checkboxes = field.options
       .map((opt) => {
         const state = checkboxValues[opt.id];
-        const isChecked = state === "done";
-        const checkedAttr = isChecked ? " checked" : "";
+        const isChecked = state === 'done';
+        const checkedAttr = isChecked ? ' checked' : '';
         const checkboxId = `field-${field.id}-${opt.id}`;
         return `<div class="checkbox-item">
         <input type="checkbox" id="${checkboxId}" name="${field.id}" value="${escapeHtml(opt.id)}"${checkedAttr}${disabledAttr}>
         <label for="${checkboxId}">${escapeHtml(opt.label)}</label>
       </div>`;
       })
-      .join("\n      ");
+      .join('\n      ');
 
     return `<div class="checkbox-group">
       ${checkboxes}
     </div>`;
   }
 
-  if (mode === "explicit") {
+  if (mode === 'explicit') {
     // Explicit mode: render as select with yes/no/unfilled options
     const rows = field.options
       .map((opt) => {
-        const state = checkboxValues[opt.id] ?? "unfilled";
+        const state = checkboxValues[opt.id] ?? 'unfilled';
         const selectId = `field-${field.id}-${opt.id}`;
         const selectName = `${field.id}.${opt.id}`;
 
         return `<div class="option-row">
         <span class="option-label">${escapeHtml(opt.label)}</span>
         <select id="${selectId}" name="${selectName}"${disabledAttr}>
-          <option value="unfilled"${state === "unfilled" ? " selected" : ""}>-- Select --</option>
-          <option value="yes"${state === "yes" ? " selected" : ""}>Yes</option>
-          <option value="no"${state === "no" ? " selected" : ""}>No</option>
+          <option value="unfilled"${state === 'unfilled' ? ' selected' : ''}>-- Select --</option>
+          <option value="yes"${state === 'yes' ? ' selected' : ''}>Yes</option>
+          <option value="no"${state === 'no' ? ' selected' : ''}>No</option>
         </select>
       </div>`;
       })
-      .join("\n      ");
+      .join('\n      ');
 
     return `<div class="checkbox-group">
       ${rows}
@@ -960,22 +922,22 @@ function renderCheckboxesInput(
   // Multi mode: render as select with multiple state options
   const rows = field.options
     .map((opt) => {
-      const state = checkboxValues[opt.id] ?? "todo";
+      const state = checkboxValues[opt.id] ?? 'todo';
       const selectId = `field-${field.id}-${opt.id}`;
       const selectName = `${field.id}.${opt.id}`;
 
       return `<div class="option-row">
         <span class="option-label">${escapeHtml(opt.label)}</span>
         <select id="${selectId}" name="${selectName}"${disabledAttr}>
-          <option value="todo"${state === "todo" ? " selected" : ""}>To Do</option>
-          <option value="active"${state === "active" ? " selected" : ""}>Active</option>
-          <option value="done"${state === "done" ? " selected" : ""}>Done</option>
-          <option value="incomplete"${state === "incomplete" ? " selected" : ""}>Incomplete</option>
-          <option value="na"${state === "na" ? " selected" : ""}>N/A</option>
+          <option value="todo"${state === 'todo' ? ' selected' : ''}>To Do</option>
+          <option value="active"${state === 'active' ? ' selected' : ''}>Active</option>
+          <option value="done"${state === 'done' ? ' selected' : ''}>Done</option>
+          <option value="incomplete"${state === 'incomplete' ? ' selected' : ''}>Incomplete</option>
+          <option value="na"${state === 'na' ? ' selected' : ''}>N/A</option>
         </select>
       </div>`;
     })
-    .join("\n      ");
+    .join('\n      ');
 
   return `<div class="checkbox-group">
       ${rows}
@@ -988,9 +950,9 @@ function renderCheckboxesInput(
  */
 export function escapeHtml(str: string): string {
   return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

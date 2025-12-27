@@ -57,7 +57,14 @@ function getSingleSelectValue(values: Record<string, unknown>, fieldId: string):
 function minWords(ctx: ValidatorContext): ValidationIssue[] {
   const min = ctx.params.min as number;
   if (typeof min !== 'number') {
-    return [{ severity: 'error', message: 'min_words requires "min" parameter', ref: ctx.targetId, source: 'code' }];
+    return [
+      {
+        severity: 'error',
+        message: 'min_words requires "min" parameter',
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
 
   const value = getStringValue(ctx.values, ctx.targetId);
@@ -65,12 +72,14 @@ function minWords(ctx: ValidatorContext): ValidationIssue[] {
 
   const wordCount = countWords(value);
   if (wordCount < min) {
-    return [{
-      severity: 'error',
-      message: `Field requires at least ${min} words (currently ${wordCount})`,
-      ref: ctx.targetId,
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'error',
+        message: `Field requires at least ${min} words (currently ${wordCount})`,
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
   return [];
 }
@@ -82,7 +91,14 @@ function minWords(ctx: ValidatorContext): ValidationIssue[] {
 function maxWords(ctx: ValidatorContext): ValidationIssue[] {
   const max = ctx.params.max as number;
   if (typeof max !== 'number') {
-    return [{ severity: 'error', message: 'max_words requires "max" parameter', ref: ctx.targetId, source: 'code' }];
+    return [
+      {
+        severity: 'error',
+        message: 'max_words requires "max" parameter',
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
 
   const value = getStringValue(ctx.values, ctx.targetId);
@@ -90,12 +106,14 @@ function maxWords(ctx: ValidatorContext): ValidationIssue[] {
 
   const wordCount = countWords(value);
   if (wordCount > max) {
-    return [{
-      severity: 'warning',
-      message: `Field exceeds ${max} word limit (currently ${wordCount})`,
-      ref: ctx.targetId,
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'warning',
+        message: `Field exceeds ${max} word limit (currently ${wordCount})`,
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
   return [];
 }
@@ -110,22 +128,31 @@ function sumTo(ctx: ValidatorContext): ValidationIssue[] {
   const tolerance = (ctx.params.tolerance as number) ?? 0.1;
 
   if (!Array.isArray(fields)) {
-    return [{ severity: 'error', message: 'sum_to requires "fields" array parameter', ref: ctx.targetId, source: 'code' }];
+    return [
+      {
+        severity: 'error',
+        message: 'sum_to requires "fields" array parameter',
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
 
-  const values = fields.map(fieldId => getNumberValue(ctx.values, fieldId) ?? 0);
+  const values = fields.map((fieldId) => getNumberValue(ctx.values, fieldId) ?? 0);
   const sum = values.reduce((a, b) => a + b, 0);
 
   // Only validate if at least one value is set
-  if (values.every(v => v === 0)) return [];
+  if (values.every((v) => v === 0)) return [];
 
   if (Math.abs(sum - target) > tolerance) {
-    return [{
-      severity: 'error',
-      message: `Fields must sum to ${target}% (currently ${sum.toFixed(1)}%)`,
-      ref: fields[0],
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'error',
+        message: `Fields must sum to ${target}% (currently ${sum.toFixed(1)}%)`,
+        ref: fields[0],
+        source: 'code',
+      },
+    ];
   }
   return [];
 }
@@ -140,25 +167,31 @@ function sumToPercentList(ctx: ValidatorContext): ValidationIssue[] {
 
   if (items.length === 0) return [];
 
-  const percentages = items.map(item => extractPercentage(item)).filter((p): p is number => p !== null);
+  const percentages = items
+    .map((item) => extractPercentage(item))
+    .filter((p): p is number => p !== null);
 
   if (percentages.length === 0) {
-    return [{
-      severity: 'warning',
-      message: 'Items should include percentages (format: "Label: XX%")',
-      ref: ctx.targetId,
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'warning',
+        message: 'Items should include percentages (format: "Label: XX%")',
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
 
   const sum = percentages.reduce((a, b) => a + b, 0);
   if (Math.abs(sum - target) > 0.1) {
-    return [{
-      severity: 'warning',
-      message: `Items should sum to ${target}% (currently ${sum.toFixed(1)}%)`,
-      ref: ctx.targetId,
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'warning',
+        message: `Items should sum to ${target}% (currently ${sum.toFixed(1)}%)`,
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
   return [];
 }
@@ -172,7 +205,14 @@ function requiredIf(ctx: ValidatorContext): ValidationIssue[] {
   const targetField = (ctx.params.then as string) ?? ctx.targetId;
 
   if (!triggerField) {
-    return [{ severity: 'error', message: 'required_if requires "when" parameter', ref: ctx.targetId, source: 'code' }];
+    return [
+      {
+        severity: 'error',
+        message: 'required_if requires "when" parameter',
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
 
   const trigger = ctx.values[triggerField] as Record<string, unknown> | undefined;
@@ -189,12 +229,14 @@ function requiredIf(ctx: ValidatorContext): ValidationIssue[] {
     (target.kind === 'number' && target.value == null);
 
   if (triggerHasValue && targetEmpty) {
-    return [{
-      severity: 'error',
-      message: `This field is required when ${triggerField} has a value`,
-      ref: targetField,
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'error',
+        message: `This field is required when ${triggerField} has a value`,
+        ref: targetField,
+        source: 'code',
+      },
+    ];
   }
   return [];
 }
@@ -209,19 +251,28 @@ function requiredIfEquals(ctx: ValidatorContext): ValidationIssue[] {
   const targetField = (ctx.params.then as string) ?? ctx.targetId;
 
   if (!triggerField || expectedValue === undefined) {
-    return [{ severity: 'error', message: 'required_if_equals requires "when" and "equals" parameters', ref: ctx.targetId, source: 'code' }];
+    return [
+      {
+        severity: 'error',
+        message: 'required_if_equals requires "when" and "equals" parameters',
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
 
   const triggerValue = getSingleSelectValue(ctx.values, triggerField);
   const target = getStringValue(ctx.values, targetField);
 
   if (triggerValue === expectedValue && (!target || target.trim().length === 0)) {
-    return [{
-      severity: 'error',
-      message: `This field is required when ${triggerField} is "${expectedValue}"`,
-      ref: targetField,
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'error',
+        message: `This field is required when ${triggerField} is "${expectedValue}"`,
+        ref: targetField,
+        source: 'code',
+      },
+    ];
   }
   return [];
 }
@@ -232,26 +283,35 @@ function requiredIfEquals(ctx: ValidatorContext): ValidationIssue[] {
  */
 function itemFormat(ctx: ValidatorContext): ValidationIssue[] {
   const pattern = ctx.params.pattern as string;
-  const example = ctx.params.example as string ?? '';
+  const example = (ctx.params.example as string) ?? '';
 
   if (!pattern) {
-    return [{ severity: 'error', message: 'item_format requires "pattern" parameter', ref: ctx.targetId, source: 'code' }];
+    return [
+      {
+        severity: 'error',
+        message: 'item_format requires "pattern" parameter',
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
 
   const items = getStringListItems(ctx.values, ctx.targetId);
   if (items.length === 0) return [];
 
   const regex = new RegExp(pattern);
-  const malformed = items.filter(item => !regex.test(item));
+  const malformed = items.filter((item) => !regex.test(item));
 
   if (malformed.length > 0) {
     const hint = example ? ` Expected format: "${example}"` : '';
-    return [{
-      severity: 'warning',
-      message: `${malformed.length} item(s) don't match expected format.${hint}`,
-      ref: ctx.targetId,
-      source: 'code',
-    }];
+    return [
+      {
+        severity: 'warning',
+        message: `${malformed.length} item(s) don't match expected format.${hint}`,
+        ref: ctx.targetId,
+        source: 'code',
+      },
+    ];
   }
   return [];
 }

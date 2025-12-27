@@ -32,8 +32,8 @@ import type {
   UrlListField,
   UrlListValue,
   UrlValue,
-} from "./coreTypes.js";
-import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from "../settings.js";
+} from './coreTypes.js';
+import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
 
 // =============================================================================
 // Sentinel Value Helpers
@@ -51,13 +51,13 @@ function formatValueFence(content: string): string {
  * Returns the fence block if there's a reason, empty string otherwise.
  */
 function getSentinelContent(response: FieldResponse | undefined): string {
-  if (response?.state === "skipped" && response.reason) {
+  if (response?.state === 'skipped' && response.reason) {
     return formatValueFence(`|SKIP| (${response.reason})`);
   }
-  if (response?.state === "aborted" && response.reason) {
+  if (response?.state === 'aborted' && response.reason) {
     return formatValueFence(`|ABORT| (${response.reason})`);
   }
-  return "";
+  return '';
 }
 
 // =============================================================================
@@ -77,37 +77,37 @@ export interface SerializeOptions {
  * Serialize an attribute value to Markdoc format.
  */
 function serializeAttrValue(value: unknown): string {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     // Escape backslashes and quotes
-    const escaped = value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     return `"${escaped}"`;
   }
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return String(value);
   }
-  if (typeof value === "boolean") {
-    return value ? "true" : "false";
+  if (typeof value === 'boolean') {
+    return value ? 'true' : 'false';
   }
   if (value === null) {
-    return "null";
+    return 'null';
   }
   if (Array.isArray(value)) {
-    const items = value.map((v) => serializeAttrValue(v)).join(", ");
+    const items = value.map((v) => serializeAttrValue(v)).join(', ');
     return `[${items}]`;
   }
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     // Serialize plain objects as Markdoc object literals: {key: value, key2: value2}
     const entries = Object.entries(value as Record<string, unknown>);
     const parts = entries.map(([k, v]) => `${k}: ${serializeAttrValue(v)}`);
-    return `{${parts.join(", ")}}`;
+    return `{${parts.join(', ')}}`;
   }
   // Handle remaining primitive types (bigint, symbol, undefined, function)
   // These shouldn't appear in form attributes but handle gracefully
-  if (typeof value === "bigint") {
+  if (typeof value === 'bigint') {
     return String(value);
   }
-  if (typeof value === "undefined") {
-    return "null";
+  if (typeof value === 'undefined') {
+    return 'null';
   }
   // For functions and symbols, throw - these are invalid in form attributes
   throw new Error(`Cannot serialize value of type ${typeof value} to Markdoc`);
@@ -127,7 +127,7 @@ function serializeAttrs(attrs: Record<string, unknown>): string {
     }
   }
 
-  return parts.join(" ");
+  return parts.join(' ');
 }
 
 // =============================================================================
@@ -137,22 +137,22 @@ function serializeAttrs(attrs: Record<string, unknown>): string {
 /** Map checkbox state to marker character */
 const STATE_TO_MARKER: Record<CheckboxValue, string> = {
   // Multi mode
-  todo: " ",
-  done: "x",
-  incomplete: "/",
-  active: "*",
-  na: "-",
+  todo: ' ',
+  done: 'x',
+  incomplete: '/',
+  active: '*',
+  na: '-',
   // Explicit mode
-  unfilled: " ",
-  yes: "y",
-  no: "n",
+  unfilled: ' ',
+  yes: 'y',
+  no: 'n',
 };
 
 /**
  * Get the checkbox marker for a state.
  */
 function getMarker(state: CheckboxValue): string {
-  return STATE_TO_MARKER[state] ?? " ";
+  return STATE_TO_MARKER[state] ?? ' ';
 }
 
 // =============================================================================
@@ -162,10 +162,7 @@ function getMarker(state: CheckboxValue): string {
 /**
  * Serialize a string field.
  */
-function serializeStringField(
-  field: StringField,
-  response: FieldResponse | undefined,
-): string {
+function serializeStringField(field: StringField, response: FieldResponse | undefined): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
@@ -193,15 +190,15 @@ function serializeStringField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
-  let content = "";
+  let content = '';
 
   // Extract value from response if state is "answered"
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     const value = response.value as StringValue;
     if (value.value) {
       content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
@@ -220,10 +217,7 @@ function serializeStringField(
 /**
  * Serialize a number field.
  */
-function serializeNumberField(
-  field: NumberField,
-  response: FieldResponse | undefined,
-): string {
+function serializeNumberField(field: NumberField, response: FieldResponse | undefined): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
@@ -248,15 +242,15 @@ function serializeNumberField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
-  let content = "";
+  let content = '';
 
   // Extract value from response if state is "answered"
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     const value = response.value as NumberValue;
     if (value.value !== null && value.value !== undefined) {
       content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
@@ -309,18 +303,18 @@ function serializeStringListField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
-  let content = "";
+  let content = '';
 
   // Extract value from response if state is "answered"
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     const value = response.value as StringListValue;
     if (value.items && value.items.length > 0) {
-      content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
+      content = `\n\`\`\`value\n${value.items.join('\n')}\n\`\`\`\n`;
     }
   }
 
@@ -336,19 +330,16 @@ function serializeStringListField(
 /**
  * Serialize options (for single-select, multi-select, checkboxes).
  */
-function serializeOptions(
-  options: Option[],
-  selected: Record<string, CheckboxValue>,
-): string {
+function serializeOptions(options: Option[], selected: Record<string, CheckboxValue>): string {
   const lines: string[] = [];
 
   for (const opt of options) {
-    const state = selected[opt.id] ?? "todo";
+    const state = selected[opt.id] ?? 'todo';
     const marker = getMarker(state);
     lines.push(`- [${marker}] ${opt.label} {% #${opt.id} %}`);
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -373,7 +364,7 @@ function serializeSingleSelectField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
@@ -381,14 +372,14 @@ function serializeSingleSelectField(
 
   // Extract value from response if state is "answered"
   let value: SingleSelectValue | undefined;
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     value = response.value as SingleSelectValue;
   }
 
   // Convert selected to checkbox state format
   const selected: Record<string, CheckboxValue> = {};
   for (const opt of field.options) {
-    selected[opt.id] = opt.id === value?.selected ? "done" : "todo";
+    selected[opt.id] = opt.id === value?.selected ? 'done' : 'todo';
   }
 
   const options = serializeOptions(field.options, selected);
@@ -423,7 +414,7 @@ function serializeMultiSelectField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
@@ -431,7 +422,7 @@ function serializeMultiSelectField(
 
   // Extract value from response if state is "answered"
   let value: MultiSelectValue | undefined;
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     value = response.value as MultiSelectValue;
   }
 
@@ -439,7 +430,7 @@ function serializeMultiSelectField(
   const selected: Record<string, CheckboxValue> = {};
   const selectedSet = new Set(value?.selected ?? []);
   for (const opt of field.options) {
-    selected[opt.id] = selectedSet.has(opt.id) ? "done" : "todo";
+    selected[opt.id] = selectedSet.has(opt.id) ? 'done' : 'todo';
   }
 
   const options = serializeOptions(field.options, selected);
@@ -463,13 +454,13 @@ function serializeCheckboxesField(
   if (field.role !== AGENT_ROLE) {
     attrs.role = field.role;
   }
-  if (field.checkboxMode !== "multi") {
+  if (field.checkboxMode !== 'multi') {
     attrs.checkboxMode = field.checkboxMode;
   }
   if (field.minDone !== undefined) {
     attrs.minDone = field.minDone;
   }
-  if (field.approvalMode !== "none") {
+  if (field.approvalMode !== 'none') {
     attrs.approvalMode = field.approvalMode;
   }
   if (field.validate) {
@@ -477,7 +468,7 @@ function serializeCheckboxesField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
@@ -485,7 +476,7 @@ function serializeCheckboxesField(
 
   // Extract value from response if state is "answered"
   let value: CheckboxesValue | undefined;
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     value = response.value as CheckboxesValue;
   }
 
@@ -496,10 +487,7 @@ function serializeCheckboxesField(
 /**
  * Serialize a url-field.
  */
-function serializeUrlField(
-  field: UrlField,
-  response: FieldResponse | undefined,
-): string {
+function serializeUrlField(field: UrlField, response: FieldResponse | undefined): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
@@ -515,15 +503,15 @@ function serializeUrlField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
-  let content = "";
+  let content = '';
 
   // Extract value from response if state is "answered"
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     const value = response.value as UrlValue;
     if (value.value) {
       content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
@@ -542,10 +530,7 @@ function serializeUrlField(
 /**
  * Serialize a url-list field.
  */
-function serializeUrlListField(
-  field: UrlListField,
-  response: FieldResponse | undefined,
-): string {
+function serializeUrlListField(field: UrlListField, response: FieldResponse | undefined): string {
   const attrs: Record<string, unknown> = { id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
@@ -570,18 +555,18 @@ function serializeUrlListField(
   }
 
   // Add state attribute for skipped/aborted (markform-216)
-  if (response?.state === "skipped" || response?.state === "aborted") {
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
     attrs.state = response.state;
   }
 
   const attrStr = serializeAttrs(attrs);
-  let content = "";
+  let content = '';
 
   // Extract value from response if state is "answered"
-  if (response?.state === "answered" && response.value) {
+  if (response?.state === 'answered' && response.value) {
     const value = response.value as UrlListValue;
     if (value.items && value.items.length > 0) {
-      content = `\n\`\`\`value\n${value.items.join("\n")}\n\`\`\`\n`;
+      content = `\n\`\`\`value\n${value.items.join('\n')}\n\`\`\`\n`;
     }
   }
 
@@ -601,21 +586,21 @@ function serializeField(field: Field, responses: Record<Id, FieldResponse>): str
   const response = responses[field.id];
 
   switch (field.kind) {
-    case "string":
+    case 'string':
       return serializeStringField(field, response);
-    case "number":
+    case 'number':
       return serializeNumberField(field, response);
-    case "string_list":
+    case 'string_list':
       return serializeStringListField(field, response);
-    case "single_select":
+    case 'single_select':
       return serializeSingleSelectField(field, response);
-    case "multi_select":
+    case 'multi_select':
       return serializeMultiSelectField(field, response);
-    case "checkboxes":
+    case 'checkboxes':
       return serializeCheckboxesField(field, response);
-    case "url":
+    case 'url':
       return serializeUrlField(field, response);
-    case "url_list":
+    case 'url_list':
       return serializeUrlListField(field, response);
   }
 }
@@ -644,13 +629,13 @@ function serializeDocBlock(doc: DocumentationBlock): string {
  */
 function serializeNotes(notes: Note[]): string {
   if (notes.length === 0) {
-    return "";
+    return '';
   }
 
   // Sort numerically by ID suffix (n1, n2, n10 not n1, n10, n2)
   const sorted = [...notes].sort((a, b) => {
-    const aNum = Number.parseInt(a.id.replace(/^n/, ""), 10) || 0;
-    const bNum = Number.parseInt(b.id.replace(/^n/, ""), 10) || 0;
+    const aNum = Number.parseInt(a.id.replace(/^n/, ''), 10) || 0;
+    const bNum = Number.parseInt(b.id.replace(/^n/, ''), 10) || 0;
     return aNum - bNum;
   });
 
@@ -666,7 +651,7 @@ function serializeNotes(notes: Note[]): string {
     lines.push(`{% note ${attrStr} %}\n${note.text}\n{% /note %}`);
   }
 
-  return lines.join("\n\n");
+  return lines.join('\n\n');
 }
 
 // =============================================================================
@@ -701,23 +686,23 @@ function serializeFieldGroup(
   }
 
   for (const field of group.children) {
-    lines.push("");
+    lines.push('');
     lines.push(serializeField(field, responses));
 
     // Add any doc blocks for this field
     const fieldDocs = docsByRef.get(field.id);
     if (fieldDocs) {
       for (const doc of fieldDocs) {
-        lines.push("");
+        lines.push('');
         lines.push(serializeDocBlock(doc));
       }
     }
   }
 
-  lines.push("");
-  lines.push("{% /field-group %}");
+  lines.push('');
+  lines.push('{% /field-group %}');
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -749,27 +734,27 @@ function serializeFormSchema(
   const formDocs = docsByRef.get(schema.id);
   if (formDocs) {
     for (const doc of formDocs) {
-      lines.push("");
+      lines.push('');
       lines.push(serializeDocBlock(doc));
     }
   }
 
   for (const group of schema.groups) {
-    lines.push("");
+    lines.push('');
     lines.push(serializeFieldGroup(group, responses, docs));
   }
 
   // Add notes at end of form, before closing tag (markform-217)
   const notesContent = serializeNotes(notes);
   if (notesContent) {
-    lines.push("");
+    lines.push('');
     lines.push(notesContent);
   }
 
-  lines.push("");
-  lines.push("{% /form %}");
+  lines.push('');
+  lines.push('{% /form %}');
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 // =============================================================================
@@ -793,12 +778,7 @@ markform:
 ---`;
 
   // Serialize form body
-  const body = serializeFormSchema(
-    form.schema,
-    form.responsesByFieldId,
-    form.docs,
-    form.notes,
-  );
+  const body = serializeFormSchema(form.schema, form.responsesByFieldId, form.docs, form.notes);
 
   return `${frontmatter}\n\n${body}\n`;
 }
@@ -810,121 +790,114 @@ markform:
 /** Map checkbox state to GFM marker for raw markdown output */
 const STATE_TO_GFM_MARKER: Record<CheckboxValue, string> = {
   // Multi mode
-  todo: " ",
-  done: "x",
-  incomplete: "/",
-  active: "*",
-  na: "-",
+  todo: ' ',
+  done: 'x',
+  incomplete: '/',
+  active: '*',
+  na: '-',
   // Explicit mode
-  unfilled: " ",
-  yes: "x",
-  no: " ",
+  unfilled: ' ',
+  yes: 'x',
+  no: ' ',
 };
 
 /**
  * Serialize a field value to raw markdown (human-readable).
  */
-function serializeFieldRaw(
-  field: Field,
-  responses: Record<Id, FieldResponse>,
-): string {
+function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): string {
   const response = responses[field.id];
   const lines: string[] = [];
 
   lines.push(`**${field.label}:**`);
 
   // Extract value from response if state is "answered"
-  const value = response?.state === "answered" ? response.value : undefined;
+  const value = response?.state === 'answered' ? response.value : undefined;
 
   switch (field.kind) {
-    case "string": {
+    case 'string': {
       const strValue = value as StringValue | undefined;
       if (strValue?.value) {
         lines.push(strValue.value);
       } else {
-        lines.push("_(empty)_");
+        lines.push('_(empty)_');
       }
       break;
     }
-    case "number": {
+    case 'number': {
       const numValue = value as NumberValue | undefined;
       if (numValue?.value !== null && numValue?.value !== undefined) {
         lines.push(String(numValue.value));
       } else {
-        lines.push("_(empty)_");
+        lines.push('_(empty)_');
       }
       break;
     }
-    case "string_list": {
+    case 'string_list': {
       const listValue = value as StringListValue | undefined;
       if (listValue?.items && listValue.items.length > 0) {
         for (const item of listValue.items) {
           lines.push(`- ${item}`);
         }
       } else {
-        lines.push("_(empty)_");
+        lines.push('_(empty)_');
       }
       break;
     }
-    case "single_select": {
+    case 'single_select': {
       const selectValue = value as SingleSelectValue | undefined;
-      const selected = field.options.find(
-        (opt) => opt.id === selectValue?.selected,
-      );
+      const selected = field.options.find((opt) => opt.id === selectValue?.selected);
       if (selected) {
         lines.push(selected.label);
       } else {
-        lines.push("_(none selected)_");
+        lines.push('_(none selected)_');
       }
       break;
     }
-    case "multi_select": {
+    case 'multi_select': {
       const multiValue = value as MultiSelectValue | undefined;
       const selectedSet = new Set(multiValue?.selected ?? []);
-      const selectedOpts = field.options.filter((opt) =>
-        selectedSet.has(opt.id),
-      );
+      const selectedOpts = field.options.filter((opt) => selectedSet.has(opt.id));
       if (selectedOpts.length > 0) {
         for (const opt of selectedOpts) {
           lines.push(`- ${opt.label}`);
         }
       } else {
-        lines.push("_(none selected)_");
+        lines.push('_(none selected)_');
       }
       break;
     }
-    case "checkboxes": {
+    case 'checkboxes': {
       const cbValue = value as CheckboxesValue | undefined;
       for (const opt of field.options) {
-        const state = cbValue?.values[opt.id] ?? "todo";
-        const marker = STATE_TO_GFM_MARKER[state] ?? " ";
+        const state = cbValue?.values[opt.id] ?? 'todo';
+        const marker = STATE_TO_GFM_MARKER[state] ?? ' ';
         lines.push(`- [${marker}] ${opt.label}`);
       }
       break;
     }
-    case "url": {
+    case 'url': {
       const urlValue = value as UrlValue | undefined;
       if (urlValue?.value) {
         lines.push(urlValue.value);
       } else {
-        lines.push("_(empty)_");
+        lines.push('_(empty)_');
       }
       break;
     }
-    case "url_list": {
+    case 'url_list': {
       const urlListValue = value as UrlListValue | undefined;
       if (urlListValue?.items && urlListValue.items.length > 0) {
         for (const item of urlListValue.items) {
           lines.push(`- ${item}`);
         }
       } else {
-        lines.push("_(empty)_");
+        lines.push('_(empty)_');
       }
       break;
     }
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -950,7 +923,7 @@ export function serializeRawMarkdown(form: ParsedForm): string {
   // Add form title
   if (form.schema.title) {
     lines.push(`# ${form.schema.title}`);
-    lines.push("");
+    lines.push('');
   }
 
   // Add form-level docs
@@ -958,7 +931,7 @@ export function serializeRawMarkdown(form: ParsedForm): string {
   if (formDocs) {
     for (const doc of formDocs) {
       lines.push(doc.bodyMarkdown.trim());
-      lines.push("");
+      lines.push('');
     }
   }
 
@@ -967,7 +940,7 @@ export function serializeRawMarkdown(form: ParsedForm): string {
     // Add group title as H2
     if (group.title) {
       lines.push(`## ${group.title}`);
-      lines.push("");
+      lines.push('');
     }
 
     // Add group-level docs
@@ -975,25 +948,25 @@ export function serializeRawMarkdown(form: ParsedForm): string {
     if (groupDocs) {
       for (const doc of groupDocs) {
         lines.push(doc.bodyMarkdown.trim());
-        lines.push("");
+        lines.push('');
       }
     }
 
     // Process fields
     for (const field of group.children) {
       lines.push(serializeFieldRaw(field, form.responsesByFieldId));
-      lines.push("");
+      lines.push('');
 
       // Add field-level docs
       const fieldDocs = docsByRef.get(field.id);
       if (fieldDocs) {
         for (const doc of fieldDocs) {
           lines.push(doc.bodyMarkdown.trim());
-          lines.push("");
+          lines.push('');
         }
       }
     }
   }
 
-  return lines.join("\n").trim() + "\n";
+  return lines.join('\n').trim() + '\n';
 }

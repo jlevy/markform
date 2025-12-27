@@ -4,9 +4,9 @@
  * Session transcripts are used for golden testing and session replay.
  * They capture the full interaction between the harness and agent.
  */
-import YAML from "yaml";
-import type { SessionTranscript } from "./coreTypes";
-import { SessionTranscriptSchema } from "./coreTypes";
+import YAML from 'yaml';
+import type { SessionTranscript } from './coreTypes';
+import { SessionTranscriptSchema } from './coreTypes';
 
 /**
  * Parse a session transcript from YAML string.
@@ -24,7 +24,7 @@ export function parseSession(yaml: string): SessionTranscript {
     raw = YAML.parse(yaml);
   } catch (err) {
     throw new Error(
-      `Failed to parse session YAML: ${err instanceof Error ? err.message : String(err)}`
+      `Failed to parse session YAML: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 
@@ -34,9 +34,7 @@ export function parseSession(yaml: string): SessionTranscript {
   // Validate against schema
   const result = SessionTranscriptSchema.safeParse(converted);
   if (!result.success) {
-    const errors = result.error.errors
-      .map((e) => `${e.path.join(".")}: ${e.message}`)
-      .join("; ");
+    const errors = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
     throw new Error(`Invalid session transcript: ${errors}`);
   }
 
@@ -70,9 +68,7 @@ export function serializeSession(session: SessionTranscript): string {
  * Convert a string from snake_case to camelCase.
  */
 function snakeToCamel(str: string): string {
-  return str.replace(/_([a-z])/g, (_match, letter: string) =>
-    letter.toUpperCase()
-  );
+  return str.replace(/_([a-z])/g, (_match, letter: string) => letter.toUpperCase());
 }
 
 /**
@@ -100,7 +96,7 @@ function toCamelCaseDeep(obj: unknown, preserveKeys = false): unknown {
     return obj.map((item) => toCamelCaseDeep(item, false));
   }
 
-  if (typeof obj === "object") {
+  if (typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     const record = obj as Record<string, unknown>;
 
@@ -110,9 +106,7 @@ function toCamelCaseDeep(obj: unknown, preserveKeys = false): unknown {
 
       // Check if this is a "values" key in a set_checkboxes patch
       // The "values" object contains option IDs as keys which should be preserved
-      const isCheckboxValues =
-        key === "values" &&
-        record.op === "set_checkboxes";
+      const isCheckboxValues = key === 'values' && record.op === 'set_checkboxes';
 
       result[resultKey] = toCamelCaseDeep(value, isCheckboxValues);
     }
@@ -140,7 +134,7 @@ function toSnakeCaseDeep(obj: unknown, preserveKeys = false): unknown {
     return obj.map((item) => toSnakeCaseDeep(item, false));
   }
 
-  if (typeof obj === "object") {
+  if (typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     const record = obj as Record<string, unknown>;
 
@@ -150,9 +144,7 @@ function toSnakeCaseDeep(obj: unknown, preserveKeys = false): unknown {
 
       // Check if this is a "values" key in a set_checkboxes patch
       // The "values" object contains option IDs as keys which should be preserved
-      const isCheckboxValues =
-        key === "values" &&
-        record.op === "set_checkboxes";
+      const isCheckboxValues = key === 'values' && record.op === 'set_checkboxes';
 
       result[resultKey] = toSnakeCaseDeep(value, isCheckboxValues);
     }

@@ -24,24 +24,21 @@
  *   5. Validate final form completeness
  */
 
-import { readFileSync } from "node:fs";
-import { writeFile } from "atomically";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from 'node:fs';
+import { writeFile } from 'atomically';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Markform imports
-import { parseForm } from "../src/engine/parse.js";
-import { serializeSession } from "../src/engine/session.js";
-import type { SessionTranscript, SessionTurn, Patch } from "../src/engine/coreTypes.js";
-import {
-  createMarkformTools,
-  MarkformSessionStore,
-} from "../src/integrations/ai-sdk.js";
+import { parseForm } from '../src/engine/parse.js';
+import { serializeSession } from '../src/engine/session.js';
+import type { SessionTranscript, SessionTurn, Patch } from '../src/engine/coreTypes.js';
+import { createMarkformTools, MarkformSessionStore } from '../src/integrations/ai-sdk.js';
 
 // Get the directory of this script
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const packageDir = join(__dirname, "..");
+const packageDir = join(__dirname, '..');
 
 // =============================================================================
 // Configuration
@@ -57,15 +54,14 @@ interface Config {
 
 function parseArgs(): Config {
   const args = process.argv.slice(2);
-  const formPath =
-    args[0] ?? join(packageDir, "examples/simple/simple.form.md");
+  const formPath = args[0] ?? join(packageDir, 'examples/simple/simple.form.md');
 
   return {
     formPath: resolve(formPath),
     maxTurns: 20,
-    model: "anthropic/claude-sonnet-4-5",
+    model: 'anthropic/claude-sonnet-4-5',
     outputSessionPath: args[1],
-    verbose: args.includes("--verbose") || args.includes("-v"),
+    verbose: args.includes('--verbose') || args.includes('-v'),
   };
 }
 
@@ -74,10 +70,10 @@ function parseArgs(): Config {
 // =============================================================================
 
 async function runMockAgent(config: Config): Promise<void> {
-  console.log("Running in mock mode (AI SDK not installed)\n");
+  console.log('Running in mock mode (AI SDK not installed)\n');
 
   // Load form
-  const formContent = readFileSync(config.formPath, "utf-8");
+  const formContent = readFileSync(config.formPath, 'utf-8');
   const form = parseForm(formContent);
 
   // Create session store and tools
@@ -88,7 +84,7 @@ async function runMockAgent(config: Config): Promise<void> {
   const turns: SessionTurn[] = [];
   let turnNumber = 0;
 
-  console.log("=== Starting Mock Agent Loop ===\n");
+  console.log('=== Starting Mock Agent Loop ===\n');
 
   // Initial inspect
   let inspectResult = await tools.markform_inspect.execute({});
@@ -101,12 +97,10 @@ async function runMockAgent(config: Config): Promise<void> {
     console.log(`\n--- Turn ${turnNumber} ---`);
 
     // Get issues to address
-    const issues = inspectResult.data.issues.filter(
-      (i) => i.severity === "required"
-    );
+    const issues = inspectResult.data.issues.filter((i) => i.severity === 'required');
 
     if (issues.length === 0) {
-      console.log("No required issues remaining.");
+      console.log('No required issues remaining.');
       break;
     }
 
@@ -116,64 +110,62 @@ async function runMockAgent(config: Config): Promise<void> {
     const patches: Patch[] = [];
     for (const issue of issues.slice(0, 3)) {
       const fieldId = issue.ref;
-      const field = form.schema.groups
-        .flatMap((g) => g.children)
-        .find((f) => f.id === fieldId);
+      const field = form.schema.groups.flatMap((g) => g.children).find((f) => f.id === fieldId);
 
       if (!field) {
         continue;
       }
 
       switch (field.kind) {
-        case "string":
+        case 'string':
           patches.push({
-            op: "set_string",
+            op: 'set_string',
             fieldId,
             value: `Mock value for ${field.label}`,
           });
           break;
-        case "number":
-          patches.push({ op: "set_number", fieldId, value: 42 });
+        case 'number':
+          patches.push({ op: 'set_number', fieldId, value: 42 });
           break;
-        case "string_list":
+        case 'string_list':
           patches.push({
-            op: "set_string_list",
+            op: 'set_string_list',
             fieldId,
-            items: ["item1", "item2"],
+            items: ['item1', 'item2'],
           });
           break;
-        case "single_select":
+        case 'single_select':
           if (field.options.length > 0) {
             patches.push({
-              op: "set_single_select",
+              op: 'set_single_select',
               fieldId,
               selected: field.options[0]?.id ?? null,
             });
           }
           break;
-        case "multi_select":
+        case 'multi_select':
           if (field.options.length > 0) {
             patches.push({
-              op: "set_multi_select",
+              op: 'set_multi_select',
               fieldId,
-              selected: [field.options[0]?.id ?? ""],
+              selected: [field.options[0]?.id ?? ''],
             });
           }
           break;
-        case "checkboxes":
+        case 'checkboxes':
           if (field.options.length > 0) {
-            const values: Record<string, "done" | "yes"> = {};
+            const values: Record<string, 'done' | 'yes'> = {};
             for (const opt of field.options) {
-              values[opt.id] = field.checkboxMode === "explicit" ? "yes" : "done";
+              values[opt.id] = field.checkboxMode === 'explicit' ? 'yes' : 'done';
             }
-            patches.push({ op: "set_checkboxes", fieldId, values });
+            patches.push({ op: 'set_checkboxes', fieldId, values });
           }
           break;
       }
     }
 
     if (patches.length === 0) {
-      console.log("No patches generated. Breaking.");
+      console.log('No patches generated. Breaking.');
       break;
     }
 
@@ -187,10 +179,8 @@ async function runMockAgent(config: Config): Promise<void> {
       inspect: { issues },
       apply: { patches },
       after: {
-        requiredIssueCount: applyResult.data.issues.filter(
-          (i) => i.severity === "required"
-        ).length,
-        markdownSha256: "mock-sha256",
+        requiredIssueCount: applyResult.data.issues.filter((i) => i.severity === 'required').length,
+        markdownSha256: 'mock-sha256',
         answeredFieldCount: 0,
         skippedFieldCount: 0,
       },
@@ -201,25 +191,25 @@ async function runMockAgent(config: Config): Promise<void> {
   }
 
   // Final result
-  console.log("\n=== Final Result ===");
+  console.log('\n=== Final Result ===');
   console.log(`Complete: ${inspectResult.data.isComplete}`);
   console.log(`Turns: ${turnNumber}`);
   console.log(
-    `Remaining issues: ${inspectResult.data.issues.filter((i) => i.severity === "required").length}`
+    `Remaining issues: ${inspectResult.data.issues.filter((i) => i.severity === 'required').length}`,
   );
 
   // Show final markdown
   if (config.verbose) {
     const markdownResult = await tools.markform_get_markdown!.execute({});
-    console.log("\n=== Final Form ===");
+    console.log('\n=== Final Form ===');
     console.log(markdownResult.data.markdown);
   }
 
   // Output session if requested
   if (config.outputSessionPath) {
     const session: SessionTranscript = {
-      sessionVersion: "0.1.0",
-      mode: "mock",
+      sessionVersion: '0.1.0',
+      mode: 'mock',
       form: { path: config.formPath },
       harness: { maxTurns: config.maxTurns, maxPatchesPerTurn: 20, maxIssues: 10 },
       turns,
@@ -240,35 +230,35 @@ async function runMockAgent(config: Config): Promise<void> {
 
 async function runLiveAgent(config: Config): Promise<void> {
   // Dynamically import AI SDK
-  let generateText: typeof import("ai").generateText;
-  let anthropic: typeof import("@ai-sdk/anthropic").anthropic;
+  let generateText: typeof import('ai').generateText;
+  let anthropic: typeof import('@ai-sdk/anthropic').anthropic;
 
   try {
-    const ai = await import("ai");
+    const ai = await import('ai');
     generateText = ai.generateText;
   } catch {
-    console.log("AI SDK (ai package) not installed. Running mock agent.");
+    console.log('AI SDK (ai package) not installed. Running mock agent.');
     return runMockAgent(config);
   }
 
   try {
-    const anthropicModule = await import("@ai-sdk/anthropic");
+    const anthropicModule = await import('@ai-sdk/anthropic');
     anthropic = anthropicModule.anthropic;
   } catch {
-    console.log("Anthropic provider not installed. Running mock agent.");
+    console.log('Anthropic provider not installed. Running mock agent.');
     return runMockAgent(config);
   }
 
   // Check for API key
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.log("ANTHROPIC_API_KEY not set. Running mock agent.");
+    console.log('ANTHROPIC_API_KEY not set. Running mock agent.');
     return runMockAgent(config);
   }
 
   console.log(`Running live agent with model: ${config.model}\n`);
 
   // Load form
-  const formContent = readFileSync(config.formPath, "utf-8");
+  const formContent = readFileSync(config.formPath, 'utf-8');
   const form = parseForm(formContent);
 
   // Create session store and tools
@@ -279,7 +269,7 @@ async function runLiveAgent(config: Config): Promise<void> {
   const turns: SessionTurn[] = [];
   let turnNumber = 0;
 
-  console.log("=== Starting Live Agent Loop ===\n");
+  console.log('=== Starting Live Agent Loop ===\n');
 
   // Get initial form state
   let inspectResult = await tools.markform_inspect.execute({});
@@ -295,14 +285,14 @@ async function runLiveAgent(config: Config): Promise<void> {
 
 Form State: ${inspectResult.data.formState}
 Issues to resolve:
-${inspectResult.data.issues.map((i) => `- ${i.ref}: ${i.message} (${i.severity})`).join("\n")}
+${inspectResult.data.issues.map((i) => `- ${i.ref}: ${i.message} (${i.severity})`).join('\n')}
 
 Use the markform_apply tool to fill in values for the fields that have issues.
 Focus on required issues first. Use realistic, sensible values.
 If a field asks for specific format (email, date, etc.), use the correct format.`;
 
     if (config.verbose) {
-      console.log("Prompt:", prompt.slice(0, 200) + "...");
+      console.log('Prompt:', prompt.slice(0, 200) + '...');
     }
 
     // Call the model
@@ -313,30 +303,28 @@ If a field asks for specific format (email, date, etc.), use the correct format.
       const result = await generateText({
         model,
         prompt,
-        tools: tools as unknown as Parameters<typeof generateText>[0]["tools"],
+        tools: tools as unknown as Parameters<typeof generateText>[0]['tools'],
         maxSteps: 5,
       } as Parameters<typeof generateText>[0]);
 
-      console.log(`Model response: ${result.text || "(tool calls only)"}`);
+      console.log(`Model response: ${result.text || '(tool calls only)'}`);
 
       // Record patches from tool calls
       const patches: Patch[] = [];
       for (const step of result.steps) {
         for (const toolResult of step.toolResults) {
           if (
-            toolResult.toolName === "markform_apply" &&
-            "result" in toolResult &&
-            typeof toolResult.result === "object" &&
+            toolResult.toolName === 'markform_apply' &&
+            'result' in toolResult &&
+            typeof toolResult.result === 'object' &&
             toolResult.result !== null
           ) {
             // The patches were already applied, just record them
             const applyResult = toolResult.result as { data: { applyStatus: string } };
-            if (applyResult.data?.applyStatus === "applied") {
+            if (applyResult.data?.applyStatus === 'applied') {
               // Get patches from the tool call args
-              const toolCall = step.toolCalls.find(
-                (tc) => tc.toolName === "markform_apply"
-              );
-              if (toolCall && "args" in toolCall) {
+              const toolCall = step.toolCalls.find((tc) => tc.toolName === 'markform_apply');
+              if (toolCall && 'args' in toolCall) {
                 const args = toolCall.args as { patches: Patch[] };
                 patches.push(...args.patches);
               }
@@ -353,14 +341,14 @@ If a field asks for specific format (email, date, etc.), use the correct format.
           apply: { patches },
           after: {
             requiredIssueCount: 0, // Will be updated
-            markdownSha256: "live-agent",
+            markdownSha256: 'live-agent',
             answeredFieldCount: 0,
             skippedFieldCount: 0,
           },
         });
       }
     } catch (err) {
-      console.error("Error calling model:", err);
+      console.error('Error calling model:', err);
       break;
     }
 
@@ -371,26 +359,27 @@ If a field asks for specific format (email, date, etc.), use the correct format.
     // Update last turn with new issue count
     const lastTurn = turns[turns.length - 1];
     if (lastTurn) {
-      lastTurn.after.requiredIssueCount =
-        inspectResult.data.issues.filter((i) => i.severity === "required").length;
+      lastTurn.after.requiredIssueCount = inspectResult.data.issues.filter(
+        (i) => i.severity === 'required',
+      ).length;
     }
   }
 
   // Final result
-  console.log("\n=== Final Result ===");
+  console.log('\n=== Final Result ===');
   console.log(`Complete: ${inspectResult.data.isComplete}`);
   console.log(`Turns: ${turnNumber}`);
 
   // Show final form
   const markdownResult = await tools.markform_get_markdown!.execute({});
-  console.log("\n=== Final Form ===");
+  console.log('\n=== Final Form ===');
   console.log(markdownResult.data.markdown);
 
   // Output session if requested
   if (config.outputSessionPath) {
     const session: SessionTranscript = {
-      sessionVersion: "0.1.0",
-      mode: "live",
+      sessionVersion: '0.1.0',
+      mode: 'live',
       form: { path: config.formPath },
       harness: { maxTurns: config.maxTurns, maxPatchesPerTurn: 20, maxIssues: 10 },
       turns,
@@ -406,10 +395,10 @@ If a field asks for specific format (email, date, etc.), use the correct format.
 
   // Validation
   if (inspectResult.data.isComplete) {
-    console.log("\n✓ Form successfully completed by agent!");
+    console.log('\n✓ Form successfully completed by agent!');
   } else {
     console.log(
-      `\n✗ Form incomplete. ${inspectResult.data.issues.filter((i) => i.severity === "required").length} required issues remaining.`
+      `\n✗ Form incomplete. ${inspectResult.data.issues.filter((i) => i.severity === 'required').length} required issues remaining.`,
     );
     process.exit(1);
   }
@@ -422,16 +411,16 @@ If a field asks for specific format (email, date, etc.), use the correct format.
 async function main(): Promise<void> {
   const config = parseArgs();
 
-  console.log("Markform Live Agent Test");
-  console.log("========================");
+  console.log('Markform Live Agent Test');
+  console.log('========================');
   console.log(`Form: ${config.formPath}`);
   console.log(`Max turns: ${config.maxTurns}`);
-  console.log("");
+  console.log('');
 
   await runLiveAgent(config);
 }
 
 main().catch((err) => {
-  console.error("Error:", err);
+  console.error('Error:', err);
   process.exit(1);
 });

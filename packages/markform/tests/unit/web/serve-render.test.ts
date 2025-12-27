@@ -5,13 +5,10 @@
  * for all field types, allowing users to edit and save forms.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from 'vitest';
 
-import { parseForm } from "../../../src/engine/parse.js";
-import {
-  renderFormHtml,
-  escapeHtml,
-} from "../../../src/cli/commands/serve.js";
+import { parseForm } from '../../../src/engine/parse.js';
+import { renderFormHtml, escapeHtml } from '../../../src/cli/commands/serve.js';
 
 // Helper to check if HTML contains an element with attributes (unused but kept for future use)
 // function hasElement(
@@ -39,19 +36,17 @@ import {
 //   return match ? match[1] : null;
 // }
 
-describe("serve HTML rendering", () => {
-  describe("escapeHtml", () => {
-    it("should escape HTML special characters", () => {
+describe('serve HTML rendering', () => {
+  describe('escapeHtml', () => {
+    it('should escape HTML special characters', () => {
       expect(escapeHtml("<script>alert('xss')</script>")).toBe(
-        "&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;"
+        '&lt;script&gt;alert(&#039;xss&#039;)&lt;/script&gt;',
       );
-      expect(escapeHtml('a & b "quoted"')).toBe(
-        "a &amp; b &quot;quoted&quot;"
-      );
+      expect(escapeHtml('a & b "quoted"')).toBe('a &amp; b &quot;quoted&quot;');
     });
   });
 
-  describe("string field rendering", () => {
+  describe('string field rendering', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -62,7 +57,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render string field as text input", () => {
+    it('should render string field as text input', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -73,15 +68,15 @@ markform:
       expect(html).toContain('id="field-name"');
     });
 
-    it("should mark required fields", () => {
+    it('should mark required fields', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
-      expect(html).toContain("required");
+      expect(html).toContain('required');
     });
   });
 
-  describe("number field rendering", () => {
+  describe('number field rendering', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -92,7 +87,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render number field as number input", () => {
+    it('should render number field as number input', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -101,7 +96,7 @@ markform:
       expect(html).toContain('name="age"');
     });
 
-    it("should include min/max constraints", () => {
+    it('should include min/max constraints', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -109,7 +104,7 @@ markform:
       expect(html).toContain('max="150"');
     });
 
-    it("should use step=1 for integer fields", () => {
+    it('should use step=1 for integer fields', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -117,7 +112,7 @@ markform:
     });
   });
 
-  describe("string_list field rendering", () => {
+  describe('string_list field rendering', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -128,7 +123,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render string_list as textarea", () => {
+    it('should render string_list as textarea', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -136,7 +131,7 @@ markform:
       expect(html).toContain('name="tags"');
     });
 
-    it("should include placeholder explaining format", () => {
+    it('should include placeholder explaining format', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -144,7 +139,7 @@ markform:
     });
   });
 
-  describe("single_select field rendering", () => {
+  describe('single_select field rendering', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -159,7 +154,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render single_select as select element", () => {
+    it('should render single_select as select element', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -167,7 +162,7 @@ markform:
       expect(html).toContain('name="priority"');
     });
 
-    it("should include all options", () => {
+    it('should include all options', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -175,12 +170,12 @@ markform:
       expect(html).toContain('value="low"');
       expect(html).toContain('value="medium"');
       expect(html).toContain('value="high"');
-      expect(html).toContain(">Low</option>");
-      expect(html).toContain(">Medium</option>");
-      expect(html).toContain(">High</option>");
+      expect(html).toContain('>Low</option>');
+      expect(html).toContain('>Medium</option>');
+      expect(html).toContain('>High</option>');
     });
 
-    it("should include empty option for unselected state", () => {
+    it('should include empty option for unselected state', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -189,7 +184,7 @@ markform:
     });
   });
 
-  describe("multi_select field rendering", () => {
+  describe('multi_select field rendering', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -204,7 +199,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render multi_select as checkboxes", () => {
+    it('should render multi_select as checkboxes', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -212,7 +207,7 @@ markform:
       expect(html).toContain('type="checkbox"');
     });
 
-    it("should include all options as checkboxes", () => {
+    it('should include all options as checkboxes', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -222,17 +217,17 @@ markform:
       expect(html).toContain('value="database"');
     });
 
-    it("should have labels for each checkbox", () => {
+    it('should have labels for each checkbox', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
-      expect(html).toContain(">Frontend</label>");
-      expect(html).toContain(">Backend</label>");
-      expect(html).toContain(">Database</label>");
+      expect(html).toContain('>Frontend</label>');
+      expect(html).toContain('>Backend</label>');
+      expect(html).toContain('>Database</label>');
     });
   });
 
-  describe("checkboxes field rendering (simple mode)", () => {
+  describe('checkboxes field rendering (simple mode)', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -246,7 +241,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render simple checkboxes as HTML checkboxes", () => {
+    it('should render simple checkboxes as HTML checkboxes', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -255,7 +250,7 @@ markform:
       expect(html).toContain('name="agreements"');
     });
 
-    it("should include all options", () => {
+    it('should include all options', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -264,7 +259,7 @@ markform:
     });
   });
 
-  describe("checkboxes field rendering (multi mode)", () => {
+  describe('checkboxes field rendering (multi mode)', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -278,7 +273,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render multi checkboxes as select elements", () => {
+    it('should render multi checkboxes as select elements', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -288,7 +283,7 @@ markform:
       expect(html).toContain('name="tasks.design"');
     });
 
-    it("should include all state options", () => {
+    it('should include all state options', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -301,7 +296,7 @@ markform:
     });
   });
 
-  describe("checkboxes field rendering (explicit mode)", () => {
+  describe('checkboxes field rendering (explicit mode)', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -315,7 +310,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render explicit checkboxes as select elements", () => {
+    it('should render explicit checkboxes as select elements', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -325,7 +320,7 @@ markform:
       expect(html).toContain('name="confirmations.notified"');
     });
 
-    it("should include yes/no/unfilled options", () => {
+    it('should include yes/no/unfilled options', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -335,7 +330,7 @@ markform:
     });
   });
 
-  describe("form structure", () => {
+  describe('form structure', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -346,7 +341,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should wrap form in a form element with POST method", () => {
+    it('should wrap form in a form element with POST method', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -355,14 +350,14 @@ markform:
       expect(html).toContain('action="/save"');
     });
 
-    it("should include form title", () => {
+    it('should include form title', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
-      expect(html).toContain("Test Form");
+      expect(html).toContain('Test Form');
     });
 
-    it("should include save button of type submit", () => {
+    it('should include save button of type submit', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -371,7 +366,7 @@ markform:
     });
   });
 
-  describe("pre-filled values", () => {
+  describe('pre-filled values', () => {
     // Note: String and number values use ```value fence blocks, not inline text
     const formContent = `---
 markform:
@@ -397,21 +392,21 @@ John Doe
 {% /field-group %}
 {% /form %}`;
 
-    it("should pre-fill string value", () => {
+    it('should pre-fill string value', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
       expect(html).toContain('value="John Doe"');
     });
 
-    it("should pre-fill number value", () => {
+    it('should pre-fill number value', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
       expect(html).toContain('value="30"');
     });
 
-    it("should pre-select single_select option", () => {
+    it('should pre-select single_select option', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -420,7 +415,7 @@ John Doe
     });
   });
 
-  describe("url field rendering", () => {
+  describe('url field rendering', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -431,7 +426,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render url field as url input", () => {
+    it('should render url field as url input', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -441,21 +436,21 @@ markform:
       expect(html).toContain('id="field-website"');
     });
 
-    it("should include placeholder for url format", () => {
+    it('should include placeholder for url format', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
       expect(html).toContain('placeholder="https://example.com"');
     });
 
-    it("should mark required url fields", () => {
+    it('should mark required url fields', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
-      expect(html).toContain("required");
+      expect(html).toContain('required');
     });
 
-    it("should show type badge as url", () => {
+    it('should show type badge as url', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -463,7 +458,7 @@ markform:
     });
   });
 
-  describe("url_list field rendering", () => {
+  describe('url_list field rendering', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -474,7 +469,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should render url_list as textarea", () => {
+    it('should render url_list as textarea', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -482,14 +477,14 @@ markform:
       expect(html).toContain('name="references"');
     });
 
-    it("should include placeholder explaining format", () => {
+    it('should include placeholder explaining format', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
       expect(html).toMatch(/placeholder="[^"]*URL.*line/i);
     });
 
-    it("should show type badge as url_list", () => {
+    it('should show type badge as url_list', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
@@ -497,7 +492,7 @@ markform:
     });
   });
 
-  describe("url pre-filled values", () => {
+  describe('url pre-filled values', () => {
     const formContent = `---
 markform:
   spec: MF/0.1
@@ -518,24 +513,24 @@ https://example2.com
 {% /field-group %}
 {% /form %}`;
 
-    it("should pre-fill url value", () => {
+    it('should pre-fill url value', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
       expect(html).toContain('value="https://example.com"');
     });
 
-    it("should pre-fill url_list values", () => {
+    it('should pre-fill url_list values', () => {
       const form = parseForm(formContent);
       const html = renderFormHtml(form);
 
-      expect(html).toContain("https://example1.com");
-      expect(html).toContain("https://example2.com");
+      expect(html).toContain('https://example1.com');
+      expect(html).toContain('https://example2.com');
     });
   });
 
-  describe("skip_field support", () => {
-    describe("optional fields", () => {
+  describe('skip_field support', () => {
+    describe('optional fields', () => {
       const formContent = `---
 markform:
   spec: MF/0.1
@@ -547,7 +542,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-      it("should render skip button for optional string field", () => {
+      it('should render skip button for optional string field', () => {
         const form = parseForm(formContent);
         const html = renderFormHtml(form);
 
@@ -556,7 +551,7 @@ markform:
         expect(html).toMatch(/Skip/i);
       });
 
-      it("should render skip button for optional number field", () => {
+      it('should render skip button for optional number field', () => {
         const form = parseForm(formContent);
         const html = renderFormHtml(form);
 
@@ -564,7 +559,7 @@ markform:
       });
     });
 
-    describe("required fields", () => {
+    describe('required fields', () => {
       const formContent = `---
 markform:
   spec: MF/0.1
@@ -575,7 +570,7 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-      it("should not render skip button for required fields", () => {
+      it('should not render skip button for required fields', () => {
         const form = parseForm(formContent);
         const html = renderFormHtml(form);
 
@@ -584,7 +579,7 @@ markform:
       });
     });
 
-    describe("skipped state display", () => {
+    describe('skipped state display', () => {
       const formContent = `---
 markform:
   spec: MF/0.1
@@ -595,11 +590,11 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-      it("should show skipped indicator for previously skipped fields", () => {
+      it('should show skipped indicator for previously skipped fields', () => {
         const form = parseForm(formContent);
         // Mark the field as skipped
         form.responsesByFieldId = {
-          notes: { state: "skipped" },
+          notes: { state: 'skipped' },
         };
         const html = renderFormHtml(form);
 
@@ -610,7 +605,7 @@ markform:
     });
   });
 
-  describe("field type coverage", () => {
+  describe('field type coverage', () => {
     // This test ensures ALL field types defined in FieldKind are handled by the web renderer.
     // If a new field type is added to coreTypes.ts but not to serve.ts, this test will fail.
 
@@ -641,15 +636,15 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it("should not have any unknown field types in output", () => {
+    it('should not have any unknown field types in output', () => {
       const form = parseForm(allFieldTypesForm);
       const html = renderFormHtml(form);
 
       // The "(unknown field type)" message indicates a field type wasn't handled
-      expect(html).not.toContain("unknown field type");
+      expect(html).not.toContain('unknown field type');
     });
 
-    it("should show correct type badges for all field types", () => {
+    it('should show correct type badges for all field types', () => {
       const form = parseForm(allFieldTypesForm);
       const html = renderFormHtml(form);
 
@@ -664,7 +659,7 @@ markform:
       expect(html).toContain('type-badge">url_list</span>');
     });
 
-    it("should render appropriate input elements for all field types", () => {
+    it('should render appropriate input elements for all field types', () => {
       const form = parseForm(allFieldTypesForm);
       const html = renderFormHtml(form);
 

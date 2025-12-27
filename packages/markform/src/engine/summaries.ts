@@ -30,7 +30,7 @@ import type {
   StructureSummary,
   UrlListValue,
   UrlValue,
-} from "./coreTypes.js";
+} from './coreTypes.js';
 
 // =============================================================================
 // Structure Summary Computation
@@ -54,12 +54,10 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
     url_list: 0,
   };
 
-  const groupsById: Record<Id, "field_group"> = {};
+  const groupsById: Record<Id, 'field_group'> = {};
   const fieldsById: Record<Id, FieldKind> = {};
-  const optionsById: Record<
-    QualifiedOptionRef,
-    { parentFieldId: Id; parentFieldKind: FieldKind }
-  > = {};
+  const optionsById: Record<QualifiedOptionRef, { parentFieldId: Id; parentFieldKind: FieldKind }> =
+    {};
 
   let groupCount = 0;
   let fieldCount = 0;
@@ -67,7 +65,7 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
 
   for (const group of schema.groups) {
     groupCount++;
-    groupsById[group.id] = "field_group";
+    groupsById[group.id] = 'field_group';
 
     for (const field of group.children) {
       fieldCount++;
@@ -75,7 +73,7 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
       fieldsById[field.id] = field.kind;
 
       // Count options for select/checkbox fields
-      if ("options" in field) {
+      if ('options' in field) {
         for (const opt of field.options) {
           optionCount++;
           const qualifiedRef: QualifiedOptionRef = `${field.id}.${opt.id}`;
@@ -112,53 +110,53 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
   }
 
   switch (field.kind) {
-    case "string": {
+    case 'string': {
       const v = value as StringValue;
-      return v.value !== null && v.value.trim() !== "";
+      return v.value !== null && v.value.trim() !== '';
     }
-    case "number": {
+    case 'number': {
       const v = value as NumberValue;
       return v.value !== null;
     }
-    case "string_list": {
+    case 'string_list': {
       const v = value as StringListValue;
       return v.items.length > 0;
     }
-    case "single_select": {
+    case 'single_select': {
       const v = value as SingleSelectValue;
       return v.selected !== null;
     }
-    case "multi_select": {
+    case 'multi_select': {
       const v = value as MultiSelectValue;
       return v.selected.length > 0;
     }
-    case "checkboxes": {
+    case 'checkboxes': {
       const v = value as CheckboxesValue;
       const checkboxField = field;
       // For checkboxes, check if any option has been changed from default
-      const mode = checkboxField.checkboxMode ?? "multi";
+      const mode = checkboxField.checkboxMode ?? 'multi';
 
       for (const opt of checkboxField.options) {
         const state = v.values[opt.id];
-        if (mode === "explicit") {
+        if (mode === 'explicit') {
           // In explicit mode, "unfilled" is default, anything else is submitted
-          if (state !== "unfilled") {
+          if (state !== 'unfilled') {
             return true;
           }
         } else {
           // In multi/simple mode, "todo" is default, anything else is submitted
-          if (state !== "todo") {
+          if (state !== 'todo') {
             return true;
           }
         }
       }
       return false;
     }
-    case "url": {
+    case 'url': {
       const v = value as UrlValue;
-      return v.value !== null && v.value.trim() !== "";
+      return v.value !== null && v.value.trim() !== '';
     }
-    case "url_list": {
+    case 'url_list': {
       const v = value as UrlListValue;
       return v.items.length > 0;
     }
@@ -170,7 +168,7 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
  */
 function computeCheckboxProgress(
   field: CheckboxesField,
-  value: CheckboxesValue | undefined
+  value: CheckboxesValue | undefined,
 ): CheckboxProgressCounts {
   const result: CheckboxProgressCounts = {
     total: field.options.length,
@@ -186,7 +184,7 @@ function computeCheckboxProgress(
 
   if (!value) {
     // All options in default state
-    const defaultState = field.checkboxMode === "explicit" ? "unfilled" : "todo";
+    const defaultState = field.checkboxMode === 'explicit' ? 'unfilled' : 'todo';
     for (const _opt of field.options) {
       result[defaultState]++;
     }
@@ -194,7 +192,7 @@ function computeCheckboxProgress(
   }
 
   for (const opt of field.options) {
-    const state = value.values[opt.id] ?? "todo";
+    const state = value.values[opt.id] ?? 'todo';
     result[state]++;
   }
 
@@ -215,7 +213,7 @@ function computeFieldProgress(
   field: Field,
   response: FieldResponse,
   notes: Note[],
-  issues: InspectIssue[]
+  issues: InspectIssue[],
 ): FieldProgress {
   const fieldIssues = issues.filter((i) => i.ref === field.id);
   const issueCount = fieldIssues.length;
@@ -227,12 +225,12 @@ function computeFieldProgress(
   // - Empty unanswered fields with only "required_missing" issues are NOT invalid (just empty)
   // - Fields with value validation issues are invalid
   let valid = true;
-  if (response.state === "skipped" || response.state === "aborted") {
+  if (response.state === 'skipped' || response.state === 'aborted') {
     // Skipped/aborted fields with any issues are invalid
     valid = issueCount === 0;
   } else if (empty) {
     // Empty unanswered fields: only invalid if they have issues OTHER than required_missing
-    const valueIssues = fieldIssues.filter((i) => i.reason !== "required_missing");
+    const valueIssues = fieldIssues.filter((i) => i.reason !== 'required_missing');
     valid = valueIssues.length === 0;
   } else {
     // Filled fields: invalid if any issues
@@ -256,10 +254,10 @@ function computeFieldProgress(
   };
 
   // Add checkbox progress for checkboxes fields
-  if (field.kind === "checkboxes") {
+  if (field.kind === 'checkboxes') {
     progress.checkboxProgress = computeCheckboxProgress(
       field,
-      value as CheckboxesValue | undefined
+      value as CheckboxesValue | undefined,
     );
   }
 
@@ -277,10 +275,10 @@ function computeFieldProgress(
  * @param response - The field response (may be undefined)
  * @returns The response state
  */
- 
+
 function _getAnswerState(response: FieldResponse | undefined): AnswerState {
   if (!response) {
-    return "unanswered";
+    return 'unanswered';
   }
   return response.state;
 }
@@ -298,7 +296,7 @@ export function computeProgressSummary(
   schema: FormSchema,
   responsesByFieldId: Record<Id, FieldResponse>,
   notes: Note[],
-  issues: InspectIssue[]
+  issues: InspectIssue[],
 ): ProgressSummary {
   const fields: Record<Id, FieldProgress> = {};
   const counts: ProgressCounts = {
@@ -322,7 +320,7 @@ export function computeProgressSummary(
 
   for (const group of schema.groups) {
     for (const field of group.children) {
-      const response = responsesByFieldId[field.id] ?? { state: "unanswered" };
+      const response = responsesByFieldId[field.id] ?? { state: 'unanswered' };
       const progress = computeFieldProgress(field, response, notes, issues);
       fields[field.id] = progress;
 
@@ -333,13 +331,13 @@ export function computeProgressSummary(
       }
 
       // Dimension 1: AnswerState (mutually exclusive)
-      if (progress.answerState === "answered") {
+      if (progress.answerState === 'answered') {
         counts.answeredFields++;
-      } else if (progress.answerState === "skipped") {
+      } else if (progress.answerState === 'skipped') {
         counts.skippedFields++;
-      } else if (progress.answerState === "aborted") {
+      } else if (progress.answerState === 'aborted') {
         counts.abortedFields++;
-      } else if (progress.answerState === "unanswered") {
+      } else if (progress.answerState === 'unanswered') {
         counts.unansweredFields++;
       }
 
@@ -378,25 +376,25 @@ export function computeProgressSummary(
 export function computeFormState(progress: ProgressSummary): ProgressState {
   // Aborted fields = invalid state
   if (progress.counts.abortedFields > 0) {
-    return "invalid";
+    return 'invalid';
   }
 
   // If any field is invalid, form is invalid
   if (progress.counts.invalidFields > 0) {
-    return "invalid";
+    return 'invalid';
   }
 
   // If all required fields are filled and valid
   if (progress.counts.emptyRequiredFields === 0) {
-    return "complete";
+    return 'complete';
   }
 
   // If any field is answered but not all required fields filled
   if (progress.counts.answeredFields > 0) {
-    return "incomplete";
+    return 'incomplete';
   }
 
-  return "empty";
+  return 'empty';
 }
 
 /**
@@ -424,12 +422,10 @@ export function isFormComplete(progress: ProgressSummary): boolean {
   }
 
   // Basic requirements: no invalid fields, all required fields filled
-  const baseComplete =
-    counts.invalidFields === 0 && counts.emptyRequiredFields === 0;
+  const baseComplete = counts.invalidFields === 0 && counts.emptyRequiredFields === 0;
 
   // All fields must be addressed (filled or skipped)
-  const allFieldsAccountedFor =
-    counts.answeredFields + counts.skippedFields === counts.totalFields;
+  const allFieldsAccountedFor = counts.answeredFields + counts.skippedFields === counts.totalFields;
 
   return baseComplete && allFieldsAccountedFor;
 }
@@ -458,7 +454,7 @@ export function computeAllSummaries(
   schema: FormSchema,
   responsesByFieldId: Record<Id, FieldResponse>,
   notes: Note[],
-  issues: InspectIssue[]
+  issues: InspectIssue[],
 ): ComputedSummaries {
   const structureSummary = computeStructureSummary(schema);
   const progressSummary = computeProgressSummary(schema, responsesByFieldId, notes, issues);

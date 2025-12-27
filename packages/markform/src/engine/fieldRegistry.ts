@@ -14,7 +14,7 @@
  * TypeScript will error if any of these are missing or inconsistent.
  */
 
-import type { z } from "zod";
+import type { z } from 'zod';
 
 // =============================================================================
 // Field kinds (tuple for type inference)
@@ -26,14 +26,14 @@ import type { z } from "zod";
  * corresponding types and handlers are added.
  */
 export const FIELD_KINDS = [
-  "string",
-  "number",
-  "string_list",
-  "checkboxes",
-  "single_select",
-  "multi_select",
-  "url",
-  "url_list",
+  'string',
+  'number',
+  'string_list',
+  'checkboxes',
+  'single_select',
+  'multi_select',
+  'url',
+  'url_list',
 ] as const;
 
 /** Field kind discriminant - derived from the tuple */
@@ -68,7 +68,7 @@ import type {
   SetMultiSelectPatch,
   SetUrlPatch,
   SetUrlListPatch,
-} from "./coreTypes.js";
+} from './coreTypes.js';
 
 /**
  * Type map linking each field kind to its corresponding types.
@@ -79,49 +79,49 @@ export interface FieldTypeMap {
     field: StringField;
     value: StringValue;
     patch: SetStringPatch;
-    emptyValue: { kind: "string"; value: null };
+    emptyValue: { kind: 'string'; value: null };
   };
   number: {
     field: NumberField;
     value: NumberValue;
     patch: SetNumberPatch;
-    emptyValue: { kind: "number"; value: null };
+    emptyValue: { kind: 'number'; value: null };
   };
   string_list: {
     field: StringListField;
     value: StringListValue;
     patch: SetStringListPatch;
-    emptyValue: { kind: "string_list"; items: [] };
+    emptyValue: { kind: 'string_list'; items: [] };
   };
   checkboxes: {
     field: CheckboxesField;
     value: CheckboxesValue;
     patch: SetCheckboxesPatch;
-    emptyValue: { kind: "checkboxes"; values: Record<string, never> };
+    emptyValue: { kind: 'checkboxes'; values: Record<string, never> };
   };
   single_select: {
     field: SingleSelectField;
     value: SingleSelectValue;
     patch: SetSingleSelectPatch;
-    emptyValue: { kind: "single_select"; selected: null };
+    emptyValue: { kind: 'single_select'; selected: null };
   };
   multi_select: {
     field: MultiSelectField;
     value: MultiSelectValue;
     patch: SetMultiSelectPatch;
-    emptyValue: { kind: "multi_select"; selected: [] };
+    emptyValue: { kind: 'multi_select'; selected: [] };
   };
   url: {
     field: UrlField;
     value: UrlValue;
     patch: SetUrlPatch;
-    emptyValue: { kind: "url"; value: null };
+    emptyValue: { kind: 'url'; value: null };
   };
   url_list: {
     field: UrlListField;
     value: UrlListValue;
     patch: SetUrlListPatch;
-    emptyValue: { kind: "url_list"; items: [] };
+    emptyValue: { kind: 'url_list'; items: [] };
   };
 }
 
@@ -154,13 +154,13 @@ const _exactCheck: _AssertMapExact = true;
 // =============================================================================
 
 /** Union of all Field types - derived from the registry */
-export type Field = FieldTypeMap[FieldKind]["field"];
+export type Field = FieldTypeMap[FieldKind]['field'];
 
 /** Union of all FieldValue types - derived from the registry */
-export type FieldValue = FieldTypeMap[FieldKind]["value"];
+export type FieldValue = FieldTypeMap[FieldKind]['value'];
 
 /** Union of all set patch types - derived from the registry */
-export type SetValuePatch = FieldTypeMap[FieldKind]["patch"];
+export type SetValuePatch = FieldTypeMap[FieldKind]['patch'];
 
 // =============================================================================
 // Exhaustiveness check helper
@@ -196,22 +196,22 @@ export function assertNever(x: never, message?: string): never {
  */
 export function createEmptyValue(kind: FieldKind): FieldValue {
   switch (kind) {
-    case "string":
-      return { kind: "string", value: null };
-    case "number":
-      return { kind: "number", value: null };
-    case "string_list":
-      return { kind: "string_list", items: [] };
-    case "checkboxes":
-      return { kind: "checkboxes", values: {} };
-    case "single_select":
-      return { kind: "single_select", selected: null };
-    case "multi_select":
-      return { kind: "multi_select", selected: [] };
-    case "url":
-      return { kind: "url", value: null };
-    case "url_list":
-      return { kind: "url_list", items: [] };
+    case 'string':
+      return { kind: 'string', value: null };
+    case 'number':
+      return { kind: 'number', value: null };
+    case 'string_list':
+      return { kind: 'string_list', items: [] };
+    case 'checkboxes':
+      return { kind: 'checkboxes', values: {} };
+    case 'single_select':
+      return { kind: 'single_select', selected: null };
+    case 'multi_select':
+      return { kind: 'multi_select', selected: [] };
+    case 'url':
+      return { kind: 'url', value: null };
+    case 'url_list':
+      return { kind: 'url_list', items: [] };
     default:
       return assertNever(kind);
   }
@@ -246,7 +246,7 @@ import {
   SetMultiSelectPatchSchema,
   SetUrlPatchSchema,
   SetUrlListPatchSchema,
-} from "./coreTypes.js";
+} from './coreTypes.js';
 
 /**
  * Zod schema registry - maps each kind to its schemas.
@@ -306,4 +306,3 @@ export const FIELD_SCHEMAS = {
 export function getFieldSchemas<K extends FieldKind>(kind: K) {
   return FIELD_SCHEMAS[kind];
 }
-

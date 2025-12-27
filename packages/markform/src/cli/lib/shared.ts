@@ -2,29 +2,29 @@
  * Shared CLI utilities for command context, debug, and dry-run helpers.
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import { relative } from "node:path";
+import { relative } from 'node:path';
 
-import pc from "picocolors";
-import YAML from "yaml";
+import pc from 'picocolors';
+import YAML from 'yaml';
 
-import { convertKeysToSnakeCase } from "./naming.js";
-import type { CommandContext, OutputFormat } from "./cliTypes.js";
+import { convertKeysToSnakeCase } from './naming.js';
+import type { CommandContext, OutputFormat } from './cliTypes.js';
 
 // Re-export types for backwards compatibility
-export type { CommandContext, OutputFormat } from "./cliTypes.js";
+export type { CommandContext, OutputFormat } from './cliTypes.js';
 
 /**
  * Valid format options for Commander choice validation.
  */
 export const OUTPUT_FORMATS: OutputFormat[] = [
-  "console",
-  "plaintext",
-  "yaml",
-  "json",
-  "markform",
-  "markdown",
+  'console',
+  'plaintext',
+  'yaml',
+  'json',
+  'markform',
+  'markdown',
 ];
 
 /**
@@ -41,7 +41,7 @@ export function getCommandContext(command: Command): CommandContext {
     dryRun: opts.dryRun ?? false,
     verbose: opts.verbose ?? false,
     quiet: opts.quiet ?? false,
-    format: opts.format ?? "console",
+    format: opts.format ?? 'console',
   };
 }
 
@@ -50,7 +50,7 @@ export function getCommandContext(command: Command): CommandContext {
  * Returns true for console format when stdout is a TTY.
  */
 export function shouldUseColors(ctx: CommandContext): boolean {
-  if (ctx.format === "plaintext" || ctx.format === "yaml" || ctx.format === "json") {
+  if (ctx.format === 'plaintext' || ctx.format === 'yaml' || ctx.format === 'json') {
     return false;
   }
   // console format: use colors if stdout is a TTY and NO_COLOR is not set
@@ -65,15 +65,15 @@ export function shouldUseColors(ctx: CommandContext): boolean {
 export function formatOutput(
   ctx: CommandContext,
   data: unknown,
-  consoleFormatter?: (data: unknown, useColors: boolean) => string
+  consoleFormatter?: (data: unknown, useColors: boolean) => string,
 ): string {
   switch (ctx.format) {
-    case "json":
+    case 'json':
       return JSON.stringify(convertKeysToSnakeCase(data), null, 2);
-    case "yaml":
+    case 'yaml':
       return YAML.stringify(convertKeysToSnakeCase(data));
-    case "plaintext":
-    case "console":
+    case 'plaintext':
+    case 'console':
     default:
       if (consoleFormatter) {
         return consoleFormatter(data, shouldUseColors(ctx));
@@ -130,11 +130,7 @@ export function logSuccess(ctx: CommandContext, message: string): void {
 /**
  * Log a timing message (hidden if --quiet is set).
  */
-export function logTiming(
-  ctx: CommandContext,
-  label: string,
-  durationMs: number
-): void {
+export function logTiming(ctx: CommandContext, label: string, durationMs: number): void {
   if (!ctx.quiet) {
     const seconds = (durationMs / 1000).toFixed(1);
     console.log(pc.cyan(`⏰ ${label}: ${seconds}s`));
@@ -158,7 +154,7 @@ export function logWarn(ctx: CommandContext, message: string): void {
 export function formatPath(absolutePath: string, cwd: string = process.cwd()): string {
   const relativePath = relative(cwd, absolutePath);
   // If the relative path doesn't start with "..", it's within cwd
-  const displayPath = relativePath.startsWith("..") ? absolutePath : `./${relativePath}`;
+  const displayPath = relativePath.startsWith('..') ? absolutePath : `./${relativePath}`;
   return pc.green(displayPath);
 }
 
@@ -166,8 +162,8 @@ export function formatPath(absolutePath: string, cwd: string = process.cwd()): s
  * Read a file and return its contents.
  */
 export async function readFile(filePath: string): Promise<string> {
-  const { readFile: fsReadFile } = await import("node:fs/promises");
-  return fsReadFile(filePath, "utf-8");
+  const { readFile: fsReadFile } = await import('node:fs/promises');
+  return fsReadFile(filePath, 'utf-8');
 }
 
 /**
@@ -176,10 +172,7 @@ export async function readFile(filePath: string): Promise<string> {
  * Uses the atomically library to prevent partial or corrupted files
  * if the process crashes mid-write.
  */
-export async function writeFile(
-  filePath: string,
-  contents: string
-): Promise<void> {
-  const { writeFile: atomicWriteFile } = await import("atomically");
+export async function writeFile(filePath: string, contents: string): Promise<void> {
+  const { writeFile: atomicWriteFile } = await import('atomically');
   await atomicWriteFile(filePath, contents);
 }

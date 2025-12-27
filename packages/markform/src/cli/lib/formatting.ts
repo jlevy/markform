@@ -2,7 +2,7 @@
  * Color and output formatting utilities for CLI.
  */
 
-import pc from "picocolors";
+import pc from 'picocolors';
 
 /**
  * Semantic color helpers for consistent CLI output.
@@ -36,7 +36,7 @@ export function formatTiming(label: string, durationMs: number): string {
  * Format a count with label.
  */
 export function formatCount(count: number, label: string): string {
-  return `${count} ${label}${count === 1 ? "" : "s"}`;
+  return `${count} ${label}${count === 1 ? '' : 's'}`;
 }
 
 /**
@@ -44,14 +44,14 @@ export function formatCount(count: number, label: string): string {
  */
 export function formatState(state: string): string {
   switch (state) {
-    case "complete":
-      return pc.green("✓ complete");
-    case "incomplete":
-      return pc.yellow("○ incomplete");
-    case "empty":
-      return pc.dim("◌ empty");
-    case "invalid":
-      return pc.red("✗ invalid");
+    case 'complete':
+      return pc.green('✓ complete');
+    case 'incomplete':
+      return pc.yellow('○ incomplete');
+    case 'empty':
+      return pc.dim('◌ empty');
+    case 'invalid':
+      return pc.red('✗ invalid');
     default:
       return state;
   }

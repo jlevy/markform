@@ -5,9 +5,8 @@
  * fill form fields interactively.
  */
 
-import * as p from "@clack/prompts";
-import pc from "picocolors";
-
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
 
 import type {
   Field,
@@ -24,7 +23,7 @@ import type {
   UrlListField,
   ParsedForm,
   InspectIssue,
-} from "../../engine/coreTypes.js";
+} from '../../engine/coreTypes.js';
 
 /**
  * Context for a field prompt including description from docs.
@@ -42,7 +41,7 @@ interface FieldPromptContext {
  */
 function getFieldDescription(form: ParsedForm, fieldId: string): string | undefined {
   const doc = form.docs.find(
-    (d) => d.ref === fieldId && (d.tag === "description" || d.tag === "instructions")
+    (d) => d.ref === fieldId && (d.tag === 'description' || d.tag === 'instructions'),
   );
   return doc?.bodyMarkdown;
 }
@@ -54,8 +53,8 @@ function getFieldById(form: ParsedForm, fieldId: string): Field | undefined {
   for (const group of form.schema.groups) {
     const field = group.children.find((f) => f.id === fieldId);
     if (field) {
-return field;
-}
+      return field;
+    }
   }
   return undefined;
 }
@@ -64,7 +63,7 @@ return field;
  * Format field label with required indicator and progress.
  */
 function formatFieldLabel(ctx: FieldPromptContext): string {
-  const required = ctx.field.required ? pc.red("*") : "";
+  const required = ctx.field.required ? pc.red('*') : '';
   const progress = pc.dim(`(${ctx.index} of ${ctx.total})`);
   return `${ctx.field.label}${required} ${progress}`;
 }
@@ -74,10 +73,10 @@ function formatFieldLabel(ctx: FieldPromptContext): string {
  */
 function createSkipPatch(field: Field): SkipFieldPatch {
   return {
-    op: "skip_field",
+    op: 'skip_field',
     fieldId: field.id,
-    role: "user",
-    reason: "User skipped in console",
+    role: 'user',
+    reason: 'User skipped in console',
   };
 }
 
@@ -86,19 +85,19 @@ function createSkipPatch(field: Field): SkipFieldPatch {
  * Returns "fill" if user wants to enter a value, or a skip_field patch if skipping.
  * Returns null if user cancelled.
  */
-async function promptSkipOrFill(ctx: FieldPromptContext): Promise<"fill" | SkipFieldPatch | null> {
+async function promptSkipOrFill(ctx: FieldPromptContext): Promise<'fill' | SkipFieldPatch | null> {
   const field = ctx.field;
 
   // Required fields must be filled - no skip option
   if (field.required) {
-    return "fill";
+    return 'fill';
   }
 
   const result = await p.select({
-    message: `${formatFieldLabel(ctx)} ${pc.dim("(optional)")}`,
+    message: `${formatFieldLabel(ctx)} ${pc.dim('(optional)')}`,
     options: [
-      { value: "fill", label: "Enter value" },
-      { value: "skip", label: "Skip this field" },
+      { value: 'fill', label: 'Enter value' },
+      { value: 'skip', label: 'Skip this field' },
     ],
   });
 
@@ -106,11 +105,11 @@ async function promptSkipOrFill(ctx: FieldPromptContext): Promise<"fill" | SkipF
     return null;
   }
 
-  if (result === "skip") {
+  if (result === 'skip') {
     return createSkipPatch(field);
   }
 
-  return "fill";
+  return 'fill';
 }
 
 /**
@@ -118,16 +117,15 @@ async function promptSkipOrFill(ctx: FieldPromptContext): Promise<"fill" | SkipF
  */
 async function promptForString(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as StringField;
-  const currentVal =
-    ctx.currentValue?.kind === "string" ? ctx.currentValue.value : null;
+  const currentVal = ctx.currentValue?.kind === 'string' ? ctx.currentValue.value : null;
 
   const result = await p.text({
     message: formatFieldLabel(ctx),
     placeholder: currentVal ?? (ctx.description ? ctx.description.slice(0, 60) : undefined),
-    initialValue: currentVal ?? "",
+    initialValue: currentVal ?? '',
     validate: (value) => {
       if (field.required && !value.trim()) {
-        return "This field is required";
+        return 'This field is required';
       }
       if (field.minLength && value.length < field.minLength) {
         return `Minimum ${field.minLength} characters required`;
@@ -152,7 +150,7 @@ async function promptForString(ctx: FieldPromptContext): Promise<Patch | null> {
   }
 
   return {
-    op: "set_string",
+    op: 'set_string',
     fieldId: field.id,
     value: result || null,
   };
@@ -163,26 +161,25 @@ async function promptForString(ctx: FieldPromptContext): Promise<Patch | null> {
  */
 async function promptForNumber(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as NumberField;
-  const currentVal =
-    ctx.currentValue?.kind === "number" ? ctx.currentValue.value : null;
+  const currentVal = ctx.currentValue?.kind === 'number' ? ctx.currentValue.value : null;
 
   const result = await p.text({
     message: formatFieldLabel(ctx),
     placeholder: currentVal !== null ? String(currentVal) : undefined,
-    initialValue: currentVal !== null ? String(currentVal) : "",
+    initialValue: currentVal !== null ? String(currentVal) : '',
     validate: (value) => {
       if (field.required && !value.trim()) {
-        return "This field is required";
+        return 'This field is required';
       }
       if (!value.trim()) {
         return undefined; // Allow empty for optional
       }
       const num = Number(value);
       if (isNaN(num)) {
-        return "Please enter a valid number";
+        return 'Please enter a valid number';
       }
       if (field.integer && !Number.isInteger(num)) {
-        return "Please enter a whole number";
+        return 'Please enter a whole number';
       }
       if (field.min !== undefined && num < field.min) {
         return `Minimum value is ${field.min}`;
@@ -204,7 +201,7 @@ async function promptForNumber(ctx: FieldPromptContext): Promise<Patch | null> {
   }
 
   return {
-    op: "set_number",
+    op: 'set_number',
     fieldId: field.id,
     value: result ? Number(result) : null,
   };
@@ -215,24 +212,23 @@ async function promptForNumber(ctx: FieldPromptContext): Promise<Patch | null> {
  */
 async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as StringListField;
-  const currentItems =
-    ctx.currentValue?.kind === "string_list" ? ctx.currentValue.items : [];
+  const currentItems = ctx.currentValue?.kind === 'string_list' ? ctx.currentValue.items : [];
 
   const hint = ctx.description
     ? `${ctx.description.slice(0, 50)}... (one item per line)`
-    : "Enter items, one per line. Press Enter twice when done.";
+    : 'Enter items, one per line. Press Enter twice when done.';
 
   const result = await p.text({
     message: formatFieldLabel(ctx),
     placeholder: hint,
-    initialValue: currentItems.join("\n"),
+    initialValue: currentItems.join('\n'),
     validate: (value) => {
       const items = value
-        .split("\n")
+        .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
       if (field.required && items.length === 0) {
-        return "At least one item is required";
+        return 'At least one item is required';
       }
       if (field.minItems && items.length < field.minItems) {
         return `Minimum ${field.minItems} items required`;
@@ -248,8 +244,8 @@ async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | nul
     return null;
   }
 
-  const items = (result)
-    .split("\n")
+  const items = result
+    .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
 
@@ -259,7 +255,7 @@ async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | nul
   }
 
   return {
-    op: "set_string_list",
+    op: 'set_string_list',
     fieldId: field.id,
     items,
   };
@@ -271,7 +267,7 @@ async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | nul
 async function promptForSingleSelect(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as SingleSelectField;
   const currentSelected =
-    ctx.currentValue?.kind === "single_select" ? ctx.currentValue.selected : null;
+    ctx.currentValue?.kind === 'single_select' ? ctx.currentValue.selected : null;
 
   const options = field.options.map((opt) => ({
     value: opt.id,
@@ -289,7 +285,7 @@ async function promptForSingleSelect(ctx: FieldPromptContext): Promise<Patch | n
   }
 
   return {
-    op: "set_single_select",
+    op: 'set_single_select',
     fieldId: field.id,
     selected: result,
   };
@@ -301,7 +297,7 @@ async function promptForSingleSelect(ctx: FieldPromptContext): Promise<Patch | n
 async function promptForMultiSelect(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as MultiSelectField;
   const currentSelected =
-    ctx.currentValue?.kind === "multi_select" ? ctx.currentValue.selected : [];
+    ctx.currentValue?.kind === 'multi_select' ? ctx.currentValue.selected : [];
 
   const options = field.options.map((opt) => ({
     value: opt.id,
@@ -320,7 +316,7 @@ async function promptForMultiSelect(ctx: FieldPromptContext): Promise<Patch | nu
   }
 
   return {
-    op: "set_multi_select",
+    op: 'set_multi_select',
     fieldId: field.id,
     selected: result,
   };
@@ -336,10 +332,9 @@ async function promptForMultiSelect(ctx: FieldPromptContext): Promise<Patch | nu
  */
 async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as CheckboxesField;
-  const currentValues =
-    ctx.currentValue?.kind === "checkboxes" ? ctx.currentValue.values : {};
+  const currentValues = ctx.currentValue?.kind === 'checkboxes' ? ctx.currentValue.values : {};
 
-  if (field.checkboxMode === "simple") {
+  if (field.checkboxMode === 'simple') {
     // Simple mode: multiselect to mark items as done
     const options = field.options.map((opt) => ({
       value: opt.id,
@@ -347,7 +342,7 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
     }));
 
     const currentlyDone = field.options
-      .filter((opt) => currentValues[opt.id] === "done")
+      .filter((opt) => currentValues[opt.id] === 'done')
       .map((opt) => opt.id);
 
     const result = await p.multiselect({
@@ -362,69 +357,69 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
     }
 
     const selected = result;
-    const values: Record<string, "todo" | "done"> = {};
+    const values: Record<string, 'todo' | 'done'> = {};
     for (const opt of field.options) {
-      values[opt.id] = selected.includes(opt.id) ? "done" : "todo";
+      values[opt.id] = selected.includes(opt.id) ? 'done' : 'todo';
     }
 
     return {
-      op: "set_checkboxes",
+      op: 'set_checkboxes',
       fieldId: field.id,
       values,
     };
   }
 
-  if (field.checkboxMode === "explicit") {
+  if (field.checkboxMode === 'explicit') {
     // Explicit mode: yes/no for each option
-    const values: Record<string, "yes" | "no" | "unfilled"> = {};
+    const values: Record<string, 'yes' | 'no' | 'unfilled'> = {};
 
     for (const opt of field.options) {
       const current = currentValues[opt.id];
       const result = await p.select({
         message: `${opt.label}`,
         options: [
-          { value: "yes", label: "Yes" },
-          { value: "no", label: "No" },
-          { value: "unfilled", label: "Skip" },
+          { value: 'yes', label: 'Yes' },
+          { value: 'no', label: 'No' },
+          { value: 'unfilled', label: 'Skip' },
         ],
-        initialValue: current === "yes" || current === "no" ? current : "unfilled",
+        initialValue: current === 'yes' || current === 'no' ? current : 'unfilled',
       });
 
       if (p.isCancel(result)) {
         return null;
       }
 
-      values[opt.id] = result as "yes" | "no" | "unfilled";
+      values[opt.id] = result as 'yes' | 'no' | 'unfilled';
     }
 
     return {
-      op: "set_checkboxes",
+      op: 'set_checkboxes',
       fieldId: field.id,
       values,
     };
   }
 
   // Multi mode: 5 states per option
-  const values: Record<string, "todo" | "done" | "incomplete" | "active" | "na"> = {};
+  const values: Record<string, 'todo' | 'done' | 'incomplete' | 'active' | 'na'> = {};
 
   for (const opt of field.options) {
     const current = currentValues[opt.id] as
-      | "todo"
-      | "done"
-      | "incomplete"
-      | "active"
-      | "na"
+      | 'todo'
+      | 'done'
+      | 'incomplete'
+      | 'active'
+      | 'na'
       | undefined;
     const result = await p.select({
       message: `${opt.label}`,
       options: [
-        { value: "todo", label: "To do" },
-        { value: "active", label: "In progress" },
-        { value: "done", label: "Done" },
-        { value: "incomplete", label: "Incomplete" },
-        { value: "na", label: "N/A" },
+        { value: 'todo', label: 'To do' },
+        { value: 'active', label: 'In progress' },
+        { value: 'done', label: 'Done' },
+        { value: 'incomplete', label: 'Incomplete' },
+        { value: 'na', label: 'N/A' },
       ],
-      initialValue: current ?? "todo",
+      initialValue: current ?? 'todo',
     });
 
     if (p.isCancel(result)) {
@@ -435,7 +430,7 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
   }
 
   return {
-    op: "set_checkboxes",
+    op: 'set_checkboxes',
     fieldId: field.id,
     values,
   };
@@ -446,16 +441,15 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
  */
 async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as UrlField;
-  const currentVal =
-    ctx.currentValue?.kind === "url" ? ctx.currentValue.value : null;
+  const currentVal = ctx.currentValue?.kind === 'url' ? ctx.currentValue.value : null;
 
   const result = await p.text({
     message: formatFieldLabel(ctx),
-    placeholder: currentVal ?? "https://example.com",
-    initialValue: currentVal ?? "",
+    placeholder: currentVal ?? 'https://example.com',
+    initialValue: currentVal ?? '',
     validate: (value) => {
       if (field.required && !value.trim()) {
-        return "This field is required";
+        return 'This field is required';
       }
       if (!value.trim()) {
         return undefined; // Allow empty for optional
@@ -464,7 +458,7 @@ async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
       try {
         new URL(value);
       } catch {
-        return "Please enter a valid URL (e.g., https://example.com)";
+        return 'Please enter a valid URL (e.g., https://example.com)';
       }
       return undefined;
     },
@@ -480,7 +474,7 @@ async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
   }
 
   return {
-    op: "set_url",
+    op: 'set_url',
     fieldId: field.id,
     value: result || null,
   };
@@ -491,24 +485,23 @@ async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
  */
 async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as UrlListField;
-  const currentItems =
-    ctx.currentValue?.kind === "url_list" ? ctx.currentValue.items : [];
+  const currentItems = ctx.currentValue?.kind === 'url_list' ? ctx.currentValue.items : [];
 
   const hint = ctx.description
     ? `${ctx.description.slice(0, 50)}... (one URL per line)`
-    : "Enter URLs, one per line. Press Enter twice when done.";
+    : 'Enter URLs, one per line. Press Enter twice when done.';
 
   const result = await p.text({
     message: formatFieldLabel(ctx),
     placeholder: hint,
-    initialValue: currentItems.join("\n"),
+    initialValue: currentItems.join('\n'),
     validate: (value) => {
       const items = value
-        .split("\n")
+        .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
       if (field.required && items.length === 0) {
-        return "At least one URL is required";
+        return 'At least one URL is required';
       }
       if (field.minItems && items.length < field.minItems) {
         return `Minimum ${field.minItems} URLs required`;
@@ -532,8 +525,8 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
     return null;
   }
 
-  const items = (result)
-    .split("\n")
+  const items = result
+    .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
 
@@ -543,7 +536,7 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
   }
 
   return {
-    op: "set_url_list",
+    op: 'set_url_list',
     fieldId: field.id,
     items,
   };
@@ -555,12 +548,10 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
  *
  * For optional fields, first offers a choice to skip or fill.
  */
-export async function promptForField(
-  ctx: FieldPromptContext
-): Promise<Patch | null> {
+export async function promptForField(ctx: FieldPromptContext): Promise<Patch | null> {
   // Show description if available
   if (ctx.description) {
-    p.note(ctx.description, pc.dim("Instructions"));
+    p.note(ctx.description, pc.dim('Instructions'));
   }
 
   // For optional fields, offer skip/fill choice first
@@ -571,28 +562,28 @@ export async function promptForField(
     return null;
   }
 
-  if (typeof skipOrFillResult !== "string") {
+  if (typeof skipOrFillResult !== 'string') {
     // User chose to skip - return the skip_field patch
     return skipOrFillResult;
   }
 
   // User chose to fill - proceed to field-specific prompt
   switch (ctx.field.kind) {
-    case "string":
+    case 'string':
       return promptForString(ctx);
-    case "number":
+    case 'number':
       return promptForNumber(ctx);
-    case "string_list":
+    case 'string_list':
       return promptForStringList(ctx);
-    case "single_select":
+    case 'single_select':
       return promptForSingleSelect(ctx);
-    case "multi_select":
+    case 'multi_select':
       return promptForMultiSelect(ctx);
-    case "checkboxes":
+    case 'checkboxes':
       return promptForCheckboxes(ctx);
-    case "url":
+    case 'url':
       return promptForUrl(ctx);
-    case "url_list":
+    case 'url_list':
       return promptForUrlList(ctx);
     default:
       // Unknown field type - skip
@@ -610,23 +601,23 @@ export async function promptForField(
  */
 export async function runInteractiveFill(
   form: ParsedForm,
-  issues: InspectIssue[]
+  issues: InspectIssue[],
 ): Promise<{ patches: Patch[]; cancelled: boolean }> {
   // Filter to field-level issues only (not form/group/option)
-  const fieldIssues = issues.filter((i) => i.scope === "field");
+  const fieldIssues = issues.filter((i) => i.scope === 'field');
 
   // Deduplicate by fieldId (a field might have multiple issues)
   const seenFieldIds = new Set<string>();
   const uniqueFieldIssues = fieldIssues.filter((issue) => {
     if (seenFieldIds.has(issue.ref)) {
-return false;
-}
+      return false;
+    }
     seenFieldIds.add(issue.ref);
     return true;
   });
 
   if (uniqueFieldIssues.length === 0) {
-    p.note("No fields to fill for the selected role.", "Info");
+    p.note('No fields to fill for the selected role.', 'Info');
     return { patches: [], cancelled: false };
   }
 
@@ -636,14 +627,14 @@ return false;
   for (const issue of uniqueFieldIssues) {
     const field = getFieldById(form, issue.ref);
     if (!field) {
-continue;
-}
+      continue;
+    }
 
     index++;
     const response = form.responsesByFieldId[field.id];
     const ctx: FieldPromptContext = {
       field,
-      currentValue: response?.state === "answered" ? response.value : undefined,
+      currentValue: response?.state === 'answered' ? response.value : undefined,
       description: getFieldDescription(form, field.id),
       index,
       total: uniqueFieldIssues.length,
@@ -654,7 +645,7 @@ continue;
     if (patch === null && p.isCancel(patch)) {
       // User cancelled (Ctrl+C)
       const shouldContinue = await p.confirm({
-        message: "Cancel and discard changes?",
+        message: 'Cancel and discard changes?',
         initialValue: false,
       });
 
@@ -677,36 +668,29 @@ continue;
 /**
  * Show intro message for interactive fill session.
  */
-export function showInteractiveIntro(
-  formTitle: string,
-  role: string,
-  fieldCount: number
-): void {
-  p.intro(pc.bgCyan(pc.black(" Markform Interactive Fill ")));
+export function showInteractiveIntro(formTitle: string, role: string, fieldCount: number): void {
+  p.intro(pc.bgCyan(pc.black(' Markform Interactive Fill ')));
 
   const lines = [
-    `${pc.bold("Form:")} ${formTitle}`,
-    `${pc.bold("Role:")} ${role}`,
-    `${pc.bold("Fields:")} ${fieldCount} to fill`,
+    `${pc.bold('Form:')} ${formTitle}`,
+    `${pc.bold('Role:')} ${role}`,
+    `${pc.bold('Fields:')} ${fieldCount} to fill`,
   ];
 
-  p.note(lines.join("\n"), "Session Info");
+  p.note(lines.join('\n'), 'Session Info');
 }
 
 /**
  * Show outro message after interactive fill.
  */
-export function showInteractiveOutro(
-  patchCount: number,
-  cancelled: boolean
-): void {
+export function showInteractiveOutro(patchCount: number, cancelled: boolean): void {
   if (cancelled) {
-    p.cancel("Interactive fill cancelled.");
+    p.cancel('Interactive fill cancelled.');
     return;
   }
 
   if (patchCount === 0) {
-    p.outro(pc.yellow("No changes made."));
+    p.outro(pc.yellow('No changes made.'));
     return;
   }
 

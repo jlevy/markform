@@ -1,12 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { parseForm } from "../../../src/engine/parse.js";
-import { validate } from "../../../src/engine/validate.js";
-import type { ValidatorRegistry } from "../../../src/engine/coreTypes.js";
+import { parseForm } from '../../../src/engine/parse.js';
+import { validate } from '../../../src/engine/validate.js';
+import type { ValidatorRegistry } from '../../../src/engine/coreTypes.js';
 
-describe("engine/validate", () => {
-  describe("string field validation", () => {
-    it("validates required string field", () => {
+describe('engine/validate', () => {
+  describe('string field validation', () => {
+    it('validates required string field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -25,12 +25,12 @@ markform:
 
       expect(result.isValid).toBe(false);
       expect(result.issues).toHaveLength(1);
-      expect(result.issues[0]?.severity).toBe("error");
-      expect(result.issues[0]?.ref).toBe("name");
-      expect(result.issues[0]?.message).toContain("empty");
+      expect(result.issues[0]?.severity).toBe('error');
+      expect(result.issues[0]?.ref).toBe('name');
+      expect(result.issues[0]?.message).toContain('empty');
     });
 
-    it("passes when required string field has value", () => {
+    it('passes when required string field has value', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -55,7 +55,7 @@ John Doe
       expect(result.issues).toHaveLength(0);
     });
 
-    it("validates minLength constraint", () => {
+    it('validates minLength constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -77,10 +77,10 @@ abc
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at least 5 characters");
+      expect(result.issues[0]?.message).toContain('at least 5 characters');
     });
 
-    it("validates maxLength constraint", () => {
+    it('validates maxLength constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -102,10 +102,10 @@ hello world
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at most 5 characters");
+      expect(result.issues[0]?.message).toContain('at most 5 characters');
     });
 
-    it("validates pattern constraint", () => {
+    it('validates pattern constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -127,10 +127,10 @@ not-an-email
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("pattern");
+      expect(result.issues[0]?.message).toContain('pattern');
     });
 
-    it("passes when pattern matches", () => {
+    it('passes when pattern matches', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -155,8 +155,8 @@ test@example.com
     });
   });
 
-  describe("number field validation", () => {
-    it("validates required number field", () => {
+  describe('number field validation', () => {
+    it('validates required number field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -174,10 +174,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.ref).toBe("age");
+      expect(result.issues[0]?.ref).toBe('age');
     });
 
-    it("validates min constraint", () => {
+    it('validates min constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -199,10 +199,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at least 18");
+      expect(result.issues[0]?.message).toContain('at least 18');
     });
 
-    it("validates max constraint", () => {
+    it('validates max constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -224,10 +224,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at most 120");
+      expect(result.issues[0]?.message).toContain('at most 120');
     });
 
-    it("validates integer constraint", () => {
+    it('validates integer constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -249,12 +249,12 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("integer");
+      expect(result.issues[0]?.message).toContain('integer');
     });
   });
 
-  describe("string-list field validation", () => {
-    it("validates required string-list field", () => {
+  describe('string-list field validation', () => {
+    it('validates required string-list field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -272,10 +272,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.ref).toBe("tags");
+      expect(result.issues[0]?.ref).toBe('tags');
     });
 
-    it("validates minItems constraint", () => {
+    it('validates minItems constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -298,10 +298,10 @@ two
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at least 3 items");
+      expect(result.issues[0]?.message).toContain('at least 3 items');
     });
 
-    it("validates maxItems constraint", () => {
+    it('validates maxItems constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -325,10 +325,10 @@ three
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at most 2 items");
+      expect(result.issues[0]?.message).toContain('at most 2 items');
     });
 
-    it("validates uniqueItems constraint", () => {
+    it('validates uniqueItems constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -352,12 +352,12 @@ one
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("Duplicate");
+      expect(result.issues[0]?.message).toContain('Duplicate');
     });
   });
 
-  describe("single-select field validation", () => {
-    it("validates required single-select field", () => {
+  describe('single-select field validation', () => {
+    it('validates required single-select field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -379,10 +379,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.ref).toBe("priority");
+      expect(result.issues[0]?.ref).toBe('priority');
     });
 
-    it("passes when single-select has selection", () => {
+    it('passes when single-select has selection', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -407,8 +407,8 @@ markform:
     });
   });
 
-  describe("multi-select field validation", () => {
-    it("validates required multi-select field", () => {
+  describe('multi-select field validation', () => {
+    it('validates required multi-select field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -431,7 +431,7 @@ markform:
       expect(result.isValid).toBe(false);
     });
 
-    it("validates minSelections constraint", () => {
+    it('validates minSelections constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -453,10 +453,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at least 2 selections");
+      expect(result.issues[0]?.message).toContain('at least 2 selections');
     });
 
-    it("validates maxSelections constraint", () => {
+    it('validates maxSelections constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -477,12 +477,12 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at most 1 selections");
+      expect(result.issues[0]?.message).toContain('at most 1 selections');
     });
   });
 
-  describe("checkboxes field validation", () => {
-    it("validates required checkboxes in explicit mode", () => {
+  describe('checkboxes field validation', () => {
+    it('validates required checkboxes in explicit mode', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -503,10 +503,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("unfilled");
+      expect(result.issues[0]?.message).toContain('unfilled');
     });
 
-    it("passes when all checkboxes answered in explicit mode", () => {
+    it('passes when all checkboxes answered in explicit mode', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -529,7 +529,7 @@ markform:
       expect(result.isValid).toBe(true);
     });
 
-    it("validates minDone constraint", () => {
+    it('validates minDone constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -551,10 +551,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at least 2 items done");
+      expect(result.issues[0]?.message).toContain('at least 2 items done');
     });
 
-    it("validates minDone constraint in simple mode", () => {
+    it('validates minDone constraint in simple mode', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -576,10 +576,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at least 2 items done");
+      expect(result.issues[0]?.message).toContain('at least 2 items done');
     });
 
-    it("passes minDone when threshold met in simple mode", () => {
+    it('passes minDone when threshold met in simple mode', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -603,7 +603,7 @@ markform:
       expect(result.isValid).toBe(true);
     });
 
-    it("validates required multi-mode checkboxes fail when incomplete items exist", () => {
+    it('validates required multi-mode checkboxes fail when incomplete items exist', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -624,10 +624,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("completed");
+      expect(result.issues[0]?.message).toContain('completed');
     });
 
-    it("passes when all required multi-mode checkboxes are done or na", () => {
+    it('passes when all required multi-mode checkboxes are done or na', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -651,8 +651,8 @@ markform:
     });
   });
 
-  describe("code validators", () => {
-    it("runs code validators from registry", () => {
+  describe('code validators', () => {
+    it('runs code validators from registry', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -674,10 +674,10 @@ test
       const registry: ValidatorRegistry = {
         myValidator: () => [
           {
-            severity: "error",
-            message: "Custom validation failed",
-            ref: "name",
-            source: "code",
+            severity: 'error',
+            message: 'Custom validation failed',
+            ref: 'name',
+            source: 'code',
           },
         ],
       };
@@ -685,10 +685,10 @@ test
       const result = validate(form, { validatorRegistry: registry });
 
       expect(result.isValid).toBe(false);
-      expect(result.issues.some((i) => i.message === "Custom validation failed")).toBe(true);
+      expect(result.issues.some((i) => i.message === 'Custom validation failed')).toBe(true);
     });
 
-    it("reports missing validators", () => {
+    it('reports missing validators', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -710,10 +710,10 @@ test
       const result = validate(form, { validatorRegistry: {} });
 
       expect(result.isValid).toBe(true); // Missing validator is "recommended" not "required"
-      expect(result.issues.some((i) => i.message.includes("not found"))).toBe(true);
+      expect(result.issues.some((i) => i.message.includes('not found'))).toBe(true);
     });
 
-    it("skips code validators when option set", () => {
+    it('skips code validators when option set', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -735,10 +735,10 @@ test
       const registry: ValidatorRegistry = {
         myValidator: () => [
           {
-            severity: "error",
-            message: "Custom validation failed",
-            ref: "name",
-            source: "code",
+            severity: 'error',
+            message: 'Custom validation failed',
+            ref: 'name',
+            source: 'code',
           },
         ],
       };
@@ -753,8 +753,8 @@ test
     });
   });
 
-  describe("url field validation", () => {
-    it("validates required url field", () => {
+  describe('url field validation', () => {
+    it('validates required url field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -773,12 +773,12 @@ markform:
 
       expect(result.isValid).toBe(false);
       expect(result.issues).toHaveLength(1);
-      expect(result.issues[0]?.severity).toBe("error");
-      expect(result.issues[0]?.ref).toBe("website");
-      expect(result.issues[0]?.message).toContain("empty");
+      expect(result.issues[0]?.severity).toBe('error');
+      expect(result.issues[0]?.ref).toBe('website');
+      expect(result.issues[0]?.message).toContain('empty');
     });
 
-    it("passes when required url field has valid URL", () => {
+    it('passes when required url field has valid URL', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -803,7 +803,7 @@ https://example.com
       expect(result.issues).toHaveLength(0);
     });
 
-    it("rejects invalid URL format", () => {
+    it('rejects invalid URL format', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -825,10 +825,10 @@ not-a-valid-url
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("not a valid URL");
+      expect(result.issues[0]?.message).toContain('not a valid URL');
     });
 
-    it("rejects non-http(s) URLs", () => {
+    it('rejects non-http(s) URLs', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -850,10 +850,10 @@ ftp://example.com
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("not a valid URL");
+      expect(result.issues[0]?.message).toContain('not a valid URL');
     });
 
-    it("accepts http URLs", () => {
+    it('accepts http URLs', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -878,8 +878,8 @@ http://example.com
     });
   });
 
-  describe("url-list field validation", () => {
-    it("validates required url-list field", () => {
+  describe('url-list field validation', () => {
+    it('validates required url-list field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -897,10 +897,10 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.ref).toBe("sources");
+      expect(result.issues[0]?.ref).toBe('sources');
     });
 
-    it("validates minItems constraint", () => {
+    it('validates minItems constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -923,10 +923,10 @@ https://another.com
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at least 3 items");
+      expect(result.issues[0]?.message).toContain('at least 3 items');
     });
 
-    it("validates maxItems constraint", () => {
+    it('validates maxItems constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -950,10 +950,10 @@ https://third.com
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("at most 2 items");
+      expect(result.issues[0]?.message).toContain('at most 2 items');
     });
 
-    it("validates uniqueItems constraint", () => {
+    it('validates uniqueItems constraint', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -977,10 +977,10 @@ https://example.com
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("Duplicate URL");
+      expect(result.issues[0]?.message).toContain('Duplicate URL');
     });
 
-    it("validates each URL in the list", () => {
+    it('validates each URL in the list', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1004,11 +1004,11 @@ https://also-valid.com
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      expect(result.issues[0]?.message).toContain("Item 2");
-      expect(result.issues[0]?.message).toContain("not a valid URL");
+      expect(result.issues[0]?.message).toContain('Item 2');
+      expect(result.issues[0]?.message).toContain('not a valid URL');
     });
 
-    it("passes with valid URL list", () => {
+    it('passes with valid URL list', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1035,8 +1035,8 @@ http://third.com
     });
   });
 
-  describe("complete form validation", () => {
-    it("validates a form with multiple field types", () => {
+  describe('complete form validation', () => {
+    it('validates a form with multiple field types', () => {
       const markdown = `---
 markform:
   spec: MF/0.1

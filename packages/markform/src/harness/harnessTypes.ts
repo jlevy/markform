@@ -8,16 +8,10 @@
  * - modelResolver.ts: ProviderName, ParsedModelId, ResolvedModel, ProviderInfo
  */
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from 'ai';
 
-import type {
-  FillMode,
-  FieldValue,
-  InspectIssue,
-  ParsedForm,
-  Patch,
-} from "../engine/coreTypes.js";
-import type { InputContext } from "../engine/valueCoercion.js";
+import type { FillMode, FieldValue, InspectIssue, ParsedForm, Patch } from '../engine/coreTypes.js';
+import type { InputContext } from '../engine/valueCoercion.js';
 
 // =============================================================================
 // Agent Interface
@@ -85,7 +79,7 @@ export interface Agent {
   generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
-    maxPatches: number
+    maxPatches: number,
   ): Promise<AgentResponse>;
 }
 
@@ -120,12 +114,7 @@ export interface LiveAgentConfig {
  *
  * These correspond to the @ai-sdk/* packages from Vercel AI SDK.
  */
-export type ProviderName =
-  | "anthropic"
-  | "openai"
-  | "google"
-  | "xai"
-  | "deepseek";
+export type ProviderName = 'anthropic' | 'openai' | 'google' | 'xai' | 'deepseek';
 
 /**
  * Parsed model identifier.
@@ -211,7 +200,7 @@ export interface TurnProgress {
  */
 export type FillStatus =
   | { ok: true }
-  | { ok: false; reason: "max_turns" | "cancelled" | "error"; message?: string };
+  | { ok: false; reason: 'max_turns' | 'cancelled' | 'error'; message?: string };
 
 /**
  * Result of the fillForm operation.
@@ -235,7 +224,7 @@ export interface FillResult {
   remainingIssues?: {
     ref: string;
     message: string;
-    severity: "required" | "recommended";
+    severity: 'required' | 'recommended';
     priority: number;
   }[];
 }

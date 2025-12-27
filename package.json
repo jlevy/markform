@@ -19,8 +19,11 @@
     "test:unit": "pnpm --filter markform test:unit",
     "test:golden": "pnpm --filter markform test:golden",
     "publint": "pnpm -r publint",
-    "lint": "eslint .",
-    "precommit": "pnpm typecheck && pnpm lint && pnpm test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
+    "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
+    "precommit": "pnpm format && pnpm lint:check && pnpm test",
     "markform": "node packages/markform/dist/bin.mjs",
     "changeset": "changeset",
     "changeset:add": "npx tsx scripts/create-changeset.ts",
@@ -33,7 +36,9 @@
     "@eslint/js": "^9.0.0",
     "atomically": "^2.0.0",
     "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.1.8",
     "lefthook": "^2.0.12",
+    "prettier": "^3.7.4",
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.0.0"
   }

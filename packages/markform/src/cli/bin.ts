@@ -7,17 +7,17 @@
  * Existing environment variables are not overwritten.
  */
 
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-import { config } from "dotenv";
+import { config } from 'dotenv';
 
-import { runCli } from "./cli.js";
+import { runCli } from './cli.js';
 
 // Load .env files from current working directory
 // .env.local takes precedence over .env, shell env takes precedence over both
 const cwd = process.cwd();
-for (const file of [".env.local", ".env"]) {
+for (const file of ['.env.local', '.env']) {
   const path = resolve(cwd, file);
   if (existsSync(path)) {
     // quiet: true suppresses the tip messages added in dotenv v17
@@ -26,6 +26,6 @@ for (const file of [".env.local", ".env"]) {
 }
 
 runCli().catch((error: unknown) => {
-  console.error("Fatal error:", error);
+  console.error('Fatal error:', error);
   process.exit(1);
 });

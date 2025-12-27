@@ -5,14 +5,14 @@
  * or as plain text when piped.
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import pc from "picocolors";
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import pc from 'picocolors';
 
-import { getCommandContext, logError } from "../lib/shared.js";
+import { getCommandContext, logError } from '../lib/shared.js';
 
 /**
  * Get the path to the SPEC.md file.
@@ -22,13 +22,13 @@ function getSpecPath(): string {
   const thisDir = dirname(fileURLToPath(import.meta.url));
   const dirName = thisDir.split(/[/\\]/).pop();
 
-  if (dirName === "dist") {
+  if (dirName === 'dist') {
     // Bundled: dist -> package root -> SPEC.md
-    return join(dirname(thisDir), "SPEC.md");
+    return join(dirname(thisDir), 'SPEC.md');
   }
 
   // Development: src/cli/commands -> src/cli -> src -> package root -> SPEC.md
-  return join(dirname(dirname(dirname(thisDir))), "SPEC.md");
+  return join(dirname(dirname(dirname(thisDir))), 'SPEC.md');
 }
 
 /**
@@ -37,7 +37,7 @@ function getSpecPath(): string {
 function loadSpec(): string {
   const specPath = getSpecPath();
   try {
-    return readFileSync(specPath, "utf-8");
+    return readFileSync(specPath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to load SPEC from ${specPath}: ${message}`);
@@ -53,13 +53,13 @@ function formatMarkdown(content: string, useColors: boolean): string {
     return content;
   }
 
-  const lines = content.split("\n");
+  const lines = content.split('\n');
   const formatted: string[] = [];
   let inCodeBlock = false;
 
   for (const line of lines) {
     // Track code blocks
-    if (line.startsWith("```")) {
+    if (line.startsWith('```')) {
       inCodeBlock = !inCodeBlock;
       formatted.push(pc.dim(line));
       continue;
@@ -71,15 +71,15 @@ function formatMarkdown(content: string, useColors: boolean): string {
     }
 
     // Headers
-    if (line.startsWith("# ")) {
+    if (line.startsWith('# ')) {
       formatted.push(pc.bold(pc.cyan(line)));
       continue;
     }
-    if (line.startsWith("## ")) {
+    if (line.startsWith('## ')) {
       formatted.push(pc.bold(pc.blue(line)));
       continue;
     }
-    if (line.startsWith("### ")) {
+    if (line.startsWith('### ')) {
       formatted.push(pc.bold(line));
       continue;
     }
@@ -99,13 +99,13 @@ function formatMarkdown(content: string, useColors: boolean): string {
       /\[([^\]]+)\]\(([^)]+)\)/g,
       (_match, text: string, url: string) => {
         return `${pc.cyan(text)} ${pc.dim(`(${url})`)}`;
-      }
+      },
     );
 
     formatted.push(formattedLine);
   }
 
-  return formatted.join("\n");
+  return formatted.join('\n');
 }
 
 /**
@@ -127,9 +127,9 @@ function displayContent(content: string): void {
  */
 export function registerSpecCommand(program: Command): void {
   program
-    .command("spec")
-    .description("Display the Markform specification")
-    .option("--raw", "Output raw markdown without formatting")
+    .command('spec')
+    .description('Display the Markform specification')
+    .option('--raw', 'Output raw markdown without formatting')
     .action((options: { raw?: boolean }, cmd: Command) => {
       const ctx = getCommandContext(cmd);
 

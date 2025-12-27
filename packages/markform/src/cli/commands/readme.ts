@@ -5,14 +5,14 @@
  * or as plain text when piped.
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import pc from "picocolors";
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import pc from 'picocolors';
 
-import { getCommandContext, logError } from "../lib/shared.js";
+import { getCommandContext, logError } from '../lib/shared.js';
 
 /**
  * Get the path to the README.md file.
@@ -22,13 +22,13 @@ function getReadmePath(): string {
   const thisDir = dirname(fileURLToPath(import.meta.url));
   const dirName = thisDir.split(/[/\\]/).pop();
 
-  if (dirName === "dist") {
+  if (dirName === 'dist') {
     // Bundled: dist -> package root -> README.md
-    return join(dirname(thisDir), "README.md");
+    return join(dirname(thisDir), 'README.md');
   }
 
   // Development: src/cli/commands -> src/cli -> src -> package root -> README.md
-  return join(dirname(dirname(dirname(thisDir))), "README.md");
+  return join(dirname(dirname(dirname(thisDir))), 'README.md');
 }
 
 /**
@@ -37,7 +37,7 @@ function getReadmePath(): string {
 function loadReadme(): string {
   const readmePath = getReadmePath();
   try {
-    return readFileSync(readmePath, "utf-8");
+    return readFileSync(readmePath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to load README from ${readmePath}: ${message}`);
@@ -53,13 +53,13 @@ function formatMarkdown(content: string, useColors: boolean): string {
     return content;
   }
 
-  const lines = content.split("\n");
+  const lines = content.split('\n');
   const formatted: string[] = [];
   let inCodeBlock = false;
 
   for (const line of lines) {
     // Track code blocks
-    if (line.startsWith("```")) {
+    if (line.startsWith('```')) {
       inCodeBlock = !inCodeBlock;
       formatted.push(pc.dim(line));
       continue;
@@ -71,15 +71,15 @@ function formatMarkdown(content: string, useColors: boolean): string {
     }
 
     // Headers
-    if (line.startsWith("# ")) {
+    if (line.startsWith('# ')) {
       formatted.push(pc.bold(pc.cyan(line)));
       continue;
     }
-    if (line.startsWith("## ")) {
+    if (line.startsWith('## ')) {
       formatted.push(pc.bold(pc.blue(line)));
       continue;
     }
-    if (line.startsWith("### ")) {
+    if (line.startsWith('### ')) {
       formatted.push(pc.bold(line));
       continue;
     }
@@ -99,13 +99,13 @@ function formatMarkdown(content: string, useColors: boolean): string {
       /\[([^\]]+)\]\(([^)]+)\)/g,
       (_match, text: string, url: string) => {
         return `${pc.cyan(text)} ${pc.dim(`(${url})`)}`;
-      }
+      },
     );
 
     formatted.push(formattedLine);
   }
 
-  return formatted.join("\n");
+  return formatted.join('\n');
 }
 
 /**
@@ -127,9 +127,9 @@ function displayContent(content: string): void {
  */
 export function registerReadmeCommand(program: Command): void {
   program
-    .command("readme")
-    .description("✨Display README documentation ← START HERE!")
-    .option("--raw", "Output raw markdown without formatting")
+    .command('readme')
+    .description('✨Display README documentation ← START HERE!')
+    .option('--raw', 'Output raw markdown without formatting')
     .action((options: { raw?: boolean }, cmd: Command) => {
       const ctx = getCommandContext(cmd);
 
@@ -148,4 +148,3 @@ export function registerReadmeCommand(program: Command): void {
       }
     });
 }
-

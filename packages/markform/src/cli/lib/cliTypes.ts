@@ -20,7 +20,7 @@
  * - markform: canonical markform format (markdoc directives, for export command)
  * - markdown: plain readable markdown (no directives, for export command)
  */
-export type OutputFormat = "console" | "plaintext" | "yaml" | "json" | "markform" | "markdown";
+export type OutputFormat = 'console' | 'plaintext' | 'yaml' | 'json' | 'markform' | 'markdown';
 
 /**
  * Context available to all commands.

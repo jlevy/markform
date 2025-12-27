@@ -5,34 +5,34 @@
  * from the examples directory.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
 
-import { parseForm } from "../../src/engine/parse.js";
-import { fillForm } from "../../src/harness/programmaticFill.js";
-import { createMockAgent } from "../../src/harness/mockAgent.js";
+import { parseForm } from '../../src/engine/parse.js';
+import { fillForm } from '../../src/harness/programmaticFill.js';
+import { createMockAgent } from '../../src/harness/mockAgent.js';
 
 // =============================================================================
 // Test Fixtures
 // =============================================================================
 
-const EXAMPLES_DIR = resolve(__dirname, "../../examples");
+const EXAMPLES_DIR = resolve(__dirname, '../../examples');
 
 function loadForm(subPath: string): string {
-  return readFileSync(resolve(EXAMPLES_DIR, subPath), "utf-8");
+  return readFileSync(resolve(EXAMPLES_DIR, subPath), 'utf-8');
 }
 
 // =============================================================================
 // Integration Tests
 // =============================================================================
 
-describe("programmatic fill API - integration tests", () => {
-  describe("simple.form.md", () => {
-    it("complete fill using MockAgent with inputContext", async () => {
+describe('programmatic fill API - integration tests', () => {
+  describe('simple.form.md', () => {
+    it('complete fill using MockAgent with inputContext', async () => {
       // Load empty form and mock-filled form
-      const emptyForm = loadForm("simple/simple.form.md");
-      const mockFilledForm = loadForm("simple/simple-mock-filled.form.md");
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
 
       // Create mock agent from completed form
       const completedForm = parseForm(mockFilledForm);
@@ -41,22 +41,26 @@ describe("programmatic fill API - integration tests", () => {
       // Fill using programmatic API with user fields pre-filled via inputContext
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
+        model: 'mock/model',
         inputContext: {
           // Pre-fill user fields that MockAgent won't fill
-          name: "Alice Johnson",
-          email: "alice@example.com",
+          name: 'Alice Johnson',
+          email: 'alice@example.com',
           age: 32,
-          tags: ["typescript", "testing", "forms"],
-          priority: "medium",
-          categories: ["frontend", "backend"],
-          tasks_multi: { research: "done", design: "done", implement: "done", test: "incomplete" },
-          tasks_simple: { read_guidelines: "done", agree_terms: "done" },
-          confirmations: { backed_up: "yes", notified: "no" },
-          website: "https://alice.dev",
-          references: ["https://docs.example.com/guide", "https://github.com/example/project", "https://medium.com/article-about-forms"],
+          tags: ['typescript', 'testing', 'forms'],
+          priority: 'medium',
+          categories: ['frontend', 'backend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'incomplete' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'no' },
+          website: 'https://alice.dev',
+          references: [
+            'https://docs.example.com/guide',
+            'https://github.com/example/project',
+            'https://medium.com/article-about-forms',
+          ],
         },
-        targetRoles: ["user", "agent"],
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
@@ -64,17 +68,17 @@ describe("programmatic fill API - integration tests", () => {
       expect(result.turns).toBeGreaterThan(0);
 
       // Verify key values were set
-      expect(result.values.name).toEqual({ kind: "string", value: "Alice Johnson" });
-      expect(result.values.email).toEqual({ kind: "string", value: "alice@example.com" });
-      expect(result.values.age).toEqual({ kind: "number", value: 32 });
+      expect(result.values.name).toEqual({ kind: 'string', value: 'Alice Johnson' });
+      expect(result.values.email).toEqual({ kind: 'string', value: 'alice@example.com' });
+      expect(result.values.age).toEqual({ kind: 'number', value: 32 });
       expect(result.values.score).toBeDefined();
       expect(result.values.notes).toBeDefined();
     });
 
-    it("partial fill with agent role only fills agent fields", async () => {
+    it('partial fill with agent role only fills agent fields', async () => {
       // Load empty form and mock-filled form
-      const emptyForm = loadForm("simple/simple.form.md");
-      const mockFilledForm = loadForm("simple/simple-mock-filled.form.md");
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
 
       // Create mock agent from completed form
       const completedForm = parseForm(mockFilledForm);
@@ -83,8 +87,8 @@ describe("programmatic fill API - integration tests", () => {
       // Fill only agent role fields
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
-        targetRoles: ["agent"],
+        model: 'mock/model',
+        targetRoles: ['agent'],
         _testAgent: mockAgent,
       });
 
@@ -100,30 +104,30 @@ describe("programmatic fill API - integration tests", () => {
       expect(result.values.name).toBeUndefined();
     });
 
-    it("round-trip: result can be re-parsed", async () => {
-      const emptyForm = loadForm("simple/simple.form.md");
-      const mockFilledForm = loadForm("simple/simple-mock-filled.form.md");
+    it('round-trip: result can be re-parsed', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
 
       const completedForm = parseForm(mockFilledForm);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
+        model: 'mock/model',
         inputContext: {
-          name: "Test User",
-          email: "test@example.com",
+          name: 'Test User',
+          email: 'test@example.com',
           age: 25,
-          tags: ["tag1"],
-          priority: "high",
-          categories: ["frontend"],
-          tasks_multi: { research: "done", design: "done", implement: "done", test: "done" },
-          tasks_simple: { read_guidelines: "done", agree_terms: "done" },
-          confirmations: { backed_up: "yes", notified: "yes" },
-          website: "https://test.com",
-          references: ["https://example.com"],
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
         },
-        targetRoles: ["user", "agent"],
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
@@ -131,21 +135,21 @@ describe("programmatic fill API - integration tests", () => {
       const reparsedForm = parseForm(result.markdown);
 
       // Should have the same structure
-      expect(reparsedForm.schema.id).toBe("simple_test");
+      expect(reparsedForm.schema.id).toBe('simple_test');
       expect(reparsedForm.schema.groups.length).toBe(6);
 
       // Values should be preserved
       const nameResponse = reparsedForm.responsesByFieldId.name;
-      expect(nameResponse?.state).toBe("answered");
-      expect(nameResponse?.value).toEqual({ kind: "string", value: "Test User" });
+      expect(nameResponse?.state).toBe('answered');
+      expect(nameResponse?.value).toEqual({ kind: 'string', value: 'Test User' });
     });
   });
 
-  describe("political-research.form.md", () => {
-    it("complete fill with inputContext for user field", async () => {
+  describe('political-research.form.md', () => {
+    it('complete fill with inputContext for user field', async () => {
       // Load empty form and Lincoln mock-filled form
-      const emptyForm = loadForm("political-research/political-research.form.md");
-      const mockFilledForm = loadForm("political-research/political-research.mock.lincoln.form.md");
+      const emptyForm = loadForm('political-research/political-research.form.md');
+      const mockFilledForm = loadForm('political-research/political-research.mock.lincoln.form.md');
 
       // Create mock agent from completed form
       const completedForm = parseForm(mockFilledForm);
@@ -154,104 +158,104 @@ describe("programmatic fill API - integration tests", () => {
       // Fill using programmatic API with user field pre-filled
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
+        model: 'mock/model',
         inputContext: {
-          name: "Abraham Lincoln",
+          name: 'Abraham Lincoln',
         },
-        targetRoles: ["user", "agent"],
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(true);
 
       // Verify user field was pre-filled
-      expect(result.values.name).toEqual({ kind: "string", value: "Abraham Lincoln" });
+      expect(result.values.name).toEqual({ kind: 'string', value: 'Abraham Lincoln' });
 
       // Verify agent filled biographical data
-      expect(result.values.birth_date).toEqual({ kind: "string", value: "1809-02-12" });
-      expect(result.values.birth_place).toEqual({ kind: "string", value: "Hodgenville, Kentucky" });
-      expect(result.values.political_party).toEqual({ kind: "string", value: "Republican" });
+      expect(result.values.birth_date).toEqual({ kind: 'string', value: '1809-02-12' });
+      expect(result.values.birth_place).toEqual({ kind: 'string', value: 'Hodgenville, Kentucky' });
+      expect(result.values.political_party).toEqual({ kind: 'string', value: 'Republican' });
     });
 
-    it("handles complex form structure", async () => {
-      const emptyForm = loadForm("political-research/political-research.form.md");
-      const mockFilledForm = loadForm("political-research/political-research.mock.lincoln.form.md");
+    it('handles complex form structure', async () => {
+      const emptyForm = loadForm('political-research/political-research.form.md');
+      const mockFilledForm = loadForm('political-research/political-research.mock.lincoln.form.md');
 
       const completedForm = parseForm(mockFilledForm);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
-        inputContext: { name: "Abraham Lincoln" },
-        targetRoles: ["user", "agent"],
+        model: 'mock/model',
+        inputContext: { name: 'Abraham Lincoln' },
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(true);
 
       // Verify string_list fields were filled
-      expect(result.values.children?.kind).toBe("string_list");
-      expect(result.values.sources?.kind).toBe("string_list");
+      expect(result.values.children?.kind).toBe('string_list');
+      expect(result.values.sources?.kind).toBe('string_list');
     });
   });
 
-  describe("error scenarios", () => {
-    it("form parse error returns appropriate error", async () => {
+  describe('error scenarios', () => {
+    it('form parse error returns appropriate error', async () => {
       const result = await fillForm({
-        form: "not a valid markform document",
-        model: "mock/model",
+        form: 'not a valid markform document',
+        model: 'mock/model',
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("error");
-        expect(result.status.message).toContain("Form parse error");
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('Form parse error');
       }
     });
 
-    it("model resolution error returns appropriate error", async () => {
-      const emptyForm = loadForm("simple/simple.form.md");
+    it('model resolution error returns appropriate error', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
 
       const result = await fillForm({
         form: emptyForm,
-        model: "nonexistent/provider-model",
+        model: 'nonexistent/provider-model',
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("error");
-        expect(result.status.message).toContain("Model resolution error");
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('Model resolution error');
       }
     });
 
-    it("invalid inputContext field returns error", async () => {
-      const emptyForm = loadForm("simple/simple.form.md");
-      const mockFilledForm = loadForm("simple/simple-mock-filled.form.md");
+    it('invalid inputContext field returns error', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
       const completedForm = parseForm(mockFilledForm);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
+        model: 'mock/model',
         inputContext: {
-          nonexistent_field: "some value",
+          nonexistent_field: 'some value',
         },
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("error");
-        expect(result.status.message).toContain("not found");
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('not found');
       }
     });
   });
 
-  describe("progress tracking", () => {
-    it("onTurnComplete receives accurate progress info", async () => {
-      const emptyForm = loadForm("simple/simple.form.md");
-      const mockFilledForm = loadForm("simple/simple-mock-filled.form.md");
+  describe('progress tracking', () => {
+    it('onTurnComplete receives accurate progress info', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
 
       const completedForm = parseForm(mockFilledForm);
       const mockAgent = createMockAgent(completedForm);
@@ -267,22 +271,22 @@ describe("programmatic fill API - integration tests", () => {
       // This ensures at least one turn is executed
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
+        model: 'mock/model',
         inputContext: {
-          name: "Test User",
-          email: "test@example.com",
+          name: 'Test User',
+          email: 'test@example.com',
           age: 25,
-          tags: ["tag1"],
-          priority: "high",
-          categories: ["frontend"],
-          tasks_multi: { research: "done", design: "done", implement: "done", test: "done" },
-          tasks_simple: { read_guidelines: "done", agree_terms: "done" },
-          confirmations: { backed_up: "yes", notified: "yes" },
-          website: "https://test.com",
-          references: ["https://example.com"],
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
           // Note: NOT pre-filling score, notes, or related_url - MockAgent will fill these
         },
-        targetRoles: ["user", "agent"],
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
         onTurnComplete: (progress) => {
           progressUpdates.push({ ...progress });
@@ -305,9 +309,9 @@ describe("programmatic fill API - integration tests", () => {
       }
     });
 
-    it("zero turns when form is already complete via inputContext", async () => {
-      const emptyForm = loadForm("simple/simple.form.md");
-      const mockFilledForm = loadForm("simple/simple-mock-filled.form.md");
+    it('zero turns when form is already complete via inputContext', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
 
       const completedForm = parseForm(mockFilledForm);
       const mockAgent = createMockAgent(completedForm);
@@ -317,26 +321,26 @@ describe("programmatic fill API - integration tests", () => {
       // Pre-fill ALL fields (including agent fields and optional fields) via inputContext
       const result = await fillForm({
         form: emptyForm,
-        model: "mock/model",
+        model: 'mock/model',
         inputContext: {
-          name: "Test User",
-          email: "test@example.com",
+          name: 'Test User',
+          email: 'test@example.com',
           age: 25,
-          tags: ["tag1"],
-          priority: "high",
-          categories: ["frontend"],
-          tasks_multi: { research: "done", design: "done", implement: "done", test: "done" },
-          tasks_simple: { read_guidelines: "done", agree_terms: "done" },
-          confirmations: { backed_up: "yes", notified: "yes" },
-          website: "https://test.com",
-          references: ["https://example.com"],
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
           // Also pre-fill agent fields (including optional ones)
           score: 87.5,
-          notes: "Pre-filled note",
-          related_url: "https://related.com",
+          notes: 'Pre-filled note',
+          related_url: 'https://related.com',
           optional_number: 42,
         },
-        targetRoles: ["user", "agent"],
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
         onTurnComplete: (progress) => {
           progressUpdates.push(progress.turnNumber);

@@ -4,10 +4,10 @@
  * Parses Markdoc documents and extracts form schema, values, and documentation blocks.
  */
 
-import Markdoc from "@markdoc/markdoc";
-import type { Node } from "@markdoc/markdoc";
+import Markdoc from '@markdoc/markdoc';
+import type { Node } from '@markdoc/markdoc';
 
-import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
+import { AGENT_ROLE, DEFAULT_PRIORITY } from '../settings.js';
 import type {
   ApprovalMode,
   CheckboxesField,
@@ -41,7 +41,7 @@ import type {
   UrlListValue,
   UrlValue,
   ValidatorRef,
-} from "./coreTypes.js";
+} from './coreTypes.js';
 
 // =============================================================================
 // Error Types
@@ -52,10 +52,10 @@ export class ParseError extends Error {
   constructor(
     message: string,
     public readonly line?: number,
-    public readonly col?: number
+    public readonly col?: number,
   ) {
     super(message);
-    this.name = "ParseError";
+    this.name = 'ParseError';
   }
 }
 
@@ -86,18 +86,18 @@ function extractFrontmatter(content: string): FrontmatterResult {
   // For now, just extract the raw YAML and we'll parse it properly with the yaml package
   try {
     // Simple parse - we'll use yaml package for proper parsing
-    const lines = (yamlContent ?? "").split("\n");
+    const lines = (yamlContent ?? '').split('\n');
     const result: Record<string, unknown> = {};
 
     for (const line of lines) {
-      const colonIndex = line.indexOf(":");
-      if (colonIndex > 0 && !line.startsWith(" ") && !line.startsWith("\t")) {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
         const key = line.slice(0, colonIndex).trim();
         const value = line.slice(colonIndex + 1).trim();
         // Handle quoted values
         if (value.startsWith('"') && value.endsWith('"')) {
           result[key] = value.slice(1, -1);
-        } else if (value === "") {
+        } else if (value === '') {
           // Nested object marker - for now just mark it
           result[key] = {};
         } else {
@@ -108,7 +108,7 @@ function extractFrontmatter(content: string): FrontmatterResult {
 
     return { frontmatter: result, body };
   } catch (_error) {
-    throw new ParseError("Failed to parse frontmatter YAML");
+    throw new ParseError('Failed to parse frontmatter YAML');
   }
 }
 
@@ -118,16 +118,16 @@ function extractFrontmatter(content: string): FrontmatterResult {
 
 /** Map checkbox marker to state value */
 const CHECKBOX_MARKERS: Record<string, CheckboxValue> = {
-  "[ ]": "todo",
-  "[x]": "done",
-  "[X]": "done",
-  "[/]": "incomplete",
-  "[*]": "active",
-  "[-]": "na",
-  "[y]": "yes",
-  "[Y]": "yes",
-  "[n]": "no",
-  "[N]": "no",
+  '[ ]': 'todo',
+  '[x]': 'done',
+  '[X]': 'done',
+  '[/]': 'incomplete',
+  '[*]': 'active',
+  '[-]': 'na',
+  '[y]': 'yes',
+  '[Y]': 'yes',
+  '[n]': 'no',
+  '[N]': 'no',
 };
 
 // Regex to extract checkbox marker and label from text content
@@ -149,8 +149,8 @@ function parseOptionText(text: string): ParsedMarkerText | null {
     return null;
   }
 
-  const marker = match[1] ?? "";
-  const label = (match[2] ?? "").trim();
+  const marker = match[1] ?? '';
+  const label = (match[2] ?? '').trim();
 
   return { marker, label };
 }
@@ -164,22 +164,21 @@ function parseOptionText(text: string): ParsedMarkerText | null {
  * Works with raw AST nodes (not transformed Tags).
  */
 function isTagNode(node: Node, name?: string): boolean {
-  if (typeof node !== "object" || node === null) {
+  if (typeof node !== 'object' || node === null) {
     return false;
   }
-  if (node.type === "tag" && node.tag) {
+  if (node.type === 'tag' && node.tag) {
     return name === undefined || node.tag === name;
   }
   return false;
 }
-
 
 /**
  * Get string attribute value or undefined.
  */
 function getStringAttr(node: Node, name: string): string | undefined {
   const value: unknown = node.attributes?.[name];
-  return typeof value === "string" ? value : undefined;
+  return typeof value === 'string' ? value : undefined;
 }
 
 /**
@@ -187,7 +186,7 @@ function getStringAttr(node: Node, name: string): string | undefined {
  */
 function getNumberAttr(node: Node, name: string): number | undefined {
   const value: unknown = node.attributes?.[name];
-  return typeof value === "number" ? value : undefined;
+  return typeof value === 'number' ? value : undefined;
 }
 
 /**
@@ -195,7 +194,7 @@ function getNumberAttr(node: Node, name: string): number | undefined {
  */
 function getBooleanAttr(node: Node, name: string): boolean | undefined {
   const value: unknown = node.attributes?.[name];
-  return typeof value === "boolean" ? value : undefined;
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 /**
@@ -210,10 +209,10 @@ function getValidateAttr(node: Node): ValidatorRef[] | undefined {
   if (Array.isArray(value)) {
     return value as ValidatorRef[];
   }
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return [value];
   }
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     // Single object validator ref like { id: "foo", param: 1 }
     return [value as ValidatorRef];
   }
@@ -241,16 +240,16 @@ function extractOptionItems(node: Node): ParsedOptionItem[] {
    * Collect all text content from a node tree into a single string.
    */
   function collectText(n: Node): string {
-    let text = "";
+    let text = '';
 
     // Text nodes have content in attributes
-    if (n.type === "text" && typeof n.attributes?.content === "string") {
+    if (n.type === 'text' && typeof n.attributes?.content === 'string') {
       text += n.attributes.content;
     }
 
     // Softbreak is a newline
-    if (n.type === "softbreak") {
-      text += "\n";
+    if (n.type === 'softbreak') {
+      text += '\n';
     }
 
     // Recurse into children
@@ -267,15 +266,15 @@ function extractOptionItems(node: Node): ParsedOptionItem[] {
    * Traverse to find list items and extract their content.
    */
   function traverse(child: Node): void {
-    if (!child || typeof child !== "object") {
+    if (!child || typeof child !== 'object') {
       return;
     }
 
     // List items contain the option text and ID
-    if (child.type === "item") {
+    if (child.type === 'item') {
       const text = collectText(child);
       // Markdoc parses {% #id %} as an id attribute on the item
-      const id = typeof child.attributes?.id === "string" ? child.attributes.id : null;
+      const id = typeof child.attributes?.id === 'string' ? child.attributes.id : null;
       if (text.trim()) {
         items.push({ id, text: text.trim() });
       }
@@ -305,17 +304,15 @@ function extractOptionItems(node: Node): ParsedOptionItem[] {
  */
 function extractFenceValue(node: Node): string | null {
   function traverse(child: Node): string | null {
-    if (!child || typeof child !== "object") {
+    if (!child || typeof child !== 'object') {
       return null;
     }
 
     // Check if this is a fence node with language="value"
-    if (child.type === "fence") {
+    if (child.type === 'fence') {
       const lang = child.attributes?.language as string | undefined;
-      if (lang === "value") {
-        return typeof child.attributes?.content === "string"
-          ? child.attributes.content
-          : null;
+      if (lang === 'value') {
+        return typeof child.attributes?.content === 'string' ? child.attributes.content : null;
       }
     }
 
@@ -349,17 +346,15 @@ function extractFenceValue(node: Node): string | null {
 // =============================================================================
 
 /** Sentinel values for text fields */
-const SENTINEL_SKIP = "|SKIP|";
-const SENTINEL_ABORT = "|ABORT|";
+const SENTINEL_SKIP = '|SKIP|';
+const SENTINEL_ABORT = '|ABORT|';
 
 /**
  * Parse a sentinel value with optional parenthesized reason.
  * Formats: `|SKIP|`, `|SKIP| (reason text)`, `|ABORT|`, `|ABORT| (reason text)`
  * Returns null if the content is not a sentinel.
  */
-function parseSentinel(
-  content: string | null
-): { type: "skip" | "abort"; reason?: string } | null {
+function parseSentinel(content: string | null): { type: 'skip' | 'abort'; reason?: string } | null {
   if (!content) {
     return null;
   }
@@ -370,13 +365,13 @@ function parseSentinel(
   // Check for |SKIP| with optional reason
   if (trimmed.startsWith(SENTINEL_SKIP)) {
     const rest = trimmed.slice(SENTINEL_SKIP.length).trim();
-    if (rest === "") {
-      return { type: "skip" };
+    if (rest === '') {
+      return { type: 'skip' };
     }
     // Extract reason from parentheses
     const match = reasonPattern.exec(rest);
     if (match?.[1]) {
-      return { type: "skip", reason: match[1].trim() };
+      return { type: 'skip', reason: match[1].trim() };
     }
     // Invalid format - just |SKIP| with non-parenthesized content
     return null;
@@ -385,13 +380,13 @@ function parseSentinel(
   // Check for |ABORT| with optional reason
   if (trimmed.startsWith(SENTINEL_ABORT)) {
     const rest = trimmed.slice(SENTINEL_ABORT.length).trim();
-    if (rest === "") {
-      return { type: "abort" };
+    if (rest === '') {
+      return { type: 'abort' };
     }
     // Extract reason from parentheses
     const match = reasonPattern.exec(rest);
     if (match?.[1]) {
-      return { type: "abort", reason: match[1].trim() };
+      return { type: 'abort', reason: match[1].trim() };
     }
     // Invalid format - just |ABORT| with non-parenthesized content
     return null;
@@ -406,21 +401,21 @@ function parseSentinel(
  */
 function isValueEmpty(value: FieldValue): boolean {
   switch (value.kind) {
-    case "string":
-    case "number":
-    case "url":
+    case 'string':
+    case 'number':
+    case 'url':
       return value.value === null;
-    case "string_list":
-    case "url_list":
+    case 'string_list':
+    case 'url_list':
       return value.items.length === 0;
-    case "single_select":
+    case 'single_select':
       return value.selected === null;
-    case "multi_select":
+    case 'multi_select':
       return value.selected.length === 0;
-    case "checkboxes": {
+    case 'checkboxes': {
       // Empty if all checkboxes are in default unchecked state (todo/unfilled)
       const values = Object.values(value.values);
-      return values.every(v => v === "todo" || v === "unfilled");
+      return values.every((v) => v === 'todo' || v === 'unfilled');
     }
   }
 }
@@ -431,9 +426,9 @@ function isValueEmpty(value: FieldValue): boolean {
  */
 function createFieldResponse(value: FieldValue): FieldResponse {
   if (isValueEmpty(value)) {
-    return { state: "unanswered" };
+    return { state: 'unanswered' };
   }
-  return { state: "answered", value };
+  return { state: 'answered', value };
 }
 
 /**
@@ -444,52 +439,55 @@ function parseFieldResponse(
   node: Node,
   value: FieldValue,
   fieldId: string,
-  required: boolean
+  required: boolean,
 ): FieldResponse {
-  const stateAttr = getStringAttr(node, "state");
+  const stateAttr = getStringAttr(node, 'state');
   const isFilled = !isValueEmpty(value);
 
   // Validate state attribute value if present
   if (stateAttr !== undefined) {
-    if (stateAttr !== "empty" && stateAttr !== "answered" && stateAttr !== "skipped" && stateAttr !== "aborted") {
+    if (
+      stateAttr !== 'empty' &&
+      stateAttr !== 'answered' &&
+      stateAttr !== 'skipped' &&
+      stateAttr !== 'aborted'
+    ) {
       throw new ParseError(
-        `Invalid state attribute '${stateAttr}' on field '${fieldId}'. Must be empty, answered, skipped, or aborted`
+        `Invalid state attribute '${stateAttr}' on field '${fieldId}'. Must be empty, answered, skipped, or aborted`,
       );
     }
 
     // Validate state vs filled consistency
-    if (stateAttr === "skipped" || stateAttr === "aborted") {
+    if (stateAttr === 'skipped' || stateAttr === 'aborted') {
       if (isFilled) {
         throw new ParseError(
-          `Field '${fieldId}' has state='${stateAttr}' but contains a value. ${stateAttr} fields cannot have values.`
+          `Field '${fieldId}' has state='${stateAttr}' but contains a value. ${stateAttr} fields cannot have values.`,
         );
       }
     }
 
     // Validate skipped on required fields
-    if (stateAttr === "skipped" && required) {
+    if (stateAttr === 'skipped' && required) {
       throw new ParseError(
-        `Field '${fieldId}' is required but has state='skipped'. Cannot skip required fields.`
+        `Field '${fieldId}' is required but has state='skipped'. Cannot skip required fields.`,
       );
     }
 
     // Return response based on explicit state attribute
-    if (stateAttr === "skipped") {
-      return { state: "skipped" };
+    if (stateAttr === 'skipped') {
+      return { state: 'skipped' };
     }
-    if (stateAttr === "aborted") {
-      return { state: "aborted" };
+    if (stateAttr === 'aborted') {
+      return { state: 'aborted' };
     }
-    if (stateAttr === "empty") {
-      return { state: "unanswered" };
+    if (stateAttr === 'empty') {
+      return { state: 'unanswered' };
     }
-    if (stateAttr === "answered") {
+    if (stateAttr === 'answered') {
       if (!isFilled) {
-        throw new ParseError(
-          `Field '${fieldId}' has state='answered' but has no value`
-        );
+        throw new ParseError(`Field '${fieldId}' has state='answered' but has no value`);
       }
-      return { state: "answered", value };
+      return { state: 'answered', value };
     }
   }
 
@@ -500,9 +498,9 @@ function parseFieldResponse(
 /**
  * Get priority attribute value or default to DEFAULT_PRIORITY.
  */
-function getPriorityAttr(node: Node): "high" | "medium" | "low" {
-  const value = getStringAttr(node, "priority");
-  if (value === "high" || value === "medium" || value === "low") {
+function getPriorityAttr(node: Node): 'high' | 'medium' | 'low' {
+  const value = getStringAttr(node, 'priority');
+  if (value === 'high' || value === 'medium' || value === 'low') {
     return value;
   }
   return DEFAULT_PRIORITY;
@@ -512,8 +510,8 @@ function getPriorityAttr(node: Node): "high" | "medium" | "low" {
  * Parse a string-field tag.
  */
 function parseStringField(node: Node): { field: StringField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("string-field missing required 'id' attribute");
@@ -522,62 +520,62 @@ function parseStringField(node: Node): { field: StringField; response: FieldResp
     throw new ParseError(`string-field '${id}' missing required 'label' attribute`);
   }
 
-  const required = getBooleanAttr(node, "required") ?? false;
+  const required = getBooleanAttr(node, 'required') ?? false;
 
   const field: StringField = {
-    kind: "string",
+    kind: 'string',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
-    multiline: getBooleanAttr(node, "multiline"),
-    pattern: getStringAttr(node, "pattern"),
-    minLength: getNumberAttr(node, "minLength"),
-    maxLength: getNumberAttr(node, "maxLength"),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    multiline: getBooleanAttr(node, 'multiline'),
+    pattern: getStringAttr(node, 'pattern'),
+    minLength: getNumberAttr(node, 'minLength'),
+    maxLength: getNumberAttr(node, 'maxLength'),
     validate: getValidateAttr(node),
   };
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
   const trimmedContent = fenceContent !== null ? fenceContent.trim() : null;
-  const stateAttr = getStringAttr(node, "state");
+  const stateAttr = getStringAttr(node, 'state');
 
   // Handle sentinel values
   const sentinel = parseSentinel(fenceContent);
   if (sentinel) {
-    if (sentinel.type === "skip") {
-      if (stateAttr !== undefined && stateAttr !== "skipped") {
+    if (sentinel.type === 'skip') {
+      if (stateAttr !== undefined && stateAttr !== 'skipped') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
         );
       }
       if (required) {
         throw new ParseError(
-          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
         );
       }
       return {
         field,
-        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
-    if (sentinel.type === "abort") {
-      if (stateAttr !== undefined && stateAttr !== "aborted") {
+    if (sentinel.type === 'abort') {
+      if (stateAttr !== undefined && stateAttr !== 'aborted') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
         );
       }
       return {
         field,
-        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
   }
 
   // No sentinel - parse normally
   const value: StringValue = {
-    kind: "string",
+    kind: 'string',
     value: trimmedContent,
   };
 
@@ -589,8 +587,8 @@ function parseStringField(node: Node): { field: StringField; response: FieldResp
  * Parse a number-field tag.
  */
 function parseNumberField(node: Node): { field: NumberField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("number-field missing required 'id' attribute");
@@ -599,59 +597,59 @@ function parseNumberField(node: Node): { field: NumberField; response: FieldResp
     throw new ParseError(`number-field '${id}' missing required 'label' attribute`);
   }
 
-  const required = getBooleanAttr(node, "required") ?? false;
+  const required = getBooleanAttr(node, 'required') ?? false;
 
   const field: NumberField = {
-    kind: "number",
+    kind: 'number',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
-    min: getNumberAttr(node, "min"),
-    max: getNumberAttr(node, "max"),
-    integer: getBooleanAttr(node, "integer"),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    min: getNumberAttr(node, 'min'),
+    max: getNumberAttr(node, 'max'),
+    integer: getBooleanAttr(node, 'integer'),
     validate: getValidateAttr(node),
   };
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const stateAttr = getStringAttr(node, "state");
+  const stateAttr = getStringAttr(node, 'state');
 
   // Handle sentinel values
   const sentinel = parseSentinel(fenceContent);
   if (sentinel) {
-    if (sentinel.type === "skip") {
-      if (stateAttr !== undefined && stateAttr !== "skipped") {
+    if (sentinel.type === 'skip') {
+      if (stateAttr !== undefined && stateAttr !== 'skipped') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
         );
       }
       if (required) {
         throw new ParseError(
-          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
         );
       }
       return {
         field,
-        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
-    if (sentinel.type === "abort") {
-      if (stateAttr !== undefined && stateAttr !== "aborted") {
+    if (sentinel.type === 'abort') {
+      if (stateAttr !== undefined && stateAttr !== 'aborted') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
         );
       }
       return {
         field,
-        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
   }
 
   // No sentinel - parse number normally
-  const trimmedContent = fenceContent !== null ? fenceContent.trim() : "";
+  const trimmedContent = fenceContent !== null ? fenceContent.trim() : '';
   let numValue: number | null = null;
   if (trimmedContent) {
     const parsed = Number(trimmedContent);
@@ -661,7 +659,7 @@ function parseNumberField(node: Node): { field: NumberField; response: FieldResp
   }
 
   const value: NumberValue = {
-    kind: "number",
+    kind: 'number',
     value: numValue,
   };
 
@@ -673,8 +671,8 @@ function parseNumberField(node: Node): { field: NumberField; response: FieldResp
  * Parse a string-list tag.
  */
 function parseStringListField(node: Node): { field: StringListField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("string-list missing required 'id' attribute");
@@ -683,55 +681,55 @@ function parseStringListField(node: Node): { field: StringListField; response: F
     throw new ParseError(`string-list '${id}' missing required 'label' attribute`);
   }
 
-  const required = getBooleanAttr(node, "required") ?? false;
+  const required = getBooleanAttr(node, 'required') ?? false;
 
   const field: StringListField = {
-    kind: "string_list",
+    kind: 'string_list',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
-    minItems: getNumberAttr(node, "minItems"),
-    maxItems: getNumberAttr(node, "maxItems"),
-    itemMinLength: getNumberAttr(node, "itemMinLength"),
-    itemMaxLength: getNumberAttr(node, "itemMaxLength"),
-    uniqueItems: getBooleanAttr(node, "uniqueItems"),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    minItems: getNumberAttr(node, 'minItems'),
+    maxItems: getNumberAttr(node, 'maxItems'),
+    itemMinLength: getNumberAttr(node, 'itemMinLength'),
+    itemMaxLength: getNumberAttr(node, 'itemMaxLength'),
+    uniqueItems: getBooleanAttr(node, 'uniqueItems'),
     validate: getValidateAttr(node),
   };
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const stateAttr = getStringAttr(node, "state");
+  const stateAttr = getStringAttr(node, 'state');
 
   // Handle sentinel values
   const sentinel = parseSentinel(fenceContent);
   if (sentinel) {
-    if (sentinel.type === "skip") {
-      if (stateAttr !== undefined && stateAttr !== "skipped") {
+    if (sentinel.type === 'skip') {
+      if (stateAttr !== undefined && stateAttr !== 'skipped') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
         );
       }
       if (required) {
         throw new ParseError(
-          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
         );
       }
       return {
         field,
-        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
-    if (sentinel.type === "abort") {
-      if (stateAttr !== undefined && stateAttr !== "aborted") {
+    if (sentinel.type === 'abort') {
+      if (stateAttr !== undefined && stateAttr !== 'aborted') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
         );
       }
       return {
         field,
-        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
   }
@@ -739,7 +737,7 @@ function parseStringListField(node: Node): { field: StringListField; response: F
   // No sentinel - parse list normally
   const items: string[] = [];
   if (fenceContent !== null) {
-    const lines = fenceContent.split("\n");
+    const lines = fenceContent.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed) {
@@ -749,7 +747,7 @@ function parseStringListField(node: Node): { field: StringListField; response: F
   }
 
   const value: StringListValue = {
-    kind: "string_list",
+    kind: 'string_list',
     items,
   };
 
@@ -762,7 +760,7 @@ function parseStringListField(node: Node): { field: StringListField; response: F
  */
 function parseOptions(
   node: Node,
-  fieldId: string
+  fieldId: string,
 ): { options: Option[]; selected: Record<string, CheckboxValue> } {
   const items = extractOptionItems(node);
   const options: Option[] = [];
@@ -777,14 +775,12 @@ function parseOptions(
 
     if (!item.id) {
       throw new ParseError(
-        `Option in field '${fieldId}' missing ID annotation. Use {% #option_id %}`
+        `Option in field '${fieldId}' missing ID annotation. Use {% #option_id %}`,
       );
     }
 
     if (seenIds.has(item.id)) {
-      throw new ParseError(
-        `Duplicate option ID '${item.id}' in field '${fieldId}'`
-      );
+      throw new ParseError(`Duplicate option ID '${item.id}' in field '${fieldId}'`);
     }
     seenIds.add(item.id);
 
@@ -803,8 +799,8 @@ function parseOptions(
  * Parse a single-select tag.
  */
 function parseSingleSelectField(node: Node): { field: SingleSelectField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("single-select missing required 'id' attribute");
@@ -813,16 +809,16 @@ function parseSingleSelectField(node: Node): { field: SingleSelectField; respons
     throw new ParseError(`single-select '${id}' missing required 'label' attribute`);
   }
 
-  const required = getBooleanAttr(node, "required") ?? false;
+  const required = getBooleanAttr(node, 'required') ?? false;
   const { options, selected } = parseOptions(node, id);
 
   const field: SingleSelectField = {
-    kind: "single_select",
+    kind: 'single_select',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     options,
     validate: getValidateAttr(node),
   };
@@ -830,14 +826,14 @@ function parseSingleSelectField(node: Node): { field: SingleSelectField; respons
   // Find the selected option (exactly one with done/[x] state)
   let selectedOption: string | null = null;
   for (const [optId, state] of Object.entries(selected)) {
-    if (state === "done") {
+    if (state === 'done') {
       selectedOption = optId;
       break;
     }
   }
 
   const value: SingleSelectValue = {
-    kind: "single_select",
+    kind: 'single_select',
     selected: selectedOption,
   };
 
@@ -849,8 +845,8 @@ function parseSingleSelectField(node: Node): { field: SingleSelectField; respons
  * Parse a multi-select tag.
  */
 function parseMultiSelectField(node: Node): { field: MultiSelectField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("multi-select missing required 'id' attribute");
@@ -859,32 +855,32 @@ function parseMultiSelectField(node: Node): { field: MultiSelectField; response:
     throw new ParseError(`multi-select '${id}' missing required 'label' attribute`);
   }
 
-  const required = getBooleanAttr(node, "required") ?? false;
+  const required = getBooleanAttr(node, 'required') ?? false;
   const { options, selected } = parseOptions(node, id);
 
   const field: MultiSelectField = {
-    kind: "multi_select",
+    kind: 'multi_select',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     options,
-    minSelections: getNumberAttr(node, "minSelections"),
-    maxSelections: getNumberAttr(node, "maxSelections"),
+    minSelections: getNumberAttr(node, 'minSelections'),
+    maxSelections: getNumberAttr(node, 'maxSelections'),
     validate: getValidateAttr(node),
   };
 
   // Collect all selected options (those with done/[x] state)
   const selectedOptions: string[] = [];
   for (const [optId, state] of Object.entries(selected)) {
-    if (state === "done") {
+    if (state === 'done') {
       selectedOptions.push(optId);
     }
   }
 
   const value: MultiSelectValue = {
-    kind: "multi_select",
+    kind: 'multi_select',
     selected: selectedOptions,
   };
 
@@ -896,8 +892,8 @@ function parseMultiSelectField(node: Node): { field: MultiSelectField; response:
  * Parse a checkboxes tag.
  */
 function parseCheckboxesField(node: Node): { field: CheckboxesField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("checkboxes missing required 'id' attribute");
@@ -908,28 +904,32 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; response: F
 
   const { options, selected } = parseOptions(node, id);
 
-  const checkboxModeStr = getStringAttr(node, "checkboxMode");
-  let checkboxMode: CheckboxMode = "multi"; // default
-  if (checkboxModeStr === "multi" || checkboxModeStr === "simple" || checkboxModeStr === "explicit") {
+  const checkboxModeStr = getStringAttr(node, 'checkboxMode');
+  let checkboxMode: CheckboxMode = 'multi'; // default
+  if (
+    checkboxModeStr === 'multi' ||
+    checkboxModeStr === 'simple' ||
+    checkboxModeStr === 'explicit'
+  ) {
     checkboxMode = checkboxModeStr;
   }
 
-  const approvalModeStr = getStringAttr(node, "approvalMode");
-  let approvalMode: ApprovalMode = "none"; // default
-  if (approvalModeStr === "blocking") {
-    approvalMode = "blocking";
+  const approvalModeStr = getStringAttr(node, 'approvalMode');
+  let approvalMode: ApprovalMode = 'none'; // default
+  if (approvalModeStr === 'blocking') {
+    approvalMode = 'blocking';
   }
 
   // Handle required attribute based on checkboxMode:
   // - explicit mode is inherently required (cannot be set to false)
   // - multi/simple modes default to optional (false)
-  const explicitRequired = getBooleanAttr(node, "required");
+  const explicitRequired = getBooleanAttr(node, 'required');
   let required: boolean;
-  if (checkboxMode === "explicit") {
+  if (checkboxMode === 'explicit') {
     if (explicitRequired === false) {
       throw new ParseError(
         `Checkbox field "${label}" has checkboxMode="explicit" which is inherently required. ` +
-          `Cannot set required=false. Remove required attribute or change checkboxMode.`
+          `Cannot set required=false. Remove required attribute or change checkboxMode.`,
       );
     }
     required = true; // explicit mode is always required
@@ -938,14 +938,14 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; response: F
   }
 
   const field: CheckboxesField = {
-    kind: "checkboxes",
+    kind: 'checkboxes',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     checkboxMode,
-    minDone: getNumberAttr(node, "minDone"),
+    minDone: getNumberAttr(node, 'minDone'),
     options,
     approvalMode,
     validate: getValidateAttr(node),
@@ -956,16 +956,16 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; response: F
 
   for (const opt of options) {
     const state = selected[opt.id];
-    if (state === undefined || state === "todo") {
+    if (state === undefined || state === 'todo') {
       // For explicit mode, "todo" (from [ ]) means "unfilled"
-      values[opt.id] = checkboxMode === "explicit" ? "unfilled" : "todo";
+      values[opt.id] = checkboxMode === 'explicit' ? 'unfilled' : 'todo';
     } else {
       values[opt.id] = state;
     }
   }
 
   const value: CheckboxesValue = {
-    kind: "checkboxes",
+    kind: 'checkboxes',
     values,
   };
 
@@ -977,8 +977,8 @@ function parseCheckboxesField(node: Node): { field: CheckboxesField; response: F
  * Parse a url-field tag.
  */
 function parseUrlField(node: Node): { field: UrlField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("url-field missing required 'id' attribute");
@@ -987,50 +987,50 @@ function parseUrlField(node: Node): { field: UrlField; response: FieldResponse }
     throw new ParseError(`url-field '${id}' missing required 'label' attribute`);
   }
 
-  const required = getBooleanAttr(node, "required") ?? false;
+  const required = getBooleanAttr(node, 'required') ?? false;
 
   const field: UrlField = {
-    kind: "url",
+    kind: 'url',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     validate: getValidateAttr(node),
   };
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const stateAttr = getStringAttr(node, "state");
+  const stateAttr = getStringAttr(node, 'state');
 
   // Handle sentinel values
   const sentinel = parseSentinel(fenceContent);
   if (sentinel) {
-    if (sentinel.type === "skip") {
-      if (stateAttr !== undefined && stateAttr !== "skipped") {
+    if (sentinel.type === 'skip') {
+      if (stateAttr !== undefined && stateAttr !== 'skipped') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
         );
       }
       if (required) {
         throw new ParseError(
-          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
         );
       }
       return {
         field,
-        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
-    if (sentinel.type === "abort") {
-      if (stateAttr !== undefined && stateAttr !== "aborted") {
+    if (sentinel.type === 'abort') {
+      if (stateAttr !== undefined && stateAttr !== 'aborted') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
         );
       }
       return {
         field,
-        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
   }
@@ -1038,7 +1038,7 @@ function parseUrlField(node: Node): { field: UrlField; response: FieldResponse }
   // No sentinel - parse normally
   const trimmedContent = fenceContent !== null ? fenceContent.trim() : null;
   const value: UrlValue = {
-    kind: "url",
+    kind: 'url',
     value: trimmedContent,
   };
 
@@ -1050,8 +1050,8 @@ function parseUrlField(node: Node): { field: UrlField; response: FieldResponse }
  * Parse a url-list tag.
  */
 function parseUrlListField(node: Node): { field: UrlListField; response: FieldResponse } {
-  const id = getStringAttr(node, "id");
-  const label = getStringAttr(node, "label");
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
 
   if (!id) {
     throw new ParseError("url-list missing required 'id' attribute");
@@ -1060,53 +1060,53 @@ function parseUrlListField(node: Node): { field: UrlListField; response: FieldRe
     throw new ParseError(`url-list '${id}' missing required 'label' attribute`);
   }
 
-  const required = getBooleanAttr(node, "required") ?? false;
+  const required = getBooleanAttr(node, 'required') ?? false;
 
   const field: UrlListField = {
-    kind: "url_list",
+    kind: 'url_list',
     id,
     label,
     required,
     priority: getPriorityAttr(node),
-    role: getStringAttr(node, "role") ?? AGENT_ROLE,
-    minItems: getNumberAttr(node, "minItems"),
-    maxItems: getNumberAttr(node, "maxItems"),
-    uniqueItems: getBooleanAttr(node, "uniqueItems"),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    minItems: getNumberAttr(node, 'minItems'),
+    maxItems: getNumberAttr(node, 'maxItems'),
+    uniqueItems: getBooleanAttr(node, 'uniqueItems'),
     validate: getValidateAttr(node),
   };
 
   // Check for sentinel values in text fields
   const fenceContent = extractFenceValue(node);
-  const stateAttr = getStringAttr(node, "state");
+  const stateAttr = getStringAttr(node, 'state');
 
   // Handle sentinel values
   const sentinel = parseSentinel(fenceContent);
   if (sentinel) {
-    if (sentinel.type === "skip") {
-      if (stateAttr !== undefined && stateAttr !== "skipped") {
+    if (sentinel.type === 'skip') {
+      if (stateAttr !== undefined && stateAttr !== 'skipped') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
         );
       }
       if (required) {
         throw new ParseError(
-          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`
+          `Field '${id}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
         );
       }
       return {
         field,
-        response: { state: "skipped", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
-    if (sentinel.type === "abort") {
-      if (stateAttr !== undefined && stateAttr !== "aborted") {
+    if (sentinel.type === 'abort') {
+      if (stateAttr !== undefined && stateAttr !== 'aborted') {
         throw new ParseError(
-          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`
+          `Field '${id}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
         );
       }
       return {
         field,
-        response: { state: "aborted", ...(sentinel.reason && { reason: sentinel.reason }) },
+        response: { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) },
       };
     }
   }
@@ -1114,7 +1114,7 @@ function parseUrlListField(node: Node): { field: UrlListField; response: FieldRe
   // No sentinel - parse list normally
   const items: string[] = [];
   if (fenceContent !== null) {
-    const lines = fenceContent.split("\n");
+    const lines = fenceContent.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed) {
@@ -1124,7 +1124,7 @@ function parseUrlListField(node: Node): { field: UrlListField; response: FieldRe
   }
 
   const value: UrlListValue = {
-    kind: "url_list",
+    kind: 'url_list',
     items,
   };
 
@@ -1140,21 +1140,21 @@ function parseField(node: Node): { field: Field; response: FieldResponse } | nul
     return null;
   }
   switch (node.tag) {
-    case "string-field":
+    case 'string-field':
       return parseStringField(node);
-    case "number-field":
+    case 'number-field':
       return parseNumberField(node);
-    case "string-list":
+    case 'string-list':
       return parseStringListField(node);
-    case "single-select":
+    case 'single-select':
       return parseSingleSelectField(node);
-    case "multi-select":
+    case 'multi-select':
       return parseMultiSelectField(node);
-    case "checkboxes":
+    case 'checkboxes':
       return parseCheckboxesField(node);
-    case "url-field":
+    case 'url-field':
       return parseUrlField(node);
-    case "url-list":
+    case 'url-list':
       return parseUrlListField(node);
     default:
       return null;
@@ -1173,10 +1173,10 @@ function parseFieldGroup(
   responsesByFieldId: Record<Id, FieldResponse>,
   orderIndex: Id[],
   idIndex: Map<Id, IdIndexEntry>,
-  parentId?: Id
+  parentId?: Id,
 ): FieldGroup {
-  const id = getStringAttr(node, "id");
-  const title = getStringAttr(node, "title");
+  const id = getStringAttr(node, 'id');
+  const title = getStringAttr(node, 'title');
 
   if (!id) {
     throw new ParseError("field-group missing required 'id' attribute");
@@ -1187,20 +1187,20 @@ function parseFieldGroup(
   }
 
   // Validate that state attribute is not on field-group
-  const stateAttr = getStringAttr(node, "state");
+  const stateAttr = getStringAttr(node, 'state');
   if (stateAttr !== undefined) {
     throw new ParseError(
-      `Field-group '${id}' has state attribute. state attribute is not allowed on field-groups.`
+      `Field-group '${id}' has state attribute. state attribute is not allowed on field-groups.`,
     );
   }
 
-  idIndex.set(id, { nodeType: "group", parentId });
+  idIndex.set(id, { nodeType: 'group', parentId });
 
   const children: Field[] = [];
 
   // Traverse children to find fields
   function processChildren(child: Node): void {
-    if (!child || typeof child !== "object") {
+    if (!child || typeof child !== 'object') {
       return;
     }
 
@@ -1210,20 +1210,20 @@ function parseFieldGroup(
         throw new ParseError(`Duplicate ID '${result.field.id}'`);
       }
 
-      idIndex.set(result.field.id, { nodeType: "field", parentId: id });
+      idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
       children.push(result.field);
       responsesByFieldId[result.field.id] = result.response;
       orderIndex.push(result.field.id);
 
       // Add options to idIndex for select/checkbox fields
-      if ("options" in result.field) {
+      if ('options' in result.field) {
         for (const opt of result.field.options) {
           const qualifiedRef = `${result.field.id}.${opt.id}`;
           if (idIndex.has(qualifiedRef)) {
             throw new ParseError(`Duplicate option ref '${qualifiedRef}'`);
           }
           idIndex.set(qualifiedRef, {
-            nodeType: "option",
+            nodeType: 'option',
             parentId: id,
             fieldId: result.field.id,
           });
@@ -1259,10 +1259,10 @@ function parseFormTag(
   node: Node,
   responsesByFieldId: Record<Id, FieldResponse>,
   orderIndex: Id[],
-  idIndex: Map<Id, IdIndexEntry>
+  idIndex: Map<Id, IdIndexEntry>,
 ): FormSchema {
-  const id = getStringAttr(node, "id");
-  const title = getStringAttr(node, "title");
+  const id = getStringAttr(node, 'id');
+  const title = getStringAttr(node, 'title');
 
   if (!id) {
     throw new ParseError("form missing required 'id' attribute");
@@ -1272,24 +1272,18 @@ function parseFormTag(
     throw new ParseError(`Duplicate ID '${id}'`);
   }
 
-  idIndex.set(id, { nodeType: "form" });
+  idIndex.set(id, { nodeType: 'form' });
 
   const groups: FieldGroup[] = [];
 
   // Process children to find field-groups
   function findFieldGroups(child: Node): void {
-    if (!child || typeof child !== "object") {
+    if (!child || typeof child !== 'object') {
       return;
     }
 
-    if (isTagNode(child, "field-group")) {
-      const group = parseFieldGroup(
-        child,
-        responsesByFieldId,
-        orderIndex,
-        idIndex,
-        id
-      );
+    if (isTagNode(child, 'field-group')) {
+      const group = parseFieldGroup(child, responsesByFieldId, orderIndex, idIndex, id);
       groups.push(group);
       return;
     }
@@ -1323,16 +1317,16 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
   const seenIds = new Set<string>();
 
   function traverse(node: Node): void {
-    if (!node || typeof node !== "object") {
+    if (!node || typeof node !== 'object') {
       return;
     }
 
     // Check for note tags
-    if (isTagNode(node, "note")) {
-      const id = getStringAttr(node, "id");
-      const ref = getStringAttr(node, "ref");
-      const role = getStringAttr(node, "role");
-      const stateAttr = getStringAttr(node, "state");
+    if (isTagNode(node, 'note')) {
+      const id = getStringAttr(node, 'id');
+      const ref = getStringAttr(node, 'ref');
+      const role = getStringAttr(node, 'role');
+      const stateAttr = getStringAttr(node, 'state');
 
       // Validate required attributes
       if (!id) {
@@ -1348,7 +1342,7 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
       // Reject state attribute on notes (markform-254: notes are general-purpose only)
       if (stateAttr !== undefined) {
         throw new ParseError(
-          `note '${id}' has 'state' attribute. Notes no longer support state linking; use FieldResponse.reason for skip/abort reasons.`
+          `note '${id}' has 'state' attribute. Notes no longer support state linking; use FieldResponse.reason for skip/abort reasons.`,
         );
       }
 
@@ -1364,9 +1358,9 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
       seenIds.add(id);
 
       // Extract text content
-      let text = "";
+      let text = '';
       function extractText(n: Node): void {
-        if (n.type === "text" && typeof n.attributes?.content === "string") {
+        if (n.type === 'text' && typeof n.attributes?.content === 'string') {
           text += n.attributes.content;
         }
         if (n.children && Array.isArray(n.children)) {
@@ -1406,7 +1400,7 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
 // =============================================================================
 
 /** Valid documentation tag names */
-const DOC_TAG_NAMES = ["description", "instructions", "documentation"] as const;
+const DOC_TAG_NAMES = ['description', 'instructions', 'documentation'] as const;
 
 /**
  * Extract all documentation blocks from AST.
@@ -1417,15 +1411,15 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
   const seenRefs = new Set<string>();
 
   function traverse(node: Node): void {
-    if (!node || typeof node !== "object") {
+    if (!node || typeof node !== 'object') {
       return;
     }
 
     // Check for description, instructions, or documentation tags
-    const nodeTag = node.type === "tag" && node.tag ? node.tag : null;
+    const nodeTag = node.type === 'tag' && node.tag ? node.tag : null;
     if (nodeTag && (DOC_TAG_NAMES as readonly string[]).includes(nodeTag)) {
       const tag = nodeTag as DocumentationTag;
-      const ref = getStringAttr(node, "ref");
+      const ref = getStringAttr(node, 'ref');
 
       if (!ref) {
         throw new ParseError(`${tag} block missing required 'ref' attribute`);
@@ -1439,16 +1433,14 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
       const uniqueKey = `${ref}:${tag}`;
 
       if (seenRefs.has(uniqueKey)) {
-        throw new ParseError(
-          `Duplicate ${tag} block for ref='${ref}'`
-        );
+        throw new ParseError(`Duplicate ${tag} block for ref='${ref}'`);
       }
       seenRefs.add(uniqueKey);
 
       // Extract body content - collect all text from children
-      let bodyMarkdown = "";
+      let bodyMarkdown = '';
       function extractText(n: Node): void {
-        if (n.type === "text" && typeof n.attributes?.content === "string") {
+        if (n.type === 'text' && typeof n.attributes?.content === 'string') {
           bodyMarkdown += n.attributes.content;
         }
         if (n.children && Array.isArray(n.children)) {
@@ -1506,13 +1498,13 @@ export function parseForm(markdown: string): ParsedForm {
   const idIndex = new Map<Id, IdIndexEntry>();
 
   function findFormTag(node: Node): void {
-    if (!node || typeof node !== "object") {
+    if (!node || typeof node !== 'object') {
       return;
     }
 
-    if (isTagNode(node, "form")) {
+    if (isTagNode(node, 'form')) {
       if (formSchema) {
-        throw new ParseError("Multiple form tags found - only one allowed");
+        throw new ParseError('Multiple form tags found - only one allowed');
       }
       formSchema = parseFormTag(node, responsesByFieldId, orderIndex, idIndex);
       return;
@@ -1528,7 +1520,7 @@ export function parseForm(markdown: string): ParsedForm {
   findFormTag(ast);
 
   if (!formSchema) {
-    throw new ParseError("No form tag found in document");
+    throw new ParseError('No form tag found in document');
   }
 
   // Step 4: Extract notes (needs idIndex to validate refs)

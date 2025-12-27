@@ -13,7 +13,7 @@
  * toSnakeCase("already_snake") // "already_snake"
  */
 export function toSnakeCase(str: string): string {
-  return str.replace(/([A-Z])/g, "_$1").toLowerCase();
+  return str.replace(/([A-Z])/g, '_$1').toLowerCase();
 }
 
 /**
@@ -42,7 +42,7 @@ export function convertKeysToSnakeCase(obj: unknown): unknown {
     return obj.map(convertKeysToSnakeCase);
   }
 
-  if (typeof obj === "object") {
+  if (typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       const snakeKey = toSnakeCase(key);
@@ -68,7 +68,7 @@ export function convertKeysToCamelCase(obj: unknown): unknown {
     return obj.map(convertKeysToCamelCase);
   }
 
-  if (typeof obj === "object") {
+  if (typeof obj === 'object') {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       const camelKey = toCamelCase(key);

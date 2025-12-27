@@ -9,7 +9,7 @@ harness:
   max_patches_per_turn: 20
   max_issues: 10
   target_roles:
-    - "*"
+    - '*'
   fill_mode: continue
 turns:
   - turn: 1

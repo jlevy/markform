@@ -5,16 +5,16 @@
  * Records session transcripts for debugging and golden tests.
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import { resolve } from "node:path";
+import { resolve } from 'node:path';
 
-import * as p from "@clack/prompts";
-import pc from "picocolors";
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
 
-import { parseForm } from "../../engine/parse.js";
-import { serialize } from "../../engine/serialize.js";
-import { serializeSession } from "../../engine/session.js";
+import { parseForm } from '../../engine/parse.js';
+import { serialize } from '../../engine/serialize.js';
+import { serializeSession } from '../../engine/session.js';
 import type {
   FillMode,
   HarnessConfig,
@@ -22,10 +22,10 @@ import type {
   SessionFinal,
   SessionTranscript,
   SessionTurnStats,
-} from "../../engine/coreTypes.js";
-import { createHarness } from "../../harness/harness.js";
-import { createLiveAgent } from "../../harness/liveAgent.js";
-import { createMockAgent } from "../../harness/mockAgent.js";
+} from '../../engine/coreTypes.js';
+import { createHarness } from '../../harness/harness.js';
+import { createLiveAgent } from '../../harness/liveAgent.js';
+import { createMockAgent } from '../../harness/mockAgent.js';
 import {
   DEFAULT_MAX_ISSUES,
   DEFAULT_MAX_PATCHES_PER_TURN,
@@ -33,10 +33,10 @@ import {
   AGENT_ROLE,
   USER_ROLE,
   parseRolesFlag,
-} from "../../settings.js";
-import type { Agent } from "../../harness/mockAgent.js";
-import { resolveModel } from "../../harness/modelResolver.js";
-import { formatSuggestedLlms } from "../../settings.js";
+} from '../../settings.js';
+import type { Agent } from '../../harness/mockAgent.js';
+import { resolveModel } from '../../harness/modelResolver.js';
+import { formatSuggestedLlms } from '../../settings.js';
 import {
   formatOutput,
   formatPath,
@@ -49,25 +49,22 @@ import {
   logWarn,
   readFile,
   writeFile,
-} from "../lib/shared.js";
-import { exportMultiFormat } from "../lib/exportHelpers.js";
-import { generateVersionedPath } from "../lib/versioning.js";
+} from '../lib/shared.js';
+import { exportMultiFormat } from '../lib/exportHelpers.js';
+import { generateVersionedPath } from '../lib/versioning.js';
 import {
   runInteractiveFill,
   showInteractiveIntro,
   showInteractiveOutro,
-} from "../lib/interactivePrompts.js";
-import { formatPatchValue, formatPatchType } from "../lib/patchFormat.js";
-import { inspect } from "../../engine/inspect.js";
-import { applyPatches } from "../../engine/apply.js";
+} from '../lib/interactivePrompts.js';
+import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
+import { inspect } from '../../engine/inspect.js';
+import { applyPatches } from '../../engine/apply.js';
 
 /**
  * Format session transcript for console output.
  */
-function formatConsoleSession(
-  transcript: SessionTranscript,
-  useColors: boolean
-): string {
+function formatConsoleSession(transcript: SessionTranscript, useColors: boolean): string {
   const lines: string[] = [];
   const bold = useColors ? pc.bold : (s: string) => s;
   const dim = useColors ? pc.dim : (s: string) => s;
@@ -76,21 +73,21 @@ function formatConsoleSession(
   const yellow = useColors ? pc.yellow : (s: string) => s;
 
   // Header
-  lines.push(bold(cyan("Session Transcript")));
-  lines.push("");
+  lines.push(bold(cyan('Session Transcript')));
+  lines.push('');
 
   // Session info
-  lines.push(`${bold("Form:")} ${transcript.form.path}`);
-  lines.push(`${bold("Mode:")} ${transcript.mode}`);
-  lines.push(`${bold("Version:")} ${transcript.sessionVersion}`);
-  lines.push("");
+  lines.push(`${bold('Form:')} ${transcript.form.path}`);
+  lines.push(`${bold('Mode:')} ${transcript.mode}`);
+  lines.push(`${bold('Version:')} ${transcript.sessionVersion}`);
+  lines.push('');
 
   // Harness config
-  lines.push(bold("Harness Config:"));
+  lines.push(bold('Harness Config:'));
   lines.push(`  Max turns: ${transcript.harness.maxTurns}`);
   lines.push(`  Max patches/turn: ${transcript.harness.maxPatchesPerTurn}`);
   lines.push(`  Max issues: ${transcript.harness.maxIssues}`);
-  lines.push("");
+  lines.push('');
 
   // Turns summary
   lines.push(bold(`Turns (${transcript.turns.length}):`));
@@ -100,19 +97,17 @@ function formatConsoleSession(
     const afterIssues = turn.after.requiredIssueCount;
 
     lines.push(
-      `  Turn ${turn.turn}: ${dim(`${issueCount} issues`)} → ${yellow(`${patchCount} patches`)} → ${afterIssues === 0 ? green("0 remaining") : dim(`${afterIssues} remaining`)}`
+      `  Turn ${turn.turn}: ${dim(`${issueCount} issues`)} → ${yellow(`${patchCount} patches`)} → ${afterIssues === 0 ? green('0 remaining') : dim(`${afterIssues} remaining`)}`,
     );
   }
-  lines.push("");
+  lines.push('');
 
   // Final result
-  const expectText = transcript.final.expectComplete
-    ? green("✓ complete")
-    : yellow("○ incomplete");
-  lines.push(`${bold("Expected:")} ${expectText}`);
-  lines.push(`${bold("Completed form:")} ${transcript.final.expectedCompletedForm}`);
+  const expectText = transcript.final.expectComplete ? green('✓ complete') : yellow('○ incomplete');
+  lines.push(`${bold('Expected:')} ${expectText}`);
+  lines.push(`${bold('Completed form:')} ${transcript.final.expectedCompletedForm}`);
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -120,58 +115,49 @@ function formatConsoleSession(
  */
 export function registerFillCommand(program: Command): void {
   program
-    .command("fill <file>")
-    .description("Run an agent to autonomously fill a form")
-    .option("--mock", "Use mock agent (requires --mock-source)")
+    .command('fill <file>')
+    .description('Run an agent to autonomously fill a form')
+    .option('--mock', 'Use mock agent (requires --mock-source)')
     .option(
-      "--model <id>",
-      "Model ID for live agent (format: provider/model-id, e.g. openai/gpt-4o)"
+      '--model <id>',
+      'Model ID for live agent (format: provider/model-id, e.g. openai/gpt-4o)',
     )
-    .option("--mock-source <file>", "Path to completed form for mock agent")
-    .option("--record <file>", "Record session transcript to file")
+    .option('--mock-source <file>', 'Path to completed form for mock agent')
+    .option('--record <file>', 'Record session transcript to file')
     .option(
-      "--max-turns <n>",
+      '--max-turns <n>',
       `Maximum turns (default: ${DEFAULT_MAX_TURNS})`,
-      String(DEFAULT_MAX_TURNS)
+      String(DEFAULT_MAX_TURNS),
     )
     .option(
-      "--max-patches <n>",
+      '--max-patches <n>',
       `Maximum patches per turn (default: ${DEFAULT_MAX_PATCHES_PER_TURN})`,
-      String(DEFAULT_MAX_PATCHES_PER_TURN)
+      String(DEFAULT_MAX_PATCHES_PER_TURN),
     )
     .option(
-      "--max-issues <n>",
+      '--max-issues <n>',
       `Maximum issues shown per turn (default: ${DEFAULT_MAX_ISSUES})`,
-      String(DEFAULT_MAX_ISSUES)
+      String(DEFAULT_MAX_ISSUES),
+    )
+    .option('--max-fields <n>', 'Maximum unique fields per turn (applied before --max-issues)')
+    .option('--max-groups <n>', 'Maximum unique groups per turn (applied before --max-issues)')
+    .option(
+      '--roles <roles>',
+      "Target roles to fill (comma-separated, or '*' for all; default: 'agent', or 'user' in --interactive mode)",
     )
     .option(
-      "--max-fields <n>",
-      "Maximum unique fields per turn (applied before --max-issues)"
+      '--mode <mode>',
+      'Fill mode: continue (skip filled fields) or overwrite (re-fill; default: continue)',
+    )
+    .option('-o, --output <file>', 'Write final form to file')
+    .option('--prompt <file>', 'Path to custom system prompt file (appends to default)')
+    .option(
+      '--instructions <text>',
+      'Inline system prompt (appends to default; takes precedence over --prompt)',
     )
     .option(
-      "--max-groups <n>",
-      "Maximum unique groups per turn (applied before --max-issues)"
-    )
-    .option(
-      "--roles <roles>",
-      "Target roles to fill (comma-separated, or '*' for all; default: 'agent', or 'user' in --interactive mode)"
-    )
-    .option(
-      "--mode <mode>",
-      "Fill mode: continue (skip filled fields) or overwrite (re-fill; default: continue)"
-    )
-    .option("-o, --output <file>", "Write final form to file")
-    .option(
-      "--prompt <file>",
-      "Path to custom system prompt file (appends to default)"
-    )
-    .option(
-      "--instructions <text>",
-      "Inline system prompt (appends to default; takes precedence over --prompt)"
-    )
-    .option(
-      "-i, --interactive",
-      "Interactive mode: prompt user for field values (defaults to user role)"
+      '-i, --interactive',
+      'Interactive mode: prompt user for field values (defaults to user role)',
     )
     .action(
       async (
@@ -193,7 +179,7 @@ export function registerFillCommand(program: Command): void {
           instructions?: string;
           interactive?: boolean;
         },
-        cmd: Command
+        cmd: Command,
       ) => {
         const ctx = getCommandContext(cmd);
         const filePath = resolve(file);
@@ -217,9 +203,9 @@ export function registerFillCommand(program: Command): void {
           }
 
           // Parse and validate --mode
-          let fillMode: FillMode = "continue"; // Default
+          let fillMode: FillMode = 'continue'; // Default
           if (options.mode) {
-            if (options.mode !== "continue" && options.mode !== "overwrite") {
+            if (options.mode !== 'continue' && options.mode !== 'overwrite') {
               logError(`Invalid --mode: ${options.mode}. Valid modes: continue, overwrite`);
               process.exit(1);
             }
@@ -229,7 +215,7 @@ export function registerFillCommand(program: Command): void {
           logVerbose(ctx, `Reading form: ${filePath}`);
           const formContent = await readFile(filePath);
 
-          logVerbose(ctx, "Parsing form...");
+          logVerbose(ctx, 'Parsing form...');
           const form = parseForm(formContent);
 
           // =====================================================================
@@ -238,15 +224,15 @@ export function registerFillCommand(program: Command): void {
           if (options.interactive) {
             // Validate: --interactive conflicts with mock mode
             if (options.mock) {
-              logError("--interactive cannot be used with --mock");
+              logError('--interactive cannot be used with --mock');
               process.exit(1);
             }
             if (options.model) {
-              logError("--interactive cannot be used with --model");
+              logError('--interactive cannot be used with --model');
               process.exit(1);
             }
             if (options.mockSource) {
-              logError("--interactive cannot be used with --mock-source");
+              logError('--interactive cannot be used with --mock-source');
               process.exit(1);
             }
 
@@ -255,13 +241,9 @@ export function registerFillCommand(program: Command): void {
 
             // Show intro
             const formTitle = form.schema.title ?? form.schema.id;
-            const fieldIssues = inspectResult.issues.filter((i) => i.scope === "field");
+            const fieldIssues = inspectResult.issues.filter((i) => i.scope === 'field');
             const uniqueFieldIds = new Set(fieldIssues.map((i) => i.ref));
-            showInteractiveIntro(
-              formTitle,
-              targetRoles.join(", "),
-              uniqueFieldIds.size
-            );
+            showInteractiveIntro(formTitle, targetRoles.join(', '), uniqueFieldIds.size);
 
             // Run interactive prompts
             const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
@@ -291,20 +273,22 @@ export function registerFillCommand(program: Command): void {
               const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, outputPath);
 
               showInteractiveOutro(patches.length, false);
-              console.log("");
-              p.log.success("Outputs:");
-              console.log(`  ${formatPath(formPath)}  ${pc.dim("(markform)")}`);
-              console.log(`  ${formatPath(rawPath)}  ${pc.dim("(plain markdown)")}`);
-              console.log(`  ${formatPath(yamlPath)}  ${pc.dim("(values as YAML)")}`);
+              console.log('');
+              p.log.success('Outputs:');
+              console.log(`  ${formatPath(formPath)}  ${pc.dim('(markform)')}`);
+              console.log(`  ${formatPath(rawPath)}  ${pc.dim('(plain markdown)')}`);
+              console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(values as YAML)')}`);
             }
 
-            logTiming(ctx, "Fill time", durationMs);
+            logTiming(ctx, 'Fill time', durationMs);
 
             // Show next step hint
             if (patches.length > 0) {
-              console.log("");
-              console.log(pc.dim("Next step: fill remaining fields with agent"));
-              console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`));
+              console.log('');
+              console.log(pc.dim('Next step: fill remaining fields with agent'));
+              console.log(
+                pc.dim(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`),
+              );
             }
 
             process.exit(0);
@@ -316,36 +300,30 @@ export function registerFillCommand(program: Command): void {
 
           // Validate options based on mode
           if (options.mock && !options.mockSource) {
-            logError("--mock requires --mock-source <file>");
+            logError('--mock requires --mock-source <file>');
             process.exit(1);
           }
 
           if (!options.mock && !options.model) {
-            logError("Live agent requires --model <provider/model-id>");
-            console.log("");
+            logError('Live agent requires --model <provider/model-id>');
+            console.log('');
             console.log(formatSuggestedLlms());
             process.exit(1);
           }
 
           // Warn about --roles=* in non-interactive mode
-          if (targetRoles.includes("*")) {
-            logWarn(ctx, "Warning: Filling all roles including user-designated fields");
+          if (targetRoles.includes('*')) {
+            logWarn(ctx, 'Warning: Filling all roles including user-designated fields');
           }
 
           // Parse harness config
           const harnessConfig: Partial<HarnessConfig> = {
-            maxTurns: parseInt(
-              options.maxTurns ?? String(DEFAULT_MAX_TURNS),
-              10
-            ),
+            maxTurns: parseInt(options.maxTurns ?? String(DEFAULT_MAX_TURNS), 10),
             maxPatchesPerTurn: parseInt(
               options.maxPatches ?? String(DEFAULT_MAX_PATCHES_PER_TURN),
-              10
+              10,
             ),
-            maxIssues: parseInt(
-              options.maxIssues ?? String(DEFAULT_MAX_ISSUES),
-              10
-            ),
+            maxIssues: parseInt(options.maxIssues ?? String(DEFAULT_MAX_ISSUES), 10),
             ...(options.maxFields && {
               maxFieldsPerTurn: parseInt(options.maxFields, 10),
             }),
@@ -380,7 +358,7 @@ export function registerFillCommand(program: Command): void {
             let systemPrompt: string | undefined;
             if (options.instructions) {
               systemPrompt = options.instructions;
-              logVerbose(ctx, "Using inline system prompt from --instructions");
+              logVerbose(ctx, 'Using inline system prompt from --instructions');
             } else if (options.prompt) {
               const promptPath = resolve(options.prompt);
               logVerbose(ctx, `Reading system prompt from: ${promptPath}`);
@@ -388,7 +366,7 @@ export function registerFillCommand(program: Command): void {
             }
 
             // Pass first target role to agent (for instruction lookup)
-            const primaryRole = targetRoles[0] === "*" ? AGENT_ROLE : targetRoles[0];
+            const primaryRole = targetRoles[0] === '*' ? AGENT_ROLE : targetRoles[0];
             const liveAgent = createLiveAgent({
               model,
               provider,
@@ -399,23 +377,29 @@ export function registerFillCommand(program: Command): void {
 
             // Log available tools
             const toolNames = liveAgent.getAvailableToolNames();
-            logInfo(ctx, `Available tools: ${toolNames.join(", ")}`);
+            logInfo(ctx, `Available tools: ${toolNames.join(', ')}`);
             logVerbose(ctx, `Using live agent with model: ${modelId}`);
           }
 
           logInfo(ctx, pc.cyan(`Filling form: ${filePath}`));
-          logInfo(ctx, `Agent: ${options.mock ? "mock" : "live"}${options.model ? ` (${options.model})` : ""}`);
+          logInfo(
+            ctx,
+            `Agent: ${options.mock ? 'mock' : 'live'}${options.model ? ` (${options.model})` : ''}`,
+          );
           logVerbose(ctx, `Max turns: ${harnessConfig.maxTurns}`);
           logVerbose(ctx, `Max patches per turn: ${harnessConfig.maxPatchesPerTurn}`);
           logVerbose(ctx, `Max issues per step: ${harnessConfig.maxIssues}`);
-          logVerbose(ctx, `Target roles: ${targetRoles.includes("*") ? "*" : targetRoles.join(", ")}`);
+          logVerbose(
+            ctx,
+            `Target roles: ${targetRoles.includes('*') ? '*' : targetRoles.join(', ')}`,
+          );
           logVerbose(ctx, `Fill mode: ${fillMode}`);
 
           // Run harness loop
           let stepResult = harness.step();
           logInfo(
             ctx,
-            `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`
+            `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`,
           );
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
@@ -423,7 +407,7 @@ export function registerFillCommand(program: Command): void {
             const response = await agent.generatePatches(
               stepResult.issues,
               harness.getForm(),
-              harnessConfig.maxPatchesPerTurn!
+              harnessConfig.maxPatchesPerTurn!,
             );
             const { patches, stats } = response;
 
@@ -433,19 +417,26 @@ export function registerFillCommand(program: Command): void {
               const typeName = formatPatchType(patch);
               const value = formatPatchValue(patch);
               // Some patches (add_note, remove_note) don't have fieldId
-              const fieldId = "fieldId" in patch ? patch.fieldId : (patch.op === "add_note" ? patch.ref : "");
+              const fieldId =
+                'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
               if (fieldId) {
-                logInfo(ctx, `    ${pc.cyan(fieldId)} ${pc.dim(`(${typeName})`)} ${pc.dim("=")} ${pc.green(value)}`);
+                logInfo(
+                  ctx,
+                  `    ${pc.cyan(fieldId)} ${pc.dim(`(${typeName})`)} ${pc.dim('=')} ${pc.green(value)}`,
+                );
               } else {
-                logInfo(ctx, `    ${pc.dim(`(${typeName})`)} ${pc.dim("=")} ${pc.green(value)}`);
+                logInfo(ctx, `    ${pc.dim(`(${typeName})`)} ${pc.dim('=')} ${pc.green(value)}`);
               }
             }
 
             // Log stats and prompts in verbose mode
             if (stats) {
-              logVerbose(ctx, `  Stats: ${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out tokens`);
+              logVerbose(
+                ctx,
+                `  Stats: ${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out tokens`,
+              );
               if (stats.toolCalls.length > 0) {
-                const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(", ");
+                const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(', ');
                 logVerbose(ctx, `  Tools: ${toolSummary}`);
               }
 
@@ -453,12 +444,12 @@ export function registerFillCommand(program: Command): void {
               if (stats.prompts) {
                 logVerbose(ctx, ``);
                 logVerbose(ctx, pc.dim(`  ─── System Prompt ───`));
-                for (const line of stats.prompts.system.split("\n")) {
+                for (const line of stats.prompts.system.split('\n')) {
                   logVerbose(ctx, pc.dim(`  ${line}`));
                 }
                 logVerbose(ctx, ``);
                 logVerbose(ctx, pc.dim(`  ─── Context Prompt ───`));
-                for (const line of stats.prompts.context.split("\n")) {
+                for (const line of stats.prompts.context.split('\n')) {
                   logVerbose(ctx, pc.dim(`  ${line}`));
                 }
                 logVerbose(ctx, ``);
@@ -485,7 +476,7 @@ export function registerFillCommand(program: Command): void {
               stepResult = harness.step();
               logInfo(
                 ctx,
-                `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`
+                `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`,
               );
             }
           }
@@ -494,15 +485,12 @@ export function registerFillCommand(program: Command): void {
 
           // Check if completed
           if (stepResult.isComplete) {
-            logSuccess(
-              ctx,
-              `Form completed in ${harness.getTurnNumber()} turn(s)`
-            );
+            logSuccess(ctx, `Form completed in ${harness.getTurnNumber()} turn(s)`);
           } else if (harness.hasReachedMaxTurns()) {
             logWarn(ctx, `Max turns reached (${harnessConfig.maxTurns})`);
           }
 
-          logTiming(ctx, "Fill time", durationMs);
+          logTiming(ctx, 'Fill time', durationMs);
 
           // Write output file
           const outputPath = options.output
@@ -520,13 +508,13 @@ export function registerFillCommand(program: Command): void {
           // Build session transcript
           const transcript = buildSessionTranscript(
             filePath,
-            options.mock ? "mock" : "live",
+            options.mock ? 'mock' : 'live',
             mockPath,
             options.model,
             harnessConfig as HarnessConfig,
             harness.getTurns(),
             stepResult.isComplete,
-            outputPath
+            outputPath,
           );
 
           // Output or record session
@@ -545,7 +533,7 @@ export function registerFillCommand(program: Command): void {
           } else {
             // Output to stdout in requested format
             const output = formatOutput(ctx, transcript, (data, useColors) =>
-              formatConsoleSession(data as SessionTranscript, useColors)
+              formatConsoleSession(data as SessionTranscript, useColors),
             );
             console.log(output);
           }
@@ -556,7 +544,7 @@ export function registerFillCommand(program: Command): void {
           logError(message);
           process.exit(1);
         }
-      }
+      },
     );
 }
 
@@ -569,18 +557,18 @@ function buildSessionTranscript(
   mockPath: string | undefined,
   modelId: string | undefined,
   harnessConfig: HarnessConfig,
-  turns: SessionTranscript["turns"],
+  turns: SessionTranscript['turns'],
   expectComplete: boolean,
-  outputPath: string
+  outputPath: string,
 ): SessionTranscript {
   const final: SessionFinal = {
     expectComplete,
     // For mock mode, use the mock source as expected; otherwise use actual output
-    expectedCompletedForm: mockMode === "mock" ? (mockPath ?? outputPath) : outputPath,
+    expectedCompletedForm: mockMode === 'mock' ? (mockPath ?? outputPath) : outputPath,
   };
 
   const transcript: SessionTranscript = {
-    sessionVersion: "0.1.0",
+    sessionVersion: '0.1.0',
     mode: mockMode,
     form: {
       path: formPath,
@@ -591,11 +579,11 @@ function buildSessionTranscript(
   };
 
   // Add mode-specific fields
-  if (mockMode === "mock" && mockPath) {
+  if (mockMode === 'mock' && mockPath) {
     transcript.mock = {
       completedMock: mockPath,
     };
-  } else if (mockMode === "live" && modelId) {
+  } else if (mockMode === 'live' && modelId) {
     transcript.live = {
       modelId,
     };

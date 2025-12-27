@@ -8,36 +8,30 @@
  * - Validation tests: empty required fields produce correct issues
  * - Patch tests: valid patches apply, invalid patches reject batch
  */
-import { describe, it, expect } from "vitest";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parseForm } from "../../../src/engine/parse";
-import { serialize } from "../../../src/engine/serialize";
-import { validate } from "../../../src/engine/validate";
-import { inspect } from "../../../src/engine/inspect";
-import { applyPatches } from "../../../src/engine/apply";
-import { computeStructureSummary } from "../../../src/engine/summaries";
-import type { Patch } from "../../../src/engine/coreTypes";
+import { describe, it, expect } from 'vitest';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { parseForm } from '../../../src/engine/parse';
+import { serialize } from '../../../src/engine/serialize';
+import { validate } from '../../../src/engine/validate';
+import { inspect } from '../../../src/engine/inspect';
+import { applyPatches } from '../../../src/engine/apply';
+import { computeStructureSummary } from '../../../src/engine/summaries';
+import type { Patch } from '../../../src/engine/coreTypes';
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
 async function loadSimpleForm() {
-  const formPath = join(
-    import.meta.dirname,
-    "../../../examples/simple/simple.form.md"
-  );
-  const content = await readFile(formPath, "utf-8");
+  const formPath = join(import.meta.dirname, '../../../examples/simple/simple.form.md');
+  const content = await readFile(formPath, 'utf-8');
   return parseForm(content);
 }
 
 async function loadFilledForm() {
-  const formPath = join(
-    import.meta.dirname,
-    "../../../examples/simple/simple-mock-filled.form.md"
-  );
-  const content = await readFile(formPath, "utf-8");
+  const formPath = join(import.meta.dirname, '../../../examples/simple/simple-mock-filled.form.md');
+  const content = await readFile(formPath, 'utf-8');
   return parseForm(content);
 }
 
@@ -45,9 +39,9 @@ async function loadFilledForm() {
 // Tests
 // =============================================================================
 
-describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
-  describe("Structure Summary", () => {
-    it("parses simple.form.md with correct structure", async () => {
+describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
+  describe('Structure Summary', () => {
+    it('parses simple.form.md with correct structure', async () => {
       const form = await loadSimpleForm();
       const summary = computeStructureSummary(form.schema);
 
@@ -69,7 +63,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       expect(summary.fieldCountByKind.url_list).toBe(1); // references
     });
 
-    it("has all required fields marked correctly", async () => {
+    it('has all required fields marked correctly', async () => {
       const form = await loadSimpleForm();
 
       // Check required field IDs in the schema
@@ -84,31 +78,41 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
 
       // Expected required: name, email, age, tags, priority, categories,
       // tasks_multi, tasks_simple, confirmations
-      expect(requiredFields).toContain("name");
-      expect(requiredFields).toContain("email");
-      expect(requiredFields).toContain("age");
-      expect(requiredFields).toContain("priority");
+      expect(requiredFields).toContain('name');
+      expect(requiredFields).toContain('email');
+      expect(requiredFields).toContain('age');
+      expect(requiredFields).toContain('priority');
     });
   });
 
-  describe("Filled Form Completion", () => {
-    it("parses simple-mock-filled.form.md as complete", async () => {
+  describe('Filled Form Completion', () => {
+    it('parses simple-mock-filled.form.md as complete', async () => {
       const form = await loadFilledForm();
       const result = inspect(form);
 
-      expect(result.formState).toBe("complete");
+      expect(result.formState).toBe('complete');
       expect(result.progressSummary.counts.invalidFields).toBe(0);
       expect(result.progressSummary.counts.emptyRequiredFields).toBe(0);
     });
 
-    it("has required fields in complete state", async () => {
+    it('has required fields in complete state', async () => {
       const form = await loadFilledForm();
       const result = inspect(form);
 
       // Check specific required fields are complete
       // Optional fields may be empty, which is fine
-      const requiredFieldIds = ["name", "email", "age", "tags", "priority",
-        "categories", "tasks_multi", "tasks_simple", "confirmations", "website"];
+      const requiredFieldIds = [
+        'name',
+        'email',
+        'age',
+        'tags',
+        'priority',
+        'categories',
+        'tasks_multi',
+        'tasks_simple',
+        'confirmations',
+        'website',
+      ];
 
       for (const fieldId of requiredFieldIds) {
         const progress = result.progressSummary.fields[fieldId];
@@ -120,8 +124,8 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
     });
   });
 
-  describe("Round-trip Serialization", () => {
-    it("parse → serialize → parse produces identical structure", async () => {
+  describe('Round-trip Serialization', () => {
+    it('parse → serialize → parse produces identical structure', async () => {
       const original = await loadSimpleForm();
       const serialized = serialize(original);
       const reparsed = parseForm(serialized);
@@ -138,7 +142,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       expect(reparsed.orderIndex.length).toBe(original.orderIndex.length);
     });
 
-    it("round-trip preserves field values", async () => {
+    it('round-trip preserves field values', async () => {
       const original = await loadFilledForm();
       const serialized = serialize(original);
       const reparsed = parseForm(serialized);
@@ -154,7 +158,7 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
       }
     });
 
-    it("round-trip produces identical serialization", async () => {
+    it('round-trip produces identical serialization', async () => {
       const original = await loadFilledForm();
       const serialized1 = serialize(original);
       const reparsed = parseForm(serialized1);
@@ -165,104 +169,98 @@ describe("Simple Form Validation (Phase 1 Checkpoint)", () => {
     });
   });
 
-  describe("Validation Issue Detection", () => {
-    it("detects empty required fields in empty form", async () => {
+  describe('Validation Issue Detection', () => {
+    it('detects empty required fields in empty form', async () => {
       const form = await loadSimpleForm();
       const result = validate(form);
 
       // Should have issues for required fields that are empty
-      const requiredIssues = result.issues.filter((i) => i.severity === "error");
+      const requiredIssues = result.issues.filter((i) => i.severity === 'error');
       expect(requiredIssues.length).toBeGreaterThan(0);
 
       // Check that name is flagged
-      const nameIssue = requiredIssues.find((i) => i.ref === "name");
+      const nameIssue = requiredIssues.find((i) => i.ref === 'name');
       expect(nameIssue).toBeDefined();
     });
 
-    it("reports no issues for filled form", async () => {
+    it('reports no issues for filled form', async () => {
       const form = await loadFilledForm();
       const result = validate(form);
 
       // Should have no error issues
-      const errorIssues = result.issues.filter((i) => i.severity === "error");
+      const errorIssues = result.issues.filter((i) => i.severity === 'error');
       expect(errorIssues.length).toBe(0);
     });
   });
 
-  describe("Inspect Integration", () => {
-    it("inspect returns complete result for filled form", async () => {
+  describe('Inspect Integration', () => {
+    it('inspect returns complete result for filled form', async () => {
       const form = await loadFilledForm();
       const result = inspect(form);
 
       // formState is "complete" when all required fields are filled
-      expect(result.formState).toBe("complete");
-      expect(result.issues.filter((i) => i.severity === "required").length).toBe(
-        0
-      );
+      expect(result.formState).toBe('complete');
+      expect(result.issues.filter((i) => i.severity === 'required').length).toBe(0);
       // isComplete is false because optional_number is empty and not skipped
       // (isComplete requires ALL fields to be addressed or skipped)
       expect(result.isComplete).toBe(false);
     });
 
-    it("inspect returns incomplete result for empty form", async () => {
+    it('inspect returns incomplete result for empty form', async () => {
       const form = await loadSimpleForm();
       const result = inspect(form);
 
       expect(result.isComplete).toBe(false);
-      expect(result.formState).toBe("empty");
-      expect(
-        result.issues.filter((i) => i.severity === "required").length
-      ).toBeGreaterThan(0);
+      expect(result.formState).toBe('empty');
+      expect(result.issues.filter((i) => i.severity === 'required').length).toBeGreaterThan(0);
     });
   });
 
-  describe("Patch Application", () => {
-    it("applies valid patches successfully", async () => {
+  describe('Patch Application', () => {
+    it('applies valid patches successfully', async () => {
       const form = await loadSimpleForm();
 
       const patches: Patch[] = [
-        { op: "set_string", fieldId: "name", value: "John Doe" },
-        { op: "set_number", fieldId: "age", value: 30 },
+        { op: 'set_string', fieldId: 'name', value: 'John Doe' },
+        { op: 'set_number', fieldId: 'age', value: 30 },
       ];
 
       const result = applyPatches(form, patches);
 
-      expect(result.applyStatus).toBe("applied");
+      expect(result.applyStatus).toBe('applied');
       // applyPatches mutates the form on success
-      expect(form.responsesByFieldId.name?.value?.kind).toBe("string");
+      expect(form.responsesByFieldId.name?.value?.kind).toBe('string');
       expect(
-        form.responsesByFieldId.name?.value?.kind === "string"
+        form.responsesByFieldId.name?.value?.kind === 'string'
           ? form.responsesByFieldId.name?.value.value
-          : null
-      ).toBe("John Doe");
+          : null,
+      ).toBe('John Doe');
     });
 
-    it("rejects patches for nonexistent fields", async () => {
+    it('rejects patches for nonexistent fields', async () => {
       const form = await loadSimpleForm();
 
-      const patches: Patch[] = [
-        { op: "set_string", fieldId: "nonexistent_field", value: "test" },
-      ];
+      const patches: Patch[] = [{ op: 'set_string', fieldId: 'nonexistent_field', value: 'test' }];
 
       const result = applyPatches(form, patches);
 
-      expect(result.applyStatus).toBe("rejected");
+      expect(result.applyStatus).toBe('rejected');
     });
 
-    it("rejects batch if any patch is invalid (transaction semantics)", async () => {
+    it('rejects batch if any patch is invalid (transaction semantics)', async () => {
       const form = await loadSimpleForm();
 
       // Get initial state of name field (may be null or undefined)
       const initialNameValue = form.responsesByFieldId.name?.value;
 
       const patches: Patch[] = [
-        { op: "set_string", fieldId: "name", value: "John Doe" }, // valid
-        { op: "set_string", fieldId: "nonexistent", value: "test" }, // invalid
+        { op: 'set_string', fieldId: 'name', value: 'John Doe' }, // valid
+        { op: 'set_string', fieldId: 'nonexistent', value: 'test' }, // invalid
       ];
 
       const result = applyPatches(form, patches);
 
-      expect(result.applyStatus).toBe("rejected");
+      expect(result.applyStatus).toBe('rejected');
       // Form should remain unchanged - name should still have original value
       // (could be null/undefined or the parsed initial value)
       if (initialNameValue === undefined) {

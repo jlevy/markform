@@ -1,11 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import { parseForm } from "../../../src/engine/parse.js";
-import {
-  fillForm,
-  type TurnProgress,
-} from "../../../src/harness/programmaticFill.js";
-import { createMockAgent } from "../../../src/harness/mockAgent.js";
+import { parseForm } from '../../../src/engine/parse.js';
+import { fillForm, type TurnProgress } from '../../../src/harness/programmaticFill.js';
+import { createMockAgent } from '../../../src/harness/mockAgent.js';
 
 // Simple test form
 const SIMPLE_FORM = `---
@@ -67,17 +64,17 @@ Test notes
 {% /form %}
 `;
 
-describe("fillForm", () => {
-  describe("basic functionality (with MockAgent)", () => {
-    it("fills form with minimal options", async () => {
+describe('fillForm', () => {
+  describe('basic functionality (with MockAgent)', () => {
+    it('fills form with minimal options', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model", // ignored when _testAgent provided
-        inputContext: { name: "John Doe" }, // Pre-fill user field
-        targetRoles: ["user", "agent"], // Target both roles
+        model: 'mock/model', // ignored when _testAgent provided
+        inputContext: { name: 'John Doe' }, // Pre-fill user field
+        targetRoles: ['user', 'agent'], // Target both roles
         _testAgent: mockAgent,
       });
 
@@ -86,30 +83,30 @@ describe("fillForm", () => {
       expect(result.totalPatches).toBeGreaterThan(0);
     });
 
-    it("returns status.ok: true when form completes", async () => {
+    it('returns status.ok: true when form completes', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John Doe" },
-        targetRoles: ["user", "agent"],
+        model: 'mock/model',
+        inputContext: { name: 'John Doe' },
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(true);
     });
 
-    it("returns correct values map keyed by field ID", async () => {
+    it('returns correct values map keyed by field ID', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John Doe" },
-        targetRoles: ["user", "agent"],
+        model: 'mock/model',
+        inputContext: { name: 'John Doe' },
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
@@ -118,114 +115,114 @@ describe("fillForm", () => {
       expect(result.values.age).toBeDefined();
     });
 
-    it("returns serialized markdown", async () => {
+    it('returns serialized markdown', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John Doe" },
+        model: 'mock/model',
+        inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
 
       expect(result.markdown).toBeDefined();
-      expect(result.markdown).toContain("{% form");
-      expect(result.markdown).toContain("test_form");
+      expect(result.markdown).toContain('{% form');
+      expect(result.markdown).toContain('test_form');
     });
 
-    it("returns turns count", async () => {
+    it('returns turns count', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John Doe" },
+        model: 'mock/model',
+        inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
 
-      expect(typeof result.turns).toBe("number");
+      expect(typeof result.turns).toBe('number');
       expect(result.turns).toBeGreaterThanOrEqual(0);
     });
   });
 
-  describe("input context", () => {
-    it("pre-fills fields from inputContext before agent runs", async () => {
+  describe('input context', () => {
+    it('pre-fills fields from inputContext before agent runs', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "Pre-filled Name" },
-        targetRoles: ["user", "agent"],
+        model: 'mock/model',
+        inputContext: { name: 'Pre-filled Name' },
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(true);
-      expect(result.values.name).toEqual({ kind: "string", value: "Pre-filled Name" });
+      expect(result.values.name).toEqual({ kind: 'string', value: 'Pre-filled Name' });
     });
 
-    it("fails fast with error on invalid field ID", async () => {
+    it('fails fast with error on invalid field ID', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { nonexistent: "value" },
+        model: 'mock/model',
+        inputContext: { nonexistent: 'value' },
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("error");
-        expect(result.status.message).toContain("not found");
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('not found');
       }
     });
 
-    it("fails fast on incompatible type", async () => {
+    it('fails fast on incompatible type', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: { complex: "object" } },
+        model: 'mock/model',
+        inputContext: { name: { complex: 'object' } },
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("error");
-        expect(result.status.message).toContain("Cannot coerce");
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('Cannot coerce');
       }
     });
 
-    it("includes inputContextWarnings for coerced values", async () => {
+    it('includes inputContextWarnings for coerced values', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
+        model: 'mock/model',
         inputContext: {
           name: 123, // number will be coerced to string with warning
         },
-        targetRoles: ["user", "agent"],
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(true);
       expect(result.inputContextWarnings).toBeDefined();
       expect(result.inputContextWarnings?.length).toBeGreaterThan(0);
-      expect(result.inputContextWarnings?.[0]).toContain("Coerced");
+      expect(result.inputContextWarnings?.[0]).toContain('Coerced');
     });
   });
 
-  describe("progress callback", () => {
-    it("onTurnComplete called after each turn", async () => {
+  describe('progress callback', () => {
+    it('onTurnComplete called after each turn', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
@@ -233,8 +230,8 @@ describe("fillForm", () => {
 
       await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John" },
+        model: 'mock/model',
+        inputContext: { name: 'John' },
         _testAgent: mockAgent,
         onTurnComplete: (progress) => {
           progressUpdates.push({ ...progress });
@@ -245,7 +242,7 @@ describe("fillForm", () => {
       expect(progressUpdates[0]?.turnNumber).toBe(1);
     });
 
-    it("TurnProgress contains correct values", async () => {
+    it('TurnProgress contains correct values', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
@@ -253,8 +250,8 @@ describe("fillForm", () => {
 
       await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John" },
+        model: 'mock/model',
+        inputContext: { name: 'John' },
         _testAgent: mockAgent,
         onTurnComplete: (progress) => {
           lastProgress = progress;
@@ -262,11 +259,11 @@ describe("fillForm", () => {
       });
 
       expect(lastProgress).toBeDefined();
-      expect(typeof lastProgress?.turnNumber).toBe("number");
-      expect(typeof lastProgress?.issuesShown).toBe("number");
-      expect(typeof lastProgress?.patchesApplied).toBe("number");
-      expect(typeof lastProgress?.requiredIssuesRemaining).toBe("number");
-      expect(typeof lastProgress?.isComplete).toBe("boolean");
+      expect(typeof lastProgress?.turnNumber).toBe('number');
+      expect(typeof lastProgress?.issuesShown).toBe('number');
+      expect(typeof lastProgress?.patchesApplied).toBe('number');
+      expect(typeof lastProgress?.requiredIssuesRemaining).toBe('number');
+      expect(typeof lastProgress?.isComplete).toBe('boolean');
     });
 
     it("callback errors don't abort fill", async () => {
@@ -275,12 +272,12 @@ describe("fillForm", () => {
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John" },
-        targetRoles: ["user", "agent"],
+        model: 'mock/model',
+        inputContext: { name: 'John' },
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
         onTurnComplete: () => {
-          throw new Error("Callback error");
+          throw new Error('Callback error');
         },
       });
 
@@ -289,8 +286,8 @@ describe("fillForm", () => {
     });
   });
 
-  describe("cancellation", () => {
-    it("signal.abort() returns partial result with reason cancelled", async () => {
+  describe('cancellation', () => {
+    it('signal.abort() returns partial result with reason cancelled', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
@@ -299,19 +296,19 @@ describe("fillForm", () => {
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John" },
+        model: 'mock/model',
+        inputContext: { name: 'John' },
         _testAgent: mockAgent,
         signal: controller.signal,
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("cancelled");
+        expect(result.status.reason).toBe('cancelled');
       }
     });
 
-    it("partial values and markdown are returned on cancellation", async () => {
+    it('partial values and markdown are returned on cancellation', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
@@ -320,8 +317,8 @@ describe("fillForm", () => {
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "Pre-filled" },
+        model: 'mock/model',
+        inputContext: { name: 'Pre-filled' },
         _testAgent: mockAgent,
         signal: controller.signal,
       });
@@ -331,7 +328,7 @@ describe("fillForm", () => {
       expect(result.markdown).toBeDefined();
     });
 
-    it("cancellation during agent call prevents patches from being applied", async () => {
+    it('cancellation during agent call prevents patches from being applied', async () => {
       const controller = new AbortController();
       let generatePatchesCalled = false;
 
@@ -342,15 +339,15 @@ describe("fillForm", () => {
           // Simulate abort happening during the LLM call
           controller.abort();
           return Promise.resolve({
-            patches: [{ op: "set_number" as const, fieldId: "age", value: 42 }],
+            patches: [{ op: 'set_number' as const, fieldId: 'age', value: 42 }],
           });
         },
       };
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
-        inputContext: { name: "John" },
+        model: 'mock/model',
+        inputContext: { name: 'John' },
         _testAgent: cancellingAgent,
         signal: controller.signal,
       });
@@ -361,19 +358,19 @@ describe("fillForm", () => {
       // But result should be cancelled, not successful
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("cancelled");
+        expect(result.status.reason).toBe('cancelled');
       }
 
       // The patch should NOT have been applied - age remains unfilled (null)
       const ageValue = result.values.age;
-      if (ageValue?.kind === "number") {
+      if (ageValue?.kind === 'number') {
         expect(ageValue.value).toBeNull();
       }
     });
   });
 
-  describe("max turns", () => {
-    it("returns status.ok: false with reason max_turns when limit reached", async () => {
+  describe('max turns', () => {
+    it('returns status.ok: false with reason max_turns when limit reached', async () => {
       // Create a mock agent that never completes
       const emptyMockAgent = {
         generatePatches() {
@@ -383,19 +380,19 @@ describe("fillForm", () => {
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
+        model: 'mock/model',
         maxTurns: 2,
         _testAgent: emptyMockAgent,
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("max_turns");
-        expect(result.status.message).toContain("2");
+        expect(result.status.reason).toBe('max_turns');
+        expect(result.status.message).toContain('2');
       }
     });
 
-    it("remainingIssues populated when not complete", async () => {
+    it('remainingIssues populated when not complete', async () => {
       const emptyMockAgent = {
         generatePatches() {
           return Promise.resolve({ patches: [] });
@@ -404,7 +401,7 @@ describe("fillForm", () => {
 
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "mock/model",
+        model: 'mock/model',
         maxTurns: 1,
         _testAgent: emptyMockAgent,
       });
@@ -415,38 +412,38 @@ describe("fillForm", () => {
     });
   });
 
-  describe("form parse error", () => {
-    it("returns appropriate error for invalid form", async () => {
+  describe('form parse error', () => {
+    it('returns appropriate error for invalid form', async () => {
       const result = await fillForm({
-        form: "not a valid form",
-        model: "mock/model",
+        form: 'not a valid form',
+        model: 'mock/model',
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("error");
-        expect(result.status.message).toContain("Form parse error");
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('Form parse error');
       }
     });
   });
 
-  describe("model resolution error", () => {
-    it("returns appropriate error for invalid model", async () => {
+  describe('model resolution error', () => {
+    it('returns appropriate error for invalid model', async () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
-        model: "invalid/model",
+        model: 'invalid/model',
       });
 
       expect(result.status.ok).toBe(false);
       if (!result.status.ok) {
-        expect(result.status.reason).toBe("error");
-        expect(result.status.message).toContain("Model resolution error");
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('Model resolution error');
       }
     });
   });
 
-  describe("fill modes", () => {
-    it("fillMode: continue skips already-filled fields", async () => {
+  describe('fill modes', () => {
+    it('fillMode: continue skips already-filled fields', async () => {
       // Start with a form that has name pre-filled (using code fence format)
       const formWithName = SIMPLE_FORM.replace(
         '{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}',
@@ -454,7 +451,7 @@ describe("fillForm", () => {
 \`\`\`value
 Original Name
 \`\`\`
-{% /string-field %}`
+{% /string-field %}`,
       );
 
       const completedForm = parseForm(COMPLETED_FORM);
@@ -462,15 +459,15 @@ Original Name
 
       const result = await fillForm({
         form: formWithName,
-        model: "mock/model",
-        fillMode: "continue",
-        targetRoles: ["user", "agent"],
+        model: 'mock/model',
+        fillMode: 'continue',
+        targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
       });
 
       expect(result.status.ok).toBe(true);
       // Name should still be "Original Name", not replaced by mock
-      expect(result.values.name).toEqual({ kind: "string", value: "Original Name" });
+      expect(result.values.name).toEqual({ kind: 'string', value: 'Original Name' });
     });
   });
 });

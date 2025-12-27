@@ -5,17 +5,17 @@
  * and example models for use with the fill command.
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import pc from "picocolors";
+import pc from 'picocolors';
 
 import {
   getProviderInfo,
   getProviderNames,
   type ProviderName,
-} from "../../harness/modelResolver.js";
-import { SUGGESTED_LLMS } from "../../settings.js";
-import { formatOutput, getCommandContext, logError } from "../lib/shared.js";
+} from '../../harness/modelResolver.js';
+import { SUGGESTED_LLMS } from '../../settings.js';
+import { formatOutput, getCommandContext, logError } from '../lib/shared.js';
 
 /**
  * Model info for a single provider.
@@ -34,14 +34,10 @@ function getModelInfo(providerFilter?: string): ProviderModelInfo[] {
 
   // Validate filter if provided
   if (providerFilter && !providers.includes(providerFilter as ProviderName)) {
-    throw new Error(
-      `Unknown provider: "${providerFilter}". Available: ${providers.join(", ")}`
-    );
+    throw new Error(`Unknown provider: "${providerFilter}". Available: ${providers.join(', ')}`);
   }
 
-  const filtered = providerFilter
-    ? [providerFilter as ProviderName]
-    : providers;
+  const filtered = providerFilter ? [providerFilter as ProviderName] : providers;
 
   return filtered.map((provider) => {
     const info = getProviderInfo(provider);
@@ -56,10 +52,7 @@ function getModelInfo(providerFilter?: string): ProviderModelInfo[] {
 /**
  * Format model info for console output.
  */
-function formatConsoleOutput(
-  info: ProviderModelInfo[],
-  useColors: boolean
-): string {
+function formatConsoleOutput(info: ProviderModelInfo[], useColors: boolean): string {
   const lines: string[] = [];
   const bold = useColors ? pc.bold : (s: string) => s;
   const cyan = useColors ? pc.cyan : (s: string) => s;
@@ -68,25 +61,25 @@ function formatConsoleOutput(
 
   for (const { provider, envVar, models } of info) {
     lines.push(bold(cyan(`${provider}/`)));
-    lines.push(`  ${dim("env:")} ${envVar}`);
+    lines.push(`  ${dim('env:')} ${envVar}`);
 
     if (models.length > 0) {
-      lines.push(`  ${dim("models:")}`);
+      lines.push(`  ${dim('models:')}`);
       for (const model of models) {
         lines.push(`    ${green(`${provider}/${model}`)}`);
       }
     } else {
-      lines.push(`  ${dim("(no suggested models)")}`);
+      lines.push(`  ${dim('(no suggested models)')}`);
     }
-    lines.push("");
+    lines.push('');
   }
 
   // Remove trailing empty line
-  if (lines.length > 0 && lines[lines.length - 1] === "") {
+  if (lines.length > 0 && lines[lines.length - 1] === '') {
     lines.pop();
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -94,11 +87,11 @@ function formatConsoleOutput(
  */
 export function registerModelsCommand(program: Command): void {
   program
-    .command("models")
-    .description("List available AI providers and example models")
+    .command('models')
+    .description('List available AI providers and example models')
     .option(
-      "-p, --provider <name>",
-      "Filter by provider (anthropic, openai, google, xai, deepseek)"
+      '-p, --provider <name>',
+      'Filter by provider (anthropic, openai, google, xai, deepseek)',
     )
     .action((options: { provider?: string }, cmd: Command) => {
       const ctx = getCommandContext(cmd);
@@ -107,7 +100,7 @@ export function registerModelsCommand(program: Command): void {
         const info = getModelInfo(options.provider);
 
         const output = formatOutput(ctx, info, (data, useColors) =>
-          formatConsoleOutput(data as ProviderModelInfo[], useColors)
+          formatConsoleOutput(data as ProviderModelInfo[], useColors),
         );
         console.log(output);
       } catch (error) {

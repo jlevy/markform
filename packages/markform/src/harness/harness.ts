@@ -7,11 +7,11 @@
 
 // Use pure JS sha256 to avoid node:crypto dependency, enabling use in
 // browsers, edge runtimes (Cloudflare Workers, Convex), and other non-Node environments.
-import { sha256 } from "js-sha256";
+import { sha256 } from 'js-sha256';
 
-import { applyPatches } from "../engine/apply.js";
-import { inspect, getFieldsForRoles } from "../engine/inspect.js";
-import { serialize } from "../engine/serialize.js";
+import { applyPatches } from '../engine/apply.js';
+import { inspect, getFieldsForRoles } from '../engine/inspect.js';
+import { serialize } from '../engine/serialize.js';
 import type {
   ClearFieldPatch,
   HarnessConfig,
@@ -21,13 +21,13 @@ import type {
   SessionTurn,
   SessionTurnStats,
   StepResult,
-} from "../engine/coreTypes.js";
+} from '../engine/coreTypes.js';
 import {
   DEFAULT_MAX_ISSUES,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
   AGENT_ROLE,
-} from "../settings.js";
+} from '../settings.js';
 
 // =============================================================================
 // Default Configuration
@@ -43,7 +43,7 @@ const DEFAULT_CONFIG: HarnessConfig = {
 // Harness State
 // =============================================================================
 
-type HarnessState = "init" | "step" | "wait" | "complete";
+type HarnessState = 'init' | 'step' | 'wait' | 'complete';
 
 // =============================================================================
 // Form Harness Class
@@ -55,7 +55,7 @@ type HarnessState = "init" | "step" | "wait" | "complete";
 export class FormHarness {
   private form: ParsedForm;
   private config: HarnessConfig;
-  private state: HarnessState = "init";
+  private state: HarnessState = 'init';
   private turnNumber = 0;
   private turns: SessionTurn[] = [];
 
@@ -108,7 +108,7 @@ export class FormHarness {
       return true;
     }
     // At the last turn, check if we've completed it (state transitioned to "complete")
-    if (this.turnNumber === this.config.maxTurns && this.state === "complete") {
+    if (this.turnNumber === this.config.maxTurns && this.state === 'complete') {
       return true;
     }
     return false;
@@ -124,12 +124,12 @@ export class FormHarness {
    * so they will be reported as needing to be filled.
    */
   step(): StepResult {
-    if (this.state === "complete") {
-      throw new Error("Harness is complete - cannot step");
+    if (this.state === 'complete') {
+      throw new Error('Harness is complete - cannot step');
     }
 
     // On first step with fillMode='overwrite', clear all target role fields
-    if (this.state === "init" && this.config.fillMode === "overwrite") {
+    if (this.state === 'init' && this.config.fillMode === 'overwrite') {
       this.clearTargetRoleFields();
     }
 
@@ -138,7 +138,7 @@ export class FormHarness {
 
     // Check max turns
     if (this.turnNumber > this.config.maxTurns) {
-      this.state = "complete";
+      this.state = 'complete';
       const result = inspect(this.form, { targetRoles: this.config.targetRoles });
       return {
         structureSummary: result.structureSummary,
@@ -150,14 +150,14 @@ export class FormHarness {
       };
     }
 
-    this.state = "step";
+    this.state = 'step';
 
     // Inspect form and compute step result
     const result = inspect(this.form, { targetRoles: this.config.targetRoles });
     const stepResult = this.computeStepResult(result);
 
     // Transition state based on whether there's more work
-    this.state = stepResult.issues.length === 0 ? "complete" : "wait";
+    this.state = stepResult.issues.length === 0 ? 'complete' : 'wait';
 
     return stepResult;
   }
@@ -174,14 +174,12 @@ export class FormHarness {
    * @returns StepResult after applying patches
    */
   apply(patches: Patch[], issues: InspectIssue[], llmStats?: SessionTurnStats): StepResult {
-    if (this.state !== "wait") {
+    if (this.state !== 'wait') {
       throw new Error(`Cannot apply in state: ${this.state}`);
     }
 
     if (patches.length > this.config.maxPatchesPerTurn) {
-      throw new Error(
-        `Too many patches: ${patches.length} > ${this.config.maxPatchesPerTurn}`
-      );
+      throw new Error(`Too many patches: ${patches.length} > ${this.config.maxPatchesPerTurn}`);
     }
 
     // Apply patches
@@ -197,9 +195,9 @@ export class FormHarness {
     // Transition state: complete if no more work OR max turns reached
     const noMoreWork = stepResult.issues.length === 0;
     if (noMoreWork || this.turnNumber >= this.config.maxTurns) {
-      this.state = "complete";
+      this.state = 'complete';
     } else {
-      this.state = "wait";
+      this.state = 'wait';
     }
 
     return stepResult;
@@ -217,10 +215,7 @@ export class FormHarness {
     const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
 
     // Step budget = min of max patches per turn and issues to address
-    const stepBudget = Math.min(
-      this.config.maxPatchesPerTurn,
-      limitedIssues.length
-    );
+    const stepBudget = Math.min(this.config.maxPatchesPerTurn, limitedIssues.length);
 
     return {
       structureSummary: result.structureSummary,
@@ -239,14 +234,12 @@ export class FormHarness {
     issues: InspectIssue[],
     patches: Patch[],
     result: ReturnType<typeof inspect>,
-    llmStats?: SessionTurnStats
+    llmStats?: SessionTurnStats,
   ): void {
     const markdown = serialize(this.form);
     const hash = sha256(markdown);
 
-    const requiredIssueCount = result.issues.filter(
-      (i) => i.severity === "required"
-    ).length;
+    const requiredIssueCount = result.issues.filter((i) => i.severity === 'required').length;
 
     const turn: SessionTurn = {
       turn: this.turnNumber,
@@ -314,7 +307,7 @@ export class FormHarness {
 
     for (const issue of issues) {
       // Form-level issues always pass
-      if (issue.scope === "form") {
+      if (issue.scope === 'form') {
         result.push(issue);
         continue;
       }
@@ -342,11 +335,11 @@ export class FormHarness {
       // Include the issue and track the field/group
       result.push(issue);
       if (fieldId) {
-seenFields.add(fieldId);
-}
+        seenFields.add(fieldId);
+      }
       if (groupId) {
-seenGroups.add(groupId);
-}
+        seenGroups.add(groupId);
+      }
     }
 
     return result;
@@ -355,16 +348,13 @@ seenGroups.add(groupId);
   /**
    * Extract field ID from an issue ref.
    */
-  private getFieldIdFromRef(
-    ref: string,
-    scope: InspectIssue["scope"]
-  ): string | undefined {
-    if (scope === "field") {
+  private getFieldIdFromRef(ref: string, scope: InspectIssue['scope']): string | undefined {
+    if (scope === 'field') {
       return ref;
     }
-    if (scope === "option") {
+    if (scope === 'option') {
       // Option refs are "fieldId.optionId"
-      const dotIndex = ref.indexOf(".");
+      const dotIndex = ref.indexOf('.');
       return dotIndex > 0 ? ref.slice(0, dotIndex) : undefined;
     }
     // Group-level issues don't have a field
@@ -377,13 +367,13 @@ seenGroups.add(groupId);
   private getGroupForField(fieldId: string): string | undefined {
     const entry = this.form.idIndex.get(fieldId);
     if (!entry) {
-return undefined;
-}
+      return undefined;
+    }
 
     // If the field has a parent and that parent is a group, return it
     if (entry.parentId) {
       const parentEntry = this.form.idIndex.get(entry.parentId);
-      if (parentEntry?.nodeType === "group") {
+      if (parentEntry?.nodeType === 'group') {
         return entry.parentId;
       }
     }
@@ -401,7 +391,7 @@ return undefined;
 
     // Create clear patches for all target role fields
     const clearPatches: ClearFieldPatch[] = targetFields.map((field) => ({
-      op: "clear_field" as const,
+      op: 'clear_field' as const,
       fieldId: field.id,
     }));
 
@@ -423,9 +413,6 @@ return undefined;
  * @param config - Optional harness configuration
  * @returns A new FormHarness instance
  */
-export function createHarness(
-  form: ParsedForm,
-  config?: Partial<HarnessConfig>
-): FormHarness {
+export function createHarness(form: ParsedForm, config?: Partial<HarnessConfig>): FormHarness {
   return new FormHarness(form, config);
 }

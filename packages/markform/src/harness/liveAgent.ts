@@ -5,22 +5,17 @@
  * by analyzing issues and generating appropriate patches.
  */
 
-import type { LanguageModel, Tool } from "ai";
-import { generateText, stepCountIs, zodSchema } from "ai";
-import { z } from "zod";
-import { openai } from "@ai-sdk/openai";
-import { google } from "@ai-sdk/google";
+import type { LanguageModel, Tool } from 'ai';
+import { generateText, stepCountIs, zodSchema } from 'ai';
+import { z } from 'zod';
+import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google';
 
-import type {
-  DocumentationBlock,
-  InspectIssue,
-  ParsedForm,
-  Patch,
-} from "../engine/coreTypes.js";
-import { PatchSchema } from "../engine/coreTypes.js";
-import { serialize } from "../engine/serialize.js";
-import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, getWebSearchConfig } from "../settings.js";
-import type { Agent, AgentResponse, LiveAgentConfig, TurnStats } from "./harnessTypes.js";
+import type { DocumentationBlock, InspectIssue, ParsedForm, Patch } from '../engine/coreTypes.js';
+import { PatchSchema } from '../engine/coreTypes.js';
+import { serialize } from '../engine/serialize.js';
+import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, getWebSearchConfig } from '../settings.js';
+import type { Agent, AgentResponse, LiveAgentConfig, TurnStats } from './harnessTypes.js';
 import {
   DEFAULT_SYSTEM_PROMPT,
   WEB_SEARCH_INSTRUCTIONS,
@@ -29,10 +24,10 @@ import {
   getIssuesIntro,
   PATCH_FORMAT_INSTRUCTIONS,
   SECTION_HEADERS,
-} from "./prompts.js";
+} from './prompts.js';
 
 // Re-export types for backwards compatibility
-export type { LiveAgentConfig } from "./harnessTypes.js";
+export type { LiveAgentConfig } from './harnessTypes.js';
 
 // =============================================================================
 // Live Agent Implementation
@@ -69,7 +64,7 @@ export class LiveAgent implements Agent {
    * Useful for logging what capabilities the agent has.
    */
   getAvailableToolNames(): string[] {
-    const tools = ["generatePatches"];
+    const tools = ['generatePatches'];
     if (this.webSearchTools) {
       tools.push(...Object.keys(this.webSearchTools));
     }
@@ -86,7 +81,7 @@ export class LiveAgent implements Agent {
   async generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
-    maxPatches: number
+    maxPatches: number,
   ): Promise<AgentResponse> {
     // Build context prompt with issues and form schema
     const contextPrompt = buildContextPrompt(issues, form, maxPatches);
@@ -96,7 +91,7 @@ export class LiveAgent implements Agent {
 
     // Append additional context if provided (never overrides form instructions)
     if (this.systemPromptAddition) {
-      systemPrompt += "\n\n# Additional Context\n" + this.systemPromptAddition;
+      systemPrompt += '\n\n# Additional Context\n' + this.systemPromptAddition;
     }
 
     // Web search tools are loaded in constructor, but check again for runtime changes
@@ -106,14 +101,15 @@ export class LiveAgent implements Agent {
 
     // If web search is available, add instructions to use it
     if (this.webSearchTools && Object.keys(this.webSearchTools).length > 0) {
-      systemPrompt += "\n\n" + WEB_SEARCH_INSTRUCTIONS;
+      systemPrompt += '\n\n' + WEB_SEARCH_INSTRUCTIONS;
     }
 
     // Define the patch tool with properly typed parameters
     const patchesSchema = z.object({
-      patches: z.array(PatchSchema).max(maxPatches).describe(
-        "Array of patches. Each patch sets a value for one field."
-      ),
+      patches: z
+        .array(PatchSchema)
+        .max(maxPatches)
+        .describe('Array of patches. Each patch sets a value for one field.'),
     });
 
     // Create tool using zodSchema wrapper for AI SDK v6 compatibility
@@ -148,7 +144,7 @@ export class LiveAgent implements Agent {
         toolCallCounts.set(toolCall.toolName, count + 1);
 
         // Extract patches from generatePatches calls
-        if (toolCall.toolName === "generatePatches" && "input" in toolCall) {
+        if (toolCall.toolName === 'generatePatches' && 'input' in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
           patches.push(...input.patches);
         }
@@ -156,14 +152,14 @@ export class LiveAgent implements Agent {
     }
 
     // Build tool call stats
-    const toolCalls: TurnStats["toolCalls"] = [];
+    const toolCalls: TurnStats['toolCalls'] = [];
     for (const [name, count] of toolCallCounts) {
       toolCalls.push({ name, count });
     }
 
     // Count remaining issues by severity
-    const requiredRemaining = issues.filter((i) => i.severity === "required").length;
-    const optionalRemaining = issues.filter((i) => i.severity === "recommended").length;
+    const requiredRemaining = issues.filter((i) => i.severity === 'required').length;
+    const optionalRemaining = issues.filter((i) => i.severity === 'recommended').length;
 
     // Build stats
     const stats: TurnStats = {
@@ -174,10 +170,10 @@ export class LiveAgent implements Agent {
         // Note: these are the counts BEFORE this turn's patches are applied
         // The caller will update these after applying patches
         answeredFields: Object.values(form.responsesByFieldId).filter(
-          (response) => response?.state === "answered"
+          (response) => response?.state === 'answered',
         ).length,
         skippedFields: Object.values(form.responsesByFieldId).filter(
-          (response) => response?.state === "skipped"
+          (response) => response?.state === 'skipped',
         ).length,
         requiredRemaining,
         optionalRemaining,
@@ -203,11 +199,7 @@ export class LiveAgent implements Agent {
 /**
  * Extract doc blocks of a specific tag type for a given ref.
  */
-function getDocBlocks(
-  docs: DocumentationBlock[],
-  ref: string,
-  tag: string
-): DocumentationBlock[] {
+function getDocBlocks(docs: DocumentationBlock[], ref: string, tag: string): DocumentationBlock[] {
   return docs.filter((d) => d.ref === ref && d.tag === tag);
 }
 
@@ -220,20 +212,16 @@ function getDocBlocks(
  * 3. Per-field instructions - Doc blocks with ref=fieldId and tag="instructions"
  * 4. System defaults - DEFAULT_ROLE_INSTRUCTIONS[targetRole] or DEFAULT_SYSTEM_PROMPT
  */
-function buildSystemPrompt(
-  form: ParsedForm,
-  targetRole: string,
-  issues: InspectIssue[]
-): string {
+function buildSystemPrompt(form: ParsedForm, targetRole: string, issues: InspectIssue[]): string {
   const sections: string[] = [];
 
   // Start with base system prompt guidelines
   sections.push(DEFAULT_SYSTEM_PROMPT);
 
   // 1. Form-level instructions (doc blocks with kind="instructions" for the form)
-  const formInstructions = getDocBlocks(form.docs, form.schema.id, "instructions");
+  const formInstructions = getDocBlocks(form.docs, form.schema.id, 'instructions');
   if (formInstructions.length > 0) {
-    sections.push("");
+    sections.push('');
     sections.push(SECTION_HEADERS.formInstructions);
     for (const doc of formInstructions) {
       sections.push(doc.bodyMarkdown.trim());
@@ -243,27 +231,25 @@ function buildSystemPrompt(
   // 2. Role-specific instructions from frontmatter
   const roleInstructions = form.metadata?.roleInstructions?.[targetRole];
   if (roleInstructions) {
-    sections.push("");
+    sections.push('');
     sections.push(SECTION_HEADERS.roleInstructions(targetRole));
     sections.push(roleInstructions);
   } else {
     // Fallback to default role instructions
     const defaultRoleInstr = DEFAULT_ROLE_INSTRUCTIONS[targetRole];
     if (defaultRoleInstr) {
-      sections.push("");
+      sections.push('');
       sections.push(SECTION_HEADERS.roleGuidance);
       sections.push(defaultRoleInstr);
     }
   }
 
   // 3. Per-field instructions for fields being addressed
-  const fieldIds = new Set(
-    issues.filter((i) => i.scope === "field").map((i) => i.ref)
-  );
+  const fieldIds = new Set(issues.filter((i) => i.scope === 'field').map((i) => i.ref));
   const fieldInstructions: string[] = [];
 
   for (const fieldId of fieldIds) {
-    const fieldDocs = getDocBlocks(form.docs, fieldId, "instructions");
+    const fieldDocs = getDocBlocks(form.docs, fieldId, 'instructions');
     if (fieldDocs.length > 0) {
       for (const doc of fieldDocs) {
         fieldInstructions.push(`**${fieldId}:** ${doc.bodyMarkdown.trim()}`);
@@ -272,12 +258,12 @@ function buildSystemPrompt(
   }
 
   if (fieldInstructions.length > 0) {
-    sections.push("");
+    sections.push('');
     sections.push(SECTION_HEADERS.fieldInstructions);
     sections.push(...fieldInstructions);
   }
 
-  return sections.join("\n");
+  return sections.join('\n');
 }
 
 /**
@@ -286,54 +272,50 @@ function buildSystemPrompt(
  * The form markdown shows the agent exactly what's been filled so far,
  * making each turn stateless - all state is in the form itself.
  */
-function buildContextPrompt(
-  issues: InspectIssue[],
-  form: ParsedForm,
-  maxPatches: number
-): string {
+function buildContextPrompt(issues: InspectIssue[], form: ParsedForm, maxPatches: number): string {
   const lines: string[] = [];
 
   // Include full form markdown so agent sees current state
-  lines.push("# Current Form State");
-  lines.push("");
-  lines.push("Below is the complete form with all currently filled values.");
-  lines.push("Fields marked with `[ ]` or empty values still need to be filled.");
-  lines.push("");
-  lines.push("```markdown");
+  lines.push('# Current Form State');
+  lines.push('');
+  lines.push('Below is the complete form with all currently filled values.');
+  lines.push('Fields marked with `[ ]` or empty values still need to be filled.');
+  lines.push('');
+  lines.push('```markdown');
   lines.push(serialize(form));
-  lines.push("```");
-  lines.push("");
+  lines.push('```');
+  lines.push('');
 
   // List remaining issues
   lines.push(ISSUES_HEADER);
-  lines.push("");
+  lines.push('');
   lines.push(getIssuesIntro(maxPatches));
-  lines.push("");
+  lines.push('');
 
   for (const issue of issues) {
     lines.push(`- **${issue.ref}** (${issue.scope}): ${issue.message}`);
     lines.push(`  Severity: ${issue.severity}, Priority: P${issue.priority}`);
 
     // If it's a field issue, include field schema info
-    if (issue.scope === "field") {
+    if (issue.scope === 'field') {
       const field = findField(form, issue.ref);
       if (field) {
         lines.push(`  Type: ${field.kind}`);
-        if ("options" in field && field.options) {
-          const optionIds = field.options.map((o) => o.id).join(", ");
+        if ('options' in field && field.options) {
+          const optionIds = field.options.map((o) => o.id).join(', ');
           lines.push(`  Options: ${optionIds}`);
         }
-        if (field.kind === "checkboxes" && "checkboxMode" in field) {
-          lines.push(`  Mode: ${field.checkboxMode ?? "multi"}`);
+        if (field.kind === 'checkboxes' && 'checkboxMode' in field) {
+          lines.push(`  Mode: ${field.checkboxMode ?? 'multi'}`);
         }
       }
     }
-    lines.push("");
+    lines.push('');
   }
 
   lines.push(PATCH_FORMAT_INSTRUCTIONS);
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -367,7 +349,7 @@ function loadWebSearchTools(provider: string): Record<string, Tool> {
   }
 
   switch (provider) {
-    case "openai": {
+    case 'openai': {
       // OpenAI web search tool via openai.tools
       // Prefer webSearch (newer) over webSearchPreview (legacy)
       if (openai.tools?.webSearch) {
@@ -379,7 +361,7 @@ function loadWebSearchTools(provider: string): Record<string, Tool> {
       return {};
     }
 
-    case "google": {
+    case 'google': {
       // Google search grounding tool via google.tools
       if (google.tools?.googleSearch) {
         return { google_search: google.tools.googleSearch({}) as Tool };
@@ -387,7 +369,7 @@ function loadWebSearchTools(provider: string): Record<string, Tool> {
       return {};
     }
 
-    case "xai": {
+    case 'xai': {
       // xAI Grok has built-in web search - no separate tool needed
       // The model itself handles search when prompted
       return {};

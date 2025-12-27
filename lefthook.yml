@@ -1,17 +1,36 @@
 # Lefthook git hooks configuration
 # See: https://github.com/evilmartians/lefthook
+#
+# Pre-commit: Fast checks with auto-fix (target: 2-5 seconds)
+# Pre-push: Full test validation
 
 pre-commit:
   parallel: true
-  commands:
-    lint:
-      glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
-      run: pnpm lint --cache --fix {staged_files}
-      stage_fixed: true
 
+  commands:
+    # Auto-format with prettier (~500ms)
+    format:
+      glob: '*.{js,ts,tsx,json,yaml,yml}'
+      run: npx prettier --write --log-level warn {staged_files}
+      stage_fixed: true
+      priority: 1
+
+    # Lint with auto-fix and caching (~1s first, ~200ms cached)
+    lint:
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
+      run: >
+        npx eslint
+        --cache
+        --cache-location node_modules/.cache/eslint
+        --fix {staged_files}
+      stage_fixed: true
+      priority: 2
+
+    # Type check with incremental mode (~2s)
     typecheck:
-      glob: "*.{ts,tsx}"
+      glob: '*.{ts,tsx}'
       run: pnpm typecheck
+      priority: 3
 
 pre-push:
   commands:

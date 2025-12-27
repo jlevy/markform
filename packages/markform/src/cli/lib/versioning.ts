@@ -5,7 +5,7 @@
  * Pattern: name.form.md → name-filled1.form.md → name-filled2.form.md
  */
 
-import { existsSync } from "node:fs";
+import { existsSync } from 'node:fs';
 
 /**
  * Version pattern that matches -filledN or _filledN before the extension.

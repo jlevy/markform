@@ -3,48 +3,48 @@
  * Provides form content from the examples directory for the examples CLI command.
  */
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import type { ExampleDefinition } from "../lib/cliTypes.js";
+import type { ExampleDefinition } from '../lib/cliTypes.js';
 
 // Re-export types for backwards compatibility
-export type { ExampleDefinition } from "../lib/cliTypes.js";
+export type { ExampleDefinition } from '../lib/cliTypes.js';
 
 /** Example definitions without content - content is loaded lazily. */
 export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
   {
-    id: "simple",
-    title: "Simple Test Form",
+    id: 'simple',
+    title: 'Simple Test Form',
     description:
-      "User and agent roles for testing full workflow. User fills required fields, agent fills optional.",
-    filename: "simple.form.md",
-    path: "simple/simple.form.md",
+      'User and agent roles for testing full workflow. User fills required fields, agent fills optional.',
+    filename: 'simple.form.md',
+    path: 'simple/simple.form.md',
   },
   {
-    id: "political-research",
-    title: "Political Research",
+    id: 'political-research',
+    title: 'Political Research',
     description:
-      "Biographical research form with one user field (name) and agent-filled details. Uses web search.",
-    filename: "political-research.form.md",
-    path: "political-research/political-research.form.md",
+      'Biographical research form with one user field (name) and agent-filled details. Uses web search.',
+    filename: 'political-research.form.md',
+    path: 'political-research/political-research.form.md',
   },
   {
-    id: "earnings-analysis",
-    title: "Company Quarterly Analysis",
+    id: 'earnings-analysis',
+    title: 'Company Quarterly Analysis',
     description:
-      "Financial analysis with one user field (company) and agent-filled quarterly analysis sections.",
-    filename: "earnings-analysis.form.md",
-    path: "earnings-analysis/earnings-analysis.form.md",
+      'Financial analysis with one user field (company) and agent-filled quarterly analysis sections.',
+    filename: 'earnings-analysis.form.md',
+    path: 'earnings-analysis/earnings-analysis.form.md',
   },
   {
-    id: "startup-deep-research",
-    title: "Startup Deep Research",
+    id: 'startup-deep-research',
+    title: 'Startup Deep Research',
     description:
-      "Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.",
-    filename: "startup-deep-research.form.md",
-    path: "startup-deep-research/startup-deep-research.form.md",
+      'Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.',
+    filename: 'startup-deep-research.form.md',
+    path: 'startup-deep-research/startup-deep-research.form.md',
   },
 ];
 
@@ -61,13 +61,13 @@ function getExamplesDir(): string {
   // Check if we're in the dist directory (bundled mode)
   // Use basename to check the directory name, not a substring match
   const dirName = thisDir.split(/[/\\]/).pop();
-  if (dirName === "dist") {
+  if (dirName === 'dist') {
     // Bundled: dist -> package root -> examples
-    return join(dirname(thisDir), "examples");
+    return join(dirname(thisDir), 'examples');
   }
 
   // Development mode: src/cli/examples -> src/cli -> src -> package root -> examples
-  return join(dirname(dirname(dirname(thisDir))), "examples");
+  return join(dirname(dirname(dirname(thisDir))), 'examples');
 }
 
 /**
@@ -86,11 +86,9 @@ export function loadExampleContent(exampleId: string): string {
   const filePath = join(examplesDir, example.path);
 
   try {
-    return readFileSync(filePath, "utf-8");
+    return readFileSync(filePath, 'utf-8');
   } catch (error) {
-    throw new Error(
-      `Failed to load example '${exampleId}' from ${filePath}: ${error}`,
-    );
+    throw new Error(`Failed to load example '${exampleId}' from ${filePath}: ${error}`);
   }
 }
 

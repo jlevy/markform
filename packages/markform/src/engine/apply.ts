@@ -37,13 +37,9 @@ import type {
   StringValue,
   UrlListValue,
   UrlValue,
-} from "./coreTypes.js";
-import {
-  computeAllSummaries,
-  computeFormState,
-  isFormComplete,
-} from "./summaries.js";
-import { validate } from "./validate.js";
+} from './coreTypes.js';
+import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
+import { validate } from './validate.js';
 
 // =============================================================================
 // Patch Validation
@@ -71,13 +67,9 @@ function findField(form: ParsedForm, fieldId: Id): Field | undefined {
 /**
  * Validate a single patch against the form schema.
  */
-function validatePatch(
-  form: ParsedForm,
-  patch: Patch,
-  index: number,
-): PatchError | null {
+function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchError | null {
   // Handle patches without fieldId
-  if (patch.op === "add_note") {
+  if (patch.op === 'add_note') {
     // Validate that ref exists in idIndex
     if (!form.idIndex.has(patch.ref)) {
       return {
@@ -88,7 +80,7 @@ function validatePatch(
     return null;
   }
 
-  if (patch.op === "remove_note") {
+  if (patch.op === 'remove_note') {
     // This patch uses 'noteId' instead of 'fieldId'
     // Validate that the note exists
     const noteExists = form.notes.some((n) => n.id === patch.noteId);
@@ -113,8 +105,8 @@ function validatePatch(
   }
 
   switch (patch.op) {
-    case "set_string":
-      if (field.kind !== "string") {
+    case 'set_string':
+      if (field.kind !== 'string') {
         return {
           patchIndex: index,
           message: `Cannot apply set_string to ${field.kind} field "${field.id}"`,
@@ -122,8 +114,8 @@ function validatePatch(
       }
       break;
 
-    case "set_number":
-      if (field.kind !== "number") {
+    case 'set_number':
+      if (field.kind !== 'number') {
         return {
           patchIndex: index,
           message: `Cannot apply set_number to ${field.kind} field "${field.id}"`,
@@ -131,8 +123,8 @@ function validatePatch(
       }
       break;
 
-    case "set_string_list":
-      if (field.kind !== "string_list") {
+    case 'set_string_list':
+      if (field.kind !== 'string_list') {
         return {
           patchIndex: index,
           message: `Cannot apply set_string_list to ${field.kind} field "${field.id}"`,
@@ -140,8 +132,8 @@ function validatePatch(
       }
       break;
 
-    case "set_single_select": {
-      if (field.kind !== "single_select") {
+    case 'set_single_select': {
+      if (field.kind !== 'single_select') {
         return {
           patchIndex: index,
           message: `Cannot apply set_single_select to ${field.kind} field "${field.id}"`,
@@ -160,8 +152,8 @@ function validatePatch(
       break;
     }
 
-    case "set_multi_select": {
-      if (field.kind !== "multi_select") {
+    case 'set_multi_select': {
+      if (field.kind !== 'multi_select') {
         return {
           patchIndex: index,
           message: `Cannot apply set_multi_select to ${field.kind} field "${field.id}"`,
@@ -180,8 +172,8 @@ function validatePatch(
       break;
     }
 
-    case "set_checkboxes": {
-      if (field.kind !== "checkboxes") {
+    case 'set_checkboxes': {
+      if (field.kind !== 'checkboxes') {
         return {
           patchIndex: index,
           message: `Cannot apply set_checkboxes to ${field.kind} field "${field.id}"`,
@@ -200,8 +192,8 @@ function validatePatch(
       break;
     }
 
-    case "set_url":
-      if (field.kind !== "url") {
+    case 'set_url':
+      if (field.kind !== 'url') {
         return {
           patchIndex: index,
           message: `Cannot apply set_url to ${field.kind} field "${field.id}"`,
@@ -209,8 +201,8 @@ function validatePatch(
       }
       break;
 
-    case "set_url_list":
-      if (field.kind !== "url_list") {
+    case 'set_url_list':
+      if (field.kind !== 'url_list') {
         return {
           patchIndex: index,
           message: `Cannot apply set_url_list to ${field.kind} field "${field.id}"`,
@@ -218,11 +210,11 @@ function validatePatch(
       }
       break;
 
-    case "clear_field":
+    case 'clear_field':
       // Any field can be cleared
       break;
 
-    case "skip_field":
+    case 'skip_field':
       // Can only skip optional fields
       if (field.required) {
         return {
@@ -232,7 +224,7 @@ function validatePatch(
       }
       break;
 
-    case "abort_field":
+    case 'abort_field':
       // Any field can be aborted
       break;
   }
@@ -276,14 +268,11 @@ function generateNoteId(form: ParsedForm): NoteId {
 /**
  * Apply a set_string patch.
  */
-function applySetString(
-  responses: Record<Id, FieldResponse>,
-  patch: SetStringPatch,
-): void {
+function applySetString(responses: Record<Id, FieldResponse>, patch: SetStringPatch): void {
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "string",
+      kind: 'string',
       value: patch.value,
     } as StringValue,
   };
@@ -292,14 +281,11 @@ function applySetString(
 /**
  * Apply a set_number patch.
  */
-function applySetNumber(
-  responses: Record<Id, FieldResponse>,
-  patch: SetNumberPatch,
-): void {
+function applySetNumber(responses: Record<Id, FieldResponse>, patch: SetNumberPatch): void {
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "number",
+      kind: 'number',
       value: patch.value,
     } as NumberValue,
   };
@@ -308,14 +294,11 @@ function applySetNumber(
 /**
  * Apply a set_string_list patch.
  */
-function applySetStringList(
-  responses: Record<Id, FieldResponse>,
-  patch: SetStringListPatch,
-): void {
+function applySetStringList(responses: Record<Id, FieldResponse>, patch: SetStringListPatch): void {
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "string_list",
+      kind: 'string_list',
       items: patch.items,
     } as StringListValue,
   };
@@ -329,9 +312,9 @@ function applySetSingleSelect(
   patch: SetSingleSelectPatch,
 ): void {
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "single_select",
+      kind: 'single_select',
       selected: patch.selected,
     } as SingleSelectValue,
   };
@@ -345,9 +328,9 @@ function applySetMultiSelect(
   patch: SetMultiSelectPatch,
 ): void {
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "multi_select",
+      kind: 'multi_select',
       selected: patch.selected,
     } as MultiSelectValue,
   };
@@ -356,10 +339,7 @@ function applySetMultiSelect(
 /**
  * Apply a set_checkboxes patch (merges with existing values).
  */
-function applySetCheckboxes(
-  responses: Record<Id, FieldResponse>,
-  patch: SetCheckboxesPatch,
-): void {
+function applySetCheckboxes(responses: Record<Id, FieldResponse>, patch: SetCheckboxesPatch): void {
   const existingResponse = responses[patch.fieldId];
   const existingValue = existingResponse?.value as CheckboxesValue | undefined;
   const existingValues = existingValue?.values ?? {};
@@ -371,9 +351,9 @@ function applySetCheckboxes(
   };
 
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "checkboxes",
+      kind: 'checkboxes',
       values: merged,
     } as CheckboxesValue,
   };
@@ -382,14 +362,11 @@ function applySetCheckboxes(
 /**
  * Apply a set_url patch.
  */
-function applySetUrl(
-  responses: Record<Id, FieldResponse>,
-  patch: SetUrlPatch,
-): void {
+function applySetUrl(responses: Record<Id, FieldResponse>, patch: SetUrlPatch): void {
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "url",
+      kind: 'url',
       value: patch.value,
     } as UrlValue,
   };
@@ -398,14 +375,11 @@ function applySetUrl(
 /**
  * Apply a set_url_list patch.
  */
-function applySetUrlList(
-  responses: Record<Id, FieldResponse>,
-  patch: SetUrlListPatch,
-): void {
+function applySetUrlList(responses: Record<Id, FieldResponse>, patch: SetUrlListPatch): void {
   responses[patch.fieldId] = {
-    state: "answered",
+    state: 'answered',
     value: {
-      kind: "url_list",
+      kind: 'url_list',
       items: patch.items,
     } as UrlListValue,
   };
@@ -414,12 +388,9 @@ function applySetUrlList(
 /**
  * Apply a clear_field patch.
  */
-function applyClearField(
-  responses: Record<Id, FieldResponse>,
-  patch: ClearFieldPatch,
-): void {
+function applyClearField(responses: Record<Id, FieldResponse>, patch: ClearFieldPatch): void {
   responses[patch.fieldId] = {
-    state: "unanswered",
+    state: 'unanswered',
   };
 }
 
@@ -427,12 +398,9 @@ function applyClearField(
  * Apply a skip_field patch.
  * Marks the field as skipped and stores reason in FieldResponse.reason.
  */
-function applySkipField(
-  responses: Record<Id, FieldResponse>,
-  patch: SkipFieldPatch,
-): void {
+function applySkipField(responses: Record<Id, FieldResponse>, patch: SkipFieldPatch): void {
   responses[patch.fieldId] = {
-    state: "skipped",
+    state: 'skipped',
     ...(patch.reason && { reason: patch.reason }),
   };
 }
@@ -441,12 +409,9 @@ function applySkipField(
  * Apply an abort_field patch.
  * Marks the field as aborted and stores reason in FieldResponse.reason.
  */
-function applyAbortField(
-  responses: Record<Id, FieldResponse>,
-  patch: AbortFieldPatch,
-): void {
+function applyAbortField(responses: Record<Id, FieldResponse>, patch: AbortFieldPatch): void {
   responses[patch.fieldId] = {
-    state: "aborted",
+    state: 'aborted',
     ...(patch.reason && { reason: patch.reason }),
   };
 }
@@ -455,10 +420,7 @@ function applyAbortField(
  * Apply an add_note patch.
  * Adds a note to the form.
  */
-function applyAddNote(
-  form: ParsedForm,
-  patch: AddNotePatch,
-): void {
+function applyAddNote(form: ParsedForm, patch: AddNotePatch): void {
   const noteId = generateNoteId(form);
   form.notes.push({
     id: noteId,
@@ -472,10 +434,7 @@ function applyAddNote(
  * Apply a remove_note patch.
  * Removes a specific note by ID.
  */
-function applyRemoveNote(
-  form: ParsedForm,
-  patch: RemoveNotePatch,
-): void {
+function applyRemoveNote(form: ParsedForm, patch: RemoveNotePatch): void {
   const index = form.notes.findIndex((n) => n.id === patch.noteId);
   if (index >= 0) {
     form.notes.splice(index, 1);
@@ -486,49 +445,45 @@ function applyRemoveNote(
 /**
  * Apply a single patch to the form.
  */
-function applyPatch(
-  form: ParsedForm,
-  responses: Record<Id, FieldResponse>,
-  patch: Patch,
-): void {
+function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patch: Patch): void {
   switch (patch.op) {
-    case "set_string":
+    case 'set_string':
       applySetString(responses, patch);
       break;
-    case "set_number":
+    case 'set_number':
       applySetNumber(responses, patch);
       break;
-    case "set_string_list":
+    case 'set_string_list':
       applySetStringList(responses, patch);
       break;
-    case "set_single_select":
+    case 'set_single_select':
       applySetSingleSelect(responses, patch);
       break;
-    case "set_multi_select":
+    case 'set_multi_select':
       applySetMultiSelect(responses, patch);
       break;
-    case "set_checkboxes":
+    case 'set_checkboxes':
       applySetCheckboxes(responses, patch);
       break;
-    case "set_url":
+    case 'set_url':
       applySetUrl(responses, patch);
       break;
-    case "set_url_list":
+    case 'set_url_list':
       applySetUrlList(responses, patch);
       break;
-    case "clear_field":
+    case 'clear_field':
       applyClearField(responses, patch);
       break;
-    case "skip_field":
+    case 'skip_field':
       applySkipField(responses, patch);
       break;
-    case "abort_field":
+    case 'abort_field':
       applyAbortField(responses, patch);
       break;
-    case "add_note":
+    case 'add_note':
       applyAddNote(form, patch);
       break;
-    case "remove_note":
+    case 'remove_note':
       applyRemoveNote(form, patch);
       break;
   }
@@ -541,20 +496,18 @@ function applyPatch(
 /**
  * Convert validation issues to inspect issues with priorities.
  */
-function convertToInspectIssues(
-  form: ParsedForm,
-): InspectIssue[] {
+function convertToInspectIssues(form: ParsedForm): InspectIssue[] {
   const result = validate(form, { skipCodeValidators: true });
   const issues: InspectIssue[] = [];
   let priority = 1;
 
   for (const vi of result.issues) {
     issues.push({
-      ref: vi.ref ?? "",
-      scope: "field", // Default to field scope; can be refined based on validator context
-      reason: vi.severity === "error" ? "validation_error" : "optional_empty",
+      ref: vi.ref ?? '',
+      scope: 'field', // Default to field scope; can be refined based on validator context
+      reason: vi.severity === 'error' ? 'validation_error' : 'optional_empty',
       message: vi.message,
-      severity: vi.severity === "error" ? "required" : "recommended",
+      severity: vi.severity === 'error' ? 'required' : 'recommended',
       priority: priority++,
     });
   }
@@ -575,10 +528,7 @@ function convertToInspectIssues(
  * @param patches - Array of patches to apply
  * @returns Apply result with new summaries and status
  */
-export function applyPatches(
-  form: ParsedForm,
-  patches: Patch[],
-): ApplyResult {
+export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
   // Validate all patches first (transaction semantics)
   const errors = validatePatches(form, patches);
   if (errors.length > 0) {
@@ -587,7 +537,7 @@ export function applyPatches(
     const summaries = computeAllSummaries(form.schema, form.responsesByFieldId, form.notes, issues);
 
     return {
-      applyStatus: "rejected",
+      applyStatus: 'rejected',
       structureSummary: summaries.structureSummary,
       progressSummary: summaries.progressSummary,
       issues,
@@ -617,7 +567,7 @@ export function applyPatches(
   const summaries = computeAllSummaries(form.schema, newResponses, newNotes, issues);
 
   return {
-    applyStatus: "applied",
+    applyStatus: 'applied',
     structureSummary: summaries.structureSummary,
     progressSummary: summaries.progressSummary,
     issues,

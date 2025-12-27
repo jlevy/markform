@@ -7,26 +7,14 @@
  * - Batch coercion of InputContext with warnings/errors
  */
 
-import type {
-  CheckboxValue,
-  Field,
-  OptionId,
-  ParsedForm,
-  Patch,
-} from "./coreTypes.js";
+import type { CheckboxValue, Field, OptionId, ParsedForm, Patch } from './coreTypes.js';
 
 // =============================================================================
 // Raw Input Types
 // =============================================================================
 
 /** Raw value that can be coerced to a field value. */
-export type RawFieldValue =
-  | string
-  | number
-  | boolean
-  | string[]
-  | Record<string, unknown>
-  | null;
+export type RawFieldValue = string | number | boolean | string[] | Record<string, unknown> | null;
 
 /** Input context is a map of field IDs to raw values. */
 export type InputContext = Record<string, RawFieldValue>;
@@ -61,7 +49,7 @@ export interface CoerceInputContextResult {
 export function findFieldById(form: ParsedForm, fieldId: string): Field | undefined {
   // O(1) check: verify the ID exists and is a field
   const entry = form.idIndex.get(fieldId);
-  if (entry?.nodeType !== "field") {
+  if (entry?.nodeType !== 'field') {
     return undefined;
   }
 
@@ -82,47 +70,44 @@ export function findFieldById(form: ParsedForm, fieldId: string): Field | undefi
 // =============================================================================
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 // =============================================================================
 // Field-Specific Coercion
 // =============================================================================
 
-function coerceToString(
-  fieldId: string,
-  rawValue: RawFieldValue,
-): CoercionResult {
+function coerceToString(fieldId: string, rawValue: RawFieldValue): CoercionResult {
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_string", fieldId, value: null },
+      patch: { op: 'set_string', fieldId, value: null },
     };
   }
 
-  if (typeof rawValue === "string") {
+  if (typeof rawValue === 'string') {
     return {
       ok: true,
-      patch: { op: "set_string", fieldId, value: rawValue },
+      patch: { op: 'set_string', fieldId, value: rawValue },
     };
   }
 
-  if (typeof rawValue === "number") {
+  if (typeof rawValue === 'number') {
     return {
       ok: true,
-      patch: { op: "set_string", fieldId, value: String(rawValue) },
+      patch: { op: 'set_string', fieldId, value: String(rawValue) },
       warning: `Coerced number ${rawValue} to string for field '${fieldId}'`,
     };
   }
 
-  if (typeof rawValue === "boolean") {
+  if (typeof rawValue === 'boolean') {
     return {
       ok: true,
-      patch: { op: "set_string", fieldId, value: String(rawValue) },
+      patch: { op: 'set_string', fieldId, value: String(rawValue) },
       warning: `Coerced boolean ${rawValue} to string for field '${fieldId}'`,
     };
   }
@@ -133,30 +118,27 @@ function coerceToString(
   };
 }
 
-function coerceToNumber(
-  fieldId: string,
-  rawValue: RawFieldValue,
-): CoercionResult {
+function coerceToNumber(fieldId: string, rawValue: RawFieldValue): CoercionResult {
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_number", fieldId, value: null },
+      patch: { op: 'set_number', fieldId, value: null },
     };
   }
 
-  if (typeof rawValue === "number") {
+  if (typeof rawValue === 'number') {
     return {
       ok: true,
-      patch: { op: "set_number", fieldId, value: rawValue },
+      patch: { op: 'set_number', fieldId, value: rawValue },
     };
   }
 
-  if (typeof rawValue === "string") {
+  if (typeof rawValue === 'string') {
     const parsed = Number(rawValue);
     if (!Number.isNaN(parsed)) {
       return {
         ok: true,
-        patch: { op: "set_number", fieldId, value: parsed },
+        patch: { op: 'set_number', fieldId, value: parsed },
         warning: `Coerced string '${rawValue}' to number for field '${fieldId}'`,
       };
     }
@@ -172,28 +154,25 @@ function coerceToNumber(
   };
 }
 
-function coerceToStringList(
-  fieldId: string,
-  rawValue: RawFieldValue,
-): CoercionResult {
+function coerceToStringList(fieldId: string, rawValue: RawFieldValue): CoercionResult {
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_string_list", fieldId, items: [] },
+      patch: { op: 'set_string_list', fieldId, items: [] },
     };
   }
 
   if (isStringArray(rawValue)) {
     return {
       ok: true,
-      patch: { op: "set_string_list", fieldId, items: rawValue },
+      patch: { op: 'set_string_list', fieldId, items: rawValue },
     };
   }
 
-  if (typeof rawValue === "string") {
+  if (typeof rawValue === 'string') {
     return {
       ok: true,
-      patch: { op: "set_string_list", fieldId, items: [rawValue] },
+      patch: { op: 'set_string_list', fieldId, items: [rawValue] },
       warning: `Coerced single string to array for field '${fieldId}'`,
     };
   }
@@ -202,9 +181,9 @@ function coerceToStringList(
     // Try to coerce non-string items
     const items: string[] = [];
     for (const item of rawValue) {
-      if (typeof item === "string") {
+      if (typeof item === 'string') {
         items.push(item);
-      } else if (typeof item === "number" || typeof item === "boolean") {
+      } else if (typeof item === 'number' || typeof item === 'boolean') {
         items.push(String(item));
       } else {
         return {
@@ -215,7 +194,7 @@ function coerceToStringList(
     }
     return {
       ok: true,
-      patch: { op: "set_string_list", fieldId, items },
+      patch: { op: 'set_string_list', fieldId, items },
       warning: `Coerced array items to strings for field '${fieldId}'`,
     };
   }
@@ -226,22 +205,19 @@ function coerceToStringList(
   };
 }
 
-function coerceToSingleSelect(
-  field: Field,
-  rawValue: RawFieldValue,
-): CoercionResult {
-  if (field.kind !== "single_select") {
+function coerceToSingleSelect(field: Field, rawValue: RawFieldValue): CoercionResult {
+  if (field.kind !== 'single_select') {
     return { ok: false, error: `Field '${field.id}' is not a single_select field` };
   }
 
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_single_select", fieldId: field.id, selected: null },
+      patch: { op: 'set_single_select', fieldId: field.id, selected: null },
     };
   }
 
-  if (typeof rawValue !== "string") {
+  if (typeof rawValue !== 'string') {
     return {
       ok: false,
       error: `single_select field '${field.id}' requires a string option ID, got ${typeof rawValue}`,
@@ -252,28 +228,25 @@ function coerceToSingleSelect(
   if (!validOptions.has(rawValue)) {
     return {
       ok: false,
-      error: `Invalid option '${rawValue}' for single_select field '${field.id}'. Valid options: ${Array.from(validOptions).join(", ")}`,
+      error: `Invalid option '${rawValue}' for single_select field '${field.id}'. Valid options: ${Array.from(validOptions).join(', ')}`,
     };
   }
 
   return {
     ok: true,
-    patch: { op: "set_single_select", fieldId: field.id, selected: rawValue },
+    patch: { op: 'set_single_select', fieldId: field.id, selected: rawValue },
   };
 }
 
-function coerceToMultiSelect(
-  field: Field,
-  rawValue: RawFieldValue,
-): CoercionResult {
-  if (field.kind !== "multi_select") {
+function coerceToMultiSelect(field: Field, rawValue: RawFieldValue): CoercionResult {
+  if (field.kind !== 'multi_select') {
     return { ok: false, error: `Field '${field.id}' is not a multi_select field` };
   }
 
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_multi_select", fieldId: field.id, selected: [] },
+      patch: { op: 'set_multi_select', fieldId: field.id, selected: [] },
     };
   }
 
@@ -281,7 +254,7 @@ function coerceToMultiSelect(
   let selected: string[];
   let warning: string | undefined;
 
-  if (typeof rawValue === "string") {
+  if (typeof rawValue === 'string') {
     selected = [rawValue];
     warning = `Coerced single string to array for multi_select field '${field.id}'`;
   } else if (isStringArray(rawValue)) {
@@ -298,27 +271,24 @@ function coerceToMultiSelect(
     if (!validOptions.has(optId)) {
       return {
         ok: false,
-        error: `Invalid option '${optId}' for multi_select field '${field.id}'. Valid options: ${Array.from(validOptions).join(", ")}`,
+        error: `Invalid option '${optId}' for multi_select field '${field.id}'. Valid options: ${Array.from(validOptions).join(', ')}`,
       };
     }
   }
 
-  const patch: Patch = { op: "set_multi_select", fieldId: field.id, selected };
+  const patch: Patch = { op: 'set_multi_select', fieldId: field.id, selected };
   return warning ? { ok: true, patch, warning } : { ok: true, patch };
 }
 
-function coerceToCheckboxes(
-  field: Field,
-  rawValue: RawFieldValue,
-): CoercionResult {
-  if (field.kind !== "checkboxes") {
+function coerceToCheckboxes(field: Field, rawValue: RawFieldValue): CoercionResult {
+  if (field.kind !== 'checkboxes') {
     return { ok: false, error: `Field '${field.id}' is not a checkboxes field` };
   }
 
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_checkboxes", fieldId: field.id, values: {} },
+      patch: { op: 'set_checkboxes', fieldId: field.id, values: {} },
     };
   }
 
@@ -335,25 +305,25 @@ function coerceToCheckboxes(
 
   // Valid checkbox values based on mode
   const validValues = new Set<string>(
-    checkboxMode === "explicit"
-      ? ["unfilled", "yes", "no"]
-      : checkboxMode === "simple"
-        ? ["todo", "done"]
-        : ["todo", "done", "incomplete", "active", "na"]
+    checkboxMode === 'explicit'
+      ? ['unfilled', 'yes', 'no']
+      : checkboxMode === 'simple'
+        ? ['todo', 'done']
+        : ['todo', 'done', 'incomplete', 'active', 'na'],
   );
 
   for (const [optId, value] of Object.entries(rawValue)) {
     if (!validOptions.has(optId)) {
       return {
         ok: false,
-        error: `Invalid option '${optId}' for checkboxes field '${field.id}'. Valid options: ${Array.from(validOptions).join(", ")}`,
+        error: `Invalid option '${optId}' for checkboxes field '${field.id}'. Valid options: ${Array.from(validOptions).join(', ')}`,
       };
     }
 
-    if (typeof value !== "string" || !validValues.has(value)) {
+    if (typeof value !== 'string' || !validValues.has(value)) {
       return {
         ok: false,
-        error: `Invalid checkbox value '${String(value)}' for option '${optId}' in field '${field.id}'. Valid values for ${checkboxMode} mode: ${Array.from(validValues).join(", ")}`,
+        error: `Invalid checkbox value '${String(value)}' for option '${optId}' in field '${field.id}'. Valid values for ${checkboxMode} mode: ${Array.from(validValues).join(', ')}`,
       };
     }
 
@@ -362,25 +332,22 @@ function coerceToCheckboxes(
 
   return {
     ok: true,
-    patch: { op: "set_checkboxes", fieldId: field.id, values },
+    patch: { op: 'set_checkboxes', fieldId: field.id, values },
   };
 }
 
-function coerceToUrl(
-  fieldId: string,
-  rawValue: RawFieldValue,
-): CoercionResult {
+function coerceToUrl(fieldId: string, rawValue: RawFieldValue): CoercionResult {
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_url", fieldId, value: null },
+      patch: { op: 'set_url', fieldId, value: null },
     };
   }
 
-  if (typeof rawValue === "string") {
+  if (typeof rawValue === 'string') {
     return {
       ok: true,
-      patch: { op: "set_url", fieldId, value: rawValue },
+      patch: { op: 'set_url', fieldId, value: rawValue },
     };
   }
 
@@ -390,28 +357,25 @@ function coerceToUrl(
   };
 }
 
-function coerceToUrlList(
-  fieldId: string,
-  rawValue: RawFieldValue,
-): CoercionResult {
+function coerceToUrlList(fieldId: string, rawValue: RawFieldValue): CoercionResult {
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: "set_url_list", fieldId, items: [] },
+      patch: { op: 'set_url_list', fieldId, items: [] },
     };
   }
 
   if (isStringArray(rawValue)) {
     return {
       ok: true,
-      patch: { op: "set_url_list", fieldId, items: rawValue },
+      patch: { op: 'set_url_list', fieldId, items: rawValue },
     };
   }
 
-  if (typeof rawValue === "string") {
+  if (typeof rawValue === 'string') {
     return {
       ok: true,
-      patch: { op: "set_url_list", fieldId, items: [rawValue] },
+      patch: { op: 'set_url_list', fieldId, items: [rawValue] },
       warning: `Coerced single string to array for field '${fieldId}'`,
     };
   }
@@ -420,7 +384,7 @@ function coerceToUrlList(
     // Try to coerce non-string items
     const items: string[] = [];
     for (const item of rawValue) {
-      if (typeof item === "string") {
+      if (typeof item === 'string') {
         items.push(item);
       } else {
         return {
@@ -431,7 +395,7 @@ function coerceToUrlList(
     }
     return {
       ok: true,
-      patch: { op: "set_url_list", fieldId, items },
+      patch: { op: 'set_url_list', fieldId, items },
     };
   }
 
@@ -459,21 +423,21 @@ export function coerceToFieldPatch(
   }
 
   switch (field.kind) {
-    case "string":
+    case 'string':
       return coerceToString(fieldId, rawValue);
-    case "number":
+    case 'number':
       return coerceToNumber(fieldId, rawValue);
-    case "string_list":
+    case 'string_list':
       return coerceToStringList(fieldId, rawValue);
-    case "single_select":
+    case 'single_select':
       return coerceToSingleSelect(field, rawValue);
-    case "multi_select":
+    case 'multi_select':
       return coerceToMultiSelect(field, rawValue);
-    case "checkboxes":
+    case 'checkboxes':
       return coerceToCheckboxes(field, rawValue);
-    case "url":
+    case 'url':
       return coerceToUrl(fieldId, rawValue);
-    case "url_list":
+    case 'url_list':
       return coerceToUrlList(fieldId, rawValue);
   }
 }
@@ -502,7 +466,7 @@ export function coerceInputContext(
 
     if (result.ok) {
       patches.push(result.patch);
-      if ("warning" in result && result.warning) {
+      if ('warning' in result && result.warning) {
         warnings.push(result.warning);
       }
     } else {

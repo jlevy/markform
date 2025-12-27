@@ -9,17 +9,17 @@
  * 5. Export results in multiple formats
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import * as p from "@clack/prompts";
-import { existsSync } from "node:fs";
-import { basename, join } from "node:path";
-import pc from "picocolors";
+import * as p from '@clack/prompts';
+import { existsSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import pc from 'picocolors';
 
-import { parseForm } from "../../engine/parse.js";
-import { inspect } from "../../engine/inspect.js";
-import { applyPatches } from "../../engine/apply.js";
-import { exportMultiFormat } from "../lib/exportHelpers.js";
+import { parseForm } from '../../engine/parse.js';
+import { inspect } from '../../engine/inspect.js';
+import { applyPatches } from '../../engine/apply.js';
+import { exportMultiFormat } from '../lib/exportHelpers.js';
 import {
   USER_ROLE,
   AGENT_ROLE,
@@ -27,37 +27,37 @@ import {
   DEFAULT_MAX_TURNS,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_ISSUES,
-} from "../../settings.js";
-import type { ParsedForm, HarnessConfig } from "../../engine/coreTypes.js";
-import { formatPatchValue, formatPatchType } from "../lib/patchFormat.js";
-import { createHarness } from "../../harness/harness.js";
-import { createLiveAgent } from "../../harness/liveAgent.js";
-import { resolveModel, getProviderInfo, type ProviderName } from "../../harness/modelResolver.js";
+} from '../../settings.js';
+import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
+import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
+import { createHarness } from '../../harness/harness.js';
+import { createLiveAgent } from '../../harness/liveAgent.js';
+import { resolveModel, getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
 import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
   getExamplePath,
   loadExampleContent,
-} from "../examples/exampleRegistry.js";
-import { formatPath, getCommandContext, logError, logTiming, writeFile } from "../lib/shared.js";
-import { generateVersionedPath } from "../lib/versioning.js";
+} from '../examples/exampleRegistry.js';
+import { formatPath, getCommandContext, logError, logTiming, writeFile } from '../lib/shared.js';
+import { generateVersionedPath } from '../lib/versioning.js';
 import {
   runInteractiveFill,
   showInteractiveIntro,
   showInteractiveOutro,
-} from "../lib/interactivePrompts.js";
+} from '../lib/interactivePrompts.js';
 
 /**
  * Print non-interactive list of examples.
  */
 function printExamplesList(): void {
-  console.log(pc.bold("Available examples:\n"));
+  console.log(pc.bold('Available examples:\n'));
   for (const example of EXAMPLE_DEFINITIONS) {
     console.log(`  ${pc.cyan(example.id)}`);
     console.log(`    ${pc.bold(example.title)}`);
     console.log(`    ${pc.dim(example.description)}`);
     console.log(`    Source: ${formatPath(getExamplePath(example.id))}`);
-    console.log("");
+    console.log('');
   }
 }
 
@@ -65,15 +65,15 @@ function printExamplesList(): void {
  * Display API availability status at startup.
  */
 function showApiStatus(): void {
-  console.log(pc.dim("API Status:"));
+  console.log(pc.dim('API Status:'));
   for (const [provider, _models] of Object.entries(SUGGESTED_LLMS)) {
     const info = getProviderInfo(provider as ProviderName);
     const hasKey = !!process.env[info.envVar];
-    const status = hasKey ? pc.green("✓") : pc.dim("○");
+    const status = hasKey ? pc.green('✓') : pc.dim('○');
     const envVar = hasKey ? pc.dim(info.envVar) : pc.yellow(info.envVar);
     console.log(`  ${status} ${provider} (${envVar})`);
   }
-  console.log("");
+  console.log('');
 }
 
 /**
@@ -85,7 +85,7 @@ function buildModelOptions(): { value: string; label: string; hint?: string }[] 
   for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
     const info = getProviderInfo(provider as ProviderName);
     const hasKey = !!process.env[info.envVar];
-    const keyStatus = hasKey ? pc.green("✓") : pc.dim("○");
+    const keyStatus = hasKey ? pc.green('✓') : pc.dim('○');
 
     for (const model of models) {
       options.push({
@@ -97,9 +97,9 @@ function buildModelOptions(): { value: string; label: string; hint?: string }[] 
   }
 
   options.push({
-    value: "custom",
-    label: "Enter custom model ID...",
-    hint: "provider/model-id format",
+    value: 'custom',
+    label: 'Enter custom model ID...',
+    hint: 'provider/model-id format',
   });
 
   return options;
@@ -112,7 +112,7 @@ async function promptForModel(): Promise<string | null> {
   const modelOptions = buildModelOptions();
 
   const selection = await p.select({
-    message: "Select LLM model:",
+    message: 'Select LLM model:',
     options: modelOptions,
   });
 
@@ -120,13 +120,13 @@ async function promptForModel(): Promise<string | null> {
     return null;
   }
 
-  if (selection === "custom") {
+  if (selection === 'custom') {
     const customModel = await p.text({
-      message: "Model ID (provider/model-id):",
-      placeholder: "anthropic/claude-sonnet-4-20250514",
+      message: 'Model ID (provider/model-id):',
+      placeholder: 'anthropic/claude-sonnet-4-20250514',
       validate: (value) => {
-        if (!value.includes("/")) {
-          return "Format: provider/model-id (e.g., anthropic/claude-sonnet-4-20250514)";
+        if (!value.includes('/')) {
+          return 'Format: provider/model-id (e.g., anthropic/claude-sonnet-4-20250514)';
         }
         return undefined;
       },
@@ -164,7 +164,7 @@ async function runAgentFill(
       maxPatchesPerTurn: DEFAULT_MAX_PATCHES_PER_TURN,
       maxIssues: DEFAULT_MAX_ISSUES,
       targetRoles: [AGENT_ROLE],
-      fillMode: "continue",
+      fillMode: 'continue',
     };
 
     // Create harness and agent
@@ -172,20 +172,20 @@ async function runAgentFill(
     const agent = createLiveAgent({ model, targetRole: AGENT_ROLE });
 
     // Run harness loop with verbose output
-    console.log("");
-    p.log.step(pc.bold("Agent fill in progress..."));
+    console.log('');
+    p.log.step(pc.bold('Agent fill in progress...'));
     let stepResult = harness.step();
 
     while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
       console.log(
-        pc.dim(`  Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issue(s) to address`)
+        pc.dim(`  Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issue(s) to address`),
       );
 
       // Generate patches from agent
       const response = await agent.generatePatches(
         stepResult.issues,
         harness.getForm(),
-        harnessConfig.maxPatchesPerTurn!
+        harnessConfig.maxPatchesPerTurn!,
       );
       const { patches } = response;
 
@@ -194,7 +194,8 @@ async function runAgentFill(
         const typeName = formatPatchType(patch);
         const value = formatPatchValue(patch);
         // Some patches (add_note, remove_note) don't have fieldId
-        const fieldId = "fieldId" in patch ? patch.fieldId : (patch.op === "add_note" ? patch.ref : "");
+        const fieldId =
+          'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
         if (fieldId) {
           console.log(pc.dim(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`));
         } else {
@@ -205,7 +206,7 @@ async function runAgentFill(
       // Apply patches
       stepResult = harness.apply(patches, stepResult.issues);
       console.log(
-        pc.dim(`    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining`)
+        pc.dim(`    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining`),
       );
 
       if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
@@ -227,7 +228,7 @@ async function runAgentFill(
       turnCount: harness.getTurnNumber(),
     };
   } catch (error) {
-    spinner.stop(pc.red("Agent fill failed"));
+    spinner.stop(pc.red('Agent fill failed'));
     throw error;
   }
 }
@@ -235,12 +236,10 @@ async function runAgentFill(
 /**
  * Run the interactive example scaffolding and filling flow.
  */
-async function runInteractiveFlow(
-  preselectedId?: string,
-): Promise<void> {
+async function runInteractiveFlow(preselectedId?: string): Promise<void> {
   const startTime = Date.now();
 
-  p.intro(pc.bgCyan(pc.black(" markform examples ")));
+  p.intro(pc.bgCyan(pc.black(' markform examples ')));
 
   // Show API availability status
   showApiStatus();
@@ -250,7 +249,7 @@ async function runInteractiveFlow(
 
   if (!selectedId) {
     const selection = await p.select({
-      message: "Select an example form to scaffold:",
+      message: 'Select an example form to scaffold:',
       options: EXAMPLE_DEFINITIONS.map((example) => ({
         value: example.id,
         label: example.title,
@@ -259,7 +258,7 @@ async function runInteractiveFlow(
     });
 
     if (p.isCancel(selection)) {
-      p.cancel("Cancelled.");
+      p.cancel('Cancelled.');
       process.exit(0);
     }
 
@@ -275,21 +274,21 @@ async function runInteractiveFlow(
   // Step 2: Prompt for output filename (use filled naming convention)
   const defaultFilename = generateVersionedPath(example.filename);
   const filenameResult = await p.text({
-    message: "Output filename:",
+    message: 'Output filename:',
     initialValue: defaultFilename,
     validate: (value) => {
       if (!value.trim()) {
-        return "Filename is required";
+        return 'Filename is required';
       }
-      if (!value.endsWith(".form.md") && !value.endsWith(".md")) {
-        return "Filename should end with .form.md or .md";
+      if (!value.endsWith('.form.md') && !value.endsWith('.md')) {
+        return 'Filename should end with .form.md or .md';
       }
       return undefined;
     },
   });
 
   if (p.isCancel(filenameResult)) {
-    p.cancel("Cancelled.");
+    p.cancel('Cancelled.');
     process.exit(0);
   }
 
@@ -304,7 +303,7 @@ async function runInteractiveFlow(
     });
 
     if (p.isCancel(overwrite) || !overwrite) {
-      p.cancel("Cancelled.");
+      p.cancel('Cancelled.');
       process.exit(0);
     }
   }
@@ -328,25 +327,29 @@ async function runInteractiveFlow(
 
   // Inspect form to get issues for user role
   const inspectResult = inspect(form, { targetRoles });
-  const fieldIssues = inspectResult.issues.filter((i) => i.scope === "field");
+  const fieldIssues = inspectResult.issues.filter((i) => i.scope === 'field');
   const uniqueFieldIds = new Set(fieldIssues.map((i) => i.ref));
 
   if (uniqueFieldIds.size === 0) {
-    p.log.info("No user-role fields to fill in this example.");
+    p.log.info('No user-role fields to fill in this example.');
     // Check if there are agent fields
     const agentInspect = inspect(form, { targetRoles: [AGENT_ROLE] });
-    const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === "field");
+    const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === 'field');
 
     if (agentFieldIssues.length === 0) {
-      logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Total time", Date.now() - startTime);
-      p.outro(pc.dim("Form scaffolded with no fields to fill."));
+      logTiming(
+        { verbose: false, format: 'console', dryRun: false, quiet: false },
+        'Total time',
+        Date.now() - startTime,
+      );
+      p.outro(pc.dim('Form scaffolded with no fields to fill.'));
       return;
     }
     // Skip to agent fill
   } else {
     // Show interactive fill intro
     const formTitle = form.schema.title ?? form.schema.id;
-    showInteractiveIntro(formTitle, targetRoles.join(", "), uniqueFieldIds.size);
+    showInteractiveIntro(formTitle, targetRoles.join(', '), uniqueFieldIds.size);
 
     // Run interactive prompts
     const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
@@ -365,58 +368,62 @@ async function runInteractiveFlow(
     const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, outputPath);
 
     showInteractiveOutro(patches.length, false);
-    console.log("");
-    p.log.success("Outputs:");
-    console.log(`  ${formatPath(formPath)}  ${pc.dim("(markform)")}`);
-    console.log(`  ${formatPath(rawPath)}  ${pc.dim("(plain markdown)")}`);
-    console.log(`  ${formatPath(yamlPath)}  ${pc.dim("(values as YAML)")}`);
+    console.log('');
+    p.log.success('Outputs:');
+    console.log(`  ${formatPath(formPath)}  ${pc.dim('(markform)')}`);
+    console.log(`  ${formatPath(rawPath)}  ${pc.dim('(plain markdown)')}`);
+    console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(values as YAML)')}`);
 
-    logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Fill time", Date.now() - startTime);
+    logTiming(
+      { verbose: false, format: 'console', dryRun: false, quiet: false },
+      'Fill time',
+      Date.now() - startTime,
+    );
   }
 
   // Step 6: Check for agent-role fields and prompt for agent fill
   const agentInspect = inspect(form, { targetRoles: [AGENT_ROLE] });
-  const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === "field");
+  const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === 'field');
 
   if (agentFieldIssues.length > 0) {
-    console.log("");
+    console.log('');
     p.log.info(`This form has ${agentFieldIssues.length} agent-role field(s) remaining.`);
 
     const runAgent = await p.confirm({
-      message: "Run agent fill now?",
+      message: 'Run agent fill now?',
       initialValue: true,
     });
 
     if (p.isCancel(runAgent) || !runAgent) {
-      console.log("");
-      console.log(pc.dim("You can run agent fill later with:"));
+      console.log('');
+      console.log(pc.dim('You can run agent fill later with:'));
       console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`));
-      p.outro(pc.dim("Happy form filling!"));
+      p.outro(pc.dim('Happy form filling!'));
       return;
     }
 
     // Step 7: Model selection
     const modelId = await promptForModel();
     if (!modelId) {
-      p.cancel("Cancelled.");
+      p.cancel('Cancelled.');
       process.exit(0);
     }
 
     // Step 8: Agent output filename
     const agentDefaultFilename = generateVersionedPath(outputPath);
     const agentFilenameResult = await p.text({
-      message: "Agent output filename:",
+      message: 'Agent output filename:',
       initialValue: basename(agentDefaultFilename),
       validate: (value) => {
         if (!value.trim()) {
-          return "Filename is required";
+          return 'Filename is required';
         }
         return undefined;
       },
     });
 
     if (p.isCancel(agentFilenameResult)) {
-      p.cancel("Cancelled.");
+      p.cancel('Cancelled.');
       process.exit(0);
     }
 
@@ -427,30 +434,34 @@ async function runInteractiveFlow(
     try {
       const { success, turnCount: _turnCount } = await runAgentFill(form, modelId, agentOutputPath);
 
-      logTiming({ verbose: false, format: "console", dryRun: false, quiet: false }, "Agent fill time", Date.now() - agentStartTime);
+      logTiming(
+        { verbose: false, format: 'console', dryRun: false, quiet: false },
+        'Agent fill time',
+        Date.now() - agentStartTime,
+      );
 
       // Step 10: Multi-format export
       const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, agentOutputPath);
 
-      console.log("");
-      p.log.success("Agent fill complete. Outputs:");
-      console.log(`  ${formatPath(formPath)}  ${pc.dim("(markform)")}`);
-      console.log(`  ${formatPath(rawPath)}  ${pc.dim("(plain markdown)")}`);
-      console.log(`  ${formatPath(yamlPath)}  ${pc.dim("(values as YAML)")}`);
+      console.log('');
+      p.log.success('Agent fill complete. Outputs:');
+      console.log(`  ${formatPath(formPath)}  ${pc.dim('(markform)')}`);
+      console.log(`  ${formatPath(rawPath)}  ${pc.dim('(plain markdown)')}`);
+      console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(values as YAML)')}`);
 
       if (!success) {
-        p.log.warn("Agent did not complete all fields. You may need to run it again.");
+        p.log.warn('Agent did not complete all fields. You may need to run it again.');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       p.log.error(`Agent fill failed: ${message}`);
-      console.log("");
-      console.log(pc.dim("You can try again with:"));
+      console.log('');
+      console.log(pc.dim('You can try again with:'));
       console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=${modelId}`));
     }
   }
 
-  p.outro(pc.dim("Happy form filling!"));
+  p.outro(pc.dim('Happy form filling!'));
 }
 
 /**
@@ -458,48 +469,39 @@ async function runInteractiveFlow(
  */
 export function registerExamplesCommand(program: Command): void {
   program
-    .command("examples")
-    .description("Try out some example forms interactively using the console")
-    .option("--list", "List available examples without interactive selection")
-    .option(
-      "--name <example>",
-      "Select example by ID (still prompts for filename)"
-    )
-    .action(
-      async (
-        options: { list?: boolean; name?: string },
-        cmd: Command
-      ) => {
-        const _ctx = getCommandContext(cmd);
+    .command('examples')
+    .description('Try out some example forms interactively using the console')
+    .option('--list', 'List available examples without interactive selection')
+    .option('--name <example>', 'Select example by ID (still prompts for filename)')
+    .action(async (options: { list?: boolean; name?: string }, cmd: Command) => {
+      const _ctx = getCommandContext(cmd);
 
-        try {
-          // --list mode: just print examples and exit
-          if (options.list) {
-            printExamplesList();
-            return;
-          }
-
-          // Validate --name if provided
-          if (options.name) {
-            const example = getExampleById(options.name);
-            if (!example) {
-              logError(`Unknown example: ${options.name}`);
-              console.log("\nAvailable examples:");
-              for (const ex of EXAMPLE_DEFINITIONS) {
-                console.log(`  ${ex.id}`);
-              }
-              process.exit(1);
-            }
-          }
-
-          // Run interactive flow
-          await runInteractiveFlow(options.name);
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : String(error);
-          logError(message);
-          process.exit(1);
+      try {
+        // --list mode: just print examples and exit
+        if (options.list) {
+          printExamplesList();
+          return;
         }
+
+        // Validate --name if provided
+        if (options.name) {
+          const example = getExampleById(options.name);
+          if (!example) {
+            logError(`Unknown example: ${options.name}`);
+            console.log('\nAvailable examples:');
+            for (const ex of EXAMPLE_DEFINITIONS) {
+              console.log(`  ${ex.id}`);
+            }
+            process.exit(1);
+          }
+        }
+
+        // Run interactive flow
+        await runInteractiveFlow(options.name);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logError(message);
+        process.exit(1);
       }
-    );
+    });
 }

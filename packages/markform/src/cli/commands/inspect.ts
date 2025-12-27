@@ -9,37 +9,31 @@
  * - Issues sorted by priority
  */
 
-import type { Command } from "commander";
+import type { Command } from 'commander';
 
-import pc from "picocolors";
+import pc from 'picocolors';
 
-import { inspect } from "../../engine/inspect.js";
-import { parseForm } from "../../engine/parse.js";
+import { inspect } from '../../engine/inspect.js';
+import { parseForm } from '../../engine/parse.js';
 import type {
   FieldValue,
   InspectIssue,
   ProgressState,
   AnswerState,
   Note,
-} from "../../engine/coreTypes.js";
-import { parseRolesFlag } from "../../settings.js";
-import {
-  formatOutput,
-  getCommandContext,
-  logError,
-  logVerbose,
-  readFile,
-} from "../lib/shared.js";
+} from '../../engine/coreTypes.js';
+import { parseRolesFlag } from '../../settings.js';
+import { formatOutput, getCommandContext, logError, logVerbose, readFile } from '../lib/shared.js';
 
 /**
  * Format state badge for console output.
  */
 function formatState(state: ProgressState, useColors: boolean): string {
   const badges: Record<ProgressState, [string, (s: string) => string]> = {
-    complete: ["✓ complete", pc.green],
-    incomplete: ["○ incomplete", pc.yellow],
-    empty: ["◌ empty", pc.dim],
-    invalid: ["✗ invalid", pc.red],
+    complete: ['✓ complete', pc.green],
+    incomplete: ['○ incomplete', pc.yellow],
+    empty: ['◌ empty', pc.dim],
+    invalid: ['✗ invalid', pc.red],
   };
   const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
   return useColors ? colorFn(text) : text;
@@ -50,10 +44,10 @@ function formatState(state: ProgressState, useColors: boolean): string {
  */
 function formatAnswerState(state: AnswerState, useColors: boolean): string {
   const badges: Record<AnswerState, [string, (s: string) => string]> = {
-    answered: ["answered", pc.green],
-    skipped: ["skipped", pc.yellow],
-    aborted: ["aborted", pc.red],
-    unanswered: ["unanswered", pc.dim],
+    answered: ['answered', pc.green],
+    skipped: ['skipped', pc.yellow],
+    aborted: ['aborted', pc.red],
+    unanswered: ['unanswered', pc.dim],
   };
   const [text, colorFn] = badges[state] ?? [state, (s: string) => s];
   return useColors ? colorFn(text) : text;
@@ -92,60 +86,54 @@ function formatPriority(priority: number, useColors: boolean): string {
 /**
  * Format severity badge for console output.
  */
-function formatSeverity(
-  severity: "required" | "recommended",
-  useColors: boolean
-): string {
+function formatSeverity(severity: 'required' | 'recommended', useColors: boolean): string {
   if (!useColors) {
     return severity;
   }
-  return severity === "required" ? pc.red(severity) : pc.yellow(severity);
+  return severity === 'required' ? pc.red(severity) : pc.yellow(severity);
 }
 
 /**
  * Format a field value for console display.
  */
-function formatFieldValue(
-  value: FieldValue | undefined,
-  useColors: boolean
-): string {
+function formatFieldValue(value: FieldValue | undefined, useColors: boolean): string {
   const dim = useColors ? pc.dim : (s: string) => s;
   const green = useColors ? pc.green : (s: string) => s;
 
   if (!value) {
-    return dim("(empty)");
+    return dim('(empty)');
   }
 
   switch (value.kind) {
-    case "string":
-      return value.value ? green(`"${value.value}"`) : dim("(empty)");
-    case "number":
-      return value.value !== null ? green(String(value.value)) : dim("(empty)");
-    case "string_list":
+    case 'string':
+      return value.value ? green(`"${value.value}"`) : dim('(empty)');
+    case 'number':
+      return value.value !== null ? green(String(value.value)) : dim('(empty)');
+    case 'string_list':
       return value.items.length > 0
-        ? green(`[${value.items.map((i) => `"${i}"`).join(", ")}]`)
-        : dim("(empty)");
-    case "single_select":
-      return value.selected ? green(value.selected) : dim("(none selected)");
-    case "multi_select":
+        ? green(`[${value.items.map((i) => `"${i}"`).join(', ')}]`)
+        : dim('(empty)');
+    case 'single_select':
+      return value.selected ? green(value.selected) : dim('(none selected)');
+    case 'multi_select':
       return value.selected.length > 0
-        ? green(`[${value.selected.join(", ")}]`)
-        : dim("(none selected)");
-    case "checkboxes": {
+        ? green(`[${value.selected.join(', ')}]`)
+        : dim('(none selected)');
+    case 'checkboxes': {
       const entries = Object.entries(value.values);
       if (entries.length === 0) {
-        return dim("(no entries)");
+        return dim('(no entries)');
       }
-      return entries.map(([k, v]) => `${k}:${v}`).join(", ");
+      return entries.map(([k, v]) => `${k}:${v}`).join(', ');
     }
-    case "url":
-      return value.value ? green(`"${value.value}"`) : dim("(empty)");
-    case "url_list":
+    case 'url':
+      return value.value ? green(`"${value.value}"`) : dim('(empty)');
+    case 'url_list':
       return value.items.length > 0
-        ? green(`[${value.items.map((i) => `"${i}"`).join(", ")}]`)
-        : dim("(empty)");
+        ? green(`[${value.items.map((i) => `"${i}"`).join(', ')}]`)
+        : dim('(empty)');
     default:
-      return dim("(unknown)");
+      return dim('(unknown)');
   }
 }
 
@@ -180,7 +168,7 @@ interface InspectReport {
     reason: string;
     message: string;
     priority: number;
-    severity: "required" | "recommended";
+    severity: 'required' | 'recommended';
     blockedBy?: string;
   }[];
 }
@@ -196,15 +184,15 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
   const yellow = useColors ? pc.yellow : (s: string) => s;
 
   // Header
-  lines.push(bold(cyan("Form Inspection Report")));
+  lines.push(bold(cyan('Form Inspection Report')));
   if (report.title) {
-    lines.push(`${bold("Title:")} ${report.title}`);
+    lines.push(`${bold('Title:')} ${report.title}`);
   }
-  lines.push("");
+  lines.push('');
 
   // Form state
-  lines.push(`${bold("Form State:")} ${formatState(report.form_state, useColors)}`);
-  lines.push("");
+  lines.push(`${bold('Form State:')} ${formatState(report.form_state, useColors)}`);
+  lines.push('');
 
   // Structure summary
   const structure = report.structure as {
@@ -212,11 +200,11 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     fieldCount: number;
     optionCount: number;
   };
-  lines.push(bold("Structure:"));
+  lines.push(bold('Structure:'));
   lines.push(`  Groups: ${structure.groupCount}`);
   lines.push(`  Fields: ${structure.fieldCount}`);
   lines.push(`  Options: ${structure.optionCount}`);
-  lines.push("");
+  lines.push('');
 
   // Progress summary
   const progress = report.progress as {
@@ -247,37 +235,45 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       }
     >;
   };
-  lines.push(bold("Progress:"));
+  lines.push(bold('Progress:'));
   lines.push(`  Total fields: ${progress.counts.totalFields}`);
   lines.push(`  Required: ${progress.counts.requiredFields}`);
-  lines.push(`  AnswerState: answered=${progress.counts.answeredFields}, skipped=${progress.counts.skippedFields}, aborted=${progress.counts.abortedFields}, unanswered=${progress.counts.unansweredFields}`);
-  lines.push(`  Validity: valid=${progress.counts.validFields}, invalid=${progress.counts.invalidFields}`);
-  lines.push(`  Value: filled=${progress.counts.filledFields}, empty=${progress.counts.emptyFields}`);
+  lines.push(
+    `  AnswerState: answered=${progress.counts.answeredFields}, skipped=${progress.counts.skippedFields}, aborted=${progress.counts.abortedFields}, unanswered=${progress.counts.unansweredFields}`,
+  );
+  lines.push(
+    `  Validity: valid=${progress.counts.validFields}, invalid=${progress.counts.invalidFields}`,
+  );
+  lines.push(
+    `  Value: filled=${progress.counts.filledFields}, empty=${progress.counts.emptyFields}`,
+  );
   lines.push(`  Empty required: ${progress.counts.emptyRequiredFields}`);
   lines.push(`  Total notes: ${progress.counts.totalNotes}`);
-  lines.push("");
+  lines.push('');
 
   // Form content (groups and fields with values)
-  lines.push(bold("Form Content:"));
+  lines.push(bold('Form Content:'));
   for (const group of report.groups) {
     lines.push(`  ${bold(group.title ?? group.id)}`);
     for (const field of group.children) {
-      const reqBadge = field.required ? yellow("[required]") : dim("[optional]");
-      const roleBadge = field.role !== "agent" ? cyan(`[${field.role}]`) : "";
+      const reqBadge = field.required ? yellow('[required]') : dim('[optional]');
+      const roleBadge = field.role !== 'agent' ? cyan(`[${field.role}]`) : '';
       const fieldProgress = progress.fields[field.id];
       const responseStateBadge = fieldProgress
         ? `[${formatAnswerState(fieldProgress.answerState, useColors)}]`
-        : "";
+        : '';
       const notesBadge = fieldProgress?.hasNotes
-        ? cyan(`[${fieldProgress.noteCount} note${fieldProgress.noteCount > 1 ? "s" : ""}]`)
-        : "";
+        ? cyan(`[${fieldProgress.noteCount} note${fieldProgress.noteCount > 1 ? 's' : ''}]`)
+        : '';
       const value = report.values[field.id];
       const valueStr = formatFieldValue(value, useColors);
-      lines.push(`    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge} ${roleBadge} ${responseStateBadge} ${notesBadge}`.trim());
-      lines.push(`      ${dim("→")} ${valueStr}`);
+      lines.push(
+        `    ${field.label} ${dim(`(${field.kind})`)} ${reqBadge} ${roleBadge} ${responseStateBadge} ${notesBadge}`.trim(),
+      );
+      lines.push(`      ${dim('→')} ${valueStr}`);
     }
   }
-  lines.push("");
+  lines.push('');
 
   // Notes summary
   if (report.notes.length > 0) {
@@ -287,7 +283,7 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
       const refLabel = dim(`${note.ref}:`);
       lines.push(`  ${note.id} ${roleBadge} ${refLabel} ${note.text}`.trim());
     }
-    lines.push("");
+    lines.push('');
   }
 
   // Issues
@@ -296,18 +292,16 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
     for (const issue of report.issues) {
       const priority = formatPriority(issue.priority, useColors);
       const severity = formatSeverity(issue.severity, useColors);
-      const blockedInfo = issue.blockedBy
-        ? ` ${dim(`(blocked by: ${issue.blockedBy})`)}`
-        : "";
+      const blockedInfo = issue.blockedBy ? ` ${dim(`(blocked by: ${issue.blockedBy})`)}` : '';
       lines.push(
-        `  ${priority} (${severity}) ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message}${blockedInfo}`
+        `  ${priority} (${severity}) ${dim(`[${issue.scope}]`)} ${dim(issue.ref)}: ${issue.message}${blockedInfo}`,
       );
     }
   } else {
-    lines.push(dim("No issues found."));
+    lines.push(dim('No issues found.'));
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**
@@ -315,95 +309,88 @@ function formatConsoleReport(report: InspectReport, useColors: boolean): string 
  */
 export function registerInspectCommand(program: Command): void {
   program
-    .command("inspect <file>")
-    .description("Inspect a form and display its structure, progress, and issues")
+    .command('inspect <file>')
+    .description('Inspect a form and display its structure, progress, and issues')
     .option(
-      "--roles <roles>",
-      "Filter issues by target roles (comma-separated, or '*' for all; default: all)"
+      '--roles <roles>',
+      "Filter issues by target roles (comma-separated, or '*' for all; default: all)",
     )
-    .action(
-      async (
-        file: string,
-        options: { roles?: string },
-        cmd: Command
-      ) => {
-        const ctx = getCommandContext(cmd);
+    .action(async (file: string, options: { roles?: string }, cmd: Command) => {
+      const ctx = getCommandContext(cmd);
 
-        try {
-          // Parse and validate --roles
-          let targetRoles: string[] | undefined;
-          if (options.roles) {
-            try {
-              targetRoles = parseRolesFlag(options.roles);
-              // '*' means all roles - pass undefined to not filter
-              if (targetRoles.includes("*")) {
-                targetRoles = undefined;
-              }
-            } catch (error) {
-              const message =
-                error instanceof Error ? error.message : String(error);
-              logError(`Invalid --roles: ${message}`);
-              process.exit(1);
+      try {
+        // Parse and validate --roles
+        let targetRoles: string[] | undefined;
+        if (options.roles) {
+          try {
+            targetRoles = parseRolesFlag(options.roles);
+            // '*' means all roles - pass undefined to not filter
+            if (targetRoles.includes('*')) {
+              targetRoles = undefined;
             }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            logError(`Invalid --roles: ${message}`);
+            process.exit(1);
           }
-
-          logVerbose(ctx, `Reading file: ${file}`);
-          const content = await readFile(file);
-
-          logVerbose(ctx, "Parsing form...");
-          const form = parseForm(content);
-
-          logVerbose(ctx, "Running inspection...");
-          const result = inspect(form, { targetRoles });
-
-          // Extract values from responses for report
-          const values: Record<string, FieldValue> = {};
-          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-            if (response.state === "answered" && response.value) {
-              values[fieldId] = response.value;
-            }
-          }
-
-          // Build the report structure
-          const report: InspectReport = {
-            title: form.schema.title,
-            structure: result.structureSummary,
-            progress: result.progressSummary,
-            form_state: result.formState,
-            groups: form.schema.groups.map((group) => ({
-              id: group.id,
-              title: group.title,
-              children: group.children.map((field) => ({
-                id: field.id,
-                kind: field.kind,
-                label: field.label,
-                required: field.required,
-                role: field.role,
-              })),
-            })),
-            values,
-            notes: form.notes,
-            issues: result.issues.map((issue: InspectIssue) => ({
-              ref: issue.ref,
-              scope: issue.scope,
-              reason: issue.reason,
-              message: issue.message,
-              priority: issue.priority,
-              severity: issue.severity,
-              blockedBy: issue.blockedBy,
-            })),
-          };
-
-          // Output in requested format
-          const output = formatOutput(ctx, report, (data, useColors) =>
-            formatConsoleReport(data as typeof report, useColors)
-          );
-          console.log(output);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          logError(message);
-          process.exit(1);
         }
+
+        logVerbose(ctx, `Reading file: ${file}`);
+        const content = await readFile(file);
+
+        logVerbose(ctx, 'Parsing form...');
+        const form = parseForm(content);
+
+        logVerbose(ctx, 'Running inspection...');
+        const result = inspect(form, { targetRoles });
+
+        // Extract values from responses for report
+        const values: Record<string, FieldValue> = {};
+        for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+          if (response.state === 'answered' && response.value) {
+            values[fieldId] = response.value;
+          }
+        }
+
+        // Build the report structure
+        const report: InspectReport = {
+          title: form.schema.title,
+          structure: result.structureSummary,
+          progress: result.progressSummary,
+          form_state: result.formState,
+          groups: form.schema.groups.map((group) => ({
+            id: group.id,
+            title: group.title,
+            children: group.children.map((field) => ({
+              id: field.id,
+              kind: field.kind,
+              label: field.label,
+              required: field.required,
+              role: field.role,
+            })),
+          })),
+          values,
+          notes: form.notes,
+          issues: result.issues.map((issue: InspectIssue) => ({
+            ref: issue.ref,
+            scope: issue.scope,
+            reason: issue.reason,
+            message: issue.message,
+            priority: issue.priority,
+            severity: issue.severity,
+            blockedBy: issue.blockedBy,
+          })),
+        };
+
+        // Output in requested format
+        const output = formatOutput(ctx, report, (data, useColors) =>
+          formatConsoleReport(data as typeof report, useColors),
+        );
+        console.log(output);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logError(message);
+        process.exit(1);
       }
-    );
+    });
 }

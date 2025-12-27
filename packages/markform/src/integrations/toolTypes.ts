@@ -9,7 +9,7 @@
  * MarkformSessionStore class.
  */
 
-import type { z } from "zod";
+import type { z } from 'zod';
 
 import type {
   ApplyResult,
@@ -18,7 +18,7 @@ import type {
   Id,
   InspectResult,
   Patch,
-} from "../engine/coreTypes.js";
+} from '../engine/coreTypes.js';
 
 // =============================================================================
 // Tool Result Types
@@ -85,8 +85,5 @@ export interface MarkformToolSet {
   markform_inspect: MarkformTool<Record<string, never>, InspectToolResult>;
   markform_apply: MarkformTool<{ patches: Patch[] }, ApplyToolResult>;
   markform_export: MarkformTool<Record<string, never>, ExportToolResult>;
-  markform_get_markdown?: MarkformTool<
-    Record<string, never>,
-    GetMarkdownToolResult
-  >;
+  markform_get_markdown?: MarkformTool<Record<string, never>, GetMarkdownToolResult>;
 }

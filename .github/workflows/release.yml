@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write  # Required for OIDC trusted publishing
+  id-token: write # Required for OIDC trusted publishing
 
 jobs:
   release:
@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          registry-url: "https://registry.npmjs.org"
+          registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
 
@@ -43,14 +43,14 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
+
           # Extract changelog section for this version
           # Matches from "## $VERSION" until the next "## " header
           NOTES=$(awk -v ver="$VERSION" '
             /^## / { if (found) exit; if ($2 == ver) found=1; next }
             found { print }
           ' packages/markform/CHANGELOG.md)
-          
+
           # Use delimiter for multiline output
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT

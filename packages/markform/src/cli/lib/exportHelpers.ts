@@ -7,15 +7,15 @@
  * - YAML values (.yml) - extracted field values
  */
 
-import YAML from "yaml";
+import YAML from 'yaml';
 
-import { serialize, serializeRawMarkdown } from "../../engine/serialize.js";
-import type { ParsedForm } from "../../engine/coreTypes.js";
-import type { ExportResult } from "./cliTypes.js";
-import { writeFile } from "./shared.js";
+import { serialize, serializeRawMarkdown } from '../../engine/serialize.js';
+import type { ParsedForm } from '../../engine/coreTypes.js';
+import type { ExportResult } from './cliTypes.js';
+import { writeFile } from './shared.js';
 
 // Re-export types for backwards compatibility
-export type { ExportResult } from "./cliTypes.js";
+export type { ExportResult } from './cliTypes.js';
 
 /**
  * Convert field responses to structured format for export (markform-218).
@@ -30,22 +30,22 @@ export function toStructuredValues(form: ParsedForm): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-    if (!response || response.state === "unanswered") {
-      result[fieldId] = { state: "unanswered" };
+    if (!response || response.state === 'unanswered') {
+      result[fieldId] = { state: 'unanswered' };
       continue;
     }
 
-    if (response.state === "skipped") {
+    if (response.state === 'skipped') {
       result[fieldId] = {
-        state: "skipped",
+        state: 'skipped',
         ...(response.reason && { reason: response.reason }),
       };
       continue;
     }
 
-    if (response.state === "aborted") {
+    if (response.state === 'aborted') {
       result[fieldId] = {
-        state: "aborted",
+        state: 'aborted',
         ...(response.reason && { reason: response.reason }),
       };
       continue;
@@ -53,7 +53,7 @@ export function toStructuredValues(form: ParsedForm): Record<string, unknown> {
 
     // state === 'answered'
     if (!response.value) {
-      result[fieldId] = { state: "answered", value: null };
+      result[fieldId] = { state: 'answered', value: null };
       continue;
     }
 
@@ -61,33 +61,33 @@ export function toStructuredValues(form: ParsedForm): Record<string, unknown> {
     let exportValue: unknown;
 
     switch (value.kind) {
-      case "string":
+      case 'string':
         exportValue = value.value ?? null;
         break;
-      case "number":
+      case 'number':
         exportValue = value.value ?? null;
         break;
-      case "string_list":
+      case 'string_list':
         exportValue = value.items;
         break;
-      case "single_select":
+      case 'single_select':
         exportValue = value.selected ?? null;
         break;
-      case "multi_select":
+      case 'multi_select':
         exportValue = value.selected;
         break;
-      case "checkboxes":
+      case 'checkboxes':
         exportValue = value.values;
         break;
-      case "url":
+      case 'url':
         exportValue = value.value ?? null;
         break;
-      case "url_list":
+      case 'url_list':
         exportValue = value.items;
         break;
     }
 
-    result[fieldId] = { state: "answered", value: exportValue };
+    result[fieldId] = { state: 'answered', value: exportValue };
   }
 
   return result;
@@ -114,8 +114,8 @@ export function toNotesArray(form: ParsedForm) {
 export function deriveExportPaths(basePath: string): ExportResult {
   return {
     formPath: basePath,
-    rawPath: basePath.replace(/\.form\.md$/, ".raw.md"),
-    yamlPath: basePath.replace(/\.form\.md$/, ".yml"),
+    rawPath: basePath.replace(/\.form\.md$/, '.raw.md'),
+    yamlPath: basePath.replace(/\.form\.md$/, '.yml'),
   };
 }
 
@@ -131,10 +131,7 @@ export function deriveExportPaths(basePath: string): ExportResult {
  * @param basePath - Base path for the .form.md file (other paths are derived)
  * @returns Paths to all exported files
  */
-export async function exportMultiFormat(
-  form: ParsedForm,
-  basePath: string,
-): Promise<ExportResult> {
+export async function exportMultiFormat(form: ParsedForm, basePath: string): Promise<ExportResult> {
   const paths = deriveExportPaths(basePath);
 
   // Export form markdown

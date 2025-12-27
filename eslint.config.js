@@ -1,5 +1,6 @@
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import prettier from 'eslint-config-prettier';
 
 /**
  * Type-aware ESLint configuration using flat config.
@@ -9,7 +10,7 @@ import tseslint from "typescript-eslint";
 // Apply type-checked configs only to TypeScript files
 const typedRecommended = tseslint.configs.recommendedTypeChecked.map((cfg) => ({
   ...cfg,
-  files: ["**/*.ts", "**/*.tsx"],
+  files: ['**/*.ts', '**/*.tsx'],
   languageOptions: {
     ...(cfg.languageOptions ?? {}),
     parserOptions: {
@@ -22,7 +23,7 @@ const typedRecommended = tseslint.configs.recommendedTypeChecked.map((cfg) => ({
 
 const typedStylistic = tseslint.configs.stylisticTypeChecked.map((cfg) => ({
   ...cfg,
-  files: ["**/*.ts", "**/*.tsx"],
+  files: ['**/*.ts', '**/*.tsx'],
   languageOptions: {
     ...(cfg.languageOptions ?? {}),
     parserOptions: {
@@ -37,14 +38,14 @@ export default [
   // Global ignores
   {
     ignores: [
-      "**/dist/**",
-      "**/node_modules/**",
-      "**/.pnpm-store/**",
-      "eslint.config.*",
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/.pnpm-store/**',
+      'eslint.config.*',
       // Temporarily ignore examples until types are fully defined
-      "**/examples/**/*.ts",
+      '**/examples/**/*.ts',
       // Scripts use optional dependencies (ai, @ai-sdk/anthropic)
-      "**/scripts/**/*.ts",
+      '**/scripts/**/*.ts',
     ],
   },
 
@@ -57,49 +58,49 @@ export default [
 
   // TypeScript-specific rules
   {
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ['**/*.ts', '**/*.tsx'],
     rules: {
       // === Code Style ===
-      curly: ["error", "all"],
-      "brace-style": ["error", "1tbs", { allowSingleLine: false }],
+      curly: ['error', 'all'],
+      'brace-style': ['error', '1tbs', { allowSingleLine: false }],
 
       // === Unused Variables ===
-      "@typescript-eslint/no-unused-vars": [
-        "error",
+      '@typescript-eslint/no-unused-vars': [
+        'error',
         {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
 
       // === Promise Safety ===
-      "@typescript-eslint/no-floating-promises": "error",
-      "@typescript-eslint/no-misused-promises": [
-        "error",
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': [
+        'error',
         { checksVoidReturn: { attributes: false } },
       ],
-      "@typescript-eslint/await-thenable": "error",
-      "@typescript-eslint/no-confusing-void-expression": "error",
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-confusing-void-expression': 'error',
 
       // === Type Import Consistency ===
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
         {
-          prefer: "type-imports",
-          fixStyle: "separate-type-imports",
+          prefer: 'type-imports',
+          fixStyle: 'separate-type-imports',
           disallowTypeAnnotations: true,
         },
       ],
-      "@typescript-eslint/no-import-type-side-effects": "error",
+      '@typescript-eslint/no-import-type-side-effects': 'error',
 
       // === Restricted Patterns ===
-      "no-restricted-syntax": [
-        "error",
+      'no-restricted-syntax': [
+        'error',
         {
-          selector: "TSImportType",
+          selector: 'TSImportType',
           message:
-            "Inline import() type expressions are not allowed. Use a proper import statement at the top of the file instead.",
+            'Inline import() type expressions are not allowed. Use a proper import statement at the top of the file instead.',
         },
       ],
     },
@@ -107,13 +108,15 @@ export default [
 
   // Relax rules for test files
   {
-    files: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**/*.ts"],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/tests/**/*.ts'],
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
     },
   },
 
+  // Prettier config must be last to override conflicting rules
+  prettier,
 ];

@@ -5,40 +5,41 @@
  * form-filling sessions with a single function call.
  */
 
-import type { LanguageModel } from "ai";
+import type { LanguageModel } from 'ai';
 
-import { applyPatches } from "../engine/apply.js";
-import { parseForm } from "../engine/parse.js";
-import { serialize } from "../engine/serialize.js";
-import type { FieldValue, InspectIssue, ParsedForm, SessionTurnStats } from "../engine/coreTypes.js";
-import { coerceInputContext } from "../engine/valueCoercion.js";
+import { applyPatches } from '../engine/apply.js';
+import { parseForm } from '../engine/parse.js';
+import { serialize } from '../engine/serialize.js';
+import type {
+  FieldValue,
+  InspectIssue,
+  ParsedForm,
+  SessionTurnStats,
+} from '../engine/coreTypes.js';
+import { coerceInputContext } from '../engine/valueCoercion.js';
 import {
   AGENT_ROLE,
   DEFAULT_MAX_ISSUES,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
-} from "../settings.js";
-import { createHarness } from "./harness.js";
-import { createLiveAgent } from "./liveAgent.js";
-import { resolveModel } from "./modelResolver.js";
-import type { Agent, FillOptions, FillResult, FillStatus } from "./harnessTypes.js";
+} from '../settings.js';
+import { createHarness } from './harness.js';
+import { createLiveAgent } from './liveAgent.js';
+import { resolveModel } from './modelResolver.js';
+import type { Agent, FillOptions, FillResult, FillStatus } from './harnessTypes.js';
 
 // Re-export types for backwards compatibility
-export type { FillOptions, FillResult, FillStatus, TurnProgress } from "./harnessTypes.js";
+export type { FillOptions, FillResult, FillStatus, TurnProgress } from './harnessTypes.js';
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
-function buildErrorResult(
-  form: ParsedForm,
-  errors: string[],
-  warnings: string[],
-): FillResult {
+function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]): FillResult {
   // Extract values from responses
   const values: Record<string, FieldValue> = {};
   for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-    if (response.state === "answered" && response.value) {
+    if (response.state === 'answered' && response.value) {
       values[fieldId] = response.value;
     }
   }
@@ -46,8 +47,8 @@ function buildErrorResult(
   return {
     status: {
       ok: false,
-      reason: "error",
-      message: errors.join("; "),
+      reason: 'error',
+      message: errors.join('; '),
     },
     markdown: serialize(form),
     values,
@@ -69,7 +70,7 @@ function buildResult(
   // Extract values from responses
   const values: Record<string, FieldValue> = {};
   for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-    if (response.state === "answered" && response.value) {
+    if (response.state === 'answered' && response.value) {
       values[fieldId] = response.value;
     }
   }
@@ -142,17 +143,22 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   let form: ParsedForm;
   try {
     form =
-      typeof options.form === "string"
-        ? parseForm(options.form)
-        : structuredClone(options.form);
+      typeof options.form === 'string' ? parseForm(options.form) : structuredClone(options.form);
   } catch (error) {
     // Return error result for parse failures
     const message = error instanceof Error ? error.message : String(error);
     return {
-      status: { ok: false, reason: "error", message: `Form parse error: ${message}` },
-      markdown: typeof options.form === "string" ? options.form : "",
+      status: { ok: false, reason: 'error', message: `Form parse error: ${message}` },
+      markdown: typeof options.form === 'string' ? options.form : '',
       values: {},
-      form: { schema: { id: "", groups: [] }, responsesByFieldId: {}, notes: [], docs: [], orderIndex: [], idIndex: new Map() },
+      form: {
+        schema: { id: '', groups: [] },
+        responsesByFieldId: {},
+        notes: [],
+        docs: [],
+        orderIndex: [],
+        idIndex: new Map(),
+      },
       turns: 0,
       totalPatches: 0,
     };
@@ -163,7 +169,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   let provider: string | undefined;
   if (!options._testAgent) {
     try {
-      if (typeof options.model === "string") {
+      if (typeof options.model === 'string') {
         const resolved = await resolveModel(options.model);
         model = resolved.model;
         provider = resolved.provider;
@@ -213,13 +219,15 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   });
 
   // Use test agent if provided, otherwise create LiveAgent
-  const agent: Agent = options._testAgent ?? createLiveAgent({
-    model: model!,
-    systemPromptAddition: options.systemPromptAddition,
-    targetRole: targetRoles[0] ?? AGENT_ROLE,
-    provider,
-    enableWebSearch: true,
-  });
+  const agent: Agent =
+    options._testAgent ??
+    createLiveAgent({
+      model: model!,
+      systemPromptAddition: options.systemPromptAddition,
+      targetRole: targetRoles[0] ?? AGENT_ROLE,
+      provider,
+      enableWebSearch: true,
+    });
 
   // 5. Run harness loop
   let turnCount = 0;
@@ -232,18 +240,14 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         form,
         turnCount,
         totalPatches,
-        { ok: false, reason: "cancelled" },
+        { ok: false, reason: 'cancelled' },
         inputContextWarnings,
         stepResult.issues,
       );
     }
 
     // Generate patches using agent
-    const response = await agent.generatePatches(
-      stepResult.issues,
-      form,
-      maxPatchesPerTurn,
-    );
+    const response = await agent.generatePatches(stepResult.issues, form, maxPatchesPerTurn);
     const { patches, stats } = response;
 
     // Re-check for cancellation after agent call (signal may have fired during LLM call)
@@ -252,7 +256,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         form,
         turnCount,
         totalPatches,
-        { ok: false, reason: "cancelled" },
+        { ok: false, reason: 'cancelled' },
         inputContextWarnings,
         stepResult.issues,
       );
@@ -276,9 +280,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     // Call progress callback (errors don't abort fill)
     if (options.onTurnComplete) {
       try {
-        const requiredIssues = stepResult.issues.filter(
-          (i) => i.severity === "required",
-        );
+        const requiredIssues = stepResult.issues.filter((i) => i.severity === 'required');
         options.onTurnComplete({
           turnNumber: turnCount,
           issuesShown: stepResult.issues.length,
@@ -300,13 +302,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
   // 6. Determine final status
   if (stepResult.isComplete) {
-    return buildResult(
-      form,
-      turnCount,
-      totalPatches,
-      { ok: true },
-      inputContextWarnings,
-    );
+    return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
   }
 
   // Hit max turns without completing
@@ -314,9 +310,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     form,
     turnCount,
     totalPatches,
-    { ok: false, reason: "max_turns", message: `Reached maximum turns (${maxTurns})` },
+    { ok: false, reason: 'max_turns', message: `Reached maximum turns (${maxTurns})` },
     inputContextWarnings,
     stepResult.issues,
   );
 }
-
