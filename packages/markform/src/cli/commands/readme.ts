@@ -128,8 +128,7 @@ function displayContent(content: string): void {
 export function registerReadmeCommand(program: Command): void {
   program
     .command("readme")
-    .alias("docs")
-    .description("Display README documentation")
+    .description("✨Display README documentation ← START HERE!")
     .option("--raw", "Output raw markdown without formatting")
     .action((options: { raw?: boolean }, cmd: Command) => {
       const ctx = getCommandContext(cmd);

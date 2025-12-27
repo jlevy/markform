@@ -56,18 +56,21 @@ function createProgram(): Command {
     );
 
   // Register commands
-  registerInspectCommand(program);
-  registerValidateCommand(program);
-  registerApplyCommand(program);
-  registerExportCommand(program);
-  registerDumpCommand(program);
-  registerRenderCommand(program);
-  registerServeCommand(program);
-  registerFillCommand(program);
-  registerModelsCommand(program);
-  registerExamplesCommand(program);
+  // Help first
   registerReadmeCommand(program);
   registerSpecCommand(program);
+  // Rest alphabetical for help display
+  registerApplyCommand(program);
+  registerDumpCommand(program);
+  registerExamplesCommand(program);
+  registerExportCommand(program);
+  registerFillCommand(program);
+  registerInspectCommand(program);
+  registerModelsCommand(program);
+  registerRenderCommand(program);
+  registerServeCommand(program);
+
+  registerValidateCommand(program);
 
   return program;
 }

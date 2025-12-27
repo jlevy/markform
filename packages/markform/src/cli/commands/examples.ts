@@ -459,7 +459,7 @@ async function runInteractiveFlow(
 export function registerExamplesCommand(program: Command): void {
   program
     .command("examples")
-    .description("Scaffold an example form and fill it interactively")
+    .description("Try out some example forms interactively using the console")
     .option("--list", "List available examples without interactive selection")
     .option(
       "--name <example>",
