@@ -9,7 +9,7 @@ describe("engine/parse", () => {
     it("parses a minimal form", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test_form" title="Test Form" %}
@@ -39,7 +39,7 @@ markform:
     it("parses string field with value", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -67,7 +67,7 @@ ACME Corp
     it("parses number field with value", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -95,7 +95,7 @@ markform:
     it("parses string-list field with values", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -125,7 +125,7 @@ Tag Three
     it("parses single-select field with selection", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -164,7 +164,7 @@ markform:
     it("parses multi-select field with selections", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -193,7 +193,7 @@ markform:
     it("parses checkboxes field with multi mode", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -226,7 +226,7 @@ markform:
     it("parses checkboxes field with explicit mode", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -255,7 +255,7 @@ markform:
     it("builds idIndex correctly", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test_form" %}
@@ -283,7 +283,7 @@ markform:
     it("maintains order in orderIndex", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -304,7 +304,7 @@ markform:
     it("throws on duplicate IDs", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -322,7 +322,7 @@ markform:
     it("throws on duplicate option IDs within field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -342,7 +342,7 @@ markform:
     it("throws on missing option ID annotation", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -361,7 +361,7 @@ markform:
     it("throws on missing label attribute", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -378,7 +378,7 @@ markform:
     it("throws when no form tag present", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 No form here.
@@ -425,7 +425,7 @@ No form here.
     it("allows multiple doc tags with same ref but different tags", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -453,7 +453,7 @@ Enter your full name.
     it("throws on duplicate description blocks for same ref", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -479,7 +479,7 @@ Second description.
     it("throws on duplicate instructions blocks for same ref", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -505,7 +505,7 @@ Second instructions.
     it("allows all three tag types for same ref", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -540,7 +540,7 @@ Additional context.
     it("rejects explicit mode with required=false", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test_form" %}
@@ -560,7 +560,7 @@ markform:
     it("accepts explicit mode without required attribute (defaults to true)", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -584,7 +584,7 @@ markform:
     it("accepts explicit mode with required=true (redundant but valid)", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -608,7 +608,7 @@ markform:
     it("multi mode defaults to optional", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -632,7 +632,7 @@ markform:
     it("simple mode defaults to optional", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -656,7 +656,7 @@ markform:
     it("default checkboxMode (multi) defaults to optional", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -683,7 +683,7 @@ markform:
     it("parses state=\"skipped\" on unfilled optional string field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -705,7 +705,7 @@ markform:
     it("parses state=\"aborted\" on unfilled number field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -727,7 +727,7 @@ markform:
     it("parses state=\"skipped\" on unfilled checkboxes field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -751,7 +751,7 @@ markform:
     it("throws error on state=\"skipped\" for required field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -769,7 +769,7 @@ markform:
     it("throws error on state=\"skipped\" with filled field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -791,7 +791,7 @@ John
     it("throws error on state=\"aborted\" with filled field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -813,7 +813,7 @@ markform:
     it("infers state=\"empty\" for unfilled field without state attribute", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -834,7 +834,7 @@ markform:
     it("infers state=\"answered\" for filled field without state attribute", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -862,7 +862,7 @@ Alice
     it("parses |SKIP| sentinel in string field value fence", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -888,7 +888,7 @@ markform:
     it("parses |ABORT| sentinel in url field value fence", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -914,7 +914,7 @@ markform:
     it("parses |SKIP| in number field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -939,7 +939,7 @@ markform:
     it("parses |ABORT| in string-list field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -964,7 +964,7 @@ markform:
     it("throws error on |SKIP| sentinel with state=\"aborted\" attribute conflict", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -988,7 +988,7 @@ markform:
     it("parses note with all required attributes", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -1015,7 +1015,7 @@ This field is not applicable for this analysis.
     it("rejects note with state attribute", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -1037,7 +1037,7 @@ Company is private, revenue not disclosed.
     it("parses multiple notes", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -1067,7 +1067,7 @@ Second note.
     it("throws error on note with invalid ref", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -1089,7 +1089,7 @@ Note text.
     it("throws error on note missing required id attribute", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -1111,7 +1111,7 @@ Note text.
     it("throws error on note missing required ref attribute", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -1133,7 +1133,7 @@ Note text.
     it("throws error on note missing required role attribute", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}

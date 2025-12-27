@@ -193,7 +193,7 @@ A `.form.md` file combines YAML frontmatter with Markdoc-tagged content:
 ```markdown
 ---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
   roles:
     - user
     - agent

@@ -207,7 +207,7 @@ The parser transforms YAML → TypeScript automatically:
 
 | YAML (frontmatter) | TypeScript |
 | --- | --- |
-| `markform_version` | `markformVersion` |
+| `spec` | `specVersion` |
 | `role_instructions` | `roleInstructions` |
 
 The serializer transforms TypeScript → YAML when writing forms.
@@ -219,7 +219,7 @@ Zod schemas include transforms to normalize property names during parsing.
 ```yaml
 ---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
   roles:
     - user
     - agent

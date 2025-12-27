@@ -1,6 +1,6 @@
 ---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="simple_test" title="Simple Test Form" %}

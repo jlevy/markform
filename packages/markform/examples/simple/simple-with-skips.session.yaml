@@ -5,12 +5,12 @@ form:
 mock:
   completed_mock: simple-skipped-filled.form.md
 harness:
-  max_turns: 50
+  max_turns: 100
   max_patches_per_turn: 20
-  max_issues: 20
+  max_issues: 10
   target_roles:
-    - user
-    - agent
+    - "*"
+  fill_mode: continue
 turns:
   - turn: 1
     inspect:
@@ -30,8 +30,7 @@ turns:
         - ref: confirmations
           scope: field
           reason: required_missing
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2
-            unfilled)
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
           severity: required
           priority: 1
         - ref: email
@@ -78,117 +77,33 @@ turns:
           priority: 1
     apply:
       patches:
-        - op: set_string
-          field_id: name
-          value: Test User
-        - op: set_string
-          field_id: email
-          value: test@example.com
         - op: set_number
           field_id: age
           value: 25
-    after:
-      required_issue_count: 7
-      markdown_sha256: be317980230ed614221e949a31c950d69e170470882a2e69228044b80392d422
-      answered_field_count: 3
-      skipped_field_count: 0
-  - turn: 2
-    inspect:
-      issues:
-        - ref: categories
-          scope: field
-          reason: required_missing
-          message: Required field "Categories" has no selections
-          severity: required
-          priority: 1
-        - ref: confirmations
-          scope: field
-          reason: required_missing
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2
-            unfilled)
-          severity: required
-          priority: 1
-        - ref: priority
-          scope: field
-          reason: required_missing
-          message: Required field "Priority" has no selection
-          severity: required
-          priority: 1
-        - ref: tags
-          scope: field
-          reason: required_missing
-          message: Required field "Tags" is empty
-          severity: required
-          priority: 1
-        - ref: tasks_multi
-          scope: field
-          reason: required_missing
-          message: All items in "Tasks (Multi Mode)" must be completed
-          severity: required
-          priority: 1
-        - ref: tasks_simple
-          scope: field
-          reason: required_missing
-          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
-          severity: required
-          priority: 1
-        - ref: website
-          scope: field
-          reason: required_missing
-          message: Required field "Website" is empty
-          severity: required
-          priority: 1
-    apply:
-      patches:
-        - op: set_string_list
-          field_id: tags
-          items:
-            - typescript
-            - testing
-        - op: set_single_select
-          field_id: priority
-          selected: high
         - op: set_multi_select
           field_id: categories
           selected:
             - frontend
             - backend
-        - op: set_url
-          field_id: website
-          value: https://test.example.com
-        - op: set_url_list
-          field_id: references
+        - op: set_checkboxes
+          field_id: confirmations
+          values:
+            backed_up: yes
+            notified: no
+        - op: set_string
+          field_id: email
+          value: test@example.com
+        - op: set_string
+          field_id: name
+          value: Test User
+        - op: set_single_select
+          field_id: priority
+          selected: high
+        - op: set_string_list
+          field_id: tags
           items:
-            - https://docs.example.com
-    after:
-      required_issue_count: 3
-      markdown_sha256: f3b491aea22dc2da552c3cbb22aad61a13e90383e2a73e3758def7127c739614
-      answered_field_count: 8
-      skipped_field_count: 0
-  - turn: 3
-    inspect:
-      issues:
-        - ref: confirmations
-          scope: field
-          reason: required_missing
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2
-            unfilled)
-          severity: required
-          priority: 1
-        - ref: tasks_multi
-          scope: field
-          reason: required_missing
-          message: All items in "Tasks (Multi Mode)" must be completed
-          severity: required
-          priority: 1
-        - ref: tasks_simple
-          scope: field
-          reason: required_missing
-          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
-          severity: required
-          priority: 1
-    apply:
-      patches:
+            - typescript
+            - testing
         - op: set_checkboxes
           field_id: tasks_multi
           values:
@@ -201,34 +116,72 @@ turns:
           values:
             read_guidelines: done
             agree_terms: done
-        - op: set_checkboxes
-          field_id: confirmations
-          values:
-            backed_up: yes
-            notified: no
-        - op: skip_field
-          role: agent
-          field_id: score
-          reason: Not needed for this test
-        - op: skip_field
-          role: agent
-          field_id: notes
-          reason: No notes required
-        - op: skip_field
-          role: agent
-          field_id: optional_number
-        - op: skip_field
-          role: agent
-          field_id: related_url
-          reason: No related URL needed
-        - op: add_note
-          id: note-agent-summary
-          ref: simple_test
-          role: agent
-          text: All required fields completed successfully. Optional fields skipped as not needed for this test scenario.
+        - op: set_url
+          field_id: website
+          value: https://test.example.com
     after:
       required_issue_count: 0
-      markdown_sha256: 3797e400a972f3e92691a01c42d399f9fce4776e4bbf6900d519088d3c8d9768
+      markdown_sha256: c7f8e717f216a4810add986d070aaef3d14f3e5a64ca8c08a02c145e41080ebb
+      answered_field_count: 10
+      skipped_field_count: 0
+  - turn: 2
+    inspect:
+      issues:
+        - ref: notes
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: optional_number
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: references
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: related_url
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: score
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+    apply:
+      patches:
+        - op: skip_field
+          field_id: notes
+          role: agent
+          reason: No value in mock form
+        - op: skip_field
+          field_id: optional_number
+          role: agent
+          reason: No value in mock form
+        - op: set_url_list
+          field_id: references
+          items:
+            - https://docs.example.com
+        - op: skip_field
+          field_id: related_url
+          role: agent
+          reason: No value in mock form
+        - op: skip_field
+          field_id: score
+          role: agent
+          reason: No value in mock form
+    after:
+      required_issue_count: 0
+      markdown_sha256: 41f7a9a6838c64b9732fd5972d2ed663fcae2b5fac48b86d33df634e94151b00
       answered_field_count: 11
       skipped_field_count: 4
 final:

@@ -10,7 +10,7 @@ describe("engine/serialize", () => {
     it("serializes a minimal form", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test_form" title="Test Form" %}
@@ -34,7 +34,7 @@ markform:
     it("serializes string field with value", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -63,7 +63,7 @@ ACME Corp
     it("serializes number field with value", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -92,7 +92,7 @@ markform:
     it("serializes string-list field with values", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -123,7 +123,7 @@ Tag Three
     it("serializes single-select field with selection", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -161,7 +161,7 @@ markform:
     it("serializes multi-select field with selections", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -192,7 +192,7 @@ markform:
     it("serializes checkboxes field with multi mode", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -227,7 +227,7 @@ markform:
     it("serializes checkboxes field with explicit mode", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -258,7 +258,7 @@ markform:
     it("preserves field attributes through round-trip", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -299,7 +299,7 @@ markform:
     it("outputs deterministic format", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -321,7 +321,7 @@ markform:
       // where validate=[{id: "min_words", min: 50}] was serialized as [[object Object]]
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -367,7 +367,7 @@ markform:
       // Test that deeply nested objects are also serialized correctly
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -435,7 +435,7 @@ markform:
     it("outputs plain markdown without markdoc directives for string field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" title="Test Form" %}
@@ -470,7 +470,7 @@ ACME Corp
     it("outputs plain markdown for number field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -496,7 +496,7 @@ markform:
     it("outputs plain markdown for string-list field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -526,7 +526,7 @@ Healthcare
     it("outputs plain markdown for single-select field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -552,7 +552,7 @@ markform:
     it("outputs plain markdown for multi-select field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -579,7 +579,7 @@ markform:
     it("outputs plain markdown for checkboxes field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -608,7 +608,7 @@ markform:
     it("shows empty placeholder for unfilled fields", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -630,7 +630,7 @@ markform:
     it("includes doc blocks as regular markdown", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" title="Test Form" %}
@@ -662,7 +662,7 @@ Enter your full legal name.
     it("serializes state=\"skipped\" attribute for skipped field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -683,7 +683,7 @@ markform:
     it("serializes state=\"aborted\" attribute for aborted field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -704,7 +704,7 @@ markform:
     it("does not serialize state attribute for answered field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -730,7 +730,7 @@ Alice
     it("does not serialize state attribute for empty field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -751,7 +751,7 @@ markform:
     it("round-trips state=\"skipped\" correctly", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -773,7 +773,7 @@ markform:
     it("round-trips state=\"aborted\" correctly", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -797,7 +797,7 @@ markform:
     it("serializes notes at end of form", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -825,7 +825,7 @@ Not applicable for this analysis.
     it("serializes notes in sorted order by ID", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -865,7 +865,7 @@ Note 1.
     it("serializes note without state attribute when state is undefined", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -893,7 +893,7 @@ General comment.
     it("round-trips notes correctly", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -925,7 +925,7 @@ Not applicable.
     it("round-trips |SKIP| sentinel in string field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -953,7 +953,7 @@ markform:
     it("round-trips |ABORT| sentinel in url field", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}
@@ -981,7 +981,7 @@ markform:
     it("round-trips form with mixed states and notes", () => {
       const markdown = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="test" %}

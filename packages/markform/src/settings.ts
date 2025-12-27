@@ -9,6 +9,23 @@
 import type { FieldPriorityLevel } from "./engine/coreTypes.js";
 
 // =============================================================================
+// Spec Version Constants
+// =============================================================================
+
+/**
+ * The current Markform spec version in full notation (e.g., "MF/0.1").
+ * This is distinct from npm package version and tracks the format that
+ * .form.md files conform to.
+ */
+export const MF_SPEC_VERSION = "MF/0.1";
+
+/**
+ * The numeric portion of the spec version (e.g., "0.1").
+ * Used when only the version number is needed.
+ */
+export const MF_SPEC_VERSION_NUMBER = "0.1";
+
+// =============================================================================
 // Role System Constants
 // =============================================================================
 

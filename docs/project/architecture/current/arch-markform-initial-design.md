@@ -1,6 +1,6 @@
 # Markform Technical Overview
 
-Version: v0.1 (proof of concept)
+Version: MF/0.1 (proof of concept)
 
 ## Motivation
 
@@ -255,7 +255,7 @@ The **Implementation Components** are specific to this TypeScript codebase:
 | --- | --- |
 | **Field** | A single data entry point within a form. Fields have a kind (type), label, and optional constraints. |
 | **Kind** | The type of a field. One of: `string`, `number`, `string_list`, `checkboxes`, `single_select`, `multi_select`, `url`, `url_list`. Determines the field's value structure, input behavior, and validation rules. |
-| **Field group** | A container that organizes related fields together. Groups have an id, optional title, and may have custom validators. Currently (v0.1), groups contain only fields (they are not nested groups). |
+| **Field group** | A container that organizes related fields together. Groups have an id, optional title, and may have custom validators. Currently (MF/0.1), groups contain only fields (they are not nested groups). |
 | **Template form** | A form with no values filled in (schema only). Starting point for filling. |
 | **Incomplete form** | A form with some values but not yet complete or valid. |
 | **Completed form** | A form with all required fields filled and passing validation. |
@@ -414,7 +414,7 @@ Currently some implementation details are spread throughout Layers 1-4.
 
 * * *
 
-## v0.1 Scope
+## MF/0.1 Scope
 
 ### Goals
 
@@ -426,7 +426,7 @@ Currently some implementation details are spread throughout Layers 1-4.
   output)
 
 - **Unified operation contract** used by CLI, AI SDK tools, and web UI (MCP server in
-  v0.2)
+  MF/0.2)
 
 - **Incremental filling**: agent/user fills one or many fields at a time; tool returns
   “what’s missing next” + validation issues
@@ -436,13 +436,13 @@ Currently some implementation details are spread throughout Layers 1-4.
 
 - **Golden session tests**: record/replay multi-turn sessions with ops + snapshots
 
-### Explicit Non-Goals for v0.1 (Proof of Concept)
+### Explicit Non-Goals for MF/0.1 (Proof of Concept)
 
 - Security hardening for sensitive/PII content (explicitly deferred)
 
 - Conditional sections / branching logic (designed for extensibility, not implemented)
 
-- Perfect “preserve exact original formatting” round-tripping (v0.1 canonicalizes
+- Perfect “preserve exact original formatting” round-tripping (MF/0.1 canonicalizes
   output)
 
 - PDF generation pipeline (HTML is enough; PDF later via print CSS)
@@ -493,12 +493,12 @@ Built on [Markdoc’s tag syntax specification][markdoc-spec] and
 - **Frontmatter:** (*required*) YAML with a top-level `markform` object containing
   version and derived metadata (see [Markdoc Frontmatter][markdoc-frontmatter]).
 
-**Frontmatter structure (v0.1):**
+**Frontmatter structure (MF/0.1):**
 
 ```yaml
 ---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
   form_summary: { ... }    # derived: structure summary
   form_progress: { ... }   # derived: progress summary
   form_state: complete|incomplete|invalid|empty   # derived: overall progress state
@@ -770,7 +770,7 @@ Example values or usage...
 - The Markdoc tag name determines the documentation `tag` property (`description`,
   `instructions`, `notes`, `examples`, or `documentation` for general content)
 
-**Placement rules (v0.1):**
+**Placement rules (MF/0.1):**
 
 - Doc blocks MAY appear inside `form` and `field-group` as direct children
 
@@ -1115,7 +1115,7 @@ See [GitHub Discussion #261][markdoc-process-false] for background on the attrib
 ```md
 ---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
 ---
 
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
@@ -1159,7 +1159,7 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 
 **Note:** When the engine serializes this form, it will add `form_summary`,
 `form_progress`, and `form_state` to the `markform` block automatically.
-Hand-authored forms only need the `markform_version`.
+Hand-authored forms only need the `spec` field.
 
 #### Example: Incomplete Form
 
@@ -1239,7 +1239,7 @@ Markform files may contain content outside of Markform tags. This content is han
 | Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
 | Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
 
-**v0.1 scope:** Only HTML comments are guaranteed to be preserved. Do not rely on
+**MF/0.1 scope:** Only HTML comments are guaranteed to be preserved. Do not rely on
 non-Markform content surviving serialization. Future versions may support full
 content preservation via raw slicing.
 
@@ -1248,7 +1248,7 @@ content preservation via raw slicing.
 Generate markdown string directly (not using `Markdoc.format()` due to canonicalization
 requirements beyond what it provides—see [Formatting][markdoc-format]):
 
-**v0.1 content restrictions for canonical serialization (*required*):**
+**MF/0.1 content restrictions for canonical serialization (*required*):**
 
 To ensure deterministic round-tripping without building a full markdown serializer:
 
@@ -1351,9 +1351,9 @@ interface FormSchema {
 interface FieldGroup {
   id: Id;
   title?: string;
-  // Note: `required` on groups is not supported in v0.1 (ignored with warning)
+  // Note: `required` on groups is not supported in MF/0.1 (ignored with warning)
   validate?: ValidatorRef[];  // validator references (string IDs or parameterized objects)
-  children: Field[];          // v0.1/v0.2: fields only; nested groups deferred (future)
+  children: Field[];          // MF/0.1/0.2: fields only; nested groups deferred (future)
 }
 
 type FieldPriorityLevel = 'high' | 'medium' | 'low';
@@ -1898,7 +1898,7 @@ const MarkformFrontmatterSchema = z.object({
 
 **YAML serialization:** When writing frontmatter, convert camelCase keys to snake_case:
 
-- `markformVersion` → `markform_version`
+- `specVersion` → `spec` (or use `MF_SPEC_VERSION` constant directly)
 
 - `formSummary` → `form_summary`
 
@@ -1928,7 +1928,7 @@ schema representations for all field types.
 | TypeScript properties | camelCase | `minLength`, `checkboxMode` |
 | JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
 | IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
-| YAML keys (frontmatter, session transcripts) | snake_case | `markform_version`, `form_summary`, `field_count_by_kind` |
+| YAML keys (frontmatter, session transcripts) | snake_case | `spec`, `form_summary`, `field_count_by_kind` |
 | Kind values (field types) | snake_case | `'string'`, `'single_select'` |
 | Patch operations | snake_case | `set_string`, `set_single_select` |
 
@@ -2136,9 +2136,10 @@ A completed form must have all checkbox options resolved to either `done` or `na
 
 **Field group `required` attribute:**
 
-The `required` attribute on `field-group` is **not supported in v0.1**. Groups may have
-`validate` references for custom validation, but the `required` attribute should not be
-used on groups. If present, it is ignored with a warning.
+The `required` attribute on `field-group` is **not supported in MF/0.1**. Groups may
+have `validate` references for custom validation, but the `required` attribute should
+not be used on groups.
+If present, it is ignored with a warning.
 
 #### Hook Validators
 
@@ -2293,7 +2294,7 @@ transpiles (~~50-100ms); subsequent loads read from cache (~~5ms).
 
 - Validator throws at runtime → catch and convert to validation issue
 
-**LLM validators (`.valid.md`) — v0.2:**
+**LLM validators (`.valid.md`) — MF/0.2:**
 
 - Sidecar file: `X.valid.md`
 
@@ -2303,7 +2304,7 @@ transpiles (~~50-100ms); subsequent loads read from cache (~~5ms).
 
 - Output as structured JSON issues
 
-- Deferred to v0.2 to reduce scope
+- Deferred to MF/0.2 to reduce scope
 
 #### Validation Pipeline
 
@@ -2311,7 +2312,7 @@ transpiles (~~50-100ms); subsequent loads read from cache (~~5ms).
 
 2. Code validators (via jiti)
 
-3. LLM validators (optional; v0.2)
+3. LLM validators (optional; MF/0.2)
 
 #### Validation Result Model
 
@@ -2550,7 +2551,7 @@ This formula ensures:
 
 **Operation availability by interface:**
 
-| Operation | CLI | AI SDK | MCP (v0.2) |
+| Operation | CLI | AI SDK | MCP (MF/0.2) |
 | --- | --- | --- | --- |
 | inspect | `markform inspect` (prints YAML report) | `markform_inspect` | `markform.inspect` |
 | apply | `markform apply` | `markform_apply` | `markform.apply` |
@@ -2991,7 +2992,7 @@ The form itself IS the state.
 └─────────┘
 ```
 
-**Note:** v0.1 runs until completion (all required fields valid, no errors).
+**Note:** MF/0.1 runs until completion (all required fields valid, no errors).
 A default `max_turns` safety limit (e.g., 100) should be enforced to prevent runaway
 loops during development and testing.
 Exceeding `max_turns` results in an error state.
@@ -3098,7 +3099,7 @@ This mirrors what `markform inspect` outputs, making each turn self-contained:
 │ ```markdown                                                                 |
 │ ---                                                                         |
 │ markform:                                                                   |
-│   markform_version: "0.1.0"                                                 |
+│   spec: "MF/0.1"                                                 |
 │   form_state: incomplete                                                    |
 │   ...                                                                       |
 │ ---                                                                         |
@@ -3203,11 +3204,11 @@ Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 
 ### User Interfaces
 
-#### CLI Commands (v0.1)
+#### CLI Commands (MF/0.1)
 
 Thin wrapper around the tool contract:
 
-**Core commands (required for v0.1):**
+**Core commands (required for MF/0.1):**
 
 - `markform inspect <file.form.md>` — parse + run validators, print full report as YAML
   (structure summary, progress summary, form state, and all issues in priority order).
@@ -3253,7 +3254,7 @@ Thin wrapper around the tool contract:
 - `markform fill <file.form.md> --model=anthropic/claude-sonnet-4-5` — fill form using
   live LLM agent
 
-**Deferred to v0.2:**
+**Deferred to MF/0.2:**
 
 - **Validation in serve** — Run engine validation from the UI with a “Validate” button.
   Requires deciding on validator execution strategy (see Future Considerations for
@@ -3266,7 +3267,7 @@ Thin wrapper around the tool contract:
 
 #### Web UI (serve)
 
-The v0.1 “serve” command provides an interactive web UI for editing and saving forms:
+The MF/0.1 “serve” command provides an interactive web UI for editing and saving forms:
 
 - Opens browser automatically (use `--no-open` to disable)
 
@@ -3304,7 +3305,7 @@ The v0.1 “serve” command provides an interactive web UI for editing and savi
 
 - CSS styling provides clean, readable form layout
 
-**Deferred to v0.2:**
+**Deferred to MF/0.2:**
 
 - Validation in serve (run engine validation from UI with a “Validate” button)
 
@@ -3331,7 +3332,7 @@ Returns an AI SDK `ToolSet` with:
 
 - `markform_get_markdown` (optional)
 
-#### MCP Server Integration (v0.2)
+#### MCP Server Integration (MF/0.2)
 
 Built on the [Model Context Protocol Specification][mcp-spec] using the
 [official TypeScript SDK][mcp-typescript-sdk]. See [MCP SDKs overview][mcp-sdks] for
@@ -3452,7 +3453,7 @@ from the initial template, or by storing the `markdown_sha256` for verification.
 
 First release as **`markform`** on npm.
 
-v0.1 includes:
+MF/0.1 includes:
 
 - Core library
 
@@ -3475,7 +3476,7 @@ is optional later.
 
 * * *
 
-## Golden Example Set for v0.1
+## Golden Example Set for MF/0.1
 
 ### Example 1: `quarterly_earnings_analysis` (mocked)
 
@@ -3564,18 +3565,18 @@ Tool set using AI SDK `tool()` + Zod input schemas
 
 Deliverable: `integrations/ai-sdk.ts`
 
-### 10) MCP server mode (v0.2)
+### 10) MCP server mode (MF/0.2)
 
 MCP tools for inspect/apply/export using TS SDK, stdio transport
 
 Deliverable: `integrations/mcp.ts`
 
-**Note:** Deferred to v0.2 to reduce v0.1 scope.
+**Note:** Deferred to MF/0.2 to reduce MF/0.1 scope.
 Full specification included above.
 
 * * *
 
-## What “Done” Looks Like for v0.1
+## What “Done” Looks Like for MF/0.1
 
 1. Write `earnings-analysis.form.md` (template) and
    `earnings-analysis.mock.filled.form.md` (completed mock)
@@ -3607,11 +3608,11 @@ Full specification included above.
 
 ## Future Extensions
 
-### v0.2 Targets
+### MF/0.2 Targets
 
-Specified in this document but deferred from v0.1 proof of concept:
+Specified in this document but deferred from MF/0.1 proof of concept:
 
-- **MCP server integration** — Full spec included above; deferred to reduce v0.1 scope
+- **MCP server integration** — Full spec included above; deferred to reduce MF/0.1 scope
 
 - **Radio button syntax** — `( )` / `(x)` markers for `single-select` as visual
   differentiation from multi-select (currently both use `[ ]` for markdown
@@ -3699,9 +3700,9 @@ Specified in this document but deferred from v0.1 proof of concept:
 
 ### Later Versions
 
-Documented but not required for v0.1 or v0.2:
+Documented but not required for MF/0.1 or MF/0.2:
 
-- **Nested field groups** — v0.1/v0.2 support only flat field groups (groups contain
+- **Nested field groups** — MF/0.1/0.2 support only flat field groups (groups contain
   fields, not other groups).
   Nested groups for hierarchical organization deferred to a future version.
   Use flat groups with descriptive IDs like `pricing_structure`, `pricing_margin_cost`
@@ -3895,13 +3896,13 @@ This section documents design decisions made during architecture planning.
 All items are resolved unless explicitly marked as open questions in the final
 subsection.
 
-### Core Field Behavior (v0.1)
+### Core Field Behavior (MF/0.1)
 
 1. **String field whitespace handling** — Whitespace-only values are equivalent to empty
    values for all purposes: `value.trim() === ""` means “no value provided.”
    For required fields, this means whitespace-only fails validation.
    For optional fields, whitespace-only is treated as empty (valid but unfilled).
-   A `trimMode` attribute to customize this behavior is deferred to post-v0.2.
+   A `trimMode` attribute to customize this behavior is deferred to post-MF/0.2.
 
 2. **Labels required on fields** — The `label` attribute is required on all field types
    (`label: string` in `FieldBase`). Missing label produces a parse error.
@@ -4012,22 +4013,22 @@ subsection.
 
      - Forms can’t be completed with outstanding problems
 
-### string-list Field (v0.1)
+### string-list Field (MF/0.1)
 
 6. **Empty string handling** — Empty strings (after trimming) are silently discarded.
    If users need explicit empty entries, that’s a different data modeling need.
 
 7. **Whitespace handling** — Always trim leading/trailing whitespace from items;
    preserve internal whitespace.
-   A `trimMode` attribute to customize this behavior is deferred to v0.2+.
+   A `trimMode` attribute to customize this behavior is deferred to MF/0.2+.
 
 8. **Item-level patterns** — `itemPattern` (regex validation per item) is deferred to
-   v0.2+. v0.1 focuses on cardinality constraints only.
+   MF/0.2+. MF/0.1 focuses on cardinality constraints only.
 
 9. **Patch operations** — `set_string_list` performs full array replacement.
-   Item-level insert/remove/reorder operations are deferred to v0.2+.
+   Item-level insert/remove/reorder operations are deferred to MF/0.2+.
 
-### Internal Representation (v0.1)
+### Internal Representation (MF/0.1)
 
 10. **`ParsedForm` internal shape** — The canonical internal representation returned by
     `parseForm()` is explicitly defined (see `ParsedForm` interface in Layer 2: Data
@@ -4044,7 +4045,7 @@ subsection.
     `kind` discriminant) and in summary types.
     Define once, export from types module.
 
-### Summary Types (v0.1)
+### Summary Types (MF/0.1)
 
 13. **CheckboxProgressCounts unified type** — The `CheckboxProgressCounts` interface
     includes fields for both multi mode (`todo`, `done`, `incomplete`, `active`, `na`)
@@ -4063,12 +4064,12 @@ subsection.
     The test runner compares the full serialized file including summaries to validate
     that summary computation is deterministic.
 
-### Repeating Groups (v0.2+)
+### Repeating Groups (MF/0.2+)
 
 16. **Instance ID generation** — Repeating group instances will use auto-generated
     sequential suffixes: `{base_id}_1`, `{base_id}_2`, etc.
     This keeps IDs predictable and readable while maintaining uniqueness.
-    Reordering may cause ID reassignment (acceptable for v0.2 scope).
+    Reordering may cause ID reassignment (acceptable for MF/0.2 scope).
 
 17. **Patch operations for repeating groups** — Full array replacement initially, with
     item-level operations (insert/remove/reorder) and field-level patches within
@@ -4077,7 +4078,7 @@ subsection.
 ### Open Questions
 
 *No open questions at this time.
-All design decisions for v0.1 have been resolved.*
+All design decisions for MF/0.1 have been resolved.*
 
 * * *
 
@@ -4110,12 +4111,12 @@ dependencies). This provides:
 
 - Works in CLI (`markform inspect`) and will work in serve when validation is added
 
-When validation is added to serve in v0.2, the same jiti-based loading will be used
+When validation is added to serve in MF/0.2, the same jiti-based loading will be used
 server-side.
 A future “bake validators” command could pre-compile for static hosting, but
 this is not needed for typical local workflows.
 
-### Potential Improvements (v0.2+)
+### Potential Improvements (MF/0.2+)
 
 - Add validation to serve (see Validator Execution research above).
 
@@ -4138,7 +4139,7 @@ This section documents enhancements identified while converting the complex
 The form exercises many advanced patterns and serves as a comprehensive test case for
 the framework.
 
-### Framework-Level Enhancements (v0.1 or v0.2)
+### Framework-Level Enhancements (MF/0.1 or MF/0.2)
 
 These require changes to the Markform schema, parser, or serializer:
 
@@ -4205,7 +4206,7 @@ The `#_other` ID is reserved for the “Other” option when `allowOther=true`.
 **Naming rationale:** `allowOther` aligns with common form library conventions (e.g.,
 Ant Design’s `allowOther`, Google Forms’ “Other” option pattern).
 
-#### 2. Date/Time Field Types (v0.2+)
+#### 2. Date/Time Field Types (MF/0.2+)
 
 **Problem:** Dates appear frequently (deadlines, as-of dates, fiscal periods).
 
@@ -4226,7 +4227,7 @@ Ant Design’s `allowOther`, Google Forms’ “Other” option pattern).
 - `allowRelative`: Allow relative dates like “next quarter” (optional, v0.3+)
 
 **Alternative:** Keep as `string-field` with well-documented patterns.
-Date parsing is complex and may not warrant a dedicated type in v0.1.
+Date parsing is complex and may not warrant a dedicated type in MF/0.1.
 
 ### Custom Validator Patterns
 
@@ -4517,10 +4518,10 @@ export const validators = {
 {% string-list id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /string-list %}
 ```
 
-### Patterns Requiring Repeating Groups (v0.2)
+### Patterns Requiring Repeating Groups (MF/0.2)
 
 The following patterns from the company analysis form require repeating groups, already
-specified for v0.2:
+specified for MF/0.2:
 
 1. **Offering families** — Each offering has: name, value prop, delivery type, revenue
    type, KPIs. Currently modeled as a single instance with note to add more.
@@ -4572,13 +4573,13 @@ The `company-analysis.form.md` exercises the following Markform features:
 
 ### Recommended Implementation Order
 
-1. **v0.1 Core:** Implement all current spec features—sufficient for basic form.
+1. **MF/0.1 Core:** Implement all current spec features—sufficient for basic form.
 
-2. **v0.1 Enhancement:** Add `allowOther` attribute (high value, moderate effort).
+2. **MF/0.1 Enhancement:** Add `allowOther` attribute (high value, moderate effort).
 
-3. **v0.2:** Implement repeating groups—unlocks offering families, driver model.
+3. **MF/0.2:** Implement repeating groups—unlocks offering families, driver model.
 
-4. **v0.2:** Add `date-field` type for date values with built-in validation.
+4. **MF/0.2:** Add `date-field` type for date values with built-in validation.
 
 Note: Conditional validation (e.g., “field X required if field Y has value”) is handled
 via code validators.

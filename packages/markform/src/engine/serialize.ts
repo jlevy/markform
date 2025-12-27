@@ -33,7 +33,7 @@ import type {
   UrlListValue,
   UrlValue,
 } from "./coreTypes.js";
-import { AGENT_ROLE, DEFAULT_PRIORITY } from "../settings.js";
+import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from "../settings.js";
 
 // =============================================================================
 // Sentinel Value Helpers
@@ -65,8 +65,8 @@ function getSentinelContent(response: FieldResponse | undefined): string {
 // =============================================================================
 
 export interface SerializeOptions {
-  /** Markform version to use in frontmatter. Defaults to "0.1.0". */
-  markformVersion?: string;
+  /** Markform spec version to use in frontmatter. Defaults to MF_SPEC_VERSION. */
+  specVersion?: string;
 }
 
 // =============================================================================
@@ -784,12 +784,12 @@ function serializeFormSchema(
  * @returns The canonical markdown string
  */
 export function serialize(form: ParsedForm, opts?: SerializeOptions): string {
-  const version = opts?.markformVersion ?? "0.1.0";
+  const specVersion = opts?.specVersion ?? MF_SPEC_VERSION;
 
   // Build frontmatter
   const frontmatter = `---
 markform:
-  markform_version: "${version}"
+  spec: "${specVersion}"
 ---`;
 
   // Serialize form body

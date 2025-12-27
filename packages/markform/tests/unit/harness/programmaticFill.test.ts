@@ -10,7 +10,7 @@ import { createMockAgent } from "../../../src/harness/mockAgent.js";
 // Simple test form
 const SIMPLE_FORM = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
   roles:
     - user
     - agent
@@ -34,7 +34,7 @@ markform:
 // Completed mock form (same schema, all fields filled) - uses code fence format
 const COMPLETED_FORM = `---
 markform:
-  markform_version: "0.1.0"
+  spec: "MF/0.1"
   roles:
     - user
     - agent

@@ -5,12 +5,12 @@ form:
 mock:
   completed_mock: simple-mock-filled.form.md
 harness:
-  max_turns: 50
+  max_turns: 100
   max_patches_per_turn: 20
-  max_issues: 20
+  max_issues: 10
   target_roles:
-    - user
-    - agent
+    - "*"
+  fill_mode: continue
 turns:
   - turn: 1
     inspect:
@@ -30,8 +30,7 @@ turns:
         - ref: confirmations
           scope: field
           reason: required_missing
-          message: All items in "Confirmations (Explicit Mode)" must be answered (2
-            unfilled)
+          message: All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
           severity: required
           priority: 1
         - ref: email
@@ -76,36 +75,6 @@ turns:
           message: Required field "Website" is empty
           severity: required
           priority: 1
-        - ref: notes
-          scope: field
-          reason: optional_empty
-          message: Optional field has no value
-          severity: recommended
-          priority: 3
-        - ref: optional_number
-          scope: field
-          reason: optional_empty
-          message: Optional field has no value
-          severity: recommended
-          priority: 3
-        - ref: references
-          scope: field
-          reason: optional_empty
-          message: Optional field has no value
-          severity: recommended
-          priority: 3
-        - ref: related_url
-          scope: field
-          reason: optional_empty
-          message: Optional field has no value
-          severity: recommended
-          priority: 3
-        - ref: score
-          scope: field
-          reason: optional_empty
-          message: Optional field has no value
-          severity: recommended
-          priority: 3
     apply:
       patches:
         - op: set_number
@@ -151,31 +120,70 @@ turns:
         - op: set_url
           field_id: website
           value: https://alice.dev
+    after:
+      required_issue_count: 0
+      markdown_sha256: 09426a756a35ea6da4ae30c1e4a0956fda0b7e5c83eadb756da50277c9740c84
+      answered_field_count: 10
+      skipped_field_count: 0
+  - turn: 2
+    inspect:
+      issues:
+        - ref: notes
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: optional_number
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: references
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: related_url
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: score
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+    apply:
+      patches:
+        - op: set_string
+          field_id: notes
+          value: This is a test note.
+        - op: skip_field
+          field_id: optional_number
+          role: agent
+          reason: No value in mock form
         - op: set_url_list
           field_id: references
           items:
             - https://docs.example.com/guide
             - https://github.com/example/project
             - https://medium.com/article-about-forms
-        - op: set_string
-          field_id: notes
-          value: This is a test note.
-        - op: set_number
-          field_id: score
-          value: 87.5
         - op: set_url
           field_id: related_url
           value: https://markform.dev/docs
-        - op: add_note
-          id: note-review
-          ref: simple_test
-          role: agent
-          text: Form completed with all required fields. Score assigned based on completeness. References include documentation and project links.
+        - op: set_number
+          field_id: score
+          value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: b1992e1b572b0b9499537d3d6dc947035e4b499c8a736f2ec66ca9d78c732566
+      markdown_sha256: 9d1537376bf7c5785e56755dca0d122be5212471437f3c50f58ed34af95c3aa9
       answered_field_count: 14
-      skipped_field_count: 0
+      skipped_field_count: 1
 final:
-  expect_complete: false
+  expect_complete: true
   expected_completed_form: simple-mock-filled.form.md
