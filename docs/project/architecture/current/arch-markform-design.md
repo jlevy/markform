@@ -1,86 +1,11 @@
-# Markform Technical Overview
+# Markform Design Overview
 
 Version: MF/0.1 (proof of concept)
 
-## Motivation
+## Background
 
-### What Is Markform?
-
-**Markform** is format, data model, and editing API for **agent-friendly, human-readable
-text forms**.
-
-The Markform format is **a superset of Markdown** based on
-[Markdoc](https://github.com/markdoc/markdoc) that is **easily readable by agents and
-humans**.
-
-The idea is to combine the simple utility of a Markdown document with the addition of
-structured tags that define typed fields and validation rules values.
-
-### Why Another Format?
-
-Plain Markdown checklists and ad-hoc templates are readable, but fragile to update
-programmatically via LLMs or agents.
-Simple to-do list tools are now commonly used by agents, but these do not extend to more
-complex assembly of information.
-
-There are numerous other tools like Typeform and Google forms for collecting data from
-humans, but it seems there isn’t a clean text format for such forms or workflows for
-their use by agents.
-
-### How Do Agents Use Markform?
-
-The data model and editing API let agents fill in forms.
-This enables powerful AI worflows that assemble information in a certain struture.
-
-Key elements of its design:
-
-- **Form content, structure, and field values are all in one text file** for better
-  context engineering.
-  This is a major advantage for LLM agents and for humans reviewing their work.
-
-- **Incremental filling** means an agent or a human can take many iterations, filling
-  and correcting a form if until it is complete and satisfies the validation rules.
-
-- The same API works with **multiple interfaces for humans or agents**. You can interact
-  with a form via a CLI, a programmatic API, from Vercel AI SDK or in an MCP server used
-  by an agent, or in web form UIs for humans.
-
-- **Flexible validation** at multiple scopes (field/group/form), including declarative
-  constraints and external hooks to arbitrary code (currently TypeScript) or LLM-based
-  validation instructions.
-
-- A **harness loop** that runs step-by-step loops for agents, making powerful agentic
-  tools possible (like deep research agents that assemble validated output in a given
-  structure)
-
-- A **golden session testing framework** that validates end-to-end behavior across modes
-  Markfrom tooling is itself easily tested end to end by agents
-
-### Why Markdoc?
-
-Markdoc extends Markdown with documents with structured tags, allowing AST parsing and
-programmatic manipulation while preserving a readable text format for human and LLM
-readability. See Stripe’s [Markdoc overview][markdoc-overview] and
-[blog post][stripe-markdoc] for more on the philosophy behind “docs-as-data” that
-Markform extends to “forms-as-data.”
-
-### Example Use Cases
-
-- A clean and readable text format for web UIs that involve filling in forms, supporting
-  strings, lists, numbers, checkboxes, URLs, and other fields
-
-- A format and set of APIs for validating structured values filled into forms
-
-- Deep research tools where agents need to follow codified processes to assemble
-  information
-
-- Practical task execution plans with checklists and assembled answers and notes
-
-- Analysis processes, like assembling insights from unstructured sources in structured
-  form
-
-- Multi-agent and agent-human workflows, where humans and/or agents fill in different
-  parts of a form, or where humans or agents review each other’s work in structured ways
+See **[the project readme](https://github.com/jlevy/markform)** for more background and
+motivation.
 
 ## Architecture Roadmap
 

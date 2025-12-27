@@ -1,6 +1,6 @@
 # Markform Specification
 
-**Version:** MF/0.1
+**Version:** MF/0.1 (draft)
 
 ## Overview
 

@@ -1,7 +1,7 @@
 {
   "name": "markform",
   "version": "0.1.1",
-  "description": "Agent-friendly, human-readable, editable forms stored as .form.md files",
+  "description": "Markdown forms for token-friendly workflows",
   "license": "AGPL-3.0-or-later",
   "author": "Joshua Levy",
   "repository": {
