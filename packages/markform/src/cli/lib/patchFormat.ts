@@ -50,6 +50,10 @@ export function formatPatchValue(patch: Patch): string {
       return patch.value ? truncate(`"${patch.value}"`) : '(empty)';
     case 'set_url_list':
       return patch.items.length > 0 ? truncate(`[${patch.items.join(', ')}]`) : '(empty)';
+    case 'set_date':
+      return patch.value ? truncate(`"${patch.value}"`) : '(empty)';
+    case 'set_year':
+      return patch.value !== null ? String(patch.value) : '(empty)';
     case 'add_note':
       return truncate(`note: ${patch.text}`);
     case 'remove_note':
@@ -84,6 +88,10 @@ export function formatPatchType(patch: Patch): string {
       return 'url';
     case 'set_url_list':
       return 'url_list';
+    case 'set_date':
+      return 'date';
+    case 'set_year':
+      return 'year';
     case 'add_note':
       return 'note';
     case 'remove_note':

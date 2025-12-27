@@ -979,6 +979,202 @@ markform:
       expect(() => parseForm(markdown)).toThrow(ParseError);
       expect(() => parseForm(markdown)).toThrow(/conflicting state/i);
     });
+
+    it('parses |SKIP| in date-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% date-field id="deadline" label="Deadline" %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /date-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.deadline;
+
+      expect(response?.state).toBe('skipped');
+      expect(response?.value).toBeUndefined();
+    });
+
+    it('parses |ABORT| in date-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% date-field id="deadline" label="Deadline" %}
+\`\`\`value
+|ABORT|
+\`\`\`
+{% /date-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.deadline;
+
+      expect(response?.state).toBe('aborted');
+      expect(response?.value).toBeUndefined();
+    });
+
+    it('parses |SKIP| in year-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% year-field id="founded" label="Founded Year" %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /year-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.founded;
+
+      expect(response?.state).toBe('skipped');
+      expect(response?.value).toBeUndefined();
+    });
+
+    it('parses |ABORT| in year-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% year-field id="founded" label="Founded Year" %}
+\`\`\`value
+|ABORT|
+\`\`\`
+{% /year-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.founded;
+
+      expect(response?.state).toBe('aborted');
+      expect(response?.value).toBeUndefined();
+    });
+
+    it('throws error on |SKIP| in required date-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% date-field id="deadline" label="Deadline" required=true %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /date-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/required.*|SKIP|/i);
+    });
+
+    it('throws error on |SKIP| in required year-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% year-field id="founded" label="Founded Year" required=true %}
+\`\`\`value
+|SKIP|
+\`\`\`
+{% /year-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/required.*|SKIP|/i);
+    });
+
+    it('parses |SKIP| with reason in date-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% date-field id="deadline" label="Deadline" %}
+\`\`\`value
+|SKIP| (No deadline set for this project)
+\`\`\`
+{% /date-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.deadline;
+
+      expect(response?.state).toBe('skipped');
+      expect(response?.reason).toBe('No deadline set for this project');
+      expect(response?.value).toBeUndefined();
+    });
+
+    it('parses |ABORT| with reason in year-field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% year-field id="founded" label="Founded Year" %}
+\`\`\`value
+|ABORT| (Unable to determine founding year)
+\`\`\`
+{% /year-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.founded;
+
+      expect(response?.state).toBe('aborted');
+      expect(response?.reason).toBe('Unable to determine founding year');
+      expect(response?.value).toBeUndefined();
+    });
   });
 
   describe('unified response model - parse notes (markform-232)', () => {

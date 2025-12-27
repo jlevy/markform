@@ -405,6 +405,69 @@ function coerceToUrlList(fieldId: string, rawValue: RawFieldValue): CoercionResu
   };
 }
 
+function coerceToDate(fieldId: string, rawValue: RawFieldValue): CoercionResult {
+  if (rawValue === null) {
+    return {
+      ok: true,
+      patch: { op: 'set_date', fieldId, value: null },
+    };
+  }
+
+  if (typeof rawValue === 'string') {
+    return {
+      ok: true,
+      patch: { op: 'set_date', fieldId, value: rawValue },
+    };
+  }
+
+  return {
+    ok: false,
+    error: `Cannot coerce ${typeof rawValue} to date for field '${fieldId}'`,
+  };
+}
+
+function coerceToYear(fieldId: string, rawValue: RawFieldValue): CoercionResult {
+  if (rawValue === null) {
+    return {
+      ok: true,
+      patch: { op: 'set_year', fieldId, value: null },
+    };
+  }
+
+  if (typeof rawValue === 'number') {
+    if (!Number.isInteger(rawValue)) {
+      return {
+        ok: false,
+        error: `Year must be an integer for field '${fieldId}', got ${rawValue}`,
+      };
+    }
+    return {
+      ok: true,
+      patch: { op: 'set_year', fieldId, value: rawValue },
+    };
+  }
+
+  if (typeof rawValue === 'string') {
+    const parsed = Number.parseInt(rawValue, 10);
+    if (Number.isNaN(parsed)) {
+      return {
+        ok: false,
+        error: `Cannot coerce non-numeric string '${rawValue}' to year for field '${fieldId}'`,
+      };
+    }
+    return {
+      ok: true,
+      patch: { op: 'set_year', fieldId, value: parsed },
+      warning: `Coerced string '${rawValue}' to year for field '${fieldId}'`,
+    };
+  }
+
+  return {
+    ok: false,
+    error: `Cannot coerce ${typeof rawValue} to year for field '${fieldId}'`,
+  };
+}
+
 // =============================================================================
 // Main Coercion Functions
 // =============================================================================
@@ -439,6 +502,10 @@ export function coerceToFieldPatch(
       return coerceToUrl(fieldId, rawValue);
     case 'url_list':
       return coerceToUrlList(fieldId, rawValue);
+    case 'date':
+      return coerceToDate(fieldId, rawValue);
+    case 'year':
+      return coerceToYear(fieldId, rawValue);
   }
 }
 

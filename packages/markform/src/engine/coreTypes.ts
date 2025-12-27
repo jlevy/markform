@@ -111,7 +111,9 @@ export type FieldKind =
   | 'single_select'
   | 'multi_select'
   | 'url'
-  | 'url_list';
+  | 'url_list'
+  | 'date'
+  | 'year';
 
 /** Field priority level for issue scoring */
 export type FieldPriorityLevel = 'high' | 'medium' | 'low';
@@ -196,6 +198,20 @@ export interface UrlListField extends FieldBase {
   uniqueItems?: boolean;
 }
 
+/** Date field - ISO 8601 date (YYYY-MM-DD) with optional min/max constraints */
+export interface DateField extends FieldBase {
+  kind: 'date';
+  min?: string; // ISO 8601 date string (YYYY-MM-DD)
+  max?: string; // ISO 8601 date string (YYYY-MM-DD)
+}
+
+/** Year field - integer year with optional min/max constraints */
+export interface YearField extends FieldBase {
+  kind: 'year';
+  min?: number; // minimum year (inclusive)
+  max?: number; // maximum year (inclusive)
+}
+
 /** Union of all field types */
 export type Field =
   | StringField
@@ -205,7 +221,9 @@ export type Field =
   | SingleSelectField
   | MultiSelectField
   | UrlField
-  | UrlListField;
+  | UrlListField
+  | DateField
+  | YearField;
 
 // =============================================================================
 // Form Structure Types
@@ -280,6 +298,18 @@ export interface UrlListValue {
   items: string[]; // Array of URL strings
 }
 
+/** Date field value */
+export interface DateValue {
+  kind: 'date';
+  value: string | null; // ISO 8601 date string (YYYY-MM-DD) or null
+}
+
+/** Year field value */
+export interface YearValue {
+  kind: 'year';
+  value: number | null; // integer year or null
+}
+
 /** Union of all field value types */
 export type FieldValue =
   | StringValue
@@ -289,7 +319,9 @@ export type FieldValue =
   | SingleSelectValue
   | MultiSelectValue
   | UrlValue
-  | UrlListValue;
+  | UrlListValue
+  | DateValue
+  | YearValue;
 
 // =============================================================================
 // Documentation Block
@@ -595,6 +627,20 @@ export interface SetUrlListPatch {
   items: string[];
 }
 
+/** Set date field value */
+export interface SetDatePatch {
+  op: 'set_date';
+  fieldId: Id;
+  value: string | null; // ISO 8601 date string (YYYY-MM-DD) or null
+}
+
+/** Set year field value */
+export interface SetYearPatch {
+  op: 'set_year';
+  fieldId: Id;
+  value: number | null; // integer year or null
+}
+
 /** Clear field value */
 export interface ClearFieldPatch {
   op: 'clear_field';
@@ -641,6 +687,8 @@ export type Patch =
   | SetMultiSelectPatch
   | SetUrlPatch
   | SetUrlListPatch
+  | SetDatePatch
+  | SetYearPatch
   | ClearFieldPatch
   | SkipFieldPatch
   | AbortFieldPatch
@@ -808,6 +856,8 @@ export const FieldKindSchema = z.enum([
   'multi_select',
   'url',
   'url_list',
+  'date',
+  'year',
 ]);
 
 export const FieldPriorityLevelSchema = z.enum(['high', 'medium', 'low']);
@@ -893,6 +943,20 @@ export const UrlListFieldSchema = z.object({
   uniqueItems: z.boolean().optional(),
 });
 
+export const DateFieldSchema = z.object({
+  ...FieldBaseSchemaPartial,
+  kind: z.literal('date'),
+  min: z.string().optional(), // ISO 8601 date string (YYYY-MM-DD)
+  max: z.string().optional(), // ISO 8601 date string (YYYY-MM-DD)
+});
+
+export const YearFieldSchema = z.object({
+  ...FieldBaseSchemaPartial,
+  kind: z.literal('year'),
+  min: z.number().int().optional(), // minimum year
+  max: z.number().int().optional(), // maximum year
+});
+
 export const FieldSchema = z.discriminatedUnion('kind', [
   StringFieldSchema,
   NumberFieldSchema,
@@ -902,6 +966,8 @@ export const FieldSchema = z.discriminatedUnion('kind', [
   MultiSelectFieldSchema,
   UrlFieldSchema,
   UrlListFieldSchema,
+  DateFieldSchema,
+  YearFieldSchema,
 ]);
 
 // Field group schema (no 'kind' property - reserved for Field/FieldValue types)
@@ -960,6 +1026,16 @@ export const UrlListValueSchema = z.object({
   items: z.array(z.string()),
 });
 
+export const DateValueSchema = z.object({
+  kind: z.literal('date'),
+  value: z.string().nullable(), // ISO 8601 date string (YYYY-MM-DD) or null
+});
+
+export const YearValueSchema = z.object({
+  kind: z.literal('year'),
+  value: z.number().int().nullable(), // integer year or null
+});
+
 export const FieldValueSchema = z.discriminatedUnion('kind', [
   StringValueSchema,
   NumberValueSchema,
@@ -969,6 +1045,8 @@ export const FieldValueSchema = z.discriminatedUnion('kind', [
   MultiSelectValueSchema,
   UrlValueSchema,
   UrlListValueSchema,
+  DateValueSchema,
+  YearValueSchema,
 ]);
 
 // FieldResponse schema (markform-255)
@@ -1209,6 +1287,18 @@ export const SetUrlListPatchSchema = z.object({
   items: z.array(z.string()),
 });
 
+export const SetDatePatchSchema = z.object({
+  op: z.literal('set_date'),
+  fieldId: IdSchema,
+  value: z.string().nullable(), // ISO 8601 date string (YYYY-MM-DD) or null
+});
+
+export const SetYearPatchSchema = z.object({
+  op: z.literal('set_year'),
+  fieldId: IdSchema,
+  value: z.number().int().nullable(), // integer year or null
+});
+
 export const ClearFieldPatchSchema = z.object({
   op: z.literal('clear_field'),
   fieldId: IdSchema,
@@ -1249,6 +1339,8 @@ export const PatchSchema = z.discriminatedUnion('op', [
   SetMultiSelectPatchSchema,
   SetUrlPatchSchema,
   SetUrlListPatchSchema,
+  SetDatePatchSchema,
+  SetYearPatchSchema,
   ClearFieldPatchSchema,
   SkipFieldPatchSchema,
   AbortFieldPatchSchema,
