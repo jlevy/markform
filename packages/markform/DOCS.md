@@ -3,12 +3,23 @@
 **Version:** MF/0.1
 
 Markform is structured Markdown for forms.
-Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define typed,
-validated fields.
+Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define
+typed, validated fields.
 
-**More info:**
-[Project README](https://github.com/jlevy/markform) |
-[Full Specification](https://github.com/jlevy/markform/blob/main/SPEC.md) (`markform spec`)
+**More info:** [Project README](https://github.com/jlevy/markform) |
+[Full Specification](https://github.com/jlevy/markform/blob/main/SPEC.md) (`markform
+spec`)
+
+## Installation
+
+```bash
+npm install -g markform    # Global CLI
+npm install markform       # Project dependency
+```
+
+Run the CLI as `npx markform` or simply `markform` if installed globally.
+
+Requires Node.js 20+. See [README](https://github.com/jlevy/markform) for full details.
 
 ## File Structure
 
@@ -341,23 +352,23 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 
 {% field-group id="basic_info" title="Basic Information" %}
 
-{% string-field id="full_title" label="Full Title" required=true %}{% /string-field %}
+{% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
 
 {% instructions ref="full_title" %}
 Look up what film the user had in mind and fill in the official title including subtitle if any (e.g., "The Lord of the Rings: The Fellowship of the Ring").
 {% /instructions %}
 
-{% string-list id="directors" label="Director(s)" required=true %}{% /string-list %}
+{% string-list id="directors" label="Director(s)" role="agent" required=true %}{% /string-list %}
 
 {% instructions ref="directors" %}
 One director per line. Most films have one; some have two or more co-directors.
 {% /instructions %}
 
-{% number-field id="year" label="Release Year" required=true min=1888 max=2030 %}{% /number-field %}
+{% number-field id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /number-field %}
 
-{% number-field id="runtime_minutes" label="Runtime (minutes)" min=1 max=1000 %}{% /number-field %}
+{% number-field id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 %}{% /number-field %}
 
-{% single-select id="mpaa_rating" label="MPAA Rating" %}
+{% single-select id="mpaa_rating" label="MPAA Rating" role="agent" %}
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
 - [ ] PG-13 {% #pg_13 %}
@@ -370,19 +381,19 @@ One director per line. Most films have one; some have two or more co-directors.
 
 {% field-group id="imdb" title="IMDB" %}
 
-{% url-field id="imdb_url" label="IMDB URL" %}{% /url-field %}
+{% url-field id="imdb_url" label="IMDB URL" role="agent" %}{% /url-field %}
 
 {% instructions ref="imdb_url" %}
 Direct link to the movie's IMDB page (e.g., https://www.imdb.com/title/tt0111161/).
 {% /instructions %}
 
-{% number-field id="imdb_rating" label="IMDB Rating" min=1.0 max=10.0 %}{% /number-field %}
+{% number-field id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /number-field %}
 
 {% instructions ref="imdb_rating" %}
 IMDB user rating (1.0-10.0 scale).
 {% /instructions %}
 
-{% number-field id="imdb_votes" label="IMDB Vote Count" min=0 %}{% /number-field %}
+{% number-field id="imdb_votes" label="IMDB Vote Count" role="agent" min=0 %}{% /number-field %}
 
 {% instructions ref="imdb_votes" %}
 Number of IMDB user votes (e.g., 2800000 for a popular film).
@@ -392,15 +403,15 @@ Number of IMDB user votes (e.g., 2800000 for a popular film).
 
 {% field-group id="rotten_tomatoes" title="Rotten Tomatoes" %}
 
-{% url-field id="rt_url" label="Rotten Tomatoes URL" %}{% /url-field %}
+{% url-field id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /url-field %}
 
-{% number-field id="rt_critics_score" label="Tomatometer (Critics)" min=0 max=100 %}{% /number-field %}
+{% number-field id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /number-field %}
 
 {% instructions ref="rt_critics_score" %}
 Tomatometer percentage (0-100).
 {% /instructions %}
 
-{% number-field id="rt_audience_score" label="Audience Score" min=0 max=100 %}{% /number-field %}
+{% number-field id="rt_audience_score" label="Audience Score" role="agent" min=0 max=100 %}{% /number-field %}
 
 {% instructions ref="rt_audience_score" %}
 Audience Score percentage (0-100).
@@ -410,13 +421,13 @@ Audience Score percentage (0-100).
 
 {% field-group id="summary" title="Summary" %}
 
-{% string-field id="logline" label="One-Line Summary" maxLength=300 %}{% /string-field %}
+{% string-field id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /string-field %}
 
 {% instructions ref="logline" %}
 Brief plot summary in 1-2 sentences, no spoilers.
 {% /instructions %}
 
-{% string-list id="notable_awards" label="Notable Awards" %}{% /string-list %}
+{% string-list id="notable_awards" label="Notable Awards" role="agent" %}{% /string-list %}
 
 {% instructions ref="notable_awards" %}
 Major awards won. One per line.
@@ -432,13 +443,60 @@ Example: "Oscar | Best Picture | 1995"
 ## CLI Quick Reference
 
 ```bash
-markform inspect form.md      # View structure and progress
-markform fill form.md --interactive  # Fill user fields interactively
+# Inspect form structure and progress
+markform inspect form.md
+markform inspect form.md --format=json
+
+# Validate form (check for errors)
+markform validate form.md
+
+# Fill forms
+markform fill form.md --interactive              # Interactive prompts for user fields
+markform fill form.md --roles=user --interactive # Only fill user-role fields
 markform fill form.md --model anthropic/claude-sonnet-4-5  # AI fills agent fields
-markform export form.md --format=json  # Export values as JSON
-markform validate form.md     # Check for validation errors
-markform serve form.md        # Web UI for browsing
+
+# Export data
+markform export form.md --format=json    # Export values as JSON
+markform export form.md --format=yaml    # Export values as YAML
+markform export form.md --format=markdown  # Readable markdown (strips tags)
+
+# Other commands
+markform serve form.md       # Web UI for browsing
+markform examples            # Try built-in examples
+markform models              # List supported AI providers
 ```
+
+## Testing and Validation
+
+**Inspect a form** to see structure, progress, and issues:
+
+```bash
+markform inspect my-form.form.md
+```
+
+**Validate** checks for constraint violations:
+
+```bash
+markform validate my-form.form.md
+```
+
+**Test with mock data** using a pre-filled source:
+
+```bash
+markform fill template.form.md --mock --mock-source filled.form.md
+```
+
+**Workflow for testing forms:**
+
+1. Create your `.form.md` template
+
+2. Run `markform validate` to check syntax and constraints
+
+3. Run `markform fill --interactive` to test user fields
+
+4. Run `markform fill --model <model>` to test agent fields
+
+5. Use `markform inspect` to verify progress and completion
 
 ## Best Practices
 
