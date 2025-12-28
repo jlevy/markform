@@ -171,13 +171,13 @@ Add `markform research <file>` command that:
 
    - Value resolution order: form defaults → file → inline → interactive
 
-5. **File Helpers**:
+5. **File I/O at CLI Layer**:
 
-   - `runResearchFromFile(inputPath, options)` function
+   - File reading/writing handled in CLI command, not core API
 
-   - Automatically write output to versioned filename
+   - Follows `fillForm()` pattern: core API works with strings
 
-   - Support `exportFormats` option for multiple outputs
+   - Reuse existing `exportMultiFormat()` for output
 
 6. **Frontmatter Harness Configuration**:
 
@@ -598,16 +598,6 @@ export interface ResearchResult extends FillResult {
   webSearchUsed: boolean;
 }
 
-/**
- * Options for file-based research.
- */
-export interface ResearchFileOptions extends Omit<ResearchOptions, 'form'> {
-  /** Output file path (defaults to versioned input path) */
-  outputPath?: string;
-  /** Export formats to generate */
-  exportFormats?: ('form' | 'raw' | 'yaml')[];
-}
-
 // ResearchFormValidation is defined in researchFormValidation.ts
 // Re-exported here for convenience
 export type { ResearchFormValidation } from './researchFormValidation.js';
@@ -922,21 +912,13 @@ export function isResearchForm(form: ParsedForm): boolean;
  * This is the primary programmatic entry point for research workflows.
  * It validates the form structure, validates the model supports web search,
  * and executes the fill workflow with web search enabled.
+ * 
+ * API design follows fillForm() pattern:
+ * - Core API works with strings/ParsedForm (no file I/O)
+ * - File I/O is handled at CLI layer using shared helpers
+ * - This keeps the API simple and testable
  */
 export async function runResearch(options: ResearchOptions): Promise<ResearchResult>;
-
-/**
- * Run research from a file path.
- * 
- * Convenience wrapper that handles file I/O:
- * - Reads form from inputPath
- * - Executes research
- * - Writes results to outputPath in specified formats
- */
-export async function runResearchFromFile(
-  inputPath: string,
-  options: ResearchFileOptions
-): Promise<ResearchResult>;
 ```
 
 #### Settings Updates (`settings.ts`)
@@ -1107,16 +1089,15 @@ InputContext ─────────────────> coerceInputCon
                                      │
                                      ▼
                             buildResult() ────────> ResearchResult
-                                     │                    │
-                                     │                    ├─> markdown
-                                     │                    ├─> values
-                                     │                    └─> status
-                                     ▼
-                            (File I/O if using runResearchFromFile)
-                                     │
-                                     ├─> .form.md
-                                     ├─> .raw.md
-                                     └─> .yml
+                                                             │
+                                                             ├─> markdown (string)
+                                                             ├─> values (Record)
+                                                             └─> status
+
+                                  CLI layer (if using `markform research` command)
+                                       │
+                                       ▼
+                              exportMultiFormat() ───> .form.md, .raw.md, .yml
 ```
 
 ## Stage 3: Refine Architecture
@@ -1414,15 +1395,7 @@ Move all LLM-related configuration from `settings.ts` to a new `src/llms.ts` fil
 
 - [ ] Integration tests with mock agent
 
-#### Phase 4: File Helpers
-
-- [ ] Add `runResearchFromFile()` to `src/research/research.ts`
-
-- [ ] Reuse `exportMultiFormat()` for output
-
-- [ ] Tests for file I/O
-
-#### Phase 5: CLI Commands
+#### Phase 4: CLI Commands
 
 - [ ] Add `src/cli/lib/initialValues.ts` with:
 
@@ -1448,7 +1421,7 @@ Move all LLM-related configuration from `settings.ts` to a new `src/llms.ts` fil
 
 - [ ] Integration tests for CLI config override hierarchy
 
-#### Phase 6: Examples Command Integration
+#### Phase 5: Examples Command Integration
 
 Update `examples` command to use research workflow for research forms:
 
@@ -1488,7 +1461,7 @@ Update `examples` command to use research workflow for research forms:
 
 - [ ] Integration tests for examples command with research forms
 
-#### Phase 7: Update Research Example Forms
+#### Phase 6: Update Research Example Forms
 
 Improve research example forms to demonstrate best practices:
 
