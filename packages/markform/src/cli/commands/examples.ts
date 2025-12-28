@@ -26,6 +26,9 @@ import {
   DEFAULT_MAX_TURNS,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_ISSUES_PER_TURN,
+  DEFAULT_RESEARCH_MAX_TURNS,
+  DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
+  DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   getFormsDir,
 } from '../../settings.js';
 import { SUGGESTED_LLMS, hasWebSearchSupport } from '../../llms.js';
@@ -260,7 +263,6 @@ async function runAgentFill(
     const agent = createLiveAgent({ model, targetRole: AGENT_ROLE });
 
     // Run harness loop with verbose output
-    console.log('');
     p.log.step(pc.bold('Agent fill in progress...'));
     let stepResult = harness.step();
 
@@ -542,12 +544,28 @@ async function runInteractiveFlow(
     // Step 9: Run agent fill or research depending on example type
     const agentStartTime = Date.now();
     const timingLabel = isResearchExample ? 'Research time' : 'Agent fill time';
+
+    // Log harness config - always show for visibility
+    const maxTurns = isResearchExample ? DEFAULT_RESEARCH_MAX_TURNS : DEFAULT_MAX_TURNS;
+    const maxIssuesPerTurn = isResearchExample
+      ? DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN
+      : DEFAULT_MAX_ISSUES_PER_TURN;
+    const maxPatchesPerTurn = isResearchExample
+      ? DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN
+      : DEFAULT_MAX_PATCHES_PER_TURN;
+
+    console.log('');
+    console.log(
+      pc.dim(
+        `Config: max_turns=${maxTurns}, max_issues_per_turn=${maxIssuesPerTurn}, max_patches_per_turn=${maxPatchesPerTurn}`,
+      ),
+    );
+
     try {
       let success: boolean;
 
       if (isResearchExample) {
         // Use runResearch() for research examples - uses research-specific defaults
-        console.log('');
         p.log.step(pc.bold('Research in progress...'));
         const result = await runResearch(form, {
           model: modelId,

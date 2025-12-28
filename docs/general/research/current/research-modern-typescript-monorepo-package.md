@@ -836,8 +836,8 @@ Structure format and lint scripts to support both auto-fix and CI verification m
 ```json
 {
   "scripts": {
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write --log-level warn .",
+    "format:check": "prettier --check --log-level warn .",
     "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
     "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
     "typecheck": "tsc -b",
@@ -850,8 +850,8 @@ Structure format and lint scripts to support both auto-fix and CI verification m
 
 | Script | Purpose | When to use |
 | --- | --- | --- |
-| `format` | Auto-format all files | Local development |
-| `format:check` | Verify formatting (no changes) | CI |
+| `format` | Auto-format changed files (quiet for unchanged) | Local development |
+| `format:check` | Verify formatting (quiet for valid files) | CI |
 | `lint` | Lint with auto-fix, then verify zero warnings | Local development |
 | `lint:check` | Lint without fix, zero warnings | CI, pre-build |
 | `build` | Format, lint, then build | Production builds |
@@ -859,6 +859,11 @@ Structure format and lint scripts to support both auto-fix and CI verification m
 **Key insight**: The `lint` script runs ESLint twice: first with `--fix` to auto-fix
 issues, then again with `--max-warnings 0` to catch any unfixable warnings.
 This ensures auto-fix doesn’t mask problems that require manual attention.
+
+**Key insight**: Using `--log-level warn` with Prettier suppresses the verbose output
+that lists every unchanged file.
+This keeps output clean—only files that were actually changed (or have issues in check
+mode) are shown.
 
 **Key insight**: The `build` script runs `format` before `lint:check`. This ensures
 formatting is applied before linting, catching any formatting issues that would fail the
@@ -1661,8 +1666,8 @@ ready for public release.
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "publint": "pnpm -r publint",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --write --log-level warn .",
+    "format:check": "prettier --check --log-level warn .",
     "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
     "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
     "prepare": "lefthook install",
@@ -2094,7 +2099,7 @@ pre-commit:
     format-core:
       root: "packages/core/"
       glob: "*.{ts,tsx}"
-      run: npx prettier --write {staged_files}
+      run: npx prettier --write --log-level warn {staged_files}
       stage_fixed: true
 
     lint-core:
