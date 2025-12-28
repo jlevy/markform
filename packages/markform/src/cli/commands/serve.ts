@@ -21,6 +21,7 @@ import { DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
   CheckboxesField,
   CheckboxesValue,
+  DateField,
   Field,
   FieldGroup,
   FieldValue,
@@ -35,6 +36,7 @@ import type {
   StringListField,
   UrlField,
   UrlListField,
+  YearField,
 } from '../../engine/coreTypes.js';
 import {
   type CommandContext,
@@ -350,6 +352,29 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
             patches.push({ op: 'set_url_list', fieldId, items });
           } else {
             patches.push({ op: 'clear_field', fieldId });
+          }
+        } else {
+          patches.push({ op: 'clear_field', fieldId });
+        }
+        break;
+      }
+
+      case 'date': {
+        const value = formData[fieldId];
+        if (typeof value === 'string' && value.trim() !== '') {
+          patches.push({ op: 'set_date', fieldId, value: value.trim() });
+        } else {
+          patches.push({ op: 'clear_field', fieldId });
+        }
+        break;
+      }
+
+      case 'year': {
+        const value = formData[fieldId];
+        if (typeof value === 'string' && value.trim() !== '') {
+          const num = parseInt(value, 10);
+          if (!isNaN(num)) {
+            patches.push({ op: 'set_year', fieldId, value: num });
           }
         } else {
           patches.push({ op: 'clear_field', fieldId });
@@ -747,6 +772,12 @@ export function renderFieldHtml(
     case 'url_list':
       inputHtml = renderUrlListInput(field, value, disabledAttr);
       break;
+    case 'date':
+      inputHtml = renderDateInput(field, value, disabledAttr);
+      break;
+    case 'year':
+      inputHtml = renderYearInput(field, value, disabledAttr);
+      break;
     default:
       inputHtml = '<div class="field-help">(unknown field type)</div>';
   }
@@ -844,6 +875,38 @@ function renderUrlListInput(
   const requiredAttr = field.required ? ' required' : '';
 
   return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one URL per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
+}
+
+/**
+ * Render a date field as date input.
+ */
+function renderDateInput(
+  field: DateField,
+  value: FieldValue | undefined,
+  disabledAttr: string,
+): string {
+  const currentValue = value?.kind === 'date' && value.value !== null ? value.value : '';
+  const requiredAttr = field.required ? ' required' : '';
+  const minAttr = field.min !== undefined ? ` min="${field.min}"` : '';
+  const maxAttr = field.max !== undefined ? ` max="${field.max}"` : '';
+
+  return `<input type="date" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minAttr}${maxAttr}${disabledAttr}>`;
+}
+
+/**
+ * Render a year field as number input.
+ */
+function renderYearInput(
+  field: YearField,
+  value: FieldValue | undefined,
+  disabledAttr: string,
+): string {
+  const currentValue = value?.kind === 'year' && value.value !== null ? String(value.value) : '';
+  const requiredAttr = field.required ? ' required' : '';
+  const minAttr = field.min !== undefined ? ` min="${field.min}"` : ' min="1000"';
+  const maxAttr = field.max !== undefined ? ` max="${field.max}"` : ' max="2500"';
+
+  return `<input type="number" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}" step="1" placeholder="YYYY"${requiredAttr}${minAttr}${maxAttr}${disabledAttr}>`;
 }
 
 /**

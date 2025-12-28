@@ -59,6 +59,8 @@ describe('programmatic fill API - integration tests', () => {
             'https://github.com/example/project',
             'https://medium.com/article-about-forms',
           ],
+          event_date: '2025-06-15',
+          founded_year: 2020,
         },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -100,6 +102,8 @@ describe('programmatic fill API - integration tests', () => {
           confirmations: { backed_up: 'yes', notified: 'yes' },
           website: 'https://test.com',
           references: ['https://example.com'],
+          event_date: '2025-03-15',
+          founded_year: 2021,
         },
         targetRoles: ['user'],
         _testAgent: mockAgent,
@@ -139,6 +143,8 @@ describe('programmatic fill API - integration tests', () => {
           confirmations: { backed_up: 'yes', notified: 'yes' },
           website: 'https://test.com',
           references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
         },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -149,7 +155,7 @@ describe('programmatic fill API - integration tests', () => {
 
       // Should have the same structure
       expect(reparsedForm.schema.id).toBe('simple_test');
-      expect(reparsedForm.schema.groups.length).toBe(6);
+      expect(reparsedForm.schema.groups.length).toBe(7);
 
       // Values should be preserved
       const nameResponse = reparsedForm.responsesByFieldId.name;
@@ -242,6 +248,8 @@ describe('programmatic fill API - integration tests', () => {
           confirmations: { backed_up: 'yes', notified: 'yes' },
           website: 'https://test.com',
           references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
           // Note: NOT pre-filling score, notes, or related_url - MockAgent will fill these
         },
         targetRoles: ['user', 'agent'],
@@ -292,11 +300,15 @@ describe('programmatic fill API - integration tests', () => {
           confirmations: { backed_up: 'yes', notified: 'yes' },
           website: 'https://test.com',
           references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
           // Also pre-fill agent fields (including optional ones)
           score: 87.5,
           notes: 'Pre-filled note',
           related_url: 'https://related.com',
           optional_number: 42,
+          optional_date: '2025-01-01',
+          optional_year: 2025,
         },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,

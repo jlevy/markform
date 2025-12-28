@@ -529,6 +529,154 @@ https://example2.com
     });
   });
 
+  describe('date field rendering', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% date-field id="deadline" label="Deadline" required=true min="2020-01-01" max="2030-12-31" %}{% /date-field %}
+{% /field-group %}
+{% /form %}`;
+
+    it('should render date field as date input', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('<input');
+      expect(html).toContain('type="date"');
+      expect(html).toContain('name="deadline"');
+      expect(html).toContain('id="field-deadline"');
+    });
+
+    it('should include min/max constraints', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('min="2020-01-01"');
+      expect(html).toContain('max="2030-12-31"');
+    });
+
+    it('should mark required date fields', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('required');
+    });
+
+    it('should show type badge as date', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('type-badge">date</span>');
+    });
+  });
+
+  describe('date pre-filled values', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% date-field id="deadline" label="Deadline" %}
+\`\`\`value
+2025-06-15
+\`\`\`
+{% /date-field %}
+{% /field-group %}
+{% /form %}`;
+
+    it('should pre-fill date value', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('value="2025-06-15"');
+    });
+  });
+
+  describe('year field rendering', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% year-field id="founded_year" label="Founded Year" required=true min=1900 max=2030 %}{% /year-field %}
+{% /field-group %}
+{% /form %}`;
+
+    it('should render year field as number input', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('<input');
+      expect(html).toContain('type="number"');
+      expect(html).toContain('name="founded_year"');
+      expect(html).toContain('id="field-founded_year"');
+    });
+
+    it('should include min/max constraints', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('min="1900"');
+      expect(html).toContain('max="2030"');
+    });
+
+    it('should include step=1 for integer years', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('step="1"');
+    });
+
+    it('should include placeholder for year format', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('placeholder="YYYY"');
+    });
+
+    it('should mark required year fields', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('required');
+    });
+
+    it('should show type badge as year', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('type-badge">year</span>');
+    });
+  });
+
+  describe('year pre-filled values', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field-group id="group1" title="Group 1" %}
+{% year-field id="founded_year" label="Founded Year" %}
+\`\`\`value
+2020
+\`\`\`
+{% /year-field %}
+{% /field-group %}
+{% /form %}`;
+
+    it('should pre-fill year value', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      expect(html).toContain('value="2020"');
+    });
+  });
+
   describe('skip_field support', () => {
     describe('optional fields', () => {
       const formContent = `---

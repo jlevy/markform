@@ -439,10 +439,10 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="sources_section" title="Research Metadata" %}
 
-{% string-field id="research_date" label="Research Date" required=true pattern="^\\d{4}-\\d{2}-\\d{2}$" %}{% /string-field %}
+{% date-field id="research_date" label="Research Date" required=true %}{% /date-field %}
 
 {% instructions ref="research_date" %}
-Date this research was conducted (YYYY-MM-DD). Important for tracking data freshness.
+Date this research was conducted. Important for tracking data freshness.
 {% /instructions %}
 
 {% string-field id="research_notes" label="Research Notes" maxLength=1000 %}{% /string-field %}

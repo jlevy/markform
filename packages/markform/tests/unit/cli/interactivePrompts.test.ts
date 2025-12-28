@@ -16,6 +16,8 @@ import type {
   CheckboxesField,
   UrlField,
   UrlListField,
+  DateField,
+  YearField,
   ParsedForm,
   InspectIssue,
 } from '../../../src/engine/coreTypes.js';
@@ -466,6 +468,74 @@ describe('interactivePrompts', () => {
       });
     });
 
+    describe('date field', () => {
+      const dateField: DateField = {
+        kind: 'date',
+        id: 'deadline',
+        label: 'Deadline',
+        required: true,
+        priority: 'medium',
+        role: 'user',
+      };
+
+      it('returns set_date patch for date field', async () => {
+        vi.mocked(p.text).mockResolvedValue('2025-06-15');
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(dateField));
+
+        expect(patch).toEqual({
+          op: 'set_date',
+          fieldId: 'deadline',
+          value: '2025-06-15',
+        });
+      });
+
+      it('returns null for optional date field with empty input', async () => {
+        const optionalField: DateField = { ...dateField, required: false };
+        vi.mocked(p.text).mockResolvedValue('');
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalField));
+
+        expect(patch).toBeNull();
+      });
+    });
+
+    describe('year field', () => {
+      const yearField: YearField = {
+        kind: 'year',
+        id: 'founded_year',
+        label: 'Founded Year',
+        required: true,
+        priority: 'medium',
+        role: 'user',
+      };
+
+      it('returns set_year patch for year field', async () => {
+        vi.mocked(p.text).mockResolvedValue('2020');
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(yearField));
+
+        expect(patch).toEqual({
+          op: 'set_year',
+          fieldId: 'founded_year',
+          value: 2020,
+        });
+      });
+
+      it('returns null for optional year field with empty input', async () => {
+        const optionalField: YearField = { ...yearField, required: false };
+        vi.mocked(p.text).mockResolvedValue('');
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalField));
+
+        expect(patch).toBeNull();
+      });
+    });
+
     it('shows field description when available', async () => {
       const field: StringField = {
         kind: 'string',
@@ -892,6 +962,56 @@ describe('interactivePrompts', () => {
       });
     });
 
+    describe('optional date field', () => {
+      const optionalDateField: DateField = {
+        kind: 'date',
+        id: 'deadline',
+        label: 'Deadline',
+        required: false,
+        priority: 'medium',
+        role: 'user',
+      };
+
+      it('shows skip option and returns skip_field patch when selected', async () => {
+        vi.mocked(p.select).mockResolvedValue('skip');
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalDateField));
+
+        expect(patch).toEqual({
+          op: 'skip_field',
+          fieldId: 'deadline',
+          role: 'user',
+          reason: 'User skipped in console',
+        });
+      });
+    });
+
+    describe('optional year field', () => {
+      const optionalYearField: YearField = {
+        kind: 'year',
+        id: 'founded_year',
+        label: 'Founded Year',
+        required: false,
+        priority: 'medium',
+        role: 'user',
+      };
+
+      it('shows skip option and returns skip_field patch when selected', async () => {
+        vi.mocked(p.select).mockResolvedValue('skip');
+        vi.mocked(p.isCancel).mockReturnValue(false);
+
+        const patch = await promptForField(createContext(optionalYearField));
+
+        expect(patch).toEqual({
+          op: 'skip_field',
+          fieldId: 'founded_year',
+          role: 'user',
+          reason: 'User skipped in console',
+        });
+      });
+    });
+
     describe('required fields', () => {
       const requiredStringField: StringField = {
         kind: 'string',
@@ -992,6 +1112,22 @@ describe('interactivePrompts', () => {
         priority: 'medium',
         role: 'user',
       },
+      {
+        kind: 'date',
+        id: 'f_date',
+        label: 'Date',
+        required: true,
+        priority: 'medium',
+        role: 'user',
+      },
+      {
+        kind: 'year',
+        id: 'f_year',
+        label: 'Year',
+        required: true,
+        priority: 'medium',
+        role: 'user',
+      },
     ];
 
     it('handles all FieldKind types without returning null unexpectedly', async () => {
@@ -1027,6 +1163,8 @@ describe('interactivePrompts', () => {
         checkboxes: 'set_checkboxes',
         url: 'set_url',
         url_list: 'set_url_list',
+        date: 'set_date',
+        year: 'set_year',
       };
 
       for (const field of allFieldTypes) {

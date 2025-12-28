@@ -21,6 +21,8 @@ import type {
   CheckboxesField,
   UrlField,
   UrlListField,
+  DateField,
+  YearField,
   ParsedForm,
   InspectIssue,
 } from '../../engine/coreTypes.js';
@@ -481,6 +483,138 @@ async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
 }
 
 /**
+ * Check if a string is a valid ISO 8601 date (YYYY-MM-DD).
+ */
+function isValidDate(str: string): boolean {
+  const pattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!pattern.test(str)) {
+    return false;
+  }
+  const date = new Date(str);
+  if (isNaN(date.getTime())) {
+    return false;
+  }
+  // Check the date components match to reject invalid dates like 2025-02-30
+  const [year, month, day] = str.split('-').map(Number);
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() + 1 === month && date.getUTCDate() === day
+  );
+}
+
+/**
+ * Prompt for a date field value.
+ */
+async function promptForDate(ctx: FieldPromptContext): Promise<Patch | null> {
+  const field = ctx.field as DateField;
+  const currentVal = ctx.currentValue?.kind === 'date' ? ctx.currentValue.value : null;
+
+  // Build format hint
+  const constraints: string[] = [];
+  if (field.min) constraints.push(`min: ${field.min}`);
+  if (field.max) constraints.push(`max: ${field.max}`);
+  const formatHint = constraints.length > 0 ? ` (${constraints.join(', ')})` : '';
+
+  const result = await p.text({
+    message: formatFieldLabel(ctx),
+    placeholder: currentVal ?? `YYYY-MM-DD${formatHint}`,
+    initialValue: currentVal ?? '',
+    validate: (value) => {
+      if (field.required && !value.trim()) {
+        return 'This field is required';
+      }
+      if (!value.trim()) {
+        return undefined; // Allow empty for optional
+      }
+      // Date format validation
+      if (!isValidDate(value)) {
+        return 'Please enter a valid date in YYYY-MM-DD format';
+      }
+      // Min/max validation
+      if (field.min && value < field.min) {
+        return `Date must be on or after ${field.min}`;
+      }
+      if (field.max && value > field.max) {
+        return `Date must be on or before ${field.max}`;
+      }
+      return undefined;
+    },
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  // Skip if empty and not required (user pressed Enter to skip)
+  if (!result && !field.required) {
+    return null;
+  }
+
+  return {
+    op: 'set_date',
+    fieldId: field.id,
+    value: result || null,
+  };
+}
+
+/** Default year range for validation */
+const DEFAULT_MIN_YEAR = 1000;
+const DEFAULT_MAX_YEAR = 2500;
+
+/**
+ * Prompt for a year field value.
+ */
+async function promptForYear(ctx: FieldPromptContext): Promise<Patch | null> {
+  const field = ctx.field as YearField;
+  const currentVal = ctx.currentValue?.kind === 'year' ? ctx.currentValue.value : null;
+
+  // Get effective min/max with defaults
+  const minYear = field.min ?? DEFAULT_MIN_YEAR;
+  const maxYear = field.max ?? DEFAULT_MAX_YEAR;
+
+  const result = await p.text({
+    message: formatFieldLabel(ctx),
+    placeholder: currentVal !== null ? String(currentVal) : `Year (${minYear}-${maxYear})`,
+    initialValue: currentVal !== null ? String(currentVal) : '',
+    validate: (value) => {
+      if (field.required && !value.trim()) {
+        return 'This field is required';
+      }
+      if (!value.trim()) {
+        return undefined; // Allow empty for optional
+      }
+      // Year must be an integer
+      const num = Number(value);
+      if (isNaN(num) || !Number.isInteger(num)) {
+        return 'Please enter a valid year (e.g., 2025)';
+      }
+      // Range validation
+      if (num < minYear) {
+        return `Year must be ${minYear} or later`;
+      }
+      if (num > maxYear) {
+        return `Year must be ${maxYear} or earlier`;
+      }
+      return undefined;
+    },
+  });
+
+  if (p.isCancel(result)) {
+    return null;
+  }
+
+  // Skip if empty and not required
+  if (!result && !field.required) {
+    return null;
+  }
+
+  return {
+    op: 'set_year',
+    fieldId: field.id,
+    value: result ? Number(result) : null,
+  };
+}
+
+/**
  * Prompt for a URL list field value.
  */
 async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> {
@@ -585,6 +719,10 @@ export async function promptForField(ctx: FieldPromptContext): Promise<Patch | n
       return promptForUrl(ctx);
     case 'url_list':
       return promptForUrlList(ctx);
+    case 'date':
+      return promptForDate(ctx);
+    case 'year':
+      return promptForYear(ctx);
     default:
       // Unknown field type - skip
       return null;
