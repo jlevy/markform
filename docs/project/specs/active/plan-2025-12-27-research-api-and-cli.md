@@ -1356,6 +1356,16 @@ Move all LLM-related configuration from `settings.ts` to a new `src/llms.ts` fil
 
 - [ ] Update form parser to extract `markform.harness` from frontmatter
 
+  **Note**: Current `parseForm()` in `parse.ts` extracts frontmatter but discards it!
+  The returned `ParsedForm.metadata` is always undefined.
+  This needs to be fixed to:
+
+  1. Parse frontmatter YAML properly (may need `yaml` package)
+
+  2. Extract `markform.spec`, `roles`, `role_instructions`, and new `harness` config
+
+  3. Populate `metadata` field in returned `ParsedForm`
+
 - [ ] Add `src/cli/lib/harnessConfigResolver.ts` with:
 
   - `FILL_DEFAULTS` and `RESEARCH_DEFAULTS` (using settings.ts constants)
