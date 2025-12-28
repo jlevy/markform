@@ -31,6 +31,7 @@ import type {
   SetSingleSelectPatch,
   SetStringListPatch,
   SetStringPatch,
+  SetTablePatch,
   SetUrlListPatch,
   SetUrlPatch,
   SetYearPatch,
@@ -38,12 +39,14 @@ import type {
   SkipFieldPatch,
   StringListValue,
   StringValue,
+  TableValue,
   UrlListValue,
   UrlValue,
   YearValue,
 } from './coreTypes.js';
 import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
 import { validate } from './validate.js';
+import { parseSentinel } from './parseSentinels.js';
 
 // =============================================================================
 // Patch Validation
@@ -228,6 +231,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_year to ${field.kind} field "${field.id}"`,
+        };
+      }
+      break;
+
+    case 'set_table':
+      if (field.kind !== 'table') {
+        return {
+          patchIndex: index,
+          message: `Cannot apply set_table to ${field.kind} field "${field.id}"`,
         };
       }
       break;
@@ -434,6 +446,44 @@ function applySetYear(responses: Record<Id, FieldResponse>, patch: SetYearPatch)
 }
 
 /**
+ * Apply a set_table patch.
+ */
+function applySetTable(responses: Record<Id, FieldResponse>, patch: SetTablePatch): void {
+  const rows: any[] = [];
+
+  for (const patchRow of patch.rows) {
+    const row: Record<string, any> = {};
+
+    for (const [columnId, cellValue] of Object.entries(patchRow)) {
+      // Check if it's a sentinel string
+      const sentinel = parseSentinel(cellValue as string);
+      if (sentinel) {
+        row[columnId] = {
+          state: sentinel.type === 'skip' ? 'skipped' : 'aborted',
+          reason: sentinel.reason,
+        };
+      } else {
+        // Regular value - wrap as answered
+        row[columnId] = {
+          state: 'answered',
+          value: cellValue,
+        };
+      }
+    }
+
+    rows.push(row);
+  }
+
+  responses[patch.fieldId] = {
+    state: 'answered',
+    value: {
+      kind: 'table',
+      rows,
+    } as TableValue,
+  };
+}
+
+/**
  * Apply a clear_field patch.
  */
 function applyClearField(responses: Record<Id, FieldResponse>, patch: ClearFieldPatch): void {
@@ -524,6 +574,9 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
       break;
     case 'set_year':
       applySetYear(responses, patch);
+      break;
+    case 'set_table':
+      applySetTable(responses, patch);
       break;
     case 'clear_field':
       applyClearField(responses, patch);

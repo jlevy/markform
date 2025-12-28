@@ -54,6 +54,8 @@ export function formatPatchValue(patch: Patch): string {
       return patch.value ? truncate(`"${patch.value}"`) : '(empty)';
     case 'set_year':
       return patch.value !== null ? String(patch.value) : '(empty)';
+    case 'set_table':
+      return patch.rows.length > 0 ? `table with ${patch.rows.length} rows` : '(empty table)';
     case 'add_note':
       return truncate(`note: ${patch.text}`);
     case 'remove_note':
@@ -92,6 +94,8 @@ export function formatPatchType(patch: Patch): string {
       return 'date';
     case 'set_year':
       return 'year';
+    case 'set_table':
+      return 'table';
     case 'add_note':
       return 'note';
     case 'remove_note':

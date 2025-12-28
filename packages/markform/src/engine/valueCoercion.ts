@@ -468,6 +468,28 @@ function coerceToYear(fieldId: string, rawValue: RawFieldValue): CoercionResult 
   };
 }
 
+function coerceToTable(fieldId: string, rawValue: RawFieldValue): CoercionResult {
+  if (rawValue === null) {
+    return {
+      ok: true,
+      patch: { op: 'set_table', fieldId, rows: [] },
+    };
+  }
+
+  if (!Array.isArray(rawValue)) {
+    return {
+      ok: false,
+      error: `Table field '${fieldId}' must be an array, got ${typeof rawValue}`,
+    };
+  }
+
+  // For now, accept the raw value as-is. More complex validation would be done elsewhere.
+  return {
+    ok: true,
+    patch: { op: 'set_table', fieldId, rows: rawValue as any },
+  };
+}
+
 // =============================================================================
 // Main Coercion Functions
 // =============================================================================
@@ -506,6 +528,8 @@ export function coerceToFieldPatch(
       return coerceToDate(fieldId, rawValue);
     case 'year':
       return coerceToYear(fieldId, rawValue);
+    case 'table':
+      return coerceToTable(fieldId, rawValue);
   }
 }
 

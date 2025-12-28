@@ -30,6 +30,8 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  TableField,
+  TableValue,
   UrlField,
   UrlListField,
   UrlListValue,
@@ -38,6 +40,7 @@ import type {
   YearValue,
 } from './coreTypes.js';
 import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
+import { serializeTableField as serializeTableFieldImpl } from './table/serializeTable.js';
 
 // =============================================================================
 // Smart Fence Selection Helpers
@@ -816,6 +819,44 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
   return `{% year-field ${attrStr} %}${content}{% /year-field %}`;
 }
 
+function serializeTableField(field: TableField, response: FieldResponse | undefined): string {
+  // For skipped/aborted tables, use field-level sentinel
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
+    const attrs: Record<string, unknown> = {
+      id: field.id,
+      label: field.label,
+      state: response.state,
+    };
+    if (field.required) attrs.required = field.required;
+    if (field.priority !== DEFAULT_PRIORITY) attrs.priority = field.priority;
+    if (field.role !== AGENT_ROLE) attrs.role = field.role;
+    if (field.validate) attrs.validate = field.validate;
+    if (field.report !== undefined) attrs.report = field.report;
+
+    // Add column attributes for completeness
+    attrs.columnIds = field.columns.map((c) => c.id);
+    attrs.columnLabels = field.columns.map((c) => c.label);
+    if (field.columns.some((c) => c.type !== 'string')) {
+      attrs.columnTypes = field.columns.map((c) => c.type);
+    }
+    if (field.minRows !== undefined) attrs.minRows = field.minRows;
+    if (field.maxRows !== undefined) attrs.maxRows = field.maxRows;
+
+    const attrStr = serializeAttrs(attrs);
+    const sentinelContent = getSentinelContent(response);
+    return `{% table-field ${attrStr} %}${sentinelContent}{% /table-field %}`;
+  }
+
+  // For answered tables, use the table serialization
+  if (response?.state === 'answered' && response.value) {
+    const tableValue = response.value as TableValue;
+    return serializeTableFieldImpl(field, tableValue.rows);
+  }
+
+  // For unanswered tables, serialize with empty table
+  return serializeTableFieldImpl(field, []);
+}
+
 /**
  * Serialize a field to Markdoc format.
  */
@@ -843,6 +884,8 @@ function serializeField(field: Field, responses: Record<Id, FieldResponse>): str
       return serializeDateField(field, response);
     case 'year':
       return serializeYearField(field, response);
+    case 'table':
+      return serializeTableField(field, response);
   }
 }
 

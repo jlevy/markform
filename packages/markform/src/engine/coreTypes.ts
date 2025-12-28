@@ -113,7 +113,8 @@ export type FieldKind =
   | 'url'
   | 'url_list'
   | 'date'
-  | 'year';
+  | 'year'
+  | 'table';
 
 /** Field priority level for issue scoring */
 export type FieldPriorityLevel = 'high' | 'medium' | 'low';
@@ -145,6 +146,7 @@ export const TEXT_ENTRY_FIELD_KINDS = [
   'string_list',
   'url',
   'url_list',
+  'table',
 ] as const;
 
 /** Field kinds that are choosers (do NOT support placeholder/examples) */
@@ -241,6 +243,57 @@ export interface YearField extends FieldBase {
   max?: number; // maximum year (inclusive)
 }
 
+// =============================================================================
+// Table Field Types
+// =============================================================================
+
+/** Column type for table cells - simple types only */
+export type ColumnType = 'string' | 'number' | 'url' | 'date' | 'year';
+
+/** Column definition - derived from columnIds, columnLabels, columnTypes attributes */
+export interface TableColumn {
+  id: Id; // from columnIds array
+  label: string; // from columnLabels array (defaults to id)
+  type: ColumnType; // from columnTypes array (defaults to 'string')
+}
+
+/** Table field - structured tabular data with typed columns */
+export interface TableField extends FieldBase {
+  kind: 'table';
+  columns: TableColumn[]; // column definitions in order
+  minRows?: number;
+  maxRows?: number;
+}
+
+/** Cell value - scalar value or null */
+export type CellValue = string | number | null;
+
+/** Cell value in patches - scalar value, null, or sentinel string */
+export type PatchCellValue = string | number | null;
+// Sentinel strings "%SKIP%", "%SKIP% (reason)", "%ABORT%", "%ABORT% (reason)" are recognized
+
+/** Table row - record from column ID to cell value */
+export type TableRow = Record<Id, CellValue>;
+
+/** Table row in patches - allows sentinel strings for skip/abort */
+export type PatchTableRow = Record<Id, PatchCellValue>;
+
+/** Cell response - matches FieldResponse pattern */
+export interface CellResponse {
+  state: AnswerState; // 'unanswered' for empty cells (validation error), 'answered' | 'skipped' | 'aborted' for valid cells
+  value?: CellValue; // present when state === 'answered'
+  reason?: string; // present when state === 'skipped' or 'aborted'
+}
+
+/** Table row response - each cell has a response */
+export type TableRowResponse = Record<Id, CellResponse>;
+
+/** Table field value */
+export interface TableValue {
+  kind: 'table';
+  rows: TableRowResponse[];
+}
+
 /** Union of all field types */
 export type Field =
   | StringField
@@ -252,7 +305,8 @@ export type Field =
   | UrlField
   | UrlListField
   | DateField
-  | YearField;
+  | YearField
+  | TableField;
 
 // =============================================================================
 // Form Structure Types
@@ -352,7 +406,8 @@ export type FieldValue =
   | UrlValue
   | UrlListValue
   | DateValue
-  | YearValue;
+  | YearValue
+  | TableValue;
 
 // =============================================================================
 // Documentation Block
@@ -496,7 +551,7 @@ export type IssueReason =
   | 'optional_empty';
 
 /** Issue scope - the level at which the issue applies */
-export type IssueScope = 'form' | 'group' | 'field' | 'option';
+export type IssueScope = 'form' | 'group' | 'field' | 'option' | 'column' | 'cell';
 
 /** Inspect issue - unified type for agent/UI consumption */
 export interface InspectIssue {
@@ -514,14 +569,30 @@ export interface InspectIssue {
 // =============================================================================
 
 /** Structure summary - describes static form schema */
+/** Qualified column reference: "{fieldId}.{columnId}" */
+export type QualifiedColumnRef = `${Id}.${Id}`;
+
 export interface StructureSummary {
   groupCount: number;
   fieldCount: number;
   optionCount: number;
+  /** Count of table columns across all table fields */
+  columnCount: number;
   fieldCountByKind: Record<FieldKind, number>;
   groupsById: Record<Id, 'field_group'>;
   fieldsById: Record<Id, FieldKind>;
   optionsById: Record<QualifiedOptionRef, { parentFieldId: Id; parentFieldKind: FieldKind }>;
+  /**
+   * Map of qualified column ref -> parent table info.
+   * Keys use qualified form: "{fieldId}.{columnId}" (e.g., "films.title")
+   */
+  columnsById: Record<
+    QualifiedColumnRef,
+    {
+      parentFieldId: Id;
+      columnType: ColumnType;
+    }
+  >;
 }
 
 /** Progress state for a field or form */
@@ -689,6 +760,13 @@ export interface SetYearPatch {
   value: number | null; // integer year or null
 }
 
+/** Set table field value - structured tabular data */
+export interface SetTablePatch {
+  op: 'set_table';
+  fieldId: Id;
+  rows: PatchTableRow[]; // values or sentinel strings like "%SKIP%", "%SKIP% (reason)"
+}
+
 /** Clear field value */
 export interface ClearFieldPatch {
   op: 'clear_field';
@@ -737,6 +815,7 @@ export type Patch =
   | SetUrlListPatch
   | SetDatePatch
   | SetYearPatch
+  | SetTablePatch
   | ClearFieldPatch
   | SkipFieldPatch
   | AbortFieldPatch
@@ -906,6 +985,7 @@ export const FieldKindSchema = z.enum([
   'url_list',
   'date',
   'year',
+  'table',
 ]);
 
 export const FieldPriorityLevelSchema = z.enum(['high', 'medium', 'low']);
@@ -1008,6 +1088,23 @@ export const YearFieldSchema = z.object({
   max: z.number().int().optional(), // maximum year
 });
 
+// Table field schemas
+export const ColumnTypeSchema = z.enum(['string', 'number', 'url', 'date', 'year']);
+
+export const TableColumnSchema = z.object({
+  id: IdSchema,
+  label: z.string(),
+  type: ColumnTypeSchema,
+});
+
+export const TableFieldSchema = z.object({
+  ...FieldBaseSchemaPartial,
+  kind: z.literal('table'),
+  columns: z.array(TableColumnSchema),
+  minRows: z.number().int().min(0).optional(),
+  maxRows: z.number().int().min(0).optional(),
+});
+
 export const FieldSchema = z.discriminatedUnion('kind', [
   StringFieldSchema,
   NumberFieldSchema,
@@ -1019,6 +1116,7 @@ export const FieldSchema = z.discriminatedUnion('kind', [
   UrlListFieldSchema,
   DateFieldSchema,
   YearFieldSchema,
+  TableFieldSchema,
 ]);
 
 // Field group schema (no 'kind' property - reserved for Field/FieldValue types)
@@ -1087,6 +1185,20 @@ export const YearValueSchema = z.object({
   value: z.number().int().nullable(), // integer year or null
 });
 
+// Table value schemas
+export const CellResponseSchema = z.object({
+  state: AnswerStateSchema,
+  value: z.union([z.string(), z.number()]).nullable().optional(),
+  reason: z.string().optional(),
+});
+
+export const TableRowResponseSchema = z.record(IdSchema, CellResponseSchema);
+
+export const TableValueSchema = z.object({
+  kind: z.literal('table'),
+  rows: z.array(TableRowResponseSchema),
+});
+
 export const FieldValueSchema = z.discriminatedUnion('kind', [
   StringValueSchema,
   NumberValueSchema,
@@ -1098,6 +1210,7 @@ export const FieldValueSchema = z.discriminatedUnion('kind', [
   UrlListValueSchema,
   DateValueSchema,
   YearValueSchema,
+  TableValueSchema,
 ]);
 
 // FieldResponse schema (markform-255)
@@ -1198,7 +1311,7 @@ export const IssueReasonSchema = z.enum([
   'optional_empty',
 ]);
 
-export const IssueScopeSchema = z.enum(['form', 'group', 'field', 'option']);
+export const IssueScopeSchema = z.enum(['form', 'group', 'field', 'option', 'column', 'cell']);
 
 export const InspectIssueSchema = z.object({
   ref: z.union([IdSchema, z.string()]), // Id or QualifiedOptionRef
@@ -1358,6 +1471,12 @@ export const SetYearPatchSchema = z.object({
   value: z.number().int().nullable(), // integer year or null
 });
 
+export const SetTablePatchSchema = z.object({
+  op: z.literal('set_table'),
+  fieldId: IdSchema,
+  rows: z.array(z.record(IdSchema, z.union([z.string(), z.number()]).nullable())),
+});
+
 export const ClearFieldPatchSchema = z.object({
   op: z.literal('clear_field'),
   fieldId: IdSchema,
@@ -1400,6 +1519,7 @@ export const PatchSchema = z.discriminatedUnion('op', [
   SetUrlListPatchSchema,
   SetDatePatchSchema,
   SetYearPatchSchema,
+  SetTablePatchSchema,
   ClearFieldPatchSchema,
   SkipFieldPatchSchema,
   AbortFieldPatchSchema,

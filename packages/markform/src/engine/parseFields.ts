@@ -31,6 +31,8 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  TableField,
+  TableValue,
   UrlField,
   UrlListField,
   UrlListValue,
@@ -52,6 +54,8 @@ import {
   parseOptionText,
 } from './parseHelpers.js';
 import { tryParseSentinelResponse } from './parseSentinels.js';
+import { parseMarkdownTable, parseTableCell } from './table/parseTable.js';
+import type { ColumnType, TableColumn } from './coreTypes.js';
 
 // =============================================================================
 // Field Response Helpers
@@ -81,6 +85,8 @@ export function isValueEmpty(value: FieldValue): boolean {
       const values = Object.values(value.values);
       return values.every((v) => v === 'todo' || v === 'unfilled');
     }
+    case 'table':
+      return value.rows.length === 0;
   }
 }
 
@@ -958,6 +964,174 @@ export function parseYearField(node: Node): { field: YearField; response: FieldR
   return { field, response };
 }
 
+/**
+ * Parse a table-field tag.
+ */
+export function parseTableField(node: Node): { field: TableField; response: FieldResponse } {
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
+
+  if (!id) {
+    throw new ParseError("table-field missing required 'id' attribute");
+  }
+  if (!label) {
+    throw new ParseError(`table-field '${id}' missing required 'label' attribute`);
+  }
+
+  // Extract column attributes
+  const columnIds = getStringArrayAttr(node, 'columnIds');
+  if (!columnIds || columnIds.length === 0) {
+    throw new ParseError(`table-field '${id}' missing required 'columnIds' attribute`);
+  }
+
+  // Validate column IDs
+  for (const columnId of columnIds) {
+    if (!/^[a-z][a-z0-9_]*$/.test(columnId)) {
+      throw new ParseError(
+        `Column ID "${columnId}" is not a valid identifier. Use snake_case like "column_name".`,
+      );
+    }
+  }
+
+  // Check for duplicates
+  const uniqueIds = new Set(columnIds);
+  if (uniqueIds.size !== columnIds.length) {
+    const duplicates = columnIds.filter((id, index) => columnIds.indexOf(id) !== index);
+    throw new ParseError(`Duplicate column ID "${duplicates[0]}" in table-field '${id}'.`);
+  }
+
+  const columnLabels = getStringArrayAttr(node, 'columnLabels');
+  const columnTypes = getStringArrayAttr(node, 'columnTypes');
+
+  // Validate array lengths
+  if (columnLabels && columnLabels.length !== columnIds.length) {
+    throw new ParseError(
+      `columnLabels has ${columnLabels.length} entries but columnIds has ${columnIds.length}.`,
+    );
+  }
+  if (columnTypes && columnTypes.length !== columnIds.length) {
+    throw new ParseError(
+      `columnTypes has ${columnTypes.length} entries but columnIds has ${columnIds.length}.`,
+    );
+  }
+
+  // Validate column types
+  if (columnTypes) {
+    const validTypes: ColumnType[] = ['string', 'number', 'url', 'date', 'year'];
+    for (const type of columnTypes) {
+      if (!validTypes.includes(type as ColumnType)) {
+        throw new ParseError(`Column type "${type}" is not valid. Use: ${validTypes.join(', ')}.`);
+      }
+    }
+  }
+
+  const required = getBooleanAttr(node, 'required') ?? false;
+  const minRows = getNumberAttr(node, 'minRows');
+  const maxRows = getNumberAttr(node, 'maxRows');
+
+  // Parse markdown table from body AST
+  let headers: string[] = [];
+  let rows: string[][] = [];
+
+  if (node.children && Array.isArray(node.children)) {
+    const table = parseMarkdownTable(node);
+    headers = table.headers;
+    rows = table.rows;
+  }
+
+  // Determine column labels
+  let finalLabels: string[];
+  if (columnLabels) {
+    // Use explicit labels
+    finalLabels = columnLabels;
+  } else if (headers.length > 0) {
+    // Back-fill from headers
+    if (headers.length !== columnIds.length) {
+      throw new ParseError(
+        `Table has ${headers.length} headers but columnIds has ${columnIds.length}. Add columnLabels attribute or fix headers.`,
+      );
+    }
+    finalLabels = headers;
+  } else {
+    // Default to IDs
+    finalLabels = columnIds;
+  }
+
+  // Build columns
+  const columns: TableColumn[] = columnIds.map((id, i) => ({
+    id,
+    label: finalLabels[i] ?? id, // Fallback to id if label is undefined
+    type: (columnTypes?.[i] as ColumnType) ?? 'string',
+  }));
+
+  const field: TableField = {
+    kind: 'table',
+    id,
+    label,
+    required,
+    priority: getPriorityAttr(node),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    columns,
+    minRows,
+    maxRows,
+    validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
+  };
+
+  // Check for sentinel values first
+  const sentinelResponse = tryParseSentinelResponse(node, id, required);
+  if (sentinelResponse) {
+    return { field, response: sentinelResponse };
+  }
+
+  // Parse table data
+  const tableRows: any[] = [];
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+    const row = rows[rowIndex];
+    if (!row || row.length !== columnIds.length) {
+      throw new ParseError(
+        `Row ${rowIndex + 1} has ${row?.length ?? 0} cells but expected ${columnIds.length}.`,
+      );
+    }
+
+    const tableRow: Record<string, any> = {};
+    for (let colIndex = 0; colIndex < columnIds.length; colIndex++) {
+      const cellText = row[colIndex];
+      if (cellText === undefined) {
+        throw new ParseError(
+          `Cell at row ${rowIndex + 1}, column "${columnIds[colIndex]}" is missing.`,
+        );
+      }
+      const column = columns[colIndex];
+      if (!column) {
+        throw new ParseError(`Column definition missing for index ${colIndex}.`);
+      }
+      const columnId = columnIds[colIndex];
+      if (!columnId) {
+        throw new ParseError(`Column ID missing for index ${colIndex}.`);
+      }
+      const columnType = column.type;
+      try {
+        const cellResult = parseTableCell(cellText, columnType);
+        tableRow[columnId] = cellResult;
+      } catch (_error) {
+        throw new ParseError(
+          `Cell "${cellText}" at row ${rowIndex + 1}, column "${columnIds[colIndex]}" is not a valid ${columnType}.`,
+        );
+      }
+    }
+    tableRows.push(tableRow);
+  }
+
+  const value: TableValue = {
+    kind: 'table',
+    rows: tableRows,
+  };
+
+  const response = parseFieldResponse(node, value, id, required);
+  return { field, response };
+}
+
 // =============================================================================
 // Field Dispatcher
 // =============================================================================
@@ -990,6 +1164,8 @@ export function parseField(node: Node): { field: Field; response: FieldResponse 
       return parseDateField(node);
     case 'year-field':
       return parseYearField(node);
+    case 'table-field':
+      return parseTableField(node);
     default:
       return null;
   }

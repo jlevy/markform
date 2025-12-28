@@ -26,6 +26,8 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  TableField,
+  TableValue,
   UrlField,
   UrlListField,
   UrlListValue,
@@ -37,6 +39,7 @@ import type {
   YearField,
   YearValue,
 } from './coreTypes.js';
+import { validateTableField as validateTableFieldImpl } from './table/validateTable.js';
 
 // =============================================================================
 // Validation Options and Results
@@ -735,6 +738,53 @@ function validateYearField(field: YearField, value: YearValue | undefined): Vali
 }
 
 /**
+ * Validate a table field.
+ */
+function validateTableField(field: TableField, value: TableValue | undefined): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Required check - table is required if it has required=true
+  if (field.required && (!value || value.rows.length === 0)) {
+    issues.push({
+      severity: 'error',
+      message: `Required table "${field.label}" is empty`,
+      ref: field.id,
+      source: 'builtin',
+    });
+    return issues;
+  }
+
+  // Skip other checks if no value
+  if (!value) {
+    return issues;
+  }
+
+  // Use table-specific validation
+  const tableErrors = validateTableFieldImpl(field, value);
+
+  // Convert table errors to ValidationIssue format
+  for (const error of tableErrors) {
+    let ref = field.id;
+    if (error.rowIndex !== undefined && error.columnId) {
+      // Create a qualified reference for cell-level errors
+      ref = `${field.id}.${error.columnId}[${error.rowIndex}]`;
+    } else if (error.columnId) {
+      // Create a qualified reference for column-level errors
+      ref = `${field.id}.${error.columnId}`;
+    }
+
+    issues.push({
+      severity: 'error',
+      message: error.message,
+      ref,
+      source: 'builtin',
+    });
+  }
+
+  return issues;
+}
+
+/**
  * Validate a single field.
  */
 function validateField(field: Field, responses: Record<Id, FieldResponse>): ValidationIssue[] {
@@ -762,6 +812,8 @@ function validateField(field: Field, responses: Record<Id, FieldResponse>): Vali
       return validateDateField(field, value as DateValue | undefined);
     case 'year':
       return validateYearField(field, value as YearValue | undefined);
+    case 'table':
+      return validateTableField(field, value as TableValue | undefined);
   }
 }
 

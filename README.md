@@ -114,8 +114,8 @@ Tomatoes, Metacritic) and comprehensive analysis.
 - **Roles**: Define who fills what (`user` for humans, `agent` for AI)
 
 - **Field types**: `string-field`, `number-field`, `date-field`, `year-field`,
-  `url-field`, `url-list`, `string-list`, `single-select`, `multi-select`,
-  `checkboxes`
+  `url-field`, `url-list`, `string-list`, `single-select`, `multi-select`, `checkboxes`,
+  `table-field`
 
 - **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
 
