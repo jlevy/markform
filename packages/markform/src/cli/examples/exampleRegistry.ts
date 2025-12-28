@@ -29,9 +29,27 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     type: 'fill',
   },
   {
-    id: 'movie-research',
-    filename: 'movie-research.form.md',
-    path: 'movie-research/movie-research.form.md',
+    id: 'movie-minimal-research',
+    filename: 'movie-minimal-research.form.md',
+    path: 'movie-research/movie-minimal-research.form.md',
+    type: 'research',
+  },
+  {
+    id: 'movie-research-simple',
+    filename: 'movie-research-simple.form.md',
+    path: 'movie-research/movie-research-simple.form.md',
+    type: 'research',
+  },
+  {
+    id: 'movie-basic-research',
+    filename: 'movie-basic-research.form.md',
+    path: 'movie-research/movie-basic-research.form.md',
+    type: 'research',
+  },
+  {
+    id: 'movie-deep-research',
+    filename: 'movie-deep-research.form.md',
+    path: 'movie-research/movie-deep-research.form.md',
     type: 'research',
   },
   {
