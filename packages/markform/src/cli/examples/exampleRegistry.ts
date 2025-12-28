@@ -46,6 +46,14 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     filename: 'startup-deep-research.form.md',
     path: 'startup-deep-research/startup-deep-research.form.md',
   },
+  {
+    id: 'celebrity-deep-research',
+    title: 'Celebrity Deep Research',
+    description:
+      'Comprehensive celebrity intelligence covering biography, career, relationships, controversies, social media, and hard-to-find details.',
+    filename: 'celebrity-deep-research.form.md',
+    path: 'celebrity-deep-research/celebrity-deep-research.form.md',
+  },
 ];
 
 /**
