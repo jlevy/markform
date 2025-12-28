@@ -49,7 +49,7 @@ function createProgram(): Command {
   program
     .name('markform')
     .description('Agent-friendly, human-readable, editable forms')
-    .version(VERSION)
+    .version(VERSION, '--version', 'output the version number')
     .showHelpAfterError()
     .option('--verbose', 'Enable verbose output')
     .option('--quiet', 'Suppress non-essential output')
