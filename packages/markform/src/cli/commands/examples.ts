@@ -69,7 +69,7 @@ function printExamplesList(): void {
     const typeLabel = example.type === 'research' ? pc.magenta('[research]') : pc.blue('[fill]');
     console.log(`  ${pc.cyan(example.id)} ${typeLabel}`);
     console.log(`    ${pc.bold(example.title ?? example.id)}`);
-    console.log(`    ${pc.dim(example.description ?? 'No description')}`);
+    console.log(`    ${example.description ?? 'No description'}`);
     console.log(`    Source: ${formatPath(getExamplePath(example.id))}`);
     console.log('');
   }
@@ -79,12 +79,12 @@ function printExamplesList(): void {
  * Display API availability status at startup.
  */
 function showApiStatus(): void {
-  console.log(pc.dim('API Status:'));
+  console.log('API Status:');
   for (const [provider, _models] of Object.entries(SUGGESTED_LLMS)) {
     const info = getProviderInfo(provider as ProviderName);
     const hasKey = !!process.env[info.envVar];
-    const status = hasKey ? pc.green('✓') : pc.dim('○');
-    const envVar = hasKey ? pc.dim(info.envVar) : pc.yellow(info.envVar);
+    const status = hasKey ? pc.green('✓') : '○';
+    const envVar = hasKey ? info.envVar : pc.yellow(info.envVar);
     console.log(`  ${status} ${provider} (${envVar})`);
   }
   console.log('');
@@ -99,7 +99,7 @@ function buildModelOptions(): { value: string; label: string; hint?: string }[] 
   for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
     const info = getProviderInfo(provider as ProviderName);
     const hasKey = !!process.env[info.envVar];
-    const keyStatus = hasKey ? pc.green('✓') : pc.dim('○');
+    const keyStatus = hasKey ? pc.green('✓') : '○';
 
     for (const model of models) {
       options.push({
@@ -170,7 +170,7 @@ function buildWebSearchModelOptions(): { value: string; label: string; hint?: st
 
     const info = getProviderInfo(provider as ProviderName);
     const hasKey = !!process.env[info.envVar];
-    const keyStatus = hasKey ? pc.green('✓') : pc.dim('○');
+    const keyStatus = hasKey ? pc.green('✓') : '○';
 
     for (const model of models) {
       options.push({
@@ -262,9 +262,7 @@ async function runAgentFill(
     // Log config for visibility
     console.log('');
     console.log(
-      pc.dim(
-        `Config: max_turns=${harnessConfig.maxTurns}, max_issues_per_turn=${harnessConfig.maxIssuesPerTurn}, max_patches_per_turn=${harnessConfig.maxPatchesPerTurn}`,
-      ),
+      `Config: max_turns=${harnessConfig.maxTurns}, max_issues_per_turn=${harnessConfig.maxIssuesPerTurn}, max_patches_per_turn=${harnessConfig.maxPatchesPerTurn}`,
     );
 
     // Create harness and agent
@@ -277,7 +275,7 @@ async function runAgentFill(
 
     while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
       console.log(
-        pc.dim(`  Turn ${stepResult.turnNumber}: ${stepResult.issues.length} issue(s) to address`),
+        `  ${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${stepResult.issues.length} issue(s) to address`,
       );
 
       // Generate patches from agent
@@ -296,17 +294,15 @@ async function runAgentFill(
         const fieldId =
           'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
         if (fieldId) {
-          console.log(pc.dim(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`));
+          console.log(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`);
         } else {
-          console.log(pc.dim(`    (${typeName}) = ${pc.green(value)}`));
+          console.log(`    (${typeName}) = ${pc.green(value)}`);
         }
       }
 
       // Apply patches
       stepResult = harness.apply(patches, stepResult.issues);
-      console.log(
-        pc.dim(`    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining`),
-      );
+      console.log(`    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining`);
 
       if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
         stepResult = harness.step();
@@ -454,7 +450,7 @@ async function runInteractiveFlow(
         'Total time',
         Date.now() - startTime,
       );
-      p.outro(pc.dim('Form scaffolded with no fields to fill.'));
+      p.outro('Form scaffolded with no fields to fill.');
       return;
     }
     // Skip to agent fill
@@ -516,9 +512,9 @@ async function runInteractiveFlow(
       const cliCommand = isResearchExample
         ? `  markform research ${formatPath(outputPath)} --model=<provider/model>`
         : `  markform fill ${formatPath(outputPath)} --model=<provider/model>`;
-      console.log(pc.dim(`You can run ${workflowLabel} later with:`));
-      console.log(pc.dim(cliCommand));
-      p.outro(pc.dim('Happy form filling!'));
+      console.log(`You can run ${workflowLabel} later with:`);
+      console.log(cliCommand);
+      p.outro('Happy form filling!');
       return;
     }
 
@@ -580,9 +576,9 @@ async function runInteractiveFlow(
         ? 'Research complete. Outputs:'
         : 'Agent fill complete. Outputs:';
       p.log.success(successMessage);
-      console.log(`  ${formatPath(formPath)}  ${pc.dim('(markform)')}`);
-      console.log(`  ${formatPath(rawPath)}  ${pc.dim('(plain markdown)')}`);
-      console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(values as YAML)')}`);
+      console.log(`  ${formatPath(formPath)}  (markform)`);
+      console.log(`  ${formatPath(rawPath)}  (plain markdown)`);
+      console.log(`  ${formatPath(yamlPath)}  (values as YAML)`);
 
       if (!success) {
         p.log.warn('Agent did not complete all fields. You may need to run it again.');
@@ -592,15 +588,15 @@ async function runInteractiveFlow(
       const failMessage = isResearchExample ? 'Research failed' : 'Agent fill failed';
       p.log.error(`${failMessage}: ${message}`);
       console.log('');
-      console.log(pc.dim('You can try again with:'));
+      console.log('You can try again with:');
       const retryCommand = isResearchExample
         ? `  markform research ${formatPath(outputPath)} --model=${modelId}`
         : `  markform fill ${formatPath(outputPath)} --model=${modelId}`;
-      console.log(pc.dim(retryCommand));
+      console.log(retryCommand);
     }
   }
 
-  p.outro(pc.dim('Happy form filling!'));
+  p.outro('Happy form filling!');
 }
 
 /**

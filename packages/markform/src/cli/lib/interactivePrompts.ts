@@ -64,7 +64,7 @@ function getFieldById(form: ParsedForm, fieldId: string): Field | undefined {
  */
 function formatFieldLabel(ctx: FieldPromptContext): string {
   const required = ctx.field.required ? pc.red('*') : '';
-  const progress = pc.dim(`(${ctx.index} of ${ctx.total})`);
+  const progress = `(${ctx.index} of ${ctx.total})`;
   return `${ctx.field.label}${required} ${progress}`;
 }
 

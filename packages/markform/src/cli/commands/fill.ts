@@ -294,10 +294,8 @@ export function registerFillCommand(program: Command): void {
             // Show next step hint
             if (patches.length > 0) {
               console.log('');
-              console.log(pc.dim('Next step: fill remaining fields with agent'));
-              console.log(
-                pc.dim(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`),
-              );
+              console.log('Next step: fill remaining fields with agent');
+              console.log(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`);
             }
 
             process.exit(0);
@@ -402,7 +400,7 @@ export function registerFillCommand(program: Command): void {
           let stepResult = harness.step();
           logInfo(
             ctx,
-            `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`,
+            `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${pc.yellow(String(stepResult.issues.length))} issues`,
           );
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
@@ -425,10 +423,10 @@ export function registerFillCommand(program: Command): void {
               if (fieldId) {
                 logInfo(
                   ctx,
-                  `    ${pc.cyan(fieldId)} ${pc.dim(`(${typeName})`)} ${pc.dim('=')} ${pc.green(value)}`,
+                  `    ${pc.cyan(fieldId)} ${pc.dim(`(${typeName})`)} = ${pc.green(value)}`,
                 );
               } else {
-                logInfo(ctx, `    ${pc.dim(`(${typeName})`)} ${pc.dim('=')} ${pc.green(value)}`);
+                logInfo(ctx, `    ${pc.dim(`(${typeName})`)} = ${pc.green(value)}`);
               }
             }
 
@@ -479,7 +477,7 @@ export function registerFillCommand(program: Command): void {
               stepResult = harness.step();
               logInfo(
                 ctx,
-                `Turn ${pc.bold(String(stepResult.turnNumber))}: ${pc.yellow(String(stepResult.issues.length))} issues`,
+                `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${pc.yellow(String(stepResult.issues.length))} issues`,
               );
             }
           }
