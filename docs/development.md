@@ -6,13 +6,15 @@
 
 ## Prerequisites
 
-- **Node.js 24** (LTS “Krypton”) — [nodejs.org](https://nodejs.org/)
+- **Node.js 20+** — We recommend v24 (current) or v22 LTS.
+  Minimum supported is v20. [nodejs.org](https://nodejs.org/)
 
 - **pnpm 10.x** — Install via `corepack enable` or `npm install -g pnpm`
 
-### Node 24 Setup
+### Node.js Setup
 
-This project requires Node.js 24+. Setup depends on your environment:
+This project requires Node.js 20 or higher. We recommend Node 24 (current) for best
+performance. Setup depends on your environment:
 
 #### Claude Code on the Web (Automatic)
 
@@ -30,12 +32,13 @@ No manual setup needed—the hook runs on session start.
 
 **Option 1: Direct installation**
 
-Download from [nodejs.org](https://nodejs.org/) and install Node 24.
+Download from [nodejs.org](https://nodejs.org/) and install Node.js 24 (current) or
+Node.js 22 LTS.
 
 **Option 2: Using a version manager**
 
 ```bash
-# Using nvm
+# Using nvm (recommended: install latest)
 nvm install 24
 nvm use 24
 
@@ -47,21 +50,10 @@ fnm use 24
 mise use node@24
 ```
 
-**Option 3: Manual binary installation** (useful in containers/CI)
-
-```bash
-NODE_VERSION="v24.12.0"
-mkdir -p ~/.local
-curl -fsSL "https://nodejs.org/dist/latest-v24.x/node-${NODE_VERSION}-linux-x64.tar.xz" \
-  -o /tmp/node24.tar.xz
-tar -xJf /tmp/node24.tar.xz -C ~/.local
-export PATH="$HOME/.local/node-${NODE_VERSION}-linux-x64/bin:$PATH"
-```
-
 #### Verify Installation
 
 ```bash
-node --version   # Should show v24.x.x
+node --version   # Should show v20.x.x or higher (v24 recommended)
 pnpm --version   # Should show 10.x.x
 ```
 

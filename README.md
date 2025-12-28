@@ -1,17 +1,23 @@
 # Markform
 
-*Markdown forms for token-friendly workflows*
+***Structured Markdown documents for humans, agents, and APIs***
 
 **Markform** is a **file format**, **data model**, and **editing API** for
-**agent-friendly, human-readable text forms**. Markform syntax is a superset of Markdown
-based on [Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files that
-are easily readable by agents and humans.
+**token-friendly, human-readable text forms**. Markform syntax is a superset of Markdown
+based on [Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files.
 
-The idea is to combine the simple utility of a Markdown document with structured tags
-that define typed fields and validation rules.
-In effect, Markform is Markdown plus structure that makes it editable via API. Markform
-enables AI agents to fill out human-readable forms or docs written in Markdown by using
-[Markdoc](https://markdoc.dev/) tags.
+Markform is like if Markdown docs had a customizable API. The idea is to combine the
+simple utility of a Markdown document with structured tags that define typed fields and
+validation rules.
+Fields, validation rules, and instructions are encoded as Markdoc tags.
+
+Markform lets you build powerful agent workflows by structuring and validating *what*
+you want (the form structure and validations) instead of *how* to get it (coding up
+agent workflows). For deep research and other tasks where you want a high level of
+control on intermediate states and final output from an AI pipeline, this approach is a
+compelling alternative to programmatic or UI-based agent workflows.
+Because it’s just Markdown with tags, agents are also very good at writing Markform,
+which makes creating new workflows much easier.
 
 ## Installation
 
@@ -23,7 +29,7 @@ npm install -g markform
 npm install markform
 ```
 
-Requires Node.js 24+.
+Requires Node.js 20+ (v24 recommended).
 
 ## Quick Start
 
@@ -33,160 +39,93 @@ npx markform examples
 ```
 
 This walks you through an example form interactively, with optional AI agent filling.
+You’ll need at least one [API key](#supported-providers) to have LLMs fill in forms.
 
-## Architecture
+### A Simple Form
 
-```mermaid
-flowchart LR
-    subgraph SPEC["<b>MARKFORM SPEC</b>"]
-        direction TB
+A `.form.md` file is simply a Markdoc file.
+It combines YAML frontmatter with Markdoc-tagged content:
 
-        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, field-group, string-field, checkboxes, etc.)"]
-        end
+```markdown
+---
+markform:
+  spec: MF/0.1
+  roles:
+    - user
+    - agent
+  role_instructions:
+    user: "Fill in your details."
+    agent: "Complete the analysis fields."
+---
 
-        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
-        end
+{% form id="my_form" title="My Form" %}
 
-        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
-        end
+{% field-group id="basics" title="Basic Info" %}
 
-        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
-        end
+{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}
 
-        L4 --> L3 --> L2 --> L1
-    end
+{% number-field id="score" label="Score" role="agent" min=0 max=100 %}{% /number-field %}
 
-    subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
-        direction TB
+{% /field-group %}
 
-        subgraph ENGINE["<b>ENGINE IMPLEMENTATION</b><br/>Markdoc parser, serializer, patch application, validation (uses jiti for TypeScript rules)"]
-        end
-
-        subgraph UI["<b>USER INTERFACES</b><br/>CLI commands, web UI (serve), render to HTML"]
-        end
-
-        subgraph AGENT["<b>AGENT INTERFACES</b><br/>Tool API library, MCP server, AI SDK tools"]
-        end
-
-        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step form-filling agentic loop"]
-        end
-
-        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts"]
-        end
-
-        UI --> ENGINE
-        AGENT --> HARNESS
-        AGENT --> ENGINE
-        HARNESS --> ENGINE
-        ENGINE --> TEST
-    end
-
-    SPEC ~~~ IMPL
-
-    style SPEC fill:#e8f4f8,stroke:#0077b6
-    style L1 fill:#caf0f8,stroke:#0077b6
-    style L2 fill:#caf0f8,stroke:#0077b6
-    style L3 fill:#caf0f8,stroke:#0077b6
-    style L4 fill:#caf0f8,stroke:#0077b6
-    style IMPL fill:#fff3e6,stroke:#fb8500
-    style ENGINE fill:#ffe8cc,stroke:#fb8500
-    style UI fill:#ffe8cc,stroke:#fb8500
-    style AGENT fill:#ffe8cc,stroke:#fb8500
-    style HARNESS fill:#ffe8cc,stroke:#fb8500
-    style TEST fill:#ffe8cc,stroke:#fb8500
+{% /form %}
 ```
 
-## Motivation
+**Key concepts:**
 
-### Why Do Forms Help Agentic Workflows?
+- **Roles**: Define who fills what (`user` for humans, `agent` for AI)
 
-Most current agent workflow frameworks emphasize the *flow* of information rather than
-the *structure* of the content.
-What’s often more useful is expressing the *state* of content directly in a way that
-provides clear context to agents and humans at all times.
+- **Field types**: `string-field`, `number-field`, `string-list`, `single-select`,
+  `multi-select`, `checkboxes`
 
-Humans have for centuries used paper forms to systemetize and manage processes.
+- **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
+
+- **Structure**: Fields organized in `field-group` containers
+
+### More Complex Research Form Examples
+
+The package includes example forms in
+[`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
+
+- `simple/simple.form.md` - Basic form demonstrating all field types
+
+- `political-research/political-research.form.md` - Biographical research form
+
+- `earnings-analysis/earnings-analysis.form.md` - Financial analysis form
+
+View them with `markform examples --list` or try them interactively.
+
+## Supported Providers
+
+Standard LLMs can be used to fill in forms or create research reports from form
+templates. The package currently has support for these models built in, and enables web
+search tools for them if possible.
+
+| Provider | Env Variable | Example Models |
+| --- | --- | --- |
+| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
+| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
+| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
+| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
+| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
+
+Set the appropriate environment variable for your provider before running `markform
+fill`. See
+[`src/settings.ts`](https://github.com/jlevy/markform/blob/main/packages/markform/src/settings.ts)
+for the full list of models.
+
+## Why?
+
+Many agent workflow frameworks emphasize the *flow* of information (the *how*) over its
+*structure* (the *what*). But the *how* is constantly changing.
+
+What we often really want is to express *desired structure and validation rules* for
+content directly in a way that provides clear context to agents and humans at all times.
+
+Humans have for centuries used paper forms to systematize and manage processes.
 The key insight of Markform is that the most natural way to express the state and
 context for a workflow is often *forms*. Just as Markdown is a transparent format for
-documents, Markform is a transparent text format structured information.
-
-### Goals of Markform
-
-Our goals are threefold:
-
-- **Expressive form state:** Fields can be arbitrary types like checkboxes, strings,
-  numbers, and lists.
-
-- **Programmatic editing:** Field state should be updated via APIs or tools.
-
-- **Easily readable by humans and agents:** Both template and field values of a form
-  should have a clear text format (not a binary or obscure XML format only readable by
-  certain applications).
-
-### Does This Already Exist?
-
-No, unfortunately not.
-The closest alternatives are:
-
-- Plain Markdown docs can be used as templates and filledin by agents.
-  These are more expressive, but it is hard to edit them programmatically or use LLMs to
-  update them reliably.
-
-- Agent to-do lists are part of many chat or coding interfaces and are programmatically
-  edited by agents. But these are limited to simple checklists, not forms with other
-  fields.
-
-- Numerous tools like Typeform, Google forms, PDF forms, and Docusign offer
-  human-friendly UI. But these do not have a human-friendly text format for use by
-  agents as well as humans.
-
-### How Can Agents Use Markform?
-
-The data model and editing API let agents fill in forms.
-This enables powerful AI workflows that assemble information in a defined structure:
-
-- **Form content, structure, and field values are in a single text file** for better
-  context engineering.
-  This is a major advantage for LLM agents and for humans reviewing their work.
-
-- **Incremental filling** means an agent or a human can take many iterations, filling
-  and correcting a form until it is complete and satisfies the validation rules.
-
-- **Multiple interfaces for humans or agents** can work with the same forms.
-  You can interact with a form via a CLI, a programmatic API, from Vercel AI SDK or in
-  an MCP server used by an agent, or in web form UIs for humans.
-
-- **Flexible validation** at multiple scopes (field/group/form), including declarative
-  constraints and external hooks to arbitrary code (currently TypeScript) or LLM-based
-  validation instructions.
-
-- An **agent execution harness** for step-by-step form filling, enabling deep research
-  agents that assemble validated output in a structured format.
-
-### Example Use Cases
-
-- A clean and readable text format for web UIs that involve filling in forms, supporting
-  strings, lists, numbers, checkboxes, URLs, and other fields
-
-- A format and set of APIs for validating structured values filled into forms
-
-- Deep research tools where agents need to follow codified processes to assemble
-  information
-
-- Practical task execution plans with checklists and assembled answers and notes
-
-- Analysis processes, like assembling insights from unstructured sources in structured
-  form
-
-- Multi-agent and agent-human workflows, where humans and/or agents fill in different
-  parts of a form, or where humans or agents review each other’s work in structured ways
-
-### Why Markdoc as a Format?
-
-Markdoc extends Markdown with structured tags, allowing AST parsing and programmatic
-manipulation while preserving human and LLM readability.
-See Stripe’s [Markdoc overview][markdoc-overview] and [blog post][stripe-markdoc] for
-more on the philosophy behind “docs-as-data” that Markform extends to “forms-as-data.”
+documents, Markform is a transparent text format for structured information.
 
 ## CLI Commands
 
@@ -269,46 +208,67 @@ markform instructions
 markform --help
 ```
 
-## Markform Format
+## Architecture
 
-A `.form.md` file is simply a Markdoc file.
-It combines YAML frontmatter with Markdoc-tagged content:
+```mermaid
+flowchart LR
+    subgraph SPEC["<b>MARKFORM SPEC</b>"]
+        direction TB
 
-```markdown
----
-markform:
-  spec: MF/0.1
-  roles:
-    - user
-    - agent
-  role_instructions:
-    user: "Fill in your details."
-    agent: "Complete the analysis fields."
----
+        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, field-group, string-field, checkboxes, etc.)"]
+        end
 
-{% form id="my_form" title="My Form" %}
+        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
+        end
 
-{% field-group id="basics" title="Basic Info" %}
+        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
+        end
 
-{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}
+        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
+        end
 
-{% number-field id="score" label="Score" role="agent" min=0 max=100 %}{% /number-field %}
+        L4 --> L3 --> L2 --> L1
+    end
 
-{% /field-group %}
+    subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
+        direction TB
 
-{% /form %}
+        subgraph ENGINE["<b>ENGINE IMPLEMENTATION</b><br/>Markdoc parser, serializer, patch application, validation (uses jiti for TypeScript rules)"]
+        end
+
+        subgraph UI["<b>USER INTERFACES</b><br/>CLI commands, web UI (serve), render to HTML"]
+        end
+
+        subgraph AGENT["<b>AGENT INTERFACES</b><br/>Tool API library, MCP server, AI SDK tools"]
+        end
+
+        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step form-filling agentic loop"]
+        end
+
+        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts"]
+        end
+
+        UI --> ENGINE
+        AGENT --> HARNESS
+        AGENT --> ENGINE
+        HARNESS --> ENGINE
+        ENGINE --> TEST
+    end
+
+    SPEC ~~~ IMPL
+
+    style SPEC fill:#e8f4f8,stroke:#0077b6
+    style L1 fill:#caf0f8,stroke:#0077b6
+    style L2 fill:#caf0f8,stroke:#0077b6
+    style L3 fill:#caf0f8,stroke:#0077b6
+    style L4 fill:#caf0f8,stroke:#0077b6
+    style IMPL fill:#fff3e6,stroke:#fb8500
+    style ENGINE fill:#ffe8cc,stroke:#fb8500
+    style UI fill:#ffe8cc,stroke:#fb8500
+    style AGENT fill:#ffe8cc,stroke:#fb8500
+    style HARNESS fill:#ffe8cc,stroke:#fb8500
+    style TEST fill:#ffe8cc,stroke:#fb8500
 ```
-
-**Key concepts:**
-
-- **Roles**: Define who fills what (`user` for humans, `agent` for AI)
-
-- **Field types**: `string-field`, `number-field`, `string-list`, `single-select`,
-  `multi-select`, `checkboxes`
-
-- **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
-
-- **Structure**: Fields organized in `field-group` containers
 
 ## Programmatic Usage
 
@@ -362,37 +322,101 @@ const result = await generateText({
 | `markform_export` | Export schema and values as JSON |
 | `markform_get_markdown` | Get canonical Markdown representation |
 
-## Supported Providers
+## FAQ
 
-Standard LLMs can be used to fill in forms or create research reports from form
-templates. The package currently has support for these models built in, and enables web
-search tools for them if possible.
+### Is this mature?
 
-| Provider | Env Variable | Example Models |
-| --- | --- | --- |
-| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
-| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
-| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
-| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
-| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
+No! I just wrote it.
+The spec is a draft.
+But it’s been useful for me already.
 
-Set the appropriate environment variable for your provider before running `markform
-fill`. See
-[`src/settings.ts`](https://github.com/jlevy/markform/blob/main/packages/markform/src/settings.ts)
-for the full list of models.
+### Was it Vibe Coded?
 
-## Example Forms
+It’s all written by LLMs but using a strongly spec-driven process, using rules from
+[Speculate](https://github.com/jlevy/speculate).
+See [the spec](SPEC.md) and the architecture docs and specs in [docs/](docs/).
 
-The package includes example forms in
-[`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
+### What are the goals of Markform?
 
-- `simple/simple.form.md` - Basic form demonstrating all field types
+- **Markform should express complex structure and validation rules for outputs:** Fields
+  can be arbitrary types like checkboxes, strings, dates, numbers, URLs, and lists.
+  Validation rules can be simple (min and max value, regexes), arbitrary code, or LLM
+  calls.
 
-- `political-research/political-research.form.md` - Biographical research form
+- **Markform is programmatically editable:** Field state should be updated via APIs, by
+  apps, or by agent tools.
 
-- `earnings-analysis/earnings-analysis.form.md` - Financial analysis form
+- **Markform is readable by humans and agents:** Both templates and field values of a
+  form should have a clear text format (not a binary or obscure XML format only readable
+  by certain applications).
 
-View them with `markform examples --list` or try them interactively.
+### How do agents fill in forms?
+
+The data model and editing API let agents fill in forms.
+This enables powerful AI workflows that assemble information in a defined structure:
+
+- **Form content, structure, and field values are in a single text file** for better
+  context engineering.
+  This is a major advantage for LLM agents and for humans reviewing their work.
+
+- **Incremental filling** means an agent or a human can take many iterations, filling
+  and correcting a form until it is complete and satisfies the validation rules.
+
+- **Multiple interfaces for humans or agents** can work with the same forms.
+  You can interact with a form via a CLI, a programmatic API, from Vercel AI SDK or in
+  an MCP server used by an agent, or in web form UIs for humans.
+
+- **Flexible validation** at multiple scopes (field/group/form), including declarative
+  constraints and external hooks to arbitrary code (currently TypeScript) or LLM-based
+  validation instructions.
+
+- An **agent execution harness** for step-by-step form filling, enabling deep research
+  agents that assemble validated output in a structured format.
+
+### Does anything like this already exist?
+
+Not really. The closest alternatives are:
+
+- Plain Markdown docs can be used as templates and filled in by agents.
+  These are more expressive, but it is hard to edit them programmatically or use LLMs to
+  update them reliably.
+
+- Agent to-do lists are part of many chat or coding interfaces and are programmatically
+  edited by agents. But these are limited to simple checklists, not forms with other
+  fields.
+
+- Numerous tools like Typeform, Google Forms, PDF forms, and Docusign offer
+  human-friendly UI. But these do not have a human-friendly text format for use by
+  agents as well as humans.
+
+### What are example use cases?
+
+- Deep research tools where agents need to follow codified processes to assemble
+  information
+
+- Practical task execution plans with checklists and assembled answers and notes
+
+- Analysis processes, like assembling insights from unstructured sources in structured
+  form
+
+- Multi-agent and agent-human workflows, where humans and/or agents fill in different
+  parts of a form, or where humans or agents review each other’s work in structured ways
+
+- A clean and readable text format for web UIs that involve filling in forms, supporting
+  strings, lists, numbers, checkboxes, URLs, and other fields
+
+### Why use Markdoc as a base format?
+
+Markdoc extends Markdown with structured tags, allowing AST parsing and programmatic
+manipulation while preserving human and LLM readability.
+See Stripe’s [Markdoc overview][markdoc-overview] and [blog post][stripe-markdoc] for
+more on the philosophy behind “docs-as-data” that Markform extends to “forms-as-data.”
+We could use XML tags, but Markdoc has some niceties like tagging Markdown AST nodes
+(`{% #some-id %}`) so I decided to go with this.
+
+### Is there a VSCode plugin for Markform or Markdoc?
+
+Yes, see [markdoc/language-server](https://github.com/markdoc/language-server).
 
 ## Documentation
 
@@ -410,3 +434,6 @@ View them with `markform examples --list` or try them interactively.
 
 AGPL-3.0-or-later. [Contact me](https://github.com/jlevy) for additional licensing
 options.
+
+[markdoc-overview]: https://markdoc.dev/docs/overview
+[stripe-markdoc]: https://stripe.com/blog/markdoc

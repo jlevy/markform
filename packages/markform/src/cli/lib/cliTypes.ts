@@ -58,14 +58,16 @@ export type ExampleType = 'fill' | 'research';
 
 /**
  * Example definition for the examples command.
+ * Note: title and description are optional in the static definition
+ * because they are loaded dynamically from the form's YAML frontmatter.
  */
 export interface ExampleDefinition {
   /** Machine-readable identifier (e.g., 'simple', 'political-research'). */
   id: string;
-  /** Human-readable title for menu display. */
-  title: string;
-  /** One-line description of the example. */
-  description: string;
+  /** Human-readable title for menu display. Loaded from frontmatter. */
+  title?: string;
+  /** One-line description of the example. Loaded from frontmatter. */
+  description?: string;
   /** Default output filename (e.g., 'simple.form.md'). */
   filename: string;
   /** Relative path within examples directory. */

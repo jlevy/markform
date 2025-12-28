@@ -39,6 +39,7 @@ import {
   getExampleById,
   getExamplePath,
   loadExampleContent,
+  getAllExamplesWithMetadata,
 } from '../examples/exampleRegistry.js';
 import {
   ensureFormsDir,
@@ -60,11 +61,12 @@ import {
  */
 function printExamplesList(): void {
   console.log(pc.bold('Available examples:\n'));
-  for (const example of EXAMPLE_DEFINITIONS) {
+  const examples = getAllExamplesWithMetadata();
+  for (const example of examples) {
     const typeLabel = example.type === 'research' ? pc.magenta('[research]') : pc.blue('[fill]');
     console.log(`  ${pc.cyan(example.id)} ${typeLabel}`);
-    console.log(`    ${pc.bold(example.title)}`);
-    console.log(`    ${pc.dim(example.description)}`);
+    console.log(`    ${pc.bold(example.title ?? example.id)}`);
+    console.log(`    ${pc.dim(example.description ?? 'No description')}`);
     console.log(`    Source: ${formatPath(getExamplePath(example.id))}`);
     console.log('');
   }
@@ -208,10 +210,10 @@ async function promptForWebSearchModel(): Promise<string | null> {
   if (selection === 'custom') {
     const customModel = await p.text({
       message: 'Model ID (provider/model-id):',
-      placeholder: 'openai/gpt-4o',
+      placeholder: 'openai/gpt-5-mini',
       validate: (value) => {
         if (!value.includes('/')) {
-          return 'Format: provider/model-id (e.g., openai/gpt-4o)';
+          return 'Format: provider/model-id (e.g., openai/gpt-5-mini)';
         }
         return undefined;
       },
@@ -343,11 +345,12 @@ async function runInteractiveFlow(
   let selectedId = preselectedId;
 
   if (!selectedId) {
+    const examples = getAllExamplesWithMetadata();
     const selection = await p.select({
       message: 'Select an example form to scaffold:',
-      options: EXAMPLE_DEFINITIONS.map((example) => ({
+      options: examples.map((example) => ({
         value: example.id,
-        label: example.title,
+        label: example.title ?? example.id,
         hint: example.description,
       })),
     });

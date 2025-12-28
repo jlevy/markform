@@ -47,7 +47,7 @@ export async function runResearch(
   // Resolve the model - model is string | LanguageModel, but resolveModel only accepts string
   const modelSpec = options.model;
   if (typeof modelSpec !== 'string') {
-    throw new Error('runResearch requires a model string identifier (e.g., "openai/gpt-4o")');
+    throw new Error('runResearch requires a model string identifier (e.g., "openai/gpt-5-mini")');
   }
   const { model } = await resolveModel(modelSpec);
 

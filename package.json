@@ -10,7 +10,7 @@
     ]
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "scripts": {
     "build": "pnpm -r build",

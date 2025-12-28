@@ -123,7 +123,7 @@ export function registerFillCommand(program: Command): void {
     .option('--mock', 'Use mock agent (requires --mock-source)')
     .option(
       '--model <id>',
-      'Model ID for live agent (format: provider/model-id, e.g. openai/gpt-4o)',
+      'Model ID for live agent (format: provider/model-id, e.g. openai/gpt-5-mini)',
     )
     .option('--mock-source <file>', 'Path to completed form for mock agent')
     .option('--record <file>', 'Record session transcript to file')

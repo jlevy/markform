@@ -1,6 +1,8 @@
 ---
 markform:
   spec: MF/0.1
+  title: Political Research
+  description: Biographical research form with one user field (name) and agent-filled details. Uses web search.
   roles:
     - user
     - agent

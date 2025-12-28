@@ -52,7 +52,7 @@
     "SPEC.md"
   ],
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "scripts": {
     "copy-docs": "cp ../../README.md . && cp ../../SPEC.md .",

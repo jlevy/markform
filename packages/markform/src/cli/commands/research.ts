@@ -102,7 +102,7 @@ export function registerResearchCommand(program: Command): void {
           console.log(`Use a model from: ${webSearchProviders.join(', ')}`);
           console.log('');
           console.log('Examples:');
-          console.log('  --model openai/gpt-4o');
+          console.log('  --model openai/gpt-5-mini');
           console.log('  --model google/gemini-2.5-flash');
           console.log('  --model xai/grok-4');
           process.exit(1);
