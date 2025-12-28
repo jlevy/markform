@@ -6,6 +6,7 @@ import {
   WEB_SEARCH_CONFIG,
   hasWebSearchSupport,
   getWebSearchConfig,
+  parseModelIdForDisplay,
 } from '../../src/llms.js';
 
 describe('llms', () => {
@@ -82,6 +83,44 @@ describe('llms', () => {
     it('returns undefined for unsupported/unknown providers', () => {
       expect(getWebSearchConfig('deepseek')).toBeUndefined();
       expect(getWebSearchConfig('unknown')).toBeUndefined();
+    });
+  });
+
+  describe('parseModelIdForDisplay', () => {
+    it('parses valid provider/model format', () => {
+      const result = parseModelIdForDisplay('anthropic/claude-sonnet-4');
+      expect(result).toEqual({ provider: 'anthropic', model: 'claude-sonnet-4' });
+    });
+
+    it('handles various providers', () => {
+      expect(parseModelIdForDisplay('openai/gpt-4o')).toEqual({
+        provider: 'openai',
+        model: 'gpt-4o',
+      });
+      expect(parseModelIdForDisplay('google/gemini-2.5-flash')).toEqual({
+        provider: 'google',
+        model: 'gemini-2.5-flash',
+      });
+    });
+
+    it('returns unknown provider for model without slash', () => {
+      const result = parseModelIdForDisplay('claude-sonnet-4');
+      expect(result).toEqual({ provider: 'unknown', model: 'claude-sonnet-4' });
+    });
+
+    it('returns unknown provider for empty provider part', () => {
+      const result = parseModelIdForDisplay('/model-name');
+      expect(result).toEqual({ provider: 'unknown', model: '/model-name' });
+    });
+
+    it('returns unknown provider for empty model part', () => {
+      const result = parseModelIdForDisplay('provider/');
+      expect(result).toEqual({ provider: 'unknown', model: 'provider/' });
+    });
+
+    it('handles model names with multiple slashes', () => {
+      const result = parseModelIdForDisplay('provider/model/variant');
+      expect(result).toEqual({ provider: 'provider', model: 'model/variant' });
     });
   });
 });

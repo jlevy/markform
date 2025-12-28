@@ -6,6 +6,48 @@
  */
 
 // =============================================================================
+// Model ID Parsing
+// =============================================================================
+
+/**
+ * Parsed model ID components for display purposes.
+ */
+export interface DisplayModelId {
+  /** Provider name (e.g., 'anthropic', 'openai') or 'unknown' */
+  provider: string;
+  /** Model name (e.g., 'claude-sonnet-4', 'gpt-4o') */
+  model: string;
+}
+
+/**
+ * Parse a model ID string into provider and model components for display.
+ *
+ * This is a non-throwing utility for extracting display-friendly components
+ * from a model ID. For validation and resolution, use `parseModelId` from
+ * `modelResolver.ts` instead.
+ *
+ * @param modelId - Model ID in format `provider/model-id`
+ * @returns Parsed components with 'unknown' provider if format is invalid
+ *
+ * @example
+ * parseModelIdForDisplay('anthropic/claude-sonnet-4')
+ * // => { provider: 'anthropic', model: 'claude-sonnet-4' }
+ *
+ * parseModelIdForDisplay('claude-sonnet-4')
+ * // => { provider: 'unknown', model: 'claude-sonnet-4' }
+ */
+export function parseModelIdForDisplay(modelId: string): DisplayModelId {
+  const slashIndex = modelId.indexOf('/');
+  if (slashIndex === -1 || slashIndex === 0 || slashIndex === modelId.length - 1) {
+    return { provider: 'unknown', model: modelId };
+  }
+  return {
+    provider: modelId.slice(0, slashIndex),
+    model: modelId.slice(slashIndex + 1),
+  };
+}
+
+// =============================================================================
 // Suggested LLMs
 // =============================================================================
 

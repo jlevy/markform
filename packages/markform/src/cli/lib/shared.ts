@@ -7,14 +7,199 @@ import type { Command } from 'commander';
 import { mkdir } from 'node:fs/promises';
 import { relative } from 'node:path';
 
+import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import YAML from 'yaml';
 
 import { convertKeysToSnakeCase } from './naming.js';
 import type { CommandContext, OutputFormat } from './cliTypes.js';
 
+// =============================================================================
+// Spinner Utility Types
+// =============================================================================
+
+/**
+ * Context type for spinner operations.
+ * - 'api': For LLM/API calls (shows provider, model, turn info)
+ * - 'compute': For local calculations
+ */
+export type SpinnerContextType = 'api' | 'compute';
+
+/**
+ * API context for spinner - used when making LLM calls.
+ */
+export interface ApiSpinnerContext {
+  type: 'api';
+  provider: string;
+  model: string;
+  turnNumber?: number;
+}
+
+/**
+ * Compute context for spinner - used for local calculations.
+ */
+export interface ComputeSpinnerContext {
+  type: 'compute';
+  operation: string;
+}
+
+/**
+ * Union of spinner context types.
+ */
+export type SpinnerContext = ApiSpinnerContext | ComputeSpinnerContext;
+
+/**
+ * Handle for controlling an active spinner.
+ */
+export interface SpinnerHandle {
+  /** Update the spinner message. */
+  message(msg: string): void;
+  /** Update the spinner context (re-renders with elapsed time). */
+  update(context: SpinnerContext): void;
+  /** Stop the spinner with a success message. */
+  stop(msg?: string): void;
+  /** Stop the spinner with an error message. */
+  error(msg: string): void;
+  /** Get elapsed time in milliseconds since spinner started. */
+  getElapsedMs(): number;
+}
+
 // Re-export types for backwards compatibility
 export type { CommandContext, OutputFormat } from './cliTypes.js';
+
+// =============================================================================
+// Spinner Utility Functions
+// =============================================================================
+
+/**
+ * Format elapsed time for display.
+ */
+function formatElapsedTime(ms: number): string {
+  const seconds = ms / 1000;
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds.toFixed(0)}s`;
+}
+
+/**
+ * Format spinner message based on context type.
+ */
+function formatSpinnerMessage(context: SpinnerContext, elapsedMs: number): string {
+  const elapsed = formatElapsedTime(elapsedMs);
+
+  if (context.type === 'api') {
+    const turnInfo = context.turnNumber !== undefined ? ` turn ${context.turnNumber}` : '';
+    return `${context.provider}/${context.model}${turnInfo} ${pc.dim(`(${elapsed})`)}`;
+  }
+
+  return `${context.operation} ${pc.dim(`(${elapsed})`)}`;
+}
+
+/**
+ * Create a context-aware spinner with elapsed time tracking.
+ *
+ * The spinner automatically updates its message with elapsed time.
+ *
+ * @example
+ * ```ts
+ * const spinner = createSpinner({
+ *   type: 'api',
+ *   provider: 'anthropic',
+ *   model: 'claude-sonnet-4',
+ *   turnNumber: 1,
+ * });
+ *
+ * // Do async work...
+ * const result = await agent.generatePatches(...);
+ *
+ * spinner.stop('Done');
+ * ```
+ */
+export function createSpinner(context: SpinnerContext): SpinnerHandle {
+  const startTime = Date.now();
+  const spinner = p.spinner();
+  let currentContext = context;
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+
+  // Start the spinner with initial message
+  const initialMessage = formatSpinnerMessage(currentContext, 0);
+  spinner.start(initialMessage);
+
+  // Update elapsed time every second
+  intervalId = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    spinner.message(formatSpinnerMessage(currentContext, elapsed));
+  }, 1000);
+
+  const cleanup = (): void => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  };
+
+  return {
+    message(msg: string): void {
+      spinner.message(msg);
+    },
+
+    update(newContext: SpinnerContext): void {
+      currentContext = newContext;
+      const elapsed = Date.now() - startTime;
+      spinner.message(formatSpinnerMessage(currentContext, elapsed));
+    },
+
+    stop(msg?: string): void {
+      cleanup();
+      const elapsed = Date.now() - startTime;
+      const defaultMsg = formatSpinnerMessage(currentContext, elapsed);
+      spinner.stop(msg ?? `✓ ${defaultMsg}`);
+    },
+
+    error(msg: string): void {
+      cleanup();
+      spinner.stop(pc.red(`✗ ${msg}`));
+    },
+
+    getElapsedMs(): number {
+      return Date.now() - startTime;
+    },
+  };
+}
+
+/**
+ * Create a no-op spinner handle for quiet mode or non-TTY environments.
+ */
+export function createNoOpSpinner(): SpinnerHandle {
+  const startTime = Date.now();
+  // Use explicit undefined returns to avoid empty-function lint errors
+  const noop = (): void => undefined;
+  return {
+    message: noop,
+    update: noop,
+    stop: noop,
+    error: noop,
+    getElapsedMs: () => Date.now() - startTime,
+  };
+}
+
+/**
+ * Create a spinner if appropriate for the context.
+ * Returns a no-op spinner in quiet mode or when stdout is not a TTY.
+ */
+export function createSpinnerIfTty(context: SpinnerContext, ctx: CommandContext): SpinnerHandle {
+  if (ctx.quiet || !process.stdout.isTTY) {
+    return createNoOpSpinner();
+  }
+  return createSpinner(context);
+}
+
+// =============================================================================
+// Output Format Utilities
+// =============================================================================
 
 /**
  * Valid format options for Commander choice validation.
