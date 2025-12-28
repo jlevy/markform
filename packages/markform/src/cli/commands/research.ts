@@ -18,7 +18,7 @@ import { formatSuggestedLlms, hasWebSearchSupport, WEB_SEARCH_CONFIG } from '../
 import {
   AGENT_ROLE,
   getFormsDir,
-  DEFAULT_RESEARCH_MAX_TURNS,
+  DEFAULT_MAX_TURNS,
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
 } from '../../settings.js';
@@ -59,8 +59,8 @@ export function registerResearchCommand(program: Command): void {
     )
     .option(
       '--max-turns <n>',
-      `Maximum turns (default: ${DEFAULT_RESEARCH_MAX_TURNS})`,
-      String(DEFAULT_RESEARCH_MAX_TURNS),
+      `Maximum turns (default: ${DEFAULT_MAX_TURNS})`,
+      String(DEFAULT_MAX_TURNS),
     )
     .option(
       '--max-patches <n>',

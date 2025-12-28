@@ -148,12 +148,6 @@ export const DEFAULT_MAX_ISSUES_PER_TURN = 10;
 // =============================================================================
 
 /**
- * Default maximum turns for research fill mode.
- * Research forms typically complete faster than general forms.
- */
-export const DEFAULT_RESEARCH_MAX_TURNS = 10;
-
-/**
  * Default maximum issues to show per turn in research mode.
  * Lower than general fill to keep research responses focused.
  */

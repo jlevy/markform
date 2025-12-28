@@ -13,9 +13,9 @@ import { resolveHarnessConfig } from '../harness/harnessConfigResolver.js';
 import type { FillOptions } from '../harness/harnessTypes.js';
 import {
   AGENT_ROLE,
+  DEFAULT_MAX_TURNS,
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
-  DEFAULT_RESEARCH_MAX_TURNS,
 } from '../settings.js';
 import type { ResearchResult, ResearchStatus } from './researchTypes.js';
 
@@ -56,8 +56,7 @@ export async function runResearch(
   const config = {
     ...baseConfig,
     // Apply research-specific defaults if not overridden
-    maxTurns:
-      options.maxTurns ?? form.metadata?.harnessConfig?.maxTurns ?? DEFAULT_RESEARCH_MAX_TURNS,
+    maxTurns: options.maxTurns ?? form.metadata?.harnessConfig?.maxTurns ?? DEFAULT_MAX_TURNS,
     maxIssuesPerTurn:
       options.maxIssuesPerTurn ??
       form.metadata?.harnessConfig?.maxIssuesPerTurn ??
