@@ -45,6 +45,7 @@ import {
   getAllExamplesWithMetadata,
 } from '../examples/exampleRegistry.js';
 import {
+  createSpinner,
   ensureFormsDir,
   formatPath,
   getCommandContext,
@@ -243,95 +244,119 @@ async function runAgentFill(
   _outputPath: string,
   configOverrides?: Partial<HarnessConfig>,
 ): Promise<{ success: boolean; turnCount: number }> {
-  const spinner = p.spinner();
+  // Extract provider and model name for spinner display
+  const [providerName, modelName] = modelId.includes('/')
+    ? (modelId.split('/') as [string, string])
+    : ['unknown', modelId];
 
+  // Use enhanced spinner for model resolution
+  const resolveSpinner = createSpinner({
+    type: 'compute',
+    operation: `Resolving model: ${modelId}`,
+  });
+
+  let model, provider;
   try {
-    // Resolve the model
-    spinner.start(`Resolving model: ${modelId}`);
-    const { model, provider } = await resolveModel(modelId);
-    spinner.stop(`Model resolved: ${modelId}`);
+    const result = await resolveModel(modelId);
+    model = result.model;
+    provider = result.provider;
+    resolveSpinner.stop(`✓ Model resolved: ${modelId}`);
+  } catch (error) {
+    resolveSpinner.error('Model resolution failed');
+    throw error;
+  }
 
-    // Create harness config with defaults, then apply overrides
-    const harnessConfig: Partial<HarnessConfig> = {
-      maxTurns: configOverrides?.maxTurns ?? DEFAULT_MAX_TURNS,
-      maxPatchesPerTurn: configOverrides?.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN,
-      maxIssuesPerTurn: configOverrides?.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN,
-      targetRoles: [AGENT_ROLE],
-      fillMode: 'continue',
-    };
+  // Create harness config with defaults, then apply overrides
+  const harnessConfig: Partial<HarnessConfig> = {
+    maxTurns: configOverrides?.maxTurns ?? DEFAULT_MAX_TURNS,
+    maxPatchesPerTurn: configOverrides?.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN,
+    maxIssuesPerTurn: configOverrides?.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN,
+    targetRoles: [AGENT_ROLE],
+    fillMode: 'continue',
+  };
 
-    // Log config for visibility
-    console.log('');
+  // Log config for visibility
+  console.log('');
+  console.log(
+    `Config: max_turns=${harnessConfig.maxTurns}, max_issues_per_turn=${harnessConfig.maxIssuesPerTurn}, max_patches_per_turn=${harnessConfig.maxPatchesPerTurn}`,
+  );
+
+  // Create harness and agent
+  const harness = createHarness(form, harnessConfig);
+  const agent = createLiveAgent({ model, provider, targetRole: AGENT_ROLE });
+
+  // Run harness loop with verbose output
+  p.log.step(pc.bold('Agent fill in progress...'));
+  let stepResult = harness.step();
+
+  while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
     console.log(
-      `Config: max_turns=${harnessConfig.maxTurns}, max_issues_per_turn=${harnessConfig.maxIssuesPerTurn}, max_patches_per_turn=${harnessConfig.maxPatchesPerTurn}`,
+      `  ${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
     );
 
-    // Create harness and agent
-    const harness = createHarness(form, harnessConfig);
-    const agent = createLiveAgent({ model, provider, targetRole: AGENT_ROLE });
+    // Create spinner for LLM call with provider, model, and turn number
+    const llmSpinner = createSpinner({
+      type: 'api',
+      provider: providerName,
+      model: modelName,
+      turnNumber: stepResult.turnNumber,
+    });
 
-    // Run harness loop with verbose output
-    p.log.step(pc.bold('Agent fill in progress...'));
-    let stepResult = harness.step();
-
-    while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-      console.log(
-        `  ${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
-      );
-
-      // Generate patches from agent
-      const response = await agent.generatePatches(
+    // Generate patches from agent
+    let response;
+    try {
+      response = await agent.generatePatches(
         stepResult.issues,
         harness.getForm(),
         harnessConfig.maxPatchesPerTurn!,
       );
-      const { patches, stats } = response;
+      llmSpinner.stop();
+    } catch (error) {
+      llmSpinner.error('LLM call failed');
+      throw error;
+    }
+    const { patches, stats } = response;
 
-      // Log each patch with field id, type, and value (truncated)
-      for (const patch of patches) {
-        const typeName = formatPatchType(patch);
-        const value = formatPatchValue(patch);
-        // Some patches (add_note, remove_note) don't have fieldId
-        const fieldId =
-          'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
-        if (fieldId) {
-          console.log(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`);
-        } else {
-          console.log(`    (${typeName}) = ${pc.green(value)}`);
-        }
-      }
-
-      // Apply patches
-      stepResult = harness.apply(patches, stepResult.issues);
-      const tokenInfo = stats
-        ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
-        : '';
-      console.log(
-        `    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining${tokenInfo}`,
-      );
-
-      if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-        stepResult = harness.step();
+    // Log each patch with field id, type, and value (truncated)
+    for (const patch of patches) {
+      const typeName = formatPatchType(patch);
+      const value = formatPatchValue(patch);
+      // Some patches (add_note, remove_note) don't have fieldId
+      const fieldId = 'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
+      if (fieldId) {
+        console.log(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`);
+      } else {
+        console.log(`    (${typeName}) = ${pc.green(value)}`);
       }
     }
 
-    if (stepResult.isComplete) {
-      p.log.success(pc.green(`Form completed in ${harness.getTurnNumber()} turn(s)`));
-    } else {
-      p.log.warn(pc.yellow(`Max turns reached (${harnessConfig.maxTurns})`));
+    // Apply patches
+    stepResult = harness.apply(patches, stepResult.issues);
+    const tokenInfo = stats
+      ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
+      : '';
+    console.log(
+      `    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining${tokenInfo}`,
+    );
+
+    if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
+      stepResult = harness.step();
     }
-
-    // Copy final form state
-    Object.assign(form, harness.getForm());
-
-    return {
-      success: stepResult.isComplete,
-      turnCount: harness.getTurnNumber(),
-    };
-  } catch (error) {
-    spinner.stop(pc.red('Agent fill failed'));
-    throw error;
   }
+
+  if (stepResult.isComplete) {
+    p.log.success(pc.green(`Form completed in ${harness.getTurnNumber()} turn(s)`));
+  } else {
+    p.log.warn(pc.yellow(`Max turns reached (${harnessConfig.maxTurns})`));
+  }
+
+  // Copy final form state
+  Object.assign(form, harness.getForm());
+
+  return {
+    success: stepResult.isComplete,
+    turnCount: harness.getTurnNumber(),
+  };
 }
 
 /**

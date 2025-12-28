@@ -23,6 +23,7 @@ import {
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
 } from '../../settings.js';
 import {
+  createSpinner,
   getCommandContext,
   logError,
   logInfo,
@@ -89,7 +90,7 @@ export function registerResearchCommand(program: Command): void {
         // Validate model supports web search
         const modelId = options.model as string;
         const providerMatch = /^([^/]+)\//.exec(modelId);
-        const provider = providerMatch?.[1] ?? modelId;
+        const provider: string = providerMatch?.[1] ?? modelId;
 
         if (!hasWebSearchSupport(provider)) {
           const webSearchProviders = Object.entries(WEB_SEARCH_CONFIG)
@@ -160,15 +161,35 @@ export function registerResearchCommand(program: Command): void {
         logVerbose(ctx, `Max patches/turn: ${maxPatchesPerTurn}`);
         logVerbose(ctx, `Max issues/turn: ${maxIssuesPerTurn}`);
 
+        // Extract model name from modelId for spinner display (provider already extracted at line 92)
+        const modelName = modelId.includes('/') ? modelId.split('/')[1]! : modelId;
+
+        // Create spinner for research operation (only for TTY, not quiet mode)
+        const spinner =
+          process.stdout.isTTY && !ctx.quiet
+            ? createSpinner({
+                type: 'api',
+                provider,
+                model: modelName,
+              })
+            : null;
+
         // Run research fill
-        const result = await runResearch(form, {
-          model: modelId,
-          maxTurns,
-          maxPatchesPerTurn,
-          maxIssuesPerTurn,
-          targetRoles: [AGENT_ROLE],
-          fillMode: 'continue',
-        });
+        let result;
+        try {
+          result = await runResearch(form, {
+            model: modelId,
+            maxTurns,
+            maxPatchesPerTurn,
+            maxIssuesPerTurn,
+            targetRoles: [AGENT_ROLE],
+            fillMode: 'continue',
+          });
+          spinner?.stop();
+        } catch (error) {
+          spinner?.error('Research failed');
+          throw error;
+        }
 
         // Log tools used
         if (result.availableTools) {

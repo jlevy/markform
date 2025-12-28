@@ -40,6 +40,7 @@ import { formatSuggestedLlms } from '../../llms.js';
 import type { Agent } from '../../harness/mockAgent.js';
 import { resolveModel } from '../../harness/modelResolver.js';
 import {
+  createSpinner,
   ensureFormsDir,
   formatOutput,
   formatPath,
@@ -52,6 +53,7 @@ import {
   logWarn,
   readFile,
   writeFile,
+  type SpinnerHandle,
 } from '../lib/shared.js';
 import { exportMultiFormat } from '../lib/exportHelpers.js';
 import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
@@ -342,6 +344,8 @@ export function registerFillCommand(program: Command): void {
           // Create agent based on type
           let agent: Agent;
           let mockPath: string | undefined;
+          let agentProvider: string | undefined;
+          let agentModelName: string | undefined;
 
           if (options.mock) {
             // Mock agent requires a completed form as source
@@ -355,6 +359,10 @@ export function registerFillCommand(program: Command): void {
             const modelId = options.model!;
             logVerbose(ctx, `Resolving model: ${modelId}`);
             const { model, provider } = await resolveModel(modelId);
+
+            // Store provider and model name for spinner display
+            agentProvider = provider;
+            agentModelName = modelId.includes('/') ? modelId.split('/')[1] : modelId;
 
             // Determine system prompt: --instructions > --prompt > default
             let systemPrompt: string | undefined;
@@ -405,12 +413,36 @@ export function registerFillCommand(program: Command): void {
           );
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
+            // Create spinner for LLM call (only for live agent with TTY)
+            let spinner: SpinnerHandle | null = null;
+            if (
+              !options.mock &&
+              agentProvider &&
+              agentModelName &&
+              process.stdout.isTTY &&
+              !ctx.quiet
+            ) {
+              spinner = createSpinner({
+                type: 'api',
+                provider: agentProvider,
+                model: agentModelName,
+                turnNumber: stepResult.turnNumber,
+              });
+            }
+
             // Generate patches from agent
-            const response = await agent.generatePatches(
-              stepResult.issues,
-              harness.getForm(),
-              harnessConfig.maxPatchesPerTurn,
-            );
+            let response;
+            try {
+              response = await agent.generatePatches(
+                stepResult.issues,
+                harness.getForm(),
+                harnessConfig.maxPatchesPerTurn,
+              );
+              spinner?.stop();
+            } catch (error) {
+              spinner?.error('LLM call failed');
+              throw error;
+            }
             const { patches, stats } = response;
 
             // Log patches with field id, type, and value (truncated)
