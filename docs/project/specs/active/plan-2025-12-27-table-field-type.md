@@ -28,7 +28,7 @@ A native `table-field` provides:
 
 - Standard markdown table syntax (familiar to LLMs and humans)
 
-- Header-as-ID pattern (simple, unambiguous)
+- Column structure defined via attributes (consistent with other field types)
 
 - Sentinel value support (`%SKIP%`, `%ABORT%`) matching other field types
 
@@ -40,9 +40,15 @@ Add a new field type `table-field` (kind: `'table'`) that:
 
 1. Uses markdown table syntax for values
 
-2. Has typed columns specified via `columnTypes` attribute
+2. Has columns specified via attribute arrays:
 
-3. Uses header row as column IDs (must be valid snake_case identifiers)
+   - `columnIds` (required) — array of snake_case identifiers
+
+   - `columnLabels` (optional) — array of display labels, defaults to `columnIds`
+
+   - `columnTypes` (optional) — array of column types, defaults to all `"string"`
+
+3. Markdown table headers are for display only (not parsed for column structure)
 
 4. Supports row count constraints via `minRows`/`maxRows`
 
@@ -107,28 +113,80 @@ Before defining `table-field`, we formalize the existing field type categories:
 
 **Must Have:**
 
-1. **Syntax:**
+1. **Syntax (clean template):**
+
+   Labels are back-filled from markdown headers — no duplication needed:
+
    ```md
    {% table-field id="key_people" label="Key People" role="agent" required=true
-      minRows=1 maxRows=10 columnTypes=["string", "string", "url", "string"] %}
-   | name | title | linkedin_url | background |
+      minRows=1 maxRows=10
+      columnIds=["name", "title", "linkedin_url", "background"]
+      columnTypes=["string", "string", "url", "string"] %}
+   | Name | Title | LinkedIn URL | Background |
+   |------|-------|--------------|------------|
+   {% /table-field %}
+   ```
+
+   After filling and serialize, `columnLabels` is written explicitly:
+
+   ```md
+   {% table-field id="key_people" label="Key People" role="agent" required=true
+      minRows=1 maxRows=10
+      columnIds=["name", "title", "linkedin_url", "background"]
+      columnLabels=["Name", "Title", "LinkedIn URL", "Background"]
+      columnTypes=["string", "string", "url", "string"] %}
+   | Name | Title | LinkedIn URL | Background |
    |------|-------|--------------|------------|
    | John Smith | CEO | https://linkedin.com/in/jsmith | 20 years in tech |
    {% /table-field %}
    ```
 
-2. **Column types:** Support simple types only: `string`, `number`, `url`, `date`,
+2. **Column attributes:**
+
+| Attribute | Required | Default | Description |
+| --- | --- | --- | --- |
+| `columnIds` | Yes | — | Array of snake_case identifiers for each column |
+| `columnLabels` | No | See below | Array of display labels for headers |
+| `columnTypes` | No | All `"string"` | Array of column types |
+
+**Label defaulting behavior:**
+
+- If `columnLabels` is specified, it is authoritative (markdown headers ignored)
+
+- If `columnLabels` is omitted AND field is unanswered (no data rows), labels are
+  back-filled from markdown table headers
+
+- If `columnLabels` is omitted AND field has data rows, labels default to `columnIds`
+
+- On serialize, `columnLabels` is always written explicitly (preserves extracted labels)
+
+3. **Column types:** Support simple types only: `string`, `number`, `url`, `date`,
    `year`
 
-3. **Header validation:**
+4. **Attribute validation:**
 
-   - Headers must be valid identifiers (regex: `^[a-z][a-z0-9_]*$`)
+   - `columnIds` is always required
 
-   - Headers must be unique within the table
+   - Each ID must be valid identifier (regex: `^[a-z][a-z0-9_]*$`)
 
-   - Header count must match `columnTypes` array length
+   - IDs must be unique within the table
 
-4. **Cell validation:**
+   - If `columnLabels` specified, length must equal `columnIds.length`
+
+   - If `columnTypes` specified, length must equal `columnIds.length`
+
+   - If back-filling labels from headers, header count must equal `columnIds.length`
+     (validation error if mismatch)
+
+5. **Markdown table headers:**
+
+   - When `columnLabels` specified: headers are for display only (not parsed)
+
+   - When `columnLabels` omitted and unanswered: headers are extracted as labels
+
+   - Cell values are matched positionally to `columnIds`
+
+6. **Cell validation:**
 
    - Each cell validated against its column’s type
 
@@ -136,7 +194,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 
    - Clear error messages for type mismatches
 
-5. **Sentinel values in cells:**
+7. **Sentinel values in cells:**
 
    Standard sentinel syntax works in table cells:
 
@@ -150,7 +208,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 
    The `%` delimiters don’t conflict with markdown table `|` delimiters.
 
-6. **Row constraints:**
+8. **Row constraints:**
 
    - `minRows` — minimum row count (default: 0)
 
@@ -158,7 +216,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 
    - `required=true` implies `minRows >= 1`
 
-7. **Patch operation:**
+9. **Patch operation:**
    ```json
    {
      "op": "set_table",
@@ -169,15 +227,15 @@ Before defining `table-field`, we formalize the existing field type categories:
    }
    ```
 
-8. **Export format:**
-   ```json
-   {
-     "kind": "table",
-     "rows": [
-       {"name": "John", "title": "CEO", "linkedin_url": "https://...", "background": "..."}
-     ]
-   }
-   ```
+10. **Export format:**
+    ```json
+    {
+      "kind": "table",
+      "rows": [
+        {"name": "John", "title": "CEO", "linkedin_url": "https://...", "background": "..."}
+      ]
+    }
+    ```
 
 **Nice to Have (v2):**
 
@@ -186,8 +244,6 @@ Before defining `table-field`, we formalize the existing field type categories:
 2. Multiline types in cells (would need multi-line cell syntax)
 
 3. Column-level constraints (minLength, pattern, etc.)
-
-4. Column display labels separate from IDs
 
 **Not in Scope:**
 
@@ -203,9 +259,10 @@ Before defining `table-field`, we formalize the existing field type categories:
 
 1. **Parsing:** Form with table-field parses correctly, extracts columns and rows
 
-2. **Header validation:** Invalid header (e.g., “First Name”) produces clear parse error
+2. **Column ID validation:** Invalid ID (e.g., “First Name”) produces clear parse error
 
-3. **Column count mismatch:** Error if columnTypes length ≠ header count
+3. **Array length mismatch:** Error if `columnLabels` or `columnTypes` length ≠
+   `columnIds.length`
 
 4. **Cell type validation:** Non-numeric value in number column produces clear error
 
@@ -224,7 +281,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 1. **Empty table syntax:** How to represent a table with no data rows?
    **Resolution:** Header + separator row only:
    ```md
-   | name | title |
+   | Name | Title |
    |------|-------|
    ```
 
@@ -241,6 +298,18 @@ Before defining `table-field`, we formalize the existing field type categories:
    Empty cells are invalid.
    Use `%SKIP%` to explicitly skip.
 
+5. **Why not infer column IDs from headers?** **Resolution:** Headers are for display
+   only. Column structure comes entirely from attributes for consistency with other field
+   types and to allow friendly labels (with spaces, etc.)
+   that can’t be IDs.
+
+6. **Why back-fill labels from headers when unanswered?** **Resolution:** Makes
+   templates prettier and easier to read.
+   Authors write natural markdown tables with friendly headers — no need to duplicate
+   them in `columnLabels`. On first serialize, the extracted labels are written to the
+   attribute, making subsequent parses authoritative.
+   If the table has data rows, we assume it was previously serialized with labels.
+
 ## Stage 2: Architecture Stage
 
 ### Type Definitions
@@ -251,10 +320,11 @@ Before defining `table-field`, we formalize the existing field type categories:
 /** Column type for table cells - simple types only */
 export type ColumnType = 'string' | 'number' | 'url' | 'date' | 'year';
 
-/** Column definition - derived from header + columnTypes */
+/** Column definition - derived from columnIds, columnLabels, columnTypes attributes */
 export interface TableColumn {
-  id: Id;           // from header cell (e.g., "linkedin_url")
-  type: ColumnType; // from columnTypes array
+  id: Id;           // from columnIds array
+  label: string;    // from columnLabels array (defaults to id)
+  type: ColumnType; // from columnTypes array (defaults to 'string')
 }
 
 /** Table field - structured tabular data with typed columns */
@@ -297,19 +367,41 @@ export interface SetTablePatch {
 
 ### Parsing Strategy
 
-1. Extract markdown table from tag body
+1. Extract `columnIds`, `columnLabels`, `columnTypes` from tag attributes
 
-2. Parse first row as header → extract column IDs
+2. Validate `columnIds` is present and all IDs are valid identifiers
 
-3. Validate each header is valid identifier (`^[a-z][a-z0-9_]*$`)
+3. If `columnLabels` present, validate length matches `columnIds.length`
 
-4. Validate columnTypes array length matches header count
+4. If `columnTypes` present, validate length matches `columnIds.length`
 
-5. Build `columns: TableColumn[]` by zipping headers with types
+5. Parse markdown table from tag body:
 
-6. Skip separator row (row 2 with `|---|---|`)
+   - Extract header row (row 1)
 
-7. Parse data rows (row 3+):
+   - Skip separator row (row 2 with `|---|---|`)
+
+   - Parse data rows (row 3+)
+
+6. Determine labels:
+
+   - If `columnLabels` attribute present → use those
+
+   - Else if no data rows (unanswered) → extract from markdown headers
+
+     - Validate header count equals `columnIds.length`
+
+   - Else (has data rows but no `columnLabels`) → default to `columnIds`
+
+7. Build `columns: TableColumn[]` by combining:
+
+   - `id` from `columnIds[i]`
+
+   - `label` from step 6
+
+   - `type` from `columnTypes[i]` (or `'string'` if not specified)
+
+8. Parse each data row:
 
    - For each cell, check for sentinel pattern first
 
@@ -325,10 +417,13 @@ export interface SetTablePatch {
 
 | Rule | Error Code | Example Error Message |
 | --- | --- | --- |
-| Header must be valid ID | `INVALID_COLUMN_ID` | `Column header "First Name" is not a valid identifier. Use snake_case like "first_name".` |
-| Headers must be unique | `DUPLICATE_COLUMN_ID` | `Duplicate column header "name" at position 3.` |
-| columnTypes length must match headers | `COLUMN_TYPE_MISMATCH` | `columnTypes has 3 entries but table has 4 columns.` |
+| columnIds must be present | `MISSING_COLUMN_IDS` | `table-field 'people' missing required 'columnIds' attribute.` |
+| Column ID must be valid | `INVALID_COLUMN_ID` | `Column ID "First Name" is not a valid identifier. Use snake_case like "first_name".` |
+| Column IDs must be unique | `DUPLICATE_COLUMN_ID` | `Duplicate column ID "name" at position 3.` |
+| columnLabels length must match | `COLUMN_LABELS_MISMATCH` | `columnLabels has 3 entries but columnIds has 4.` |
+| columnTypes length must match | `COLUMN_TYPES_MISMATCH` | `columnTypes has 3 entries but columnIds has 4.` |
 | columnTypes values must be valid | `INVALID_COLUMN_TYPE` | `Column type "text" is not valid. Use: string, number, url, date, year.` |
+| Header count must match when back-filling | `HEADER_COUNT_MISMATCH` | `Table has 3 headers but columnIds has 4. Add columnLabels attribute or fix headers.` |
 
 **Value validation (semantic):**
 
@@ -347,8 +442,10 @@ export interface SetTablePatch {
 Serialize as canonical markdown table:
 
 ```md
-{% table-field id="key_people" label="Key People" columnTypes=["string", "string", "url", "string"] minRows=1 %}
-| name | title | linkedin_url | background |
+{% table-field id="key_people" label="Key People" columnIds=["name", "title", "linkedin_url", "background"]
+   columnLabels=["Name", "Title", "LinkedIn URL", "Background"]
+   columnTypes=["string", "string", "url", "string"] minRows=1 %}
+| Name | Title | LinkedIn URL | Background |
 |------|-------|--------------|------------|
 | John Smith | CEO | https://linkedin.com/in/jsmith | 20 years in tech |
 | Jane Doe | CTO | %SKIP% (No public profile) | Former Google engineer |
@@ -356,6 +453,16 @@ Serialize as canonical markdown table:
 ```
 
 **Formatting rules:**
+
+- Attributes:
+
+  - `columnIds` always serialized
+
+  - `columnLabels` always serialized (ensures back-filled labels are preserved)
+
+  - `columnTypes` only if not all strings
+
+- Header row uses labels from `columnLabels`
 
 - No padding in cells (canonical)
 
@@ -1006,15 +1113,19 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Add `table-field` to Markdoc tag config
 
-- [ ] Extract `columnTypes` attribute
+- [ ] Extract `columnIds`, `columnLabels`, `columnTypes` attributes
 
-- [ ] Validate columnTypes is array of valid type names
+- [ ] Validate `columnIds` is present and all IDs are valid identifiers
 
-- [ ] Parse header row, validate as identifiers
+- [ ] Validate `columnLabels` length matches `columnIds.length` if specified
 
-- [ ] Validate header count matches columnTypes length
+- [ ] Validate `columnTypes` is array of valid type names if specified
 
-- [ ] Build `TableColumn[]` from headers + types
+- [ ] Validate `columnTypes` length matches `columnIds.length` if specified
+
+- [ ] Build `TableColumn[]` from attributes (id, label, type)
+
+- [ ] Parse markdown table body (skip headers, parse data rows)
 
 - [ ] Parse data rows with sentinel detection
 
@@ -1026,9 +1137,9 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Write parser tests for valid tables
 
-- [ ] Write parser tests for invalid headers
+- [ ] Write parser tests for invalid column IDs
 
-- [ ] Write parser tests for column type mismatches
+- [ ] Write parser tests for array length mismatches
 
 - [ ] Write parser tests for cell type errors
 
@@ -1037,6 +1148,14 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 ### Phase 5: Serialization
 
 - [ ] Add table serialization to `table/serializeTable.ts`
+
+- [ ] Serialize `columnIds` always
+
+- [ ] Serialize `columnLabels` always (preserves back-filled labels)
+
+- [ ] Serialize `columnTypes` only if not all strings
+
+- [ ] Generate header row from `columnLabels`
 
 - [ ] Implement `escapeTableCell()` function with pipe escaping
 
@@ -1100,21 +1219,59 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 ### Phase 9: Documentation
 
-- [ ] Update SPEC.md Layer 1: Add `table-field` tag documentation
+**SPEC.md updates:**
 
-- [ ] Update SPEC.md Layer 2: Add table types to Field Type Reference
+- [ ] Layer 1 (Syntax): Add `table-field` tag to Field Tags table
 
-- [ ] Update SPEC.md Layer 2: Add scope reference types and parsing
+- [ ] Layer 1 (Syntax): Document column attributes (`columnIds`, `columnLabels`,
+  `columnTypes`) with defaults and label back-filling behavior
 
-- [ ] Update SPEC.md Layer 3: Add table validation rules
+- [ ] Layer 1 (Syntax): Add table-field value encoding section (markdown table syntax)
 
-- [ ] Update SPEC.md Layer 4: Add `set_table` patch
+- [ ] Layer 2 (Data Model): Add `TableField`, `TableColumn`, `TableValue` types
 
-- [ ] Update DOCS.md with table-field usage
+- [ ] Layer 2 (Data Model): Add `ColumnType` to type definitions
 
-- [ ] Add table-field example to an example form
+- [ ] Layer 2 (Data Model): Add scope reference types for columns and cells
 
-- [ ] Update README if appropriate
+- [ ] Layer 2 (Data Model): Update `FieldKind` to include `'table'`
+
+- [ ] Layer 2 (Data Model): Update Field Type Reference table with table-field mapping
+
+- [ ] Layer 3 (Validation): Add table-specific validation rules
+
+- [ ] Layer 4 (Tool API): Add `set_table` to Patch Schema
+
+**DOCS.md updates:**
+
+- [ ] Add Table Field section with syntax and examples
+
+- [ ] Document column attributes with defaults
+
+- [ ] Explain label back-filling from headers (cleaner templates)
+
+- [ ] Show examples: clean template syntax, typed columns, after-serialize form
+
+- [ ] Document sentinel values in cells
+
+**README.md updates:**
+
+- [ ] Add `table-field` to field types list in Quick Start section
+
+**Example form migrations (see Appendix for details):**
+
+- [ ] Migrate `movie-research-basic.form.md` — 1 field (`notable_awards`)
+
+- [ ] Migrate `movie-research-deep.form.md` — 2 fields (`lead_cast`, `notable_awards`)
+
+- [ ] Migrate `celebrity-deep-research.form.md` — ~20 fields (major migration)
+
+- [ ] Migrate `startup-deep-research.form.md` — ~8 fields
+
+- [ ] Migrate `earnings-analysis.form.md` — 2 fields (`sources_accessed`,
+  `experts_list`)
+
+- [ ] Create simple table-field example in `examples/simple/`
 
 ## Stage 5: Validation
 
@@ -1162,13 +1319,17 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Valid table parses correctly
 
-- [ ] Invalid header (spaces) produces clear error
+- [ ] Missing `columnIds` produces clear error
 
-- [ ] Invalid header (uppercase) produces clear error
+- [ ] Invalid column ID (spaces) produces clear error
 
-- [ ] Duplicate header produces clear error
+- [ ] Invalid column ID (uppercase) produces clear error
 
-- [ ] columnTypes length mismatch produces clear error
+- [ ] Duplicate column ID produces clear error
+
+- [ ] `columnLabels` length mismatch produces clear error
+
+- [ ] `columnTypes` length mismatch produces clear error
 
 - [ ] Invalid column type produces clear error
 
@@ -1185,6 +1346,14 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 - [ ] Invalid URL in url column produces clear error
 
 - [ ] Invalid date format produces clear error
+
+- [ ] Default types (all string) when `columnTypes` omitted
+
+- [ ] Default labels (same as IDs) when `columnLabels` omitted and has data rows
+
+- [ ] Labels back-filled from headers when `columnLabels` omitted and unanswered
+
+- [ ] Header count mismatch error when back-filling labels
 
 **Table validation tests:**
 
@@ -1248,21 +1417,54 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 ```md
 {% table-field id="notable_films" label="Notable Filmography" role="agent" required=true
-   minRows=5 maxRows=15 columnTypes=["year", "string", "string", "number", "number", "string"] %}
-| release_year | title | role | rt_score | box_office_m | notes |
-|--------------|-------|------|----------|--------------|-------|
+   minRows=5 maxRows=15
+   columnIds=["release_year", "title", "role", "rt_score", "box_office_m", "notes"]
+   columnLabels=["Year", "Title", "Role", "RT Score", "Box Office ($M)", "Notes"]
+   columnTypes=["year", "string", "string", "number", "number", "string"] %}
+| Year | Title | Role | RT Score | Box Office ($M) | Notes |
+|------|-------|------|----------|-----------------|-------|
 | 2023 | Barbie | Barbie | 88 | 1441.8 | Highest-grossing film of 2023 |
 | 2019 | Once Upon a Time in Hollywood | Sharon Tate | 85 | 374.3 | Oscar-nominated ensemble |
 | 2017 | I, Tonya | Tonya Harding | 90 | 53.9 | %SKIP% (Box office not tracked) |
 {% /table-field %}
 ```
 
-### Empty Table (Template)
+### All-String Table (Clean Template Syntax)
+
+Labels are back-filled from headers — no need to duplicate in `columnLabels`:
 
 ```md
-{% table-field id="awards" label="Awards" columnTypes=["year", "string", "string", "string"] %}
-| award_year | award_name | category | result |
-|------------|------------|----------|--------|
+{% table-field id="team" label="Team Members" columnIds=["name", "title", "department"] %}
+| Full Name | Job Title | Department |
+|-----------|-----------|------------|
+| John Smith | CEO | Executive |
+| Jane Doe | CTO | Engineering |
+{% /table-field %}
+```
+
+After serialize, becomes (labels preserved in attribute):
+
+```md
+{% table-field id="team" label="Team Members"
+   columnIds=["name", "title", "department"]
+   columnLabels=["Full Name", "Job Title", "Department"] %}
+| Full Name | Job Title | Department |
+|-----------|-----------|------------|
+| John Smith | CEO | Executive |
+| Jane Doe | CTO | Engineering |
+{% /table-field %}
+```
+
+### Empty Table Template (Typed Columns)
+
+Clean template with types — labels extracted from headers:
+
+```md
+{% table-field id="awards" label="Awards"
+   columnIds=["award_year", "award_name", "category", "result"]
+   columnTypes=["year", "string", "string", "string"] %}
+| Year | Award | Category | Result |
+|------|-------|----------|--------|
 {% /table-field %}
 ```
 
@@ -1270,42 +1472,58 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 ```md
 
-<!-- ERROR: Header "First Name" is not valid identifier -->
+<!-- ERROR: table-field 'people' missing required 'columnIds' attribute. -->
 
-{% table-field id="people" columnTypes=["string", "string"] %}
-| First Name | last_name |
+{% table-field id="people" %}
+| First Name | Last Name |
 |------------|-----------|
 {% /table-field %}
 
-<!-- ERROR: columnTypes has 2 entries but table has 3 columns -->
+<!-- ERROR: Column ID "First Name" is not a valid identifier. Use snake_case. -->
 
-{% table-field id="people" columnTypes=["string", "string"] %}
-| name | title | department |
-|------|-------|------------|
+{% table-field id="people" columnIds=["First Name", "last_name"] %}
+| First Name | Last Name |
+|------------|-----------|
 {% /table-field %}
 
-<!-- ERROR: Column type "text" is not valid -->
+<!-- ERROR: columnLabels has 2 entries but columnIds has 3. -->
 
-{% table-field id="notes" columnTypes=["text", "string"] %}
-| content | author |
+{% table-field id="people" columnIds=["name", "title", "dept"] columnLabels=["Name", "Title"] %}
+| Name | Title | Dept |
+|------|-------|------|
+{% /table-field %}
+
+<!-- ERROR: Column type "text" is not valid. Use: string, number, url, date, year. -->
+
+{% table-field id="notes" columnIds=["content", "author"] columnTypes=["text", "string"] %}
+| Content | Author |
 |---------|--------|
+{% /table-field %}
+
+<!-- ERROR: Table has 2 headers but columnIds has 3. Add columnLabels or fix headers. -->
+
+{% table-field id="people" columnIds=["name", "title", "dept"] %}
+| Name | Title |
+|------|-------|
 {% /table-field %}
 ```
 
 ### Cell Validation Errors
 
 ```md
-{% table-field id="films" columnTypes=["year", "string", "number"] %}
-| release_year | title | rt_score |
-|--------------|-------|----------|
+{% table-field id="films" columnIds=["release_year", "title", "rt_score"]
+   columnTypes=["year", "string", "number"] %}
+| Year | Title | RT Score |
+|------|-------|----------|
 | 2023 | Barbie | not-a-number |
 {% /table-field %}
 
 <!-- ERROR: Cell "not-a-number" at row 1, column "rt_score" is not a valid number. -->
 
-{% table-field id="films" columnTypes=["year", "string", "number"] %}
-| release_year | title | rt_score |
-|--------------|-------|----------|
+{% table-field id="films" columnIds=["release_year", "title", "rt_score"]
+   columnTypes=["year", "string", "number"] %}
+| Year | Title | RT Score |
+|------|-------|----------|
 | 2023 | Barbie | |
 {% /table-field %}
 
@@ -1322,3 +1540,138 @@ For reference, the complete type taxonomy after this feature:
 | Multiline | `text` (string+multiline), `string_list`, `url_list` | No (v1) |
 | Structured | `checkboxes`, `single_select`, `multi_select` | No |
 | Composite | `table` | N/A (is the table) |
+
+## Appendix: Example Form Migrations
+
+The following example forms currently use pipe-delimited `string-list` syntax that
+should be migrated to `table-field`:
+
+### movie-research-basic.form.md
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `notable_awards` | `Award \| Category \| Year` | `table-field` with `columnIds=["award", "category", "year"]` |
+
+### movie-research-deep.form.md
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `lead_cast` | `Actor Name \| Character Name` | `table-field` with `columnIds=["actor_name", "character_name"]` |
+| `notable_awards` | `Award \| Category \| Year` | `table-field` with `columnIds=["award", "category", "year"]` |
+
+### celebrity-deep-research.form.md
+
+**Biographical fields:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `death_info` | `YYYY-MM-DD \| Location \| Cause \| Age` | Single-row table or keep as string (structured but single value) |
+| `causes_activism` | `Cause \| Role \| Source` | `table-field` with `columnIds=["cause", "role_involvement", "source"]` |
+| `education` | `Institution \| Degree \| Years \| Notes` | `table-field` with `columnIds=["institution", "degree_program", "years", "notes"]` |
+
+**Family/relationships fields:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `siblings` | `Name \| Relationship \| Notable info` | `table-field` with `columnIds=["name", "relationship", "notable_info"]` |
+| `marriages` | `Spouse \| Wedding \| Divorce \| Duration \| Source` | `table-field` with `columnIds=["spouse", "wedding_date", "divorce_date", "duration", "source"]` |
+| `children` | `Name \| Birth Year \| Other Parent \| Notes` | `table-field` with `columnIds=["name", "birth_year", "other_parent", "notes"]`, `columnTypes=["string", "year", "string", "string"]` |
+| `notable_relationships` | `Partner \| Dates \| Reliability` | `table-field` with `columnIds=["partner", "dates", "reliability"]` |
+
+**Career fields (already markdown tables — validate/enhance):**
+
+| Current Field | Notes |
+| --- | --- |
+| `notable_films_table` | Already markdown table in instructions; convert to proper `table-field` |
+| `notable_tv_table` | Already markdown table in instructions; convert to proper `table-field` |
+| `oscar_history` | Already markdown table in instructions; convert to proper `table-field` |
+| `other_major_awards` | Already markdown table in instructions; convert to proper `table-field` |
+
+**Career statistics fields:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `box_office_stats` | `Total \| # Films \| Average \| Highest \| Source` | Keep as string (summary, not list) |
+| `rt_career_stats` | `Avg \| # Fresh \| # Rotten \| Notable` | Keep as string (summary, not list) |
+| `major_awards_summary` | `# Oscar \| # Emmy \| # Grammy \| # GG \| Other` | Keep as string (summary, not list) |
+
+**Financial/business fields:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `known_salaries` | `Project \| Amount \| Year \| Source` | `table-field` with `columnIds=["project", "amount", "year", "source"]` |
+| `business_ventures` | `Company \| Role \| Industry \| Status \| Source` | `table-field` with `columnIds=["company", "role", "industry", "status", "source"]` |
+| `endorsements` | `Brand \| Type \| Value \| Years \| Source` | `table-field` with `columnIds=["brand", "deal_type", "value", "years", "source"]` |
+| `real_estate` | `Property \| Location \| Price \| Year \| Source` | `table-field` with `columnIds=["property", "location", "price", "year", "source"]` |
+
+**Legal/controversy fields:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `legal_cases` | `Type \| Year \| Parties \| Outcome \| Source` | `table-field` with `columnIds=["case_type", "year", "parties", "outcome", "source"]` |
+| `arrests_charges` | `Year \| Charge \| Location \| Outcome \| Source` | `table-field` with `columnIds=["year", "charge", "location", "outcome", "source"]`, `columnTypes=["year", "string", "string", "string", "string"]` |
+| `controversies` | `Year \| Issue \| Description \| Outcome \| Reliability` | `table-field` with `columnIds=["year", "issue", "description", "outcome", "reliability"]` |
+
+**Social media fields:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `instagram`, `twitter_x`, `tiktok`, etc. | `@handle \| Followers \| Verified? \| Activity \| URL` | Keep as string (single platform per field) |
+
+**Interview/media fields:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `notable_interviews` | `Outlet \| Date \| Topic \| URL` | `table-field` with `columnIds=["outlet", "date", "topic", "url"]`, `columnTypes=["string", "date", "string", "url"]` |
+| `talk_show_appearances` | `Show \| Date \| Notable moment \| URL` | `table-field` with `columnIds=["show", "date", "notable_moment", "url"]`, `columnTypes=["string", "date", "string", "url"]` |
+| `obituary_sources` | `Publication \| Headline \| URL` | `table-field` with `columnIds=["publication", "headline", "url"]`, `columnTypes=["string", "string", "url"]` |
+
+### startup-deep-research.form.md
+
+**Funding/competitors:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `funding_rounds` | `Round \| Date \| Amount \| Lead \| Source` | `table-field` with `columnIds=["round_type", "date", "amount", "lead_investor", "source"]` |
+| `competitors` | `Company \| Website \| One-liner \| Funding \| Source` | `table-field` with `columnIds=["company", "website", "one_liner", "funding_stage", "source"]`, `columnTypes=["string", "url", "string", "string", "url"]` |
+
+**Social media fields:**
+
+| Current Field | Format | Notes |
+| --- | --- | --- |
+| `twitter_x`, `linkedin_company`, `youtube`, etc. | Various `\|`-delimited | Keep as string (single platform per field) |
+
+**Community presence:**
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `hn_posts` | `Title \| Date \| Points \| Comments \| URL` | `table-field` with `columnIds=["title", "date", "points", "comments", "url"]`, `columnTypes=["string", "date", "number", "number", "url"]` |
+| `product_hunt_launches` | `Product \| Date \| Upvotes \| Badges \| URL` | `table-field` with `columnIds=["product", "date", "upvotes", "badges", "url"]`, `columnTypes=["string", "date", "number", "string", "url"]` |
+| `podcasts_interviews` | `Title \| Podcast \| Date \| URL` | `table-field` with `columnIds=["title", "podcast", "date", "url"]`, `columnTypes=["string", "string", "date", "url"]` |
+| `press_coverage` | `Title \| Publication \| Date \| URL` | `table-field` with `columnIds=["title", "publication", "date", "url"]`, `columnTypes=["string", "string", "date", "url"]` |
+
+### earnings-analysis.form.md
+
+| Current Field | Format | Migration |
+| --- | --- | --- |
+| `sources_accessed` | `Date \| Source \| Type \| Link \| Takeaways` | `table-field` with `columnIds=["date", "source", "type", "link", "takeaways"]`, `columnTypes=["date", "string", "string", "url", "string"]` |
+| `experts_list` | `Name \| Angle \| Lead time \| Hit rate \| Tier` | `table-field` with `columnIds=["name", "angle", "lead_time", "hit_rate", "tier"]` |
+
+### Migration Notes
+
+1. **Summary fields vs list fields:** Some pipe-delimited fields are single-value
+   summaries (e.g., `box_office_stats`), not lists.
+   These should remain as `string-field`.
+
+2. **Single-platform social media:** Fields like `instagram`, `twitter_x` represent one
+   platform each and are better as `string-field` than `table-field`.
+
+3. **Already-table fields:** Some fields (`notable_films_table`, `oscar_history`)
+   already use markdown table syntax in their instructions but are typed as
+   `string-field`. These should become proper `table-field` tags.
+
+4. **Typed columns:** Many tables benefit from typed columns (dates, URLs, numbers) for
+   validation. The migration column shows suggested types.
+
+5. **Template syntax:** All migrated tables should use clean template syntax (omit
+   `columnLabels`, let headers provide them).
