@@ -14,7 +14,7 @@ import pc from 'picocolors';
 import { parseForm } from '../../engine/parse.js';
 import { applyPatches } from '../../engine/apply.js';
 import { runResearch } from '../../research/runResearch.js';
-import { formatSuggestedLlms } from '../../llms.js';
+import { formatSuggestedLlms, hasWebSearchSupport, WEB_SEARCH_CONFIG } from '../../llms.js';
 import {
   AGENT_ROLE,
   getFormsDir,
@@ -86,6 +86,28 @@ export function registerResearchCommand(program: Command): void {
           process.exit(1);
         }
 
+        // Validate model supports web search
+        const modelId = options.model as string;
+        const providerMatch = /^([^/]+)\//.exec(modelId);
+        const provider = providerMatch?.[1] ?? modelId;
+
+        if (!hasWebSearchSupport(provider)) {
+          const webSearchProviders = Object.entries(WEB_SEARCH_CONFIG)
+            .filter(([, config]) => config.supported)
+            .map(([p]) => p);
+
+          logError(`Model "${modelId}" does not support web search.`);
+          console.log('');
+          console.log(pc.yellow('Research forms require web search capabilities.'));
+          console.log(`Use a model from: ${webSearchProviders.join(', ')}`);
+          console.log('');
+          console.log('Examples:');
+          console.log('  --model openai/gpt-4o');
+          console.log('  --model google/gemini-2.5-flash');
+          console.log('  --model xai/grok-4');
+          process.exit(1);
+        }
+
         // Resolve input path
         const inputPath = resolve(input);
         logVerbose(ctx, `Input: ${inputPath}`);
@@ -132,7 +154,6 @@ export function registerResearchCommand(program: Command): void {
         const maxIssuesPerTurn = parseInt(options.maxIssues as string, 10);
 
         // Log research start
-        const modelId = options.model as string;
         logInfo(ctx, `Research fill with model: ${modelId}`);
         logVerbose(ctx, `Max turns: ${maxTurns}`);
         logVerbose(ctx, `Max patches/turn: ${maxPatchesPerTurn}`);
