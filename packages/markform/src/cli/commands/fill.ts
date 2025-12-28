@@ -24,18 +24,19 @@ import type {
   SessionTurnStats,
 } from '../../engine/coreTypes.js';
 import { createHarness } from '../../harness/harness.js';
+import { resolveHarnessConfig } from '../../harness/harnessConfigResolver.js';
 import { createLiveAgent } from '../../harness/liveAgent.js';
 import { createMockAgent } from '../../harness/mockAgent.js';
 import {
-  DEFAULT_MAX_ISSUES,
+  DEFAULT_MAX_ISSUES_PER_TURN,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
   AGENT_ROLE,
   USER_ROLE,
   parseRolesFlag,
   getFormsDir,
-  formatSuggestedLlms,
 } from '../../settings.js';
+import { formatSuggestedLlms } from '../../llms.js';
 import type { Agent } from '../../harness/mockAgent.js';
 import { resolveModel } from '../../harness/modelResolver.js';
 import {
@@ -88,7 +89,7 @@ function formatConsoleSession(transcript: SessionTranscript, useColors: boolean)
   lines.push(bold('Harness Config:'));
   lines.push(`  Max turns: ${transcript.harness.maxTurns}`);
   lines.push(`  Max patches/turn: ${transcript.harness.maxPatchesPerTurn}`);
-  lines.push(`  Max issues: ${transcript.harness.maxIssues}`);
+  lines.push(`  Max issues/turn: ${transcript.harness.maxIssuesPerTurn}`);
   lines.push('');
 
   // Turns summary
@@ -122,7 +123,7 @@ export function registerFillCommand(program: Command): void {
     .option('--mock', 'Use mock agent (requires --mock-source)')
     .option(
       '--model <id>',
-      'Model ID for live agent (format: provider/model-id, e.g. openai/gpt-4o)',
+      'Model ID for live agent (format: provider/model-id, e.g. openai/gpt-5-mini)',
     )
     .option('--mock-source <file>', 'Path to completed form for mock agent')
     .option('--record <file>', 'Record session transcript to file')
@@ -138,8 +139,8 @@ export function registerFillCommand(program: Command): void {
     )
     .option(
       '--max-issues <n>',
-      `Maximum issues shown per turn (default: ${DEFAULT_MAX_ISSUES})`,
-      String(DEFAULT_MAX_ISSUES),
+      `Maximum issues shown per turn (default: ${DEFAULT_MAX_ISSUES_PER_TURN})`,
+      String(DEFAULT_MAX_ISSUES_PER_TURN),
     )
     .option('--max-fields <n>', 'Maximum unique fields per turn (applied before --max-issues)')
     .option('--max-groups <n>', 'Maximum unique groups per turn (applied before --max-issues)')
@@ -324,23 +325,17 @@ export function registerFillCommand(program: Command): void {
             logWarn(ctx, 'Warning: Filling all roles including user-designated fields');
           }
 
-          // Parse harness config
-          const harnessConfig: Partial<HarnessConfig> = {
-            maxTurns: parseInt(options.maxTurns ?? String(DEFAULT_MAX_TURNS), 10),
-            maxPatchesPerTurn: parseInt(
-              options.maxPatches ?? String(DEFAULT_MAX_PATCHES_PER_TURN),
-              10,
-            ),
-            maxIssues: parseInt(options.maxIssues ?? String(DEFAULT_MAX_ISSUES), 10),
-            ...(options.maxFields && {
-              maxFieldsPerTurn: parseInt(options.maxFields, 10),
-            }),
-            ...(options.maxGroups && {
-              maxGroupsPerTurn: parseInt(options.maxGroups, 10),
-            }),
+          // Parse harness config using resolver (handles frontmatter defaults)
+          const cliOptions = {
+            maxTurns: options.maxTurns ? parseInt(options.maxTurns, 10) : undefined,
+            maxPatchesPerTurn: options.maxPatches ? parseInt(options.maxPatches, 10) : undefined,
+            maxIssuesPerTurn: options.maxIssues ? parseInt(options.maxIssues, 10) : undefined,
+            maxFieldsPerTurn: options.maxFields ? parseInt(options.maxFields, 10) : undefined,
+            maxGroupsPerTurn: options.maxGroups ? parseInt(options.maxGroups, 10) : undefined,
             targetRoles,
             fillMode,
           };
+          const harnessConfig = resolveHarnessConfig(form, cliOptions);
 
           // Create harness
           const harness = createHarness(form, harnessConfig);
@@ -396,7 +391,7 @@ export function registerFillCommand(program: Command): void {
           );
           logVerbose(ctx, `Max turns: ${harnessConfig.maxTurns}`);
           logVerbose(ctx, `Max patches per turn: ${harnessConfig.maxPatchesPerTurn}`);
-          logVerbose(ctx, `Max issues per step: ${harnessConfig.maxIssues}`);
+          logVerbose(ctx, `Max issues per turn: ${harnessConfig.maxIssuesPerTurn}`);
           logVerbose(
             ctx,
             `Target roles: ${targetRoles.includes('*') ? '*' : targetRoles.join(', ')}`,
@@ -415,7 +410,7 @@ export function registerFillCommand(program: Command): void {
             const response = await agent.generatePatches(
               stepResult.issues,
               harness.getForm(),
-              harnessConfig.maxPatchesPerTurn!,
+              harnessConfig.maxPatchesPerTurn,
             );
             const { patches, stats } = response;
 
@@ -525,7 +520,7 @@ export function registerFillCommand(program: Command): void {
             options.mock ? 'mock' : 'live',
             mockPath,
             options.model,
-            harnessConfig as HarnessConfig,
+            harnessConfig,
             harness.getTurns(),
             stepResult.isComplete,
             outputPath,

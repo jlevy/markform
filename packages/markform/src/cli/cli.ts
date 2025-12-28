@@ -20,6 +20,7 @@ import { registerReadmeCommand } from './commands/readme.js';
 import { registerSpecCommand } from './commands/spec.js';
 import { registerModelsCommand } from './commands/models.js';
 import { registerRenderCommand } from './commands/render.js';
+import { registerResearchCommand } from './commands/research.js';
 import { registerServeCommand } from './commands/serve.js';
 import { registerValidateCommand } from './commands/validate.js';
 import { OUTPUT_FORMATS } from './lib/shared.js';
@@ -67,8 +68,8 @@ function createProgram(): Command {
   registerInspectCommand(program);
   registerModelsCommand(program);
   registerRenderCommand(program);
+  registerResearchCommand(program);
   registerServeCommand(program);
-
   registerValidateCommand(program);
 
   return program;

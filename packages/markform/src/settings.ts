@@ -138,117 +138,41 @@ export const DEFAULT_MAX_TURNS = 100;
 export const DEFAULT_MAX_PATCHES_PER_TURN = 20;
 
 /**
- * Default maximum issues to show per step.
+ * Default maximum issues to show per turn.
+ * Note: Renamed from DEFAULT_MAX_ISSUES for naming consistency with other per-turn limits.
  */
-export const DEFAULT_MAX_ISSUES = 10;
+export const DEFAULT_MAX_ISSUES_PER_TURN = 10;
 
 // =============================================================================
-// LLM Suggestions
-// =============================================================================
-
-/**
- * Suggested LLM models for the fill command, organized by provider.
- * These are shown in help/error messages. Only includes models from the
- * authoritative models.yaml configuration.
- */
-export const SUGGESTED_LLMS: Record<string, string[]> = {
-  openai: ['gpt-5-mini', 'gpt-5-nano', 'gpt-5.1', 'gpt-5-pro', 'gpt-5.2', 'gpt-5.2-pro'],
-  anthropic: [
-    'claude-opus-4-5',
-    'claude-opus-4-1',
-    'claude-sonnet-4-5',
-    'claude-sonnet-4-0',
-    'claude-haiku-4-5',
-  ],
-  google: [
-    'gemini-2.5-pro',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-3-pro-preview',
-  ],
-  xai: ['grok-4', 'grok-4-fast'],
-  deepseek: ['deepseek-chat', 'deepseek-reasoner'],
-};
-
-/**
- * Format suggested LLMs for display in help/error messages.
- */
-export function formatSuggestedLlms(): string {
-  const lines: string[] = ['Available providers and example models:'];
-  for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
-    lines.push(`  ${provider}/`);
-    for (const model of models) {
-      lines.push(`    - ${provider}/${model}`);
-    }
-  }
-  return lines.join('\n');
-}
-
-// =============================================================================
-// Web Search Configuration
+// Research Defaults
 // =============================================================================
 
 /**
- * Web search support configuration by provider.
- *
- * Providers with native web search:
- * - openai: webSearchPreview tool (models: gpt-4o and later)
- * - google: googleSearch grounding (all Gemini models)
- * - xai: native search in Grok models
- *
- * Providers without native web search:
- * - anthropic: requires external tool (e.g., Tavily)
- * - deepseek: no web search support
+ * Default maximum turns for research fill mode.
+ * Research forms typically complete faster than general forms.
  */
-export interface WebSearchConfig {
-  /** Whether the provider has native web search */
-  supported: boolean;
-  /** Tool name for web search (provider-specific) */
-  toolName?: string;
-  /** Package export name for the web search tool */
-  exportName?: string;
-}
+export const DEFAULT_RESEARCH_MAX_TURNS = 10;
 
 /**
- * Web search configuration per provider.
+ * Default maximum issues to show per turn in research mode.
+ * Lower than general fill to keep research responses focused.
  */
-export const WEB_SEARCH_CONFIG: Record<string, WebSearchConfig> = {
-  openai: {
-    supported: true,
-    toolName: 'web_search_preview',
-    exportName: 'openaiTools',
-  },
-  google: {
-    supported: true,
-    toolName: 'googleSearch',
-    exportName: 'googleTools',
-  },
-  xai: {
-    supported: true,
-    // xAI Grok has built-in web search, enabled via model settings
-    toolName: 'xai_search',
-  },
-  anthropic: {
-    supported: false,
-  },
-  deepseek: {
-    supported: false,
-  },
-};
+export const DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN = 5;
 
 /**
- * Check if a provider supports native web search.
+ * Default maximum patches per turn in research mode.
  */
-export function hasWebSearchSupport(provider: string): boolean {
-  return WEB_SEARCH_CONFIG[provider]?.supported ?? false;
-}
+export const DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN = 10;
 
-/**
- * Get web search tool configuration for a provider.
- * Returns undefined if provider doesn't support web search.
- */
-export function getWebSearchConfig(provider: string): WebSearchConfig | undefined {
-  const config = WEB_SEARCH_CONFIG[provider];
-  return config?.supported ? config : undefined;
-}
+// =============================================================================
+// LLM Settings (re-exported from llms.ts for backwards compatibility)
+// =============================================================================
+
+export {
+  SUGGESTED_LLMS,
+  formatSuggestedLlms,
+  WEB_SEARCH_CONFIG,
+  hasWebSearchSupport,
+  getWebSearchConfig,
+  type WebSearchConfig,
+} from './llms.js';

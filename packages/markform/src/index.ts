@@ -93,6 +93,7 @@ export type {
   SessionTranscript,
   // Frontmatter
   MarkformFrontmatter,
+  FrontmatterHarnessConfig,
   // Validators
   ValidatorContext,
   ValidatorFn,
@@ -220,6 +221,7 @@ export type {
 export { FormHarness, createHarness } from './harness/harness.js';
 export { MockAgent, createMockAgent } from './harness/mockAgent.js';
 export { fillForm } from './harness/programmaticFill.js';
+export { resolveHarnessConfig } from './harness/harnessConfigResolver.js';
 export type {
   FillOptions,
   FillResult,
@@ -228,3 +230,12 @@ export type {
   TurnStats,
   AgentResponse,
 } from './harness/harnessTypes.js';
+
+// =============================================================================
+// Research Exports
+// =============================================================================
+
+export { runResearch } from './research/runResearch.js';
+export type { ResearchOptions } from './research/runResearch.js';
+export { isResearchForm, validateResearchForm } from './research/researchFormValidation.js';
+export type { ResearchResult, ResearchStatus } from './research/researchTypes.js';

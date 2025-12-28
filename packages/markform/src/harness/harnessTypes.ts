@@ -166,7 +166,7 @@ export interface FillOptions {
   /** Maximum patches per turn (default: 20) */
   maxPatchesPerTurn?: number;
   /** Maximum issues to show per turn (default: 10) */
-  maxIssues?: number;
+  maxIssuesPerTurn?: number;
   /** Target roles to fill (default: ['agent']) */
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */

@@ -19,7 +19,7 @@ form:
 mock:
   completed_mock: examples/simple/simple-mock-filled.form.md
 harness:
-  max_issues: 5
+  max_issues_per_turn: 5
   max_patches_per_turn: 3
   max_turns: 10
 turns:
@@ -52,7 +52,7 @@ mode: mock
 form:
   path: test.form.md
 harness:
-  max_issues: 5
+  max_issues_per_turn: 5
   max_patches_per_turn: 3
   max_turns: 10
 turns: []
@@ -79,7 +79,7 @@ describe('session module', () => {
       expect(session.sessionVersion).toBe('0.1.0');
       expect(session.mode).toBe('mock');
       expect(session.form.path).toBe('examples/simple/simple.form.md');
-      expect(session.harness.maxIssues).toBe(5);
+      expect(session.harness.maxIssuesPerTurn).toBe(5);
       expect(session.turns.length).toBe(1);
     });
 
@@ -136,7 +136,7 @@ describe('session module', () => {
         mode: 'mock',
         form: { path: 'test.form.md' },
         harness: {
-          maxIssues: 5,
+          maxIssuesPerTurn: 5,
           maxPatchesPerTurn: 3,
           maxTurns: 10,
         },
@@ -151,7 +151,7 @@ describe('session module', () => {
 
       expect(yaml).toContain('session_version:');
       expect(yaml).toContain('mode: mock');
-      expect(yaml).toContain('max_issues: 5');
+      expect(yaml).toContain('max_issues_per_turn: 5');
       expect(yaml).toContain('max_patches_per_turn: 3');
     });
 
@@ -161,7 +161,7 @@ describe('session module', () => {
         mode: 'live',
         form: { path: 'test.form.md' },
         harness: {
-          maxIssues: 10,
+          maxIssuesPerTurn: 10,
           maxPatchesPerTurn: 5,
           maxTurns: 20,
         },
@@ -176,7 +176,7 @@ describe('session module', () => {
 
       // Should use snake_case in YAML output
       expect(yaml).toContain('session_version:');
-      expect(yaml).toContain('max_issues:');
+      expect(yaml).toContain('max_issues_per_turn:');
       expect(yaml).toContain('max_patches_per_turn:');
       expect(yaml).toContain('max_turns:');
       expect(yaml).toContain('expect_complete:');
@@ -184,7 +184,7 @@ describe('session module', () => {
 
       // Should NOT contain camelCase
       expect(yaml).not.toContain('sessionVersion:');
-      expect(yaml).not.toContain('maxIssues:');
+      expect(yaml).not.toContain('maxIssuesPerTurn:');
     });
 
     it('serializes turns with all fields', () => {
@@ -193,7 +193,7 @@ describe('session module', () => {
         mode: 'mock',
         form: { path: 'test.form.md' },
         harness: {
-          maxIssues: 5,
+          maxIssuesPerTurn: 5,
           maxPatchesPerTurn: 3,
           maxTurns: 10,
         },
@@ -249,7 +249,7 @@ describe('session module', () => {
       expect(reparsed.sessionVersion).toBe(original.sessionVersion);
       expect(reparsed.mode).toBe(original.mode);
       expect(reparsed.form.path).toBe(original.form.path);
-      expect(reparsed.harness.maxIssues).toBe(original.harness.maxIssues);
+      expect(reparsed.harness.maxIssuesPerTurn).toBe(original.harness.maxIssuesPerTurn);
       expect(reparsed.turns.length).toBe(original.turns.length);
       expect(reparsed.final.expectComplete).toBe(original.final.expectComplete);
     });

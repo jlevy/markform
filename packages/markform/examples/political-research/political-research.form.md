@@ -19,6 +19,10 @@ markform:
       6. Leave unknown fields empty - Don't guess or fabricate information
       7. Keep text fields concise - Aim for 50-100 words max for descriptive fields
          (e.g., portrait_description, cause_of_death). Lists should have 3-10 items.
+  harness_config:
+    max_turns: 10
+    max_issues_per_turn: 5
+    max_patches_per_turn: 10
 ---
 
 {% form id="political_research" title="Political Research Form" %}
