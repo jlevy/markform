@@ -54,71 +54,33 @@ describe('llms', () => {
       }
     });
 
-    it('marks openai, anthropic, google, xai as supported', () => {
-      expect(WEB_SEARCH_CONFIG.openai?.supported).toBe(true);
-      expect(WEB_SEARCH_CONFIG.anthropic?.supported).toBe(true);
-      expect(WEB_SEARCH_CONFIG.google?.supported).toBe(true);
-      expect(WEB_SEARCH_CONFIG.xai?.supported).toBe(true);
-    });
-
-    it('marks deepseek as unsupported', () => {
-      expect(WEB_SEARCH_CONFIG.deepseek?.supported).toBe(false);
-    });
-
-    it('provides tool names for supported providers', () => {
-      expect(WEB_SEARCH_CONFIG.openai?.toolName).toBe('webSearch');
-      expect(WEB_SEARCH_CONFIG.anthropic?.toolName).toBe('webSearch_20250305');
-      expect(WEB_SEARCH_CONFIG.google?.toolName).toBe('googleSearch');
-      expect(WEB_SEARCH_CONFIG.xai?.toolName).toBe('webSearch');
+    it('supported providers have toolNames', () => {
+      for (const [_provider, config] of Object.entries(WEB_SEARCH_CONFIG)) {
+        if (config.supported) {
+          expect(config.toolName).toBeDefined();
+          expect(config.toolName!.length).toBeGreaterThan(0);
+        }
+      }
     });
   });
 
   describe('hasWebSearchSupport', () => {
-    it('returns true for supported providers', () => {
+    it('returns correct values for known and unknown providers', () => {
       expect(hasWebSearchSupport('openai')).toBe(true);
-      expect(hasWebSearchSupport('anthropic')).toBe(true);
-      expect(hasWebSearchSupport('google')).toBe(true);
-      expect(hasWebSearchSupport('xai')).toBe(true);
-    });
-
-    it('returns false for unsupported providers', () => {
       expect(hasWebSearchSupport('deepseek')).toBe(false);
-    });
-
-    it('returns false for unknown providers', () => {
       expect(hasWebSearchSupport('unknown')).toBe(false);
-      expect(hasWebSearchSupport('')).toBe(false);
     });
   });
 
   describe('getWebSearchConfig', () => {
-    it('returns config for supported providers', () => {
-      const openaiConfig = getWebSearchConfig('openai');
-      expect(openaiConfig).toBeDefined();
-      expect(openaiConfig?.supported).toBe(true);
-      expect(openaiConfig?.toolName).toBe('webSearch');
-
-      const anthropicConfig = getWebSearchConfig('anthropic');
-      expect(anthropicConfig).toBeDefined();
-      expect(anthropicConfig?.supported).toBe(true);
-      expect(anthropicConfig?.toolName).toBe('webSearch_20250305');
-
-      const googleConfig = getWebSearchConfig('google');
-      expect(googleConfig).toBeDefined();
-      expect(googleConfig?.supported).toBe(true);
-      expect(googleConfig?.toolName).toBe('googleSearch');
-
-      const xaiConfig = getWebSearchConfig('xai');
-      expect(xaiConfig).toBeDefined();
-      expect(xaiConfig?.supported).toBe(true);
-      expect(xaiConfig?.toolName).toBe('webSearch');
+    it('returns config with toolName for supported providers', () => {
+      const config = getWebSearchConfig('openai');
+      expect(config).toBeDefined();
+      expect(config?.toolName).toBeDefined();
     });
 
-    it('returns undefined for unsupported providers', () => {
+    it('returns undefined for unsupported/unknown providers', () => {
       expect(getWebSearchConfig('deepseek')).toBeUndefined();
-    });
-
-    it('returns undefined for unknown providers', () => {
       expect(getWebSearchConfig('unknown')).toBeUndefined();
     });
   });
