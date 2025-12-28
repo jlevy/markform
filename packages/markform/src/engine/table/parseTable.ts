@@ -25,6 +25,7 @@ export interface ParseTableResult {
  * Parse Markdoc AST table nodes into headers and rows.
  * Extracts text content from the node and parses it using Markdoc.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function parseMarkdownTable(node: any): ParseTableResult {
   // Extract text content from the node (similar to extractOptionItems)
   const content = extractTextContent(node);
@@ -47,9 +48,11 @@ export function parseMarkdownTable(node: any): ParseTableResult {
 /**
  * Extract text content from a Markdoc node tree.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractTextContent(node: any): string {
   let content = '';
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function collectText(n: any): void {
     if (!n || typeof n !== 'object') return;
 
@@ -158,6 +161,7 @@ function extractRowCells(node: any): string[] {
 function extractCellContent(node: any): string {
   let content = '';
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function collectText(n: any): void {
     if (!n || typeof n !== 'object') return;
 
@@ -190,11 +194,16 @@ function extractCellContent(node: any): string {
  */
 export function escapeTableCell(value: string): string {
   // Reject newlines and control characters
-  if (/[\n\r]/.test(value)) {
+  if (value.includes('\n') || value.includes('\r')) {
     throw new Error('Cell value cannot contain newlines');
   }
-  if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(value)) {
-    throw new Error('Cell value contains invalid control characters');
+  // Check for control characters (0x00-0x1F except \t and \n)
+  for (let i = 0; i < value.length; i++) {
+    const charCode = value.charCodeAt(i);
+    if (charCode < 32 && charCode !== 9) {
+      // Allow tab (9), reject others
+      throw new Error('Cell value contains invalid control characters');
+    }
   }
 
   // Escape backslash-before-pipe first, then standalone pipes
@@ -207,10 +216,11 @@ export function escapeTableCell(value: string): string {
  */
 export function unescapeTableCell(escaped: string): string {
   // Reverse: unescape \\| → \| and \| → |
+  const placeholder = 'ESCAPED_BACKSLASH_PIPE_PLACEHOLDER';
   return escaped
-    .replace(/\\\\\|/g, '\u0000ESCAPED_BACKSLASH_PIPE\u0000')
+    .replace(/\\\\\|/g, placeholder)
     .replace(/\\\|/g, '|')
-    .replace(/\u0000ESCAPED_BACKSLASH_PIPE\u0000/g, '\\|');
+    .replace(new RegExp(placeholder, 'g'), '\\|');
 }
 
 // =============================================================================
@@ -224,7 +234,7 @@ export function unescapeTableCell(escaped: string): string {
 export function parseTableCell(
   cellText: string,
   columnType: string,
-): { state: 'answered' | 'skipped' | 'aborted'; value?: any; reason?: string } {
+): { state: 'answered' | 'skipped' | 'aborted'; value?: string | number | null; reason?: string } {
   // Check for sentinel pattern first
   const sentinel = parseSentinel(cellText);
   if (sentinel) {
@@ -237,8 +247,8 @@ export function parseTableCell(
   // Not a sentinel, parse as typed value
   const trimmed = cellText.trim();
   if (trimmed === '') {
-    // Empty cells are invalid - must use sentinel
-    throw new Error('Empty cells are not allowed - use %SKIP% or %ABORT%');
+    // Empty cells represent null values (no value provided)
+    return { state: 'answered', value: null };
   }
 
   // Parse according to column type

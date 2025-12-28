@@ -8,6 +8,7 @@ import type {
   CheckboxesField,
   CheckboxesValue,
   CheckboxProgressCounts,
+  TableValue,
   ColumnType,
   DateValue,
   Field,
@@ -192,7 +193,7 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
       return v.value !== null;
     }
     case 'table': {
-      const v = value as import('./coreTypes.js').TableValue;
+      const v = value as TableValue;
       return v.rows.length > 0;
     }
   }

@@ -172,14 +172,14 @@ describe('parseTableCell', () => {
   });
 
   describe('empty cells', () => {
-    it('treats empty string as unanswered', () => {
+    it('treats empty string as null value', () => {
       const result = parseTableCell('', 'string');
-      expect(result).toEqual({ state: 'unanswered' });
+      expect(result).toEqual({ state: 'answered', value: null });
     });
 
-    it('treats whitespace-only as unanswered', () => {
+    it('treats whitespace-only as null value', () => {
       const result = parseTableCell('   ', 'string');
-      expect(result).toEqual({ state: 'unanswered' });
+      expect(result).toEqual({ state: 'answered', value: null });
     });
   });
 

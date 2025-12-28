@@ -9,6 +9,7 @@
 import type { Node } from '@markdoc/markdoc';
 
 import { AGENT_ROLE, DEFAULT_PRIORITY } from '../settings.js';
+import type { TableRowResponse, CellResponse } from './coreTypes.js';
 import type {
   ApprovalMode,
   CheckboxesField,
@@ -1085,7 +1086,7 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
   }
 
   // Parse table data
-  const tableRows: any[] = [];
+  const tableRows: TableRowResponse[] = [];
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
     if (!row || row.length !== columnIds.length) {
@@ -1094,7 +1095,7 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
       );
     }
 
-    const tableRow: Record<string, any> = {};
+    const tableRow: Record<string, CellResponse> = {};
     for (let colIndex = 0; colIndex < columnIds.length; colIndex++) {
       const cellText = row[colIndex];
       if (cellText === undefined) {

@@ -49,6 +49,8 @@ describe('table-field integration', () => {
     expect((parsed.response.value as any)?.rows).toHaveLength(2);
 
     // Serialize back
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const serialized = serializeTableField(parsed.field, (parsed.response.value as any).rows);
 
     // Verify serialization includes key elements
@@ -78,7 +80,9 @@ describe('table-field integration', () => {
     );
 
     const parsed = parseTableField(node);
-    const serialized = serializeTableField(parsed.field, (parsed.response.value as any).rows);
+    // For empty tables, response.value might be undefined, so use empty array
+    const rows = parsed.response.value ? (parsed.response.value as any).rows : [];
+    const serialized = serializeTableField(parsed.field, rows);
 
     expect(serialized).toContain('columnIds=["name", "value"]');
     expect(serialized).toContain('columnLabels=["Name", "Value"]');
@@ -104,6 +108,7 @@ describe('table-field integration', () => {
     );
 
     const parsed = parseTableField(node);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const serialized = serializeTableField(parsed.field, (parsed.response.value as any).rows);
 
     expect(serialized).toContain('| Task A | done |');

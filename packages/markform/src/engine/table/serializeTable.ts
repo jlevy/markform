@@ -5,7 +5,7 @@
  */
 
 import { escapeTableCell } from './parseTable.js';
-import type { TableField, TableRowResponse } from '../coreTypes.js';
+import type { TableField, TableRowResponse, CellResponse } from '../coreTypes.js';
 
 // =============================================================================
 // Table Serialization
@@ -53,6 +53,10 @@ export function serializeTableField(field: TableField, rows: TableRowResponse[])
   for (const row of rows) {
     const cells = field.columns.map((column) => {
       const cellResponse = row[column.id];
+      if (!cellResponse) {
+        // This shouldn't happen in valid data, but provide a fallback
+        return '';
+      }
       return serializeCell(cellResponse);
     });
     lines.push(`| ${cells.join(' | ')} |`);
@@ -66,7 +70,7 @@ export function serializeTableField(field: TableField, rows: TableRowResponse[])
 /**
  * Serialize a cell response to string format.
  */
-function serializeCell(cell: any): string {
+function serializeCell(cell: CellResponse): string {
   if (cell.state === 'skipped') {
     return `%SKIP%${cell.reason ? ` (${cell.reason})` : ''}`;
   }
@@ -74,7 +78,8 @@ function serializeCell(cell: any): string {
     return `%ABORT%${cell.reason ? ` (${cell.reason})` : ''}`;
   }
   if (cell.state === 'answered') {
-    return escapeTableCell(String(cell.value));
+    // Handle null values specially - serialize as empty string to preserve null semantics
+    return cell.value === null ? '' : escapeTableCell(String(cell.value));
   }
   // unanswered cells shouldn't exist in serialization
   return '';

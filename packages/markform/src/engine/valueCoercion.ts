@@ -484,6 +484,7 @@ function coerceToTable(fieldId: string, rawValue: RawFieldValue): CoercionResult
   }
 
   // For now, accept the raw value as-is. More complex validation would be done elsewhere.
+
   return {
     ok: true,
     patch: { op: 'set_table', fieldId, rows: rawValue as any },

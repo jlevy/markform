@@ -33,11 +33,12 @@ export function validateScopeRef(
     case 'option': {
       // Check if it's an option (select/checkbox field)
       if (isSelectableField(field.kind)) {
-        const selectableField = field as any; // Type assertion for selectable fields
-        if (selectableField.options.some((o: any) => o.id === ref.optionId)) {
+        // Type assertion for selectable fields - we know this is safe due to isSelectableField check
+        const selectableField = field as { options: { id: string }[] };
+        if (selectableField.options.some((o) => o.id === ref.optionId)) {
           return { ok: true, scope: 'option' };
         }
-        const validOptions = selectableField.options.map((o: any) => o.id).join(', ');
+        const validOptions = selectableField.options.map((o) => o.id).join(', ');
         return {
           ok: false,
           error:
