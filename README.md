@@ -64,10 +64,10 @@ markform:
 {% field-group id="input" title="Input" %}
 
 <!-- User fills this field -->
-{% string-field id="movie" label="Movie" role="user" required=true %}{% /string-field %}
+{% string-field id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /string-field %}
 
 {% instructions ref="movie" %}  <!-- Guidance for filling the field -->
-Enter the movie title (e.g., "The Matrix" or "Barbie 2023").
+Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson").
 {% /instructions %}
 
 {% /field-group %}
@@ -78,6 +78,15 @@ Enter the movie title (e.g., "The Matrix" or "Barbie 2023").
 {% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
 
 {% number-field id="year" label="Release Year" role="agent" min=1888 max=2030 %}{% /number-field %}
+
+{% single-select id="mpaa_rating" label="MPAA Rating" role="agent" %}
+- [ ] G {% #g %}
+- [ ] PG {% #pg %}
+- [ ] PG-13 {% #pg_13 %}
+- [ ] R {% #r %}
+- [ ] NC-17 {% #nc_17 %}
+- [ ] NR/Unrated {% #nr %}
+{% /single-select %}
 
 {% url-field id="imdb_url" label="IMDB URL" role="agent" %}{% /url-field %}
 

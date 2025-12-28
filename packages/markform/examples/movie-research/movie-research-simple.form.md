@@ -15,10 +15,10 @@ markform:
 
 {% field-group id="input" title="Input" %}
 
-{% string-field id="movie" label="Movie" role="user" required=true %}{% /string-field %}
+{% string-field id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /string-field %}
 
 {% instructions ref="movie" %}
-Enter the movie title (e.g., "The Matrix" or "Barbie 2023").
+Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson").
 {% /instructions %}
 
 {% /field-group %}
