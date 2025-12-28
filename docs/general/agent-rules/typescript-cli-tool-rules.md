@@ -619,6 +619,41 @@ program
   .option('-v, --verbose', 'Verbose output')           // -v used by --version
 ```
 
+### Show Help After Errors
+
+Configure Commander.js to display help after usage errors. This helps users understand
+what went wrong and how to correctly use the command:
+
+```ts
+// In program setup (affects all commands)
+const program = new Command()
+  .name('my-cli')
+  .showHelpAfterError()  // Show full help after errors
+  // ... other options
+
+// Or with a custom hint message (more concise)
+program.showHelpAfterError('(add --help for additional information)');
+```
+
+This provides a better user experience when required arguments are missing or options
+are invalid:
+
+```console
+$ my-cli research
+error: missing required argument 'input'
+
+Usage: my-cli research [options] <input>
+
+Fill a form using a web-search-enabled model
+
+Options:
+  --model <provider/model>  Model to use (required)
+  -h, --help                display help for command
+```
+
+When configured on the root program, this behavior propagates to all subcommands
+automatically.
+
 ### Stdout/Stderr Separation
 
 Route output appropriately for Unix pipeline compatibility:
