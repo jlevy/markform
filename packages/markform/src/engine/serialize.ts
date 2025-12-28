@@ -267,6 +267,9 @@ function serializeStringField(field: StringField, response: FieldResponse | unde
   if (field.validate) {
     attrs.validate = field.validate;
   }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
+  }
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -318,6 +321,9 @@ function serializeNumberField(field: NumberField, response: FieldResponse | unde
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
   }
 
   // Add state attribute for skipped/aborted (markform-216)
@@ -380,6 +386,9 @@ function serializeStringListField(
   if (field.validate) {
     attrs.validate = field.validate;
   }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
+  }
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -441,6 +450,9 @@ function serializeSingleSelectField(
   if (field.validate) {
     attrs.validate = field.validate;
   }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
+  }
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -490,6 +502,9 @@ function serializeMultiSelectField(
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
   }
 
   // Add state attribute for skipped/aborted (markform-216)
@@ -545,6 +560,9 @@ function serializeCheckboxesField(
   if (field.validate) {
     attrs.validate = field.validate;
   }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
+  }
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -579,6 +597,9 @@ function serializeUrlField(field: UrlField, response: FieldResponse | undefined)
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
   }
 
   // Add state attribute for skipped/aborted (markform-216)
@@ -632,6 +653,9 @@ function serializeUrlListField(field: UrlListField, response: FieldResponse | un
   if (field.validate) {
     attrs.validate = field.validate;
   }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
+  }
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -681,6 +705,9 @@ function serializeDateField(field: DateField, response: FieldResponse | undefine
   if (field.validate) {
     attrs.validate = field.validate;
   }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
+  }
 
   // Add state attribute for skipped/aborted
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -729,6 +756,9 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
   }
   if (field.validate) {
     attrs.validate = field.validate;
+  }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
   }
 
   // Add state attribute for skipped/aborted
@@ -796,6 +826,9 @@ function serializeField(field: Field, responses: Record<Id, FieldResponse>): str
  */
 function serializeDocBlock(doc: DocumentationBlock): string {
   const attrs: Record<string, unknown> = { ref: doc.ref };
+  if (doc.report !== undefined) {
+    attrs.report = doc.report;
+  }
   const attrStr = serializeAttrs(attrs);
   return `{% ${doc.tag} ${attrStr} %}\n${doc.bodyMarkdown}\n{% /${doc.tag} %}`;
 }
@@ -853,6 +886,9 @@ function serializeFieldGroup(
   }
   if (group.validate) {
     attrs.validate = group.validate;
+  }
+  if (group.report !== undefined) {
+    attrs.report = group.report;
   }
 
   const attrStr = serializeAttrs(attrs);

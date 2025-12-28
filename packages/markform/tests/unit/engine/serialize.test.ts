@@ -1054,4 +1054,99 @@ Age cannot be determined.
       expect(reparsed.notes[1]?.id).toBe('n2');
     });
   });
+
+  describe('report attribute round-trip', () => {
+    it('preserves report=false on field through serialize/parse cycle', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="visible" label="Visible Field" /%}
+{% string-field id="hidden" label="Hidden Field" report=false /%}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      expect(parsed.schema.groups[0]?.children[1]?.report).toBe(false);
+
+      const output = serialize(parsed);
+      expect(output).toContain('report=false');
+
+      const reparsed = parseForm(output);
+      expect(reparsed.schema.groups[0]?.children[1]?.report).toBe(false);
+    });
+
+    it('preserves report=false on field-group through serialize/parse cycle', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="visible_group" title="Visible" %}
+{% string-field id="f1" label="Field 1" /%}
+{% /field-group %}
+
+{% field-group id="hidden_group" title="Hidden" report=false %}
+{% string-field id="f2" label="Field 2" /%}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      expect(parsed.schema.groups[1]?.report).toBe(false);
+
+      const output = serialize(parsed);
+      expect(output).toContain('report=false');
+
+      const reparsed = parseForm(output);
+      expect(reparsed.schema.groups[1]?.report).toBe(false);
+    });
+
+    it('preserves report attribute on documentation blocks through serialize/parse cycle', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" /%}
+{% /field-group %}
+
+{% instructions ref="name" report=true %}
+These instructions should appear in report.
+{% /instructions %}
+
+{% description ref="name" report=false %}
+This description should NOT appear in report.
+{% /description %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const instructionsDoc = parsed.docs.find((d) => d.tag === 'instructions');
+      const descriptionDoc = parsed.docs.find((d) => d.tag === 'description');
+      expect(instructionsDoc?.report).toBe(true);
+      expect(descriptionDoc?.report).toBe(false);
+
+      const output = serialize(parsed);
+      // Check that report attributes are preserved in output
+      expect(output).toMatch(/instructions.*report=true/s);
+      expect(output).toMatch(/description.*report=false/s);
+
+      const reparsed = parseForm(output);
+      const reparsedInstructions = reparsed.docs.find((d) => d.tag === 'instructions');
+      const reparsedDescription = reparsed.docs.find((d) => d.tag === 'description');
+      expect(reparsedInstructions?.report).toBe(true);
+      expect(reparsedDescription?.report).toBe(false);
+    });
+  });
 });
