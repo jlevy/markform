@@ -440,7 +440,7 @@ async function runInteractiveFlow(
   const targetRoles = [USER_ROLE];
 
   // Track output paths from user fill (will be used for file viewer if no agent fill)
-  let userFillOutputs: { formPath: string; rawPath: string; yamlPath: string } | null = null;
+  let userFillOutputs: { reportPath: string; yamlPath: string; formPath: string } | null = null;
 
   // Inspect form to get issues for user role
   const inspectResult = inspect(form, { targetRoles });
@@ -487,9 +487,9 @@ async function runInteractiveFlow(
     showInteractiveOutro(patches.length, false);
     console.log('');
     p.log.success('Outputs:');
-    console.log(`  ${formatPath(userFillOutputs.formPath)}  ${pc.dim('(markform)')}`);
-    console.log(`  ${formatPath(userFillOutputs.rawPath)}  ${pc.dim('(plain markdown)')}`);
-    console.log(`  ${formatPath(userFillOutputs.yamlPath)}  ${pc.dim('(values as YAML)')}`);
+    console.log(`  ${formatPath(userFillOutputs.reportPath)}  ${pc.dim('(output report)')}`);
+    console.log(`  ${formatPath(userFillOutputs.yamlPath)}  ${pc.dim('(output values)')}`);
+    console.log(`  ${formatPath(userFillOutputs.formPath)}  ${pc.dim('(filled markform source)')}`);
 
     logTiming(
       { verbose: false, format: 'console', dryRun: false, quiet: false },
@@ -527,9 +527,9 @@ async function runInteractiveFlow(
       // Offer to view user fill output files (if any were created)
       if (userFillOutputs) {
         const files: FileOption[] = [
-          { path: userFillOutputs.formPath, label: 'Markform', hint: 'form with tags' },
-          { path: userFillOutputs.rawPath, label: 'Plain Markdown', hint: 'rendered output' },
-          { path: userFillOutputs.yamlPath, label: 'YAML', hint: 'extracted values' },
+          { path: userFillOutputs.reportPath, label: 'Report', hint: 'output report' },
+          { path: userFillOutputs.yamlPath, label: 'Values', hint: 'output values' },
+          { path: userFillOutputs.formPath, label: 'Form', hint: 'filled markform source' },
         ];
         await showFileViewerChooser(files);
       }
@@ -588,16 +588,16 @@ async function runInteractiveFlow(
       );
 
       // Step 10: Multi-format export
-      const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, agentOutputPath);
+      const { reportPath, yamlPath, formPath } = await exportMultiFormat(form, agentOutputPath);
 
       console.log('');
       const successMessage = isResearchExample
         ? 'Research complete. Outputs:'
         : 'Agent fill complete. Outputs:';
       p.log.success(successMessage);
-      console.log(`  ${formatPath(formPath)}  (markform)`);
-      console.log(`  ${formatPath(rawPath)}  (plain markdown)`);
-      console.log(`  ${formatPath(yamlPath)}  (values as YAML)`);
+      console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
+      console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
+      console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
 
       if (!success) {
         p.log.warn('Agent did not complete all fields. You may need to run it again.');
@@ -605,9 +605,9 @@ async function runInteractiveFlow(
 
       // Offer to view output files
       const agentFillFiles: FileOption[] = [
-        { path: formPath, label: 'Markform', hint: 'form with tags' },
-        { path: rawPath, label: 'Plain Markdown', hint: 'rendered output' },
-        { path: yamlPath, label: 'YAML', hint: 'extracted values' },
+        { path: reportPath, label: 'Report', hint: 'output report' },
+        { path: yamlPath, label: 'Values', hint: 'output values' },
+        { path: formPath, label: 'Form', hint: 'filled markform source' },
       ];
       await showFileViewerChooser(agentFillFiles);
     } catch (error) {

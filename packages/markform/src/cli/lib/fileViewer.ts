@@ -207,8 +207,12 @@ async function viewFile(filePath: string): Promise<void> {
 /**
  * Show an interactive file viewer chooser.
  *
- * Presents a list of files to view with descriptions, plus a Skip option.
- * Loops until the user selects Skip.
+ * Presents a list of files to view:
+ * - "Show report:" for the report output (.report.md) at the top
+ * - "Show source:" for other files (.form.md, .raw.md, .yml)
+ * - "Quit" at the bottom
+ *
+ * Loops until the user selects Quit.
  *
  * @param files Array of file options to display
  */
@@ -219,26 +223,44 @@ export async function showFileViewerChooser(files: FileOption[]): Promise<void> 
 
   console.log('');
 
+  // Identify report (.report.md) vs source files
+  const reportFile = files.find((f) => f.path.endsWith('.report.md'));
+  const sourceFiles = files.filter((f) => !f.path.endsWith('.report.md'));
+
   while (true) {
-    const options = [
-      ...files.map((file) => ({
+    const options: { value: string; label: string; hint?: string }[] = [];
+
+    // Report file first (if exists)
+    if (reportFile) {
+      options.push({
+        value: reportFile.path,
+        label: `Show report: ${pc.green(basename(reportFile.path))}`,
+        hint: reportFile.hint ?? '',
+      });
+    }
+
+    // Source files
+    for (const file of sourceFiles) {
+      options.push({
         value: file.path,
-        label: pc.green(basename(file.path)),
+        label: `Show source: ${pc.green(basename(file.path))}`,
         hint: file.hint ?? '',
-      })),
-      {
-        value: 'skip',
-        label: 'Done viewing',
-        hint: 'exit file viewer',
-      },
-    ];
+      });
+    }
+
+    // Quit option at the end
+    options.push({
+      value: 'quit',
+      label: 'Quit',
+      hint: '',
+    });
 
     const selection = await p.select({
-      message: 'View an output file?',
+      message: 'View files:',
       options,
     });
 
-    if (p.isCancel(selection) || selection === 'skip') {
+    if (p.isCancel(selection) || selection === 'quit') {
       break;
     }
 

@@ -191,12 +191,12 @@ export function registerResearchCommand(program: Command): void {
         }
 
         // Export filled form
-        const { formPath, rawPath, yamlPath } = await exportMultiFormat(result.form, outputPath);
+        const { reportPath, yamlPath, formPath } = await exportMultiFormat(result.form, outputPath);
 
         logSuccess(ctx, 'Outputs:');
-        console.log(`  ${formPath}  ${pc.dim('(markform)')}`);
-        console.log(`  ${rawPath}  ${pc.dim('(plain markdown)')}`);
-        console.log(`  ${yamlPath}  ${pc.dim('(values as YAML)')}`);
+        console.log(`  ${reportPath}  ${pc.dim('(output report)')}`);
+        console.log(`  ${yamlPath}  ${pc.dim('(output values)')}`);
+        console.log(`  ${formPath}  ${pc.dim('(filled markform source)')}`);
 
         // Save transcript if requested
         if (options.transcript && result.transcript) {
