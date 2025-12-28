@@ -644,10 +644,12 @@ sequenceDiagram
 #### Research Workflow
 
 The research workflow is a specialized application of the harness loop for web-search-
-enabled research tasks. It provides:
+enabled research tasks.
+It provides:
 
 1. **Research forms** — Forms with `user` role fields (problem definition) followed by
-   `agent` role fields (research tasks). User fields come first, agent fields follow.
+   `agent` role fields (research tasks).
+   User fields come first, agent fields follow.
 
 2. **Web search requirement** — Research requires models with native web search support
    (OpenAI, Google, xAI). The workflow validates this before execution.
@@ -655,28 +657,27 @@ enabled research tasks. It provides:
 3. **Research-specific defaults** — Lower `maxIssuesPerTurn` (3 vs 10) and
    `maxGroupsPerTurn` (1) to encourage focused, deep research on one section at a time.
 
-4. **Frontmatter configuration** — Research forms can specify harness parameters in
-   YAML frontmatter under `markform.harness`.
+4. **Frontmatter configuration** — Research forms can specify harness parameters in YAML
+   frontmatter under `markform.harness`.
 
 **API Design:**
 
-The research API follows the "thin wrapper" pattern:
+The research API follows the “thin wrapper” pattern—same options type, different
+behavior:
 
 ```typescript
-// ResearchOptions extends FillOptions - no field duplication
-interface ResearchOptions extends FillOptions {
-  skipValidation?: boolean;  // Only research-specific addition
-}
+// Same FillOptions type for both APIs - no separate ResearchOptions
+async function fillForm(options: FillOptions): Promise<FillResult>;
+async function runResearch(options: FillOptions): Promise<ResearchResult>;
 
 // runResearch() validates then delegates to fillForm()
-async function runResearch(options: ResearchOptions): Promise<ResearchResult> {
-  // 1. Validate research form structure
-  // 2. Validate model supports web search
-  // 3. Apply RESEARCH_DEFAULTS for config
-  // 4. Delegate to fillForm() for execution
-}
+// 1. Validate research form structure (user fields, then agent fields)
+// 2. Validate model supports web search
+// 3. Apply RESEARCH_DEFAULTS for config
+// 4. Delegate to fillForm() for execution
 ```
 
+If you don’t want research validation, use `fillForm()` directly.
 This avoids code duplication—`runResearch()` adds validation and defaults but reuses
 `fillForm()` for all execution logic.
 
@@ -701,7 +702,9 @@ async function fillForm(options: {
 **Benefits:**
 
 - **Testable** — Unit tests can pass strings directly without file fixtures
+
 - **Composable** — APIs can be chained without intermediate file I/O
+
 - **Platform-agnostic** — Works in browsers, serverless, anywhere without filesystem
 
 #### File I/O at CLI Layer
@@ -718,10 +721,12 @@ await exportMultiFormat(result.form, outputPath, formats);
 **Implementation:**
 
 - `src/cli/lib/fileHelpers.ts` — Shared file reading utilities
+
 - `src/cli/lib/exportHelpers.ts` — `exportMultiFormat()` for output
+
 - Each CLI command reads input, calls core API, writes output
 
-This keeps core APIs simple and focused while CLI commands handle the "glue" of
+This keeps core APIs simple and focused while CLI commands handle the “glue” of
 reading/writing files, parsing CLI arguments, and user interaction.
 
 * * *
@@ -889,7 +894,8 @@ if (result.status.ok) {
 
 #### runResearch()
 
-Specialized wrapper for research workflows:
+Specialized wrapper for research workflows.
+Takes the same `FillOptions` as `fillForm()`:
 
 ```typescript
 import { runResearch } from 'markform';
@@ -901,6 +907,16 @@ const result = await runResearch({
 });
 // Returns ResearchResult (extends FillResult)
 ```
+
+Key differences from `fillForm()`:
+
+- Validates form has research structure (user fields before agent fields)
+
+- Validates model supports web search (fails fast if not)
+
+- Applies `RESEARCH_DEFAULTS` (maxIssuesPerTurn: 3, maxGroupsPerTurn: 1)
+
+If you don’t want these validations, use `fillForm()` directly with manual defaults.
 
 Both APIs work with strings (not file paths) for testability and composability.
 See API Design Principles above.
