@@ -34,6 +34,7 @@ import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
 import { createHarness } from '../../harness/harness.js';
 import { createLiveAgent } from '../../harness/liveAgent.js';
 import { resolveModel, getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
+import { runResearch } from '../../research/runResearch.js';
 import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
@@ -538,11 +539,30 @@ async function runInteractiveFlow(
 
     const agentOutputPath = join(formsDir, agentFilenameResult);
 
-    // Step 9: Run agent fill (or research for research-type examples)
+    // Step 9: Run agent fill or research depending on example type
     const agentStartTime = Date.now();
     const timingLabel = isResearchExample ? 'Research time' : 'Agent fill time';
     try {
-      const { success, turnCount: _turnCount } = await runAgentFill(form, modelId, agentOutputPath);
+      let success: boolean;
+
+      if (isResearchExample) {
+        // Use runResearch() for research examples - uses research-specific defaults
+        console.log('');
+        p.log.step(pc.bold('Research in progress...'));
+        const result = await runResearch(form, {
+          model: modelId,
+          targetRoles: [AGENT_ROLE],
+          fillMode: 'continue',
+        });
+        success = result.status === 'completed';
+        // Copy final form state
+        Object.assign(form, result.form);
+        console.log(pc.dim(`  Completed in ${result.totalTurns} turn(s)`));
+      } else {
+        // Use runAgentFill() for regular fill examples
+        const result = await runAgentFill(form, modelId, agentOutputPath);
+        success = result.success;
+      }
 
       logTiming(
         { verbose: false, format: 'console', dryRun: false, quiet: false },
