@@ -29,6 +29,12 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     type: 'fill',
   },
   {
+    id: 'movie-research',
+    filename: 'movie-research.form.md',
+    path: 'movie-research/movie-research.form.md',
+    type: 'research',
+  },
+  {
     id: 'earnings-analysis',
     filename: 'earnings-analysis.form.md',
     path: 'earnings-analysis/earnings-analysis.form.md',
