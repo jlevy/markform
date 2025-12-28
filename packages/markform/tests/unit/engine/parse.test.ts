@@ -1610,4 +1610,72 @@ markform:
       expect(() => parseForm(markdown)).toThrow(/invalid example.*not-a-url.*must be a valid URL/i);
     });
   });
+
+  describe('table-field with attribute-based columns', () => {
+    it('validates header row matches attribute-defined columns', () => {
+      // With attribute-based columns, the parser should validate that the header row
+      // matches the defined column IDs/labels. If headers are reordered or mismatched,
+      // it should still map values correctly by header name, not position.
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% table-field id="people" label="People" columnIds=["name", "age"] columnLabels=["Name", "Age"] columnTypes=["string", "number"] %}
+
+| Age | Name |
+| --- | --- |
+| 25 | Alice |
+| 30 | Bob |
+
+{% /table-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const value = result.responsesByFieldId.people?.value;
+
+      expect(value).toBeDefined();
+      expect(value?.kind).toBe('table');
+      if (value?.kind === 'table') {
+        // With proper header validation, values should be mapped by header name
+        // Age column contains 25, 30 and Name column contains Alice, Bob
+        // If parsed correctly by header matching:
+        // Cells are CellResponse objects with { state, value }
+        expect(value.rows[0]?.name?.value).toBe('Alice');
+        expect(value.rows[0]?.age?.value).toBe(25);
+        expect(value.rows[1]?.name?.value).toBe('Bob');
+        expect(value.rows[1]?.age?.value).toBe(30);
+      }
+    });
+
+    it('rejects table with invalid separator when using attribute columns', () => {
+      // With attribute-based columns, header/separator validation should still apply
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% table-field id="items" label="Items" columnIds=["id", "name"] columnLabels=["ID", "Name"] columnTypes=["number", "string"] %}
+
+| ID | Name |
+| not-valid-separator |
+| 1 | Item1 |
+
+{% /table-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      // Should throw because separator row is malformed
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+    });
+  });
 });

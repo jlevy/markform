@@ -1067,10 +1067,10 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
 
   // Get table content - raw markdown table inside the tag
   const tableContent = extractTableContent(node);
-  const columnsFromInline = true;
 
   // Try attribute-based columns first
   let columns = parseColumnsFromAttributes(node, id);
+  let columnsFromInline = false;
   let dataStartLine = 2; // Default: header + separator
 
   // If no attribute columns, try to extract from inline table
@@ -1087,6 +1087,7 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
     }
     columns = extractResult.columns;
     dataStartLine = extractResult.dataStartLine;
+    columnsFromInline = true;
   }
 
   const field: TableField = {
