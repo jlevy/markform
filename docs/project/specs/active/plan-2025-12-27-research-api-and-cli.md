@@ -155,15 +155,21 @@ Add `markform research <file>` command that:
 
 4. **CLI Command** (`markform research <file>`):
 
-   - `--model <id>`: Required, web-search-capable model
+   - `--model=<id>`: Required, web-search-capable model
 
-   - `-o, --output <file>`: Output file path
+   - `-o, --output=<file>`: Output file path
 
-   - `--interactive` / `-i`: Prompt for user fields (default when user fields exist)
+   - `--initial-values=<file>`: JSON/YAML file with initial field values
 
-   - `--roles <roles>`: Target roles (default: ‘agent’ or ‘*’ for all)
+   - `-- field=value ...`: Inline field values after `--` separator
+
+   - `--interactive` / `-i`: Prompt for missing user fields
+
+   - `--roles=<roles>`: Target roles (default: ‘agent’ or ‘*’ for all)
 
    - Standard harness options: `--max-turns`, `--max-patches`, etc.
+
+   - Value resolution order: form defaults → file → inline → interactive
 
 5. **File Helpers**:
 
@@ -537,7 +543,12 @@ export interface ResearchOptions {
   form: string | ParsedForm;
   /** Model identifier (must support web search) */
   model: string;
-  /** Pre-fill user-role fields by ID */
+  /**
+   * Pre-fill fields by ID. CLI populates this from:
+   * 1. --initial-values=file.json/yml
+   * 2. -- field=value pairs
+   * Values are merged (later overrides earlier).
+   */
   inputContext?: InputContext;
   /** Additional context for agent prompt */
   systemPromptAddition?: string;
@@ -944,34 +955,83 @@ export function formatWebSearchModels(): string;
 ### CLI Design
 
 ```
-markform research <file> [options]
+markform research <file> [options] [-- field=value ...]
 
 Arguments:
-  file                 Path to research form (.form.md)
+  file                       Path to research form (.form.md)
 
 Options:
-  --model <id>         Model ID (required, must support web search)
-  -o, --output <file>  Output file path
-  -i, --interactive    Prompt for user-role fields interactively
-  --max-turns <n>      Maximum turns (default: 100)
-  --max-patches <n>    Maximum patches per turn (default: 20)
-  --max-issues <n>     Maximum issues per step (default: 10)
-  --roles <roles>      Target roles to fill (default: agent)
-  --mode <mode>        Fill mode: continue or overwrite
-  --verbose            Verbose output
-  --quiet              Minimal output
-  --dry-run            Validate without executing
+  --model=<id>               Model ID (required, must support web search)
+  -o, --output=<file>        Output file path
+  --initial-values=<file>    JSON/YAML file with initial field values
+  -i, --interactive          Prompt for user-role fields interactively
+  --max-turns=<n>            Maximum turns (default: 100)
+  --max-patches=<n>          Maximum patches per turn (default: 20)
+  --max-issues=<n>           Maximum issues per step (default: 10)
+  --roles=<roles>            Target roles to fill (default: agent)
+  --mode=<mode>              Fill mode: continue or overwrite
+  --verbose                  Verbose output
+  --quiet                    Minimal output
+  --dry-run                  Validate without executing
+
+Field Values:
+  Field values can be provided in three ways (later overrides earlier):
+  1. --initial-values=file.json or file.yml (JSON/YAML file)
+  2. -- field=value field2=value2 (inline after --)
+  3. -i/--interactive (prompts for missing user fields)
+
+  The -- separator marks the end of options; everything after is field=value pairs.
+  Values are split on first = only, so values can contain = characters.
+  Shell quoting rules apply: use quotes for values with spaces.
 
 Examples:
-  # Run research with OpenAI
-  markform research startup.form.md --model openai/gpt-4o
+  # Inline field values (most common for quick use)
+  markform research celebrity.form.md --model=openai/gpt-4o \
+    -- celebrity_name="Leonard Cohen" disambiguation="Canadian singer-songwriter"
 
-  # Interactive mode with user prompts
-  markform research startup.form.md --model google/gemini-2.0-flash -i
+  # From JSON/YAML file (for scripting or complex values)
+  markform research startup.form.md --model=openai/gpt-4o \
+    --initial-values=inputs.json
+
+  # Combined: file provides defaults, inline overrides
+  markform research startup.form.md --model=openai/gpt-4o \
+    --initial-values=defaults.yml -- company_name="Acme Corp"
+
+  # Interactive mode prompts for any missing user fields
+  markform research startup.form.md --model=google/gemini-2.0-flash -i
 
   # Specify output location
-  markform research startup.form.md --model xai/grok-4 -o results/
+  markform research startup.form.md --model=xai/grok-4 -o=results/
 ```
+
+#### Initial Values File Format
+
+JSON and YAML are both supported (YAML parser handles JSON transparently):
+
+```yaml
+# inputs.yml
+celebrity_name: Leonard Cohen
+disambiguation: Canadian singer-songwriter, poet, 1960s-2010s
+```
+
+```json
+{
+  "celebrity_name": "Leonard Cohen",
+  "disambiguation": "Canadian singer-songwriter, poet, 1960s-2010s"
+}
+```
+
+#### Field Value Resolution Order
+
+Values are merged with later sources overriding earlier:
+
+1. **Form defaults** (from field `default` attribute if any)
+
+2. **--initial-values file** (JSON/YAML)
+
+3. **Inline `-- field=value`** pairs
+
+4. **Interactive prompts** (if `-i` flag, prompts for still-empty required user fields)
 
 ### Error Messages
 
@@ -1342,13 +1402,27 @@ Move all LLM-related configuration from `settings.ts` to a new `src/llms.ts` fil
 
 #### Phase 5: CLI Commands
 
+- [ ] Add `src/cli/lib/initialValues.ts` with:
+
+  - `parseInlineFieldValues(args: string[])`: parse `field=value` pairs after `--`
+
+  - `loadInitialValuesFile(path: string)`: load JSON/YAML file, return InputContext
+
+  - `mergeInitialValues(file, inline)`: merge with inline overriding file
+
 - [ ] Add `src/cli/commands/research.ts` command using `resolveHarnessConfig()`
+
+  - Support `--initial-values=<file>` option
+
+  - Support `-- field=value` pairs via positional args after `--`
+
+  - Support `--interactive` mode for missing user fields
+
+  - Support `--model` with web search validation
 
 - [ ] Update `src/cli/commands/fill.ts` to use shared `resolveHarnessConfig()`
 
-- [ ] Support `--interactive` mode in research command
-
-- [ ] Support `--model` with web search validation
+- [ ] Unit tests for initial values parsing and merging
 
 - [ ] Integration tests for CLI config override hierarchy
 
@@ -1472,9 +1546,29 @@ Improve research example forms to demonstrate best practices:
 
    - `runResearch()` uses frontmatter harness config when present
 
+   - `runResearch()` uses inputContext to pre-fill fields
+
    - `runResearchFromFile()` writes expected output files
 
-5. **Examples Command Tests** (`tests/integration/examples.test.ts`):
+5. **Initial Values Tests** (`tests/unit/cli/initialValues.test.ts`):
+
+   - Parse `-- field=value` pairs correctly
+
+   - Handle values containing `=` (split on first `=` only)
+
+   - Handle quoted values with spaces
+
+   - Load JSON file via `--initial-values=file.json`
+
+   - Load YAML file via `--initial-values=file.yml`
+
+   - Merge order: file values, then inline values (inline wins)
+
+   - Error on missing initial-values file
+
+   - Error on invalid JSON/YAML syntax
+
+6. **Examples Command Tests** (`tests/integration/examples.test.ts`):
 
    - Example registry includes `type` field for all examples
 
@@ -1484,11 +1578,15 @@ Improve research example forms to demonstrate best practices:
 
    - `promptForWebSearchModel()` only shows openai/google/xai models
 
-6. **CLI Tests**:
+7. **CLI Tests**:
 
    - `markform research --help` shows correct options
 
-   - `markform research <file> --model anthropic/claude-...` fails with web search error
+   - `markform research <file> --model=anthropic/claude-...` fails with web search error
+
+   - `markform research <file> --model=openai/gpt-4o -- field=value` pre-fills field
+
+   - `markform research <file> --initial-values=test.json` loads values from file
 
    - `markform research <file> --model openai/gpt-4o` succeeds
 
