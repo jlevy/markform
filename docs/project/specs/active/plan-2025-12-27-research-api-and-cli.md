@@ -372,51 +372,61 @@ Add `markform research <file>` command that:
    section. This consolidates source tracking and makes verification easier.
 
    ```
-   {% string-list id="core_biography_sources" label="Section Source URLs" %}{% /string-list %}
+   {% string-list id="core_biography_sources" label="Core Bio Sources" %}{% /string-list %}
+   
+   {% instructions ref="core_biography_sources" %}
+   URLs used as sources for this section. One URL per line.
+   {% /instructions %}
+   
+   {% /field-group %}
    ```
-{% instructions ref="core_biography_sources" %} URLs used as sources for this section.
-One URL per line. {% /instructions %}
 
-{% /field-group %}
-```
+   Benefits:
 
-Benefits:
+   - Consolidates source tracking per section (vs scattered in each field)
 
-- Consolidates source tracking per section (vs scattered in each field)
+   - Makes verification of claims easier
 
-- Makes verification of claims easier
+   - Reduces repetition of “Source: ...” in individual instructions
 
-- Reduces repetition of “Source: ...” in individual instructions
+   - Agent can batch-add sources after completing section
 
-- Agent can batch-add sources after completing section
+   - Final `research_metadata` section can aggregate or cross-reference
 
-- Final `research_metadata` section can aggregate or cross-reference
-
-Pattern for field ID: `{group_id}_sources` (e.g., `core_biography_sources`,
-`family_relationships_sources`, `financial_business_sources`)
+   Pattern for field ID: `{group_id}_sources` (e.g., `core_biography_sources`,
+   `family_relationships_sources`, `financial_business_sources`)
 
 **Best practices for research forms:**
 
 1. The `{% documentation %}` block at form level sets expectations for source hierarchy
-and formatting. All research forms should include this.
+   and formatting. All research forms should include this.
 
 2. Each field group should end with a `*_sources` URL list field for section citations.
 
 3. Frontmatter ordering for clarity:
+
    - `spec`, `roles`, `role_instructions`, then `harness`
+
    - This makes human intent and role guidance visible before harness constraints.
 
 4. Sources field labels should be descriptive, not generic:
-   - Prefer labels like "Core Bio Sources", "Filmography Sources", "Press Coverage Sources"
-   - Avoid "Section Source URLs".
+
+   - Prefer labels like “Core Bio Sources”, “Filmography Sources”, “Press Coverage
+     Sources”
+
+   - Avoid “Section Source URLs”.
 
 5. ID naming for sources fields:
+
    - Prefer `{group_id}_sources` unless the group id itself ends with `_sources`
-   - In that case, use `{group_id}_urls` to avoid duplication (e.g., `specialized_sources_urls`).
+
+   - In that case, use `{group_id}_urls` to avoid duplication (e.g.,
+     `specialized_sources_urls`).
 
 ## Stage 2: Architecture Stage
 
 ### Component Overview
+
 ```
 src/research/ # NEW: Application-layer research module ├── research.ts # Research API
 (runResearch, runResearchFromFile) ├── researchTypes.ts # Research-specific types ├──
@@ -429,14 +439,15 @@ fillForm() └── harnessTypes.ts # Core types
 
 src/cli/ ├── commands/ │ ├── research.ts # NEW: CLI command │ └── fill.ts # Update: Use
 shared config resolver └── lib/ ├── harnessConfigResolver.ts # NEW: Shared harness
-config resolution └── ...existing files
+config resolution ├── initialValues.ts # NEW: Parse --initial-values and -- field=value
+└── ...existing files
 
 src/llms.ts # NEW: Consolidated LLM settings (from settings.ts)
 
-src/settings.ts # Update: Remove LLM section (moved to llms.ts)
+src/settings.ts # Update: Remove LLM section, add research defaults
 
 src/engine/coreTypes.ts # Update: Add FrontmatterHarnessConfig type
-````
+```
 
 **Why a separate module?**
 
@@ -526,7 +537,7 @@ export function isWebSearchModel(modelId: string): boolean;
  * Get suggested models for a specific provider.
  */
 export function getSuggestedModels(provider: string): string[];
-````
+```
 
 #### Research Types (`research/researchTypes.ts`)
 
@@ -1284,7 +1295,8 @@ Rename `maxIssues` → `maxIssuesPerTurn` for consistency with other per-turn li
 
 - [ ] Rename `DEFAULT_MAX_ISSUES` → `DEFAULT_MAX_ISSUES_PER_TURN` in `settings.ts`
 
-- [ ] Rename `maxIssues` → `maxIssuesPerTurn` in `HarnessConfig` type
+- [ ] Rename `maxIssues` → `maxIssuesPerTurn` in `HarnessConfig` type (in
+  `coreTypes.ts`)
 
 - [ ] Rename `maxIssues` → `maxIssuesPerTurn` in `FillOptions` type
 
