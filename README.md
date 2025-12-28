@@ -1,17 +1,23 @@
 # Markform
 
-*Markdown forms for token-friendly workflows*
+*Structured Markdown documents for humans and agents*
 
 **Markform** is a **file format**, **data model**, and **editing API** for
-**agent-friendly, human-readable text forms**. Markform syntax is a superset of Markdown
+**token-friendly, human-readable text forms**. Markform syntax is a superset of Markdown
 based on [Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files that
 are easily readable by agents and humans.
 
 The idea is to combine the simple utility of a Markdown document with structured tags
 that define typed fields and validation rules.
-In effect, Markform is Markdown plus structure that makes it editable via API. Markform
-enables AI agents to fill out human-readable forms or docs written in Markdown by using
-[Markdoc](https://markdoc.dev/) tags.
+Markform is like if Markdown had an editing API. Structure like fields, validation
+rules, and instructions are encoded as Markdoc tags.
+
+Markform lets you build powerful agent workflows by structuring and validating *what*
+you want (the form structure and validations) instead of *how* to get it (coding up
+agent workflows). For deep research or structured tasks, this approach is a compelling
+alternative to programmatic or UI-based agent workflows.
+Because it’s just Markdown with tags, agents are also very good at writing Markform,
+which makes creating new workflows much easier.
 
 ## Installation
 
@@ -25,6 +31,8 @@ npm install markform
 
 Requires Node.js 24+.
 
+## Examples
+
 ## Quick Start
 
 ```bash
@@ -33,77 +41,90 @@ npx markform examples
 ```
 
 This walks you through an example form interactively, with optional AI agent filling.
+You’ll need at least one [API key](#supported-providers) to have LLMs fill in forms.
 
-## Architecture
+### A Simple Form
 
-```mermaid
-flowchart LR
-    subgraph SPEC["<b>MARKFORM SPEC</b>"]
-        direction TB
+A `.form.md` file is simply a Markdoc file.
+It combines YAML frontmatter with Markdoc-tagged content:
 
-        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, field-group, string-field, checkboxes, etc.)"]
-        end
+```markdown
+---
+markform:
+  spec: MF/0.1
+  roles:
+    - user
+    - agent
+  role_instructions:
+    user: "Fill in your details."
+    agent: "Complete the analysis fields."
+---
 
-        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
-        end
+{% form id="my_form" title="My Form" %}
 
-        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
-        end
+{% field-group id="basics" title="Basic Info" %}
 
-        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
-        end
+{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}
 
-        L4 --> L3 --> L2 --> L1
-    end
+{% number-field id="score" label="Score" role="agent" min=0 max=100 %}{% /number-field %}
 
-    subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
-        direction TB
+{% /field-group %}
 
-        subgraph ENGINE["<b>ENGINE IMPLEMENTATION</b><br/>Markdoc parser, serializer, patch application, validation (uses jiti for TypeScript rules)"]
-        end
-
-        subgraph UI["<b>USER INTERFACES</b><br/>CLI commands, web UI (serve), render to HTML"]
-        end
-
-        subgraph AGENT["<b>AGENT INTERFACES</b><br/>Tool API library, MCP server, AI SDK tools"]
-        end
-
-        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step form-filling agentic loop"]
-        end
-
-        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts"]
-        end
-
-        UI --> ENGINE
-        AGENT --> HARNESS
-        AGENT --> ENGINE
-        HARNESS --> ENGINE
-        ENGINE --> TEST
-    end
-
-    SPEC ~~~ IMPL
-
-    style SPEC fill:#e8f4f8,stroke:#0077b6
-    style L1 fill:#caf0f8,stroke:#0077b6
-    style L2 fill:#caf0f8,stroke:#0077b6
-    style L3 fill:#caf0f8,stroke:#0077b6
-    style L4 fill:#caf0f8,stroke:#0077b6
-    style IMPL fill:#fff3e6,stroke:#fb8500
-    style ENGINE fill:#ffe8cc,stroke:#fb8500
-    style UI fill:#ffe8cc,stroke:#fb8500
-    style AGENT fill:#ffe8cc,stroke:#fb8500
-    style HARNESS fill:#ffe8cc,stroke:#fb8500
-    style TEST fill:#ffe8cc,stroke:#fb8500
+{% /form %}
 ```
 
-## Motivation
+**Key concepts:**
+
+- **Roles**: Define who fills what (`user` for humans, `agent` for AI)
+
+- **Field types**: `string-field`, `number-field`, `string-list`, `single-select`,
+  `multi-select`, `checkboxes`
+
+- **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
+
+- **Structure**: Fields organized in `field-group` containers
+
+### More Complex Deep Research Forms
+
+The package includes example forms in
+[`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
+
+- `simple/simple.form.md` - Basic form demonstrating all field types
+
+- `political-research/political-research.form.md` - Biographical research form
+
+- `earnings-analysis/earnings-analysis.form.md` - Financial analysis form
+
+View them with `markform examples --list` or try them interactively.
+
+## Supported Providers
+
+Standard LLMs can be used to fill in forms or create research reports from form
+templates. The package currently has support for these models built in, and enables web
+search tools for them if possible.
+
+| Provider | Env Variable | Example Models |
+| --- | --- | --- |
+| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
+| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
+| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
+| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
+| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
+
+Set the appropriate environment variable for your provider before running `markform
+fill`. See
+[`src/settings.ts`](https://github.com/jlevy/markform/blob/main/packages/markform/src/settings.ts)
+for the full list of models.
+
+## Why?
 
 ### Why Do Forms Help Agentic Workflows?
 
-Most current agent workflow frameworks emphasize the *flow* of information rather than
-the *structure* of the content.
-What’s often more useful is expressing the *state* of content directly in a way that
-provides clear context to agents and humans at all times.
+Many agent workflow frameworks tend to emphasize the *flow* of information (the *how*)
+over its *structure* (the *what*). But the *how* is constantly changing.
+
+What we often really want is to express *desired structure and validation rules* for
+content directly in a way that provides clear context to agents and humans at all times.
 
 Humans have for centuries used paper forms to systemetize and manage processes.
 The key insight of Markform is that the most natural way to express the state and
@@ -140,7 +161,7 @@ The closest alternatives are:
   human-friendly UI. But these do not have a human-friendly text format for use by
   agents as well as humans.
 
-### How Can Agents Use Markform?
+### How Do Agents Fill in Forms?
 
 The data model and editing API let agents fill in forms.
 This enables powerful AI workflows that assemble information in a defined structure:
@@ -269,46 +290,67 @@ markform instructions
 markform --help
 ```
 
-## Markform Format
+## Architecture
 
-A `.form.md` file is simply a Markdoc file.
-It combines YAML frontmatter with Markdoc-tagged content:
+```mermaid
+flowchart LR
+    subgraph SPEC["<b>MARKFORM SPEC</b>"]
+        direction TB
 
-```markdown
----
-markform:
-  spec: MF/0.1
-  roles:
-    - user
-    - agent
-  role_instructions:
-    user: "Fill in your details."
-    agent: "Complete the analysis fields."
----
+        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, field-group, string-field, checkboxes, etc.)"]
+        end
 
-{% form id="my_form" title="My Form" %}
+        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
+        end
 
-{% field-group id="basics" title="Basic Info" %}
+        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
+        end
 
-{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}
+        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
+        end
 
-{% number-field id="score" label="Score" role="agent" min=0 max=100 %}{% /number-field %}
+        L4 --> L3 --> L2 --> L1
+    end
 
-{% /field-group %}
+    subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
+        direction TB
 
-{% /form %}
+        subgraph ENGINE["<b>ENGINE IMPLEMENTATION</b><br/>Markdoc parser, serializer, patch application, validation (uses jiti for TypeScript rules)"]
+        end
+
+        subgraph UI["<b>USER INTERFACES</b><br/>CLI commands, web UI (serve), render to HTML"]
+        end
+
+        subgraph AGENT["<b>AGENT INTERFACES</b><br/>Tool API library, MCP server, AI SDK tools"]
+        end
+
+        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step form-filling agentic loop"]
+        end
+
+        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts"]
+        end
+
+        UI --> ENGINE
+        AGENT --> HARNESS
+        AGENT --> ENGINE
+        HARNESS --> ENGINE
+        ENGINE --> TEST
+    end
+
+    SPEC ~~~ IMPL
+
+    style SPEC fill:#e8f4f8,stroke:#0077b6
+    style L1 fill:#caf0f8,stroke:#0077b6
+    style L2 fill:#caf0f8,stroke:#0077b6
+    style L3 fill:#caf0f8,stroke:#0077b6
+    style L4 fill:#caf0f8,stroke:#0077b6
+    style IMPL fill:#fff3e6,stroke:#fb8500
+    style ENGINE fill:#ffe8cc,stroke:#fb8500
+    style UI fill:#ffe8cc,stroke:#fb8500
+    style AGENT fill:#ffe8cc,stroke:#fb8500
+    style HARNESS fill:#ffe8cc,stroke:#fb8500
+    style TEST fill:#ffe8cc,stroke:#fb8500
 ```
-
-**Key concepts:**
-
-- **Roles**: Define who fills what (`user` for humans, `agent` for AI)
-
-- **Field types**: `string-field`, `number-field`, `string-list`, `single-select`,
-  `multi-select`, `checkboxes`
-
-- **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
-
-- **Structure**: Fields organized in `field-group` containers
 
 ## Programmatic Usage
 
@@ -361,38 +403,6 @@ const result = await generateText({
 | `markform_apply` | Apply patches to update field values |
 | `markform_export` | Export schema and values as JSON |
 | `markform_get_markdown` | Get canonical Markdown representation |
-
-## Supported Providers
-
-Standard LLMs can be used to fill in forms or create research reports from form
-templates. The package currently has support for these models built in, and enables web
-search tools for them if possible.
-
-| Provider | Env Variable | Example Models |
-| --- | --- | --- |
-| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
-| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
-| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
-| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
-| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
-
-Set the appropriate environment variable for your provider before running `markform
-fill`. See
-[`src/settings.ts`](https://github.com/jlevy/markform/blob/main/packages/markform/src/settings.ts)
-for the full list of models.
-
-## Example Forms
-
-The package includes example forms in
-[`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
-
-- `simple/simple.form.md` - Basic form demonstrating all field types
-
-- `political-research/political-research.form.md` - Biographical research form
-
-- `earnings-analysis/earnings-analysis.form.md` - Financial analysis form
-
-View them with `markform examples --list` or try them interactively.
 
 ## Documentation
 
