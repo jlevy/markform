@@ -19,7 +19,7 @@ import type {
 import { coerceInputContext } from '../engine/valueCoercion.js';
 import {
   AGENT_ROLE,
-  DEFAULT_MAX_ISSUES,
+  DEFAULT_MAX_ISSUES_PER_TURN,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
 } from '../settings.js';
@@ -207,13 +207,13 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   // 4. Create harness + agent
   const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
-  const maxIssues = options.maxIssues ?? DEFAULT_MAX_ISSUES;
+  const maxIssuesPerTurn = options.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN;
   const targetRoles = options.targetRoles ?? [AGENT_ROLE];
 
   const harness = createHarness(form, {
     maxTurns,
     maxPatchesPerTurn,
-    maxIssues,
+    maxIssuesPerTurn,
     targetRoles,
     fillMode: options.fillMode,
   });

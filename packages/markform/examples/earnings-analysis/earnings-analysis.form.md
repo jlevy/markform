@@ -7,6 +7,10 @@ markform:
   role_instructions:
     user: "Enter company identification (legal name, ticker, fiscal year) and the quarter you want analyzed."
     agent: "Complete the company profile and quarterly analysis based on the provided company context."
+  harness_config:
+    max_turns: 10
+    max_issues_per_turn: 5
+    max_patches_per_turn: 10
 ---
 
 {% form id="company_analysis" title="Company Quarterly Analysis Worksheet" %}

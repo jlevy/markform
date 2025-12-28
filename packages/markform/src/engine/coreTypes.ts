@@ -343,11 +343,23 @@ export interface DocumentationBlock {
 // Form Metadata (from frontmatter)
 // =============================================================================
 
+/**
+ * Optional harness configuration from frontmatter.
+ * Forms can specify default harness settings for fill operations.
+ */
+export interface FrontmatterHarnessConfig {
+  maxTurns?: number;
+  maxPatchesPerTurn?: number;
+  maxIssuesPerTurn?: number;
+}
+
 /** Form-level metadata from YAML frontmatter, including role configuration */
 export interface FormMetadata {
   markformVersion: string;
   roles: string[];
   roleInstructions: Record<string, string>;
+  /** Optional harness configuration from frontmatter */
+  harnessConfig?: FrontmatterHarnessConfig;
 }
 
 // =============================================================================
@@ -715,7 +727,7 @@ export interface StepResult {
 
 /** Harness configuration */
 export interface HarnessConfig {
-  maxIssues: number;
+  maxIssuesPerTurn: number;
   maxPatchesPerTurn: number;
   maxTurns: number;
   /** Maximum unique fields to include issues for per turn (undefined = unlimited) */
@@ -1073,11 +1085,19 @@ export const DocumentationBlockSchema = z.object({
   bodyMarkdown: z.string(),
 });
 
+// Frontmatter harness config schema
+export const FrontmatterHarnessConfigSchema = z.object({
+  maxTurns: z.number().int().positive().optional(),
+  maxPatchesPerTurn: z.number().int().positive().optional(),
+  maxIssuesPerTurn: z.number().int().positive().optional(),
+});
+
 // Form metadata schema
 export const FormMetadataSchema = z.object({
   markformVersion: z.string(),
   roles: z.array(z.string()).min(1),
   roleInstructions: z.record(z.string(), z.string()),
+  harnessConfig: FrontmatterHarnessConfigSchema.optional(),
 });
 
 // Validation schemas
@@ -1360,7 +1380,7 @@ export const StepResultSchema = z.object({
 
 // Session transcript schemas
 export const HarnessConfigSchema = z.object({
-  maxIssues: z.number().int().positive(),
+  maxIssuesPerTurn: z.number().int().positive(),
   maxPatchesPerTurn: z.number().int().positive(),
   maxTurns: z.number().int().positive(),
   maxFieldsPerTurn: z.number().int().positive().optional(),

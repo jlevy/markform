@@ -211,7 +211,7 @@ async function runMockAgent(config: Config): Promise<void> {
       sessionVersion: '0.1.0',
       mode: 'mock',
       form: { path: config.formPath },
-      harness: { maxTurns: config.maxTurns, maxPatchesPerTurn: 20, maxIssues: 10 },
+      harness: { maxTurns: config.maxTurns, maxPatchesPerTurn: 20, maxIssuesPerTurn: 10 },
       turns,
       final: {
         expectComplete: inspectResult.data.isComplete,
@@ -381,7 +381,7 @@ If a field asks for specific format (email, date, etc.), use the correct format.
       sessionVersion: '0.1.0',
       mode: 'live',
       form: { path: config.formPath },
-      harness: { maxTurns: config.maxTurns, maxPatchesPerTurn: 20, maxIssues: 10 },
+      harness: { maxTurns: config.maxTurns, maxPatchesPerTurn: 20, maxIssuesPerTurn: 10 },
       turns,
       final: {
         expectComplete: inspectResult.data.isComplete,

@@ -18,9 +18,10 @@ markform:
       7. Include source URLs for every piece of information
       8. Leave unknown fields empty - don't guess or fabricate
       9. Keep descriptions concise (50-150 words max)
-  harness:
+  harness_config:
+    max_turns: 10
     max_issues_per_turn: 3
-    max_groups_per_turn: 1
+    max_patches_per_turn: 10
 ---
 
 {% form id="startup_deep_research" title="Startup Deep Research" %}

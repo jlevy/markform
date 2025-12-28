@@ -21,6 +21,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
       'User and agent roles for testing full workflow. User fills required fields, agent fills optional.',
     filename: 'simple.form.md',
     path: 'simple/simple.form.md',
+    type: 'fill',
   },
   {
     id: 'political-research',
@@ -29,6 +30,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
       'Biographical research form with one user field (name) and agent-filled details. Uses web search.',
     filename: 'political-research.form.md',
     path: 'political-research/political-research.form.md',
+    type: 'research',
   },
   {
     id: 'earnings-analysis',
@@ -37,6 +39,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
       'Financial analysis with one user field (company) and agent-filled quarterly analysis sections.',
     filename: 'earnings-analysis.form.md',
     path: 'earnings-analysis/earnings-analysis.form.md',
+    type: 'research',
   },
   {
     id: 'startup-deep-research',
@@ -45,6 +48,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
       'Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.',
     filename: 'startup-deep-research.form.md',
     path: 'startup-deep-research/startup-deep-research.form.md',
+    type: 'research',
   },
   {
     id: 'celebrity-deep-research',
@@ -53,6 +57,7 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
       'Comprehensive celebrity intelligence covering biography, career, relationships, controversies, social media, and hard-to-find details.',
     filename: 'celebrity-deep-research.form.md',
     path: 'celebrity-deep-research/celebrity-deep-research.form.md',
+    type: 'research',
   },
 ];
 

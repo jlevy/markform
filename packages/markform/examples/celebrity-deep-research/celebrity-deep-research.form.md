@@ -22,9 +22,10 @@ markform:
       8. NOTE RECENCY - Celebrity data changes rapidly; note when info was last verified
       9. "JUICY" DETAILS - Look beyond Wikipedia: court records, NNDB, political donations, fan forums often have interesting details mainstream sources miss
       10. DECEASED CELEBRITIES - Check Find A Grave, obituaries, memorial sites
-  harness:
+  harness_config:
+    max_turns: 10
     max_issues_per_turn: 3
-    max_groups_per_turn: 1
+    max_patches_per_turn: 10
 ---
 
 {% form id="celebrity_deep_research" title="Celebrity Deep Research" %}

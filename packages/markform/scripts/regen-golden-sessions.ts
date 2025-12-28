@@ -87,7 +87,7 @@ async function regenSession(config: SessionConfig): Promise<void> {
   const harnessConfig: HarnessConfig = {
     maxTurns: 100,
     maxPatchesPerTurn: 20,
-    maxIssues: 10,
+    maxIssuesPerTurn: 10,
     targetRoles: ['*'],
     fillMode: 'continue',
   };

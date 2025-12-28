@@ -23,12 +23,12 @@ import { exportMultiFormat } from '../lib/exportHelpers.js';
 import {
   USER_ROLE,
   AGENT_ROLE,
-  SUGGESTED_LLMS,
   DEFAULT_MAX_TURNS,
   DEFAULT_MAX_PATCHES_PER_TURN,
-  DEFAULT_MAX_ISSUES,
+  DEFAULT_MAX_ISSUES_PER_TURN,
   getFormsDir,
 } from '../../settings.js';
+import { SUGGESTED_LLMS, hasWebSearchSupport } from '../../llms.js';
 import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
 import { createHarness } from '../../harness/harness.js';
@@ -61,7 +61,8 @@ import {
 function printExamplesList(): void {
   console.log(pc.bold('Available examples:\n'));
   for (const example of EXAMPLE_DEFINITIONS) {
-    console.log(`  ${pc.cyan(example.id)}`);
+    const typeLabel = example.type === 'research' ? pc.magenta('[research]') : pc.blue('[fill]');
+    console.log(`  ${pc.cyan(example.id)} ${typeLabel}`);
     console.log(`    ${pc.bold(example.title)}`);
     console.log(`    ${pc.dim(example.description)}`);
     console.log(`    Source: ${formatPath(getExamplePath(example.id))}`);
@@ -151,6 +152,82 @@ async function promptForModel(): Promise<string | null> {
 }
 
 /**
+ * Build model options filtered to providers with web search support.
+ */
+function buildWebSearchModelOptions(): { value: string; label: string; hint?: string }[] {
+  const options: { value: string; label: string; hint?: string }[] = [];
+
+  for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
+    // Only include providers with web search support
+    if (!hasWebSearchSupport(provider)) {
+      continue;
+    }
+
+    const info = getProviderInfo(provider as ProviderName);
+    const hasKey = !!process.env[info.envVar];
+    const keyStatus = hasKey ? pc.green('✓') : pc.dim('○');
+
+    for (const model of models) {
+      options.push({
+        value: `${provider}/${model}`,
+        label: `${provider}/${model}`,
+        hint: `${keyStatus} ${info.envVar}`,
+      });
+    }
+  }
+
+  options.push({
+    value: 'custom',
+    label: 'Enter custom model ID...',
+    hint: 'provider/model-id format',
+  });
+
+  return options;
+}
+
+/**
+ * Prompt user to select a model with web search capability for research workflow.
+ */
+async function promptForWebSearchModel(): Promise<string | null> {
+  const modelOptions = buildWebSearchModelOptions();
+
+  if (modelOptions.length === 1) {
+    // Only "custom" option available, no web-search-capable providers configured
+    p.log.warn('No web-search-capable providers found. OpenAI, Google, or xAI API key required.');
+  }
+
+  const selection = await p.select({
+    message: 'Select LLM model (web search required):',
+    options: modelOptions,
+  });
+
+  if (p.isCancel(selection)) {
+    return null;
+  }
+
+  if (selection === 'custom') {
+    const customModel = await p.text({
+      message: 'Model ID (provider/model-id):',
+      placeholder: 'openai/gpt-4o',
+      validate: (value) => {
+        if (!value.includes('/')) {
+          return 'Format: provider/model-id (e.g., openai/gpt-4o)';
+        }
+        return undefined;
+      },
+    });
+
+    if (p.isCancel(customModel)) {
+      return null;
+    }
+
+    return customModel;
+  }
+
+  return selection;
+}
+
+/**
  * Run the agent fill workflow.
  */
 async function runAgentFill(
@@ -170,7 +247,7 @@ async function runAgentFill(
     const harnessConfig: Partial<HarnessConfig> = {
       maxTurns: DEFAULT_MAX_TURNS,
       maxPatchesPerTurn: DEFAULT_MAX_PATCHES_PER_TURN,
-      maxIssues: DEFAULT_MAX_ISSUES,
+      maxIssuesPerTurn: DEFAULT_MAX_ISSUES_PER_TURN,
       targetRoles: [AGENT_ROLE],
       fillMode: 'continue',
     };
@@ -404,26 +481,34 @@ async function runInteractiveFlow(
   // Step 6: Check for agent-role fields and prompt for agent fill
   const agentInspect = inspect(form, { targetRoles: [AGENT_ROLE] });
   const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === 'field');
+  const isResearchExample = example.type === 'research';
 
   if (agentFieldIssues.length > 0) {
     console.log('');
+    const workflowLabel = isResearchExample ? 'research' : 'agent fill';
     p.log.info(`This form has ${agentFieldIssues.length} agent-role field(s) remaining.`);
 
+    const confirmMessage = isResearchExample
+      ? 'Run research now? (requires web search)'
+      : 'Run agent fill now?';
     const runAgent = await p.confirm({
-      message: 'Run agent fill now?',
+      message: confirmMessage,
       initialValue: true,
     });
 
     if (p.isCancel(runAgent) || !runAgent) {
       console.log('');
-      console.log(pc.dim('You can run agent fill later with:'));
-      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=<provider/model>`));
+      const cliCommand = isResearchExample
+        ? `  markform research ${formatPath(outputPath)} --model=<provider/model>`
+        : `  markform fill ${formatPath(outputPath)} --model=<provider/model>`;
+      console.log(pc.dim(`You can run ${workflowLabel} later with:`));
+      console.log(pc.dim(cliCommand));
       p.outro(pc.dim('Happy form filling!'));
       return;
     }
 
-    // Step 7: Model selection
-    const modelId = await promptForModel();
+    // Step 7: Model selection - use web search prompt for research examples
+    const modelId = isResearchExample ? await promptForWebSearchModel() : await promptForModel();
     if (!modelId) {
       p.cancel('Cancelled.');
       process.exit(0);
@@ -450,14 +535,15 @@ async function runInteractiveFlow(
 
     const agentOutputPath = join(formsDir, agentFilenameResult);
 
-    // Step 9: Run agent fill
+    // Step 9: Run agent fill (or research for research-type examples)
     const agentStartTime = Date.now();
+    const timingLabel = isResearchExample ? 'Research time' : 'Agent fill time';
     try {
       const { success, turnCount: _turnCount } = await runAgentFill(form, modelId, agentOutputPath);
 
       logTiming(
         { verbose: false, format: 'console', dryRun: false, quiet: false },
-        'Agent fill time',
+        timingLabel,
         Date.now() - agentStartTime,
       );
 
@@ -465,7 +551,10 @@ async function runInteractiveFlow(
       const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, agentOutputPath);
 
       console.log('');
-      p.log.success('Agent fill complete. Outputs:');
+      const successMessage = isResearchExample
+        ? 'Research complete. Outputs:'
+        : 'Agent fill complete. Outputs:';
+      p.log.success(successMessage);
       console.log(`  ${formatPath(formPath)}  ${pc.dim('(markform)')}`);
       console.log(`  ${formatPath(rawPath)}  ${pc.dim('(plain markdown)')}`);
       console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(values as YAML)')}`);
@@ -475,10 +564,14 @@ async function runInteractiveFlow(
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      p.log.error(`Agent fill failed: ${message}`);
+      const failMessage = isResearchExample ? 'Research failed' : 'Agent fill failed';
+      p.log.error(`${failMessage}: ${message}`);
       console.log('');
       console.log(pc.dim('You can try again with:'));
-      console.log(pc.dim(`  markform fill ${formatPath(outputPath)} --model=${modelId}`));
+      const retryCommand = isResearchExample
+        ? `  markform research ${formatPath(outputPath)} --model=${modelId}`
+        : `  markform fill ${formatPath(outputPath)} --model=${modelId}`;
+      console.log(pc.dim(retryCommand));
     }
   }
 

@@ -52,6 +52,11 @@ export interface ExportResult {
 // =============================================================================
 
 /**
+ * Example type for distinguishing workflow modes.
+ */
+export type ExampleType = 'fill' | 'research';
+
+/**
  * Example definition for the examples command.
  */
 export interface ExampleDefinition {
@@ -65,4 +70,6 @@ export interface ExampleDefinition {
   filename: string;
   /** Relative path within examples directory. */
   path: string;
+  /** Example type: 'fill' for standard fill workflow, 'research' for web-search workflow. */
+  type?: ExampleType;
 }
