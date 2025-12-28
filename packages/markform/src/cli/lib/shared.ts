@@ -4,6 +4,7 @@
 
 import type { Command } from 'commander';
 
+import { mkdir } from 'node:fs/promises';
 import { relative } from 'node:path';
 
 import pc from 'picocolors';
@@ -36,12 +37,14 @@ export function getCommandContext(command: Command): CommandContext {
     verbose?: boolean;
     quiet?: boolean;
     format?: OutputFormat;
+    formsDir?: string;
   }>();
   return {
     dryRun: opts.dryRun ?? false,
     verbose: opts.verbose ?? false,
     quiet: opts.quiet ?? false,
     format: opts.format ?? 'console',
+    formsDir: opts.formsDir,
   };
 }
 
@@ -175,4 +178,14 @@ export async function readFile(filePath: string): Promise<string> {
 export async function writeFile(filePath: string, contents: string): Promise<void> {
   const { writeFile: atomicWriteFile } = await import('atomically');
   await atomicWriteFile(filePath, contents);
+}
+
+/**
+ * Ensure the forms directory exists, creating it if necessary.
+ * Uses recursive mkdir so parent directories are created as needed.
+ *
+ * @param formsDir Absolute path to the forms directory
+ */
+export async function ensureFormsDir(formsDir: string): Promise<void> {
+  await mkdir(formsDir, { recursive: true });
 }

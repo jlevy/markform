@@ -33,11 +33,13 @@ import {
   AGENT_ROLE,
   USER_ROLE,
   parseRolesFlag,
+  getFormsDir,
+  formatSuggestedLlms,
 } from '../../settings.js';
 import type { Agent } from '../../harness/mockAgent.js';
 import { resolveModel } from '../../harness/modelResolver.js';
-import { formatSuggestedLlms } from '../../settings.js';
 import {
+  ensureFormsDir,
   formatOutput,
   formatPath,
   getCommandContext,
@@ -51,7 +53,7 @@ import {
   writeFile,
 } from '../lib/shared.js';
 import { exportMultiFormat } from '../lib/exportHelpers.js';
-import { generateVersionedPath } from '../lib/versioning.js';
+import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
 import {
   runInteractiveFill,
   showInteractiveIntro,
@@ -261,9 +263,15 @@ export function registerFillCommand(program: Command): void {
             const durationMs = Date.now() - startTime;
 
             // Write output files (all formats)
-            const outputPath = options.output
-              ? resolve(options.output)
-              : generateVersionedPath(filePath);
+            // Default to forms directory when --output is not specified
+            let outputPath: string;
+            if (options.output) {
+              outputPath = resolve(options.output);
+            } else {
+              const formsDir = getFormsDir(ctx.formsDir);
+              await ensureFormsDir(formsDir);
+              outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
+            }
 
             if (ctx.dryRun) {
               logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
@@ -493,9 +501,15 @@ export function registerFillCommand(program: Command): void {
           logTiming(ctx, 'Fill time', durationMs);
 
           // Write output file
-          const outputPath = options.output
-            ? resolve(options.output)
-            : generateVersionedPath(filePath);
+          // Default to forms directory when --output is not specified
+          let outputPath: string;
+          if (options.output) {
+            outputPath = resolve(options.output);
+          } else {
+            const formsDir = getFormsDir(ctx.formsDir);
+            await ensureFormsDir(formsDir);
+            outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
+          }
           const formMarkdown = serialize(harness.getForm());
 
           if (ctx.dryRun) {

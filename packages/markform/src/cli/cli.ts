@@ -9,6 +9,7 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 
 import { VERSION } from '../index.js';
+import { DEFAULT_FORMS_DIR } from '../settings.js';
 import { registerApplyCommand } from './commands/apply.js';
 import { registerDumpCommand } from './commands/dump.js';
 import { registerExamplesCommand } from './commands/examples.js';
@@ -49,7 +50,8 @@ function createProgram(): Command {
     .option('--verbose', 'Enable verbose output')
     .option('--quiet', 'Suppress non-essential output')
     .option('--dry-run', 'Show what would be done without making changes')
-    .option('--format <format>', `Output format: ${OUTPUT_FORMATS.join(', ')}`, 'console');
+    .option('--format <format>', `Output format: ${OUTPUT_FORMATS.join(', ')}`, 'console')
+    .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`);
 
   // Register commands
   // Help first

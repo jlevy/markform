@@ -1,5 +1,8 @@
 attic/
 
+# User-generated forms output directory
+forms/
+
 # README.md and SPEC.md are copied from root at build time
 packages/markform/README.md
 packages/markform/SPEC.md

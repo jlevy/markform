@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   generateVersionedPath,
+  generateVersionedPathInFormsDir,
   incrementVersion,
   parseVersionedPath,
 } from '../../../src/cli/lib/versioning.js';
@@ -151,6 +152,50 @@ describe('versioning', () => {
         return path === 'file.txt-filled1';
       });
       expect(generateVersionedPath('file.txt')).toBe('file.txt-filled2');
+    });
+  });
+
+  describe('generateVersionedPathInFormsDir', () => {
+    const mockExistsSync = vi.mocked(existsSync);
+
+    it('returns -filled1 in forms dir when no files exist', () => {
+      mockExistsSync.mockReturnValue(false);
+      const result = generateVersionedPathInFormsDir('/path/to/input.form.md', '/tmp/forms');
+      expect(result).toBe('/tmp/forms/input-filled1.form.md');
+    });
+
+    it('returns -filled2 when -filled1 exists in forms dir', () => {
+      mockExistsSync.mockImplementation((path) => {
+        return path === '/tmp/forms/input-filled1.form.md';
+      });
+      const result = generateVersionedPathInFormsDir('/path/to/input.form.md', '/tmp/forms');
+      expect(result).toBe('/tmp/forms/input-filled2.form.md');
+    });
+
+    it('strips existing version from input filename', () => {
+      mockExistsSync.mockReturnValue(false);
+      const result = generateVersionedPathInFormsDir(
+        '/path/to/input-filled5.form.md',
+        '/tmp/forms',
+      );
+      // Should use base name without version
+      expect(result).toBe('/tmp/forms/input-filled1.form.md');
+    });
+
+    it('skips to next available version in forms dir', () => {
+      mockExistsSync.mockImplementation((path) => {
+        return (
+          path === '/tmp/forms/input-filled1.form.md' || path === '/tmp/forms/input-filled2.form.md'
+        );
+      });
+      const result = generateVersionedPathInFormsDir('/path/to/input.form.md', '/tmp/forms');
+      expect(result).toBe('/tmp/forms/input-filled3.form.md');
+    });
+
+    it('handles input with just filename', () => {
+      mockExistsSync.mockReturnValue(false);
+      const result = generateVersionedPathInFormsDir('simple.form.md', '/tmp/forms');
+      expect(result).toBe('/tmp/forms/simple-filled1.form.md');
     });
   });
 });
