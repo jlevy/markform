@@ -64,9 +64,13 @@ markform:
 {% field-group id="input" title="Input" %}
 
 <!-- User fills this field -->
+
 {% string-field id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /string-field %}
 
-{% instructions ref="movie" %}  <!-- Guidance for filling the field -->
+{% instructions ref="movie" %}
+
+<!-- Guidance for filling the field -->
+
 Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson").
 {% /instructions %}
 
@@ -75,6 +79,7 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 {% field-group id="details" title="Movie Details" %}
 
 <!-- Agent researches and fills these fields -->
+
 {% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
 
 {% number-field id="year" label="Release Year" role="agent" min=1888 max=2030 %}{% /number-field %}
@@ -99,8 +104,8 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 {% /form %}
 ```
 
-This is a simplified version of the
-[full movie research form](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research.form.md),
+This is a simplified version of the [full movie research
+form](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research.form.md),
 which includes multiple rating sources (IMDB, Rotten Tomatoes, Metacritic), detailed
 instructions, and harness configuration.
 
@@ -461,11 +466,23 @@ We could use XML tags, but Markdoc has some niceties like tagging Markdown AST n
 
 ### Is there a VSCode plugin for Markform or Markdoc?
 
-Yes, see [markdoc/language-server](https://github.com/markdoc/language-server).
+For quick syntax highlighting of `{% tag %}` syntax, install
+[Better Jinja](https://marketplace.visualstudio.com/items?itemName=samuelcolvin.jinjahtml)
+and associate `.form.md` files with the `jinja-md` language mode in your VS Code
+settings:
+
+```json
+"files.associations": {
+  "*.form.md": "jinja-md"
+}
+```
+
+Or see [markdoc/language-server](https://github.com/markdoc/language-server).
 
 ## Documentation
 
-- **[Quick Reference](https://github.com/jlevy/markform/blob/main/packages/markform/DOCS.md)**
+- **[Quick
+  Reference](https://github.com/jlevy/markform/blob/main/packages/markform/DOCS.md)**
   (or run `markform docs`) - Concise syntax reference (agent-friendly)
 
 - **[Markform Spec](https://github.com/jlevy/markform/blob/main/SPEC.md)** (or run
