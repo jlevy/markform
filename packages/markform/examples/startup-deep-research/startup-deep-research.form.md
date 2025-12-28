@@ -18,6 +18,9 @@ markform:
       7. Include source URLs for every piece of information
       8. Leave unknown fields empty - don't guess or fabricate
       9. Keep descriptions concise (50-150 words max)
+  harness:
+    max_issues_per_turn: 3
+    max_groups_per_turn: 1
 ---
 
 {% form id="startup_deep_research" title="Startup Deep Research" %}
@@ -101,6 +104,12 @@ Source: linkedin.com/company page, crunchbase.com, or company website.
 Source: Company website About page, crunchbase.com, Wikipedia if notable.
 {% /instructions %}
 
+{% string-list id="basic_info_sources" label="Company Overview Sources" %}{% /string-list %}
+
+{% instructions ref="basic_info_sources" %}
+URLs used as sources for this section. One URL per line.
+{% /instructions %}
+
 {% /field-group %}
 
 {% field-group id="founders_section" title="Founders & Key People" %}
@@ -134,6 +143,12 @@ Brief background: prior companies, notable roles, education.
 {% string-field id="founder_4_linkedin" label="Founder 4 LinkedIn URL" %}{% /string-field %}
 {% string-field id="founder_4_background" label="Founder 4 Background" maxLength=500 %}{% /string-field %}
 
+{% string-list id="founders_sources" label="Founders Sources" %}{% /string-list %}
+
+{% instructions ref="founders_sources" %}
+URLs used as sources for this section. One URL per line.
+{% /instructions %}
+
 {% /field-group %}
 
 {% field-group id="funding_section" title="Funding History" %}
@@ -161,6 +176,12 @@ Example: "Series B | 2023-06 | $50M | Sequoia Capital | https://techcrunch.com/.
 Source: crunchbase.com funding rounds, pitchbook.com, techcrunch.com, company press releases.
 {% /instructions %}
 
+{% string-list id="funding_sources" label="Funding Sources" %}{% /string-list %}
+
+{% instructions ref="funding_sources" %}
+URLs used as sources for this section. One URL per line.
+{% /instructions %}
+
 {% /field-group %}
 
 {% field-group id="competitors_section" title="Competitors & Market Position" %}
@@ -186,6 +207,12 @@ Source: crunchbase.com competitors section, g2.com alternatives, company investo
 {% instructions ref="competitive_positioning" %}
 How does this company differentiate? Key advantages/disadvantages vs competitors.
 Source: Company website, product pages, press interviews, g2.com reviews.
+{% /instructions %}
+
+{% string-list id="competitors_sources" label="Competitors Sources" %}{% /string-list %}
+
+{% instructions ref="competitors_sources" %}
+URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
 {% /field-group %}
@@ -256,6 +283,12 @@ Also note if there are significant discussions in related subreddits.
 Source: Search reddit.com for company name, check for official subreddit.
 {% /instructions %}
 
+{% string-list id="social_media_sources" label="Social Media Sources" %}{% /string-list %}
+
+{% instructions ref="social_media_sources" %}
+URLs used as sources for this section. One URL per line.
+{% /instructions %}
+
 {% /field-group %}
 
 {% field-group id="hacker_news_section" title="Hacker News Presence" %}
@@ -269,6 +302,12 @@ Include: Show HN launches, funding announcements, major discussions about the co
 Source: Search hn.algolia.com for company name, product name, and founder names.
 {% /instructions %}
 
+{% string-list id="hacker_news_sources" label="Hacker News Sources" %}{% /string-list %}
+
+{% instructions ref="hacker_news_sources" %}
+URLs used as sources for this section. One URL per line.
+{% /instructions %}
+
 {% /field-group %}
 
 {% field-group id="product_hunt_section" title="Product Hunt Presence" %}
@@ -280,6 +319,12 @@ List all known Product Hunt launches, one per line.
 Format: "Product Name | YYYY-MM-DD | Upvotes | Badges (if any) | https://producthunt.com/posts/..."
 Note any badges: Product of the Day/Week/Month, Golden Kitty, etc.
 Source: Search producthunt.com for company name and product names.
+{% /instructions %}
+
+{% string-list id="product_hunt_sources" label="Product Hunt Sources" %}{% /string-list %}
+
+{% instructions ref="product_hunt_sources" %}
+URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
 {% /field-group %}
@@ -363,6 +408,12 @@ Example: "2019: Originally 'PaymentsAPI' focused on SMB; 2021: Rebranded, pivote
 Source: web.archive.org - search for company domain, review snapshots from different years.
 {% /instructions %}
 
+{% string-list id="deep_intel_sources" label="Deep Intel Sources" %}{% /string-list %}
+
+{% instructions ref="deep_intel_sources" %}
+URLs used as sources for this section. One URL per line.
+{% /instructions %}
+
 {% /field-group %}
 
 {% field-group id="press_section" title="Notable Press Coverage" %}
@@ -376,16 +427,15 @@ Focus on: funding announcements, major product launches, company profiles, notab
 Source: techcrunch.com, theinformation.com, bloomberg.com, forbes.com, wired.com, venturebeat.com, company Press page.
 {% /instructions %}
 
+{% string-list id="press_sources" label="Press Coverage Sources" %}{% /string-list %}
+
+{% instructions ref="press_sources" %}
+URLs used as sources for this section. One URL per line.
+{% /instructions %}
+
 {% /field-group %}
 
 {% field-group id="sources_section" title="Research Metadata" %}
-
-{% string-list id="all_sources" label="All Sources Consulted" %}{% /string-list %}
-
-{% instructions ref="all_sources" %}
-List all URLs and sources used for this research, one per line.
-Group by type: Company site, Crunchbase, LinkedIn, Social media, HN/PH, Reviews, Press, Other.
-{% /instructions %}
 
 {% string-field id="research_date" label="Research Date" required=true pattern="^\\d{4}-\\d{2}-\\d{2}$" %}{% /string-field %}
 
