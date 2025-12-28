@@ -1,5 +1,14 @@
 # markform
 
+## 0.1.3
+
+### Patch Changes
+
+- 3ea571b: - fix: Move ai from peerDependencies to regular dependencies (resolves install issues for new users)
+  - refactor: Change multi-format export from raw to report format
+  - docs: Update README example and add MPAA rating to minimal form
+  - fix(examples): simplify movie-research-minimal form structure
+
 ## 0.1.2
 
 ### Patch Changes
