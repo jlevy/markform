@@ -55,7 +55,6 @@ describe('set_table patch', () => {
   });
 
   it('handles sentinel strings in cells', () => {
-    const responses: Record<string, any> = {};
     const patch: SetTablePatch = {
       op: 'set_table',
       fieldId: 'films',
@@ -93,7 +92,6 @@ describe('set_table patch', () => {
   });
 
   it('handles null values', () => {
-    const responses: Record<string, any> = {};
     const patch: SetTablePatch = {
       op: 'set_table',
       fieldId: 'films',
@@ -115,7 +113,6 @@ describe('set_table patch', () => {
   });
 
   it('handles empty table', () => {
-    const responses: Record<string, any> = {};
     const patch: SetTablePatch = {
       op: 'set_table',
       fieldId: 'films',

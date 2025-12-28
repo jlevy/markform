@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { parseTableField } from '../../src/engine/parseFields.js';
 import { serializeTableField } from '../../src/engine/table/serializeTable.js';
 import { createMockNode } from '../../src/engine/testUtils.js';
+import type { TableValue } from '../../src/engine/coreTypes.js';
 
 /**
  * Integration test for table field parsing and serialization.
@@ -81,7 +82,7 @@ describe('table-field integration', () => {
 
     const parsed = parseTableField(node);
     // For empty tables, response.value might be undefined, so use empty array
-    const rows = parsed.response.value ? (parsed.response.value as any).rows : [];
+    const rows = parsed.response.value ? (parsed.response.value as TableValue).rows : [];
     const serialized = serializeTableField(parsed.field, rows);
 
     expect(serialized).toContain('columnIds=["name", "value"]');

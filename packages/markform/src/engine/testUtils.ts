@@ -6,16 +6,16 @@ import type { Node } from '@markdoc/markdoc';
 
 export function createMockNode(
   tag: string,
-  attributes: Record<string, any> = {},
+  attributes: Record<string, unknown> = {},
   content?: string,
 ): Node {
   // Create a minimal mock node for testing
   return {
     tag,
     attributes,
-    children: content ? [{ type: 'text', attributes: { content } } as any] : [],
+    children: content ? [{ type: 'text', attributes: { content } }] : [],
     type: 'tag',
-  } as any;
+  } as unknown as Node;
   return {
     tag,
     attributes,

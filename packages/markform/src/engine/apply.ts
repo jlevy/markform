@@ -40,6 +40,8 @@ import type {
   StringListValue,
   StringValue,
   TableValue,
+  TableRowResponse,
+  CellResponse,
   UrlListValue,
   UrlValue,
   YearValue,
@@ -449,10 +451,10 @@ function applySetYear(responses: Record<Id, FieldResponse>, patch: SetYearPatch)
  * Apply a set_table patch.
  */
 function applySetTable(responses: Record<Id, FieldResponse>, patch: SetTablePatch): void {
-  const rows: any[] = [];
+  const rows: TableRowResponse[] = [];
 
   for (const patchRow of patch.rows) {
-    const row: Record<string, any> = {};
+    const row: Record<Id, CellResponse> = {};
 
     for (const [columnId, cellValue] of Object.entries(patchRow)) {
       // Check if it's a sentinel string

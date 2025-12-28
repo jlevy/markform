@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import Markdoc from '@markdoc/markdoc';
+import type { Node } from '@markdoc/markdoc';
 
 import {
   parseMarkdownTable,
@@ -8,16 +10,25 @@ import {
 } from './parseTable.js';
 
 describe('parseMarkdownTable', () => {
-  // Helper to create a mock node with text content
-  function createTextNode(content: string) {
-    return {
-      type: 'text',
-      attributes: { content },
-    };
+  // Helper to create a Markdoc AST from markdown content
+  function createTableNode(content: string): Node | null {
+    const ast = Markdoc.parse(content);
+    // Find the table node in the AST
+    function findTableNode(node: Node): Node | null {
+      if (node.type === 'table') return node;
+      if (node.children) {
+        for (const child of node.children) {
+          const found = findTableNode(child);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+    return findTableNode(ast);
   }
 
   it('parses simple table', () => {
-    const node = createTextNode(
+    const node = createTableNode(
       `
 | Name | Age | City |
 |------|-----|------|
@@ -25,8 +36,9 @@ describe('parseMarkdownTable', () => {
 | Jane | 30  | LA   |
 `.trim(),
     );
+    expect(node).not.toBeNull();
 
-    const result = parseMarkdownTable(node);
+    const result = parseMarkdownTable(node!);
     expect(result.headers).toEqual(['Name', 'Age', 'City']);
     expect(result.rows).toEqual([
       ['John', '25', 'NYC'],
@@ -35,69 +47,74 @@ describe('parseMarkdownTable', () => {
   });
 
   it('handles empty table', () => {
-    const node = createTextNode(
+    const node = createTableNode(
       `
 | Name | Age |
 |------|-----|
 `.trim(),
     );
+    expect(node).not.toBeNull();
 
-    const result = parseMarkdownTable(node);
+    const result = parseMarkdownTable(node!);
     expect(result.headers).toEqual(['Name', 'Age']);
     expect(result.rows).toEqual([]);
   });
 
   it('handles single row', () => {
-    const node = createTextNode(
+    const node = createTableNode(
       `
 | Name | Age |
 |------|-----|
 | John | 25  |
 `.trim(),
     );
+    expect(node).not.toBeNull();
 
-    const result = parseMarkdownTable(node);
+    const result = parseMarkdownTable(node!);
     expect(result.headers).toEqual(['Name', 'Age']);
     expect(result.rows).toEqual([['John', '25']]);
   });
 
   it('handles missing separator row', () => {
-    const node = createTextNode(
+    const node = createTableNode(
       `
 | Name | Age |
 | John | 25  |
 `.trim(),
     );
+    expect(node).not.toBeNull();
 
-    const result = parseMarkdownTable(node);
+    const result = parseMarkdownTable(node!);
     expect(result.headers).toEqual(['Name', 'Age']);
     expect(result.rows).toEqual([['John', '25']]);
   });
 
   it('trims whitespace from cells', () => {
-    const node = createTextNode(
+    const node = createTableNode(
       `
 | Name  | Age |
 |-------|-----|
 |  John |  25 |
 `.trim(),
     );
+    expect(node).not.toBeNull();
 
-    const result = parseMarkdownTable(node);
+    const result = parseMarkdownTable(node!);
     expect(result.headers).toEqual(['Name', 'Age']);
     expect(result.rows).toEqual([['John', '25']]);
   });
 
   it('handles escaped pipes', () => {
-    const node = createTextNode(
+    const node = createTableNode(
       `
 | Expression | Result |
 |------------|--------|
 | A\\|B      | A|B    |
 `.trim(),
     );
+    expect(node).not.toBeNull();
 
-    const result = parseMarkdownTable(node);
+    const result = parseMarkdownTable(node!);
     expect(result.headers).toEqual(['Expression', 'Result']);
     expect(result.rows).toEqual([['A\\|B', 'A|B']]);
   });

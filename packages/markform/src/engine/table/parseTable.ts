@@ -5,6 +5,7 @@
  */
 
 import Markdoc from '@markdoc/markdoc';
+import type { Node } from '@markdoc/markdoc';
 import { parseSentinel } from '../parseSentinels.js';
 
 // =============================================================================
@@ -25,8 +26,7 @@ export interface ParseTableResult {
  * Parse Markdoc AST table nodes into headers and rows.
  * Extracts text content from the node and parses it using Markdoc.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function parseMarkdownTable(node: any): ParseTableResult {
+export function parseMarkdownTable(node: Node): ParseTableResult {
   // Extract text content from the node (similar to extractOptionItems)
   const content = extractTextContent(node);
 
@@ -48,12 +48,10 @@ export function parseMarkdownTable(node: any): ParseTableResult {
 /**
  * Extract text content from a Markdoc node tree.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractTextContent(node: any): string {
+function extractTextContent(node: Node): string {
   let content = '';
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function collectText(n: any): void {
+  function collectText(n: Node): void {
     if (!n || typeof n !== 'object') return;
 
     // Text nodes have content in attributes
@@ -81,7 +79,7 @@ function extractTextContent(node: any): string {
 /**
  * Traverse Markdoc AST to extract table data.
  */
-function traverseTable(node: any, headers: string[], rows: string[][]): void {
+function traverseTable(node: Node, headers: string[], rows: string[][]): void {
   if (!node || typeof node !== 'object') return;
 
   // Look for table node
@@ -109,7 +107,7 @@ function traverseTable(node: any, headers: string[], rows: string[][]): void {
 /**
  * Extract header row from thead.
  */
-function extractHeaderRow(node: any, headers: string[]): void {
+function extractHeaderRow(node: Node, headers: string[]): void {
   if (node.children && Array.isArray(node.children)) {
     for (const child of node.children) {
       if (child.type === 'tr') {
@@ -124,7 +122,7 @@ function extractHeaderRow(node: any, headers: string[]): void {
 /**
  * Extract data rows from tbody.
  */
-function extractBodyRows(node: any, rows: string[][]): void {
+function extractBodyRows(node: Node, rows: string[][]): void {
   if (node.children && Array.isArray(node.children)) {
     for (const child of node.children) {
       if (child.type === 'tr') {
@@ -140,7 +138,7 @@ function extractBodyRows(node: any, rows: string[][]): void {
 /**
  * Extract cell content from a table row.
  */
-function extractRowCells(node: any): string[] {
+function extractRowCells(node: Node): string[] {
   const cells: string[] = [];
 
   if (node.children && Array.isArray(node.children)) {
@@ -158,11 +156,10 @@ function extractRowCells(node: any): string[] {
 /**
  * Extract text content from a table cell.
  */
-function extractCellContent(node: any): string {
+function extractCellContent(node: Node): string {
   let content = '';
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function collectText(n: any): void {
+  function collectText(n: Node): void {
     if (!n || typeof n !== 'object') return;
 
     // Text nodes have content in attributes or directly
@@ -259,7 +256,7 @@ export function parseTableCell(
 /**
  * Parse a string value according to column type.
  */
-function parseTypedValue(value: string, type: string): any {
+function parseTypedValue(value: string, type: string): string | number {
   switch (type) {
     case 'string':
       return value;

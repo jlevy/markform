@@ -7,7 +7,14 @@
  * - Batch coercion of InputContext with warnings/errors
  */
 
-import type { CheckboxValue, Field, OptionId, ParsedForm, Patch } from './coreTypes.js';
+import type {
+  CheckboxValue,
+  Field,
+  OptionId,
+  ParsedForm,
+  Patch,
+  PatchTableRow,
+} from './coreTypes.js';
 
 // =============================================================================
 // Raw Input Types
@@ -487,7 +494,7 @@ function coerceToTable(fieldId: string, rawValue: RawFieldValue): CoercionResult
 
   return {
     ok: true,
-    patch: { op: 'set_table', fieldId, rows: rawValue as any },
+    patch: { op: 'set_table', fieldId, rows: rawValue as unknown as PatchTableRow[] },
   };
 }
 
