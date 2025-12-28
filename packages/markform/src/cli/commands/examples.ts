@@ -26,7 +26,6 @@ import {
   DEFAULT_MAX_TURNS,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_ISSUES_PER_TURN,
-  DEFAULT_RESEARCH_MAX_TURNS,
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   getFormsDir,
@@ -550,10 +549,9 @@ async function runInteractiveFlow(
     const agentStartTime = Date.now();
     const timingLabel = isResearchExample ? 'Research time' : 'Agent fill time';
 
-    // Research examples use tighter defaults for focused web search
+    // Research examples use tighter per-turn limits for focused web search
     const configOverrides = isResearchExample
       ? {
-          maxTurns: DEFAULT_RESEARCH_MAX_TURNS,
           maxIssuesPerTurn: DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
           maxPatchesPerTurn: DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
         }
