@@ -62,7 +62,7 @@ export type ExampleType = 'fill' | 'research';
  * because they are loaded dynamically from the form's YAML frontmatter.
  */
 export interface ExampleDefinition {
-  /** Machine-readable identifier (e.g., 'simple', 'political-research'). */
+  /** Machine-readable identifier (e.g., 'simple', 'celebrity-deep-research'). */
   id: string;
   /** Human-readable title for menu display. Loaded from frontmatter. */
   title?: string;

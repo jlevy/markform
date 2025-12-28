@@ -54,10 +54,6 @@ describe('examples registry', () => {
       expect(EXAMPLE_DEFINITIONS.some((e) => e.id === 'simple')).toBe(true);
     });
 
-    it('includes political-research example', () => {
-      expect(EXAMPLE_DEFINITIONS.some((e) => e.id === 'political-research')).toBe(true);
-    });
-
     it('includes earnings-analysis example', () => {
       expect(EXAMPLE_DEFINITIONS.some((e) => e.id === 'earnings-analysis')).toBe(true);
     });
@@ -68,7 +64,6 @@ describe('examples registry', () => {
       const ids = getExampleIds();
       expect(Array.isArray(ids)).toBe(true);
       expect(ids).toContain('simple');
-      expect(ids).toContain('political-research');
       expect(ids).toContain('earnings-analysis');
     });
   });
@@ -124,13 +119,6 @@ describe('examples registry', () => {
       expect(content).toContain('{% form');
     });
 
-    it('loads political-research example content', () => {
-      const content = loadExampleContent('political-research');
-      expect(content).toBeTruthy();
-      expect(content).toContain('markform:');
-      expect(content).toContain('political_research');
-    });
-
     it('loads earnings-analysis example content', () => {
       const content = loadExampleContent('earnings-analysis');
       expect(content).toBeTruthy();
@@ -150,19 +138,6 @@ describe('examples registry', () => {
 
       expect(form.schema.id).toBe('simple_test');
       expect(form.schema.groups.length).toBeGreaterThan(0);
-    });
-
-    it('political-research example parses as valid form', () => {
-      const content = loadExampleContent('political-research');
-      const form = parseForm(content);
-
-      expect(form.schema.id).toBe('political_research');
-      expect(form.schema.groups.length).toBeGreaterThan(0);
-
-      // Should have the name field with user role
-      const nameField = form.schema.groups.flatMap((g) => g.children).find((f) => f.id === 'name');
-      expect(nameField).toBeDefined();
-      expect(nameField?.role).toBe('user');
     });
 
     it('earnings-analysis example parses as valid form', () => {

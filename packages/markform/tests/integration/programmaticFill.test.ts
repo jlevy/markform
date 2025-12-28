@@ -158,61 +158,6 @@ describe('programmatic fill API - integration tests', () => {
     });
   });
 
-  describe('political-research.form.md', () => {
-    it('complete fill with inputContext for user field', async () => {
-      // Load empty form and Lincoln mock-filled form
-      const emptyForm = loadForm('political-research/political-research.form.md');
-      const mockFilledForm = loadForm('political-research/political-research.mock.lincoln.form.md');
-
-      // Create mock agent from completed form
-      const completedForm = parseForm(mockFilledForm);
-      const mockAgent = createMockAgent(completedForm);
-
-      // Fill using programmatic API with user field pre-filled
-      const result = await fillForm({
-        form: emptyForm,
-        model: 'mock/model',
-        inputContext: {
-          name: 'Abraham Lincoln',
-        },
-        targetRoles: ['user', 'agent'],
-        _testAgent: mockAgent,
-      });
-
-      expect(result.status.ok).toBe(true);
-
-      // Verify user field was pre-filled
-      expect(result.values.name).toEqual({ kind: 'string', value: 'Abraham Lincoln' });
-
-      // Verify agent filled biographical data
-      expect(result.values.birth_date).toEqual({ kind: 'string', value: '1809-02-12' });
-      expect(result.values.birth_place).toEqual({ kind: 'string', value: 'Hodgenville, Kentucky' });
-      expect(result.values.political_party).toEqual({ kind: 'string', value: 'Republican' });
-    });
-
-    it('handles complex form structure', async () => {
-      const emptyForm = loadForm('political-research/political-research.form.md');
-      const mockFilledForm = loadForm('political-research/political-research.mock.lincoln.form.md');
-
-      const completedForm = parseForm(mockFilledForm);
-      const mockAgent = createMockAgent(completedForm);
-
-      const result = await fillForm({
-        form: emptyForm,
-        model: 'mock/model',
-        inputContext: { name: 'Abraham Lincoln' },
-        targetRoles: ['user', 'agent'],
-        _testAgent: mockAgent,
-      });
-
-      expect(result.status.ok).toBe(true);
-
-      // Verify string_list fields were filled
-      expect(result.values.children?.kind).toBe('string_list');
-      expect(result.values.sources?.kind).toBe('string_list');
-    });
-  });
-
   describe('error scenarios', () => {
     it('form parse error returns appropriate error', async () => {
       const result = await fillForm({

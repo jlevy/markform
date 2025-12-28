@@ -29,12 +29,6 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     type: 'fill',
   },
   {
-    id: 'political-research',
-    filename: 'political-research.form.md',
-    path: 'political-research/political-research.form.md',
-    type: 'research',
-  },
-  {
     id: 'earnings-analysis',
     filename: 'earnings-analysis.form.md',
     path: 'earnings-analysis/earnings-analysis.form.md',
@@ -78,7 +72,7 @@ function getExamplesDir(): string {
 
 /**
  * Load the content of an example form.
- * @param exampleId - The example ID (e.g., 'simple', 'political-research')
+ * @param exampleId - The example ID (e.g., 'simple', 'celebrity-deep-research')
  * @returns The form content as a string
  * @throws Error if the example is not found
  */
@@ -114,7 +108,7 @@ export function getExampleById(id: string): ExampleDefinition | undefined {
 
 /**
  * Get the absolute path to an example's source file.
- * @param exampleId - The example ID (e.g., 'simple', 'political-research')
+ * @param exampleId - The example ID (e.g., 'simple', 'celebrity-deep-research')
  * @returns The absolute path to the example form file
  * @throws Error if the example is not found
  */
@@ -145,7 +139,7 @@ function extractFrontmatter(content: string): Record<string, unknown> | null {
 
 /**
  * Load metadata (title, description) from an example's YAML frontmatter.
- * @param exampleId - The example ID (e.g., 'simple', 'political-research')
+ * @param exampleId - The example ID (e.g., 'simple', 'celebrity-deep-research')
  * @returns Object with title and description from frontmatter
  */
 export function loadExampleMetadata(exampleId: string): { title?: string; description?: string } {
