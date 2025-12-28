@@ -119,9 +119,13 @@ async function promptForString(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as StringField;
   const currentVal = ctx.currentValue?.kind === 'string' ? ctx.currentValue.value : null;
 
+  // Prefer field placeholder, fall back to current value or description
+  const placeholderText =
+    field.placeholder ?? currentVal ?? (ctx.description ? ctx.description.slice(0, 60) : undefined);
+
   const result = await p.text({
     message: formatFieldLabel(ctx),
-    placeholder: currentVal ?? (ctx.description ? ctx.description.slice(0, 60) : undefined),
+    placeholder: placeholderText,
     initialValue: currentVal ?? '',
     validate: (value) => {
       if (field.required && !value.trim()) {
@@ -163,9 +167,13 @@ async function promptForNumber(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as NumberField;
   const currentVal = ctx.currentValue?.kind === 'number' ? ctx.currentValue.value : null;
 
+  // Prefer field placeholder, fall back to current value
+  const placeholderText =
+    field.placeholder ?? (currentVal !== null ? String(currentVal) : undefined);
+
   const result = await p.text({
     message: formatFieldLabel(ctx),
-    placeholder: currentVal !== null ? String(currentVal) : undefined,
+    placeholder: placeholderText,
     initialValue: currentVal !== null ? String(currentVal) : '',
     validate: (value) => {
       if (field.required && !value.trim()) {
@@ -214,9 +222,15 @@ async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | nul
   const field = ctx.field as StringListField;
   const currentItems = ctx.currentValue?.kind === 'string_list' ? ctx.currentValue.items : [];
 
-  const hint = ctx.description
-    ? `${ctx.description.slice(0, 50)}... (one item per line)`
-    : 'Enter items, one per line. Press Enter twice when done.';
+  // Prefer field placeholder, fall back to description or default hint
+  let hint: string;
+  if (field.placeholder) {
+    hint = `${field.placeholder} (one item per line)`;
+  } else if (ctx.description) {
+    hint = `${ctx.description.slice(0, 50)}... (one item per line)`;
+  } else {
+    hint = 'Enter items, one per line. Press Enter twice when done.';
+  }
 
   const result = await p.text({
     message: formatFieldLabel(ctx),
@@ -443,9 +457,12 @@ async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
   const field = ctx.field as UrlField;
   const currentVal = ctx.currentValue?.kind === 'url' ? ctx.currentValue.value : null;
 
+  // Prefer field placeholder, fall back to current value or default
+  const placeholderText = field.placeholder ?? currentVal ?? 'https://example.com';
+
   const result = await p.text({
     message: formatFieldLabel(ctx),
-    placeholder: currentVal ?? 'https://example.com',
+    placeholder: placeholderText,
     initialValue: currentVal ?? '',
     validate: (value) => {
       if (field.required && !value.trim()) {
@@ -487,9 +504,15 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
   const field = ctx.field as UrlListField;
   const currentItems = ctx.currentValue?.kind === 'url_list' ? ctx.currentValue.items : [];
 
-  const hint = ctx.description
-    ? `${ctx.description.slice(0, 50)}... (one URL per line)`
-    : 'Enter URLs, one per line. Press Enter twice when done.';
+  // Prefer field placeholder, fall back to description or default hint
+  let hint: string;
+  if (field.placeholder) {
+    hint = `${field.placeholder} (one URL per line)`;
+  } else if (ctx.description) {
+    hint = `${ctx.description.slice(0, 50)}... (one URL per line)`;
+  } else {
+    hint = 'Enter URLs, one per line. Press Enter twice when done.';
+  }
 
   const result = await p.text({
     message: formatFieldLabel(ctx),

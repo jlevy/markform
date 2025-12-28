@@ -18,17 +18,17 @@ Fill all fields using interactive prompts - no LLM API key needed.
 
 {% field-group id="basic_fields" title="Basic Fields" %}
 
-{% string-field id="name" label="Name" role="user" required=true minLength=2 maxLength=50 %}{% /string-field %}
+{% string-field id="name" label="Name" role="user" required=true minLength=2 maxLength=50 placeholder="Enter your name" examples=["John Smith", "Jane Doe"] %}{% /string-field %}
 
 {% instructions ref="name" %}
 Enter your full name (2-50 characters).
 {% /instructions %}
 
-{% string-field id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" %}{% /string-field %}
+{% string-field id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" examples=["alice@company.com", "bob@example.org"] %}{% /string-field %}
 
-{% number-field id="age" label="Age" role="user" required=true min=0 max=150 integer=true %}{% /number-field %}
+{% number-field id="age" label="Age" role="user" required=true min=0 max=150 integer=true placeholder="25" examples=["18", "30", "45"] %}{% /number-field %}
 
-{% number-field id="score" label="Score" role="user" min=0.0 max=100.0 %}{% /number-field %}
+{% number-field id="score" label="Score" role="user" min=0.0 max=100.0 placeholder="85.5" examples=["75.0", "90.5", "100.0"] %}{% /number-field %}
 
 {% instructions ref="score" %}
 Enter a score between 0 and 100 (optional).
@@ -94,13 +94,13 @@ Answer yes or no for each confirmation. All must be explicitly answered.
 
 {% field-group id="url_fields" title="URL Fields" %}
 
-{% url-field id="website" label="Website" role="user" required=true %}{% /url-field %}
+{% url-field id="website" label="Website" role="user" required=true placeholder="https://example.com" examples=["https://github.com/user/repo", "https://company.com"] %}{% /url-field %}
 
 {% instructions ref="website" %}
 Enter your website URL (must be http or https).
 {% /instructions %}
 
-{% url-list id="references" label="References" role="user" minItems=1 maxItems=5 uniqueItems=true %}{% /url-list %}
+{% url-list id="references" label="References" role="user" minItems=1 maxItems=5 uniqueItems=true placeholder="https://docs.example.com" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] %}{% /url-list %}
 
 {% instructions ref="references" %}
 Add 1-5 unique reference URLs for sources or documentation.

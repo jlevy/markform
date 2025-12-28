@@ -121,7 +121,7 @@ turns:
           value: https://test.example.com
     after:
       required_issue_count: 0
-      markdown_sha256: 62c9aad095c2ea5c2947c308c5e4b3c4cbc677a7e481971871c5091d5ca27b02
+      markdown_sha256: 3a9ecee6dbd7e576c15956149b2594c8ee9fba949ba5ec58bc75550ce2db267c
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
@@ -181,7 +181,7 @@ turns:
           reason: No value in mock form
     after:
       required_issue_count: 0
-      markdown_sha256: 5ca306e53bdb0213b0558f6132c7a5af491c40c8765f25bc7047efa0478b7876
+      markdown_sha256: 457baf8e026da37dcbf116c97519db6de147a59df774c63f21b4984835cf286f
       answered_field_count: 11
       skipped_field_count: 4
 final:

@@ -240,6 +240,20 @@ All fields support these attributes:
 | `role` | string | - | Target actor (`user`, `agent`) |
 | `priority` | string | medium | `high`, `medium`, `low` |
 
+**Text-entry fields only** (string, number, string-list, url, url-list):
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `placeholder` | string | Hint text shown in empty fields |
+| `examples` | string[] | Example values (helps LLMs understand expected format) |
+
+```markdown
+{% string-field id="name" label="Name" placeholder="Enter your name" examples=["John Doe", "Jane Smith"] %}{% /string-field %}
+{% number-field id="revenue" label="Revenue" placeholder="1000000" examples=["500000", "1000000"] %}{% /number-field %}
+```
+
+Note: `placeholder` and `examples` are NOT valid on chooser fields (single-select, multi-select, checkboxes).
+
 ## Documentation Blocks
 
 Add context to fields, groups, or the form.
