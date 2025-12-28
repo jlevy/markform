@@ -47,6 +47,7 @@ function createProgram(): Command {
     .name('markform')
     .description('Agent-friendly, human-readable, editable forms')
     .version(VERSION)
+    .showHelpAfterError()
     .option('--verbose', 'Enable verbose output')
     .option('--quiet', 'Suppress non-essential output')
     .option('--dry-run', 'Show what would be done without making changes')
