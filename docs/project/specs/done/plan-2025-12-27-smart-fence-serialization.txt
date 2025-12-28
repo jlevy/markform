@@ -184,16 +184,16 @@ Some text with ~~~~ but no backticks
 
 ### Phase 1: Core Implementation
 
-- [ ] Add `maxRunAtLineStart()` function
-- [ ] Add `pickFence()` function
-- [ ] Update `formatValueFence()` to use smart selection
-- [ ] Verify existing tests still pass
+- [x] Add `maxRunAtLineStart()` function
+- [x] Add `pickFence()` function
+- [x] Update `formatValueFence()` to use smart selection
+- [x] Verify existing tests still pass
 
 ### Phase 2: Testing
 
 #### Unit Tests to Add (in `tests/unit/`)
 
-- [ ] `serialize-fence.test.ts`:
+- [x] `serialize-fence.test.ts`:
   - Test `maxRunAtLineStart()` with various inputs:
     - No fence chars → returns 0
     - Triple backticks at line start → returns 3
@@ -213,13 +213,13 @@ Some text with ~~~~ but no backticks
 
 #### Integration/Round-trip Tests
 
-- [ ] Add test forms with values containing:
+- [x] Add test forms with values containing:
   - Markdown with triple-backtick code blocks
   - Markdown with tilde code blocks
   - Markdown with Markdoc tags
   - Markdown with both backticks and tildes
   - Pathological case: many runs of both chars
-- [ ] Verify parse → serialize → parse round-trip preserves values exactly
+- [x] Verify parse → serialize → parse round-trip preserves values exactly
 
 ### Edge Cases to Test
 
@@ -231,18 +231,18 @@ Some text with ~~~~ but no backticks
 
 ### Task Checklist
 
-- [ ] Implement core functions
-- [ ] Run existing tests (`pnpm test`)
-- [ ] Add unit tests
-- [ ] Add integration tests
-- [ ] Run full test suite
-- [ ] Update SPEC.md if needed (document fence selection behavior under "Value fences")
+- [x] Implement core functions
+- [x] Run existing tests (`pnpm test`)
+- [x] Add unit tests
+- [x] Add integration tests
+- [x] Run full test suite
+- [x] Update SPEC.md if needed (document fence selection behavior under "Value fences")
 
 ## Stage 4: Validation Stage
 
-- [ ] All tests pass
-- [ ] Manual verification with example forms containing code blocks
-- [ ] Code review
+- [x] All tests pass
+- [x] Manual verification with example forms containing code blocks
+- [x] Code review
 
 ## Notes
 

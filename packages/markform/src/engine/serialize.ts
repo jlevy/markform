@@ -40,14 +40,89 @@ import type {
 import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
 
 // =============================================================================
+// Smart Fence Selection Helpers
+// =============================================================================
+
+/** Fence character types for value fences */
+type FenceChar = '`' | '~';
+
+/** Result of pickFence analysis */
+interface FenceChoice {
+  /** The fence character to use (backticks or tildes) */
+  char: FenceChar;
+  /** The fence length (minimum 3) */
+  len: number;
+  /** Whether to add process=false for Markdoc tags */
+  processFalse: boolean;
+}
+
+/**
+ * Find the maximum run of fence characters at line starts (indent ≤ 3 spaces).
+ * Lines with 4+ space indent are inside code blocks so don't break fences.
+ */
+export function maxRunAtLineStart(value: string, char: FenceChar): number {
+  // Pattern: 0-3 leading spaces, then runs of the fence char
+  const escaped = char === '`' ? '`' : '~';
+  const pattern = new RegExp(`^( {0,3})${escaped}+`, 'gm');
+
+  let maxRun = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(value)) !== null) {
+    // The full match includes the leading spaces, so subtract them
+    const indent = match[1]?.length ?? 0;
+    const runLength = match[0].length - indent;
+    if (runLength > maxRun) {
+      maxRun = runLength;
+    }
+  }
+
+  return maxRun;
+}
+
+/**
+ * Pick the optimal fence character and length for a value.
+ * Also detects if process=false is needed for Markdoc tags.
+ */
+export function pickFence(value: string): FenceChoice {
+  // Check for Markdoc tags
+  const hasMarkdocTags = value.includes('{%');
+
+  // Get max runs for both fence types
+  const maxBackticks = maxRunAtLineStart(value, '`');
+  const maxTildes = maxRunAtLineStart(value, '~');
+
+  // Pick the char with smaller max-run; prefer backticks on tie
+  let char: FenceChar;
+  let maxRun: number;
+
+  if (maxBackticks <= maxTildes) {
+    char = '`';
+    maxRun = maxBackticks;
+  } else {
+    char = '~';
+    maxRun = maxTildes;
+  }
+
+  // Length is max(3, maxRun + 1) to ensure the fence is longer than any in content
+  const len = Math.max(3, maxRun + 1);
+
+  return { char, len, processFalse: hasMarkdocTags };
+}
+
+// =============================================================================
 // Sentinel Value Helpers
 // =============================================================================
 
 /**
  * Format a value fence block with the given content.
+ * Uses smart fence selection to avoid collision with code blocks in content.
  */
 function formatValueFence(content: string): string {
-  return `\n\`\`\`value\n${content}\n\`\`\`\n`;
+  const { char, len, processFalse } = pickFence(content);
+  const fence = char.repeat(len);
+  const processAttr = processFalse ? ' {% process=false %}' : '';
+  return `\n${fence}value${processAttr}\n${content}\n${fence}\n`;
 }
 
 /**
@@ -205,7 +280,7 @@ function serializeStringField(field: StringField, response: FieldResponse | unde
   if (response?.state === 'answered' && response.value) {
     const value = response.value as StringValue;
     if (value.value) {
-      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+      content = formatValueFence(value.value);
     }
   }
 
@@ -257,7 +332,7 @@ function serializeNumberField(field: NumberField, response: FieldResponse | unde
   if (response?.state === 'answered' && response.value) {
     const value = response.value as NumberValue;
     if (value.value !== null && value.value !== undefined) {
-      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+      content = formatValueFence(String(value.value));
     }
   }
 
@@ -318,7 +393,7 @@ function serializeStringListField(
   if (response?.state === 'answered' && response.value) {
     const value = response.value as StringListValue;
     if (value.items && value.items.length > 0) {
-      content = `\n\`\`\`value\n${value.items.join('\n')}\n\`\`\`\n`;
+      content = formatValueFence(value.items.join('\n'));
     }
   }
 
@@ -518,7 +593,7 @@ function serializeUrlField(field: UrlField, response: FieldResponse | undefined)
   if (response?.state === 'answered' && response.value) {
     const value = response.value as UrlValue;
     if (value.value) {
-      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+      content = formatValueFence(value.value);
     }
   }
 
@@ -570,7 +645,7 @@ function serializeUrlListField(field: UrlListField, response: FieldResponse | un
   if (response?.state === 'answered' && response.value) {
     const value = response.value as UrlListValue;
     if (value.items && value.items.length > 0) {
-      content = `\n\`\`\`value\n${value.items.join('\n')}\n\`\`\`\n`;
+      content = formatValueFence(value.items.join('\n'));
     }
   }
 
@@ -619,7 +694,7 @@ function serializeDateField(field: DateField, response: FieldResponse | undefine
   if (response?.state === 'answered' && response.value) {
     const value = response.value as DateValue;
     if (value.value) {
-      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+      content = formatValueFence(value.value);
     }
   }
 
@@ -668,7 +743,7 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
   if (response?.state === 'answered' && response.value) {
     const value = response.value as YearValue;
     if (value.value !== null && value.value !== undefined) {
-      content = `\n\`\`\`value\n${value.value}\n\`\`\`\n`;
+      content = formatValueFence(String(value.value));
     }
   }
 
