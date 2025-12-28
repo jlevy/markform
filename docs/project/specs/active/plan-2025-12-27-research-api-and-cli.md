@@ -396,6 +396,18 @@ and formatting. All research forms should include this.
 
 2. Each field group should end with a `*_sources` URL list field for section citations.
 
+3. Frontmatter ordering for clarity:
+   - `spec`, `roles`, `role_instructions`, then `harness`
+   - This makes human intent and role guidance visible before harness constraints.
+
+4. Sources field labels should be descriptive, not generic:
+   - Prefer labels like "Core Bio Sources", "Filmography Sources", "Press Coverage Sources"
+   - Avoid "Section Source URLs".
+
+5. ID naming for sources fields:
+   - Prefer `{group_id}_sources` unless the group id itself ends with `_sources`
+   - In that case, use `{group_id}_urls` to avoid duplication (e.g., `specialized_sources_urls`).
+
 ## Stage 2: Architecture Stage
 
 ### Component Overview

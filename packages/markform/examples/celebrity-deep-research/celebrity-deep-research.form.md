@@ -795,9 +795,9 @@ Sources: Geni.com, FamilySearch.org, Ancestry (if publicly discussed).
 Example: "Related to British royalty through maternal line (per Finding Your Roots appearance)"
 {% /instructions %}
 
-{% string-list id="specialized_sources_sources" label="Specialized Sources" %}{% /string-list %}
+{% string-list id="specialized_sources_urls" label="Specialized Sources" %}{% /string-list %}
 
-{% instructions ref="specialized_sources_sources" %}
+{% instructions ref="specialized_sources_urls" %}
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
