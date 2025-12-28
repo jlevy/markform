@@ -12,7 +12,7 @@ implementations, and lists remaining manual validation steps for the reviewer.
 ## Automated Validation (Testing Performed)
 
 The implementation includes comprehensive unit test coverage across all engine components.
-All 518 tests pass.
+All 618 tests pass.
 
 ### Unit Testing
 
@@ -83,13 +83,79 @@ All 518 tests pass.
 - ✅ `formatPatchValue()` handles set_date and set_year patches
 - ✅ `formatPatchType()` handles set_date and set_year patches
 
+#### Interactive Prompts (`tests/unit/cli/interactivePrompts.test.ts`)
+
+- ✅ `promptForDate()` returns set_date patch with valid date value
+- ✅ `promptForDate()` returns null for optional field with empty input
+- ✅ `promptForDate()` validates YYYY-MM-DD format
+- ✅ `promptForDate()` validates min/max date constraints
+- ✅ `promptForYear()` returns set_year patch with integer value
+- ✅ `promptForYear()` returns null for optional field with empty input
+- ✅ `promptForYear()` validates integer format
+- ✅ `promptForYear()` validates min/max year range
+- ✅ Optional date field shows skip option and returns skip_field patch
+- ✅ Optional year field shows skip option and returns skip_field patch
+- ✅ Date and year fields included in allFieldTypes coverage test
+- ✅ Expected patch operations (set_date, set_year) in coverage test
+
+#### Web UI Serve (`tests/unit/web/serve-render.test.ts`)
+
+- ✅ Date field renders as `<input type="date">` element
+- ✅ Date field includes min/max attributes when specified
+- ✅ Date field shows type badge as "date"
+- ✅ Date field pre-fills existing values
+- ✅ Date field respects required attribute
+- ✅ Year field renders as `<input type="number">` element
+- ✅ Year field includes step="1" for integer input
+- ✅ Year field includes placeholder="YYYY"
+- ✅ Year field includes min/max attributes
+- ✅ Year field shows type badge as "year"
+- ✅ Year field pre-fills existing values
+- ✅ Year field respects required attribute
+- ✅ `formDataToPatches()` handles date field form data
+- ✅ `formDataToPatches()` handles year field form data
+
+#### Mock Agent (`src/harness/mockAgent.ts`)
+
+- ✅ `hasValue()` handles date fields (value !== null)
+- ✅ `hasValue()` handles year fields (value !== null)
+- ✅ `createPatch()` creates set_date patches from DateValue
+- ✅ `createPatch()` creates set_year patches from YearValue
+- ✅ MockAgent fills date/year fields from completed mock form
+
+#### Golden Session Tests (`tests/golden/golden.test.ts`)
+
+- ✅ simple.session.yaml includes date/year field patches
+- ✅ simple-with-skips.session.yaml handles date/year fields
+- ✅ Session replay matches expected hashes after date/year patches
+- ✅ Forms complete successfully with date/year fields filled
+
 ### Integration and End-to-End Testing
 
-- ✅ Full test suite passes (518 tests)
+- ✅ Full test suite passes (618 tests)
 - ✅ Build succeeds with new types
 - ✅ TypeScript compilation with strict mode passes
 - ✅ ESLint checks pass
 - ✅ Prettier formatting passes
+- ✅ Integration tests include date/year fields in inputContext
+- ✅ Programmatic fill API handles date/year field pre-filling
+- ✅ Round-trip test verifies 7 groups (including date_fields)
+
+### Example Forms
+
+- ✅ `simple.form.md` includes `date_fields` group with required date/year fields
+- ✅ `simple.form.md` includes optional date/year fields
+- ✅ `simple-mock-filled.form.md` includes filled date/year values
+- ✅ `simple-skipped-filled.form.md` includes date/year with skipped optionals
+- ✅ `startup-deep-research.form.md` uses date-field for research_date
+
+### Documentation
+
+- ✅ README.md lists date-field, year-field in field types
+- ✅ SPEC.md includes date-field and year-field in tag table
+- ✅ SPEC.md includes Field Type Mappings for date and year
+- ✅ SPEC.md includes validation rules for date format and year range
+- ✅ SPEC.md includes required field semantics for date, year, url, url-list
 
 ## Manual Testing Needed
 
@@ -266,19 +332,46 @@ pnpm --filter=markform exec markform validate /tmp/test-invalid-date.form.md
 - bad_date should be flagged as invalid format
 - impossible_date should be flagged as invalid (Feb 30 doesn't exist)
 
-### 6. Web UI (if applicable)
+### 6. Interactive Prompts
 
-If the web UI is available, verify:
-- Date fields render with appropriate date picker or input
-- Year fields render with appropriate number input
-- Validation errors display correctly for invalid dates/years
+Test the interactive fill command with date and year fields:
 
 ```bash
-pnpm --filter=markform exec markform serve /tmp/test-date.form.md
-# Open browser and verify date field rendering
+# Test interactive fill with date/year fields
+pnpm --filter=markform exec markform fill examples/simple/simple.form.md --interactive
+
+# Verify:
+# - Date field shows placeholder "YYYY-MM-DD (min: 2020-01-01, max: 2030-12-31)"
+# - Year field shows placeholder "Year (1900-2030)"
+# - Invalid date format (e.g., "not-a-date") shows validation error
+# - Invalid year (e.g., "abc") shows validation error
+# - Skip option appears for optional date/year fields
 ```
 
-### 7. Round-Trip Serialization
+**Expected behavior:**
+- Date prompts accept YYYY-MM-DD format and reject invalid dates
+- Year prompts accept integers and reject non-numeric input
+- Min/max constraints are enforced with helpful error messages
+- Optional fields can be skipped
+
+### 7. Web UI
+
+If the web UI is available, verify:
+- Date fields render with `<input type="date">` (native date picker)
+- Year fields render with `<input type="number" step="1">` with YYYY placeholder
+- Min/max attributes are passed to HTML elements
+- Validation errors display correctly for invalid dates/years
+- Form submission correctly creates date/year patches
+
+```bash
+pnpm --filter=markform exec markform serve examples/simple/simple.form.md
+# Open browser at http://localhost:3000 and verify:
+# 1. Date field has native date picker UI
+# 2. Year field accepts only numbers with step=1
+# 3. Fill values and submit, check console for patch output
+```
+
+### 8. Round-Trip Serialization
 
 Verify that parsing and serializing produces identical output:
 

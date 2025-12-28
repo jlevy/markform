@@ -137,6 +137,30 @@ Add 1-5 unique reference URLs for sources or documentation.
 
 {% /field-group %}
 
+{% field-group id="date_fields" title="Date and Year Fields" %}
+
+{% date-field id="event_date" label="Event Date" max="2030-12-31" min="2020-01-01" required=true role="user" %}
+```value
+2025-03-15
+```
+{% /date-field %}
+
+{% instructions ref="event_date" %}
+Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+{% /instructions %}
+
+{% year-field id="founded_year" label="Founded Year" max=2030 min=1900 required=true role="user" %}
+```value
+2021
+```
+{% /year-field %}
+
+{% instructions ref="founded_year" %}
+Enter the year the company was founded (1900-2030).
+{% /instructions %}
+
+{% /field-group %}
+
 {% field-group id="optional_fields" title="Optional Fields" %}
 
 {% string-field id="notes" label="Notes" role="user" state="skipped" %}
@@ -159,6 +183,18 @@ Add any relevant notes or observations (optional).
 
 {% instructions ref="related_url" %}
 Optionally add a URL to related documentation or resources.
+{% /instructions %}
+
+{% date-field id="optional_date" label="Optional Date" role="user" state="skipped" %}{% /date-field %}
+
+{% instructions ref="optional_date" %}
+Optionally add a date (YYYY-MM-DD format).
+{% /instructions %}
+
+{% year-field id="optional_year" label="Optional Year" role="user" state="skipped" %}{% /year-field %}
+
+{% instructions ref="optional_year" %}
+Optionally add a year.
 {% /instructions %}
 
 {% /field-group %}

@@ -39,6 +39,18 @@ turns:
           message: Required field "Email" is empty
           severity: required
           priority: 1
+        - ref: event_date
+          scope: field
+          reason: required_missing
+          message: Required field "Event Date" is empty
+          severity: required
+          priority: 1
+        - ref: founded_year
+          scope: field
+          reason: required_missing
+          message: Required field "Founded Year" is empty
+          severity: required
+          priority: 1
         - ref: name
           scope: field
           reason: required_missing
@@ -63,18 +75,6 @@ turns:
           message: All items in "Tasks (Multi Mode)" must be completed
           severity: required
           priority: 1
-        - ref: tasks_simple
-          scope: field
-          reason: required_missing
-          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
-          severity: required
-          priority: 1
-        - ref: website
-          scope: field
-          reason: required_missing
-          message: Required field "Website" is empty
-          severity: required
-          priority: 1
     apply:
       patches:
         - op: set_number
@@ -93,6 +93,12 @@ turns:
         - op: set_string
           field_id: email
           value: alice@example.com
+        - op: set_date
+          field_id: event_date
+          value: 2025-06-15
+        - op: set_year
+          field_id: founded_year
+          value: 2020
         - op: set_string
           field_id: name
           value: Alice Johnson
@@ -112,29 +118,45 @@ turns:
             design: done
             implement: done
             test: na
-        - op: set_checkboxes
-          field_id: tasks_simple
-          values:
-            read_guidelines: done
-            agree_terms: done
-        - op: set_url
-          field_id: website
-          value: https://alice.dev
     after:
-      required_issue_count: 0
-      markdown_sha256: 2043ec76d913d290881480d5d2ca4de9ef6a3fdbdb626c65f6c33943be8524db
+      required_issue_count: 2
+      markdown_sha256: 52eebab0fcb220df8b7a013325828496d576ba946edfac585eb3877715a30148
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
     inspect:
       issues:
+        - ref: tasks_simple
+          scope: field
+          reason: required_missing
+          message: All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
+          severity: required
+          priority: 1
+        - ref: website
+          scope: field
+          reason: required_missing
+          message: Required field "Website" is empty
+          severity: required
+          priority: 1
         - ref: notes
           scope: field
           reason: optional_empty
           message: Optional field has no value
           severity: recommended
           priority: 3
+        - ref: optional_date
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
         - ref: optional_number
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: optional_year
           scope: field
           reason: optional_empty
           message: Optional field has no value
@@ -160,11 +182,27 @@ turns:
           priority: 3
     apply:
       patches:
+        - op: set_checkboxes
+          field_id: tasks_simple
+          values:
+            read_guidelines: done
+            agree_terms: done
+        - op: set_url
+          field_id: website
+          value: https://alice.dev
         - op: set_string
           field_id: notes
           value: This is a test note.
         - op: skip_field
+          field_id: optional_date
+          role: agent
+          reason: No value in mock form
+        - op: skip_field
           field_id: optional_number
+          role: agent
+          reason: No value in mock form
+        - op: skip_field
+          field_id: optional_year
           role: agent
           reason: No value in mock form
         - op: set_url_list
@@ -181,9 +219,9 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: bdf33a4ca1ca4b0ae0005a5ff53b70a19b58838ac1076fe42a91de0781986096
-      answered_field_count: 14
-      skipped_field_count: 1
+      markdown_sha256: a213d1ab8c4660151e352e320aac257df53e940b1d67a2a479516fca7427e189
+      answered_field_count: 16
+      skipped_field_count: 3
 final:
   expect_complete: true
   expected_completed_form: simple-mock-filled.form.md

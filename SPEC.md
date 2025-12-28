@@ -212,6 +212,8 @@ field a `Field` or `FieldValue` represents.
 | --- | --- | --- |
 | `string-field` | `'string'` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
 | `number-field` | `'number'` | Numeric value; optional `min`, `max`, `integer` |
+| `date-field` | `'date'` | ISO 8601 date (YYYY-MM-DD); optional `min`, `max` date constraints |
+| `year-field` | `'year'` | Integer year; optional `min`, `max` year constraints |
 | `string-list` | `'string_list'` | Array of strings (open-ended list); supports `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
 | `single-select` | `'single_select'` | Select one option from enumerated list |
 | `multi-select` | `'multi_select'` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
@@ -1741,6 +1743,32 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | Zod | `z.array(z.string().url()).min(n).max(m)` |
 | JSON Schema | `{ type: "array", items: { type: "string", format: "uri" }, minItems, maxItems, uniqueItems }` |
 
+**`date-field`** — ISO 8601 date value (YYYY-MM-DD)
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `date-field` |
+| TypeScript interface | `DateField` |
+| TypeScript kind | `'date'` |
+| Attributes | `id`, `label`, `required`, `min`, `max` |
+| FieldValue | `{ kind: 'date'; value: string \| null }` |
+| Patch operation | `{ op: 'set_date'; fieldId: Id; value: string \| null }` |
+| Zod | `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)` |
+| JSON Schema | `{ type: "string", format: "date" }` |
+
+**`year-field`** — Integer year value
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `year-field` |
+| TypeScript interface | `YearField` |
+| TypeScript kind | `'year'` |
+| Attributes | `id`, `label`, `required`, `min`, `max` |
+| FieldValue | `{ kind: 'year'; value: number \| null }` |
+| Patch operation | `{ op: 'set_year'; fieldId: Id; value: number \| null }` |
+| Zod | `z.number().int().min(min).max(max)` |
+| JSON Schema | `{ type: "integer", minimum: min, maximum: max }` |
+
 **Note:** `OptionId` values are local to the field (e.g., `"ten_k"`, `"bullish"`). They
 are NOT qualified with the field ID in patches or FieldValue—the field context is
 implicit.
@@ -1774,6 +1802,10 @@ Schema checks (always available, deterministic):
 | Number parsing success | `number-field` | Built-in |
 | Min/max value range | `number-field` | `min`, `max` attributes |
 | Integer constraint | `number-field` | `integer=true` attribute |
+| Date format validation | `date-field` | Built-in (ISO 8601 YYYY-MM-DD) |
+| Min/max date range | `date-field` | `min`, `max` attributes |
+| Year integer validation | `year-field` | Built-in (integer) |
+| Min/max year range | `year-field` | `min`, `max` attributes |
 | Pattern match | `string-field` | `pattern` attribute (JS regex) |
 | Min/max length | `string-field` | `minLength`, `maxLength` attributes |
 | Min/max item count | `string-list` | `minItems`, `maxItems` attributes |
@@ -1795,6 +1827,10 @@ This section provides normative definitions:
 | --- | --- | --- |
 | `string-field` | `value !== null && value.trim() !== ""` | Value may be null or empty |
 | `number-field` | `value !== null` (and parseable as number) | Value may be null |
+| `date-field` | `value !== null && isValidDate(value)` | Value may be null |
+| `year-field` | `value !== null` (and valid integer) | Value may be null |
+| `url-field` | `value !== null && isValidUrl(value)` | Value may be null |
+| `url-list` | `items.length >= max(1, minItems)` | Empty array is valid (unless `minItems` constraint) |
 | `string-list` | `items.length >= max(1, minItems)` | Empty array is valid (unless `minItems` constraint) |
 | `single-select` | Exactly one option must be selected | Zero or one option selected (never >1) |
 | `multi-select` | `selected.length >= max(1, minSelections)` | Empty selection valid (unless `minSelections` constraint) |

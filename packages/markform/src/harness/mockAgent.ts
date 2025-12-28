@@ -7,6 +7,7 @@
 
 import type {
   CheckboxesValue,
+  DateValue,
   Field,
   FieldValue,
   Id,
@@ -20,6 +21,7 @@ import type {
   StringValue,
   UrlListValue,
   UrlValue,
+  YearValue,
 } from '../engine/coreTypes.js';
 import type { Agent, AgentResponse } from './harnessTypes.js';
 
@@ -150,6 +152,10 @@ export class MockAgent implements Agent {
         return value.value !== null && value.value !== '';
       case 'url_list':
         return value.items.length > 0;
+      case 'date':
+        return value.value !== null;
+      case 'year':
+        return value.value !== null;
       default:
         return false;
     }
@@ -229,6 +235,24 @@ export class MockAgent implements Agent {
           op: 'set_url_list',
           fieldId,
           items: v.items,
+        };
+      }
+
+      case 'date': {
+        const v = value as DateValue;
+        return {
+          op: 'set_date',
+          fieldId,
+          value: v.value,
+        };
+      }
+
+      case 'year': {
+        const v = value as YearValue;
+        return {
+          op: 'set_year',
+          fieldId,
+          value: v.value,
         };
       }
 
