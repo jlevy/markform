@@ -284,7 +284,7 @@ async function runAgentFill(
         harness.getForm(),
         harnessConfig.maxPatchesPerTurn!,
       );
-      const { patches } = response;
+      const { patches, stats } = response;
 
       // Log each patch with field id, type, and value (truncated)
       for (const patch of patches) {
@@ -302,7 +302,12 @@ async function runAgentFill(
 
       // Apply patches
       stepResult = harness.apply(patches, stepResult.issues);
-      console.log(`    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining`);
+      const tokenInfo = stats
+        ? ` ${pc.dim(`(${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out)`)}`
+        : '';
+      console.log(
+        `    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining${tokenInfo}`,
+      );
 
       if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
         stepResult = harness.step();

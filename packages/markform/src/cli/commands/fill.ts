@@ -414,7 +414,10 @@ export function registerFillCommand(program: Command): void {
             const { patches, stats } = response;
 
             // Log patches with field id, type, and value (truncated)
-            logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patches:`);
+            const tokenSuffix = stats
+              ? ` ${pc.dim(`(${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out)`)}`
+              : '';
+            logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patches${tokenSuffix}:`);
             for (const patch of patches) {
               const typeName = formatPatchType(patch);
               const value = formatPatchValue(patch);
