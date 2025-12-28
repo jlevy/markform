@@ -449,7 +449,7 @@ export function isTextEntryFieldKind(kind: FieldKind): boolean {
 
 - [ ] Add placeholder/examples to `simple/simple.form.md` demonstrating usage
 
-- [ ] Add placeholder/examples to at least one field in `movie-research-simple.form.md`
+- [ ] Add placeholder/examples to at least one field in `movie-minimal-research.form.md`
 
 ## Stage 5: Validation
 

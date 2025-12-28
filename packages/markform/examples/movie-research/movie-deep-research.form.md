@@ -45,10 +45,6 @@ markform:
 Comprehensive movie research covering ratings from multiple sources, box office performance, full cast and crew, technical specifications, streaming availability, and cultural impact analysis.
 {% /description %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 1: USER INPUT
-     ═══════════════════════════════════════════════════════════════════════════ -->
-
 {% field-group id="movie_input" title="Movie Identification" %}
 
 {% string-field id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /string-field %}
@@ -59,9 +55,7 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 2: TITLE IDENTIFICATION
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Title Identification
 
 {% field-group id="title_identification" title="Title Identification" %}
 
@@ -75,10 +69,7 @@ Official title including subtitle if any (e.g., "The Lord of the Rings: The Fell
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 3: SOURCES
-     Agent should find ALL sources before filling data fields
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Sources
 
 {% field-group id="primary_sources" title="Primary Sources" %}
 
@@ -153,9 +144,7 @@ Studio or film's official website, if still active.
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 4: BASIC DETAILS
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Basic Details
 
 {% field-group id="basic_details" title="Basic Details" %}
 
@@ -215,9 +204,7 @@ Production countries, one per line.
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 5: CAST & CREW
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Cast & Crew
 
 {% field-group id="cast_crew" title="Cast & Crew" %}
 
@@ -255,9 +242,7 @@ Example: "Emma Thomas (producer)"
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 6: RATINGS
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Ratings
 
 {% field-group id="imdb_ratings" title="IMDB Ratings" %}
 
@@ -325,9 +310,7 @@ Opening weekend audience grade (A+ to F). Only available for theatrical releases
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 7: BOX OFFICE
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Box Office
 
 {% field-group id="box_office" title="Box Office" %}
 
@@ -357,9 +340,7 @@ US opening weekend gross in millions USD.
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 8: TECHNICAL SPECIFICATIONS
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Technical Specifications
 
 {% field-group id="technical_specs" title="Technical Specifications" %}
 
@@ -398,9 +379,7 @@ Primary camera system used (e.g., "Arri Alexa 65", "IMAX 15-perf", "Panavision P
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 9: STREAMING AVAILABILITY
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Streaming Availability
 
 {% field-group id="streaming_availability" title="Streaming Availability (US)" %}
 
@@ -433,48 +412,7 @@ Select all platforms where this film is currently available to stream (subscript
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 10: FRANCHISE & SOURCE MATERIAL
-     ═══════════════════════════════════════════════════════════════════════════ -->
-
-{% field-group id="franchise_info" title="Franchise & Source Material" %}
-
-{% checkboxes id="franchise_flags" label="Franchise Status" role="agent" checkboxMode="simple" %}
-- [ ] Part of a franchise {% #is_franchise %}
-- [ ] Has sequel(s) {% #has_sequels %}
-- [ ] Has prequel(s) {% #has_prequels %}
-- [ ] Is a remake/reboot {% #is_remake %}
-- [ ] Based on existing IP {% #based_on_ip %}
-{% /checkboxes %}
-
-{% string-field id="franchise_name" label="Franchise Name" role="agent" %}{% /string-field %}
-
-{% instructions ref="franchise_name" %}
-Name of the franchise if applicable (e.g., "Marvel Cinematic Universe", "Star Wars").
-{% /instructions %}
-
-{% string-field id="franchise_position" label="Position in Franchise" role="agent" %}{% /string-field %}
-
-{% instructions ref="franchise_position" %}
-Where this film sits in the franchise (e.g., "Phase 3, Film 17", "Episode V", "2nd of trilogy").
-{% /instructions %}
-
-{% string-field id="source_material" label="Source Material" role="agent" %}{% /string-field %}
-
-{% instructions ref="source_material" %}
-What the film is based on, if applicable.
-Format: Type | Title | Creator
-Examples:
-- "Novel | The Shining | Stephen King"
-- "Comic | Batman | DC Comics"
-- "Original screenplay"
-{% /instructions %}
-
-{% /field-group %}
-
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 11: CONTENT & THEMES
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Content & Themes
 
 {% field-group id="content_themes" title="Content & Themes" %}
 
@@ -501,9 +439,7 @@ Major themes explored in the film (e.g., "redemption", "family", "identity", "wa
 
 {% /field-group %}
 
-<!-- ═══════════════════════════════════════════════════════════════════════════
-     SECTION 12: SUMMARY & LEGACY
-     ═══════════════════════════════════════════════════════════════════════════ -->
+## Summary & Legacy
 
 {% field-group id="summary" title="Summary" %}
 

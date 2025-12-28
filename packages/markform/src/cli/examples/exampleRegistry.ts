@@ -35,12 +35,6 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     type: 'research',
   },
   {
-    id: 'movie-research-simple',
-    filename: 'movie-research-simple.form.md',
-    path: 'movie-research/movie-research-simple.form.md',
-    type: 'research',
-  },
-  {
     id: 'movie-basic-research',
     filename: 'movie-basic-research.form.md',
     path: 'movie-research/movie-basic-research.form.md',

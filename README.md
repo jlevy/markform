@@ -127,15 +127,20 @@ instructions, and harness configuration.
 The package includes example forms in
 [`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
 
-- `movie-research/movie-research-simple.form.md` - The simple form shown above
+- [`movie-research/movie-minimal-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-minimal-research.form.md)
+  \- Quick movie lookup (title, year, rating)
 
-- `movie-research/movie-research.form.md` - Full movie research with multiple sources
+- [`movie-research/movie-basic-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-basic-research.form.md)
+  \- Standard research with IMDB, Rotten Tomatoes, Metacritic
 
-- `simple/simple.form.md` - Basic form demonstrating all field types
+- [`movie-research/movie-deep-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-deep-research.form.md)
+  \- Comprehensive analysis with streaming, box office
 
-- `political-research/political-research.form.md` - Biographical research form
+- [`simple/simple.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/simple/simple.form.md)
+  \- Basic form demonstrating all field types
 
-- `earnings-analysis/earnings-analysis.form.md` - Financial analysis form
+- [`earnings-analysis/earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
+  \- Financial analysis form
 
 View them with `markform examples --list` or try them interactively.
 
@@ -438,6 +443,13 @@ Not really. The closest alternatives are:
 - Numerous tools like Typeform, Google Forms, PDF forms, and Docusign offer
   human-friendly UI. But these do not have a human-friendly text format for use by
   agents as well as humans.
+
+| Approach | Human-readable | Agent-editable | Custom validations |
+| --- | :---: | :---: | :---: |
+| Plain Markdown | ✅ | ⚠️ fragile | ❌ |
+| JSON Schema | ❌ | ✅ | ✅ |
+| PDF Forms, SaaS tools | ⚠️ | ❌ | ⚠️ |
+| **Markform** | ✅ | ✅ | ✅ |
 
 ### What are example use cases?
 
