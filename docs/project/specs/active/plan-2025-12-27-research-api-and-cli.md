@@ -543,22 +543,6 @@ export function getSuggestedModels(provider: string): string[];
 
 ```typescript
 /**
- * Options for runResearch - extends FillOptions with research constraints.
- * 
- * Key differences from fillForm():
- * - model must support web search (validated at start)
- * - form must be a valid research form (validated at start)
- * - defaults to RESEARCH_DEFAULTS instead of FILL_DEFAULTS
- * 
- * This avoids duplicating FillOptions fields. runResearch() is a thin
- * wrapper that validates constraints then delegates to fillForm().
- */
-export interface ResearchOptions extends FillOptions {
-  /** Skip research form validation (for testing) */
-  skipValidation?: boolean;
-}
-
-/**
  * Result of research execution.
  * Extends FillResult with research-specific metadata.
  */
@@ -579,27 +563,25 @@ export type { ResearchFormValidation } from './researchFormValidation.js';
 /**
  * Run research on a form using a web-search-capable model.
  * 
- * This is a thin wrapper around fillForm() that:
- * 1. Validates form is a valid research form (unless skipValidation)
- * 2. Validates model supports web search
- * 3. Applies RESEARCH_DEFAULTS for harness config
- * 4. Delegates to fillForm() for actual execution
+ * Takes the same FillOptions as fillForm() - no separate options type.
  * 
- * Design principle: runResearch() adds validation and defaults,
- * but reuses fillForm() for all execution logic. No duplication.
+ * Differences from fillForm():
+ * 1. Validates form is a valid research form (user fields, then agent fields)
+ * 2. Validates model supports web search (fails fast if not)
+ * 3. Applies RESEARCH_DEFAULTS instead of FILL_DEFAULTS
+ * 
+ * If you don't want these validations, use fillForm() directly.
  */
-export async function runResearch(options: ResearchOptions): Promise<ResearchResult> {
+export async function runResearch(options: FillOptions): Promise<ResearchResult> {
   // 1. Parse form if string
   const form = typeof options.form === 'string' 
     ? parseForm(options.form) 
     : options.form;
 
   // 2. Validate research form structure
-  if (!options.skipValidation) {
-    const validation = validateResearchForm(form);
-    if (!validation.valid) {
-      throw new Error(`Invalid research form: ${validation.errors.join(', ')}`);
-    }
+  const validation = validateResearchForm(form);
+  if (!validation.valid) {
+    throw new Error(`Invalid research form: ${validation.errors.join(', ')}`);
   }
 
   // 3. Validate model supports web search
