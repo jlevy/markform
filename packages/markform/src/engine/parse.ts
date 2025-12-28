@@ -394,6 +394,10 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
       function extractText(n: Node): void {
         if (n.type === 'text' && typeof n.attributes?.content === 'string') {
           bodyMarkdown += n.attributes.content;
+        } else if (n.type === 'softbreak' || n.type === 'hardbreak') {
+          // Preserve line breaks from markdown - softbreak is a single newline,
+          // hardbreak is an explicit break (e.g., two spaces at end of line)
+          bodyMarkdown += '\n';
         }
         if (n.children && Array.isArray(n.children)) {
           for (const c of n.children) {

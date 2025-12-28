@@ -396,6 +396,38 @@ markform:
         });
       }
     });
+
+    it('serializes doc blocks with proper spacing between tag name and attributes', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="notable_awards" label="Notable Awards" %}{% /string-list %}
+
+{% instructions ref="notable_awards" %}
+Major awards won. One per line.
+Format: Award | Category | Year
+Example: "Oscar | Best Picture | 1995"
+{% /instructions %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Bug: serialization was missing space between tag name and ref attribute
+      // Output was: {% instructionsref="notable_awards" %} instead of {% instructions ref="notable_awards" %}
+      expect(output).toContain('{% instructions ref="notable_awards" %}');
+      expect(output).not.toContain('{% instructionsref=');
+
+      // Also verify the body content preserves newlines
+      expect(output).toContain('One per line.\nFormat:');
+    });
   });
 
   describe('serialize with simple.form.md', () => {
