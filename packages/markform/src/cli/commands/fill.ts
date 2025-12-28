@@ -415,7 +415,7 @@ export function registerFillCommand(program: Command): void {
 
             // Log patches with field id, type, and value (truncated)
             const tokenSuffix = stats
-              ? ` ${pc.dim(`(${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out)`)}`
+              ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
               : '';
             logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patches${tokenSuffix}:`);
             for (const patch of patches) {
@@ -438,7 +438,7 @@ export function registerFillCommand(program: Command): void {
             if (stats) {
               logVerbose(
                 ctx,
-                `  Stats: ${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out tokens`,
+                `  Stats: tokens ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0}`,
               );
               if (stats.toolCalls.length > 0) {
                 const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(', ');

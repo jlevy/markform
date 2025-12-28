@@ -58,6 +58,7 @@ import {
   showInteractiveIntro,
   showInteractiveOutro,
 } from '../lib/interactivePrompts.js';
+import { showFileViewerChooser, type FileOption } from '../lib/fileViewer.js';
 
 /**
  * Print non-interactive list of examples.
@@ -303,7 +304,7 @@ async function runAgentFill(
       // Apply patches
       stepResult = harness.apply(patches, stepResult.issues);
       const tokenInfo = stats
-        ? ` ${pc.dim(`(${stats.inputTokens ?? 0} in / ${stats.outputTokens ?? 0} out)`)}`
+        ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
         : '';
       console.log(
         `    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining${tokenInfo}`,
@@ -438,6 +439,9 @@ async function runInteractiveFlow(
   const form = parseForm(content);
   const targetRoles = [USER_ROLE];
 
+  // Track output paths from user fill (will be used for file viewer if no agent fill)
+  let userFillOutputs: { formPath: string; rawPath: string; yamlPath: string } | null = null;
+
   // Inspect form to get issues for user role
   const inspectResult = inspect(form, { targetRoles });
   const fieldIssues = inspectResult.issues.filter((i) => i.scope === 'field');
@@ -478,14 +482,14 @@ async function runInteractiveFlow(
     }
 
     // Export filled form in all formats (examples command always exports all formats)
-    const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, outputPath);
+    userFillOutputs = await exportMultiFormat(form, outputPath);
 
     showInteractiveOutro(patches.length, false);
     console.log('');
     p.log.success('Outputs:');
-    console.log(`  ${formatPath(formPath)}  ${pc.dim('(markform)')}`);
-    console.log(`  ${formatPath(rawPath)}  ${pc.dim('(plain markdown)')}`);
-    console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(values as YAML)')}`);
+    console.log(`  ${formatPath(userFillOutputs.formPath)}  ${pc.dim('(markform)')}`);
+    console.log(`  ${formatPath(userFillOutputs.rawPath)}  ${pc.dim('(plain markdown)')}`);
+    console.log(`  ${formatPath(userFillOutputs.yamlPath)}  ${pc.dim('(values as YAML)')}`);
 
     logTiming(
       { verbose: false, format: 'console', dryRun: false, quiet: false },
@@ -519,6 +523,17 @@ async function runInteractiveFlow(
         : `  markform fill ${formatPath(outputPath)} --model=<provider/model>`;
       console.log(`You can run ${workflowLabel} later with:`);
       console.log(cliCommand);
+
+      // Offer to view user fill output files (if any were created)
+      if (userFillOutputs) {
+        const files: FileOption[] = [
+          { path: userFillOutputs.formPath, label: 'Markform', hint: 'form with tags' },
+          { path: userFillOutputs.rawPath, label: 'Plain Markdown', hint: 'rendered output' },
+          { path: userFillOutputs.yamlPath, label: 'YAML', hint: 'extracted values' },
+        ];
+        await showFileViewerChooser(files);
+      }
+
       p.outro('Happy form filling!');
       return;
     }
@@ -587,6 +602,14 @@ async function runInteractiveFlow(
       if (!success) {
         p.log.warn('Agent did not complete all fields. You may need to run it again.');
       }
+
+      // Offer to view output files
+      const agentFillFiles: FileOption[] = [
+        { path: formPath, label: 'Markform', hint: 'form with tags' },
+        { path: rawPath, label: 'Plain Markdown', hint: 'rendered output' },
+        { path: yamlPath, label: 'YAML', hint: 'extracted values' },
+      ];
+      await showFileViewerChooser(agentFillFiles);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const failMessage = isResearchExample ? 'Research failed' : 'Agent fill failed';
