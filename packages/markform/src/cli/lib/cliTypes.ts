@@ -30,6 +30,8 @@ export interface CommandContext {
   verbose: boolean;
   quiet: boolean;
   format: OutputFormat;
+  /** Optional forms directory override from --forms-dir CLI option */
+  formsDir?: string;
 }
 
 // =============================================================================

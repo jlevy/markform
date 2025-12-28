@@ -27,6 +27,7 @@ import {
   DEFAULT_MAX_TURNS,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_ISSUES,
+  getFormsDir,
 } from '../../settings.js';
 import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
@@ -39,8 +40,15 @@ import {
   getExamplePath,
   loadExampleContent,
 } from '../examples/exampleRegistry.js';
-import { formatPath, getCommandContext, logError, logTiming, writeFile } from '../lib/shared.js';
-import { generateVersionedPath } from '../lib/versioning.js';
+import {
+  ensureFormsDir,
+  formatPath,
+  getCommandContext,
+  logError,
+  logTiming,
+  writeFile,
+} from '../lib/shared.js';
+import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
 import {
   runInteractiveFill,
   showInteractiveIntro,
@@ -235,11 +243,21 @@ async function runAgentFill(
 
 /**
  * Run the interactive example scaffolding and filling flow.
+ *
+ * @param preselectedId Optional example ID to pre-select
+ * @param formsDirOverride Optional forms directory override from CLI option
  */
-async function runInteractiveFlow(preselectedId?: string): Promise<void> {
+async function runInteractiveFlow(
+  preselectedId?: string,
+  formsDirOverride?: string,
+): Promise<void> {
   const startTime = Date.now();
 
   p.intro(pc.bgCyan(pc.black(' markform examples ')));
+
+  // Ensure forms directory exists (use override if provided)
+  const formsDir = getFormsDir(formsDirOverride);
+  await ensureFormsDir(formsDir);
 
   // Show API availability status
   showApiStatus();
@@ -272,9 +290,11 @@ async function runInteractiveFlow(preselectedId?: string): Promise<void> {
   }
 
   // Step 2: Prompt for output filename (use filled naming convention)
-  const defaultFilename = generateVersionedPath(example.filename);
+  // Generate versioned path in forms directory
+  const defaultOutputPath = generateVersionedPathInFormsDir(example.filename, formsDir);
+  const defaultFilename = basename(defaultOutputPath);
   const filenameResult = await p.text({
-    message: 'Output filename:',
+    message: `Output filename (in ${formatPath(formsDir)}):`,
     initialValue: defaultFilename,
     validate: (value) => {
       if (!value.trim()) {
@@ -293,7 +313,7 @@ async function runInteractiveFlow(preselectedId?: string): Promise<void> {
   }
 
   const filename = filenameResult;
-  const outputPath = join(process.cwd(), filename);
+  const outputPath = join(formsDir, filename);
 
   // Step 3: Check for existing file
   if (existsSync(outputPath)) {
@@ -409,11 +429,12 @@ async function runInteractiveFlow(preselectedId?: string): Promise<void> {
       process.exit(0);
     }
 
-    // Step 8: Agent output filename
-    const agentDefaultFilename = generateVersionedPath(outputPath);
+    // Step 8: Agent output filename (in forms directory)
+    const agentDefaultOutputPath = generateVersionedPathInFormsDir(outputPath, formsDir);
+    const agentDefaultFilename = basename(agentDefaultOutputPath);
     const agentFilenameResult = await p.text({
-      message: 'Agent output filename:',
-      initialValue: basename(agentDefaultFilename),
+      message: `Agent output filename (in ${formatPath(formsDir)}):`,
+      initialValue: agentDefaultFilename,
       validate: (value) => {
         if (!value.trim()) {
           return 'Filename is required';
@@ -427,7 +448,7 @@ async function runInteractiveFlow(preselectedId?: string): Promise<void> {
       process.exit(0);
     }
 
-    const agentOutputPath = join(process.cwd(), agentFilenameResult);
+    const agentOutputPath = join(formsDir, agentFilenameResult);
 
     // Step 9: Run agent fill
     const agentStartTime = Date.now();
@@ -474,7 +495,7 @@ export function registerExamplesCommand(program: Command): void {
     .option('--list', 'List available examples without interactive selection')
     .option('--name <example>', 'Select example by ID (still prompts for filename)')
     .action(async (options: { list?: boolean; name?: string }, cmd: Command) => {
-      const _ctx = getCommandContext(cmd);
+      const ctx = getCommandContext(cmd);
 
       try {
         // --list mode: just print examples and exit
@@ -496,8 +517,8 @@ export function registerExamplesCommand(program: Command): void {
           }
         }
 
-        // Run interactive flow
-        await runInteractiveFlow(options.name);
+        // Run interactive flow with optional formsDir override
+        await runInteractiveFlow(options.name, ctx.formsDir);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logError(message);

@@ -6,6 +6,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import { basename, join } from 'node:path';
 
 /**
  * Version pattern that matches -filledN or _filledN before the extension.
@@ -113,6 +114,39 @@ export function generateVersionedPath(filePath: string): string {
   while (existsSync(candidate)) {
     version++;
     candidate = `${parsed.base}-filled${version}${parsed.extension}`;
+  }
+
+  return candidate;
+}
+
+/**
+ * Generate a versioned filename within the forms directory.
+ *
+ * Derives the base name from the input path and creates a versioned
+ * output path within the specified forms directory.
+ *
+ * @param inputPath - Original input file path (used to derive basename)
+ * @param formsDir - Absolute path to the forms directory
+ * @returns Absolute path to a non-existent versioned file in formsDir
+ */
+export function generateVersionedPathInFormsDir(inputPath: string, formsDir: string): string {
+  // Get the filename from the input path
+  const inputFilename = basename(inputPath);
+
+  // Parse to get base name without version
+  const parsed = parseVersionedPath(inputFilename);
+
+  // Use the base name (stripped of any existing version) or the full filename
+  const baseName = parsed?.base ?? inputFilename.replace(/\.form\.md$/i, '');
+  const extension = parsed?.extension ?? '.form.md';
+
+  // Start from version 1 and find next available
+  let version = 1;
+  let candidate = join(formsDir, `${baseName}-filled${version}${extension}`);
+
+  while (existsSync(candidate)) {
+    version++;
+    candidate = join(formsDir, `${baseName}-filled${version}${extension}`);
   }
 
   return candidate;
