@@ -104,11 +104,9 @@ Add `markform research <file>` command that:
 
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
-- **Code types, methods, and function signatures**: DO NOT MAINTAIN - This is a new
-  feature, no existing APIs change
+- **Code types, methods, and function signatures**: DO NOT MAINTAIN - make clean changes
 
-- **Library APIs**: KEEP DEPRECATED for FillOptions/FillResult - the new ResearchOptions
-  should be a superset that extends the existing pattern
+- **Library APIs**: DO NOT MAINTAIN - just make it work cleanly with current tests
 
 - **Server APIs**: N/A
 
@@ -925,11 +923,11 @@ export function isResearchForm(form: ParsedForm): boolean;
  * and executes the fill workflow with web search enabled.
  * 
  * API design follows fillForm() pattern:
+ * - Same FillOptions type (no separate ResearchOptions)
  * - Core API works with strings/ParsedForm (no file I/O)
  * - File I/O is handled at CLI layer using shared helpers
- * - This keeps the API simple and testable
  */
-export async function runResearch(options: ResearchOptions): Promise<ResearchResult>;
+export async function runResearch(options: FillOptions): Promise<ResearchResult>;
 ```
 
 #### Settings Updates (`settings.ts`)
@@ -1384,7 +1382,7 @@ Move all LLM-related configuration from `settings.ts` to a new `src/llms.ts` fil
 
 - [ ] Create `src/research/` module directory
 
-- [ ] Add `src/research/researchTypes.ts` with ResearchOptions, ResearchResult,
+- [ ] Add `src/research/researchTypes.ts` with ResearchResult type and re-export
   ResearchFormValidation
 
 - [ ] Add `src/research/researchFormValidation.ts` with `validateResearchForm()`
