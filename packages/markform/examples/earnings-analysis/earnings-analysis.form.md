@@ -1,6 +1,8 @@
 ---
 markform:
   spec: MF/0.1
+  title: Company Quarterly Analysis
+  description: Financial analysis with one user field (company) and agent-filled quarterly analysis sections.
   roles:
     - user
     - agent

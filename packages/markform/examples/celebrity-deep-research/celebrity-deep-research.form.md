@@ -1,6 +1,8 @@
 ---
 markform:
   spec: MF/0.1
+  title: Celebrity Deep Research
+  description: Comprehensive celebrity intelligence covering biography, career, relationships, controversies, social media, and hard-to-find details.
   roles:
     - user
     - agent

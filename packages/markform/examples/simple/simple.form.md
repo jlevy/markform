@@ -1,6 +1,8 @@
 ---
 markform:
   spec: MF/0.1
+  title: Simple Test Form
+  description: User and agent roles for testing full workflow. User fills required fields, agent fills optional.
   roles:
     - user
     - agent

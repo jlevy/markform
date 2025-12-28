@@ -39,6 +39,7 @@ import {
   getExampleById,
   getExamplePath,
   loadExampleContent,
+  getAllExamplesWithMetadata,
 } from '../examples/exampleRegistry.js';
 import {
   ensureFormsDir,
@@ -60,10 +61,11 @@ import {
  */
 function printExamplesList(): void {
   console.log(pc.bold('Available examples:\n'));
-  for (const example of EXAMPLE_DEFINITIONS) {
+  const examples = getAllExamplesWithMetadata();
+  for (const example of examples) {
     console.log(`  ${pc.cyan(example.id)}`);
-    console.log(`    ${pc.bold(example.title)}`);
-    console.log(`    ${pc.dim(example.description)}`);
+    console.log(`    ${pc.bold(example.title ?? example.id)}`);
+    console.log(`    ${pc.dim(example.description ?? 'No description')}`);
     console.log(`    Source: ${formatPath(getExamplePath(example.id))}`);
     console.log('');
   }
@@ -266,11 +268,12 @@ async function runInteractiveFlow(
   let selectedId = preselectedId;
 
   if (!selectedId) {
+    const examples = getAllExamplesWithMetadata();
     const selection = await p.select({
       message: 'Select an example form to scaffold:',
-      options: EXAMPLE_DEFINITIONS.map((example) => ({
+      options: examples.map((example) => ({
         value: example.id,
-        label: example.title,
+        label: example.title ?? example.id,
         hint: example.description,
       })),
     });

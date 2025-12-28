@@ -10,6 +10,9 @@ import {
   getExampleById,
   getExampleIds,
   loadExampleContent,
+  getAllExamplesWithMetadata,
+  getExampleWithMetadata,
+  loadExampleMetadata,
 } from '../../../src/cli/examples/exampleRegistry.js';
 
 describe('examples registry', () => {
@@ -18,11 +21,9 @@ describe('examples registry', () => {
       expect(EXAMPLE_DEFINITIONS.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('each example has all required fields', () => {
+    it('each example has all required static fields', () => {
       for (const example of EXAMPLE_DEFINITIONS) {
         expect(example.id).toBeTruthy();
-        expect(example.title).toBeTruthy();
-        expect(example.description).toBeTruthy();
         expect(example.filename).toBeTruthy();
         expect(example.path).toBeTruthy();
 
@@ -32,6 +33,14 @@ describe('examples registry', () => {
         // Path should be relative path with subdirectory
         expect(example.path).toContain('/');
         expect(example.path).toMatch(/\.form\.md$/);
+      }
+    });
+
+    it('each example has title and description in frontmatter', () => {
+      for (const example of EXAMPLE_DEFINITIONS) {
+        const metadata = loadExampleMetadata(example.id);
+        expect(metadata.title).toBeTruthy();
+        expect(metadata.description).toBeTruthy();
       }
     });
 
@@ -69,12 +78,40 @@ describe('examples registry', () => {
       const example = getExampleById('simple');
       expect(example).toBeDefined();
       expect(example?.id).toBe('simple');
-      expect(example?.title).toBe('Simple Test Form');
+      expect(example?.filename).toBe('simple.form.md');
     });
 
     it('returns undefined for invalid ID', () => {
       const example = getExampleById('nonexistent');
       expect(example).toBeUndefined();
+    });
+  });
+
+  describe('getExampleWithMetadata', () => {
+    it('returns example with title and description loaded from frontmatter', () => {
+      const example = getExampleWithMetadata('simple');
+      expect(example).toBeDefined();
+      expect(example?.id).toBe('simple');
+      expect(example?.title).toBe('Simple Test Form');
+      expect(example?.description).toBeTruthy();
+    });
+
+    it('returns undefined for invalid ID', () => {
+      const example = getExampleWithMetadata('nonexistent');
+      expect(example).toBeUndefined();
+    });
+  });
+
+  describe('getAllExamplesWithMetadata', () => {
+    it('returns all examples with metadata loaded', () => {
+      const examples = getAllExamplesWithMetadata();
+      expect(examples.length).toBe(EXAMPLE_DEFINITIONS.length);
+
+      for (const example of examples) {
+        expect(example.id).toBeTruthy();
+        expect(example.title).toBeTruthy();
+        expect(example.description).toBeTruthy();
+      }
     });
   });
 
