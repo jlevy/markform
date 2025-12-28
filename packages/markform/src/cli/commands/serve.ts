@@ -8,15 +8,16 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Command } from 'commander';
 
 import { exec } from 'node:child_process';
+import { readFile as readFileAsync } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 import pc from 'picocolors';
 
 import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
 import { serialize } from '../../engine/serialize.js';
-import { DEFAULT_PORT } from '../../settings.js';
+import { DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -75,22 +76,28 @@ function openBrowser(url: string): void {
 export function registerServeCommand(program: Command): void {
   program
     .command('serve <file>')
-    .description('Serve a form as a web page for browsing')
+    .description('Serve a file as a web page (forms are interactive, others are read-only)')
     .option('-p, --port <port>', 'Port to serve on', String(DEFAULT_PORT))
     .option('--no-open', "Don't open browser automatically")
     .action(async (file: string, options: { port?: string; open?: boolean }, cmd: Command) => {
       const ctx = getCommandContext(cmd);
       const port = parseInt(options.port ?? String(DEFAULT_PORT), 10);
       const filePath = resolve(file);
+      const fileType = detectFileType(filePath);
 
       try {
         logVerbose(ctx, `Reading file: ${filePath}`);
         const content = await readFile(filePath);
-        let form = parseForm(content);
+
+        // For form files, parse and track state
+        let form: ParsedForm | null = null;
+        if (fileType === 'form') {
+          form = parseForm(content);
+        }
 
         // Start the server
         const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-          handleRequest(req, res, form, filePath, ctx, (updatedForm) => {
+          handleRequest(req, res, filePath, fileType, form, ctx, (updatedForm) => {
             form = updatedForm;
           }).catch((err) => {
             console.error('Request error:', err);
@@ -101,7 +108,9 @@ export function registerServeCommand(program: Command): void {
 
         server.listen(port, () => {
           const url = `http://localhost:${port}`;
-          logInfo(ctx, pc.green(`\n✓ Form server running at ${pc.bold(url)}\n`));
+          const typeLabel =
+            fileType === 'form' ? 'Form' : fileType === 'unknown' ? 'File' : fileType.toUpperCase();
+          logInfo(ctx, pc.green(`\n✓ ${typeLabel} server running at ${pc.bold(url)}\n`));
           logInfo(ctx, pc.dim('Press Ctrl+C to stop\n'));
 
           // Open browser by default unless --no-open is specified
@@ -126,26 +135,51 @@ export function registerServeCommand(program: Command): void {
 
 /**
  * Handle HTTP requests.
+ * Dispatches to appropriate renderer based on file type.
  */
 async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
-  form: ParsedForm,
   filePath: string,
+  fileType: FileType,
+  form: ParsedForm | null,
   ctx: CommandContext,
   updateForm: (form: ParsedForm) => void,
 ): Promise<void> {
   const url = req.url ?? '/';
 
   if (req.method === 'GET' && url === '/') {
-    // Render the form as HTML
-    const html = renderFormHtml(form);
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(html);
-  } else if (req.method === 'POST' && url === '/save') {
+    // Dispatch to appropriate renderer based on file type
+    if (fileType === 'form' && form) {
+      const html = renderFormHtml(form);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } else if (fileType === 'raw' || fileType === 'report') {
+      const content = await readFileAsync(filePath, 'utf-8');
+      const html = renderMarkdownHtml(content, basename(filePath));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } else if (fileType === 'yaml') {
+      const content = await readFileAsync(filePath, 'utf-8');
+      const html = renderYamlHtml(content, basename(filePath));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } else if (fileType === 'json') {
+      const content = await readFileAsync(filePath, 'utf-8');
+      const html = renderJsonHtml(content, basename(filePath));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    } else {
+      // Unknown file type - show as plain text
+      const content = await readFileAsync(filePath, 'utf-8');
+      const html = renderPlainTextHtml(content, basename(filePath));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+    }
+  } else if (req.method === 'POST' && url === '/save' && fileType === 'form' && form) {
     // Save the form to a new versioned file
     await handleSave(req, res, form, filePath, ctx, updateForm);
-  } else if (url === '/api/form') {
+  } else if (url === '/api/form' && form) {
     // API endpoint for form data
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ schema: form.schema }));
@@ -955,4 +989,219 @@ export function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// =============================================================================
+// Read-only Renderers for non-form file types
+// =============================================================================
+
+/** Common styles for read-only viewers */
+const READ_ONLY_STYLES = `
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #f8f9fa;
+      color: #212529;
+    }
+    h1 { color: #495057; border-bottom: 2px solid #dee2e6; padding-bottom: 0.5rem; font-size: 1.5rem; }
+    .content {
+      background: white;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      background: #e9ecef;
+      border-radius: 4px;
+      color: #6c757d;
+      margin-left: 0.75rem;
+      font-weight: normal;
+    }
+`;
+
+/**
+ * Render markdown content as read-only HTML.
+ * Simple rendering without full markdown parsing.
+ */
+function renderMarkdownHtml(content: string, filename: string): string {
+  // Simple markdown-to-html conversion (headers and paragraphs)
+  const lines = content.split('\n');
+  let html = '';
+  let inParagraph = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('# ')) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<h2>${escapeHtml(trimmed.slice(2))}</h2>`;
+    } else if (trimmed.startsWith('## ')) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<h3>${escapeHtml(trimmed.slice(3))}</h3>`;
+    } else if (trimmed.startsWith('### ')) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<h4>${escapeHtml(trimmed.slice(4))}</h4>`;
+    } else if (trimmed === '') {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+    } else {
+      if (!inParagraph) {
+        html += '<p>';
+        inParagraph = true;
+      } else {
+        html += '<br>';
+      }
+      html += escapeHtml(trimmed);
+    }
+  }
+
+  if (inParagraph) {
+    html += '</p>';
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(filename)} - Markform Viewer</title>
+  <style>${READ_ONLY_STYLES}
+    h2 { color: #495057; font-size: 1.3rem; margin-top: 1.5rem; }
+    h3 { color: #6c757d; font-size: 1.1rem; margin-top: 1.25rem; }
+    h4 { color: #6c757d; font-size: 1rem; margin-top: 1rem; }
+    p { margin: 0.75rem 0; }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(filename)}<span class="badge">Markdown</span></h1>
+  <div class="content">
+    ${html}
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Render YAML content with syntax highlighting.
+ */
+function renderYamlHtml(content: string, filename: string): string {
+  // Basic YAML syntax highlighting
+  const highlighted = content
+    .split('\n')
+    .map((line) => {
+      // Highlight keys (before colon)
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0 && !line.trim().startsWith('#') && !line.trim().startsWith('-')) {
+        const key = escapeHtml(line.slice(0, colonIndex));
+        const rest = escapeHtml(line.slice(colonIndex));
+        return `<span style="color:#9cdcfe">${key}</span>${rest}`;
+      }
+      // Highlight comments
+      if (line.trim().startsWith('#')) {
+        return `<span style="color:#6a9955">${escapeHtml(line)}</span>`;
+      }
+      return escapeHtml(line);
+    })
+    .join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(filename)} - Markform Viewer</title>
+  <style>${READ_ONLY_STYLES}</style>
+</head>
+<body>
+  <h1>${escapeHtml(filename)}<span class="badge">YAML</span></h1>
+  <div class="content">
+    <pre>${highlighted}</pre>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Render JSON content with syntax highlighting and formatting.
+ */
+function renderJsonHtml(content: string, filename: string): string {
+  // Try to pretty-print JSON
+  let formatted: string;
+  try {
+    const parsed = JSON.parse(content) as unknown;
+    formatted = JSON.stringify(parsed, null, 2);
+  } catch {
+    formatted = content;
+  }
+
+  // Basic JSON syntax highlighting
+  const highlighted = formatted
+    .replace(/"([^"]+)":/g, '<span style="color:#9cdcfe">"$1"</span>:')
+    .replace(/: "([^"]+)"/g, ': <span style="color:#ce9178">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span style="color:#b5cea8">$1</span>')
+    .replace(/: (true|false|null)/g, ': <span style="color:#569cd6">$1</span>');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(filename)} - Markform Viewer</title>
+  <style>${READ_ONLY_STYLES}</style>
+</head>
+<body>
+  <h1>${escapeHtml(filename)}<span class="badge">JSON</span></h1>
+  <div class="content">
+    <pre>${highlighted}</pre>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Render plain text content.
+ */
+function renderPlainTextHtml(content: string, filename: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(filename)} - Markform Viewer</title>
+  <style>${READ_ONLY_STYLES}</style>
+</head>
+<body>
+  <h1>${escapeHtml(filename)}<span class="badge">Text</span></h1>
+  <div class="content">
+    <pre>${escapeHtml(content)}</pre>
+  </div>
+</body>
+</html>`;
 }

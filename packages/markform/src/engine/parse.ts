@@ -23,7 +23,13 @@ import type {
 } from './coreTypes.js';
 import { DEFAULT_ROLES, DEFAULT_ROLE_INSTRUCTIONS } from '../settings.js';
 import { parseField } from './parseFields.js';
-import { getStringAttr, getValidateAttr, isTagNode, ParseError } from './parseHelpers.js';
+import {
+  getBooleanAttr,
+  getStringAttr,
+  getValidateAttr,
+  isTagNode,
+  ParseError,
+} from './parseHelpers.js';
 
 // Re-export ParseError for backward compatibility
 export { ParseError } from './parseHelpers.js';
@@ -201,6 +207,7 @@ function parseFieldGroup(
     title,
     validate: getValidateAttr(node),
     children,
+    report: getBooleanAttr(node, 'report'),
   };
 }
 
@@ -415,6 +422,7 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
         tag,
         ref,
         bodyMarkdown: bodyMarkdown.trim(),
+        report: getBooleanAttr(node, 'report'),
       });
     }
 

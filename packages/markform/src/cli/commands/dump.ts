@@ -4,6 +4,11 @@
  * A lightweight alternative to inspect that outputs only the values map,
  * without structure, progress, or validation information.
  * Useful for quick value extraction, scripting, and integration.
+ *
+ * Output includes full state for all fields:
+ * - answered: shows the value
+ * - skipped: shows reason if available
+ * - unanswered: indicates field is not yet filled
  */
 
 import type { Command } from 'commander';
@@ -11,16 +16,34 @@ import type { Command } from 'commander';
 import pc from 'picocolors';
 
 import { parseForm } from '../../engine/parse.js';
-import type { FieldValue } from '../../engine/coreTypes.js';
+import type { FieldResponse, ParsedForm } from '../../engine/coreTypes.js';
+import { toStructuredValues, toNotesArray } from '../lib/exportHelpers.js';
 import { formatOutput, getCommandContext, logError, logVerbose, readFile } from '../lib/shared.js';
 
 /**
- * Format a field value for console display.
+ * Format a field response for console display, including state information.
  */
-function formatFieldValue(value: FieldValue | undefined, useColors: boolean): string {
+function formatFieldResponse(response: FieldResponse, useColors: boolean): string {
   const dim = useColors ? pc.dim : (s: string) => s;
   const green = useColors ? pc.green : (s: string) => s;
+  const yellow = useColors ? pc.yellow : (s: string) => s;
 
+  if (response.state === 'unanswered') {
+    return dim('(unanswered)');
+  }
+
+  if (response.state === 'skipped') {
+    const reason = response.reason ? ` ${response.reason}` : '';
+    return yellow(`[skipped]${reason}`);
+  }
+
+  if (response.state === 'aborted') {
+    const reason = response.reason ? ` ${response.reason}` : '';
+    return yellow(`[aborted]${reason}`);
+  }
+
+  // state === 'answered'
+  const value = response.value;
   if (!value) {
     return dim('(empty)');
   }
@@ -55,49 +78,23 @@ function formatFieldValue(value: FieldValue | undefined, useColors: boolean): st
 }
 
 /**
- * Format values for console output.
+ * Format form responses for console output, showing all fields with their states.
  */
-function formatConsoleValues(values: Record<string, FieldValue>, useColors: boolean): string {
+function formatConsoleResponses(form: ParsedForm, useColors: boolean): string {
   const lines: string[] = [];
   const bold = useColors ? pc.bold : (s: string) => s;
+  const dim = useColors ? pc.dim : (s: string) => s;
 
-  for (const [fieldId, value] of Object.entries(values)) {
-    const valueStr = formatFieldValue(value, useColors);
+  for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+    const valueStr = formatFieldResponse(response, useColors);
     lines.push(`${bold(fieldId)}: ${valueStr}`);
   }
 
   if (lines.length === 0) {
-    const dim = useColors ? pc.dim : (s: string) => s;
-    lines.push(dim('(no values)'));
+    lines.push(dim('(no fields)'));
   }
 
   return lines.join('\n');
-}
-
-/**
- * Convert FieldValue to a plain value for JSON/YAML serialization.
- */
-function toPlainValue(value: FieldValue): unknown {
-  switch (value.kind) {
-    case 'string':
-      return value.value ?? null;
-    case 'number':
-      return value.value ?? null;
-    case 'string_list':
-      return value.items;
-    case 'single_select':
-      return value.selected ?? null;
-    case 'multi_select':
-      return value.selected;
-    case 'checkboxes':
-      return value.values;
-    case 'url':
-      return value.value ?? null;
-    case 'url_list':
-      return value.items;
-    default:
-      return null;
-  }
 }
 
 /**
@@ -106,7 +103,7 @@ function toPlainValue(value: FieldValue): unknown {
 export function registerDumpCommand(program: Command): void {
   program
     .command('dump <file>')
-    .description('Extract and display form values only (lightweight inspect)')
+    .description('Extract and display form values with state (lightweight inspect)')
     .action(async (file: string, _options: Record<string, unknown>, cmd: Command) => {
       const ctx = getCommandContext(cmd);
 
@@ -117,39 +114,23 @@ export function registerDumpCommand(program: Command): void {
         logVerbose(ctx, 'Parsing form...');
         const form = parseForm(content);
 
-        // For JSON/YAML output, convert to plain values
-        // For console/plaintext, use the full FieldValue objects for formatting
+        // For JSON/YAML output, use toStructuredValues which includes state
+        // For console/plaintext, use formatted output with field states
         const isStructured = ctx.format === 'json' || ctx.format === 'yaml';
 
         if (isStructured) {
-          // Convert to plain values for structured output
-          const plainValues: Record<string, unknown> = {};
-          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-            // Only include answered fields in structured output
-            if (response.state === 'answered' && response.value) {
-              plainValues[fieldId] = toPlainValue(response.value);
-            }
-          }
-
-          // Include notes in structured output
+          // Use toStructuredValues for state-aware structured output
           const structuredOutput = {
-            values: plainValues,
-            notes: form.notes,
+            values: toStructuredValues(form),
+            ...(form.notes.length > 0 && { notes: toNotesArray(form) }),
           };
 
           const output = formatOutput(ctx, structuredOutput, () => '');
           console.log(output);
         } else {
-          // Use formatted output for console/plaintext
-          // Extract values from responses for display
-          const values: Record<string, FieldValue> = {};
-          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-            if (response.state === 'answered' && response.value) {
-              values[fieldId] = response.value;
-            }
-          }
-          const output = formatOutput(ctx, values, (data, useColors) =>
-            formatConsoleValues(data as Record<string, FieldValue>, useColors),
+          // Use formatted output for console/plaintext with state display
+          const output = formatOutput(ctx, form, (data, useColors) =>
+            formatConsoleResponses(data as ParsedForm, useColors),
           );
           console.log(output);
         }

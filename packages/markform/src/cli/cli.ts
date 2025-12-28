@@ -18,6 +18,7 @@ import { registerExportCommand } from './commands/export.js';
 import { registerFillCommand } from './commands/fill.js';
 import { registerInspectCommand } from './commands/inspect.js';
 import { registerReadmeCommand } from './commands/readme.js';
+import { registerReportCommand } from './commands/report.js';
 import { registerSpecCommand } from './commands/spec.js';
 import { registerModelsCommand } from './commands/models.js';
 import { registerRenderCommand } from './commands/render.js';
@@ -70,6 +71,7 @@ function createProgram(): Command {
   registerInspectCommand(program);
   registerModelsCommand(program);
   registerRenderCommand(program);
+  registerReportCommand(program);
   registerResearchCommand(program);
   registerServeCommand(program);
   registerValidateCommand(program);
