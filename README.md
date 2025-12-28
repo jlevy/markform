@@ -50,42 +50,72 @@ It combines YAML frontmatter with Markdoc-tagged content:
 ---
 markform:
   spec: MF/0.1
-  roles:
+  title: Movie Research (Simple)
+  roles:              # Who can fill fields
     - user
     - agent
-  role_instructions:
-    user: "Fill in your details."
-    agent: "Complete the analysis fields."
+  role_instructions:  # Instructions shown to each role
+    user: "Enter the movie title."
+    agent: "Research the movie and fill in the details from IMDB."
 ---
 
-{% form id="my_form" title="My Form" %}
+{% form id="movie_research" title="Movie Research" %}
 
-{% field-group id="basics" title="Basic Info" %}
+{% field-group id="input" title="Input" %}
 
-{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}
+<!-- User fills this field -->
+{% string-field id="movie" label="Movie" role="user" required=true %}{% /string-field %}
 
-{% number-field id="score" label="Score" role="agent" min=0 max=100 %}{% /number-field %}
+{% instructions ref="movie" %}  <!-- Guidance for filling the field -->
+Enter the movie title (e.g., "The Matrix" or "Barbie 2023").
+{% /instructions %}
+
+{% /field-group %}
+
+{% field-group id="details" title="Movie Details" %}
+
+<!-- Agent researches and fills these fields -->
+{% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
+
+{% number-field id="year" label="Release Year" role="agent" min=1888 max=2030 %}{% /number-field %}
+
+{% url-field id="imdb_url" label="IMDB URL" role="agent" %}{% /url-field %}
+
+{% number-field id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /number-field %}
+
+{% string-field id="logline" label="Summary" role="agent" maxLength=200 %}{% /string-field %}
 
 {% /field-group %}
 
 {% /form %}
 ```
 
+This is a simplified version of the
+[full movie research form](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research.form.md),
+which includes multiple rating sources (IMDB, Rotten Tomatoes, Metacritic), detailed
+instructions, and harness configuration.
+
 **Key concepts:**
 
 - **Roles**: Define who fills what (`user` for humans, `agent` for AI)
 
-- **Field types**: `string-field`, `number-field`, `string-list`, `single-select`,
-  `multi-select`, `checkboxes`
+- **Field types**: `string-field`, `number-field`, `url-field`, `string-list`,
+  `single-select`, `multi-select`, `checkboxes`
 
 - **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
 
 - **Structure**: Fields organized in `field-group` containers
 
-### More Complex Research Form Examples
+- **Instructions**: Per-field guidance for users or agents
+
+### More Example Forms
 
 The package includes example forms in
 [`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
+
+- `movie-research/movie-research-simple.form.md` - The simple form shown above
+
+- `movie-research/movie-research.form.md` - Full movie research with multiple sources
 
 - `simple/simple.form.md` - Basic form demonstrating all field types
 
