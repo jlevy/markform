@@ -29,7 +29,7 @@ npm install -g markform
 npm install markform
 ```
 
-Requires Node.js 24+.
+Requires Node.js 20+ (v24 recommended).
 
 ## Quick Start
 
