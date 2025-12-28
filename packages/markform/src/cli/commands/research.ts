@@ -14,7 +14,12 @@ import pc from 'picocolors';
 import { parseForm } from '../../engine/parse.js';
 import { applyPatches } from '../../engine/apply.js';
 import { runResearch } from '../../research/runResearch.js';
-import { formatSuggestedLlms, hasWebSearchSupport, WEB_SEARCH_CONFIG } from '../../llms.js';
+import {
+  formatSuggestedLlms,
+  hasWebSearchSupport,
+  parseModelIdForDisplay,
+  WEB_SEARCH_CONFIG,
+} from '../../llms.js';
 import {
   AGENT_ROLE,
   getFormsDir,
@@ -89,8 +94,7 @@ export function registerResearchCommand(program: Command): void {
 
         // Validate model supports web search
         const modelId = options.model as string;
-        const providerMatch = /^([^/]+)\//.exec(modelId);
-        const provider: string = providerMatch?.[1] ?? modelId;
+        const { provider, model: modelName } = parseModelIdForDisplay(modelId);
 
         if (!hasWebSearchSupport(provider)) {
           const webSearchProviders = Object.entries(WEB_SEARCH_CONFIG)
@@ -161,10 +165,8 @@ export function registerResearchCommand(program: Command): void {
         logVerbose(ctx, `Max patches/turn: ${maxPatchesPerTurn}`);
         logVerbose(ctx, `Max issues/turn: ${maxIssuesPerTurn}`);
 
-        // Extract model name from modelId for spinner display (provider already extracted at line 92)
-        const modelName = modelId.includes('/') ? modelId.split('/')[1]! : modelId;
-
         // Create spinner for research operation (only for TTY, not quiet mode)
+        // Note: provider and modelName already extracted via parseModelIdForDisplay above
         const spinner =
           process.stdout.isTTY && !ctx.quiet
             ? createSpinner({

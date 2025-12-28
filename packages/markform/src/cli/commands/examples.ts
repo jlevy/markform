@@ -30,7 +30,7 @@ import {
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   getFormsDir,
 } from '../../settings.js';
-import { SUGGESTED_LLMS, hasWebSearchSupport } from '../../llms.js';
+import { SUGGESTED_LLMS, hasWebSearchSupport, parseModelIdForDisplay } from '../../llms.js';
 import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
 import { formatTurnIssues } from '../lib/formatting.js';
@@ -245,9 +245,7 @@ async function runAgentFill(
   configOverrides?: Partial<HarnessConfig>,
 ): Promise<{ success: boolean; turnCount: number }> {
   // Extract provider and model name for spinner display
-  const [providerName, modelName] = modelId.includes('/')
-    ? (modelId.split('/') as [string, string])
-    : ['unknown', modelId];
+  const { provider: providerName, model: modelName } = parseModelIdForDisplay(modelId);
 
   // Use enhanced spinner for model resolution
   const resolveSpinner = createSpinner({

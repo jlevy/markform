@@ -356,13 +356,13 @@ export function registerFillCommand(program: Command): void {
             agent = createMockAgent(mockForm);
           } else {
             // Live agent uses LLM (model is required, validated above)
-            const modelId = options.model!;
-            logVerbose(ctx, `Resolving model: ${modelId}`);
-            const { model, provider } = await resolveModel(modelId);
+            const modelIdString = options.model!;
+            logVerbose(ctx, `Resolving model: ${modelIdString}`);
+            const { model, provider, modelId } = await resolveModel(modelIdString);
 
             // Store provider and model name for spinner display
             agentProvider = provider;
-            agentModelName = modelId.includes('/') ? modelId.split('/')[1] : modelId;
+            agentModelName = modelId;
 
             // Determine system prompt: --instructions > --prompt > default
             let systemPrompt: string | undefined;
