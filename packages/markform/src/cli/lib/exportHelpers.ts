@@ -9,9 +9,9 @@
 
 import YAML from 'yaml';
 
-import { serialize, serializeRawMarkdown } from '../../engine/serialize.js';
+import { serialize, serializeReportMarkdown } from '../../engine/serialize.js';
 import type { ParsedForm } from '../../engine/coreTypes.js';
-import { deriveExportPath } from '../../settings.js';
+import { deriveExportPath, deriveReportPath } from '../../settings.js';
 import type { ExportResult } from './cliTypes.js';
 import { writeFile } from './shared.js';
 
@@ -110,24 +110,30 @@ export function toNotesArray(form: ParsedForm) {
  * Derive export paths from a base form path.
  * Uses centralized extension constants from settings.ts.
  *
+ * Standard exports: report, values (yaml), form.
+ * Raw markdown is available via CLI but not in standard exports.
+ *
  * @param basePath - Path to the .form.md file
  * @returns Object with paths for all export formats
  */
 export function deriveExportPaths(basePath: string): ExportResult {
   return {
-    formPath: deriveExportPath(basePath, 'form'),
-    rawPath: deriveExportPath(basePath, 'raw'),
+    reportPath: deriveReportPath(basePath),
     yamlPath: deriveExportPath(basePath, 'yaml'),
+    formPath: deriveExportPath(basePath, 'form'),
   };
 }
 
 /**
  * Export form to multiple formats.
  *
- * Writes:
+ * Standard exports:
+ * - Report format (.report.md) - filtered markdown (excludes instructions, report=false)
+ * - YAML values (.yml) - structured format with state and notes
  * - Markform format (.form.md) - canonical form with directives
- * - Raw markdown (.raw.md) - plain readable markdown (no directives)
- * - YAML values (.yml) - structured format with state and notes (markform-218, markform-219)
+ *
+ * Note: Raw markdown (.raw.md) is available via CLI `markform export --raw`
+ * but is not included in standard multi-format export.
  *
  * @param form - The parsed form to export
  * @param basePath - Base path for the .form.md file (other paths are derived)
@@ -136,13 +142,9 @@ export function deriveExportPaths(basePath: string): ExportResult {
 export async function exportMultiFormat(form: ParsedForm, basePath: string): Promise<ExportResult> {
   const paths = deriveExportPaths(basePath);
 
-  // Export form markdown
-  const formContent = serialize(form);
-  await writeFile(paths.formPath, formContent);
-
-  // Export raw markdown
-  const rawContent = serializeRawMarkdown(form);
-  await writeFile(paths.rawPath, rawContent);
+  // Export report markdown (filtered, no instructions, excludes report=false)
+  const reportContent = serializeReportMarkdown(form);
+  await writeFile(paths.reportPath, reportContent);
 
   // Export YAML values with structured format (markform-218, markform-219)
   const values = toStructuredValues(form);
@@ -153,6 +155,10 @@ export async function exportMultiFormat(form: ParsedForm, basePath: string): Pro
   };
   const yamlContent = YAML.stringify(exportData);
   await writeFile(paths.yamlPath, yamlContent);
+
+  // Export form markdown
+  const formContent = serialize(form);
+  await writeFile(paths.formPath, formContent);
 
   return paths;
 }

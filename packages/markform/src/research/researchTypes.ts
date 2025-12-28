@@ -37,10 +37,10 @@ export interface ResearchResult {
   availableTools?: string[];
 
   // File outputs (if form was saved)
-  /** Path to saved .form.md file */
-  formPath?: string;
-  /** Path to saved .raw.md file */
-  rawPath?: string;
+  /** Path to saved .report.md file */
+  reportPath?: string;
   /** Path to saved .yaml file */
   yamlPath?: string;
+  /** Path to saved .form.md file */
+  formPath?: string;
 }

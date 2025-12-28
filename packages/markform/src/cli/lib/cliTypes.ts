@@ -40,11 +40,15 @@ export interface CommandContext {
 
 /**
  * Result of multi-format export.
+ *
+ * Standard exports: report (.report.md), values (.yml), form (.form.md).
+ * Note: Raw markdown (.raw.md) is available via CLI `markform export --raw` but
+ * is not included in standard multi-format export.
  */
 export interface ExportResult {
-  formPath: string;
-  rawPath: string;
+  reportPath: string;
   yamlPath: string;
+  formPath: string;
 }
 
 // =============================================================================

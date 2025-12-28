@@ -279,15 +279,15 @@ export function registerFillCommand(program: Command): void {
               logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
               showInteractiveOutro(patches.length, false);
             } else {
-              // Export all formats (form, raw markdown, YAML)
-              const { formPath, rawPath, yamlPath } = await exportMultiFormat(form, outputPath);
+              // Export all formats (report, yaml, form)
+              const { reportPath, yamlPath, formPath } = await exportMultiFormat(form, outputPath);
 
               showInteractiveOutro(patches.length, false);
               console.log('');
               p.log.success('Outputs:');
-              console.log(`  ${formatPath(formPath)}  ${pc.dim('(markform)')}`);
-              console.log(`  ${formatPath(rawPath)}  ${pc.dim('(plain markdown)')}`);
-              console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(values as YAML)')}`);
+              console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
+              console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
+              console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
             }
 
             logTiming(ctx, 'Fill time', durationMs);
