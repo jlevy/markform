@@ -5,8 +5,13 @@
  * types, and utilities for working with .form.md files.
  */
 
-/** Markform version. */
-export const VERSION = '0.1.0';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
+
+/** Markform version (read from package.json). */
+export const VERSION: string = pkg.version;
 
 // =============================================================================
 // Type Exports

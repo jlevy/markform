@@ -14,7 +14,12 @@ import pc from 'picocolors';
 import { parseForm } from '../../engine/parse.js';
 import { applyPatches } from '../../engine/apply.js';
 import { runResearch } from '../../research/runResearch.js';
-import { formatSuggestedLlms, hasWebSearchSupport, WEB_SEARCH_CONFIG } from '../../llms.js';
+import {
+  formatSuggestedLlms,
+  hasWebSearchSupport,
+  parseModelIdForDisplay,
+  WEB_SEARCH_CONFIG,
+} from '../../llms.js';
 import {
   AGENT_ROLE,
   getFormsDir,
@@ -23,6 +28,7 @@ import {
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
 } from '../../settings.js';
 import {
+  createSpinner,
   getCommandContext,
   logError,
   logInfo,
@@ -88,8 +94,7 @@ export function registerResearchCommand(program: Command): void {
 
         // Validate model supports web search
         const modelId = options.model as string;
-        const providerMatch = /^([^/]+)\//.exec(modelId);
-        const provider = providerMatch?.[1] ?? modelId;
+        const { provider, model: modelName } = parseModelIdForDisplay(modelId);
 
         if (!hasWebSearchSupport(provider)) {
           const webSearchProviders = Object.entries(WEB_SEARCH_CONFIG)
@@ -160,15 +165,33 @@ export function registerResearchCommand(program: Command): void {
         logVerbose(ctx, `Max patches/turn: ${maxPatchesPerTurn}`);
         logVerbose(ctx, `Max issues/turn: ${maxIssuesPerTurn}`);
 
+        // Create spinner for research operation (only for TTY, not quiet mode)
+        // Note: provider and modelName already extracted via parseModelIdForDisplay above
+        const spinner =
+          process.stdout.isTTY && !ctx.quiet
+            ? createSpinner({
+                type: 'api',
+                provider,
+                model: modelName,
+              })
+            : null;
+
         // Run research fill
-        const result = await runResearch(form, {
-          model: modelId,
-          maxTurns,
-          maxPatchesPerTurn,
-          maxIssuesPerTurn,
-          targetRoles: [AGENT_ROLE],
-          fillMode: 'continue',
-        });
+        let result;
+        try {
+          result = await runResearch(form, {
+            model: modelId,
+            maxTurns,
+            maxPatchesPerTurn,
+            maxIssuesPerTurn,
+            targetRoles: [AGENT_ROLE],
+            fillMode: 'continue',
+          });
+          spinner?.stop();
+        } catch (error) {
+          spinner?.error('Research failed');
+          throw error;
+        }
 
         // Log tools used
         if (result.availableTools) {
