@@ -2,8 +2,6 @@ session_version: 0.1.0
 mode: mock
 form:
   path: simple.form.md
-mock:
-  completed_mock: simple-mock-filled.form.md
 harness:
   max_turns: 100
   max_patches_per_turn: 20
@@ -120,7 +118,7 @@ turns:
             test: na
     after:
       required_issue_count: 2
-      markdown_sha256: 52eebab0fcb220df8b7a013325828496d576ba946edfac585eb3877715a30148
+      markdown_sha256: db1344c35d062b08de6c9079d8607de3483d192d08f459fe4ee056e0545372be
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
@@ -157,6 +155,12 @@ turns:
           severity: recommended
           priority: 3
         - ref: optional_year
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+        - ref: project_tasks
           scope: field
           reason: optional_empty
           message: Optional field has no value
@@ -205,6 +209,10 @@ turns:
           field_id: optional_year
           role: agent
           reason: No value in mock form
+        - op: skip_field
+          field_id: project_tasks
+          role: agent
+          reason: No value in mock form
         - op: set_url_list
           field_id: references
           items:
@@ -219,9 +227,36 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: a213d1ab8c4660151e352e320aac257df53e940b1d67a2a479516fca7427e189
+      markdown_sha256: 8ccc26d72bca98bda674c127ead5e0c5b58608f36131f59a232e20957aea840c
       answered_field_count: 16
-      skipped_field_count: 3
+      skipped_field_count: 4
+  - turn: 3
+    inspect:
+      issues:
+        - ref: team_members
+          scope: field
+          reason: optional_empty
+          message: Optional field has no value
+          severity: recommended
+          priority: 3
+    apply:
+      patches:
+        - op: set_table
+          field_id: team_members
+          rows:
+            - name: Alice
+              role: Engineer
+              start_date: 2024-01-15
+            - name: Bob
+              role: Designer
+              start_date: 2023-06-01
+    after:
+      required_issue_count: 0
+      markdown_sha256: 8ecd2b2c7194e8aa6feded78887e6ae818635b035a4ab366ca0655c13f93b902
+      answered_field_count: 17
+      skipped_field_count: 4
 final:
   expect_complete: true
   expected_completed_form: simple-mock-filled.form.md
+mock:
+  completed_mock: simple-mock-filled.form.md

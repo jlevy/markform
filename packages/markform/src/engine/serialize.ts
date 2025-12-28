@@ -6,9 +6,11 @@
  */
 
 import type {
+  CellResponse,
   CheckboxesField,
   CheckboxesValue,
   CheckboxValue,
+  ColumnTypeName,
   DateField,
   DateValue,
   DocumentationBlock,
@@ -30,6 +32,10 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  TableColumn,
+  TableField,
+  TableRowResponse,
+  TableValue,
   UrlField,
   UrlListField,
   UrlListValue,
@@ -817,6 +823,127 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
 }
 
 /**
+ * Serialize a cell value for table output.
+ */
+function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): string {
+  if (cell.state === 'skipped') {
+    return cell.reason ? `%SKIP:${cell.reason}%` : '%SKIP%';
+  }
+  if (cell.state === 'aborted') {
+    return cell.reason ? `%ABORT:${cell.reason}%` : '%ABORT%';
+  }
+  if (cell.value === undefined || cell.value === null) {
+    return '';
+  }
+  // Convert value to string based on type
+  if (typeof cell.value === 'number') {
+    return String(cell.value);
+  }
+  return cell.value;
+}
+
+/**
+ * Serialize a table row to markdown table row format.
+ */
+function serializeTableRow(row: TableRowResponse, columns: TableColumn[]): string {
+  const cells = columns.map((col) => {
+    const cell = row[col.id] ?? { state: 'skipped' };
+    return serializeCellValue(cell, col.type);
+  });
+  return `| ${cells.join(' | ')} |`;
+}
+
+/**
+ * Serialize a table value to markdown table format.
+ */
+function serializeMarkdownTable(value: TableValue, columns: TableColumn[]): string {
+  if (columns.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = [];
+
+  // Header row
+  const headerCells = columns.map((col) => col.label);
+  lines.push(`| ${headerCells.join(' | ')} |`);
+
+  // Separator row
+  const separatorCells = columns.map(() => '---');
+  lines.push(`| ${separatorCells.join(' | ')} |`);
+
+  // Data rows
+  for (const row of value.rows) {
+    lines.push(serializeTableRow(row, columns));
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Serialize a table-field.
+ */
+function serializeTableField(field: TableField, response: FieldResponse | undefined): string {
+  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  if (field.required) {
+    attrs.required = field.required;
+  }
+  if (field.priority !== DEFAULT_PRIORITY) {
+    attrs.priority = field.priority;
+  }
+  if (field.role !== AGENT_ROLE) {
+    attrs.role = field.role;
+  }
+
+  // Column attributes
+  attrs.columnIds = field.columns.map((c) => c.id);
+  attrs.columnLabels = field.columns.map((c) => c.label);
+  attrs.columnTypes = field.columns.map((c) => {
+    if (c.required) {
+      return { type: c.type, required: true };
+    }
+    return c.type;
+  });
+
+  if (field.minRows !== undefined) {
+    attrs.minRows = field.minRows;
+  }
+  if (field.maxRows !== undefined) {
+    attrs.maxRows = field.maxRows;
+  }
+  if (field.validate) {
+    attrs.validate = field.validate;
+  }
+  if (field.report !== undefined) {
+    attrs.report = field.report;
+  }
+
+  // Add state attribute for skipped/aborted
+  if (response?.state === 'skipped' || response?.state === 'aborted') {
+    attrs.state = response.state;
+  }
+
+  const attrStr = serializeAttrs(attrs);
+  let content = '';
+
+  // Extract value from response if state is "answered"
+  if (response?.state === 'answered' && response.value) {
+    const value = response.value as TableValue;
+    if (value.rows.length > 0) {
+      const tableContent = serializeMarkdownTable(value, field.columns);
+      content = formatValueFence(tableContent);
+    }
+  }
+
+  // Sentinel with reason for skipped/aborted overrides value content
+  const sentinelContent = getSentinelContent(response);
+  if (sentinelContent) {
+    content = sentinelContent;
+  }
+
+  return `{% table-field ${attrStr} %}${content}{% /table-field %}`;
+}
+
+/**
  * Serialize a field to Markdoc format.
  */
 function serializeField(field: Field, responses: Record<Id, FieldResponse>): string {
@@ -843,6 +970,8 @@ function serializeField(field: Field, responses: Record<Id, FieldResponse>): str
       return serializeDateField(field, response);
     case 'year':
       return serializeYearField(field, response);
+    case 'table':
+      return serializeTableField(field, response);
   }
 }
 
@@ -1155,6 +1284,15 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       const yearValue = value as YearValue | undefined;
       if (yearValue?.value !== null && yearValue?.value !== undefined) {
         lines.push(String(yearValue.value));
+      } else {
+        lines.push('_(empty)_');
+      }
+      break;
+    }
+    case 'table': {
+      const tableValue = value as TableValue | undefined;
+      if (tableValue?.rows && tableValue.rows.length > 0) {
+        lines.push(`_(${tableValue.rows.length} rows)_`);
       } else {
         lines.push('_(empty)_');
       }

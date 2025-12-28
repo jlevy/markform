@@ -7,7 +7,14 @@
  * - Batch coercion of InputContext with warnings/errors
  */
 
-import type { CheckboxValue, Field, OptionId, ParsedForm, Patch } from './coreTypes.js';
+import type {
+  CheckboxValue,
+  Field,
+  OptionId,
+  ParsedForm,
+  Patch,
+  TableRowPatch,
+} from './coreTypes.js';
 
 // =============================================================================
 // Raw Input Types
@@ -468,6 +475,56 @@ function coerceToYear(fieldId: string, rawValue: RawFieldValue): CoercionResult 
   };
 }
 
+/**
+ * Coerce raw value to SetTablePatch.
+ * Accepts:
+ * - Array of row objects: [{ col1: value1, col2: value2 }, ...]
+ * - Empty array: [] (valid for optional tables or minRows=0)
+ */
+function coerceToTable(fieldId: string, rawValue: RawFieldValue): CoercionResult {
+  // Handle null as clear
+  if (rawValue === null) {
+    return {
+      ok: true,
+      patch: { op: 'set_table', fieldId, rows: [] },
+    };
+  }
+
+  // Must be an array
+  if (!Array.isArray(rawValue)) {
+    return {
+      ok: false,
+      error: `Table value for field '${fieldId}' must be an array of rows, got ${typeof rawValue}`,
+    };
+  }
+
+  // Empty array is valid
+  if (rawValue.length === 0) {
+    return {
+      ok: true,
+      patch: { op: 'set_table', fieldId, rows: [] },
+    };
+  }
+
+  // Process each row
+  const rows: TableRowPatch[] = [];
+  for (let i = 0; i < rawValue.length; i++) {
+    const row = rawValue[i];
+    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
+      return {
+        ok: false,
+        error: `Row ${i} for table field '${fieldId}' must be an object, got ${Array.isArray(row) ? 'array' : typeof row}`,
+      };
+    }
+    rows.push(row as TableRowPatch);
+  }
+
+  return {
+    ok: true,
+    patch: { op: 'set_table', fieldId, rows },
+  };
+}
+
 // =============================================================================
 // Main Coercion Functions
 // =============================================================================
@@ -506,6 +563,8 @@ export function coerceToFieldPatch(
       return coerceToDate(fieldId, rawValue);
     case 'year':
       return coerceToYear(fieldId, rawValue);
+    case 'table':
+      return coerceToTable(fieldId, rawValue);
   }
 }
 

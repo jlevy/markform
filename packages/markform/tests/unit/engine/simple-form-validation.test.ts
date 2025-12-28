@@ -46,12 +46,12 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
       const summary = computeStructureSummary(form.schema);
 
       // Expected counts based on simple.form.md:
-      // 19 fields: name, email, age, score, tags, priority, categories,
+      // 21 fields: name, email, age, score, tags, priority, categories,
       //   tasks_multi, tasks_simple, confirmations, website, references,
-      //   event_date, founded_year, notes, optional_number, related_url, optional_date, optional_year
-      // 7 groups: basic_fields, list_fields, selection_fields, checkbox_fields, url_fields, date_fields, optional_fields
-      expect(summary.fieldCount).toBe(19);
-      expect(summary.groupCount).toBe(7);
+      //   event_date, founded_year, team_members, project_tasks, notes, optional_number, related_url, optional_date, optional_year
+      // 8 groups: basic_fields, list_fields, selection_fields, checkbox_fields, url_fields, date_fields, table_fields, optional_fields
+      expect(summary.fieldCount).toBe(21);
+      expect(summary.groupCount).toBe(8);
 
       // Check field types
       expect(summary.fieldCountByKind.string).toBe(3); // name, email, notes
@@ -64,6 +64,7 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
       expect(summary.fieldCountByKind.url_list).toBe(1); // references
       expect(summary.fieldCountByKind.date).toBe(2); // event_date, optional_date
       expect(summary.fieldCountByKind.year).toBe(2); // founded_year, optional_year
+      expect(summary.fieldCountByKind.table).toBe(2); // team_members, project_tasks
     });
 
     it('has all required fields marked correctly', async () => {

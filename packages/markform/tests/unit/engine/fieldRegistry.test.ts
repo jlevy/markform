@@ -21,8 +21,8 @@ import { FieldKindSchema, type FieldValue } from '../../../src/engine/coreTypes.
 
 describe('fieldRegistry', () => {
   describe('FIELD_KINDS', () => {
-    it('should contain all 10 field kinds', () => {
-      expect(FIELD_KINDS).toHaveLength(10);
+    it('should contain all 11 field kinds', () => {
+      expect(FIELD_KINDS).toHaveLength(11);
       expect(FIELD_KINDS).toContain('string');
       expect(FIELD_KINDS).toContain('number');
       expect(FIELD_KINDS).toContain('string_list');
@@ -33,6 +33,7 @@ describe('fieldRegistry', () => {
       expect(FIELD_KINDS).toContain('url_list');
       expect(FIELD_KINDS).toContain('date');
       expect(FIELD_KINDS).toContain('year');
+      expect(FIELD_KINDS).toContain('table');
     });
 
     it('should match FieldKindSchema from coreTypes', () => {
@@ -54,7 +55,7 @@ describe('fieldRegistry', () => {
       type _HasPatch = _Entry['patch'];
       type _HasEmptyValue = _Entry['emptyValue'];
 
-      expect(kinds.length).toBe(10); // If we get here, types are correct
+      expect(kinds.length).toBe(11); // If we get here, types are correct
     });
   });
 
@@ -181,6 +182,8 @@ describe('fieldRegistry', () => {
             return 'date';
           case 'year':
             return 'year';
+          case 'table':
+            return 'table';
           default: {
             // Exhaustiveness check
             const _exhaustive: never = kind;

@@ -36,6 +36,7 @@ export const FIELD_KINDS = [
   'url_list',
   'date',
   'year',
+  'table',
 ] as const;
 
 /** Field kind discriminant - derived from the tuple */
@@ -56,6 +57,7 @@ import type {
   UrlListField,
   DateField,
   YearField,
+  TableField,
   StringValue,
   NumberValue,
   StringListValue,
@@ -66,6 +68,7 @@ import type {
   UrlListValue,
   DateValue,
   YearValue,
+  TableValue,
   SetStringPatch,
   SetNumberPatch,
   SetStringListPatch,
@@ -76,6 +79,7 @@ import type {
   SetUrlListPatch,
   SetDatePatch,
   SetYearPatch,
+  SetTablePatch,
 } from './coreTypes.js';
 
 /**
@@ -142,6 +146,12 @@ export interface FieldTypeMap {
     value: YearValue;
     patch: SetYearPatch;
     emptyValue: { kind: 'year'; value: null };
+  };
+  table: {
+    field: TableField;
+    value: TableValue;
+    patch: SetTablePatch;
+    emptyValue: { kind: 'table'; rows: [] };
   };
 }
 
@@ -236,6 +246,8 @@ export function createEmptyValue(kind: FieldKind): FieldValue {
       return { kind: 'date', value: null };
     case 'year':
       return { kind: 'year', value: null };
+    case 'table':
+      return { kind: 'table', rows: [] };
     default:
       return assertNever(kind);
   }
@@ -256,6 +268,7 @@ import {
   UrlListFieldSchema,
   DateFieldSchema,
   YearFieldSchema,
+  TableFieldSchema,
   StringValueSchema,
   NumberValueSchema,
   StringListValueSchema,
@@ -266,6 +279,7 @@ import {
   UrlListValueSchema,
   DateValueSchema,
   YearValueSchema,
+  TableValueSchema,
   SetStringPatchSchema,
   SetNumberPatchSchema,
   SetStringListPatchSchema,
@@ -276,6 +290,7 @@ import {
   SetUrlListPatchSchema,
   SetDatePatchSchema,
   SetYearPatchSchema,
+  SetTablePatchSchema,
 } from './coreTypes.js';
 
 /**
@@ -332,6 +347,11 @@ export const FIELD_SCHEMAS = {
     field: YearFieldSchema,
     value: YearValueSchema,
     patch: SetYearPatchSchema,
+  },
+  table: {
+    field: TableFieldSchema,
+    value: TableValueSchema,
+    patch: SetTablePatchSchema,
   },
 } as const satisfies Record<
   FieldKind,

@@ -273,3 +273,101 @@ export function extractFenceValue(node: Node): string | null {
 
   return null;
 }
+
+/**
+ * Extract table content from node children.
+ * Handles both raw text and Markdoc-parsed table nodes.
+ * Reconstructs markdown table format from the AST.
+ */
+export function extractTableContent(node: Node): string | null {
+  const lines: string[] = [];
+
+  function extractTextFromNode(n: Node): string {
+    if (!n || typeof n !== 'object') return '';
+    if (n.type === 'text' && typeof n.attributes?.content === 'string') {
+      return n.attributes.content;
+    }
+    if (n.children && Array.isArray(n.children)) {
+      return n.children.map(extractTextFromNode).join('');
+    }
+    return '';
+  }
+
+  function extractTableRow(trNode: Node): string {
+    if (!trNode.children || !Array.isArray(trNode.children)) return '';
+    const cells = trNode.children
+      .filter((c: Node) => c.type === 'th' || c.type === 'td')
+      .map((c: Node) => extractTextFromNode(c).trim());
+    return `| ${cells.join(' | ')} |`;
+  }
+
+  function processNode(child: Node): void {
+    if (!child || typeof child !== 'object') return;
+
+    // Paragraph containing text (like "| Name | Role |")
+    if (child.type === 'paragraph' || child.type === 'inline') {
+      const text = extractTextFromNode(child).trim();
+      if (text) {
+        lines.push(text);
+      }
+      return;
+    }
+
+    // Text node directly
+    if (child.type === 'text' && typeof child.attributes?.content === 'string') {
+      const text = child.attributes.content.trim();
+      if (text) {
+        lines.push(text);
+      }
+      return;
+    }
+
+    // Markdoc table node - reconstruct as markdown
+    if (child.type === 'table') {
+      // Process thead
+      const thead = child.children?.find((c: Node) => c.type === 'thead');
+      if (thead?.children) {
+        for (const tr of thead.children.filter((c: Node) => c.type === 'tr')) {
+          lines.push(extractTableRow(tr));
+        }
+      }
+
+      // If we have header rows, add separator
+      if (thead?.children?.length) {
+        const firstTr = thead.children.find((c: Node) => c.type === 'tr');
+        if (firstTr?.children) {
+          const colCount = firstTr.children.filter(
+            (c: Node) => c.type === 'th' || c.type === 'td',
+          ).length;
+          const separatorCells = Array(colCount).fill('----');
+          lines.push(`| ${separatorCells.join(' | ')} |`);
+        }
+      }
+
+      // Process tbody
+      const tbody = child.children?.find((c: Node) => c.type === 'tbody');
+      if (tbody?.children) {
+        for (const tr of tbody.children.filter((c: Node) => c.type === 'tr')) {
+          lines.push(extractTableRow(tr));
+        }
+      }
+      return;
+    }
+
+    // Traverse children for other node types
+    if (child.children && Array.isArray(child.children)) {
+      for (const c of child.children) {
+        processNode(c);
+      }
+    }
+  }
+
+  if (node.children && Array.isArray(node.children)) {
+    for (const child of node.children) {
+      processNode(child);
+    }
+  }
+
+  const result = lines.join('\n').trim();
+  return result || null;
+}

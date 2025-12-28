@@ -124,6 +124,30 @@ Enter the year the company was founded (1900-2030).
 
 {% /field-group %}
 
+{% field-group id="table_fields" title="Table Fields" %}
+
+{% table-field id="team_members" label="Team Members" role="user" minRows=0 maxRows=5 %}
+| Name | Role | Start Date |
+| string,required | string | date |
+|----|----|----|
+{% /table-field %}
+
+{% instructions ref="team_members" %}
+Add team members with their name (required), role, and start date.
+{% /instructions %}
+
+{% table-field id="project_tasks" label="Project Tasks" role="user" minRows=0 maxRows=10 %}
+| Task | Estimate (hrs) | Link |
+| string,required | number | url |
+|----|----|----|
+{% /table-field %}
+
+{% instructions ref="project_tasks" %}
+Optionally add project tasks with estimated hours and reference links.
+{% /instructions %}
+
+{% /field-group %}
+
 {% field-group id="optional_fields" title="Optional Fields" %}
 
 {% string-field id="notes" label="Notes" role="user" %}{% /string-field %}

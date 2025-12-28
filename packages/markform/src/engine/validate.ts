@@ -5,6 +5,7 @@
  */
 
 import type {
+  CellResponse,
   CheckboxesField,
   CheckboxesValue,
   DateField,
@@ -26,6 +27,10 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  TableColumn,
+  TableField,
+  TableRowResponse,
+  TableValue,
   UrlField,
   UrlListField,
   UrlListValue,
@@ -735,6 +740,180 @@ function validateYearField(field: YearField, value: YearValue | undefined): Vali
 }
 
 /**
+ * Validate a cell value according to its column type.
+ */
+function validateCellValue(
+  cell: CellResponse,
+  column: TableColumn,
+  fieldId: string,
+  rowIndex: number,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const cellRef = `${fieldId}[${rowIndex}].${column.id}`;
+
+  // Skip validation for skipped/aborted cells
+  if (cell.state === 'skipped' || cell.state === 'aborted') {
+    // But check if cell is required
+    if (column.required) {
+      issues.push({
+        severity: 'error',
+        message: `Required cell "${column.label}" in row ${rowIndex + 1} is ${cell.state}`,
+        ref: cellRef,
+        source: 'builtin',
+      });
+    }
+    return issues;
+  }
+
+  // Check for empty required cells
+  if (column.required && (cell.value === undefined || cell.value === null || cell.value === '')) {
+    issues.push({
+      severity: 'error',
+      message: `Required cell "${column.label}" in row ${rowIndex + 1} is empty`,
+      ref: cellRef,
+      source: 'builtin',
+    });
+    return issues;
+  }
+
+  // Skip type validation if no value
+  if (cell.value === undefined || cell.value === null || cell.value === '') {
+    return issues;
+  }
+
+  // Type-specific validation
+  switch (column.type) {
+    case 'number':
+      if (typeof cell.value !== 'number') {
+        issues.push({
+          severity: 'error',
+          message: `Cell "${column.label}" in row ${rowIndex + 1} must be a number (got "${cell.value}")`,
+          ref: cellRef,
+          source: 'builtin',
+        });
+      }
+      break;
+
+    case 'year':
+      if (typeof cell.value !== 'number' || !Number.isInteger(cell.value)) {
+        issues.push({
+          severity: 'error',
+          message: `Cell "${column.label}" in row ${rowIndex + 1} must be an integer year (got "${cell.value}")`,
+          ref: cellRef,
+          source: 'builtin',
+        });
+      }
+      break;
+
+    case 'url':
+      if (typeof cell.value === 'string') {
+        try {
+          new URL(cell.value);
+        } catch {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be a valid URL (got "${cell.value}")`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+      }
+      break;
+
+    case 'date':
+      if (typeof cell.value === 'string') {
+        // Basic ISO date validation (YYYY-MM-DD)
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (!datePattern.test(cell.value)) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be a valid date in YYYY-MM-DD format (got "${cell.value}")`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+      }
+      break;
+
+    case 'string':
+      // String type accepts any value
+      break;
+  }
+
+  return issues;
+}
+
+/**
+ * Validate a table row.
+ */
+function validateTableRow(
+  row: TableRowResponse,
+  columns: TableColumn[],
+  fieldId: string,
+  rowIndex: number,
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  for (const column of columns) {
+    const cell = row[column.id] ?? { state: 'skipped' };
+    issues.push(...validateCellValue(cell, column, fieldId, rowIndex));
+  }
+
+  return issues;
+}
+
+/**
+ * Validate a table field.
+ */
+function validateTableField(field: TableField, value: TableValue | undefined): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  // Check required
+  const isEmpty = !value || value.rows.length === 0;
+  if (field.required && isEmpty) {
+    issues.push({
+      severity: 'error',
+      message: `Required field "${field.label}" is empty`,
+      ref: field.id,
+      source: 'builtin',
+    });
+    return issues;
+  }
+
+  // Skip other checks if no value
+  if (isEmpty) {
+    return issues;
+  }
+
+  // Check minRows
+  if (field.minRows !== undefined && value.rows.length < field.minRows) {
+    issues.push({
+      severity: 'error',
+      message: `"${field.label}" must have at least ${field.minRows} row(s) (has ${value.rows.length})`,
+      ref: field.id,
+      source: 'builtin',
+    });
+  }
+
+  // Check maxRows
+  if (field.maxRows !== undefined && value.rows.length > field.maxRows) {
+    issues.push({
+      severity: 'error',
+      message: `"${field.label}" must have at most ${field.maxRows} row(s) (has ${value.rows.length})`,
+      ref: field.id,
+      source: 'builtin',
+    });
+  }
+
+  // Validate each row
+  for (let i = 0; i < value.rows.length; i++) {
+    issues.push(...validateTableRow(value.rows[i]!, field.columns, field.id, i));
+  }
+
+  return issues;
+}
+
+/**
  * Validate a single field.
  */
 function validateField(field: Field, responses: Record<Id, FieldResponse>): ValidationIssue[] {
@@ -762,6 +941,8 @@ function validateField(field: Field, responses: Record<Id, FieldResponse>): Vali
       return validateDateField(field, value as DateValue | undefined);
     case 'year':
       return validateYearField(field, value as YearValue | undefined);
+    case 'table':
+      return validateTableField(field, value as TableValue | undefined);
   }
 }
 

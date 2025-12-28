@@ -29,6 +29,7 @@ import type {
   StringListValue,
   StringValue,
   StructureSummary,
+  TableValue,
   UrlListValue,
   UrlValue,
   YearValue,
@@ -56,6 +57,7 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
     url_list: 0,
     date: 0,
     year: 0,
+    table: 0,
   };
 
   const groupsById: Record<Id, 'field_group'> = {};
@@ -171,6 +173,10 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
     case 'year': {
       const v = value as YearValue;
       return v.value !== null;
+    }
+    case 'table': {
+      const v = value as TableValue;
+      return v.rows.length > 0;
     }
   }
 }
