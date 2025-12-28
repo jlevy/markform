@@ -37,7 +37,6 @@ import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
 import { createHarness } from '../../harness/harness.js';
 import { createLiveAgent } from '../../harness/liveAgent.js';
 import { resolveModel, getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
-import { runResearch } from '../../research/runResearch.js';
 import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
@@ -235,11 +234,13 @@ async function promptForWebSearchModel(): Promise<string | null> {
 
 /**
  * Run the agent fill workflow.
+ * Accepts optional harness config overrides - research uses different defaults.
  */
 async function runAgentFill(
   form: ParsedForm,
   modelId: string,
   _outputPath: string,
+  configOverrides?: Partial<HarnessConfig>,
 ): Promise<{ success: boolean; turnCount: number }> {
   const spinner = p.spinner();
 
@@ -249,14 +250,22 @@ async function runAgentFill(
     const { model } = await resolveModel(modelId);
     spinner.stop(`Model resolved: ${modelId}`);
 
-    // Create harness config
+    // Create harness config with defaults, then apply overrides
     const harnessConfig: Partial<HarnessConfig> = {
-      maxTurns: DEFAULT_MAX_TURNS,
-      maxPatchesPerTurn: DEFAULT_MAX_PATCHES_PER_TURN,
-      maxIssuesPerTurn: DEFAULT_MAX_ISSUES_PER_TURN,
+      maxTurns: configOverrides?.maxTurns ?? DEFAULT_MAX_TURNS,
+      maxPatchesPerTurn: configOverrides?.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN,
+      maxIssuesPerTurn: configOverrides?.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN,
       targetRoles: [AGENT_ROLE],
       fillMode: 'continue',
     };
+
+    // Log config for visibility
+    console.log('');
+    console.log(
+      pc.dim(
+        `Config: max_turns=${harnessConfig.maxTurns}, max_issues_per_turn=${harnessConfig.maxIssuesPerTurn}, max_patches_per_turn=${harnessConfig.maxPatchesPerTurn}`,
+      ),
+    );
 
     // Create harness and agent
     const harness = createHarness(form, harnessConfig);
@@ -541,46 +550,21 @@ async function runInteractiveFlow(
 
     const agentOutputPath = join(formsDir, agentFilenameResult);
 
-    // Step 9: Run agent fill or research depending on example type
+    // Step 9: Run agent fill (research examples use different defaults)
     const agentStartTime = Date.now();
     const timingLabel = isResearchExample ? 'Research time' : 'Agent fill time';
 
-    // Log harness config - always show for visibility
-    const maxTurns = isResearchExample ? DEFAULT_RESEARCH_MAX_TURNS : DEFAULT_MAX_TURNS;
-    const maxIssuesPerTurn = isResearchExample
-      ? DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN
-      : DEFAULT_MAX_ISSUES_PER_TURN;
-    const maxPatchesPerTurn = isResearchExample
-      ? DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN
-      : DEFAULT_MAX_PATCHES_PER_TURN;
-
-    console.log('');
-    console.log(
-      pc.dim(
-        `Config: max_turns=${maxTurns}, max_issues_per_turn=${maxIssuesPerTurn}, max_patches_per_turn=${maxPatchesPerTurn}`,
-      ),
-    );
+    // Research examples use tighter defaults for focused web search
+    const configOverrides = isResearchExample
+      ? {
+          maxTurns: DEFAULT_RESEARCH_MAX_TURNS,
+          maxIssuesPerTurn: DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
+          maxPatchesPerTurn: DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
+        }
+      : undefined;
 
     try {
-      let success: boolean;
-
-      if (isResearchExample) {
-        // Use runResearch() for research examples - uses research-specific defaults
-        p.log.step(pc.bold('Research in progress...'));
-        const result = await runResearch(form, {
-          model: modelId,
-          targetRoles: [AGENT_ROLE],
-          fillMode: 'continue',
-        });
-        success = result.status === 'completed';
-        // Copy final form state
-        Object.assign(form, result.form);
-        console.log(pc.dim(`  Completed in ${result.totalTurns} turn(s)`));
-      } else {
-        // Use runAgentFill() for regular fill examples
-        const result = await runAgentFill(form, modelId, agentOutputPath);
-        success = result.success;
-      }
+      const { success } = await runAgentFill(form, modelId, agentOutputPath, configOverrides);
 
       logTiming(
         { verbose: false, format: 'console', dryRun: false, quiet: false },
