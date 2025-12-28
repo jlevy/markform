@@ -4,18 +4,18 @@
 
 **Markform** is a **file format**, **data model**, and **editing API** for
 **token-friendly, human-readable text forms**. Markform syntax is a superset of Markdown
-based on [Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files that
-are easily readable by agents and humans.
+based on [Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files.
 
-The idea is to combine the simple utility of a Markdown document with structured tags
-that define typed fields and validation rules.
-Markform is like if Markdown had an editing API. Structure like fields, validation
-rules, and instructions are encoded as Markdoc tags.
+Markform is like if Markdown docs had a customizable API. The idea is to combine the
+simple utility of a Markdown document with structured tags that define typed fields and
+validation rules.
+Fields, validation rules, and instructions are encoded as Markdoc tags.
 
 Markform lets you build powerful agent workflows by structuring and validating *what*
 you want (the form structure and validations) instead of *how* to get it (coding up
-agent workflows). For deep research or structured tasks, this approach is a compelling
-alternative to programmatic or UI-based agent workflows.
+agent workflows). For deep research and other tasks where you want a high level of
+control on intermediate states and final output from an AI pipeline, this approach is a
+compelling alternative to programmatic or UI-based agent workflows.
 Because it’s just Markdown with tags, agents are also very good at writing Markform,
 which makes creating new workflows much easier.
 
