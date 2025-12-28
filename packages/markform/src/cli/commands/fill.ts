@@ -61,6 +61,7 @@ import {
   showInteractiveOutro,
 } from '../lib/interactivePrompts.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
+import { formatTurnIssues } from '../lib/formatting.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
 
@@ -400,7 +401,7 @@ export function registerFillCommand(program: Command): void {
           let stepResult = harness.step();
           logInfo(
             ctx,
-            `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${pc.yellow(String(stepResult.issues.length))} issues`,
+            `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
           );
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
@@ -477,7 +478,7 @@ export function registerFillCommand(program: Command): void {
               stepResult = harness.step();
               logInfo(
                 ctx,
-                `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${pc.yellow(String(stepResult.issues.length))} issues`,
+                `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
               );
             }
           }

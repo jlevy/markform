@@ -47,9 +47,11 @@ export async function runResearch(
   // Resolve the model - model is string | LanguageModel, but resolveModel only accepts string
   const modelSpec = options.model;
   if (typeof modelSpec !== 'string') {
-    throw new Error('runResearch requires a model string identifier (e.g., "openai/gpt-5-mini")');
+    throw new Error(
+      'runResearch requires a model string identifier (e.g., "openai/gpt-4o-search-preview")',
+    );
   }
-  const { model } = await resolveModel(modelSpec);
+  const { model, provider } = await resolveModel(modelSpec);
 
   // Resolve harness config with research defaults
   const baseConfig = resolveHarnessConfig(form, options);
@@ -73,8 +75,12 @@ export async function runResearch(
   const harness = createHarness(form, config);
   const agent = createLiveAgent({
     model,
+    provider,
     targetRole: config.targetRoles?.[0] ?? AGENT_ROLE,
   });
+
+  // Get available tools for logging
+  const availableTools = agent.getAvailableToolNames();
 
   // Track stats
   let totalInputTokens = 0;
@@ -145,5 +151,6 @@ export async function runResearch(
     totalTurns: harness.getTurnNumber(),
     inputTokens: totalInputTokens > 0 ? totalInputTokens : undefined,
     outputTokens: totalOutputTokens > 0 ? totalOutputTokens : undefined,
+    availableTools,
   };
 }

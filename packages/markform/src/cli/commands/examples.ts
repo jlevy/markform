@@ -33,6 +33,7 @@ import {
 import { SUGGESTED_LLMS, hasWebSearchSupport } from '../../llms.js';
 import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
+import { formatTurnIssues } from '../lib/formatting.js';
 import { createHarness } from '../../harness/harness.js';
 import { createLiveAgent } from '../../harness/liveAgent.js';
 import { resolveModel, getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
@@ -246,7 +247,7 @@ async function runAgentFill(
   try {
     // Resolve the model
     spinner.start(`Resolving model: ${modelId}`);
-    const { model } = await resolveModel(modelId);
+    const { model, provider } = await resolveModel(modelId);
     spinner.stop(`Model resolved: ${modelId}`);
 
     // Create harness config with defaults, then apply overrides
@@ -266,7 +267,7 @@ async function runAgentFill(
 
     // Create harness and agent
     const harness = createHarness(form, harnessConfig);
-    const agent = createLiveAgent({ model, targetRole: AGENT_ROLE });
+    const agent = createLiveAgent({ model, provider, targetRole: AGENT_ROLE });
 
     // Run harness loop with verbose output
     p.log.step(pc.bold('Agent fill in progress...'));
@@ -274,7 +275,7 @@ async function runAgentFill(
 
     while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
       console.log(
-        `  ${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${stepResult.issues.length} issue(s) to address`,
+        `  ${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
       );
 
       // Generate patches from agent

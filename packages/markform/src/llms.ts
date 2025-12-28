@@ -11,26 +11,13 @@
 
 /**
  * Suggested LLM models for the fill command, organized by provider.
- * These are shown in help/error messages. Only includes models from the
- * authoritative models.yaml configuration.
+ * These are shown in help/error messages and model selection prompts.
  */
 export const SUGGESTED_LLMS: Record<string, string[]> = {
-  openai: ['gpt-5-mini', 'gpt-5-nano', 'gpt-5.1', 'gpt-5-pro', 'gpt-5.2', 'gpt-5.2-pro'],
-  anthropic: [
-    'claude-opus-4-5',
-    'claude-opus-4-1',
-    'claude-sonnet-4-5',
-    'claude-sonnet-4-0',
-    'claude-haiku-4-5',
-  ],
-  google: [
-    'gemini-2.5-pro',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-3-pro-preview',
-  ],
-  xai: ['grok-4', 'grok-4-fast'],
+  openai: ['gpt-5-mini', 'gpt-5-nano', 'gpt-5.2', 'gpt-5.2-pro', 'o3', 'o3-mini'],
+  anthropic: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5'],
+  google: ['gemini-3-flash', 'gemini-3-pro-preview', 'gemini-2.5-flash'],
+  xai: ['grok-4', 'grok-4.1-fast'],
   deepseek: ['deepseek-chat', 'deepseek-reasoner'],
 };
 
@@ -54,47 +41,46 @@ export function formatSuggestedLlms(): string {
 
 /**
  * Web search support configuration by provider.
- *
- * Providers with native web search:
- * - openai: webSearchPreview tool (models: gpt-4o and later)
- * - google: googleSearch grounding (all Gemini models)
- * - xai: native search in Grok models
- *
- * Providers without native web search:
- * - anthropic: requires external tool (e.g., Tavily)
- * - deepseek: no web search support
  */
 export interface WebSearchConfig {
   /** Whether the provider has native web search */
   supported: boolean;
-  /** Tool name for web search (provider-specific) */
+  /** Tool name on providerSdk.tools (e.g., 'webSearch', 'googleSearch') */
   toolName?: string;
-  /** Package export name for the web search tool */
-  exportName?: string;
 }
 
 /**
  * Web search configuration per provider.
+ *
+ * Tool names are from Vercel AI SDK provider documentation:
+ * - openai: https://ai-sdk.dev/providers/ai-sdk-providers/openai
+ * - anthropic: https://ai-sdk.dev/providers/ai-sdk-providers/anthropic
+ * - google: https://ai-sdk.dev/providers/ai-sdk-providers/google-generative-ai
+ * - xai: https://ai-sdk.dev/providers/ai-sdk-providers/xai
+ * - deepseek: https://ai-sdk.dev/providers/ai-sdk-providers/deepseek (no tools)
  */
 export const WEB_SEARCH_CONFIG: Record<string, WebSearchConfig> = {
+  // openai.tools.webSearch - https://ai-sdk.dev/providers/ai-sdk-providers/openai#web-search
   openai: {
     supported: true,
-    toolName: 'web_search_preview',
-    exportName: 'openaiTools',
+    toolName: 'webSearch',
   },
+  // anthropic.tools.webSearch_20250305 - https://ai-sdk.dev/providers/ai-sdk-providers/anthropic#web-search
+  anthropic: {
+    supported: true,
+    toolName: 'webSearch_20250305',
+  },
+  // google.tools.googleSearch - https://ai-sdk.dev/providers/ai-sdk-providers/google-generative-ai#google-search-grounding
   google: {
     supported: true,
     toolName: 'googleSearch',
-    exportName: 'googleTools',
   },
+  // xai.tools.webSearch - https://ai-sdk.dev/providers/ai-sdk-providers/xai#web-search-tool
   xai: {
     supported: true,
-    // xAI Grok has built-in web search, enabled via model settings
-    toolName: 'xai_search',
+    toolName: 'webSearch',
   },
-  anthropic: {
-    supported: false,
-  },
+  // deepseek has no tools - https://ai-sdk.dev/providers/ai-sdk-providers/deepseek
   deepseek: {
     supported: false,
   },

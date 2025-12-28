@@ -54,32 +54,34 @@ describe('llms', () => {
       }
     });
 
-    it('marks openai, google, xai as supported', () => {
+    it('marks openai, anthropic, google, xai as supported', () => {
       expect(WEB_SEARCH_CONFIG.openai?.supported).toBe(true);
+      expect(WEB_SEARCH_CONFIG.anthropic?.supported).toBe(true);
       expect(WEB_SEARCH_CONFIG.google?.supported).toBe(true);
       expect(WEB_SEARCH_CONFIG.xai?.supported).toBe(true);
     });
 
-    it('marks anthropic, deepseek as unsupported', () => {
-      expect(WEB_SEARCH_CONFIG.anthropic?.supported).toBe(false);
+    it('marks deepseek as unsupported', () => {
       expect(WEB_SEARCH_CONFIG.deepseek?.supported).toBe(false);
     });
 
     it('provides tool names for supported providers', () => {
-      expect(WEB_SEARCH_CONFIG.openai?.toolName).toBe('web_search_preview');
+      expect(WEB_SEARCH_CONFIG.openai?.toolName).toBe('webSearch');
+      expect(WEB_SEARCH_CONFIG.anthropic?.toolName).toBe('webSearch_20250305');
       expect(WEB_SEARCH_CONFIG.google?.toolName).toBe('googleSearch');
+      expect(WEB_SEARCH_CONFIG.xai?.toolName).toBe('webSearch');
     });
   });
 
   describe('hasWebSearchSupport', () => {
     it('returns true for supported providers', () => {
       expect(hasWebSearchSupport('openai')).toBe(true);
+      expect(hasWebSearchSupport('anthropic')).toBe(true);
       expect(hasWebSearchSupport('google')).toBe(true);
       expect(hasWebSearchSupport('xai')).toBe(true);
     });
 
     it('returns false for unsupported providers', () => {
-      expect(hasWebSearchSupport('anthropic')).toBe(false);
       expect(hasWebSearchSupport('deepseek')).toBe(false);
     });
 
@@ -94,16 +96,25 @@ describe('llms', () => {
       const openaiConfig = getWebSearchConfig('openai');
       expect(openaiConfig).toBeDefined();
       expect(openaiConfig?.supported).toBe(true);
-      expect(openaiConfig?.toolName).toBe('web_search_preview');
+      expect(openaiConfig?.toolName).toBe('webSearch');
+
+      const anthropicConfig = getWebSearchConfig('anthropic');
+      expect(anthropicConfig).toBeDefined();
+      expect(anthropicConfig?.supported).toBe(true);
+      expect(anthropicConfig?.toolName).toBe('webSearch_20250305');
 
       const googleConfig = getWebSearchConfig('google');
       expect(googleConfig).toBeDefined();
       expect(googleConfig?.supported).toBe(true);
       expect(googleConfig?.toolName).toBe('googleSearch');
+
+      const xaiConfig = getWebSearchConfig('xai');
+      expect(xaiConfig).toBeDefined();
+      expect(xaiConfig?.supported).toBe(true);
+      expect(xaiConfig?.toolName).toBe('webSearch');
     });
 
     it('returns undefined for unsupported providers', () => {
-      expect(getWebSearchConfig('anthropic')).toBeUndefined();
       expect(getWebSearchConfig('deepseek')).toBeUndefined();
     });
 

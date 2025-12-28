@@ -4,6 +4,8 @@
 
 import pc from 'picocolors';
 
+import type { InspectIssue, IssueReason } from '../../engine/coreTypes.js';
+
 /**
  * Semantic color helpers for consistent CLI output.
  */
@@ -82,4 +84,57 @@ export function formatPriority(priority: number): string {
     default:
       return pc.dim(label);
   }
+}
+
+/**
+ * Get a short status word from an issue reason.
+ */
+export function issueReasonToStatus(reason: IssueReason): string {
+  switch (reason) {
+    case 'required_missing':
+      return 'missing';
+    case 'validation_error':
+      return 'invalid';
+    case 'checkbox_incomplete':
+      return 'incomplete';
+    case 'min_items_not_met':
+      return 'too-few';
+    case 'optional_empty':
+      return 'empty';
+    default:
+      return 'issue';
+  }
+}
+
+/**
+ * Format a single issue as "fieldId (status)".
+ */
+export function formatIssueBrief(issue: InspectIssue): string {
+  const status = issueReasonToStatus(issue.reason);
+  return `${issue.ref} (${status})`;
+}
+
+/**
+ * Format a list of issues as a compact comma-separated summary.
+ * Example: "company_name (missing), revenue (invalid), tasks (incomplete)"
+ */
+export function formatIssuesSummary(issues: InspectIssue[]): string {
+  return issues.map(formatIssueBrief).join(', ');
+}
+
+/**
+ * Format issues for turn logging - shows count and brief field list.
+ * Example: "5 issue(s): company_name (missing), revenue (invalid), ..."
+ */
+export function formatTurnIssues(issues: InspectIssue[], maxShow = 5): string {
+  const count = issues.length;
+  if (count === 0) {
+    return '0 issues';
+  }
+
+  const shown = issues.slice(0, maxShow);
+  const summary = shown.map(formatIssueBrief).join(', ');
+  const suffix = count > maxShow ? `, +${count - maxShow} more` : '';
+
+  return `${count} issue(s): ${summary}${suffix}`;
 }

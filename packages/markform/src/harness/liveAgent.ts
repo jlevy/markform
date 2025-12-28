@@ -9,12 +9,15 @@ import type { LanguageModel, Tool } from 'ai';
 import { generateText, stepCountIs, zodSchema } from 'ai';
 import { z } from 'zod';
 import { openai } from '@ai-sdk/openai';
+import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
+import { xai } from '@ai-sdk/xai';
 
 import type { DocumentationBlock, InspectIssue, ParsedForm, Patch } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 import { serialize } from '../engine/serialize.js';
-import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, getWebSearchConfig } from '../settings.js';
+import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from '../settings.js';
+import { getWebSearchConfig } from '../llms.js';
 import type { Agent, AgentResponse, LiveAgentConfig, TurnStats } from './harnessTypes.js';
 import {
   DEFAULT_SYSTEM_PROMPT,
@@ -338,43 +341,33 @@ function findField(form: ParsedForm, fieldId: string) {
 
 /**
  * Load web search tools for a provider.
- *
- * Uses statically imported provider modules to get web search tools.
- * Returns empty object if provider doesn't support web search.
+ * Uses centralized config from llms.ts.
  */
 function loadWebSearchTools(provider: string): Record<string, Tool> {
   const config = getWebSearchConfig(provider);
-  if (!config) {
-    return {};
-  }
+  if (!config?.toolName) return {};
 
   switch (provider) {
     case 'openai': {
-      // OpenAI web search tool via openai.tools
-      // Prefer webSearch (newer) over webSearchPreview (legacy)
-      if (openai.tools?.webSearch) {
-        return { web_search: openai.tools.webSearch({}) as Tool };
-      }
-      if (openai.tools?.webSearchPreview) {
-        return { web_search: openai.tools.webSearchPreview({}) as Tool };
-      }
+      const tool = openai.tools?.webSearch?.({}) ?? openai.tools?.webSearchPreview?.({});
+      if (tool) return { web_search: tool as Tool };
       return {};
     }
-
+    case 'anthropic': {
+      const tool = anthropic.tools?.webSearch_20250305?.({});
+      if (tool) return { web_search: tool as Tool };
+      return {};
+    }
     case 'google': {
-      // Google search grounding tool via google.tools
-      if (google.tools?.googleSearch) {
-        return { google_search: google.tools.googleSearch({}) as Tool };
-      }
+      const tool = google.tools?.googleSearch?.({});
+      if (tool) return { google_search: tool as Tool };
       return {};
     }
-
     case 'xai': {
-      // xAI Grok has built-in web search - no separate tool needed
-      // The model itself handles search when prompted
+      const tool = xai.tools?.webSearch?.({});
+      if (tool) return { web_search: tool as Tool };
       return {};
     }
-
     default:
       return {};
   }

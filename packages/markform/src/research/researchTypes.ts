@@ -33,6 +33,8 @@ export interface ResearchResult {
   inputTokens?: number;
   /** Total output tokens used (if available) */
   outputTokens?: number;
+  /** Tools available to the agent */
+  availableTools?: string[];
 
   // File outputs (if form was saved)
   /** Path to saved .form.md file */

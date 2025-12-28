@@ -103,6 +103,7 @@ export function registerResearchCommand(program: Command): void {
           console.log('');
           console.log('Examples:');
           console.log('  --model openai/gpt-5-mini');
+          console.log('  --model anthropic/claude-sonnet-4-5');
           console.log('  --model google/gemini-2.5-flash');
           console.log('  --model xai/grok-4');
           process.exit(1);
@@ -168,6 +169,11 @@ export function registerResearchCommand(program: Command): void {
           targetRoles: [AGENT_ROLE],
           fillMode: 'continue',
         });
+
+        // Log tools used
+        if (result.availableTools) {
+          logInfo(ctx, `Tools: ${result.availableTools.join(', ')}`);
+        }
 
         // Log result
         const statusColor =
