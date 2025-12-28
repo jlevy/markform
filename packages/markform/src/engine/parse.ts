@@ -6,18 +6,22 @@
 
 import Markdoc from '@markdoc/markdoc';
 import type { Node } from '@markdoc/markdoc';
+import YAML from 'yaml';
 
 import type {
   DocumentationBlock,
   DocumentationTag,
   FieldGroup,
   FieldResponse,
+  FormMetadata,
   FormSchema,
+  FrontmatterHarnessConfig,
   Id,
   IdIndexEntry,
   Note,
   ParsedForm,
 } from './coreTypes.js';
+import { DEFAULT_ROLES, DEFAULT_ROLE_INSTRUCTIONS } from '../settings.js';
 import { parseField } from './parseFields.js';
 import { getStringAttr, getValidateAttr, isTagNode, ParseError } from './parseHelpers.js';
 
@@ -33,10 +37,44 @@ const FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 interface FrontmatterResult {
   frontmatter: Record<string, unknown>;
   body: string;
+  metadata?: FormMetadata;
+}
+
+/**
+ * Parse harness configuration from frontmatter.
+ * Converts snake_case keys to camelCase.
+ */
+function parseHarnessConfig(raw: unknown): FrontmatterHarnessConfig | undefined {
+  if (!raw || typeof raw !== 'object') {
+    return undefined;
+  }
+
+  const config = raw as Record<string, unknown>;
+  const result: FrontmatterHarnessConfig = {};
+
+  // Map snake_case to camelCase
+  const keyMap: Record<string, keyof FrontmatterHarnessConfig> = {
+    max_turns: 'maxTurns',
+    maxTurns: 'maxTurns',
+    max_patches_per_turn: 'maxPatchesPerTurn',
+    maxPatchesPerTurn: 'maxPatchesPerTurn',
+    max_issues_per_turn: 'maxIssuesPerTurn',
+    maxIssuesPerTurn: 'maxIssuesPerTurn',
+  };
+
+  for (const [key, value] of Object.entries(config)) {
+    const camelKey = keyMap[key];
+    if (camelKey && typeof value === 'number') {
+      result[camelKey] = value;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 /**
  * Extract YAML frontmatter from markdown content.
+ * Uses full YAML parsing to support nested structures.
  */
 function extractFrontmatter(content: string): FrontmatterResult {
   const match = FRONTMATTER_REGEX.exec(content);
@@ -47,31 +85,29 @@ function extractFrontmatter(content: string): FrontmatterResult {
   const yamlContent = match[1];
   const body = content.slice(match[0].length);
 
-  // Parse YAML using a simple approach (yaml package will be used later)
-  // For now, just extract the raw YAML and we'll parse it properly with the yaml package
   try {
-    // Simple parse - we'll use yaml package for proper parsing
-    const lines = (yamlContent ?? '').split('\n');
-    const result: Record<string, unknown> = {};
+    const parsed = YAML.parse(yamlContent ?? '') as Record<string, unknown> | null;
+    const frontmatter = parsed ?? {};
 
-    for (const line of lines) {
-      const colonIndex = line.indexOf(':');
-      if (colonIndex > 0 && !line.startsWith(' ') && !line.startsWith('\t')) {
-        const key = line.slice(0, colonIndex).trim();
-        const value = line.slice(colonIndex + 1).trim();
-        // Handle quoted values
-        if (value.startsWith('"') && value.endsWith('"')) {
-          result[key] = value.slice(1, -1);
-        } else if (value === '') {
-          // Nested object marker - for now just mark it
-          result[key] = {};
-        } else {
-          result[key] = value;
-        }
-      }
+    // Extract metadata from markform section
+    const markformSection = frontmatter.markform as Record<string, unknown> | undefined;
+    if (!markformSection) {
+      return { frontmatter, body };
     }
 
-    return { frontmatter: result, body };
+    // Parse harness config from markform.harness
+    const harnessConfig = parseHarnessConfig(markformSection.harness);
+
+    // Build metadata
+    const metadata: FormMetadata = {
+      markformVersion: (markformSection.spec as string) ?? 'MF/0.1',
+      roles: (frontmatter.roles as string[]) ?? [...DEFAULT_ROLES],
+      roleInstructions:
+        (frontmatter.role_instructions as Record<string, string>) ?? DEFAULT_ROLE_INSTRUCTIONS,
+      ...(harnessConfig && { harnessConfig }),
+    };
+
+    return { frontmatter, body, metadata };
   } catch (_error) {
     throw new ParseError('Failed to parse frontmatter YAML');
   }
@@ -401,8 +437,8 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
  * @throws ParseError if the document is invalid
  */
 export function parseForm(markdown: string): ParsedForm {
-  // Step 1: Extract frontmatter
-  const { body } = extractFrontmatter(markdown);
+  // Step 1: Extract frontmatter and metadata
+  const { body, metadata } = extractFrontmatter(markdown);
 
   // Step 2: Parse Markdoc AST (raw AST, not transformed)
   const ast = Markdoc.parse(body);
@@ -452,5 +488,6 @@ export function parseForm(markdown: string): ParsedForm {
     docs,
     orderIndex,
     idIndex,
+    ...(metadata && { metadata }),
   };
 }

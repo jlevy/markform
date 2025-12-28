@@ -52,6 +52,11 @@ export interface ExportResult {
 // =============================================================================
 
 /**
+ * Example type for distinguishing workflow modes.
+ */
+export type ExampleType = 'fill' | 'research';
+
+/**
  * Example definition for the examples command.
  * Note: title and description are optional in the static definition
  * because they are loaded dynamically from the form's YAML frontmatter.
@@ -67,4 +72,6 @@ export interface ExampleDefinition {
   filename: string;
   /** Relative path within examples directory. */
   path: string;
+  /** Example type: 'fill' for standard fill workflow, 'research' for web-search workflow. */
+  type?: ExampleType;
 }

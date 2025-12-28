@@ -314,11 +314,11 @@ markform:
       expect(fieldRefs.length).toBeLessThanOrEqual(2);
     });
 
-    it('applies maxIssues after field/group filtering', () => {
+    it('applies maxIssuesPerTurn after field/group filtering', () => {
       const form = parseForm(MULTI_GROUP_FORM);
       const harness = createHarness(form, {
         maxFieldsPerTurn: 5, // Would allow 5 fields
-        maxIssues: 2, // But cap at 2 issues total
+        maxIssuesPerTurn: 2, // But cap at 2 issues total
       });
 
       const result = harness.step();

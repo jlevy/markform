@@ -385,7 +385,7 @@ describe('engine/coreTypes', () => {
         validators: { code: 'examples/simple/simple.valid.ts' },
         mock: { completedMock: 'examples/simple/simple-mock-filled.form.md' },
         harness: {
-          maxIssues: 5,
+          maxIssuesPerTurn: 5,
           maxPatchesPerTurn: 3,
           maxTurns: 100,
         },

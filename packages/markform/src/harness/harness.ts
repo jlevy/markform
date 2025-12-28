@@ -23,7 +23,7 @@ import type {
   StepResult,
 } from '../engine/coreTypes.js';
 import {
-  DEFAULT_MAX_ISSUES,
+  DEFAULT_MAX_ISSUES_PER_TURN,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
   AGENT_ROLE,
@@ -34,7 +34,7 @@ import {
 // =============================================================================
 
 const DEFAULT_CONFIG: HarnessConfig = {
-  maxIssues: DEFAULT_MAX_ISSUES,
+  maxIssuesPerTurn: DEFAULT_MAX_ISSUES_PER_TURN,
   maxPatchesPerTurn: DEFAULT_MAX_PATCHES_PER_TURN,
   maxTurns: DEFAULT_MAX_TURNS,
 };
@@ -210,9 +210,9 @@ export class FormHarness {
   private computeStepResult(result: ReturnType<typeof inspect>): StepResult {
     // Issue filtering pipeline (order matters):
     // 1. Filter by maxGroupsPerTurn/maxFieldsPerTurn - limits scope diversity
-    // 2. Cap by maxIssues - limits total count shown to agent
+    // 2. Cap by maxIssuesPerTurn - limits total count shown to agent
     const filteredIssues = this.filterIssuesByScope(result.issues);
-    const limitedIssues = filteredIssues.slice(0, this.config.maxIssues);
+    const limitedIssues = filteredIssues.slice(0, this.config.maxIssuesPerTurn);
 
     // Step budget = min of max patches per turn and issues to address
     const stepBudget = Math.min(this.config.maxPatchesPerTurn, limitedIssues.length);

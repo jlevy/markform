@@ -26,26 +26,31 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     id: 'simple',
     filename: 'simple.form.md',
     path: 'simple/simple.form.md',
+    type: 'fill',
   },
   {
     id: 'political-research',
     filename: 'political-research.form.md',
     path: 'political-research/political-research.form.md',
+    type: 'research',
   },
   {
     id: 'earnings-analysis',
     filename: 'earnings-analysis.form.md',
     path: 'earnings-analysis/earnings-analysis.form.md',
+    type: 'research',
   },
   {
     id: 'startup-deep-research',
     filename: 'startup-deep-research.form.md',
     path: 'startup-deep-research/startup-deep-research.form.md',
+    type: 'research',
   },
   {
     id: 'celebrity-deep-research',
     filename: 'celebrity-deep-research.form.md',
     path: 'celebrity-deep-research/celebrity-deep-research.form.md',
+    type: 'research',
   },
 ];
 
