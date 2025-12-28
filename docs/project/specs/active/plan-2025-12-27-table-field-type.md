@@ -156,12 +156,30 @@ Before defining `table-field`, we formalize the existing field type categories:
 - If `columnLabels` is omitted AND field is unanswered (no data rows), labels are
   back-filled from markdown table headers
 
-- If `columnLabels` is omitted AND field has data rows, labels default to `columnIds`
+- If `columnLabels` is omitted AND field has data rows, this is a **parse error** (data
+  rows imply the form was previously serialized, which always writes `columnLabels`)
 
 - On serialize, `columnLabels` is always written explicitly (preserves extracted labels)
 
 3. **Column types:** Support simple types only: `string`, `number`, `url`, `date`,
    `year`
+
+   **Per-column required/optional:**
+
+   Columns are **optional by default** — agents can send `null` to skip a cell, which
+   serializes as `%SKIP%`. To make a column required, use object syntax in
+   `columnTypes`:
+
+   ```md
+   columnTypes=["string", {type: "number", required: true}, "url"]
+   ```
+
+   - Simple string (`"string"`) — optional, allows `%SKIP%`
+
+   - Object with `required: true` — cell must have a value (not `%SKIP%` or `%ABORT%`)
+
+   This mirrors field-level `required` behavior.
+   Required columns produce validation errors if a cell contains a sentinel value.
 
 4. **Attribute validation:**
 
@@ -214,7 +232,11 @@ Before defining `table-field`, we formalize the existing field type categories:
 
    - `maxRows` — maximum row count (default: unlimited)
 
-   - `required=true` implies `minRows >= 1`
+   - `required=true` implies `minRows >= 1` (if `minRows` is 0 or omitted, it’s
+     effectively set to 1)
+
+   - `required=false` with `minRows > 0` is valid — the table is optional but if filled,
+     must have at least `minRows` rows
 
 9. **Patch operation:**
    ```json
@@ -228,22 +250,27 @@ Before defining `table-field`, we formalize the existing field type categories:
    ```
 
 10. **Export format:**
+
+    Uses sentinel strings directly in cell values for clarity:
+
     ```json
     {
       "kind": "table",
       "rows": [
-        {"name": "John", "title": "CEO", "linkedin_url": "https://...", "background": "..."}
+        {"name": "John", "title": "CEO", "linkedin_url": "https://...", "background": "20 years in tech"},
+        {"name": "Jane", "title": "CTO", "linkedin_url": "%SKIP% (No public profile)", "background": "Former Google"}
       ]
     }
     ```
 
+    Cells use `%SKIP%`, `%SKIP% (reason)`, `%ABORT%`, or `%ABORT% (reason)` directly as
+    string values.
+
 **Nice to Have (v2):**
 
-1. Column-level `required` attribute (some columns optional)
+1. Multiline types in cells (would need multi-line cell syntax)
 
-2. Multiline types in cells (would need multi-line cell syntax)
-
-3. Column-level constraints (minLength, pattern, etc.)
+2. Column-level constraints (minLength, pattern, etc.)
 
 **Not in Scope:**
 
@@ -317,17 +344,30 @@ Before defining `table-field`, we formalize the existing field type categories:
 **New types in `coreTypes.ts`:**
 
 ```typescript
-/** Column type for table cells - simple types only */
-export type ColumnType = 'string' | 'number' | 'url' | 'date' | 'year';
+/** Base column type for table cells - simple types only */
+export type ColumnTypeName = 'string' | 'number' | 'url' | 'date' | 'year';
 
-/** Column definition - derived from columnIds, columnLabels, columnTypes attributes */
+/**
+ * Column type specification in attributes.
+ * Can be a simple string or an object with required flag.
+ */
+export type ColumnTypeSpec = ColumnTypeName | { type: ColumnTypeName; required: boolean };
+
+/**
+ * Column definition - derived from columnIds, columnLabels, columnTypes attributes.
+ * After parsing, columns always have explicit required flag (default: false).
+ */
 export interface TableColumn {
-  id: Id;           // from columnIds array
-  label: string;    // from columnLabels array (defaults to id)
-  type: ColumnType; // from columnTypes array (defaults to 'string')
+  id: Id;                 // from columnIds array
+  label: string;          // from columnLabels array (defaults to id)
+  type: ColumnTypeName;   // from columnTypes array (defaults to 'string')
+  required: boolean;      // from columnTypes object or default false
 }
 
-/** Table field - structured tabular data with typed columns */
+/**
+ * Table field - structured tabular data with typed columns.
+ * Inherits all FieldBase properties including `report?: boolean`.
+ */
 export interface TableField extends FieldBase {
   kind: 'table';
   columns: TableColumn[];  // column definitions in order
@@ -335,34 +375,131 @@ export interface TableField extends FieldBase {
   maxRows?: number;
 }
 
-/** Cell value - scalar value or null */
-export type CellValue = string | number | null;
+/**
+ * Cell value - scalar value only (never null).
+ * Empty/skipped cells use %SKIP% sentinel, not null.
+ */
+export type CellValue = string | number;
 
-/** Table row - record from column ID to cell value */
-export type TableRow = Record<Id, CellValue>;
+/**
+ * Table row for patches - simplified format.
+ * Values can be:
+ * - Actual value (string/number)
+ * - null to indicate %SKIP% (serialized as %SKIP% in markdown)
+ * - "%SKIP%" or "%ABORT%" sentinel strings with optional reason
+ */
+export type TableRowPatch = Record<Id, CellValue | null | string>;
 
-/** Cell response - matches FieldResponse pattern */
+/**
+ * Cell response - matches FieldResponse pattern.
+ * Used in internal representation (ParsedForm).
+ */
 export interface CellResponse {
-  state: AnswerState;     // 'answered' | 'skipped' | 'aborted'
+  state: 'answered' | 'skipped' | 'aborted';  // cells cannot be 'unanswered'
   value?: CellValue;      // present when state === 'answered'
   reason?: string;        // present when state === 'skipped' or 'aborted'
 }
 
-/** Table row response - each cell has a response */
+/** Table row response - each cell has a response (internal representation) */
 export type TableRowResponse = Record<Id, CellResponse>;
 
-/** Table field value */
+/** Table field value (internal representation) */
 export interface TableValue {
   kind: 'table';
   rows: TableRowResponse[];
 }
 
-/** Set table field patch */
+/**
+ * Set table field patch.
+ * Uses simplified format where null values become %SKIP% on serialize.
+ */
 export interface SetTablePatch {
   op: 'set_table';
   fieldId: Id;
-  rows: TableRow[];  // simplified for patches (no sentinel structure)
+  rows: TableRowPatch[];
 }
+```
+
+**Zod Schemas for Table Types:**
+
+```typescript
+import { z } from 'zod';
+import { IdSchema, AnswerStateSchema } from './coreTypes.js';
+
+/** Base column type name schema */
+export const ColumnTypeNameSchema = z.enum(['string', 'number', 'url', 'date', 'year']);
+
+/**
+ * Column type specification schema (for parsing attributes).
+ * Either a simple type name or an object with type and required.
+ */
+export const ColumnTypeSpecSchema = z.union([
+  ColumnTypeNameSchema,
+  z.object({
+    type: ColumnTypeNameSchema,
+    required: z.boolean(),
+  }),
+]);
+
+/**
+ * Table column schema (normalized form after parsing).
+ * Always has explicit required flag.
+ */
+export const TableColumnSchema = z.object({
+  id: IdSchema,
+  label: z.string(),
+  type: ColumnTypeNameSchema,
+  required: z.boolean(),
+});
+
+/** Table field schema (extends FieldBase pattern) */
+export const TableFieldSchema = z.object({
+  // FieldBase properties
+  id: IdSchema,
+  label: z.string(),
+  required: z.boolean(),
+  priority: z.enum(['high', 'medium', 'low']),
+  role: z.string(),
+  validate: z.array(z.union([z.string(), z.object({ id: z.string() }).passthrough()])).optional(),
+  report: z.boolean().optional(),
+  // Table-specific properties
+  kind: z.literal('table'),
+  columns: z.array(TableColumnSchema),
+  minRows: z.number().int().nonnegative().optional(),
+  maxRows: z.number().int().positive().optional(),
+});
+
+/** Cell value schema (never null - use sentinels for skipped) */
+export const CellValueSchema = z.union([z.string(), z.number()]);
+
+/** Cell response schema */
+export const CellResponseSchema = z.object({
+  state: z.enum(['answered', 'skipped', 'aborted']),
+  value: CellValueSchema.optional(),
+  reason: z.string().optional(),
+});
+
+/** Table row response schema */
+export const TableRowResponseSchema = z.record(IdSchema, CellResponseSchema);
+
+/** Table value schema */
+export const TableValueSchema = z.object({
+  kind: z.literal('table'),
+  rows: z.array(TableRowResponseSchema),
+});
+
+/** Table row patch schema (simplified for patches) */
+export const TableRowPatchSchema = z.record(
+  IdSchema,
+  z.union([CellValueSchema, z.null(), z.string()]),  // null or sentinel string
+);
+
+/** Set table patch schema */
+export const SetTablePatchSchema = z.object({
+  op: z.literal('set_table'),
+  fieldId: IdSchema,
+  rows: z.array(TableRowPatchSchema),
+});
 ```
 
 ### Parsing Strategy
@@ -391,7 +528,8 @@ export interface SetTablePatch {
 
      - Validate header count equals `columnIds.length`
 
-   - Else (has data rows but no `columnLabels`) → default to `columnIds`
+   - Else (has data rows but no `columnLabels`) → **parse error** (data rows imply the
+     form was previously serialized, which always writes `columnLabels`)
 
 7. Build `columns: TableColumn[]` by combining:
 
@@ -399,13 +537,19 @@ export interface SetTablePatch {
 
    - `label` from step 6
 
-   - `type` from `columnTypes[i]` (or `'string'` if not specified)
+   - `type` and `required` from `columnTypes[i]`:
+
+     - If string (e.g., `"string"`) → `type: "string", required: false`
+
+     - If object (e.g., `{type: "number", required: true}`) → extract both
+
+     - If omitted → `type: "string", required: false`
 
 8. Parse each data row:
 
    - For each cell, check for sentinel pattern first
 
-   - If sentinel, extract state and reason using existing `parseSentinelValue()`
+   - If sentinel, extract state and reason using existing `parseSentinel()`
 
    - If not sentinel, coerce value to column type
 
@@ -424,18 +568,20 @@ export interface SetTablePatch {
 | columnTypes length must match | `COLUMN_TYPES_MISMATCH` | `columnTypes has 3 entries but columnIds has 4.` |
 | columnTypes values must be valid | `INVALID_COLUMN_TYPE` | `Column type "text" is not valid. Use: string, number, url, date, year.` |
 | Header count must match when back-filling | `HEADER_COUNT_MISMATCH` | `Table has 3 headers but columnIds has 4. Add columnLabels attribute or fix headers.` |
+| columnLabels required when table has data | `MISSING_COLUMN_LABELS` | `Table has data rows but no columnLabels attribute. Add columnLabels or remove data rows.` |
 
 **Value validation (semantic):**
 
 | Rule | Error Code | Example Error Message |
 | --- | --- | --- |
-| Cell must have value or sentinel | `CELL_EMPTY` | `Cell at row 2, column "title" is empty. Provide a value or use \|SKIP\|.` |
+| Cell must have value or sentinel | `CELL_EMPTY` | `Cell at row 2, column "title" is empty. Provide a value or use %SKIP%.` |
 | Number cell must parse | `CELL_TYPE_MISMATCH` | `Cell "abc" at row 1, column "rt_score" is not a valid number.` |
 | URL cell must be valid | `CELL_TYPE_MISMATCH` | `Cell "not-a-url" at row 1, column "website" is not a valid URL.` |
 | Date cell must be ISO format | `CELL_TYPE_MISMATCH` | `Cell "Jan 15" at row 1, column "release_date" is not a valid date. Use YYYY-MM-DD format.` |
 | Year cell must be integer | `CELL_TYPE_MISMATCH` | `Cell "2024.5" at row 1, column "release_year" is not a valid year.` |
 | Row count ≥ minRows | `MIN_ROWS_NOT_MET` | `Table "films" has 2 rows but requires at least 5.` |
 | Row count ≤ maxRows | `MAX_ROWS_EXCEEDED` | `Table "films" has 20 rows but maximum is 15.` |
+| Required column cannot be skipped | `REQUIRED_CELL_SKIPPED` | `Cell at row 1, column "title" is required but contains %SKIP%.` |
 
 ### Serialization Strategy
 
@@ -466,7 +612,8 @@ Serialize as canonical markdown table:
 
 - No padding in cells (canonical)
 
-- Separator row uses minimum dashes (`|---|`)
+- Separator row uses minimum dashes (`|---|`) without alignment characters (`:---`,
+  `:---:`, `---:` are not used; alignment is not supported in v1)
 
 - Sentinel values (`%SKIP%`, `%ABORT%`) serialized as-is with optional reason
 
@@ -495,6 +642,10 @@ The following escaping rules apply:
 **Serialization algorithm:**
 
 ```typescript
+/**
+ * Escape a cell value for markdown table serialization.
+ * Only pipes need escaping; backslashes before pipes are preserved.
+ */
 function escapeTableCell(value: string): string {
   // Reject newlines and control characters
   if (/[\n\r]/.test(value)) {
@@ -504,16 +655,88 @@ function escapeTableCell(value: string): string {
     throw new Error('Cell value contains invalid control characters');
   }
 
-  // Escape backslash-before-pipe first, then standalone pipes
-  return value.replace(/\\\|/g, '\\\\|').replace(/\|/g, '\\|');
+  // Escape only unescaped pipes using negative lookbehind
+  // This correctly handles: "A|B" → "A\|B", "A\|B" → "A\|B" (already escaped)
+  return value.replace(/(?<!\\)\|/g, '\\|');
 }
 
+/**
+ * Unescape a cell value from markdown table parsing.
+ * Markdoc handles most of this, but we may need to handle \| → |
+ */
 function unescapeTableCell(escaped: string): string {
-  // Reverse: unescape \\| → \| and \| → |
-  return escaped.replace(/\\\\\|/g, '\u0000ESCAPED_BACKSLASH_PIPE\u0000')
-                .replace(/\\\|/g, '|')
-                .replace(/\u0000ESCAPED_BACKSLASH_PIPE\u0000/g, '\\|');
+  // Simple replacement: \| → |
+  // If we need to preserve literal \|, the user must write \\|
+  return escaped.replace(/\\\|/g, '|');
 }
+```
+
+**Note:** Since we’re using Markdoc’s built-in table parser, escaping is primarily
+needed for serialization.
+Markdoc handles unescaping during parsing.
+The unescape function is provided for cases where we need to manually process cell
+content.
+
+**Test cases (TDD):**
+
+```typescript
+describe('escapeTableCell', () => {
+  it('leaves plain text unchanged', () => {
+    expect(escapeTableCell('Hello world')).toBe('Hello world');
+  });
+
+  it('escapes unescaped pipe', () => {
+    expect(escapeTableCell('A|B')).toBe('A\\|B');
+  });
+
+  it('escapes multiple pipes', () => {
+    expect(escapeTableCell('A|B|C')).toBe('A\\|B\\|C');
+  });
+
+  it('leaves already-escaped pipe unchanged', () => {
+    expect(escapeTableCell('A\\|B')).toBe('A\\|B');
+  });
+
+  it('handles mixed escaped and unescaped pipes', () => {
+    expect(escapeTableCell('A\\|B|C')).toBe('A\\|B\\|C');
+  });
+
+  it('rejects newlines', () => {
+    expect(() => escapeTableCell('line1\nline2')).toThrow('newlines');
+  });
+
+  it('rejects control characters', () => {
+    expect(() => escapeTableCell('text\x00more')).toThrow('control characters');
+  });
+});
+
+describe('unescapeTableCell', () => {
+  it('leaves plain text unchanged', () => {
+    expect(unescapeTableCell('Hello world')).toBe('Hello world');
+  });
+
+  it('unescapes escaped pipe', () => {
+    expect(unescapeTableCell('A\\|B')).toBe('A|B');
+  });
+
+  it('unescapes multiple escaped pipes', () => {
+    expect(unescapeTableCell('A\\|B\\|C')).toBe('A|B|C');
+  });
+});
+
+describe('round-trip', () => {
+  it('preserves plain text', () => {
+    const original = 'Hello world';
+    expect(unescapeTableCell(escapeTableCell(original))).toBe(original);
+  });
+
+  it('preserves text with pipes', () => {
+    const original = 'A|B|C';
+    const escaped = escapeTableCell(original);
+    expect(escaped).toBe('A\\|B\\|C');
+    expect(unescapeTableCell(escaped)).toBe(original);
+  });
+});
 ```
 
 **Sentinel value handling:**
@@ -561,7 +784,7 @@ Sentinel values don’t require escaping (no pipe characters).
 
 1. **Sentinel parsing:**
 
-   - Reuse `parseSentinelValue()` from `parseSentinels.ts`
+   - Reuse `parseSentinel()` from `parseSentinels.ts`
 
    - Pattern: `/^%(SKIP|ABORT)%(\s*\(.*\))?$/`
 
@@ -584,43 +807,47 @@ Sentinel values don’t require escaping (no pipe characters).
 ### Scope Reference Parsing and Validation
 
 Tables introduce nested references (field → column → cell).
-This requires a standalone, reusable scope parsing module that can be shared across
-validation, error reporting, and doc block resolution.
+This requires a **two-phase approach** to scope reference handling:
+
+1. **Phase 1 (Parsing):** Syntactic parsing that produces an intermediate representation
+
+2. **Phase 2 (Resolution):** Schema-aware resolution that determines the actual scope
 
 #### Reference Type Hierarchy
 
 ```
-IssueRef = Id | QualifiedOptionRef | QualifiedColumnRef | QualifiedCellRef
+IssueRef = Id | QualifiedRef | CellRef
 
 Where:
-  Id                  = /^[a-z][a-z0-9_]*$/           → "company_name"
-  QualifiedOptionRef  = {fieldId}.{optionId}          → "rating.bullish"
-  QualifiedColumnRef  = {fieldId}.{columnId}          → "key_people.name"
-  QualifiedCellRef    = {fieldId}.{columnId}[{row}]   → "key_people.name[0]"
+  Id            = /^[a-z][a-z0-9_]*$/           → "company_name"
+  QualifiedRef  = {fieldId}.{qualifierId}       → "rating.bullish" or "key_people.name"
+  CellRef       = {fieldId}.{columnId}[{row}]   → "key_people.name[0]"
 ```
 
-Note: `QualifiedOptionRef` and `QualifiedColumnRef` have identical syntax.
-Disambiguation requires schema context (lookup in `optionsById` vs `columnsById`).
+**Key insight:** `QualifiedRef` is syntactically ambiguous—it could be an option ref
+(for select/checkbox fields) or a column ref (for table fields).
+Resolution requires schema context.
 
 #### Scope Enum Extension
 
 ```typescript
-// Existing scopes
-type IssueScope = 'form' | 'group' | 'field' | 'option';
-
 // Extended for tables
 type IssueScope = 'form' | 'group' | 'field' | 'option' | 'column' | 'cell';
 ```
 
 #### Type Definitions (in `scopeRef.ts`)
 
+**Phase 1 types (parsing only, no schema):**
+
 ```typescript
-/** Parsed scope reference - discriminated union */
+/**
+ * Parsed scope reference - intermediate representation.
+ * QualifiedRef is ambiguous (could be option or column) until resolved.
+ */
 export type ParsedScopeRef =
-  | { type: 'field'; fieldId: Id }
-  | { type: 'option'; fieldId: Id; optionId: Id }
-  | { type: 'column'; fieldId: Id; columnId: Id }
-  | { type: 'cell'; fieldId: Id; columnId: Id; rowIndex: number };
+  | { kind: 'field'; fieldId: Id }
+  | { kind: 'qualified'; fieldId: Id; qualifierId: Id }  // ambiguous: option or column
+  | { kind: 'cell'; fieldId: Id; columnId: Id; rowIndex: number };
 
 /** Result of parsing a scope ref string */
 export interface ParseScopeRefResult {
@@ -628,22 +855,37 @@ export interface ParseScopeRefResult {
   ref?: ParsedScopeRef;
   error?: string;
 }
+```
 
-/** Result of validating a parsed scope ref against schema */
-export interface ValidateScopeRefResult {
+**Phase 2 types (after schema resolution):**
+
+```typescript
+/**
+ * Resolved scope reference - unambiguous after schema lookup.
+ */
+export type ResolvedScopeRef =
+  | { scope: 'form'; formId: Id }
+  | { scope: 'group'; groupId: Id }
+  | { scope: 'field'; fieldId: Id }
+  | { scope: 'option'; fieldId: Id; optionId: Id }
+  | { scope: 'column'; fieldId: Id; columnId: Id }
+  | { scope: 'cell'; fieldId: Id; columnId: Id; rowIndex: number };
+
+/** Result of resolving a parsed scope ref against schema */
+export interface ResolveScopeRefResult {
   ok: boolean;
-  scope?: IssueScope;
+  resolved?: ResolvedScopeRef;
   error?: string;
 }
 ```
 
-#### Parsing Implementation (in `scopeRef.ts`)
+#### Phase 1: Parsing Implementation (in `scopeRef.ts`)
 
 ```typescript
 const PATTERNS = {
   // field.column[row] - must check first (most specific)
   cell: /^([a-z][a-z0-9_]*)\.([a-z][a-z0-9_]*)\[(\d+)\]$/,
-  // field.qualifier - could be option or column (disambiguate later)
+  // field.qualifier - ambiguous until resolved
   qualified: /^([a-z][a-z0-9_]*)\.([a-z][a-z0-9_]*)$/,
   // simple field id
   field: /^[a-z][a-z0-9_]*$/,
@@ -652,6 +894,7 @@ const PATTERNS = {
 /**
  * Parse a scope reference string into structured form.
  * This is pure parsing - no schema validation.
+ * Qualified refs are left ambiguous (resolved in phase 2).
  */
 export function parseScopeRef(ref: string): ParseScopeRefResult {
   // Try cell pattern first (most specific)
@@ -662,20 +905,19 @@ export function parseScopeRef(ref: string): ParseScopeRefResult {
     if (rowIndex < 0 || !Number.isFinite(rowIndex)) {
       return { ok: false, error: `Invalid row index: ${rowStr}` };
     }
-    return { ok: true, ref: { type: 'cell', fieldId, columnId, rowIndex } };
+    return { ok: true, ref: { kind: 'cell', fieldId, columnId, rowIndex } };
   }
 
-  // Try qualified pattern (option or column - can't tell yet)
+  // Try qualified pattern (ambiguous: option or column)
   const qualifiedMatch = PATTERNS.qualified.exec(ref);
   if (qualifiedMatch) {
     const [, fieldId, qualifierId] = qualifiedMatch;
-    // Return as 'option' by default; caller uses schema to disambiguate
-    return { ok: true, ref: { type: 'option', fieldId, optionId: qualifierId } };
+    return { ok: true, ref: { kind: 'qualified', fieldId, qualifierId } };
   }
 
   // Try simple field pattern
   if (PATTERNS.field.test(ref)) {
-    return { ok: true, ref: { type: 'field', fieldId: ref } };
+    return { ok: true, ref: { kind: 'field', fieldId: ref } };
   }
 
   return { ok: false, error: `Invalid scope reference format: "${ref}"` };
@@ -685,35 +927,33 @@ export function parseScopeRef(ref: string): ParseScopeRefResult {
  * Serialize a parsed scope ref back to string form.
  */
 export function serializeScopeRef(ref: ParsedScopeRef): string {
-  switch (ref.type) {
+  switch (ref.kind) {
     case 'field':
       return ref.fieldId;
-    case 'option':
-      return `${ref.fieldId}.${ref.optionId}`;
-    case 'column':
-      return `${ref.fieldId}.${ref.columnId}`;
+    case 'qualified':
+      return `${ref.fieldId}.${ref.qualifierId}`;
     case 'cell':
       return `${ref.fieldId}.${ref.columnId}[${ref.rowIndex}]`;
   }
 }
 ```
 
-#### Schema Validation (in `scopeRefValidation.ts`)
+#### Phase 2: Schema Resolution (in `scopeRefValidation.ts`)
 
 ```typescript
 import type { FormSchema, StructureSummary } from './coreTypes.js';
-import type { ParsedScopeRef, ValidateScopeRefResult } from './scopeRef.js';
+import type { ParsedScopeRef, ResolvedScopeRef, ResolveScopeRefResult } from './scopeRef.js';
 
 /**
- * Validate a parsed scope ref against the form schema.
- * Checks that referenced elements exist and are valid for their type.
+ * Resolve a parsed scope ref against the form schema.
+ * Disambiguates qualified refs (option vs column) based on field type.
  */
-export function validateScopeRef(
+export function resolveScopeRef(
   ref: ParsedScopeRef,
   schema: FormSchema,
   summary: StructureSummary,
   rowCounts?: Record<Id, number>,  // for cell bounds checking
-): ValidateScopeRefResult {
+): ResolveScopeRefResult {
   const { fieldsById, optionsById } = summary;
 
   // Check field exists
@@ -722,45 +962,48 @@ export function validateScopeRef(
     return { ok: false, error: `Unknown field: "${ref.fieldId}"` };
   }
 
-  switch (ref.type) {
+  switch (ref.kind) {
     case 'field':
-      return { ok: true, scope: 'field' };
+      return { ok: true, resolved: { scope: 'field', fieldId: ref.fieldId } };
 
-    case 'option': {
+    case 'qualified': {
+      // Disambiguate based on field type and what exists
+      const qualifiedRef = `${ref.fieldId}.${ref.qualifierId}`;
+
       // Check if it's an option (select/checkbox field)
-      const qualifiedRef = `${ref.fieldId}.${ref.optionId}`;
       if (optionsById[qualifiedRef]) {
-        return { ok: true, scope: 'option' };
-      }
-      // Maybe it's a column? Check if field is a table
-      if (fieldKind === 'table') {
-        // Re-interpret as column ref
-        return validateColumnRef(ref.fieldId, ref.optionId, schema);
-      }
-      return { ok: false, error: `Unknown option: "${qualifiedRef}"` };
-    }
-
-    case 'column': {
-      if (fieldKind !== 'table') {
         return {
-          ok: false,
-          error: `Column ref "${ref.fieldId}.${ref.columnId}" invalid: ` +
-                 `field "${ref.fieldId}" is ${fieldKind}, not table`,
+          ok: true,
+          resolved: { scope: 'option', fieldId: ref.fieldId, optionId: ref.qualifierId },
         };
       }
-      return validateColumnRef(ref.fieldId, ref.columnId, schema);
+
+      // Check if it's a column (table field)
+      if (fieldKind === 'table') {
+        const colResult = resolveColumnRef(ref.fieldId, ref.qualifierId, schema);
+        if (colResult.ok) {
+          return {
+            ok: true,
+            resolved: { scope: 'column', fieldId: ref.fieldId, columnId: ref.qualifierId },
+          };
+        }
+        return colResult;
+      }
+
+      return { ok: false, error: `Unknown option or column: "${qualifiedRef}"` };
     }
 
     case 'cell': {
       if (fieldKind !== 'table') {
         return {
           ok: false,
-          error: `Cell ref "${serializeScopeRef(ref)}" invalid: ` +
+          error: `Cell ref "${ref.fieldId}.${ref.columnId}[${ref.rowIndex}]" invalid: ` +
                  `field "${ref.fieldId}" is ${fieldKind}, not table`,
         };
       }
+
       // Validate column exists
-      const colResult = validateColumnRef(ref.fieldId, ref.columnId, schema);
+      const colResult = resolveColumnRef(ref.fieldId, ref.columnId, schema);
       if (!colResult.ok) return colResult;
 
       // Validate row index bounds (if row counts provided)
@@ -769,21 +1012,30 @@ export function validateScopeRef(
         if (ref.rowIndex >= rowCount) {
           return {
             ok: false,
-            error: `Cell ref "${serializeScopeRef(ref)}" invalid: ` +
+            error: `Cell ref "${ref.fieldId}.${ref.columnId}[${ref.rowIndex}]" invalid: ` +
                    `row index ${ref.rowIndex} out of bounds (table has ${rowCount} rows)`,
           };
         }
       }
-      return { ok: true, scope: 'cell' };
+
+      return {
+        ok: true,
+        resolved: {
+          scope: 'cell',
+          fieldId: ref.fieldId,
+          columnId: ref.columnId,
+          rowIndex: ref.rowIndex,
+        },
+      };
     }
   }
 }
 
-function validateColumnRef(
+function resolveColumnRef(
   fieldId: Id,
   columnId: Id,
   schema: FormSchema,
-): ValidateScopeRefResult {
+): ResolveScopeRefResult {
   // Find the table field and check column exists
   for (const group of schema.groups) {
     for (const field of group.children) {
@@ -797,7 +1049,10 @@ function validateColumnRef(
                    `Valid columns: ${validColumns}`,
           };
         }
-        return { ok: true, scope: 'column' };
+        return {
+          ok: true,
+          resolved: { scope: 'column', fieldId, columnId },
+        };
       }
     }
   }
@@ -810,16 +1065,21 @@ function validateColumnRef(
 ```
 packages/markform/src/
 ├── engine/
-│   ├── scopeRef.ts              # Standalone scope parsing (no deps)
-│   ├── scopeRef.test.ts         # Unit tests for parsing
-│   ├── scopeRefValidation.ts    # Schema-aware validation
-│   ├── scopeRefValidation.test.ts
+│   ├── scopeRef.ts              # Phase 1: Standalone scope parsing (no deps)
+│   ├── scopeRefValidation.ts    # Phase 2: Schema-aware resolution
 │   ├── table/                   # Table-specific modules
-│   │   ├── parseTable.ts        # Markdown table parsing
+│   │   ├── parseTable.ts        # Extract table from Markdoc AST
 │   │   ├── serializeTable.ts    # Table serialization with escaping
 │   │   ├── validateTable.ts     # Table value validation
 │   │   └── tableTypes.ts        # Table-specific type helpers
 │   └── validate.ts              # Existing validation (imports scopeRefValidation)
+├── tests/unit/
+│   ├── scopeRef.test.ts         # Unit tests for scope parsing
+│   ├── scopeRefValidation.test.ts  # Unit tests for resolution
+│   └── table/
+│       ├── parseTable.test.ts   # Tests for Markdoc AST extraction
+│       ├── serializeTable.test.ts
+│       └── escaping.test.ts     # TDD tests for cell escaping
 ```
 
 #### Unit Test Coverage (scopeRef.test.ts)
@@ -830,7 +1090,7 @@ describe('parseScopeRef', () => {
     it('parses simple field id', () => {
       expect(parseScopeRef('company_name')).toEqual({
         ok: true,
-        ref: { type: 'field', fieldId: 'company_name' },
+        ref: { kind: 'field', fieldId: 'company_name' },
       });
     });
 
@@ -841,18 +1101,19 @@ describe('parseScopeRef', () => {
     });
   });
 
-  describe('qualified references (option/column)', () => {
-    it('parses qualified ref', () => {
+  describe('qualified references (ambiguous)', () => {
+    it('parses qualified ref as ambiguous', () => {
+      // Note: kind is 'qualified', not 'option' - ambiguity resolved in phase 2
       expect(parseScopeRef('rating.bullish')).toEqual({
         ok: true,
-        ref: { type: 'option', fieldId: 'rating', optionId: 'bullish' },
+        ref: { kind: 'qualified', fieldId: 'rating', qualifierId: 'bullish' },
       });
     });
 
     it('parses multi-segment field id', () => {
       expect(parseScopeRef('docs_reviewed.ten_k')).toEqual({
         ok: true,
-        ref: { type: 'option', fieldId: 'docs_reviewed', optionId: 'ten_k' },
+        ref: { kind: 'qualified', fieldId: 'docs_reviewed', qualifierId: 'ten_k' },
       });
     });
   });
@@ -861,14 +1122,14 @@ describe('parseScopeRef', () => {
     it('parses cell ref with row index', () => {
       expect(parseScopeRef('key_people.name[0]')).toEqual({
         ok: true,
-        ref: { type: 'cell', fieldId: 'key_people', columnId: 'name', rowIndex: 0 },
+        ref: { kind: 'cell', fieldId: 'key_people', columnId: 'name', rowIndex: 0 },
       });
     });
 
     it('parses large row index', () => {
       expect(parseScopeRef('films.title[999]')).toEqual({
         ok: true,
-        ref: { type: 'cell', fieldId: 'films', columnId: 'title', rowIndex: 999 },
+        ref: { kind: 'cell', fieldId: 'films', columnId: 'title', rowIndex: 999 },
       });
     });
 
@@ -885,12 +1146,17 @@ describe('parseScopeRef', () => {
 
 describe('serializeScopeRef', () => {
   it('round-trips field ref', () => {
-    const ref = { type: 'field' as const, fieldId: 'company' };
+    const ref = { kind: 'field' as const, fieldId: 'company' };
     expect(serializeScopeRef(ref)).toBe('company');
   });
 
+  it('round-trips qualified ref', () => {
+    const ref = { kind: 'qualified' as const, fieldId: 'rating', qualifierId: 'bullish' };
+    expect(serializeScopeRef(ref)).toBe('rating.bullish');
+  });
+
   it('round-trips cell ref', () => {
-    const ref = { type: 'cell' as const, fieldId: 'people', columnId: 'name', rowIndex: 5 };
+    const ref = { kind: 'cell' as const, fieldId: 'people', columnId: 'name', rowIndex: 5 };
     expect(serializeScopeRef(ref)).toBe('people.name[5]');
   });
 });
@@ -899,78 +1165,77 @@ describe('serializeScopeRef', () => {
 #### Unit Test Coverage (scopeRefValidation.test.ts)
 
 ```typescript
-describe('validateScopeRef', () => {
+describe('resolveScopeRef', () => {
   const mockSchema: FormSchema = { /* ... with table field */ };
   const mockSummary: StructureSummary = { /* ... */ };
 
-  describe('type compatibility', () => {
+  describe('field references', () => {
+    it('resolves simple field ref', () => {
+      const ref = { kind: 'field' as const, fieldId: 'company_name' };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary);
+      expect(result.ok).toBe(true);
+      expect(result.resolved?.scope).toBe('field');
+    });
+  });
+
+  describe('qualified reference disambiguation', () => {
+    it('resolves qualified ref as option for select field', () => {
+      const ref = { kind: 'qualified' as const, fieldId: 'rating', qualifierId: 'bullish' };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary);
+      expect(result.ok).toBe(true);
+      expect(result.resolved?.scope).toBe('option');
+    });
+
+    it('resolves qualified ref as column for table field', () => {
+      const ref = { kind: 'qualified' as const, fieldId: 'films', qualifierId: 'title' };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary);
+      expect(result.ok).toBe(true);
+      expect(result.resolved?.scope).toBe('column');
+    });
+
+    it('rejects unknown qualifier', () => {
+      const ref = { kind: 'qualified' as const, fieldId: 'company_name', qualifierId: 'unknown' };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary);
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain('Unknown option or column');
+    });
+  });
+
+  describe('cell references', () => {
     it('rejects cell ref on non-table field', () => {
-      const ref = { type: 'cell', fieldId: 'company_name', columnId: 'x', rowIndex: 0 };
-      const result = validateScopeRef(ref, mockSchema, mockSummary);
+      const ref = { kind: 'cell' as const, fieldId: 'company_name', columnId: 'x', rowIndex: 0 };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary);
       expect(result.ok).toBe(false);
       expect(result.error).toContain('is string, not table');
     });
 
-    it('rejects column ref on non-table field', () => {
-      const ref = { type: 'column', fieldId: 'rating', columnId: 'score' };
-      const result = validateScopeRef(ref, mockSchema, mockSummary);
-      expect(result.ok).toBe(false);
-      expect(result.error).toContain('is single_select, not table');
-    });
-  });
-
-  describe('column validation', () => {
-    it('accepts valid column', () => {
-      const ref = { type: 'column', fieldId: 'films', columnId: 'title' };
-      const result = validateScopeRef(ref, mockSchema, mockSummary);
+    it('accepts valid cell ref', () => {
+      const ref = { kind: 'cell' as const, fieldId: 'films', columnId: 'title', rowIndex: 0 };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary, { films: 5 });
       expect(result.ok).toBe(true);
-      expect(result.scope).toBe('column');
+      expect(result.resolved?.scope).toBe('cell');
     });
 
     it('rejects unknown column', () => {
-      const ref = { type: 'column', fieldId: 'films', columnId: 'nonexistent' };
-      const result = validateScopeRef(ref, mockSchema, mockSummary);
+      const ref = { kind: 'cell' as const, fieldId: 'films', columnId: 'nonexistent', rowIndex: 0 };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary);
       expect(result.ok).toBe(false);
       expect(result.error).toContain('Unknown column');
       expect(result.error).toContain('Valid columns:');
     });
-  });
-
-  describe('row bounds validation', () => {
-    it('accepts in-bounds row index', () => {
-      const ref = { type: 'cell', fieldId: 'films', columnId: 'title', rowIndex: 2 };
-      const result = validateScopeRef(ref, mockSchema, mockSummary, { films: 5 });
-      expect(result.ok).toBe(true);
-    });
 
     it('rejects out-of-bounds row index', () => {
-      const ref = { type: 'cell', fieldId: 'films', columnId: 'title', rowIndex: 10 };
-      const result = validateScopeRef(ref, mockSchema, mockSummary, { films: 5 });
+      const ref = { kind: 'cell' as const, fieldId: 'films', columnId: 'title', rowIndex: 10 };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary, { films: 5 });
       expect(result.ok).toBe(false);
       expect(result.error).toContain('out of bounds');
       expect(result.error).toContain('has 5 rows');
     });
 
     it('skips bounds check when rowCounts not provided', () => {
-      const ref = { type: 'cell', fieldId: 'films', columnId: 'title', rowIndex: 999 };
-      const result = validateScopeRef(ref, mockSchema, mockSummary);
+      const ref = { kind: 'cell' as const, fieldId: 'films', columnId: 'title', rowIndex: 999 };
+      const result = resolveScopeRef(ref, mockSchema, mockSummary);
       expect(result.ok).toBe(true); // No bounds check without rowCounts
-    });
-  });
-
-  describe('option/column disambiguation', () => {
-    it('resolves qualified ref as option for select field', () => {
-      const ref = { type: 'option', fieldId: 'rating', optionId: 'bullish' };
-      const result = validateScopeRef(ref, mockSchema, mockSummary);
-      expect(result.ok).toBe(true);
-      expect(result.scope).toBe('option');
-    });
-
-    it('resolves qualified ref as column for table field', () => {
-      const ref = { type: 'option', fieldId: 'films', optionId: 'title' };
-      const result = validateScopeRef(ref, mockSchema, mockSummary);
-      expect(result.ok).toBe(true);
-      expect(result.scope).toBe('column');
     });
   });
 });
@@ -982,7 +1247,7 @@ describe('validateScopeRef', () => {
 
 | Component | Existing Code | Reuse Strategy |
 | --- | --- | --- |
-| Sentinel parsing | `parseSentinels.ts` | Direct import of `parseSentinelValue()` |
+| Sentinel parsing | `parseSentinels.ts` | Direct import of `parseSentinel()` |
 | URL validation | `validate.ts` | Import existing URL regex/validator |
 | Date validation | `validate.ts` | Import ISO date pattern |
 | Field registry | `fieldRegistry.ts` | Add new entry following existing pattern |
@@ -990,36 +1255,87 @@ describe('validateScopeRef', () => {
 
 ### Markdown Table Parsing
 
-Need to add markdown table parsing.
-Options:
+Markdoc already parses markdown tables as part of its AST. The table-field tag body
+contains Markdoc’s parsed table nodes.
 
-1. **Simple regex-based parser** — Split on `|`, handle escaping
+**Strategy:** Leverage Markdoc’s built-in table parsing rather than writing a custom
+parser:
 
-2. **Use existing markdown library** — marked, remark, etc.
+1. Markdoc parses the tag body and produces table nodes (thead, tbody, tr, td)
 
-**Recommendation:** Simple regex parser.
-Markdown table syntax is simple and we need tight control over validation.
-No external dependency needed.
+2. We traverse the Markdoc AST to extract:
+
+   - Header cells from `thead > tr > th` nodes
+
+   - Data rows from `tbody > tr > td` nodes
+
+3. Cell content is extracted from the text content of each cell node
+
+4. Pipe escaping (`\|`) is handled by Markdoc during parsing
+
+**Implementation:**
 
 ```typescript
-function parseMarkdownTable(content: string): { headers: string[]; rows: string[][] } {
-  const lines = content.trim().split('\n').filter(line => line.trim());
-  if (lines.length < 2) return { headers: [], rows: [] };
+import type { Node } from '@markdoc/markdoc';
 
-  const parseRow = (line: string): string[] => {
-    // Remove leading/trailing pipes, split on unescaped |, trim cells
-    return line.replace(/^\||\|$/g, '')
-               .split(/(?<!\\)\|/)
-               .map(cell => cell.trim().replace(/\\\|/g, '|'));
-  };
+interface ParsedTable {
+  headers: string[];
+  rows: string[][];
+}
 
-  const headers = parseRow(lines[0]);
-  // Skip separator row (lines[1])
-  const rows = lines.slice(2).map(parseRow);
+/**
+ * Extract table data from Markdoc's parsed AST.
+ * Relies on Markdoc's built-in table parsing.
+ */
+function parseTableFromAst(node: Node): ParsedTable {
+  const headers: string[] = [];
+  const rows: string[][] = [];
+
+  // Find thead and tbody in the node's children
+  for (const child of node.children ?? []) {
+    if (child.type === 'thead') {
+      // Extract header cells
+      for (const tr of child.children ?? []) {
+        if (tr.type === 'tr') {
+          for (const th of tr.children ?? []) {
+            headers.push(extractCellText(th));
+          }
+        }
+      }
+    } else if (child.type === 'tbody') {
+      // Extract data rows
+      for (const tr of child.children ?? []) {
+        if (tr.type === 'tr') {
+          const row: string[] = [];
+          for (const td of tr.children ?? []) {
+            row.push(extractCellText(td));
+          }
+          rows.push(row);
+        }
+      }
+    }
+  }
 
   return { headers, rows };
 }
+
+function extractCellText(cell: Node): string {
+  // Extract text content from cell, handling inline nodes
+  if (cell.type === 'text') return cell.attributes?.content ?? '';
+  if (!cell.children) return '';
+  return cell.children.map(extractCellText).join('');
+}
 ```
+
+**Benefits of using Markdoc’s parser:**
+
+- No custom regex parsing (less error-prone)
+
+- Consistent with how other Markdoc content is handled
+
+- Automatically handles edge cases Markdoc already solves
+
+- Pipe escaping handled by Markdoc
 
 ### Integration Points
 
@@ -1037,11 +1353,13 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 ## Stage 4: Implementation
 
-### Phase 1: Type Definitions and Registry
+### Phase 1: Type Definitions, Registry, and Scope Parsing
 
-- [ ] Add `ColumnType` type to `coreTypes.ts`
+**Type definitions (`coreTypes.ts`):**
 
-- [ ] Add `TableColumn` interface to `coreTypes.ts`
+- [ ] Add `ColumnType` type
+
+- [ ] Add `TableColumn` interface
 
 - [ ] Add `TableField` interface extending `FieldBase`
 
@@ -1053,63 +1371,71 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Add `'table'` to `FieldKind` union
 
-- [ ] Add Zod schemas for all new types
+- [ ] Add `'column'` and `'cell'` to `IssueScope` enum
 
-- [ ] Add `table` to `FIELD_KINDS` in `fieldRegistry.ts`
+- [ ] Add Zod schemas: `ColumnTypeSchema`, `TableColumnSchema`, `TableFieldSchema`,
+  `CellValueSchema`, `CellResponseSchema`, `TableRowResponseSchema`, `TableValueSchema`,
+  `TableRowPatchSchema`, `SetTablePatchSchema`
 
-- [ ] Add `FieldTypeMap['table']` entry
+- [ ] Update `Field` union to include `TableField`
+
+- [ ] Update `FieldValue` union to include `TableValue`
 
 - [ ] Update `Patch` union to include `SetTablePatch`
 
+**Field registry (`fieldRegistry.ts`):**
+
+- [ ] Add `table` to `FIELD_KINDS`
+
+- [ ] Add `FieldTypeMap['table']` entry
+
 - [ ] Add `createEmptyValue` case for `'table'`
 
-### Phase 2: Scope Reference Parsing (Shared Module)
+**Scope reference parsing (`scopeRef.ts`):**
 
-- [ ] Create `scopeRef.ts` with `ParsedScopeRef` types
+- [ ] Create `ParsedScopeRef` types (field, qualified, cell)
 
-- [ ] Implement `parseScopeRef()` with regex patterns for field/option/column/cell
+- [ ] Create `ResolvedScopeRef` types (field, option, column, cell)
+
+- [ ] Implement `parseScopeRef()` with regex patterns
 
 - [ ] Implement `serializeScopeRef()` for round-trip
-
-- [ ] Add `'column'` and `'cell'` to `IssueScope` enum in `coreTypes.ts`
 
 - [ ] Write unit tests: valid field refs, qualified refs, cell refs
 
 - [ ] Write unit tests: invalid formats, edge cases
 
-- [ ] Create `scopeRefValidation.ts` with `validateScopeRef()`
+**Scope reference resolution (`scopeRefValidation.ts`):**
 
-- [ ] Implement field type checking (cell refs only valid for tables)
+- [ ] Implement `resolveScopeRef()` for schema-aware resolution
+
+- [ ] Implement qualified ref disambiguation (option vs column)
 
 - [ ] Implement column existence validation
 
 - [ ] Implement row bounds validation (when rowCounts provided)
 
-- [ ] Implement option/column disambiguation logic
-
-- [ ] Write unit tests for type compatibility errors
+- [ ] Write unit tests for disambiguation
 
 - [ ] Write unit tests for column validation errors
 
 - [ ] Write unit tests for row bounds errors
 
-- [ ] Write unit tests for option/column disambiguation
+### Phase 2: Markdown Table Parsing
 
-### Phase 3: Markdown Table Parser
+- [ ] Create `table/parseTable.ts` with `parseTableFromAst()` function
 
-- [ ] Create `table/parseTable.ts` with `parseMarkdownTable()` function
+- [ ] Extract headers from Markdoc’s `thead` nodes
 
-- [ ] Handle pipe escaping (`\|` → `|`)
+- [ ] Extract data rows from Markdoc’s `tbody` nodes
 
-- [ ] Handle empty cells
+- [ ] Handle whitespace trimming in cells
 
-- [ ] Handle whitespace trimming
-
-- [ ] Write unit tests for table parsing
+- [ ] Write unit tests for table parsing from AST
 
 - [ ] Test edge cases: empty table, single row, many columns
 
-### Phase 4: Field Parsing
+### Phase 3: Field Parsing
 
 - [ ] Add `table-field` to Markdoc tag config
 
@@ -1119,7 +1445,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Validate `columnLabels` length matches `columnIds.length` if specified
 
-- [ ] Validate `columnTypes` is array of valid type names if specified
+- [ ] Validate `columnTypes` entries are valid (string or `{type, required}` object)
 
 - [ ] Validate `columnTypes` length matches `columnIds.length` if specified
 
@@ -1145,7 +1471,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Write parser tests for sentinel values in cells
 
-### Phase 5: Serialization
+### Phase 4: Serialization
 
 - [ ] Add table serialization to `table/serializeTable.ts`
 
@@ -1175,7 +1501,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Write escaping tests (pipes, backslash-pipes, sentinels)
 
-### Phase 6: Table Validation
+### Phase 5: Table Validation
 
 - [ ] Create `table/validateTable.ts` for table-specific validation
 
@@ -1185,6 +1511,8 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Validate no empty cells (must use sentinel)
 
+- [ ] Validate required columns don’t contain sentinels (`REQUIRED_CELL_SKIPPED`)
+
 - [ ] Add validation error codes to taxonomy
 
 - [ ] Use `scopeRefValidation.ts` for cell reference validation in errors
@@ -1193,7 +1521,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Write validation tests for cell type errors
 
-### Phase 7: Patch Application
+### Phase 6: Patch Application
 
 - [ ] Add `set_table` case to `apply.ts`
 
@@ -1205,7 +1533,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Write patch application tests
 
-### Phase 8: Export and Summaries
+### Phase 7: Export and Summaries
 
 - [ ] Add table to `ExportedField` handling
 
@@ -1217,7 +1545,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Write export tests
 
-### Phase 9: Documentation
+### Phase 8: Documentation
 
 **SPEC.md updates:**
 
@@ -1279,11 +1607,11 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 **Scope ref parsing tests (scopeRef.test.ts):**
 
-- [ ] Parses simple field id: `company_name`
+- [ ] Parses simple field id: `company_name` → `{ kind: 'field' }`
 
-- [ ] Parses qualified ref: `rating.bullish`
+- [ ] Parses qualified ref: `rating.bullish` → `{ kind: 'qualified' }` (ambiguous)
 
-- [ ] Parses cell ref: `key_people.name[0]`
+- [ ] Parses cell ref: `key_people.name[0]` → `{ kind: 'cell' }`
 
 - [ ] Parses large row index: `films.title[999]`
 
@@ -1295,13 +1623,19 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Round-trips all ref types through serialize/parse
 
-**Scope ref validation tests (scopeRefValidation.test.ts):**
+**Scope ref resolution tests (scopeRefValidation.test.ts):**
+
+- [ ] Resolves field ref → `{ scope: 'field' }`
+
+- [ ] Disambiguates qualified ref as option for select field → `{ scope: 'option' }`
+
+- [ ] Disambiguates qualified ref as column for table field → `{ scope: 'column' }`
+
+- [ ] Rejects unknown qualifier with helpful error
 
 - [ ] Rejects cell ref on non-table field
 
-- [ ] Rejects column ref on non-table field
-
-- [ ] Accepts valid column ref on table field
+- [ ] Accepts valid cell ref on table field → `{ scope: 'cell' }`
 
 - [ ] Rejects unknown column with helpful error
 
@@ -1310,10 +1644,6 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 - [ ] Rejects out-of-bounds row index with helpful error
 
 - [ ] Skips bounds check when rowCounts not provided
-
-- [ ] Disambiguates qualified ref as option for select field
-
-- [ ] Disambiguates qualified ref as column for table field
 
 **Table parser tests:**
 
@@ -1349,11 +1679,11 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Default types (all string) when `columnTypes` omitted
 
-- [ ] Default labels (same as IDs) when `columnLabels` omitted and has data rows
-
 - [ ] Labels back-filled from headers when `columnLabels` omitted and unanswered
 
 - [ ] Header count mismatch error when back-filling labels
+
+- [ ] **Parse error** when `columnLabels` omitted but has data rows
 
 **Table validation tests:**
 
@@ -1362,6 +1692,14 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 - [ ] Table with more than maxRows fails
 
 - [ ] required=true with 0 rows fails
+
+- [ ] Required column with `%SKIP%` produces `REQUIRED_CELL_SKIPPED` error
+
+- [ ] Required column with `%ABORT%` produces `REQUIRED_CELL_SKIPPED` error
+
+- [ ] Optional column (default) allows `%SKIP%`
+
+- [ ] Column with `{type: "string", required: true}` parsed correctly
 
 **Serialization tests:**
 
@@ -1390,6 +1728,18 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 - [ ] Invalid row structure rejected
 
 - [ ] Invalid cell type rejected
+
+- [ ] Null value in patch becomes `%SKIP%` in serialized form
+
+- [ ] `%SKIP%` string in patch parsed as skipped cell
+
+- [ ] `%SKIP% (reason)` string in patch preserves reason
+
+- [ ] `%ABORT%` string in patch parsed as aborted cell
+
+**Golden test updates:**
+
+- [ ] Regenerate golden tests after format changes (`pnpm test:golden:regen`)
 
 ### Manual Testing Checklist
 
@@ -1441,6 +1791,23 @@ Labels are back-filled from headers — no need to duplicate in `columnLabels`:
 | Jane Doe | CTO | Engineering |
 {% /table-field %}
 ```
+
+### Per-Column Required (Mixed Syntax)
+
+Use object syntax in `columnTypes` to mark specific columns as required:
+
+```md
+{% table-field id="contacts" label="Contact List"
+   columnIds=["name", "email", "phone", "notes"]
+   columnTypes=[{type: "string", required: true}, {type: "string", required: true}, "string", "string"] %}
+| Name | Email | Phone | Notes |
+|------|-------|-------|-------|
+| John Smith | john@example.com | %SKIP% | Primary contact |
+{% /table-field %}
+```
+
+In this example, `name` and `email` are required (cannot be `%SKIP%`), while `phone` and
+`notes` are optional (agents can send `null` which becomes `%SKIP%`).
 
 After serialize, becomes (labels preserved in attribute):
 
@@ -1528,6 +1895,15 @@ Clean template with types — labels extracted from headers:
 {% /table-field %}
 
 <!-- ERROR: Cell at row 1, column "rt_score" is empty. Provide a value or use %SKIP%. -->
+
+{% table-field id="contacts" columnIds=["name", "email"]
+   columnTypes=[{type: "string", required: true}, "string"] %}
+| Name | Email |
+|------|-------|
+| %SKIP% | john@example.com |
+{% /table-field %}
+
+<!-- ERROR: Cell at row 1, column "name" is required but contains %SKIP%. -->
 ```
 
 ## Appendix: Type Taxonomy Reference
@@ -1544,7 +1920,17 @@ For reference, the complete type taxonomy after this feature:
 ## Appendix: Example Form Migrations
 
 The following example forms currently use pipe-delimited `string-list` syntax that
-should be migrated to `table-field`:
+should be migrated to `table-field`.
+
+**Migration priority:**
+
+1. **Phase 1 (smoke test):** `movie-research-basic.form.md` — 1 field
+
+2. **Phase 2 (small batch):** `movie-research-deep.form.md` — 2 fields
+
+3. **Phase 3 (medium):** `startup-deep-research.form.md`, `earnings-analysis.form.md`
+
+4. **Phase 4 (large, separate PR):** `celebrity-deep-research.form.md` — ~20 fields
 
 ### movie-research-basic.form.md
 
