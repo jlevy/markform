@@ -1509,7 +1509,7 @@ subsection.
 
    - **Serialization consistency:** Skip and abort states are serialized via `state`
      attribute on field tags, making them visible in the markdown.
-     Sentinel values (`|SKIP|`, `|ABORT|`) encode reasons when present.
+     Sentinel values (`%SKIP%`, `%ABORT%`) encode reasons when present.
      This ensures the markdown is self-documenting and human-readable.
 
    - **Completion semantics:** Completion requires all role-filtered fields to be

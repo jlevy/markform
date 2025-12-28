@@ -451,7 +451,7 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="notes" label="Notes" state="skipped" %}
 \`\`\`value
-|SKIP| (Not applicable for this analysis)
+%SKIP% (Not applicable for this analysis)
 \`\`\`
 {% /string-field %}
 {% /field-group %}

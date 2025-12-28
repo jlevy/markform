@@ -1,7 +1,7 @@
 /**
  * Sentinel value parsing for Markform fields.
  *
- * Sentinel values (|SKIP| and |ABORT|) are special markers that indicate
+ * Sentinel values (%SKIP% and %ABORT%) are special markers that indicate
  * a field was intentionally skipped or aborted rather than filled in.
  */
 
@@ -15,8 +15,8 @@ import { extractFenceValue, getStringAttr, ParseError } from './parseHelpers.js'
 // =============================================================================
 
 /** Sentinel values for text fields */
-export const SENTINEL_SKIP = '|SKIP|';
-export const SENTINEL_ABORT = '|ABORT|';
+export const SENTINEL_SKIP = '%SKIP%';
+export const SENTINEL_ABORT = '%ABORT%';
 
 // =============================================================================
 // Sentinel Parsing
@@ -32,7 +32,7 @@ export interface ParsedSentinel {
 
 /**
  * Parse a sentinel value with optional parenthesized reason.
- * Formats: `|SKIP|`, `|SKIP| (reason text)`, `|ABORT|`, `|ABORT| (reason text)`
+ * Formats: `%SKIP%`, `%SKIP% (reason text)`, `%ABORT%`, `%ABORT% (reason text)`
  * Returns null if the content is not a sentinel.
  */
 export function parseSentinel(content: string | null): ParsedSentinel | null {
@@ -43,7 +43,7 @@ export function parseSentinel(content: string | null): ParsedSentinel | null {
   const trimmed = content.trim();
   const reasonPattern = /^\((.+)\)$/s;
 
-  // Check for |SKIP| with optional reason
+  // Check for %SKIP% with optional reason
   if (trimmed.startsWith(SENTINEL_SKIP)) {
     const rest = trimmed.slice(SENTINEL_SKIP.length).trim();
     if (rest === '') {
@@ -54,11 +54,11 @@ export function parseSentinel(content: string | null): ParsedSentinel | null {
     if (match?.[1]) {
       return { type: 'skip', reason: match[1].trim() };
     }
-    // Invalid format - just |SKIP| with non-parenthesized content
+    // Invalid format - just %SKIP% with non-parenthesized content
     return null;
   }
 
-  // Check for |ABORT| with optional reason
+  // Check for %ABORT% with optional reason
   if (trimmed.startsWith(SENTINEL_ABORT)) {
     const rest = trimmed.slice(SENTINEL_ABORT.length).trim();
     if (rest === '') {
@@ -69,7 +69,7 @@ export function parseSentinel(content: string | null): ParsedSentinel | null {
     if (match?.[1]) {
       return { type: 'abort', reason: match[1].trim() };
     }
-    // Invalid format - just |ABORT| with non-parenthesized content
+    // Invalid format - just %ABORT% with non-parenthesized content
     return null;
   }
 
@@ -78,7 +78,7 @@ export function parseSentinel(content: string | null): ParsedSentinel | null {
 
 /**
  * Check for sentinel values in fence content and validate against state attribute.
- * Handles the common pattern of checking for |SKIP| and |ABORT| sentinels in field values.
+ * Handles the common pattern of checking for %SKIP% and %ABORT% sentinels in field values.
  *
  * @param node - The field node to check
  * @param fieldId - The field ID for error messages
@@ -101,12 +101,12 @@ export function tryParseSentinelResponse(
   if (sentinel.type === 'skip') {
     if (stateAttr !== undefined && stateAttr !== 'skipped') {
       throw new ParseError(
-        `Field '${fieldId}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
+        `Field '${fieldId}' has conflicting state='${stateAttr}' with %SKIP% sentinel`,
       );
     }
     if (required) {
       throw new ParseError(
-        `Field '${fieldId}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
+        `Field '${fieldId}' is required but has %SKIP% sentinel. Cannot skip required fields.`,
       );
     }
     return { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) };
@@ -115,7 +115,7 @@ export function tryParseSentinelResponse(
   if (sentinel.type === 'abort') {
     if (stateAttr !== undefined && stateAttr !== 'aborted') {
       throw new ParseError(
-        `Field '${fieldId}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
+        `Field '${fieldId}' has conflicting state='${stateAttr}' with %ABORT% sentinel`,
       );
     }
     return { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) };

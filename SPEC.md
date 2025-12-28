@@ -428,29 +428,29 @@ The `fence` node with `language="value"` is used for scalar values (see
 ```
 
 **Filled:** Value in a fenced code block with language `value`:
-```md
+````md
 {% string-field id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
-```
+````
 {% /string-field %}
-```
+````
 
 ##### Number Fields
 
 **Empty:**
 ```md
 {% number-field id="revenue_m" label="Revenue (millions)" %}{% /number-field %}
-```
+````
 
 **Filled:** Numeric value as string in fence (parsed to number):
-```md
+````md
 {% number-field id="revenue_m" label="Revenue (millions)" %}
 ```value
 1234.56
-```
+````
 {% /number-field %}
-```
+````
 
 ##### Single-Select Fields
 
@@ -462,7 +462,7 @@ Values are encoded **inline** via `[x]` marker—at most one option may be selec
 - [x] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
 {% /single-select %}
-```
+````
 
 Option IDs are scoped to the field—reference as `rating.bullish`, `rating.neutral`, etc.
 
@@ -522,15 +522,15 @@ Items do not have individual IDs—the field has an ID and items are positional 
 ```
 
 **Filled:** One item per non-empty line in the value fence:
-```md
+````md
 {% string-list id="key_commitments" label="Key commitments" minItems=1 %}
 ```value
 Ship v1.0 by end of Q1
 Complete security audit
 Migrate legacy users to new platform
-```
+````
 {% /string-list %}
-```
+````
 
 **Parsing rules:**
 - Split fence content by `\n`
@@ -557,14 +557,14 @@ Key engineer departure risk (bus factor = 1)
 Regulatory changes in EU market
 Competitor launching similar feature in Q2
 Customer concentration risk (top 3 = 60% revenue)
-```
+````
 {% /string-list %}
 
 {% instructions ref="top_risks" %} One risk per line.
 Be specific (company- or product-specific), not generic.
 Minimum 5; include more if needed.
 {% /instructions %}
-```
+````
 
 **Note:** The doc block is a sibling placed after the field, not nested inside it.
 
@@ -576,7 +576,7 @@ serialized on the opening tag:
 **Skipped field (no reason):**
 ```md
 {% string-field id="optional_notes" label="Optional notes" state="skipped" %}{% /string-field %}
-```
+````
 
 **Aborted field (no reason):**
 ```md
@@ -594,27 +594,27 @@ serialized on the opening tag:
 When a field has a skip or abort state AND a reason was provided via the patch, the
 reason is embedded in the sentinel value using parentheses:
 
-```md
+````md
 {% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
 ```value
-|SKIP| (Information not publicly available)
-```
+%SKIP% (Information not publicly available)
+````
 {% /string-field %}
-```
+````
 
 ```md
 {% number-field id="projected_revenue" label="Projected revenue" state="aborted" %}
 ```value
-|ABORT| (Financial projections cannot be determined from available data)
-```
+%ABORT% (Financial projections cannot be determined from available data)
+````
 {% /number-field %}
-```
+````
 
 **Parsing rules:**
 - If `state="skipped"` is present, field's responseState is `'skipped'`
 - If `state="aborted"` is present, field's responseState is `'aborted'`
 - Otherwise, responseState is determined by value presence (`'answered'` or `'empty'`)
-- Sentinel values (`|SKIP|` or `|ABORT|`) are parsed as metadata, not field values
+- Sentinel values (`%SKIP%` or `%ABORT%`) are parsed as metadata, not field values
 - Text in parentheses after sentinel is extracted as `FieldResponse.reason`
 
 **Serialization rules:**
@@ -638,7 +638,7 @@ General observation about this field.
 {% note id="n2" ref="quarterly_earnings" role="agent" %}
 Analysis completed with partial data due to API limitations.
 {% /note %}
-```
+````
 
 **Note attributes:**
 
@@ -650,7 +650,7 @@ Analysis completed with partial data due to API limitations.
 
 > **Note (markform-254):** Notes no longer support a `state` attribute.
 > Skip/abort reasons are now embedded directly in the field value using sentinel syntax
-> like `|SKIP| (reason)`. Notes are purely for general annotations.
+> like `%SKIP% (reason)`. Notes are purely for general annotations.
 
 **Placement and ordering:**
 
@@ -664,14 +664,14 @@ Analysis completed with partial data due to API limitations.
 
 **Example form with notes:**
 
-```md
+````md
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
 
 {% field-group id="company_info" title="Company Info" %}
 {% string-field id="company_name" label="Company name" state="skipped" %}
 ```value
-|SKIP| (Not applicable for this analysis type)
-```
+%SKIP% (Not applicable for this analysis type)
+````
 {% /string-field %} {% /field-group %}
 
 {% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
@@ -679,7 +679,7 @@ data due to API limitations.
 {% /note %}
 
 {% /form %}
-```
+````
 
 ##### The `process=false` Attribute
 
@@ -705,25 +705,25 @@ has no effect, but we prefer not to clutter the output).
 function containsMarkdocSyntax(value: string): boolean {
   return /\{%/.test(value);
 }
-```
+````
 
 **Example (process=false required):**
-```md
+````md
 {% string-field id="notes" label="Notes" %}
 ```value {% process=false %}
 Use {% tag %} for special formatting.
-```
+````
 {% /string-field %}
-```
+````
 
 **Example (process=false not needed):**
 ```md
 {% string-field id="name" label="Name" %}
 ```value
 Alice Johnson
-```
+````
 {% /string-field %}
-```
+````
 
 See [GitHub Discussion #261][markdoc-process-false] for background on the attribute.
 
@@ -774,7 +774,7 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 {% /field-group %}
 
 {% /form %}
-```
+````
 
 **Note:** When the engine serializes this form, it will add `form_summary`,
 `form_progress`, and `form_state` to the `markform` block automatically.
@@ -782,12 +782,12 @@ Hand-authored forms only need the `spec` field.
 
 #### Example: Incomplete Form
 
-```md
+````md
 {% field-group id="company_info" title="Company Info" %}
 {% string-field id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
-```
+````
 {% /string-field %} {% string-field id="ticker" label="Ticker" required=true %}
 ```value
 ACME
@@ -806,7 +806,7 @@ id="docs_reviewed" label="Documents reviewed" required=true %}
 
 - [ ] Earnings call transcript {% #call_transcript %} {% /checkboxes %} {% /field-group
   %}
-```
+````
 
 Notes:
 
@@ -920,7 +920,7 @@ Install the package:
 
 ```bash
 npm install my-library
-```
+````
 
 Then configure:
 
@@ -2573,8 +2573,8 @@ The friendly format uses sentinel strings for human readability:
 
 ```yaml
 values:
-  company_name: "|SKIP|"
-  revenue_m: "|ABORT|"
+  company_name: "%SKIP%"
+  revenue_m: "%ABORT%"
   quarterly_growth: 12.5
   ticker: ACME
 ```
@@ -2595,7 +2595,7 @@ When importing values (from YAML or JSON):
 
 - Structured format: Parse `state` and `value` properties from each field
 
-- Friendly format: Recognize `|SKIP|` and `|ABORT|` sentinel strings
+- Friendly format: Recognize `%SKIP%` and `%ABORT%` sentinel strings
 
 **Export includes notes:**
 
@@ -2721,6 +2721,8 @@ Type system and validation vocabulary:
 
 <!-- Reference Link Definitions -->
 
+
+
 <!-- Markdoc -->
 
 [markdoc-overview]: https://markdoc.dev/docs/overview "What is Markdoc?"
@@ -2774,3 +2776,4 @@ Type system and validation vocabulary:
 [json-schema-array]: https://json-schema.org/understanding-json-schema/reference/array "JSON Schema: Array"
 
 * * *
+~~~

@@ -9,7 +9,7 @@ refactor, which includes three major changes:
    `responsesByFieldId`
 
 2. **Skip/Abort Reason in Sentinel** (markform-254) — Embed reasons directly in sentinel
-   values `|SKIP| (reason)`
+   values `%SKIP% (reason)`
 
 3. **AnswerState/FieldState Refactor** (markform-255) — Cleaner orthogonal types with
    three dimensions
@@ -65,7 +65,7 @@ This is a major internal refactor of the markform engine:
 
 - Parse `state` attribute on field tags (`state="skipped"`, `state="aborted"`)
 
-- Parse sentinel values with parenthesized reason: `|SKIP| (reason text)`
+- Parse sentinel values with parenthesized reason: `%SKIP% (reason text)`
 
 - Parse `{% note %}` tags with id, ref, role, and text (no `state` attribute)
 
@@ -75,7 +75,7 @@ This is a major internal refactor of the markform engine:
 
 - Serialize `state` attribute on field tags for skipped/aborted fields
 
-- Serialize sentinel with reason: `|SKIP| (reason text)` in value fence
+- Serialize sentinel with reason: `%SKIP% (reason text)` in value fence
 
 - Serialize notes at end of form sorted by ID
 
@@ -124,7 +124,7 @@ Key test coverage includes:
 
 - Parse `state` attribute on field tags
 
-- Parse sentinel values with parenthesized reason: `|SKIP| (reason)`
+- Parse sentinel values with parenthesized reason: `%SKIP% (reason)`
 
 - Parse `{% note %}` tags (without state attribute)
 
@@ -140,7 +140,7 @@ Key test coverage includes:
 
 - Serialize notes at end of form (no state attribute)
 
-- Round-trip preservation of `|SKIP| (reason)` format
+- Round-trip preservation of `%SKIP% (reason)` format
 
 **Apply (28 tests)** - `tests/unit/engine/apply.test.ts`
 
@@ -225,13 +225,13 @@ markform dump examples/simple/simple-skipped-filled.form.md --format yaml
 
 Parse and serialize a form with skip/abort reasons:
 
-```markdown
+````markdown
 {% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
 ```value
-|SKIP| (Information not publicly available)
-```
+%SKIP% (Information not publicly available)
+````
 {% /string-field %}
-```
+````
 
 1. Verify parsing extracts reason to `FieldResponse.reason`
 2. Verify serialization round-trips correctly with parenthesized format
@@ -245,7 +245,7 @@ Verify notes work correctly:
 {% note id="n1" ref="form_id" role="agent" %}
 General observation about the form.
 {% /note %}
-```
+````
 
 1. Notes without `state` attribute should parse correctly
 
@@ -285,4 +285,4 @@ If using the AI SDK integration:
 
 - [ ] Verify notes with `state` attribute are rejected
 
-- [ ] Verify `|SKIP| (reason)` format parses and serializes correctly
+- [ ] Verify `%SKIP% (reason)` format parses and serializes correctly

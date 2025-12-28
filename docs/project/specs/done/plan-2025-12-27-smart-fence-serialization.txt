@@ -226,7 +226,7 @@ Some text with ~~~~ but no backticks
 1. **Indentation matters**: Fence chars with 4+ space indent don't close fences
 2. **Empty content**: Should still use default triple backticks
 3. **Only whitespace**: Should use default triple backticks
-4. **Sentinel values** (`|SKIP|`, `|ABORT|`): Verify they still work with new fence
+4. **Sentinel values** (`%SKIP%`, `%ABORT%`): Verify they still work with new fence
 5. **Very long runs**: Content with 10+ consecutive fence chars
 
 ### Task Checklist

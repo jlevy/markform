@@ -131,10 +131,10 @@ function formatValueFence(content: string): string {
  */
 function getSentinelContent(response: FieldResponse | undefined): string {
   if (response?.state === 'skipped' && response.reason) {
-    return formatValueFence(`|SKIP| (${response.reason})`);
+    return formatValueFence(`%SKIP% (${response.reason})`);
   }
   if (response?.state === 'aborted' && response.reason) {
-    return formatValueFence(`|ABORT| (${response.reason})`);
+    return formatValueFence(`%ABORT% (${response.reason})`);
   }
   return '';
 }

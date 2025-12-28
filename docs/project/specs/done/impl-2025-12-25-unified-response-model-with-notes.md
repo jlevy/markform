@@ -318,8 +318,8 @@ function parseFieldTag(
 #### markform-213: Parse sentinels in value fence
 
 ```typescript
-const SENTINEL_SKIP = '|SKIP|';
-const SENTINEL_ABORT = '|ABORT|';
+const SENTINEL_SKIP = '%SKIP%';
+const SENTINEL_ABORT = '%ABORT%';
 
 // Only for text syntax fields (string, number, string_list, url, url_list)
 if (fieldSyntax === 'text') {
@@ -376,9 +376,9 @@ Unit tests in `tests/unit/engine/parse.test.ts`:
 
 - Parse `state="skipped"` on unfilled checkboxes
 
-- Parse `|SKIP|` in string field value fence
+- Parse `%SKIP%` in string field value fence
 
-- Parse `|ABORT|` in url field value fence
+- Parse `%ABORT%` in url field value fence
 
 - Validation error: `state="skipped"` on filled field
 
@@ -494,8 +494,8 @@ function serializeResponseForExport(response: FieldResponse | undefined): unknow
 // Optional --friendly flag for human-readable YAML
 function serializeResponseFriendly(response: FieldResponse | undefined): unknown {
   if (!response || response.state === 'empty') return null;
-  if (response.state === 'skipped') return '|SKIP|';
-  if (response.state === 'aborted') return '|ABORT|';
+  if (response.state === 'skipped') return '%SKIP%';
+  if (response.state === 'aborted') return '%ABORT%';
   return serializeValueContent(response.value!);
 }
 ```

@@ -953,7 +953,7 @@ Not applicable.
   });
 
   describe('unified response model - round-trip with sentinels (markform-253)', () => {
-    it('round-trips |SKIP| sentinel in string field', () => {
+    it('round-trips %SKIP% sentinel in string field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -964,7 +964,7 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="notes" label="Notes" %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /string-field %}
 {% /field-group %}
@@ -975,13 +975,13 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      // After serialization, |SKIP| becomes state="skipped" attribute
+      // After serialization, %SKIP% becomes state="skipped" attribute
       expect(reparsed.responsesByFieldId.notes?.state).toBe('skipped');
       expect(output).toContain('state="skipped"');
-      expect(output).not.toContain('|SKIP|');
+      expect(output).not.toContain('%SKIP%');
     });
 
-    it('round-trips |ABORT| sentinel in url field', () => {
+    it('round-trips %ABORT% sentinel in url field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -992,7 +992,7 @@ markform:
 {% field-group id="g1" %}
 {% url-field id="website" label="Website" %}
 \`\`\`value
-|ABORT|
+%ABORT%
 \`\`\`
 {% /url-field %}
 {% /field-group %}
@@ -1003,10 +1003,10 @@ markform:
       const output = serialize(parsed);
       const reparsed = parseForm(output);
 
-      // After serialization, |ABORT| becomes state="aborted" attribute
+      // After serialization, %ABORT% becomes state="aborted" attribute
       expect(reparsed.responsesByFieldId.website?.state).toBe('aborted');
       expect(output).toContain('state="aborted"');
-      expect(output).not.toContain('|ABORT|');
+      expect(output).not.toContain('%ABORT%');
     });
 
     it('round-trips form with mixed states and notes', () => {

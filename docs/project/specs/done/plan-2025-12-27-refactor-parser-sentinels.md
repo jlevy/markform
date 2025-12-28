@@ -3,9 +3,10 @@
 ## Purpose
 
 Refactor `packages/markform/src/engine/parse.ts` to extract duplicated sentinel value
-handling logic into a reusable helper function. Currently, each fence-based field parser
-(string, number, string-list, url, url-list, date, year) contains nearly identical
-35-line blocks for checking and handling `|SKIP|` and `|ABORT|` sentinels.
+handling logic into a reusable helper function.
+Currently, each fence-based field parser (string, number, string-list, url, url-list,
+date, year) contains nearly identical 35-line blocks for checking and handling `%SKIP%`
+and `%ABORT%` sentinels.
 
 ## Background
 
@@ -36,7 +37,7 @@ if (sentinel) {
       throw new ParseError(`Field '${id}' has conflicting state...`);
     }
     if (required) {
-      throw new ParseError(`Field '${id}' is required but has |SKIP|...`);
+      throw new ParseError(`Field '${id}' is required but has %SKIP%...`);
     }
     return {
       field,
@@ -52,14 +53,18 @@ if (sentinel) {
 **Why This Matters:**
 
 1. **DRY Violation** - ~245 lines of duplicated logic (35 lines × 7 functions)
+
 2. **Maintenance Risk** - Any change to sentinel handling must be made in 7 places
+
 3. **Bug Risk** - Easy to introduce inconsistencies when adding new field types
+
 4. **Readability** - Field parsers are cluttered with boilerplate
 
 ## Summary of Task
 
 Extract sentinel handling into a helper function that field parsers call before parsing
-their type-specific values. This is a pure refactoring - no behavior changes.
+their type-specific values.
+This is a pure refactoring - no behavior changes.
 
 ### Proposed API
 
@@ -84,12 +89,12 @@ function tryParseSentinelResponse(
   if (sentinel.type === 'skip') {
     if (stateAttr !== undefined && stateAttr !== 'skipped') {
       throw new ParseError(
-        `Field '${fieldId}' has conflicting state='${stateAttr}' with |SKIP| sentinel`,
+        `Field '${fieldId}' has conflicting state='${stateAttr}' with %SKIP% sentinel`,
       );
     }
     if (required) {
       throw new ParseError(
-        `Field '${fieldId}' is required but has |SKIP| sentinel. Cannot skip required fields.`,
+        `Field '${fieldId}' is required but has %SKIP% sentinel. Cannot skip required fields.`,
       );
     }
     return { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) };
@@ -98,7 +103,7 @@ function tryParseSentinelResponse(
   if (sentinel.type === 'abort') {
     if (stateAttr !== undefined && stateAttr !== 'aborted') {
       throw new ParseError(
-        `Field '${fieldId}' has conflicting state='${stateAttr}' with |ABORT| sentinel`,
+        `Field '${fieldId}' has conflicting state='${stateAttr}' with %ABORT% sentinel`,
       );
     }
     return { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) };
@@ -140,18 +145,26 @@ function parseDateField(node: Node): { field: DateField; response: FieldResponse
 
 - **Code types, methods, and function signatures**: DO NOT MAINTAIN — This is internal
   refactoring; no public API changes
+
 - **Library APIs**: DO NOT MAINTAIN — No changes to exported functions
+
 - **Server APIs**: N/A — No server APIs affected
+
 - **File formats**: DO NOT MAINTAIN — No changes to file format handling
+
 - **Database schemas**: N/A — No database
 
 ## Acceptance Criteria
 
 1. All existing tests pass without modification
+
 2. `tryParseSentinelResponse()` helper function exists and is used by all fence-based
    field parsers
+
 3. Sentinel handling logic exists in exactly one place (the helper function)
+
 4. Each affected field parser is ~30 lines shorter
+
 5. Tests for date-field and year-field sentinel handling are added (these were missing)
 
 ## Testing Plan
@@ -160,10 +173,14 @@ function parseDateField(node: Node): { field: DateField; response: FieldResponse
 
 Before refactoring, add tests for date and year field sentinels to ensure full coverage:
 
-- [ ] Test `|SKIP|` in date-field
-- [ ] Test `|ABORT|` in date-field
-- [ ] Test `|SKIP|` in year-field
-- [ ] Test `|ABORT|` in year-field
+- [ ] Test `%SKIP%` in date-field
+
+- [ ] Test `%ABORT%` in date-field
+
+- [ ] Test `%SKIP%` in year-field
+
+- [ ] Test `%ABORT%` in year-field
+
 - [ ] Test conflicting state attribute with sentinel for date/year
 
 ### Post-Refactor: Verify Coverage
@@ -171,7 +188,9 @@ Before refactoring, add tests for date and year field sentinels to ensure full c
 After refactoring:
 
 - [ ] All 46 existing parse tests pass
+
 - [ ] New date/year sentinel tests pass
+
 - [ ] No behavior changes detected
 
 ## Implementation Checklist
@@ -179,28 +198,39 @@ After refactoring:
 ### Phase 1: Add Missing Test Coverage
 
 - [ ] Add sentinel tests for date-field
+
 - [ ] Add sentinel tests for year-field
+
 - [ ] Run tests to confirm current implementation passes
 
 ### Phase 2: Extract Helper Function
 
 - [ ] Create `tryParseSentinelResponse()` helper
+
 - [ ] Add unit test for the helper function directly (optional but recommended)
 
 ### Phase 3: Refactor Field Parsers
 
 - [ ] Update `parseStringField()` to use helper
+
 - [ ] Update `parseNumberField()` to use helper
+
 - [ ] Update `parseStringListField()` to use helper
+
 - [ ] Update `parseUrlField()` to use helper
+
 - [ ] Update `parseUrlListField()` to use helper
+
 - [ ] Update `parseDateField()` to use helper
+
 - [ ] Update `parseYearField()` to use helper
 
 ### Phase 4: Cleanup and Verification
 
 - [ ] Run full test suite
+
 - [ ] Verify line count reduction (~245 lines removed)
+
 - [ ] Code review for consistency
 
 ## Beads Reference

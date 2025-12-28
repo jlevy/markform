@@ -856,7 +856,7 @@ Alice
   });
 
   describe('unified response model - parse sentinels (markform-231)', () => {
-    it('parses |SKIP| sentinel in string field value fence', () => {
+    it('parses %SKIP% sentinel in string field value fence', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -867,7 +867,7 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="notes" label="Notes" %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /string-field %}
 {% /field-group %}
@@ -882,7 +882,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('parses |ABORT| sentinel in url field value fence', () => {
+    it('parses %ABORT% sentinel in url field value fence', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -893,7 +893,7 @@ markform:
 {% field-group id="g1" %}
 {% url-field id="website" label="Website" %}
 \`\`\`value
-|ABORT|
+%ABORT%
 \`\`\`
 {% /url-field %}
 {% /field-group %}
@@ -908,7 +908,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('parses |SKIP| in number field', () => {
+    it('parses %SKIP% in number field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -919,7 +919,7 @@ markform:
 {% field-group id="g1" %}
 {% number-field id="revenue" label="Revenue" %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /number-field %}
 {% /field-group %}
@@ -933,7 +933,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('parses |ABORT| in string-list field', () => {
+    it('parses %ABORT% in string-list field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -944,7 +944,7 @@ markform:
 {% field-group id="g1" %}
 {% string-list id="tags" label="Tags" %}
 \`\`\`value
-|ABORT|
+%ABORT%
 \`\`\`
 {% /string-list %}
 {% /field-group %}
@@ -958,7 +958,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('throws error on |SKIP| sentinel with state="aborted" attribute conflict', () => {
+    it('throws error on %SKIP% sentinel with state="aborted" attribute conflict', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -969,7 +969,7 @@ markform:
 {% field-group id="g1" %}
 {% string-field id="notes" label="Notes" state="aborted" %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /string-field %}
 {% /field-group %}
@@ -980,7 +980,7 @@ markform:
       expect(() => parseForm(markdown)).toThrow(/conflicting state/i);
     });
 
-    it('parses |SKIP| in date-field', () => {
+    it('parses %SKIP% in date-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -991,7 +991,7 @@ markform:
 {% field-group id="g1" %}
 {% date-field id="deadline" label="Deadline" %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /date-field %}
 {% /field-group %}
@@ -1005,7 +1005,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('parses |ABORT| in date-field', () => {
+    it('parses %ABORT% in date-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1016,7 +1016,7 @@ markform:
 {% field-group id="g1" %}
 {% date-field id="deadline" label="Deadline" %}
 \`\`\`value
-|ABORT|
+%ABORT%
 \`\`\`
 {% /date-field %}
 {% /field-group %}
@@ -1030,7 +1030,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('parses |SKIP| in year-field', () => {
+    it('parses %SKIP% in year-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1041,7 +1041,7 @@ markform:
 {% field-group id="g1" %}
 {% year-field id="founded" label="Founded Year" %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /year-field %}
 {% /field-group %}
@@ -1055,7 +1055,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('parses |ABORT| in year-field', () => {
+    it('parses %ABORT% in year-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1066,7 +1066,7 @@ markform:
 {% field-group id="g1" %}
 {% year-field id="founded" label="Founded Year" %}
 \`\`\`value
-|ABORT|
+%ABORT%
 \`\`\`
 {% /year-field %}
 {% /field-group %}
@@ -1080,7 +1080,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('throws error on |SKIP| in required date-field', () => {
+    it('throws error on %SKIP% in required date-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1091,7 +1091,7 @@ markform:
 {% field-group id="g1" %}
 {% date-field id="deadline" label="Deadline" required=true %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /date-field %}
 {% /field-group %}
@@ -1099,10 +1099,10 @@ markform:
 {% /form %}
 `;
       expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/required.*|SKIP|/i);
+      expect(() => parseForm(markdown)).toThrow(/required.*%SKIP%/i);
     });
 
-    it('throws error on |SKIP| in required year-field', () => {
+    it('throws error on %SKIP% in required year-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1113,7 +1113,7 @@ markform:
 {% field-group id="g1" %}
 {% year-field id="founded" label="Founded Year" required=true %}
 \`\`\`value
-|SKIP|
+%SKIP%
 \`\`\`
 {% /year-field %}
 {% /field-group %}
@@ -1121,10 +1121,10 @@ markform:
 {% /form %}
 `;
       expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/required.*|SKIP|/i);
+      expect(() => parseForm(markdown)).toThrow(/required.*%SKIP%/i);
     });
 
-    it('parses |SKIP| with reason in date-field', () => {
+    it('parses %SKIP% with reason in date-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1135,7 +1135,7 @@ markform:
 {% field-group id="g1" %}
 {% date-field id="deadline" label="Deadline" %}
 \`\`\`value
-|SKIP| (No deadline set for this project)
+%SKIP% (No deadline set for this project)
 \`\`\`
 {% /date-field %}
 {% /field-group %}
@@ -1150,7 +1150,7 @@ markform:
       expect(response?.value).toBeUndefined();
     });
 
-    it('parses |ABORT| with reason in year-field', () => {
+    it('parses %ABORT% with reason in year-field', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1161,7 +1161,7 @@ markform:
 {% field-group id="g1" %}
 {% year-field id="founded" label="Founded Year" %}
 \`\`\`value
-|ABORT| (Unable to determine founding year)
+%ABORT% (Unable to determine founding year)
 \`\`\`
 {% /year-field %}
 {% /field-group %}

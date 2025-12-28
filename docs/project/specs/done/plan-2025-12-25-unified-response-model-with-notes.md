@@ -44,7 +44,7 @@ cleaner, more orthogonal design.
 
 ### Core Design Principles
 
-1. **Sentinels are simple tokens** — `|SKIP|` and `|ABORT|` with no embedded data
+1. **Sentinels are simple tokens** — `%SKIP%` and `%ABORT%` with no embedded data
 
 2. **Notes are a general mechanism** — Text linked to any ID (field, group, form)
 
@@ -150,7 +150,7 @@ type FieldSyntax = 'text' | 'checkboxes';
 | `checkboxes` | `checkboxes` | Any marker changed from default |
 
 **Text syntax fields** use a value fence (`` ```value ``) for their content.
-Sentinel values (`|SKIP|`, `|ABORT|`) can appear in the fence as alternative syntax.
+Sentinel values (`%SKIP%`, `%ABORT%`) can appear in the fence as alternative syntax.
 
 **Checkboxes syntax fields** use `[ ]`/`[x]` markers on list items.
 They do NOT have value fences, so sentinels cannot appear in content—use the `state`
@@ -306,7 +306,7 @@ type Patch =
 
 **Auto-cleanup on value set:**
 
-When setting a real value on a field that has a `|SKIP|` or `|ABORT|` sentinel:
+When setting a real value on a field that has a `%SKIP%` or `%ABORT%` sentinel:
 
 - The sentinel is replaced with the new value
 
@@ -323,7 +323,7 @@ There are two serialization contexts with different representations:
 
 1. **Markform format** (markdown with tags): Uses `state` attribute on field tags
 
-2. **Value serialization** (YAML/JSON dump): Uses `|SKIP|` and `|ABORT|` sentinels
+2. **Value serialization** (YAML/JSON dump): Uses `%SKIP%` and `%ABORT%` sentinels
 
 #### Markform Format (state attribute)
 
@@ -371,10 +371,10 @@ Any mismatch between `state` attribute and field content is a **validation error
    validation error
 
 2. **Conflicting sentinel and state**: If fence contains a sentinel that doesn’t match
-   the `state` attribute (e.g., `state="skipped"` with `|ABORT|` in fence), this is a
+   the `state` attribute (e.g., `state="skipped"` with `%ABORT%` in fence), this is a
    validation error
 
-3. **Redundant but valid**: `state="skipped"` with `|SKIP|` in fence is accepted
+3. **Redundant but valid**: `state="skipped"` with `%SKIP%` in fence is accepted
    (redundant but not conflicting); serialization normalizes to state-attribute-only
 
 **Parsing rules (when no conflict):**
@@ -382,7 +382,7 @@ Any mismatch between `state` attribute and field content is a **validation error
 1. If `state` attribute is `'skipped'` or `'aborted'` (and field is unfilled): use that
    state
 
-2. Else if text fence contains exact sentinel (`|SKIP|` or `|ABORT|`): parse as that
+2. Else if text fence contains exact sentinel (`%SKIP%` or `%ABORT%`): parse as that
    state
 
 3. Else if field has content: parse as `'answered'` with the value
@@ -419,20 +419,20 @@ The `state` attribute is the source of truth.
 
 #### Parsing: Sentinel Values in Text Value Fences
 
-For fields with `FieldSyntax = 'text'`, sentinel values (`|SKIP|`, `|ABORT|`) in the
+For fields with `FieldSyntax = 'text'`, sentinel values (`%SKIP%`, `%ABORT%`) in the
 value fence are accepted as an alternative syntax:
 
 ```md
 {% string-field id="company_name" label="Company name" %}
 \```value
-|SKIP|
+%SKIP%
 \```
 {% /string-field %}
 ```
 
 **Parsing behavior:**
 
-- If value fence contains exactly `|SKIP|` or `|ABORT|` (trimmed), parse as if
+- If value fence contains exactly `%SKIP%` or `%ABORT%` (trimmed), parse as if
   `state="skipped"` or `state="aborted"` were set on the field tag
 
 - The value fence content is NOT stored as a string value
@@ -491,16 +491,16 @@ ticker:
 For human-readable output, an optional friendly mode uses sentinel tokens:
 
 ```yaml
-company_name: "|SKIP|"
-revenue_m: "|ABORT|"
+company_name: "%SKIP%"
+revenue_m: "%ABORT%"
 quarterly_growth: 12.5
 ticker: ACME
 ```
 
-The sentinels `|SKIP|` and `|ABORT|` are string values that represent the
+The sentinels `%SKIP%` and `%ABORT%` are string values that represent the
 skipped/aborted states.
 **Use friendly mode only for human consumption**, not for machine-to-machine interchange
-(since a field could legitimately have the value `"|SKIP|"`).
+(since a field could legitimately have the value `"%SKIP%"`).
 
 **Import behavior:**
 
@@ -508,7 +508,7 @@ When importing values (from YAML or JSON):
 
 - Structured format: parse `state` and `value` properties
 
-- Friendly YAML: recognize `|SKIP|` and `|ABORT|` sentinel strings
+- Friendly YAML: recognize `%SKIP%` and `%ABORT%` sentinel strings
 
 **Notes at end of form (sorted numerically by id, preserving insertion order):**
 
@@ -918,13 +918,13 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 
 17. JSON/YAML export uses structured format by default: `{ state: 'skipped' }`
 
-18. YAML export with `--friendly` uses sentinel strings: `"|SKIP|"`, `"|ABORT|"`
+18. YAML export with `--friendly` uses sentinel strings: `"%SKIP%"`, `"%ABORT%"`
 
 **Sentinel in value fence (text syntax fields):**
 
-19. `|SKIP|` in text value fence parses as `{ state: 'skipped' }`
+19. `%SKIP%` in text value fence parses as `{ state: 'skipped' }`
 
-20. `|ABORT|` in text value fence parses as `{ state: 'aborted' }`
+20. `%ABORT%` in text value fence parses as `{ state: 'aborted' }`
 
 21. Sentinel with conflicting state attr produces validation error
 
@@ -1008,13 +1008,13 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 
 **Sentinel in value fence (text syntax fields):**
 
-- [ ] Parse `|SKIP|` in string field value fence → `{ state: 'skipped' }`
+- [ ] Parse `%SKIP%` in string field value fence → `{ state: 'skipped' }`
 
-- [ ] Parse `|ABORT|` in string field value fence → `{ state: 'aborted' }`
+- [ ] Parse `%ABORT%` in string field value fence → `{ state: 'aborted' }`
 
-- [ ] Parse `|SKIP|` in number field value fence → `{ state: 'skipped' }`
+- [ ] Parse `%SKIP%` in number field value fence → `{ state: 'skipped' }`
 
-- [ ] Parse `|ABORT|` in url field value fence → `{ state: 'aborted' }`
+- [ ] Parse `%ABORT%` in url field value fence → `{ state: 'aborted' }`
 
 - [ ] Sentinel with matching state attr is valid (no conflict)
 
@@ -1080,11 +1080,11 @@ export function computeFormState(progress: ProgressSummary): ProgressState {
 
 **Friendly YAML export (optional):**
 
-- [ ] With `--friendly`, export skipped as `"|SKIP|"` string
+- [ ] With `--friendly`, export skipped as `"%SKIP%"` string
 
-- [ ] With `--friendly`, export aborted as `"|ABORT|"` string
+- [ ] With `--friendly`, export aborted as `"%ABORT%"` string
 
-- [ ] Parse friendly format (`"|SKIP|"`) back to `{ state: 'skipped' }`
+- [ ] Parse friendly format (`"%SKIP%"`) back to `{ state: 'skipped' }`
 
 #### 4. Unit Tests: Note Serialization (`tests/unit/engine/serialize.test.ts`)
 
@@ -1498,8 +1498,8 @@ interface ProgressCounts {
 ```typescript
 // In parse.ts
 
-const SENTINEL_SKIP = '|SKIP|';
-const SENTINEL_ABORT = '|ABORT|';
+const SENTINEL_SKIP = '%SKIP%';
+const SENTINEL_ABORT = '%ABORT%';
 
 function getFieldSyntax(fieldKind: FieldKind): FieldSyntax {
   // Checkboxes syntax: select and checkbox fields use [ ]/[x] markers
@@ -1529,7 +1529,7 @@ function parseFieldTag(
     if (valueFenceContent === SENTINEL_SKIP) {
       if (stateAttr && stateAttr !== 'skipped') {
         throw new ValidationError(
-          `Field ${node.attributes.id}: conflicting state="${stateAttr}" with |SKIP| sentinel`
+          `Field ${node.attributes.id}: conflicting state="${stateAttr}" with %SKIP% sentinel`
         );
       }
       if (fieldRequired) {
@@ -1543,7 +1543,7 @@ function parseFieldTag(
     if (valueFenceContent === SENTINEL_ABORT) {
       if (stateAttr && stateAttr !== 'aborted') {
         throw new ValidationError(
-          `Field ${node.attributes.id}: conflicting state="${stateAttr}" with |ABORT| sentinel`
+          `Field ${node.attributes.id}: conflicting state="${stateAttr}" with %ABORT% sentinel`
         );
       }
       return { state: 'aborted' };
@@ -1631,8 +1631,8 @@ function parseNoteTag(node: Tag, idIndex: Map<Id, IdIndexEntry>): Note {
 ```typescript
 // In serialize.ts
 
-const SENTINEL_SKIP = '|SKIP|';
-const SENTINEL_ABORT = '|ABORT|';
+const SENTINEL_SKIP = '%SKIP%';
+const SENTINEL_ABORT = '%ABORT%';
 
 /**
  * Serialize field tag with optional state attribute.
@@ -2016,7 +2016,7 @@ function computeFormState(
 
 ### Key Design Decisions
 
-1. **Sentinels are simple tokens** — `|SKIP|` and `|ABORT|` have no embedded data.
+1. **Sentinels are simple tokens** — `%SKIP%` and `%ABORT%` have no embedded data.
    Reasons go in notes.
 
 2. **Notes are general-purpose** — Can be used for skip/abort reasons OR general agent
@@ -2067,7 +2067,7 @@ function computeFormState(
 
 **Phase 2: Parsing**
 
-- Parse `|SKIP|` and `|ABORT|` in value fences
+- Parse `%SKIP%` and `%ABORT%` in value fences
 
 - Parse `{% note %}` tags
 
@@ -2284,13 +2284,13 @@ Checkboxes aborted (inline markers remain as schema defaults):
 **Friendly YAML export (optional, with `--friendly` flag):**
 
 \`\`\`yaml
-company_name: "|SKIP|"
-revenue_m: "|ABORT|"
+company_name: "%SKIP%"
+revenue_m: "%ABORT%"
 quarterly_growth: 12.5
 \`\`\`
 
 The friendly format uses sentinel strings for human readability but should not be
-used for machine interchange (since a field could legitimately have the value `"|SKIP|"`).
+used for machine interchange (since a field could legitimately have the value `"%SKIP%"`).
 ```
 
 ### 8. Serialization: Note Tags (new section)
@@ -2489,7 +2489,7 @@ XX. **Unified response model with notes** — The form response model separates 
 11. **How should JSON/YAML export represent response states?**
 
     - **Decision:** Default to structured format (`{ state: 'skipped' }`) for machine
-      interchange. Optional friendly format with sentinel strings (`"|SKIP|"`) for human
+      interchange. Optional friendly format with sentinel strings (`"%SKIP%"`) for human
       readability, enabled with `--friendly` flag.
 
 ### Deferred

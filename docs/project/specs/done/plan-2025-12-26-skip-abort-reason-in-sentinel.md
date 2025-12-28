@@ -4,7 +4,7 @@
 
 This plan simplifies the skip/abort reason storage mechanism in Markform.
 Instead of using notes with `state` attributes to store skip/abort reasons, reasons are
-embedded directly in the sentinel value using parenthesized syntax: `|SKIP| (reason)`.
+embedded directly in the sentinel value using parenthesized syntax: `%SKIP% (reason)`.
 
 This is a refinement of the unified response model specified in
 `plan-2025-12-25-unified-response-model-with-notes.md`.
@@ -15,7 +15,7 @@ This is a refinement of the unified response model specified in
 
 The current plan has two mechanisms for documenting skip/abort reasons:
 
-1. **Sentinel values with reasons**: `|SKIP| reason text` (no delimiter)
+1. **Sentinel values with reasons**: `%SKIP% reason text` (no delimiter)
 
 2. **Notes with `state` attribute**: `{% note state="skipped" %}reason{% /note %}`
 
@@ -43,9 +43,9 @@ This creates:
 
 1. **Embed reason in sentinel value** — Use parenthesized format:
 
-   - `|SKIP| (Information not publicly available)`
+   - `%SKIP% (Information not publicly available)`
 
-   - `|ABORT| (Cannot determine from available data)`
+   - `%ABORT% (Cannot determine from available data)`
 
 2. **Store reason in FieldResponse** — Add `reason?: string` field to `FieldResponse`
 
@@ -60,20 +60,20 @@ This creates:
 
 **Markdown (markform format):**
 
-```md
+````md
 {% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
 ```value
-|SKIP| (Information not publicly available)
-```
+%SKIP% (Information not publicly available)
+````
 {% /string-field %}
-```
+````
 
 **Without reason:**
 
 ```md
 {% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
 {% /string-field %}
-```
+````
 
 **Value export (structured JSON/YAML):**
 
@@ -88,8 +88,8 @@ This creates:
 **Value export (friendly YAML):**
 
 ```yaml
-company_name: "|SKIP| (Not applicable for this analysis)"
-revenue_m: "|ABORT| (API unavailable)"
+company_name: "%SKIP% (Not applicable for this analysis)"
+revenue_m: "%ABORT% (API unavailable)"
 ticker: ACME
 ```
 
@@ -145,7 +145,7 @@ ticker: ACME
 
 **In Scope:**
 
-- Sentinel format change: `|SKIP| reason` → `|SKIP| (reason)`
+- Sentinel format change: `%SKIP% reason` → `%SKIP% (reason)`
 
 - Add `reason?: string` to `FieldResponse`
 
@@ -175,26 +175,26 @@ ticker: ACME
 
 **Sentinel parsing:**
 
-1. `|SKIP| (reason text)` parses to `{ state: 'skipped' }` with `reason: 'reason text'`
+1. `%SKIP% (reason text)` parses to `{ state: 'skipped' }` with `reason: 'reason text'`
 
-2. `|ABORT| (reason text)` parses to `{ state: 'aborted' }` with `reason: 'reason text'`
+2. `%ABORT% (reason text)` parses to `{ state: 'aborted' }` with `reason: 'reason text'`
 
-3. `|SKIP|` without parentheses parses to `{ state: 'skipped' }` with no reason
+3. `%SKIP%` without parentheses parses to `{ state: 'skipped' }` with no reason
 
-4. `|ABORT|` without parentheses parses to `{ state: 'aborted' }` with no reason
+4. `%ABORT%` without parentheses parses to `{ state: 'aborted' }` with no reason
 
-5. Parentheses with empty content `|SKIP| ()` treats as no reason
+5. Parentheses with empty content `%SKIP% ()` treats as no reason
 
-6. Nested parentheses in reason `|SKIP| (reason (with parens) inside)` handled correctly
+6. Nested parentheses in reason `%SKIP% (reason (with parens) inside)` handled correctly
 
 **Serialization:**
 
-7. Skipped field with reason serializes as `|SKIP| (reason)`
+7. Skipped field with reason serializes as `%SKIP% (reason)`
 
 8. Skipped field without reason serializes with just `state="skipped"` attribute (no
    fence)
 
-9. Aborted field with reason serializes as `|ABORT| (reason)`
+9. Aborted field with reason serializes as `%ABORT% (reason)`
 
 10. Round-trip: parse → serialize → parse preserves reason exactly
 
@@ -208,7 +208,7 @@ ticker: ACME
 
 **Friendly export:**
 
-14. Friendly format uses `"|SKIP| (reason)"` string
+14. Friendly format uses `"%SKIP% (reason)"` string
 
 15. Friendly format parses back correctly
 
@@ -294,11 +294,11 @@ interface AbortFieldPatch {
 ### Parsing Logic Changes
 
 ```typescript
-const SENTINEL_SKIP = '|SKIP|';
-const SENTINEL_ABORT = '|ABORT|';
+const SENTINEL_SKIP = '%SKIP%';
+const SENTINEL_ABORT = '%ABORT%';
 
 // Regex to match sentinel with optional parenthesized reason
-// Matches: |SKIP| or |SKIP| (reason text)
+// Matches: %SKIP% or %SKIP% (reason text)
 const SENTINEL_PATTERN = /^\|(SKIP|ABORT)\|(?:\s*\((.+)\))?$/s;
 
 function parseSentinel(content: string): { sentinel: 'skip' | 'abort'; reason?: string } | null {
@@ -392,10 +392,10 @@ function serializeResponseFriendly(response: FieldResponse | undefined): unknown
     return null;
   }
   if (response.state === 'skipped') {
-    return response.reason ? `|SKIP| (${response.reason})` : '|SKIP|';
+    return response.reason ? `%SKIP% (${response.reason})` : '%SKIP%';
   }
   if (response.state === 'aborted') {
-    return response.reason ? `|ABORT| (${response.reason})` : '|ABORT|';
+    return response.reason ? `%ABORT% (${response.reason})` : '%ABORT%';
   }
   return serializeValueContent(response.value!);
 }
@@ -494,7 +494,7 @@ function serializeNotes(notes: Note[]): string {
 
 ### Design Decisions
 
-1. **Parenthesized reason format** — `|SKIP| (reason)` uses parentheses to clearly
+1. **Parenthesized reason format** — `%SKIP% (reason)` uses parentheses to clearly
    delimit the reason text.
    This:
 
@@ -530,16 +530,16 @@ function serializeNotes(notes: Note[]): string {
 
 **Unit tests for sentinel parsing:**
 
-- `|SKIP|` → skipped, no reason
+- `%SKIP%` → skipped, no reason
 
-- `|SKIP| (simple reason)` → skipped, reason: “simple reason”
+- `%SKIP% (simple reason)` → skipped, reason: “simple reason”
 
-- `|ABORT| (reason with (nested) parens)` → aborted, reason: “reason with (nested)
+- `%ABORT% (reason with (nested) parens)` → aborted, reason: “reason with (nested)
   parens”
 
-- `|SKIP| ()` → skipped, no reason (empty parens treated as no reason)
+- `%SKIP% ()` → skipped, no reason (empty parens treated as no reason)
 
-- `|SKIP| (multiline\nreason)` → skipped, reason preserved with newlines
+- `%SKIP% (multiline\nreason)` → skipped, reason preserved with newlines
 
 **Round-trip tests:**
 
@@ -565,7 +565,7 @@ function serializeNotes(notes: Note[]): string {
 
 1. **Field State Attributes section (lines 942-995):**
 
-   - Update sentinel format from `|SKIP| reason` to `|SKIP| (reason)`
+   - Update sentinel format from `%SKIP% reason` to `%SKIP% (reason)`
 
    - Update examples
 
@@ -603,7 +603,7 @@ function serializeNotes(notes: Note[]): string {
 
    - Add `reason` field to structured format examples
 
-   - Update friendly format to show `|SKIP| (reason)`
+   - Update friendly format to show `%SKIP% (reason)`
 
 8. **Design Decision 6 (~lines 3923-3943):**
 
@@ -619,13 +619,13 @@ function serializeNotes(notes: Note[]): string {
 
 ### Resolved
 
-1. **Should empty parentheses `|SKIP| ()` be treated as no reason?**
+1. **Should empty parentheses `%SKIP% ()` be treated as no reason?**
 
-   - **Decision:** Yes, treat as equivalent to `|SKIP|` with no reason
+   - **Decision:** Yes, treat as equivalent to `%SKIP%` with no reason
 
 2. **How to handle nested parentheses in reason?**
 
-   - **Decision:** Use greedy matching - everything after `|SKIP| (` up to the final `)`
+   - **Decision:** Use greedy matching - everything after `%SKIP% (` up to the final `)`
      is the reason
 
 3. **Should the `state` attribute on legacy notes cause an error?**
