@@ -543,64 +543,93 @@ export function getSuggestedModels(provider: string): string[];
 
 ```typescript
 /**
- * Options for the runResearch function.
+ * Options for runResearch - extends FillOptions with research constraints.
  * 
- * Naming convention for limits:
- * - Total limits: no suffix (maxTurns)
- * - Per-turn limits: PerTurn suffix (maxIssuesPerTurn, maxPatchesPerTurn, etc.)
+ * Key differences from fillForm():
+ * - model must support web search (validated at start)
+ * - form must be a valid research form (validated at start)
+ * - defaults to RESEARCH_DEFAULTS instead of FILL_DEFAULTS
+ * 
+ * This avoids duplicating FillOptions fields. runResearch() is a thin
+ * wrapper that validates constraints then delegates to fillForm().
  */
-export interface ResearchOptions {
-  /** Form content as markdown string or parsed form */
-  form: string | ParsedForm;
-  /** Model identifier (must support web search) */
-  model: string;
-  /**
-   * Pre-fill fields by ID. CLI populates this from:
-   * 1. --initial-values=file.json/yml
-   * 2. -- field=value pairs
-   * Values are merged (later overrides earlier).
-   */
-  inputContext?: InputContext;
-  /** Additional context for agent prompt */
-  systemPromptAddition?: string;
-  /** Maximum harness turns (default: 100) */
-  maxTurns?: number;
-  /** Maximum issues per turn (default: 3 for research) */
-  maxIssuesPerTurn?: number;
-  /** Maximum patches per turn (default: 20) */
-  maxPatchesPerTurn?: number;
-  /** Maximum unique fields per turn */
-  maxFieldsPerTurn?: number;
-  /** Maximum unique groups per turn */
-  maxGroupsPerTurn?: number;
-  /** Target roles to fill (default: ['agent']) */
-  targetRoles?: string[];
-  /** Fill mode: 'continue' or 'overwrite' */
-  fillMode?: FillMode;
-  /** Progress callback */
-  onTurnComplete?: (progress: TurnProgress) => void;
-  /** Cancellation signal */
-  signal?: AbortSignal;
+export interface ResearchOptions extends FillOptions {
   /** Skip research form validation (for testing) */
   skipValidation?: boolean;
 }
 
 /**
  * Result of research execution.
- * Extends FillResult with research-specific info.
+ * Extends FillResult with research-specific metadata.
  */
 export interface ResearchResult extends FillResult {
-  /** Was the form validated as a research form */
-  researchFormValid: boolean;
   /** Model used for research */
   modelId: string;
-  /** Whether web search was used */
-  webSearchUsed: boolean;
+  /** Whether web search was enabled */
+  webSearchEnabled: boolean;
 }
 
-// ResearchFormValidation is defined in researchFormValidation.ts
-// Re-exported here for convenience
+// Re-export for convenience
 export type { ResearchFormValidation } from './researchFormValidation.js';
+```
+
+#### Research Implementation (`research/research.ts`)
+
+```typescript
+/**
+ * Run research on a form using a web-search-capable model.
+ * 
+ * This is a thin wrapper around fillForm() that:
+ * 1. Validates form is a valid research form (unless skipValidation)
+ * 2. Validates model supports web search
+ * 3. Applies RESEARCH_DEFAULTS for harness config
+ * 4. Delegates to fillForm() for actual execution
+ * 
+ * Design principle: runResearch() adds validation and defaults,
+ * but reuses fillForm() for all execution logic. No duplication.
+ */
+export async function runResearch(options: ResearchOptions): Promise<ResearchResult> {
+  // 1. Parse form if string
+  const form = typeof options.form === 'string' 
+    ? parseForm(options.form) 
+    : options.form;
+
+  // 2. Validate research form structure
+  if (!options.skipValidation) {
+    const validation = validateResearchForm(form);
+    if (!validation.valid) {
+      throw new Error(`Invalid research form: ${validation.errors.join(', ')}`);
+    }
+  }
+
+  // 3. Validate model supports web search
+  if (typeof options.model === 'string' && !isWebSearchModel(options.model)) {
+    throw new Error(
+      `Model ${options.model} does not support web search. ${formatWebSearchModels()}`
+    );
+  }
+
+  // 4. Resolve config with research defaults
+  const resolvedConfig = resolveHarnessConfig(
+    'research',
+    form.metadata?.harness,
+    options  // CLI/API overrides
+  );
+
+  // 5. Delegate to fillForm with resolved options
+  const fillResult = await fillForm({
+    ...options,
+    form,  // Use parsed form to avoid re-parsing
+    ...resolvedConfig,
+  });
+
+  // 6. Wrap as ResearchResult
+  return {
+    ...fillResult,
+    modelId: typeof options.model === 'string' ? options.model : 'custom',
+    webSearchEnabled: true,
+  };
+}
 ```
 
 #### Frontmatter Harness Config (`engine/coreTypes.ts` - update)

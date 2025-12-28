@@ -641,6 +641,89 @@ sequenceDiagram
 
 </details>
 
+#### Research Workflow
+
+The research workflow is a specialized application of the harness loop for web-search-
+enabled research tasks. It provides:
+
+1. **Research forms** — Forms with `user` role fields (problem definition) followed by
+   `agent` role fields (research tasks). User fields come first, agent fields follow.
+
+2. **Web search requirement** — Research requires models with native web search support
+   (OpenAI, Google, xAI). The workflow validates this before execution.
+
+3. **Research-specific defaults** — Lower `maxIssuesPerTurn` (3 vs 10) and
+   `maxGroupsPerTurn` (1) to encourage focused, deep research on one section at a time.
+
+4. **Frontmatter configuration** — Research forms can specify harness parameters in
+   YAML frontmatter under `markform.harness`.
+
+**API Design:**
+
+The research API follows the "thin wrapper" pattern:
+
+```typescript
+// ResearchOptions extends FillOptions - no field duplication
+interface ResearchOptions extends FillOptions {
+  skipValidation?: boolean;  // Only research-specific addition
+}
+
+// runResearch() validates then delegates to fillForm()
+async function runResearch(options: ResearchOptions): Promise<ResearchResult> {
+  // 1. Validate research form structure
+  // 2. Validate model supports web search
+  // 3. Apply RESEARCH_DEFAULTS for config
+  // 4. Delegate to fillForm() for execution
+}
+```
+
+This avoids code duplication—`runResearch()` adds validation and defaults but reuses
+`fillForm()` for all execution logic.
+
+* * *
+
+### API Design Principles
+
+#### String-Based Core APIs
+
+Core APIs (`fillForm()`, `runResearch()`) work with **strings and in-memory objects**,
+not file paths:
+
+```typescript
+// Core API signature - string or ParsedForm, returns string
+async function fillForm(options: {
+  form: string | ParsedForm;  // Not a file path
+  model: string | LanguageModel;
+  // ...
+}): Promise<FillResult>;  // result.markdown is the output string
+```
+
+**Benefits:**
+
+- **Testable** — Unit tests can pass strings directly without file fixtures
+- **Composable** — APIs can be chained without intermediate file I/O
+- **Platform-agnostic** — Works in browsers, serverless, anywhere without filesystem
+
+#### File I/O at CLI Layer
+
+File operations are handled **exclusively in CLI commands**, not core APIs:
+
+```typescript
+// CLI command handles file I/O
+const formContent = await readFile(inputPath, 'utf-8');
+const result = await fillForm({ form: formContent, model });
+await exportMultiFormat(result.form, outputPath, formats);
+```
+
+**Implementation:**
+
+- `src/cli/lib/fileHelpers.ts` — Shared file reading utilities
+- `src/cli/lib/exportHelpers.ts` — `exportMultiFormat()` for output
+- Each CLI command reads input, calls core API, writes output
+
+This keeps core APIs simple and focused while CLI commands handle the "glue" of
+reading/writing files, parsing CLI arguments, and user interaction.
+
 * * *
 
 ### User Interfaces
@@ -694,6 +777,31 @@ Thin wrapper around the tool contract:
 
 - `markform fill <file.form.md> --model=anthropic/claude-sonnet-4-5` — fill form using
   live LLM agent
+
+- `markform research <file.form.md> --model=openai/gpt-4o` — run research workflow on a
+  research form:
+
+  - Validates form is a valid research form (user fields, then agent fields)
+
+  - Validates model supports web search (fails fast if not)
+
+  - Applies research-specific defaults (maxIssuesPerTurn: 3, maxGroupsPerTurn: 1)
+
+  - Supports `--initial-values=<file.json/yml>` for pre-filling user fields
+
+  - Supports `-- field=value` pairs for inline field values
+
+  - Writes output to versioned filename with multiple export formats
+
+- `markform examples` — interactive menu to explore and run example forms:
+
+  - Lists available example forms with descriptions
+
+  - Shows form type: `[interactive]` for standard forms, `[research]` for research forms
+
+  - For research forms: uses web-search model selection and research workflow
+
+  - For standard forms: uses interactive filling
 
 **Deferred to MF/0.2:**
 
@@ -756,6 +864,46 @@ The MF/0.1 “serve” command provides an interactive web UI for editing and sa
 
 Use `markform inspect <file>` from the CLI at any time to get a full report (YAML with
 summaries, form state, and prioritized issues).
+
+### Programmatic APIs
+
+#### fillForm()
+
+The primary programmatic entry point for form filling:
+
+```typescript
+import { fillForm } from 'markform';
+
+const result = await fillForm({
+  form: formMarkdown,                        // string or ParsedForm
+  model: 'anthropic/claude-sonnet-4-5',      // model identifier
+  inputContext: { company_name: 'Acme' },    // pre-fill values
+  onTurnComplete: (progress) => { ... },     // progress callback
+});
+
+if (result.status.ok) {
+  console.log(result.values);   // field values
+  console.log(result.markdown); // completed form
+}
+```
+
+#### runResearch()
+
+Specialized wrapper for research workflows:
+
+```typescript
+import { runResearch } from 'markform';
+
+const result = await runResearch({
+  form: researchFormMarkdown,
+  model: 'openai/gpt-4o',           // must support web search
+  inputContext: { topic: '...' },   // user field values
+});
+// Returns ResearchResult (extends FillResult)
+```
+
+Both APIs work with strings (not file paths) for testability and composability.
+See API Design Principles above.
 
 ### Agent Interfaces
 
