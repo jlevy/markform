@@ -127,13 +127,13 @@ instructions, and harness configuration.
 The package includes example forms in
 [`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
 
-- [`movie-research/movie-minimal-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-minimal-research.form.md)
+- [`movie-research/movie-research-minimal.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-minimal.form.md)
   \- Quick movie lookup (title, year, rating)
 
-- [`movie-research/movie-basic-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-basic-research.form.md)
+- [`movie-research/movie-research-basic.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-basic.form.md)
   \- Standard research with IMDB, Rotten Tomatoes, Metacritic
 
-- [`movie-research/movie-deep-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-deep-research.form.md)
+- [`movie-research/movie-research-deep.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-deep.form.md)
   \- Comprehensive analysis with streaming, box office
 
 - [`simple/simple.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/simple/simple.form.md)

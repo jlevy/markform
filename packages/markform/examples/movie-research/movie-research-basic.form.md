@@ -1,7 +1,7 @@
 ---
 markform:
   spec: MF/0.1
-  title: Movie Basic Research
+  title: Movie Research (Basic)
   description: Standard movie research form pulling ratings and key stats from IMDB, Rotten Tomatoes, and Metacritic.
   roles:
     - user
@@ -28,9 +28,9 @@ markform:
     max_patches_per_turn: 8
 ---
 
-{% form id="movie_basic_research" title="Movie Basic Research" %}
+{% form id="movie_research_basic" title="Movie Research (Basic)" %}
 
-{% description ref="movie_basic_research" %}
+{% description ref="movie_research_basic" %}
 Standard research form for gathering ratings and key statistics for any film. Pulls from IMDB, Rotten Tomatoes, and Metacritic.
 {% /description %}
 

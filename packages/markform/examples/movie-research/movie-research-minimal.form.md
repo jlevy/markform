@@ -1,7 +1,7 @@
 ---
 markform:
   spec: MF/0.1
-  title: Movie Minimal Research
+  title: Movie Research (Minimal)
   description: Quick movie lookup - just the essentials (title, year, rating, summary).
   roles:
     - user
@@ -16,9 +16,9 @@ markform:
     max_patches_per_turn: 8
 ---
 
-{% form id="movie_minimal_research" title="Movie Minimal Research" %}
+{% form id="movie_research_minimal" title="Movie Research (Minimal)" %}
 
-{% description ref="movie_minimal_research" %}
+{% description ref="movie_research_minimal" %}
 A quick movie lookup for essential info: title, year, rating, and a brief summary.
 {% /description %}
 

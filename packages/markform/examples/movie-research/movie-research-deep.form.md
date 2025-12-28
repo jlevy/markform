@@ -1,7 +1,7 @@
 ---
 markform:
   spec: MF/0.1
-  title: Movie Deep Research
+  title: Movie Research (Deep)
   description: Comprehensive movie research form with ratings, box office, cast/crew, technical specs, streaming availability, and cultural analysis.
   roles:
     - user
@@ -39,9 +39,9 @@ markform:
     max_patches_per_turn: 15
 ---
 
-{% form id="movie_deep_research" title="Movie Deep Research" %}
+{% form id="movie_research_deep" title="Movie Research (Deep)" %}
 
-{% description ref="movie_deep_research" %}
+{% description ref="movie_research_deep" %}
 Comprehensive movie research covering ratings from multiple sources, box office performance, full cast and crew, technical specifications, streaming availability, and cultural impact analysis.
 {% /description %}
 
