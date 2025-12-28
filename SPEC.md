@@ -892,6 +892,50 @@ To ensure deterministic round-tripping without building a full markdown serializ
 | Line endings | Unix (`\n`) only |
 | Doc block placement | Immediately after the referenced element |
 
+##### Smart Fence Selection
+
+When serializing field values, the fence character (backticks `` ` `` or tildes `~`) is
+chosen dynamically to avoid collision with nested code blocks in the content.
+
+**Algorithm:**
+
+1. Count the maximum consecutive run of each fence character at line starts (ignoring
+   lines indented 4+ spaces, which are inside indented code blocks per CommonMark)
+2. Pick the character with the smaller max-run
+3. On a tie, prefer backticks (more common convention)
+4. Use fence length = max(3, maxRun + 1) to ensure safe nesting
+
+**Why this matters:** String field values may contain arbitrary Markdown, including
+fenced code blocks. Without smart selection, a value containing triple backticks
+would create ambiguous or malformed output.
+
+**Example—Markdown documentation inside a value:**
+
+```md
+{% string-field id="setup_guide" label="Setup Guide" %}
+~~~value
+## Installation
+
+Install the package:
+
+```bash
+npm install my-library
+```
+
+Then configure:
+
+```json
+{
+  "enabled": true
+}
+```
+~~~
+{% /string-field %}
+```
+
+Here the serializer chose tildes (`~~~`) because the content contains backticks. The
+content includes multiple fenced code blocks that are preserved exactly as authored.
+
 * * *
 
 ## Layer 2: Form Data Model
