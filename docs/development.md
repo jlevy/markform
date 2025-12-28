@@ -157,13 +157,10 @@ pnpm test        # Tests pass
 
 ## CLI Usage
 
-After building, run the CLI from the repository root:
+Run the CLI from the repository root:
 
 ```bash
-# Build first (required after code changes)
-pnpm build
-
-# Run the CLI using the pnpm script
+# Development: runs TypeScript source directly via tsx (always current, no build needed)
 pnpm markform --help
 pnpm markform inspect <file>
 pnpm markform export <file>
@@ -173,7 +170,17 @@ pnpm markform serve <file>
 pnpm markform fill <file> --interactive  # Interactive mode for user role fields
 pnpm markform fill <file> --mock --mock-source <mock-file>
 pnpm markform fill <file> --model=anthropic/claude-sonnet-4-5
+
+# Testing built output (requires pnpm build first)
+pnpm markform:bin --help
 ```
+
+**Why two scripts?**
+
+- `pnpm markform` — Runs source via `tsx`. Use this during development—always current,
+  no build step needed.
+- `pnpm markform:bin` — Runs the built binary from `dist/`. Use this to verify the
+  published output works correctly before release.
 
 ### CLI Commands
 
