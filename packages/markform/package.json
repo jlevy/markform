@@ -48,6 +48,7 @@
   "files": [
     "dist",
     "examples",
+    "DOCS.md",
     "README.md",
     "SPEC.md"
   ],

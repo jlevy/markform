@@ -11,6 +11,7 @@ import pc from 'picocolors';
 import { VERSION } from '../index.js';
 import { DEFAULT_FORMS_DIR } from '../settings.js';
 import { registerApplyCommand } from './commands/apply.js';
+import { registerDocsCommand } from './commands/docs.js';
 import { registerDumpCommand } from './commands/dump.js';
 import { registerExamplesCommand } from './commands/examples.js';
 import { registerExportCommand } from './commands/export.js';
@@ -56,8 +57,9 @@ function createProgram(): Command {
     .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`);
 
   // Register commands
-  // Help first
+  // Help/docs first
   registerReadmeCommand(program);
+  registerDocsCommand(program);
   registerSpecCommand(program);
   // Rest alphabetical for help display
   registerApplyCommand(program);

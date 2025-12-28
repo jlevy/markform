@@ -195,14 +195,20 @@ markform apply my-form.form.md --patch '[{"op":"set","fieldId":"name","value":"A
 markform serve my-form.form.md
 ```
 
-### Other Commands
+### Documentation Commands
 
 ```bash
+# Quick reference for writing forms (agent-friendly)
+markform docs
+
+# Full specification (SPEC.md)
+markform spec
+
+# This README
+markform readme
+
 # See supported AI providers and example models
 markform models
-
-# Display full documentation
-markform instructions
 
 # See all commands
 markform --help
@@ -419,6 +425,9 @@ We could use XML tags, but Markdoc has some niceties like tagging Markdown AST n
 Yes, see [markdoc/language-server](https://github.com/markdoc/language-server).
 
 ## Documentation
+
+- **[Quick Reference](https://github.com/jlevy/markform/blob/main/packages/markform/DOCS.md)**
+  (or run `markform docs`) - Concise syntax reference (agent-friendly)
 
 - **[Markform Spec](https://github.com/jlevy/markform/blob/main/SPEC.md)** (or run
   `markform spec`) - Complete syntax and semantics
