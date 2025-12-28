@@ -11,6 +11,7 @@ import YAML from 'yaml';
 
 import { serialize, serializeRawMarkdown } from '../../engine/serialize.js';
 import type { ParsedForm } from '../../engine/coreTypes.js';
+import { deriveExportPath } from '../../settings.js';
 import type { ExportResult } from './cliTypes.js';
 import { writeFile } from './shared.js';
 
@@ -107,15 +108,16 @@ export function toNotesArray(form: ParsedForm) {
 
 /**
  * Derive export paths from a base form path.
+ * Uses centralized extension constants from settings.ts.
  *
  * @param basePath - Path to the .form.md file
  * @returns Object with paths for all export formats
  */
 export function deriveExportPaths(basePath: string): ExportResult {
   return {
-    formPath: basePath,
-    rawPath: basePath.replace(/\.form\.md$/, '.raw.md'),
-    yamlPath: basePath.replace(/\.form\.md$/, '.yml'),
+    formPath: deriveExportPath(basePath, 'form'),
+    rawPath: deriveExportPath(basePath, 'raw'),
+    yamlPath: deriveExportPath(basePath, 'yaml'),
   };
 }
 

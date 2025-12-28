@@ -1169,3 +1169,103 @@ export function serializeRawMarkdown(form: ParsedForm): string {
 
   return lines.join('\n').trim() + '\n';
 }
+
+/**
+ * Check if a documentation block should be included in reports.
+ * Default: instructions are excluded, everything else is included.
+ */
+function shouldIncludeDoc(doc: DocumentationBlock): boolean {
+  if (doc.report !== undefined) {
+    return doc.report;
+  }
+  // Default: instructions excluded, others included
+  return doc.tag !== 'instructions';
+}
+
+/**
+ * Serialize a form to filtered markdown for reports.
+ *
+ * Produces clean, readable markdown with filtered content based on `report` attribute:
+ * - Fields with report=false are excluded
+ * - Groups with report=false are excluded
+ * - Documentation blocks with report=false are excluded
+ * - Instructions blocks are excluded by default (unless report=true)
+ *
+ * @param form - The parsed form to serialize
+ * @returns Filtered plain markdown string suitable for sharing
+ */
+export function serializeReportMarkdown(form: ParsedForm): string {
+  const lines: string[] = [];
+
+  // Group doc blocks by ref, filtering out excluded docs
+  const docsByRef = new Map<string, DocumentationBlock[]>();
+  for (const doc of form.docs) {
+    if (!shouldIncludeDoc(doc)) {
+      continue;
+    }
+    const list = docsByRef.get(doc.ref) ?? [];
+    list.push(doc);
+    docsByRef.set(doc.ref, list);
+  }
+
+  // Add form title
+  if (form.schema.title) {
+    lines.push(`# ${form.schema.title}`);
+    lines.push('');
+  }
+
+  // Add form-level docs (filtered)
+  const formDocs = docsByRef.get(form.schema.id);
+  if (formDocs) {
+    for (const doc of formDocs) {
+      lines.push(doc.bodyMarkdown.trim());
+      lines.push('');
+    }
+  }
+
+  // Process each group
+  for (const group of form.schema.groups) {
+    // Skip groups with report=false
+    if (group.report === false) {
+      continue;
+    }
+
+    // Filter fields with report=false
+    const visibleFields = group.children.filter((field) => field.report !== false);
+    if (visibleFields.length === 0 && !group.title) {
+      continue;
+    }
+
+    // Add group title as H2
+    if (group.title) {
+      lines.push(`## ${group.title}`);
+      lines.push('');
+    }
+
+    // Add group-level docs (filtered)
+    const groupDocs = docsByRef.get(group.id);
+    if (groupDocs) {
+      for (const doc of groupDocs) {
+        lines.push(doc.bodyMarkdown.trim());
+        lines.push('');
+      }
+    }
+
+    // Process visible fields
+    for (const field of visibleFields) {
+      lines.push(serializeFieldRaw(field, form.responsesByFieldId));
+      lines.push('');
+
+      // Add field-level docs (filtered)
+      const fieldDocs = docsByRef.get(field.id);
+      if (fieldDocs) {
+        for (const doc of fieldDocs) {
+          lines.push(doc.bodyMarkdown.trim());
+          lines.push('');
+        }
+      }
+    }
+  }
+
+  return lines.join('\n').trim() + '\n';
+}

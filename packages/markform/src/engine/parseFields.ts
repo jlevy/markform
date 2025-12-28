@@ -201,6 +201,7 @@ export function parseStringField(node: Node): { field: StringField; response: Fi
     minLength: getNumberAttr(node, 'minLength'),
     maxLength: getNumberAttr(node, 'maxLength'),
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -252,6 +253,7 @@ export function parseNumberField(node: Node): { field: NumberField; response: Fi
     max: getNumberAttr(node, 'max'),
     integer: getBooleanAttr(node, 'integer'),
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -316,6 +318,7 @@ export function parseStringListField(node: Node): {
     itemMaxLength: getNumberAttr(node, 'itemMaxLength'),
     uniqueItems: getBooleanAttr(node, 'uniqueItems'),
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -423,6 +426,7 @@ export function parseSingleSelectField(node: Node): {
     role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     options,
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Find the selected option (exactly one with done/[x] state)
@@ -478,6 +482,7 @@ export function parseMultiSelectField(node: Node): {
     minSelections: getNumberAttr(node, 'minSelections'),
     maxSelections: getNumberAttr(node, 'maxSelections'),
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Collect all selected options (those with done/[x] state)
@@ -565,6 +570,7 @@ export function parseCheckboxesField(node: Node): {
     options,
     approvalMode,
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Initialize all options to their default state based on mode
@@ -617,6 +623,7 @@ export function parseUrlField(node: Node): { field: UrlField; response: FieldRes
     priority: getPriorityAttr(node),
     role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -668,6 +675,7 @@ export function parseUrlListField(node: Node): { field: UrlListField; response: 
     maxItems: getNumberAttr(node, 'maxItems'),
     uniqueItems: getBooleanAttr(node, 'uniqueItems'),
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -728,6 +736,7 @@ export function parseDateField(node: Node): { field: DateField; response: FieldR
     min: getStringAttr(node, 'min'),
     max: getStringAttr(node, 'max'),
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -785,6 +794,7 @@ export function parseYearField(node: Node): { field: YearField; response: FieldR
     min: getNumberAttr(node, 'min'),
     max: getNumberAttr(node, 'max'),
     validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first

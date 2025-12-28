@@ -126,6 +126,8 @@ export interface FieldBase {
   priority: FieldPriorityLevel; // explicit: parser defaults to 'medium' if not specified
   role: string; // explicit: parser defaults to AGENT_ROLE if not specified
   validate?: ValidatorRef[];
+  /** Whether to include this field in report output. Default: true */
+  report?: boolean;
 }
 
 /** String field - single or multiline text */
@@ -237,6 +239,8 @@ export interface FieldGroup {
   title?: string;
   validate?: ValidatorRef[];
   children: Field[];
+  /** Whether to include this group in report output. Default: true */
+  report?: boolean;
 }
 
 /** Form schema - root container with groups */
@@ -337,6 +341,11 @@ export interface DocumentationBlock {
   /** Reference to form/group/field ID or qualified option ref (fieldId.optionId) */
   ref: string;
   bodyMarkdown: string;
+  /**
+   * Whether to include this block in report output.
+   * Default: false for 'instructions' tag, true for others.
+   */
+  report?: boolean;
 }
 
 // =============================================================================
