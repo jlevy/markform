@@ -75,33 +75,46 @@ describe('programmatic fill API - integration tests', () => {
       expect(result.values.notes).toBeDefined();
     });
 
-    it('partial fill with agent role only fills agent fields', async () => {
+    it('inputContext pre-fills required fields and mock agent fills optional', async () => {
       // Load empty form and mock-filled form
       const emptyForm = loadForm('simple/simple.form.md');
       const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
 
-      // Create mock agent from completed form
+      // Create mock agent to fill optional fields
       const completedForm = parseForm(mockFilledForm);
       const mockAgent = createMockAgent(completedForm);
 
-      // Fill only agent role fields
+      // Fill required fields with inputContext, let mock agent fill optional ones
       const result = await fillForm({
         form: emptyForm,
         model: 'mock/model',
-        targetRoles: ['agent'],
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+        },
+        targetRoles: ['user'],
         _testAgent: mockAgent,
       });
 
-      // When targeting only agent role, the form is considered complete
-      // for that role even if user fields are empty
+      // Form should complete successfully
       expect(result.status.ok).toBe(true);
 
-      // Agent fields should be filled
+      // Required user fields should be filled from inputContext
+      expect(result.values.name).toBeDefined();
+      expect(result.values.email).toBeDefined();
+
+      // Optional fields filled by mock agent
       expect(result.values.score).toBeDefined();
       expect(result.values.notes).toBeDefined();
-
-      // User fields are not included in values (only answered fields are included)
-      expect(result.values.name).toBeUndefined();
     });
 
     it('round-trip: result can be re-parsed', async () => {

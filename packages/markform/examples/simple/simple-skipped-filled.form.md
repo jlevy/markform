@@ -1,12 +1,19 @@
 ---
 markform:
   spec: "MF/0.1"
+  title: Simple Test Form
+  description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
+  roles:
+    - user
+  role_instructions:
+    user: "Fill in all fields in this form."
 ---
 
 {% form id="simple_test" title="Simple Test Form" %}
 
 {% description ref="simple_test" %}
-A form demonstrating user and agent roles. User fills required fields,agent fills optional fields. Demonstrates all Markform v0.1 field types.
+A fully interactive form demonstrating all Markform v0.1 field types.
+Fill all fields using interactive prompts - no LLM API key needed.
 {% /description %}
 
 {% field-group id="basic_fields" title="Basic Fields" %}
@@ -33,14 +40,14 @@ test@example.com
 ```
 {% /number-field %}
 
-{% number-field id="score" label="Score" max=100 min=0 state="skipped" %}
+{% number-field id="score" label="Score" max=100 min=0 role="user" state="skipped" %}
 ```value
 |SKIP| (Not needed for this test)
 ```
 {% /number-field %}
 
 {% instructions ref="score" %}
-Assign a score between 0 and 100 based on form completeness.
+Enter a score between 0 and 100 (optional).
 {% /instructions %}
 
 {% /field-group %}
@@ -130,21 +137,21 @@ Add 1-5 unique reference URLs for sources or documentation.
 
 {% /field-group %}
 
-{% field-group id="optional_fields" title="Optional Fields (Agent)" %}
+{% field-group id="optional_fields" title="Optional Fields" %}
 
-{% string-field id="notes" label="Notes" state="skipped" %}
+{% string-field id="notes" label="Notes" role="user" state="skipped" %}
 ```value
 |SKIP| (No notes required)
 ```
 {% /string-field %}
 
 {% instructions ref="notes" %}
-Add any relevant notes or observations about this test form.
+Add any relevant notes or observations (optional).
 {% /instructions %}
 
-{% number-field id="optional_number" label="Optional Number" state="skipped" %}{% /number-field %}
+{% number-field id="optional_number" label="Optional Number" role="user" state="skipped" %}{% /number-field %}
 
-{% url-field id="related_url" label="Related URL" state="skipped" %}
+{% url-field id="related_url" label="Related URL" role="user" state="skipped" %}
 ```value
 |SKIP| (No related URL needed)
 ```
@@ -156,8 +163,8 @@ Optionally add a URL to related documentation or resources.
 
 {% /field-group %}
 
-{% note id="note-agent-summary" ref="simple_test" role="agent" %}
-All required fields completed successfully. Optional fields skipped as not needed for this test scenario.
+{% note id="note-summary" ref="simple_test" role="user" %}
+All required fields completed successfully. Optional fields skipped.
 {% /note %}
 
 {% /form %}

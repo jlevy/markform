@@ -1,19 +1,19 @@
 ---
 markform:
   spec: "MF/0.1"
+  title: Simple Test Form
+  description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
   roles:
     - user
-    - agent
   role_instructions:
-    user: "Fill in the required fields in this form."
-    agent: "Fill in the optional fields with reasonable test values."
+    user: "Fill in all fields in this form."
 ---
 
 {% form id="simple_test" title="Simple Test Form" %}
 
 {% description ref="simple_test" %}
-A form demonstrating user and agent roles. User fills required fields,
-agent fills optional fields. Demonstrates all Markform v0.1 field types.
+A fully interactive form demonstrating all Markform v0.1 field types.
+Fill all fields using interactive prompts - no LLM API key needed.
 {% /description %}
 
 {% field-group id="basic_fields" title="Basic Fields" %}
@@ -40,14 +40,14 @@ alice@example.com
 ```
 {% /number-field %}
 
-{% number-field id="score" label="Score" role="agent" min=0.0 max=100.0 %}
+{% number-field id="score" label="Score" role="user" min=0.0 max=100.0 %}
 ```value
 87.5
 ```
 {% /number-field %}
 
 {% instructions ref="score" %}
-Assign a score between 0 and 100 based on form completeness.
+Enter a score between 0 and 100 (optional).
 {% /instructions %}
 
 {% /field-group %}
@@ -140,21 +140,21 @@ Add 1-5 unique reference URLs for sources or documentation.
 
 {% /field-group %}
 
-{% field-group id="optional_fields" title="Optional Fields (Agent)" %}
+{% field-group id="optional_fields" title="Optional Fields" %}
 
-{% string-field id="notes" label="Notes" role="agent" %}
+{% string-field id="notes" label="Notes" role="user" %}
 ```value
 This is a test note.
 ```
 {% /string-field %}
 
 {% instructions ref="notes" %}
-Add any relevant notes or observations about this test form.
+Add any relevant notes or observations (optional).
 {% /instructions %}
 
-{% number-field id="optional_number" label="Optional Number" role="agent" %}{% /number-field %}
+{% number-field id="optional_number" label="Optional Number" role="user" %}{% /number-field %}
 
-{% url-field id="related_url" label="Related URL" role="agent" %}
+{% url-field id="related_url" label="Related URL" role="user" %}
 ```value
 https://markform.dev/docs
 ```
@@ -166,8 +166,8 @@ Optionally add a URL to related documentation or resources.
 
 {% /field-group %}
 
-{% note id="note-review" ref="simple_test" role="agent" %}
-Form completed with all required fields. Score assigned based on completeness. References include documentation and project links.
+{% note id="note-review" ref="simple_test" role="user" %}
+Form completed with all required fields.
 {% /note %}
 
 {% /form %}

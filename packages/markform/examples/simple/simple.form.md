@@ -2,20 +2,18 @@
 markform:
   spec: MF/0.1
   title: Simple Test Form
-  description: User and agent roles for testing full workflow. User fills required fields, agent fills optional.
+  description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
   roles:
     - user
-    - agent
   role_instructions:
-    user: "Fill in the required fields in this form."
-    agent: "Fill in the optional fields with reasonable test values."
+    user: "Fill in all fields in this form."
 ---
 
 {% form id="simple_test" title="Simple Test Form" %}
 
 {% description ref="simple_test" %}
-A form demonstrating user and agent roles. User fills required fields,
-agent fills optional fields. Demonstrates all Markform v0.1 field types.
+A fully interactive form demonstrating all Markform v0.1 field types.
+Fill all fields using interactive prompts - no LLM API key needed.
 {% /description %}
 
 {% field-group id="basic_fields" title="Basic Fields" %}
@@ -30,10 +28,10 @@ Enter your full name (2-50 characters).
 
 {% number-field id="age" label="Age" role="user" required=true min=0 max=150 integer=true %}{% /number-field %}
 
-{% number-field id="score" label="Score" role="agent" min=0.0 max=100.0 %}{% /number-field %}
+{% number-field id="score" label="Score" role="user" min=0.0 max=100.0 %}{% /number-field %}
 
 {% instructions ref="score" %}
-Assign a score between 0 and 100 based on form completeness.
+Enter a score between 0 and 100 (optional).
 {% /instructions %}
 
 {% /field-group %}
@@ -110,17 +108,17 @@ Add 1-5 unique reference URLs for sources or documentation.
 
 {% /field-group %}
 
-{% field-group id="optional_fields" title="Optional Fields (Agent)" %}
+{% field-group id="optional_fields" title="Optional Fields" %}
 
-{% string-field id="notes" label="Notes" role="agent" %}{% /string-field %}
+{% string-field id="notes" label="Notes" role="user" %}{% /string-field %}
 
 {% instructions ref="notes" %}
-Add any relevant notes or observations about this test form.
+Add any relevant notes or observations (optional).
 {% /instructions %}
 
-{% number-field id="optional_number" label="Optional Number" role="agent" %}{% /number-field %}
+{% number-field id="optional_number" label="Optional Number" role="user" %}{% /number-field %}
 
-{% url-field id="related_url" label="Related URL" role="agent" %}{% /url-field %}
+{% url-field id="related_url" label="Related URL" role="user" %}{% /url-field %}
 
 {% instructions ref="related_url" %}
 Optionally add a URL to related documentation or resources.
