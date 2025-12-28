@@ -6,19 +6,21 @@
 
 ## Prerequisites
 
-- **Node.js 20+** (LTS) — [nodejs.org](https://nodejs.org/)
+- **Node.js 20+** — We recommend v24 (current) or v22 LTS.
+  Minimum supported is v20. [nodejs.org](https://nodejs.org/)
 
 - **pnpm 10.x** — Install via `corepack enable` or `npm install -g pnpm`
 
 ### Node.js Setup
 
-This project requires Node.js 20+. Setup depends on your environment:
+This project requires Node.js 20 or higher. We recommend Node 24 (current) for best
+performance. Setup depends on your environment:
 
 #### Claude Code on the Web (Automatic)
 
 A session-start hook (`.claude/hooks/session-start.sh`) automatically:
 
-1. Downloads and installs the required Node.js version if not present
+1. Downloads and installs Node 24 if not present
 
 2. Configures PATH for the session
 
@@ -30,27 +32,28 @@ No manual setup needed—the hook runs on session start.
 
 **Option 1: Direct installation**
 
-Download from [nodejs.org](https://nodejs.org/) and install Node.js 20 LTS or newer.
+Download from [nodejs.org](https://nodejs.org/) and install Node.js 24 (current) or
+Node.js 22 LTS.
 
 **Option 2: Using a version manager**
 
 ```bash
-# Using nvm
-nvm install 20
-nvm use 20
+# Using nvm (recommended: install latest)
+nvm install 24
+nvm use 24
 
 # Using fnm
-fnm install 20
-fnm use 20
+fnm install 24
+fnm use 24
 
 # Using mise
-mise use node@20
+mise use node@24
 ```
 
 #### Verify Installation
 
 ```bash
-node --version   # Should show v20.x.x or higher
+node --version   # Should show v20.x.x or higher (v24 recommended)
 pnpm --version   # Should show 10.x.x
 ```
 
