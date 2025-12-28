@@ -44,6 +44,7 @@ import {
   extractOptionItems,
   getBooleanAttr,
   getNumberAttr,
+  getStringArrayAttr,
   getStringAttr,
   getValidateAttr,
   isTagNode,
@@ -170,6 +171,96 @@ function getPriorityAttr(node: Node): 'high' | 'medium' | 'low' {
 }
 
 // =============================================================================
+// Placeholder/Examples Validation Helpers
+// =============================================================================
+
+/**
+ * Validate that placeholder/examples are not used on chooser fields.
+ * Throws ParseError if either attribute is present.
+ */
+function validateNoPlaceholderExamples(node: Node, fieldType: string, fieldId: string): void {
+  const placeholder = getStringAttr(node, 'placeholder');
+  const examples = getStringArrayAttr(node, 'examples');
+
+  if (placeholder !== undefined) {
+    throw new ParseError(
+      `${fieldType} '${fieldId}' has 'placeholder' attribute, but placeholder is only valid on text-entry fields (string, number, string-list, url, url-list)`,
+    );
+  }
+  if (examples !== undefined) {
+    throw new ParseError(
+      `${fieldType} '${fieldId}' has 'examples' attribute, but examples is only valid on text-entry fields (string, number, string-list, url, url-list)`,
+    );
+  }
+}
+
+/**
+ * Check if a string is a valid URL.
+ */
+function isValidUrl(str: string): boolean {
+  try {
+    new URL(str);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate examples for number fields - all must parse as numbers.
+ */
+function validateNumberExamples(examples: string[] | undefined, fieldId: string): void {
+  if (!examples) return;
+  for (const example of examples) {
+    const parsed = Number(example);
+    if (Number.isNaN(parsed)) {
+      throw new ParseError(
+        `number-field '${fieldId}' has invalid example '${example}' - must be a valid number`,
+      );
+    }
+  }
+}
+
+/**
+ * Validate examples for URL fields - all must be valid URLs.
+ */
+function validateUrlExamples(examples: string[] | undefined, fieldId: string): void {
+  if (!examples) return;
+  for (const example of examples) {
+    if (!isValidUrl(example)) {
+      throw new ParseError(
+        `url-field '${fieldId}' has invalid example '${example}' - must be a valid URL`,
+      );
+    }
+  }
+}
+
+/**
+ * Warn if placeholder doesn't match the expected type.
+ * Returns a warning message or undefined.
+ * Note: Currently unused as the warning system is not yet implemented.
+ */
+function _warnPlaceholderTypeMismatch(
+  placeholder: string | undefined,
+  fieldType: 'number' | 'url',
+  fieldId: string,
+): string | undefined {
+  if (!placeholder) return undefined;
+
+  if (fieldType === 'number') {
+    const parsed = Number(placeholder);
+    if (Number.isNaN(parsed)) {
+      return `number-field '${fieldId}' has placeholder '${placeholder}' that doesn't parse as a number`;
+    }
+  } else if (fieldType === 'url') {
+    if (!isValidUrl(placeholder)) {
+      return `url-field '${fieldId}' has placeholder '${placeholder}' that doesn't look like a valid URL`;
+    }
+  }
+  return undefined;
+}
+
+// =============================================================================
 // String Field Parser
 // =============================================================================
 
@@ -202,6 +293,8 @@ export function parseStringField(node: Node): { field: StringField; response: Fi
     maxLength: getNumberAttr(node, 'maxLength'),
     validate: getValidateAttr(node),
     report: getBooleanAttr(node, 'report'),
+    placeholder: getStringAttr(node, 'placeholder'),
+    examples: getStringArrayAttr(node, 'examples'),
   };
 
   // Check for sentinel values first
@@ -242,6 +335,15 @@ export function parseNumberField(node: Node): { field: NumberField; response: Fi
 
   const required = getBooleanAttr(node, 'required') ?? false;
 
+  const placeholder = getStringAttr(node, 'placeholder');
+  const examples = getStringArrayAttr(node, 'examples');
+
+  // Validate examples are valid numbers
+  validateNumberExamples(examples, id);
+
+  // Note: Placeholder type mismatch is a warning, not an error
+  // The warnPlaceholderTypeMismatch function is available but warnings are not yet surfaced
+
   const field: NumberField = {
     kind: 'number',
     id,
@@ -254,6 +356,8 @@ export function parseNumberField(node: Node): { field: NumberField; response: Fi
     integer: getBooleanAttr(node, 'integer'),
     validate: getValidateAttr(node),
     report: getBooleanAttr(node, 'report'),
+    placeholder,
+    examples,
   };
 
   // Check for sentinel values first
@@ -319,6 +423,8 @@ export function parseStringListField(node: Node): {
     uniqueItems: getBooleanAttr(node, 'uniqueItems'),
     validate: getValidateAttr(node),
     report: getBooleanAttr(node, 'report'),
+    placeholder: getStringAttr(node, 'placeholder'),
+    examples: getStringArrayAttr(node, 'examples'),
   };
 
   // Check for sentinel values first
@@ -414,6 +520,9 @@ export function parseSingleSelectField(node: Node): {
     throw new ParseError(`single-select '${id}' missing required 'label' attribute`);
   }
 
+  // Validate that placeholder/examples are not used on chooser fields
+  validateNoPlaceholderExamples(node, 'single-select', id);
+
   const required = getBooleanAttr(node, 'required') ?? false;
   const { options, selected } = parseOptions(node, id);
 
@@ -467,6 +576,9 @@ export function parseMultiSelectField(node: Node): {
   if (!label) {
     throw new ParseError(`multi-select '${id}' missing required 'label' attribute`);
   }
+
+  // Validate that placeholder/examples are not used on chooser fields
+  validateNoPlaceholderExamples(node, 'multi-select', id);
 
   const required = getBooleanAttr(node, 'required') ?? false;
   const { options, selected } = parseOptions(node, id);
@@ -522,6 +634,9 @@ export function parseCheckboxesField(node: Node): {
   if (!label) {
     throw new ParseError(`checkboxes '${id}' missing required 'label' attribute`);
   }
+
+  // Validate that placeholder/examples are not used on chooser fields
+  validateNoPlaceholderExamples(node, 'checkboxes', id);
 
   const { options, selected } = parseOptions(node, id);
 
@@ -615,6 +730,14 @@ export function parseUrlField(node: Node): { field: UrlField; response: FieldRes
 
   const required = getBooleanAttr(node, 'required') ?? false;
 
+  const placeholder = getStringAttr(node, 'placeholder');
+  const examples = getStringArrayAttr(node, 'examples');
+
+  // Validate examples are valid URLs
+  validateUrlExamples(examples, id);
+
+  // Note: Placeholder type mismatch is a warning, not an error
+
   const field: UrlField = {
     kind: 'url',
     id,
@@ -624,6 +747,8 @@ export function parseUrlField(node: Node): { field: UrlField; response: FieldRes
     role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     validate: getValidateAttr(node),
     report: getBooleanAttr(node, 'report'),
+    placeholder,
+    examples,
   };
 
   // Check for sentinel values first
@@ -664,6 +789,14 @@ export function parseUrlListField(node: Node): { field: UrlListField; response: 
 
   const required = getBooleanAttr(node, 'required') ?? false;
 
+  const placeholder = getStringAttr(node, 'placeholder');
+  const examples = getStringArrayAttr(node, 'examples');
+
+  // Validate examples are valid URLs
+  validateUrlExamples(examples, id);
+
+  // Note: Placeholder type mismatch is a warning, not an error
+
   const field: UrlListField = {
     kind: 'url_list',
     id,
@@ -676,6 +809,8 @@ export function parseUrlListField(node: Node): { field: UrlListField; response: 
     uniqueItems: getBooleanAttr(node, 'uniqueItems'),
     validate: getValidateAttr(node),
     report: getBooleanAttr(node, 'report'),
+    placeholder,
+    examples,
   };
 
   // Check for sentinel values first

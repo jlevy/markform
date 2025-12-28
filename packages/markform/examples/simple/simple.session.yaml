@@ -122,7 +122,7 @@ turns:
           value: https://alice.dev
     after:
       required_issue_count: 0
-      markdown_sha256: 82ebecc97db1321838d47491c23ab951525e1fa5fd14590cd306565faa00b05f
+      markdown_sha256: 2043ec76d913d290881480d5d2ca4de9ef6a3fdbdb626c65f6c33943be8524db
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
@@ -181,7 +181,7 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: 09ad2c0b12f3b27505ea3fbcfd35e025e94d906c1cb9701322b793b233db54dd
+      markdown_sha256: bdf33a4ca1ca4b0ae0005a5ff53b70a19b58838ac1076fe42a91de0781986096
       answered_field_count: 14
       skipped_field_count: 1
 final:

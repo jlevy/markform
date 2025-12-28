@@ -133,6 +133,26 @@ export function getValidateAttr(node: Node): ValidatorRef[] | undefined {
 }
 
 /**
+ * Get string array attribute value or undefined.
+ * Handles both single string (converts to array) and array formats.
+ */
+export function getStringArrayAttr(node: Node, name: string): string[] | undefined {
+  const value: unknown = node.attributes?.[name];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    // Filter to only strings
+    const strings = value.filter((v): v is string => typeof v === 'string');
+    return strings.length > 0 ? strings : undefined;
+  }
+  if (typeof value === 'string') {
+    return [value];
+  }
+  return undefined;
+}
+
+/**
  * Parsed option item from AST.
  */
 export interface ParsedOptionItem {
