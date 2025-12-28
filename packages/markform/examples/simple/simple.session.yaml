@@ -181,7 +181,7 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: 98987fd1c4b8b6d3bd1868c4ba7dc8e00def3f5003f470a7666f4983bae20868
+      markdown_sha256: 09ad2c0b12f3b27505ea3fbcfd35e025e94d906c1cb9701322b793b233db54dd
       answered_field_count: 14
       skipped_field_count: 1
 final:

@@ -42,7 +42,7 @@ test@example.com
 
 {% number-field id="score" label="Score" max=100 min=0 role="user" state="skipped" %}
 ```value
-|SKIP| (Not needed for this test)
+%SKIP% (Not needed for this test)
 ```
 {% /number-field %}
 
@@ -141,7 +141,7 @@ Add 1-5 unique reference URLs for sources or documentation.
 
 {% string-field id="notes" label="Notes" role="user" state="skipped" %}
 ```value
-|SKIP| (No notes required)
+%SKIP% (No notes required)
 ```
 {% /string-field %}
 
@@ -153,7 +153,7 @@ Add any relevant notes or observations (optional).
 
 {% url-field id="related_url" label="Related URL" role="user" state="skipped" %}
 ```value
-|SKIP| (No related URL needed)
+%SKIP% (No related URL needed)
 ```
 {% /url-field %}
 
