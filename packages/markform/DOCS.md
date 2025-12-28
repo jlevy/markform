@@ -321,13 +321,16 @@ markform:
     agent: |
       Research and fill in all fields for the specified movie.
       Guidelines:
-      1. PRIMARY SOURCES:
+      1. WORKFLOW - Complete sections in order:
+         - First identify the movie title
+         - Then find all source URLs (verify you have the right movie on each site)
+         - Then fill in details (year, directors, ratings) from those sources
+      2. PRIMARY SOURCES:
          - IMDB (imdb.com) for ratings, runtime, and technical details
          - Rotten Tomatoes (rottentomatoes.com) for Tomatometer and Audience Score
          - Metacritic (metacritic.com) for Metascore
-      2. Use the EXACT numeric scores from each source - don't average or interpret
-      3. Note if any scores are unavailable (older films may lack some metrics)
-      4. Include source URLs for verification
+      3. Use the EXACT numeric scores from each source - don't average or interpret
+      4. Skip fields if any scores are unavailable (older films may lack some metrics)
   harness_config:
     max_issues_per_turn: 3
     max_patches_per_turn: 8
@@ -350,7 +353,7 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 
 {% /field-group %}
 
-{% field-group id="basic_info" title="Basic Information" %}
+{% field-group id="title_identification" title="Title Identification" %}
 
 {% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
 
@@ -358,13 +361,39 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 Look up what film the user had in mind and fill in the official title including subtitle if any (e.g., "The Lord of the Rings: The Fellowship of the Ring").
 {% /instructions %}
 
+{% /field-group %}
+
+{% field-group id="sources" title="Sources" %}
+
+{% url-field id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /url-field %}
+
+{% instructions ref="imdb_url" %}
+Direct link to the movie's IMDB page (e.g., https://www.imdb.com/title/tt0111161/).
+{% /instructions %}
+
+{% url-field id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /url-field %}
+
+{% instructions ref="rt_url" %}
+Direct link to the movie's Rotten Tomatoes page.
+{% /instructions %}
+
+{% url-field id="metacritic_url" label="Metacritic URL" role="agent" %}{% /url-field %}
+
+{% instructions ref="metacritic_url" %}
+Direct link to the movie's Metacritic page.
+{% /instructions %}
+
+{% /field-group %}
+
+{% field-group id="basic_details" title="Basic Details" %}
+
+{% number-field id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /number-field %}
+
 {% string-list id="directors" label="Director(s)" role="agent" required=true %}{% /string-list %}
 
 {% instructions ref="directors" %}
 One director per line. Most films have one; some have two or more co-directors.
 {% /instructions %}
-
-{% number-field id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /number-field %}
 
 {% number-field id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 %}{% /number-field %}
 
@@ -379,13 +408,7 @@ One director per line. Most films have one; some have two or more co-directors.
 
 {% /field-group %}
 
-{% field-group id="imdb" title="IMDB" %}
-
-{% url-field id="imdb_url" label="IMDB URL" role="agent" %}{% /url-field %}
-
-{% instructions ref="imdb_url" %}
-Direct link to the movie's IMDB page (e.g., https://www.imdb.com/title/tt0111161/).
-{% /instructions %}
+{% field-group id="imdb_ratings" title="IMDB Ratings" %}
 
 {% number-field id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /number-field %}
 
@@ -401,9 +424,7 @@ Number of IMDB user votes (e.g., 2800000 for a popular film).
 
 {% /field-group %}
 
-{% field-group id="rotten_tomatoes" title="Rotten Tomatoes" %}
-
-{% url-field id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /url-field %}
+{% field-group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
 
 {% number-field id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /number-field %}
 
@@ -411,10 +432,22 @@ Number of IMDB user votes (e.g., 2800000 for a popular film).
 Tomatometer percentage (0-100).
 {% /instructions %}
 
+{% number-field id="rt_critics_count" label="Critics Review Count" role="agent" min=0 %}{% /number-field %}
+
 {% number-field id="rt_audience_score" label="Audience Score" role="agent" min=0 max=100 %}{% /number-field %}
 
 {% instructions ref="rt_audience_score" %}
 Audience Score percentage (0-100).
+{% /instructions %}
+
+{% /field-group %}
+
+{% field-group id="metacritic_ratings" title="Metacritic Ratings" %}
+
+{% number-field id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 %}{% /number-field %}
+
+{% instructions ref="metacritic_score" %}
+Metascore (0-100 scale). Leave empty if not available.
 {% /instructions %}
 
 {% /field-group %}
