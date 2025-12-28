@@ -119,7 +119,7 @@ turns:
             test: na
     after:
       required_issue_count: 2
-      markdown_sha256: 4dc64a199b40d1f2610000da1e28fa0182f8e62c389445b7b54494b30d989519
+      markdown_sha256: 036648431a4c1fc82d2d6a9db2720135978a972e9bcbb1fce34423f9b5cd9729
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
@@ -219,7 +219,7 @@ turns:
           reason: No value in mock form
     after:
       required_issue_count: 0
-      markdown_sha256: c97ef91d5b9faa3b9b9450728154c3c75d710b21a5ca4a9195f6658eff1744d3
+      markdown_sha256: ba6cc923d27e772730d912dfee3a0ed7d17f1fbff7f133ec2c43d1655fb9769e
       answered_field_count: 13
       skipped_field_count: 6
 final:

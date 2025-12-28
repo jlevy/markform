@@ -18,7 +18,7 @@ Fill all fields using interactive prompts - no LLM API key needed.
 
 {% field-group id="basic_fields" title="Basic Fields" %}
 
-{% string-field id="name" label="Name" maxLength=50 minLength=2 required=true role="user" %}
+{% string-field id="name" label="Name" maxLength=50 minLength=2 required=true role="user" placeholder="Enter your name" examples=["John Smith", "Jane Doe"] %}
 ```value
 Test User
 ```
@@ -28,19 +28,19 @@ Test User
 Enter your full name (2-50 characters).
 {% /instructions %}
 
-{% string-field id="email" label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" required=true role="user" %}
+{% string-field id="email" label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" required=true role="user" placeholder="email@example.com" examples=["alice@company.com", "bob@example.org"] %}
 ```value
 test@example.com
 ```
 {% /string-field %}
 
-{% number-field id="age" integer=true label="Age" max=150 min=0 required=true role="user" %}
+{% number-field id="age" integer=true label="Age" max=150 min=0 required=true role="user" placeholder="25" examples=["18", "30", "45"] %}
 ```value
 25
 ```
 {% /number-field %}
 
-{% number-field id="score" label="Score" max=100 min=0 role="user" state="skipped" %}
+{% number-field id="score" label="Score" max=100 min=0 role="user" state="skipped" placeholder="85.5" examples=["75.0", "90.5", "100.0"] %}
 ```value
 %SKIP% (Not needed for this test)
 ```
@@ -115,7 +115,7 @@ Answer yes or no for each confirmation. All must be explicitly answered.
 
 {% field-group id="url_fields" title="URL Fields" %}
 
-{% url-field id="website" label="Website" required=true role="user" %}
+{% url-field id="website" label="Website" required=true role="user" placeholder="https://example.com" examples=["https://github.com/user/repo", "https://company.com"] %}
 ```value
 https://test.example.com
 ```
@@ -125,7 +125,7 @@ https://test.example.com
 Enter your website URL (must be http or https).
 {% /instructions %}
 
-{% url-list id="references" label="References" maxItems=5 minItems=1 role="user" uniqueItems=true %}
+{% url-list id="references" label="References" maxItems=5 minItems=1 role="user" uniqueItems=true placeholder="https://docs.example.com" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] %}
 ```value
 https://docs.example.com
 ```

@@ -1345,4 +1345,269 @@ Note text.
       expect(() => parseForm(markdown)).toThrow(/missing.*role/i);
     });
   });
+
+  describe('placeholder and examples attributes (markform-345)', () => {
+    it('parses placeholder on string field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" placeholder="Enter your name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+
+      expect(field?.placeholder).toBe('Enter your name');
+    });
+
+    it('parses examples as single string on string field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" examples="John Doe" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+
+      expect(field?.examples).toEqual(['John Doe']);
+    });
+
+    it('parses examples as array on string field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-field id="name" label="Name" examples=["John Doe", "Jane Smith", "Alice Johnson"] %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+
+      expect(field?.examples).toEqual(['John Doe', 'Jane Smith', 'Alice Johnson']);
+    });
+
+    it('parses placeholder and examples on number field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="age" label="Age" placeholder="25" examples=["18", "25", "65"] %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+
+      expect(field?.placeholder).toBe('25');
+      expect(field?.examples).toEqual(['18', '25', '65']);
+    });
+
+    it('parses placeholder and examples on url field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" placeholder="https://example.com" examples=["https://example.com", "https://github.com"] %}{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+
+      expect(field?.placeholder).toBe('https://example.com');
+      expect(field?.examples).toEqual(['https://example.com', 'https://github.com']);
+    });
+
+    it('parses placeholder on string-list field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% string-list id="tags" label="Tags" placeholder="technology" examples=["tech", "science", "business"] %}{% /string-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+
+      expect(field?.placeholder).toBe('technology');
+      expect(field?.examples).toEqual(['tech', 'science', 'business']);
+    });
+
+    it('parses placeholder on url-list field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" placeholder="https://example.com" examples=["https://example.com/1", "https://example.com/2"] %}{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children[0];
+
+      expect(field?.placeholder).toBe('https://example.com');
+      expect(field?.examples).toEqual(['https://example.com/1', 'https://example.com/2']);
+    });
+
+    it('throws error on placeholder for single-select field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% single-select id="priority" label="Priority" placeholder="Select one" %}
+- [ ] Low {% #low %}
+- [ ] High {% #high %}
+{% /single-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/placeholder.*only valid on text-entry fields/i);
+    });
+
+    it('throws error on examples for multi-select field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% multi-select id="categories" label="Categories" examples=["cat1", "cat2"] %}
+- [ ] Option 1 {% #opt1 %}
+- [ ] Option 2 {% #opt2 %}
+{% /multi-select %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/examples.*only valid on text-entry fields/i);
+    });
+
+    it('throws error on placeholder for checkboxes field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% checkboxes id="tasks" label="Tasks" placeholder="Check all that apply" %}
+- [ ] Task 1 {% #t1 %}
+- [ ] Task 2 {% #t2 %}
+{% /checkboxes %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/placeholder.*only valid on text-entry fields/i);
+    });
+
+    it('throws error on invalid number example', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% number-field id="age" label="Age" examples=["25", "not-a-number", "30"] %}{% /number-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(
+        /invalid example.*not-a-number.*must be a valid number/i,
+      );
+    });
+
+    it('throws error on invalid URL example', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-field id="website" label="Website" examples=["https://example.com", "not-a-url"] %}{% /url-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/invalid example.*not-a-url.*must be a valid URL/i);
+    });
+
+    it('throws error on invalid URL example in url-list', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" %}
+{% url-list id="sources" label="Sources" examples=["not-a-url", "https://example.com"] %}{% /url-list %}
+{% /field-group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/invalid example.*not-a-url.*must be a valid URL/i);
+    });
+  });
 });

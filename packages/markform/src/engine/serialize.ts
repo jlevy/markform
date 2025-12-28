@@ -270,6 +270,12 @@ function serializeStringField(field: StringField, response: FieldResponse | unde
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  if (field.placeholder) {
+    attrs.placeholder = field.placeholder;
+  }
+  if (field.examples && field.examples.length > 0) {
+    attrs.examples = field.examples;
+  }
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -324,6 +330,12 @@ function serializeNumberField(field: NumberField, response: FieldResponse | unde
   }
   if (field.report !== undefined) {
     attrs.report = field.report;
+  }
+  if (field.placeholder) {
+    attrs.placeholder = field.placeholder;
+  }
+  if (field.examples && field.examples.length > 0) {
+    attrs.examples = field.examples;
   }
 
   // Add state attribute for skipped/aborted (markform-216)
@@ -388,6 +400,12 @@ function serializeStringListField(
   }
   if (field.report !== undefined) {
     attrs.report = field.report;
+  }
+  if (field.placeholder) {
+    attrs.placeholder = field.placeholder;
+  }
+  if (field.examples && field.examples.length > 0) {
+    attrs.examples = field.examples;
   }
 
   // Add state attribute for skipped/aborted (markform-216)
@@ -601,6 +619,12 @@ function serializeUrlField(field: UrlField, response: FieldResponse | undefined)
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  if (field.placeholder) {
+    attrs.placeholder = field.placeholder;
+  }
+  if (field.examples && field.examples.length > 0) {
+    attrs.examples = field.examples;
+  }
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -655,6 +679,12 @@ function serializeUrlListField(field: UrlListField, response: FieldResponse | un
   }
   if (field.report !== undefined) {
     attrs.report = field.report;
+  }
+  if (field.placeholder) {
+    attrs.placeholder = field.placeholder;
+  }
+  if (field.examples && field.examples.length > 0) {
+    attrs.examples = field.examples;
   }
 
   // Add state attribute for skipped/aborted (markform-216)

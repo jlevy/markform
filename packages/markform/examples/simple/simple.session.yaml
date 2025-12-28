@@ -120,7 +120,7 @@ turns:
             test: na
     after:
       required_issue_count: 2
-      markdown_sha256: 3011c932c9bc84eae6f9c121002de4a743a566fd6aac4001c24cdaa66a6b4da4
+      markdown_sha256: 52eebab0fcb220df8b7a013325828496d576ba946edfac585eb3877715a30148
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
@@ -219,7 +219,7 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: eb76c9cc75ff6afae8a4b4bec280b393071e9c9d2399f87f3f0d0dc4744d6eaf
+      markdown_sha256: a213d1ab8c4660151e352e320aac257df53e940b1d67a2a479516fca7427e189
       answered_field_count: 16
       skipped_field_count: 3
 final:

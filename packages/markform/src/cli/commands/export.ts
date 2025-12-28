@@ -24,6 +24,8 @@ interface ExportField {
   label: string;
   required: boolean;
   options?: { id: string; label: string }[];
+  placeholder?: string;
+  examples?: string[];
 }
 
 interface ExportGroup {
@@ -117,6 +119,8 @@ export function registerExportCommand(program: Command): void {
                     })),
                   }
                 : {}),
+              ...(field.placeholder ? { placeholder: field.placeholder } : {}),
+              ...(field.examples && field.examples.length > 0 ? { examples: field.examples } : {}),
             })),
           })),
         };

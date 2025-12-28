@@ -236,6 +236,32 @@ Example: `pattern="^[A-Z]{1,5}$"` for a ticker symbol.
 
 The `role` attribute enables multi-actor workflows where different fields are assigned
 to different actors.
+
+**Text-entry field attributes (string, number, string-list, url, url-list only):**
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| `placeholder` | string | Hint text shown in empty fields (displayed in UI) |
+| `examples` | string[] | Example values for the field (helps LLMs, shown in prompts) |
+
+These attributes are only valid on text-entry field types. Using them on chooser fields
+(single-select, multi-select, checkboxes) will result in a parse error.
+
+**Example with placeholder and examples:**
+```md
+{% string-field id="company_name" label="Company name" placeholder="Enter company name" examples=["ACME Corp", "Globex Inc"] %}{% /string-field %}
+```
+
+For number fields, examples must be valid numbers:
+```md
+{% number-field id="revenue" label="Revenue (USD)" placeholder="1000000" examples=["500000", "1000000", "5000000"] %}{% /number-field %}
+```
+
+For URL fields, examples must be valid URLs:
+```md
+{% url-field id="website" label="Website" placeholder="https://example.com" examples=["https://example.com", "https://github.com"] %}{% /url-field %}
+```
+
 When running the fill harness with `targetRoles`, only fields matching those roles are
 considered for completion.
 See **Role-filtered completion** in the ProgressState Definitions section.

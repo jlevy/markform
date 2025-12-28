@@ -128,6 +128,33 @@ export interface FieldBase {
   validate?: ValidatorRef[];
   /** Whether to include this field in report output. Default: true */
   report?: boolean;
+  /** Hint text for empty field (text-entry fields only) */
+  placeholder?: string;
+  /** Example values (text-entry fields only) */
+  examples?: string[];
+}
+
+// =============================================================================
+// Field Kind Categories
+// =============================================================================
+
+/** Field kinds that accept text entry (support placeholder/examples) */
+export const TEXT_ENTRY_FIELD_KINDS = [
+  'string',
+  'number',
+  'string_list',
+  'url',
+  'url_list',
+] as const;
+
+/** Field kinds that are choosers (do NOT support placeholder/examples) */
+export const CHOOSER_FIELD_KINDS = ['single_select', 'multi_select', 'checkboxes'] as const;
+
+/**
+ * Check if a field kind accepts text entry (supports placeholder/examples).
+ */
+export function isTextEntryFieldKind(kind: FieldKind): boolean {
+  return (TEXT_ENTRY_FIELD_KINDS as readonly string[]).includes(kind);
 }
 
 /** String field - single or multiline text */
@@ -898,6 +925,9 @@ const FieldBaseSchemaPartial = {
   priority: FieldPriorityLevelSchema,
   role: z.string(),
   validate: z.array(ValidatorRefSchema).optional(),
+  report: z.boolean().optional(),
+  placeholder: z.string().optional(),
+  examples: z.array(z.string()).optional(),
 };
 
 // Field schemas

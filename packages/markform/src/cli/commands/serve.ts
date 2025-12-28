@@ -812,8 +812,11 @@ function renderStringInput(
   const requiredAttr = field.required ? ' required' : '';
   const minLengthAttr = field.minLength !== undefined ? ` minlength="${field.minLength}"` : '';
   const maxLengthAttr = field.maxLength !== undefined ? ` maxlength="${field.maxLength}"` : '';
+  const placeholderAttr = field.placeholder
+    ? ` placeholder="${escapeHtml(field.placeholder)}"`
+    : '';
 
-  return `<input type="text" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minLengthAttr}${maxLengthAttr}${disabledAttr}>`;
+  return `<input type="text" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minLengthAttr}${maxLengthAttr}${placeholderAttr}${disabledAttr}>`;
 }
 
 /**
@@ -829,8 +832,11 @@ function renderNumberInput(
   const minAttr = field.min !== undefined ? ` min="${field.min}"` : '';
   const maxAttr = field.max !== undefined ? ` max="${field.max}"` : '';
   const stepAttr = field.integer ? ' step="1"' : '';
+  const placeholderAttr = field.placeholder
+    ? ` placeholder="${escapeHtml(field.placeholder)}"`
+    : '';
 
-  return `<input type="number" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minAttr}${maxAttr}${stepAttr}${disabledAttr}>`;
+  return `<input type="number" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}"${requiredAttr}${minAttr}${maxAttr}${stepAttr}${placeholderAttr}${disabledAttr}>`;
 }
 
 /**
@@ -844,8 +850,12 @@ function renderStringListInput(
   const items = value?.kind === 'string_list' ? value.items : [];
   const currentValue = items.join('\n');
   const requiredAttr = field.required ? ' required' : '';
+  // Use field placeholder or default
+  const placeholderText = field.placeholder
+    ? `${escapeHtml(field.placeholder)} (one item per line)`
+    : 'Enter one item per line';
 
-  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one item per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
+  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="${placeholderText}"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
 }
 
 /**
@@ -858,8 +868,10 @@ function renderUrlInput(
 ): string {
   const currentValue = value?.kind === 'url' && value.value !== null ? value.value : '';
   const requiredAttr = field.required ? ' required' : '';
+  // Use field placeholder or default
+  const placeholderText = field.placeholder ?? 'https://example.com';
 
-  return `<input type="url" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}" placeholder="https://example.com"${requiredAttr}${disabledAttr}>`;
+  return `<input type="url" id="field-${field.id}" name="${field.id}" value="${escapeHtml(currentValue)}" placeholder="${escapeHtml(placeholderText)}"${requiredAttr}${disabledAttr}>`;
 }
 
 /**
@@ -873,8 +885,12 @@ function renderUrlListInput(
   const items = value?.kind === 'url_list' ? value.items : [];
   const currentValue = items.join('\n');
   const requiredAttr = field.required ? ' required' : '';
+  // Use field placeholder or default
+  const placeholderText = field.placeholder
+    ? `${escapeHtml(field.placeholder)} (one URL per line)`
+    : 'Enter one URL per line';
 
-  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="Enter one URL per line"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
+  return `<textarea id="field-${field.id}" name="${field.id}" placeholder="${placeholderText}"${requiredAttr}${disabledAttr}>${escapeHtml(currentValue)}</textarea>`;
 }
 
 /**
