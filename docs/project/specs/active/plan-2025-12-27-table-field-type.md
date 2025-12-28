@@ -30,7 +30,7 @@ A native `table-field` provides:
 
 - Header-as-ID pattern (simple, unambiguous)
 
-- Sentinel value support (`|SKIP|`, `|ABORT|`) matching other field types
+- Sentinel value support (`%SKIP%`, `%ABORT%`) matching other field types
 
 Reference: `SPEC.md` Layer 2 (Form Data Model) for field type definitions.
 
@@ -48,7 +48,7 @@ Add a new field type `table-field` (kind: `'table'`) that:
 
 5. Validates cell values against column types
 
-6. Supports sentinel values (`|SKIP|`, `|ABORT|`) in cells
+6. Supports sentinel values (`%SKIP%`, `%ABORT%`) in cells
 
 ## Backward Compatibility
 
@@ -132,21 +132,23 @@ Before defining `table-field`, we formalize the existing field type categories:
 
    - Each cell validated against its column’s type
 
-   - Empty cells are invalid (must use `|SKIP|` or `|ABORT|` to skip)
+   - Empty cells are invalid (must use `%SKIP%` or `%ABORT%` to skip)
 
    - Clear error messages for type mismatches
 
 5. **Sentinel values in cells:**
 
-   - `|SKIP|` — cell explicitly skipped
+   Standard sentinel syntax works in table cells:
 
-   - `|SKIP| (reason)` — skipped with parenthetical reason
+   - `%SKIP%` — cell explicitly skipped
 
-   - `|ABORT|` — cell could not be completed
+   - `%SKIP% (reason)` — skipped with parenthetical reason
 
-   - `|ABORT| (reason)` — aborted with reason
+   - `%ABORT%` — cell could not be completed
 
-   - Reuse existing `parseSentinelValue()` logic from `parseSentinels.ts`
+   - `%ABORT% (reason)` — aborted with reason
+
+   The `%` delimiters don’t conflict with markdown table `|` delimiters.
 
 6. **Row constraints:**
 
@@ -207,7 +209,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 
 4. **Cell type validation:** Non-numeric value in number column produces clear error
 
-5. **Sentinel parsing:** `|SKIP| (reason)` in cell parses correctly
+5. **Sentinel parsing:** `%SKIP% (reason)` in cell parses correctly
 
 6. **Row constraints:** minRows/maxRows validated correctly
 
@@ -228,7 +230,8 @@ Before defining `table-field`, we formalize the existing field type categories:
 
 2. **Pipe in cell content:** How to escape `|` in cell values?
    **Resolution:** Use `\|` for literal pipe.
-   Sentinel patterns `|SKIP|` and `|ABORT|` are recognized specially.
+   Sentinel syntax (`%SKIP%`, `%ABORT%`) uses `%` delimiters which don’t conflict with
+   table pipes.
 
 3. **Whitespace handling:** How to handle leading/trailing whitespace in cells?
    **Resolution:** Trim whitespace from cell values (standard markdown table behavior).
@@ -236,7 +239,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 4. **Row validation completeness:** Must every cell in a row have a value?
    **Resolution:** Yes.
    Empty cells are invalid.
-   Use `|SKIP|` to explicitly skip.
+   Use `%SKIP%` to explicitly skip.
 
 ## Stage 2: Architecture Stage
 
@@ -348,7 +351,7 @@ Serialize as canonical markdown table:
 | name | title | linkedin_url | background |
 |------|-------|--------------|------------|
 | John Smith | CEO | https://linkedin.com/in/jsmith | 20 years in tech |
-| Jane Doe | CTO | |SKIP| (No public profile) | Former Google engineer |
+| Jane Doe | CTO | %SKIP% (No public profile) | Former Google engineer |
 {% /table-field %}
 ```
 
@@ -358,7 +361,7 @@ Serialize as canonical markdown table:
 
 - Separator row uses minimum dashes (`|---|`)
 
-- Sentinel values serialized as-is with parenthetical reason
+- Sentinel values (`%SKIP%`, `%ABORT%`) serialized as-is with optional reason
 
 - Empty table = header + separator only
 
@@ -408,14 +411,33 @@ function unescapeTableCell(escaped: string): string {
 
 **Sentinel value handling:**
 
-Sentinel patterns (`|SKIP|`, `|ABORT|`) are NOT escaped during serialization.
-They are recognized as special patterns before general escaping applies:
+Standard sentinel syntax with `%` delimiters:
 
-1. Check if value matches sentinel pattern: `/^\|(SKIP|ABORT)\|(\s*\(.*\))?$/`
+- Pattern: `/^%(SKIP|ABORT)%(\s*\(.*\))?$/`
 
-2. If sentinel, serialize as-is (no escaping)
+- Recognized forms: `%SKIP%`, `%SKIP% (reason)`, `%ABORT%`, `%ABORT% (reason)`
 
-3. If not sentinel, apply cell escaping rules
+Sentinel values don’t require escaping (no pipe characters).
+
+**Parsing flow:**
+
+1. Split row on unescaped `|` (using `(?<!\\)\|`)
+
+2. Trim each cell
+
+3. Check if cell matches sentinel pattern
+
+4. If sentinel, extract state and reason
+
+5. If not sentinel, unescape `\|` → `|` and validate against column type
+
+**Serialization flow:**
+
+1. Check if CellResponse has `state: 'skipped'` or `state: 'aborted'`
+
+2. If so, serialize as `%SKIP%` or `%ABORT%` (with reason if present)
+
+3. If answered, escape any `|` in value as `\|`
 
 **Examples:**
 
@@ -423,18 +445,20 @@ They are recognized as special patterns before general escaping applies:
 | --- | --- | --- |
 | `Hello` | `Hello` | No escaping needed |
 | `A\|B` | `A\\|B` | Pipe escaped |
-| `Path: C:\\\|files` | `Path: C:\\\\|files` | Backslash-pipe preserved |
-| `\|SKIP\|` | `\|SKIP\|` | Sentinel - no escaping |
-| `\|SKIP\| (reason)` | `\|SKIP\| (reason)` | Sentinel with reason |
-| `Not \|SKIP\| sentinel` | `Not \\|SKIP\\| sentinel` | Not a sentinel pattern |
+| `%SKIP%` | `%SKIP%` | Sentinel (skipped cell) |
+| `%SKIP% (No data)` | `%SKIP% (No data)` | Sentinel with reason |
+| `%ABORT%` | `%ABORT%` | Sentinel (aborted cell) |
+| `Use %SKIP% here` | `Use %SKIP% here` | NOT a sentinel (not at start) |
 
 ### Reusable Components
 
-1. **`parseSentinelValue()` from `parseSentinels.ts`:**
+1. **Sentinel parsing:**
 
-   - Reuse for cell sentinel detection
+   - Reuse `parseSentinelValue()` from `parseSentinels.ts`
 
-   - Already handles `|SKIP|`, `|ABORT|`, parenthetical reasons
+   - Pattern: `/^%(SKIP|ABORT)%(\s*\(.*\))?$/`
+
+   - Same syntax works in all field types including table cells
 
 2. **URL validation from `validate.ts`:**
 
@@ -1020,7 +1044,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Reject newlines and control characters in cell values
 
-- [ ] Handle sentinel value detection (no escaping for `|SKIP|`, `|ABORT|`)
+- [ ] Handle sentinel value detection (`%SKIP%`, `%ABORT%`)
 
 - [ ] Generate canonical markdown table format
 
@@ -1150,11 +1174,11 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 
 - [ ] Empty cell produces clear error
 
-- [ ] `|SKIP|` in cell parses as skipped
+- [ ] `%SKIP%` in cell parses as skipped
 
-- [ ] `|SKIP| (reason)` extracts reason
+- [ ] `%SKIP% (reason)` extracts reason
 
-- [ ] `|ABORT|` in cell parses as aborted
+- [ ] `%ABORT%` in cell parses as aborted
 
 - [ ] Non-numeric value in number column produces clear error
 
@@ -1229,7 +1253,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 |--------------|-------|------|----------|--------------|-------|
 | 2023 | Barbie | Barbie | 88 | 1441.8 | Highest-grossing film of 2023 |
 | 2019 | Once Upon a Time in Hollywood | Sharon Tate | 85 | 374.3 | Oscar-nominated ensemble |
-| 2017 | I, Tonya | Tonya Harding | 90 | 53.9 | |SKIP| (Box office not tracked) |
+| 2017 | I, Tonya | Tonya Harding | 90 | 53.9 | %SKIP% (Box office not tracked) |
 {% /table-field %}
 ```
 
@@ -1285,7 +1309,7 @@ function parseMarkdownTable(content: string): { headers: string[]; rows: string[
 | 2023 | Barbie | |
 {% /table-field %}
 
-<!-- ERROR: Cell at row 1, column "rt_score" is empty. Provide a value or use |SKIP|. -->
+<!-- ERROR: Cell at row 1, column "rt_score" is empty. Provide a value or use %SKIP%. -->
 ```
 
 ## Appendix: Type Taxonomy Reference
