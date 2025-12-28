@@ -12,9 +12,9 @@ markform:
       Research and fill in all fields for the specified movie.
       Guidelines:
       1. WORKFLOW - Complete sections in order:
-         - First identify the movie (title, year, directors)
+         - First identify the movie title
          - Then find all source URLs (verify you have the right movie on each site)
-         - Then fill in ratings and details from each source
+         - Then fill in details (year, directors, ratings) from those sources
       2. PRIMARY SOURCES:
          - IMDB (imdb.com) for ratings, runtime, and technical details
          - Rotten Tomatoes (rottentomatoes.com) for Tomatometer and Audience Score
@@ -44,7 +44,7 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 
 {% /field-group %}
 
-{% field-group id="basic_identification" title="Basic Identification" %}
+{% field-group id="title_identification" title="Title Identification" %}
 
 {% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
 
@@ -52,19 +52,11 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 Look up what film the user had in mind and fill in the official title including subtitle if any (e.g., "The Lord of the Rings: The Fellowship of the Ring").
 {% /instructions %}
 
-{% number-field id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /number-field %}
-
-{% string-list id="directors" label="Director(s)" role="agent" required=true %}{% /string-list %}
-
-{% instructions ref="directors" %}
-One director per line. Most films have one; some have two or more co-directors.
-{% /instructions %}
-
 {% /field-group %}
 
 {% field-group id="sources" title="Sources" %}
 
-{% url-field id="imdb_url" label="IMDB URL" role="agent" %}{% /url-field %}
+{% url-field id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /url-field %}
 
 {% instructions ref="imdb_url" %}
 Direct link to the movie's IMDB page (e.g., https://www.imdb.com/title/tt0111161/).
@@ -85,6 +77,14 @@ Direct link to the movie's Metacritic page.
 {% /field-group %}
 
 {% field-group id="basic_details" title="Basic Details" %}
+
+{% number-field id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /number-field %}
+
+{% string-list id="directors" label="Director(s)" role="agent" required=true %}{% /string-list %}
+
+{% instructions ref="directors" %}
+One director per line. Most films have one; some have two or more co-directors.
+{% /instructions %}
 
 {% number-field id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 %}{% /number-field %}
 
