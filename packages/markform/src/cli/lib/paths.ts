@@ -8,11 +8,10 @@
 
 import { resolve } from 'node:path';
 
-/**
- * Default forms directory for CLI output (relative to cwd).
- * Commands write form outputs here to avoid cluttering the workspace.
- */
-export const DEFAULT_FORMS_DIR = './forms';
+import { DEFAULT_FORMS_DIR } from '../../settings.js';
+
+// Re-export for convenience - CLI code can import all path-related things from here
+export { DEFAULT_FORMS_DIR };
 
 /**
  * Resolve the forms directory path to an absolute path.

@@ -97,6 +97,12 @@ export const DEFAULT_PRIORITY: FieldPriorityLevel = 'medium';
 // =============================================================================
 
 /**
+ * Default forms directory for CLI output (relative to cwd).
+ * Commands write form outputs here to avoid cluttering the workspace.
+ */
+export const DEFAULT_FORMS_DIR = './forms';
+
+/**
  * The default port for the serve command.
  */
 export const DEFAULT_PORT = 3344;
