@@ -151,12 +151,15 @@ Metascore (0-100 scale). Leave empty if not available.
 Brief plot summary in 1-2 sentences, no spoilers.
 {% /instructions %}
 
-{% string-list id="notable_awards" label="Notable Awards" role="agent" %}{% /string-list %}
+{% table-field id="notable_awards" label="Notable Awards" role="agent" %}
+| Award | Category | Year |
+| string | string | year |
+|----|----|----|
+{% /table-field %}
 
 {% instructions ref="notable_awards" %}
-Major awards won. One per line.
-Format: Award | Category | Year
-Example: "Oscar | Best Picture | 1995"
+Major awards won.
+Example: Oscar | Best Picture | 1995
 {% /instructions %}
 
 {% /field-group %}

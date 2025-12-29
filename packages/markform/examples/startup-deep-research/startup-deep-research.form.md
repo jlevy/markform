@@ -169,12 +169,15 @@ Most recent valuation if publicly known (e.g., "$1.5B").
 Source: Press releases, crunchbase.com, pitchbook.com.
 {% /instructions %}
 
-{% string-list id="funding_rounds" label="Funding Rounds" %}{% /string-list %}
+{% table-field id="funding_rounds" label="Funding Rounds" %}
+| Round Type | Date | Amount | Lead Investor(s) | Source URL |
+| string | string | string | string | url |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="funding_rounds" %}
-One round per line, most recent first.
-Format: "Round Type | YYYY-MM | $Amount | Lead Investor(s) | Source URL"
-Example: "Series B | 2023-06 | $50M | Sequoia Capital | https://techcrunch.com/..."
+Most recent first. Date format: YYYY-MM
+Example: Series B | 2023-06 | $50M | Sequoia Capital | https://techcrunch.com/...
 Source: crunchbase.com funding rounds, pitchbook.com, techcrunch.com, company press releases.
 {% /instructions %}
 
@@ -195,12 +198,15 @@ Primary market/category (e.g., "Developer Tools", "HR Tech", "FinTech - Payments
 Source: crunchbase.com categories, g2.com categories.
 {% /instructions %}
 
-{% string-list id="competitors" label="Key Competitors" %}{% /string-list %}
+{% table-field id="competitors" label="Key Competitors" minRows=0 maxRows=5 %}
+| Company Name | Website | One-liner | Funding/Stage | Source URL |
+| string | url | string | string | url |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="competitors" %}
-List 3-5 main competitors, one per line.
-Format: "Company Name | Website | One-liner | Funding/Stage | Source URL"
-Example: "Notion | notion.so | All-in-one workspace | $275M Series C | https://crunchbase.com/..."
+List 3-5 main competitors.
+Example: Notion | https://notion.so | All-in-one workspace | $275M Series C | https://crunchbase.com/...
 Source: crunchbase.com competitors section, g2.com alternatives, company investor decks, press comparisons.
 {% /instructions %}
 
@@ -295,11 +301,14 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="hacker_news_section" title="Hacker News Presence" %}
 
-{% string-list id="hn_posts" label="Notable Hacker News Posts" %}{% /string-list %}
+{% table-field id="hn_posts" label="Notable Hacker News Posts" minRows=0 maxRows=5 %}
+| Title | Date | Points | Comments | URL |
+| string | date | number | number | url |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="hn_posts" %}
-List top 3-5 HN posts by points/relevance, one per line.
-Format: "Title | YYYY-MM-DD | Points | Comments | https://news.ycombinator.com/item?id=..."
+List top 3-5 HN posts by points/relevance.
 Include: Show HN launches, funding announcements, major discussions about the company.
 Source: Search hn.algolia.com for company name, product name, and founder names.
 {% /instructions %}
@@ -314,11 +323,13 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="product_hunt_section" title="Product Hunt Presence" %}
 
-{% string-list id="ph_launches" label="Product Hunt Launches" %}{% /string-list %}
+{% table-field id="ph_launches" label="Product Hunt Launches" %}
+| Product Name | Date | Upvotes | Badges | URL |
+| string | date | number | string | url |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="ph_launches" %}
-List all known Product Hunt launches, one per line.
-Format: "Product Name | YYYY-MM-DD | Upvotes | Badges (if any) | https://producthunt.com/posts/..."
 Note any badges: Product of the Day/Week/Month, Golden Kitty, etc.
 Source: Search producthunt.com for company name and product names.
 {% /instructions %}
@@ -376,12 +387,15 @@ Example: "4.2/5 | 500 reviews | 85% CEO approval | https://glassdoor.com/..."
 Source: glassdoor.com. Provides employee sentiment and culture insights.
 {% /instructions %}
 
-{% string-list id="hiring_signals" label="Hiring Signals" %}{% /string-list %}
+{% table-field id="hiring_signals" label="Hiring Signals" %}
+| Department | Roles | Notable Positions |
+| string | string | string |
+|----|----|----|
+{% /table-field %}
 
 {% instructions ref="hiring_signals" %}
-Current job openings that indicate growth areas, one category per line.
-Format: "Department | # Open Roles | Notable positions"
-Example: "Engineering | 25 roles | Staff ML Engineer, Platform Lead"
+Current job openings that indicate growth areas.
+Example: Engineering | 25 roles | Staff ML Engineer, Platform Lead
 Source: Company careers page, linkedin.com/company/jobs, lever.co, greenhouse.io job boards.
 {% /instructions %}
 
@@ -393,12 +407,15 @@ Example: "12 patents granted | NLP, recommendation systems | patents.google.com"
 Source: patents.google.com, USPTO (uspto.gov), Espacenet. Search for company name and founder names.
 {% /instructions %}
 
-{% string-list id="podcast_interviews" label="Podcast/Video Interviews" %}{% /string-list %}
+{% table-field id="podcast_interviews" label="Podcast/Video Interviews" %}
+| Title | Podcast/Show | Date | URL |
+| string | string | string | url |
+|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="podcast_interviews" %}
-Notable founder or exec interviews, one per line.
-Format: "Title | Podcast/Show | Date | URL"
-Example: "Building Stripe | How I Built This | 2021-03 | https://youtube.com/..."
+Notable founder or exec interviews.
+Example: Building Stripe | How I Built This | 2021-03 | https://youtube.com/...
 Source: youtube.com, Spotify, Apple Podcasts. Search for founder names + "interview" or "podcast".
 {% /instructions %}
 
@@ -420,11 +437,14 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="press_section" title="Notable Press Coverage" %}
 
-{% string-list id="press_coverage" label="Press Articles" %}{% /string-list %}
+{% table-field id="press_coverage" label="Press Articles" minRows=0 maxRows=5 %}
+| Title | Publication | Date | URL |
+| string | string | date | url |
+|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="press_coverage" %}
-List 3-5 most notable press articles, one per line.
-Format: "Title | Publication | YYYY-MM-DD | URL"
+List 3-5 most notable press articles.
 Focus on: funding announcements, major product launches, company profiles, notable interviews.
 Source: techcrunch.com, theinformation.com, bloomberg.com, forbes.com, wired.com, venturebeat.com, company Press page.
 {% /instructions %}

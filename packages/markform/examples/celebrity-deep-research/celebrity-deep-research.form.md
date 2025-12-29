@@ -184,21 +184,25 @@ Sources:
 Example: "Democrat; donated $50K to Obama 2012 per FEC; publicly endorsed Biden 2020"
 {% /instructions %}
 
-{% string-list id="causes_activism" label="Causes & Activism" %}{% /string-list %}
+{% table-field id="causes_activism" label="Causes & Activism" %}
+| Cause | Role/Involvement | Source |
+| string | string | string |
+|----|----|----|
+{% /table-field %}
 
 {% instructions ref="causes_activism" %}
-One cause per line.
-Format: Cause | Role/Involvement | Source
-Example: "Climate Change | Founded Earth Alliance with DiCaprio | earthalliance.org"
+Example: Climate Change | Founded Earth Alliance with DiCaprio | earthalliance.org
 Sources: NNDB.com, Charity Navigator (for their foundations), Wikipedia, press.
 {% /instructions %}
 
-{% string-list id="education" label="Education History" %}{% /string-list %}
+{% table-field id="education" label="Education History" %}
+| Institution | Degree/Program | Years | Notes |
+| string | string | string | string |
+|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="education" %}
-One institution per line, chronological.
-Format: Institution | Degree/Program | Years | Notes
-Example: "Yale University | Drama (incomplete) | 2000-2002 | Left to pursue acting"
+Example: Yale University | Drama (incomplete) | 2000-2002 | Left to pursue acting
 Sources: Wikipedia, LinkedIn (if they have one), university alumni lists, IMDb bio.
 {% /instructions %}
 
@@ -225,38 +229,48 @@ Note if parents were also in entertainment industry.
 Sources: Wikipedia, IMDb bio.
 {% /instructions %}
 
-{% string-list id="siblings" label="Siblings" %}{% /string-list %}
+{% table-field id="siblings" label="Siblings" %}
+| Name | Relationship | Notable Info |
+| string | string | string |
+|----|----|----|
+{% /table-field %}
 
 {% instructions ref="siblings" %}
-One sibling per line.
-Format: Name | Relationship | Notable info (if any)
-Example: "Jake Gyllenhaal | Brother | Actor, Oscar nominee"
+Example: Jake Gyllenhaal | Brother | Actor, Oscar nominee
 {% /instructions %}
 
-{% string-list id="marriages" label="Marriage History" %}{% /string-list %}
+{% table-field id="marriages" label="Marriage History" %}
+| Spouse Name | Wedding Date | Divorce Date | Duration | Source |
+| string | date | string | string | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="marriages" %}
-One marriage per line, chronological.
-Format: Spouse Name | Wedding Date | Divorce Date (or "present") | Duration | Source
-Example: "Brad Pitt | 2000-07-29 | 2005-01-07 | 4.5 years | Court records"
+Chronological order. Divorce Date should be date or "present".
+Example: Brad Pitt | 2000-07-29 | 2005-01-07 | 4.5 years | Court records
 Sources: Wikipedia, WhosDatedWho, court records for divorces.
 {% /instructions %}
 
-{% string-list id="children" label="Children" %}{% /string-list %}
+{% table-field id="children" label="Children" %}
+| Name | Birth Year | Other Parent | Notes |
+| string | year | string | string |
+|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="children" %}
-One child per line.
-Format: Name | Birth Year | Other Parent | Notes
-Example: "Shiloh Jolie-Pitt | 2006 | Brad Pitt | Biological child"
+Example: Shiloh Jolie-Pitt | 2006 | Brad Pitt | Biological child
 Note: Some celebrities keep children very private; respect when info is intentionally hidden.
 {% /instructions %}
 
-{% string-list id="notable_relationships" label="Notable Dating History" %}{% /string-list %}
+{% table-field id="notable_relationships" label="Notable Dating History" %}
+| Partner Name | Dates | Reliability |
+| string | string | string |
+|----|----|----|
+{% /table-field %}
 
 {% instructions ref="notable_relationships" %}
-Significant relationships (not marriages), most recent first. One per line.
-Format: Partner Name | Approximate Dates | Reliability
-Example: "Taylor Swift | 2016-2017 | Confirmed via paparazzi/social media"
+Significant relationships (not marriages), most recent first.
+Example: Taylor Swift | 2016-2017 | Confirmed via paparazzi/social media
 Sources: WhosDatedWho.com, tabloids (note reliability), press confirmations.
 Note if "rumored only" vs "confirmed."
 {% /instructions %}
@@ -459,12 +473,15 @@ Example: "$400M-$450M (CelebrityNetWorth, 2024; Forbes estimates $380M)"
 Note: Always include source and date; these estimates vary wildly.
 {% /instructions %}
 
-{% string-list id="known_salaries" label="Known Salary/Earnings" %}{% /string-list %}
+{% table-field id="known_salaries" label="Known Salary/Earnings" %}
+| Project | Amount | Year | Source |
+| string | string | year | string |
+|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="known_salaries" %}
-Reported salaries per project, one per line.
-Format: Project | Amount | Year | Source
-Example: "Barbie | $12.5M + $50M backend | 2023 | Variety"
+Reported salaries per project.
+Example: Barbie | $12.5M + $50M backend | 2023 | Variety
 Sources: Variety, THR salary reports, leaked studio documents.
 {% /instructions %}
 
@@ -477,30 +494,39 @@ Example: "2023: #8, $59M | 2022: #12, $42M"
 Source: Forbes.com Celebrity 100 lists.
 {% /instructions %}
 
-{% string-list id="business_ventures" label="Business Ventures & Companies" %}{% /string-list %}
+{% table-field id="business_ventures" label="Business Ventures & Companies" %}
+| Company | Role | Industry | Status | Source |
+| string | string | string | string | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="business_ventures" %}
-Companies owned, founded, or invested in. One per line.
-Format: Company | Role | Industry | Status | Source
-Example: "Honest Company | Co-founder | Consumer goods | IPO 2021, now private | SEC filings"
+Companies owned, founded, or invested in.
+Example: Honest Company | Co-founder | Consumer goods | IPO 2021, now private | SEC filings
 Sources: Forbes, SEC EDGAR (for public companies), Crunchbase, press releases.
 {% /instructions %}
 
-{% string-list id="endorsements" label="Major Endorsements & Sponsorships" %}{% /string-list %}
+{% table-field id="endorsements" label="Major Endorsements & Sponsorships" %}
+| Brand | Type | Value | Years | Source |
+| string | string | string | string | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="endorsements" %}
-Brand deals and endorsements. One per line.
-Format: Brand | Type | Approximate Value (if known) | Years | Source
-Example: "Chanel No. 5 | Global Ambassador | $5M/year | 2020-present | Variety"
+Brand deals and endorsements.
+Example: Chanel No. 5 | Global Ambassador | $5M/year | 2020-present | Variety
 Sources: Press releases, Variety/THR business coverage, social media sponsored posts.
 {% /instructions %}
 
-{% string-list id="real_estate" label="Known Real Estate Holdings" %}{% /string-list %}
+{% table-field id="real_estate" label="Known Real Estate Holdings" %}
+| Property | Location | Price | Year | Source |
+| string | string | string | year | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="real_estate" %}
-Significant property purchases/sales. One per line.
-Format: Property | Location | Purchase Price | Year | Source
-Example: "$25M mansion | Beverly Hills, CA | $25M | 2021 | Variety Dirt"
+Significant property purchases/sales.
+Example: $25M mansion | Beverly Hills, CA | $25M | 2021 | Variety Dirt
 Sources: Variety Dirt column, real estate news, property records.
 {% /instructions %}
 
@@ -520,35 +546,40 @@ Sources: The Smoking Gun (legal docs), court records (PACER for federal, state c
 Note tabloid vs verified sources clearly.
 {% /description %}
 
-{% string-list id="legal_cases" label="Legal Cases & Lawsuits" %}{% /string-list %}
+{% table-field id="legal_cases" label="Legal Cases & Lawsuits" %}
+| Case Type | Year | Parties | Outcome | Source |
+| string | year | string | string | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="legal_cases" %}
-Court cases, lawsuits, legal proceedings. One per line.
-Format: Case Type | Year | Parties | Outcome | Source
-Example: "Divorce | 2016-2019 | Jolie v. Pitt | Settled | Court records, TMZ"
-Example: "Defamation | 2022 | Depp v. Heard | Depp won $10.35M | Fairfax County Court"
-Sources: 
-- PACER (pacer.gov) for federal cases
-- State court record searches
-- The Smoking Gun (thesmokinggun.com) - publishes actual legal documents
-- Court Listener (courtlistener.com) - free federal case search
+Court cases, lawsuits, legal proceedings.
+Example: Divorce | 2016 | Jolie v. Pitt | Settled | Court records, TMZ
+Example: Defamation | 2022 | Depp v. Heard | Depp won $10.35M | Fairfax County Court
+Sources: PACER, state court record searches, The Smoking Gun, Court Listener.
 {% /instructions %}
 
-{% string-list id="arrests_charges" label="Arrests & Criminal Charges" %}{% /string-list %}
+{% table-field id="arrests_charges" label="Arrests & Criminal Charges" %}
+| Year | Charge | Location | Outcome | Source |
+| year | string | string | string | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="arrests_charges" %}
-Criminal matters if any. One per line.
-Format: Year | Charge | Location | Outcome | Source
-Example: "2007 | DUI | Los Angeles | Plea deal, probation | TMZ, court records"
+Criminal matters if any.
+Example: 2007 | DUI | Los Angeles | Plea deal, probation | TMZ, court records
 Sources: The Smoking Gun (has mugshots/records), court records, news archives.
 {% /instructions %}
 
-{% string-list id="controversies" label="Public Controversies" %}{% /string-list %}
+{% table-field id="controversies" label="Public Controversies" %}
+| Year | Issue | Description | Outcome | Reliability |
+| year | string | string | string | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="controversies" %}
-Non-legal controversies. One per line.
-Format: Year | Issue | Brief Description | Outcome | Source Reliability
-Example: "2021 | Workplace behavior | Accusations of diva behavior on set | Denied by rep | Tabloid reports (low reliability)"
+Non-legal controversies.
+Example: 2021 | Workplace behavior | Accusations of diva behavior on set | Denied by rep | Tabloid reports (low)
 Sources: Wikipedia Controversies section, press, tabloids.
 Always note source reliability (high/medium/low).
 {% /instructions %}
@@ -698,22 +729,27 @@ Notable interviews and media appearances.
 Sources: YouTube (talk show archives), podcast platforms, major publications.
 {% /description %}
 
-{% string-list id="notable_interviews" label="Notable Interviews" %}{% /string-list %}
+{% table-field id="notable_interviews" label="Notable Interviews" %}
+| Outlet/Show | Date | Topic | URL |
+| string | string | string | url |
+|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="notable_interviews" %}
-Most revealing or significant interviews. One per line.
-Format: Outlet/Show | Date | Topic/Significance | URL
-Example: "WTF with Marc Maron | 2019-06 | Candid about childhood trauma | youtube.com/..."
-Example: "Vanity Fair Profile | 2023-08 | Cover story, career retrospective | vanityfair.com/..."
+Most revealing or significant interviews.
+Example: WTF with Marc Maron | 2019-06 | Candid about childhood trauma | https://youtube.com/...
 Prioritize: Long-form podcasts (Maron, Armchair Expert, Fresh Air), major magazine profiles.
 {% /instructions %}
 
-{% string-list id="talk_show_appearances" label="Notable Talk Show Appearances" %}{% /string-list %}
+{% table-field id="talk_show_appearances" label="Notable Talk Show Appearances" %}
+| Show | Date | Moment | URL |
+| string | string | string | url |
+|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="talk_show_appearances" %}
-Memorable talk show moments. One per line.
-Format: Show | Date | Notable moment | URL if available
-Example: "Graham Norton | 2023-07 | Viral story about meeting the Queen | youtube.com/..."
+Memorable talk show moments.
+Example: Graham Norton | 2023-07 | Viral story about meeting the Queen | https://youtube.com/...
 Source: YouTube archives of Fallon, Kimmel, Colbert, Graham Norton, etc.
 {% /instructions %}
 
@@ -860,12 +896,15 @@ Source: IMDb Trivia section, interviews, biographies.
 Prioritize: Surprising facts, near-misses on iconic roles, unusual skills, celebrity connections.
 {% /instructions %}
 
-{% string-list id="notable_quotes" label="Notable Quotes" %}{% /string-list %}
+{% table-field id="notable_quotes" label="Notable Quotes" %}
+| Quote | Context/Source |
+| string | string |
+|----|----|
+{% /table-field %}
 
 {% instructions ref="notable_quotes" %}
-Memorable quotes by the celebrity. One per line.
-Format: "Quote text" - Context/Source
-Example: "I'd rather be hated for who I am than loved for who I'm not." - 2010 Vanity Fair interview
+Memorable quotes by the celebrity.
+Example: I'd rather be hated for who I am than loved for who I'm not. | 2010 Vanity Fair interview
 Sources: IMDb Quotes, Brainy Quote, notable interviews.
 {% /instructions %}
 

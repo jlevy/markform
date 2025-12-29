@@ -423,7 +423,11 @@ Check what you actually used. Fill the log as you go.
 Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tier, Link or file path, Key takeaways. At least 3 sources required.
 {% /instructions %}
 
-{% string-list id="sources_accessed" label="Sources accessed (Date | Source | Type | Link | Takeaways)" required=true minItems=3 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+\\|.+\\|.+", example: "2024-01-15 | SEC Filing | 10-K | https://... | Key takeaway"}] %}{% /string-list %}
+{% table-field id="sources_accessed" label="Sources Accessed" required=true minRows=3 %}
+| Date | Source | Type | Link | Takeaways |
+| date | string | string | url | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% /field-group %}
 
@@ -492,10 +496,14 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% field-group id="sources_experts" title="Q2.5 Key Experts and Analysts" %}
 
-{% string-list id="experts_list" label="Key experts (Name | Angle | Lead time | Hit rate | Tier)" minItems=0 validate=[{id: "item_format", pattern: "^.+\\|.+\\|.+\\|.+\\|.+", example: "Jane Doe | Supply chain | 2 weeks | High | Tier 1"}] %}{% /string-list %}
+{% table-field id="experts_list" label="Key Experts" minRows=0 %}
+| Name | Angle | Lead Time | Hit Rate | Tier |
+| string | string | string | string | string |
+|----|----|----|----|----|
+{% /table-field %}
 
 {% instructions ref="experts_list" %}
-Format each entry as: Name | Angle | Typical lead time | Hit rate assessment | Tier
+Track key experts covering this company with their specialization and track record.
 {% /instructions %}
 
 {% /field-group %}
