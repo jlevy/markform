@@ -117,11 +117,41 @@ What movie do you want to research? \[*This field is filled in by the user (`rol
 {% /form %}
 ```
 
-This is the minimal movie research form.
+Run the `npx markform examples` and select the `Movie Research (Minimal)` example and
+view the report:
+
+```markdown
+# Movie Research (Minimal)
+
+## Movie Identification
+
+Movie:
+shawshank redemption
+
+## About the Movie
+
+Full Title:
+The Shawshank Redemption
+
+Release Year:
+1994
+
+IMDB URL:
+https://www.imdb.com/title/tt0111161/
+
+MPAA Rating:
+R
+
+IMDB Rating:
+9.3
+
+One-Line Summary:
+Convicted banker Andy Dufresne is sent to Shawshank State Penitentiary, where he forms an unexpected friendship with inmate Red while holding onto hope and striving to maintain his dignity in a corrupt prison system.
+```
+
 See the
 [examples/](https://github.com/jlevy/markform/tree/main/packages/markform/examples)
-directory for forms with more fields, including multiple rating sources (IMDB, Rotten
-Tomatoes, Metacritic) and comprehensive analysis.
+directory for a few more complex form examples.
 
 **Key concepts:**
 
