@@ -24,6 +24,7 @@ import { registerSpecCommand } from './commands/spec.js';
 import { registerModelsCommand } from './commands/models.js';
 import { registerRenderCommand } from './commands/render.js';
 import { registerResearchCommand } from './commands/research.js';
+import { registerSchemaCommand } from './commands/schema.js';
 import { registerServeCommand } from './commands/serve.js';
 import { registerValidateCommand } from './commands/validate.js';
 import { OUTPUT_FORMATS } from './lib/shared.js';
@@ -75,6 +76,7 @@ function createProgram(): Command {
   registerRenderCommand(program);
   registerReportCommand(program);
   registerResearchCommand(program);
+  registerSchemaCommand(program);
   registerServeCommand(program);
   registerValidateCommand(program);
 
