@@ -168,7 +168,7 @@ Future versions may split into:
 
 | Document | Content | Scope |
 | --- | --- | --- |
-| `markform-spec.md` | Core specification (portable) | Layers 1-4 |
+| [`markform-spec.md`](../../../markform-spec.md) | Core specification (portable) | Layers 1-4 |
 | `markform-engine.md` | Engine implementation details | Engine |
 | `markform-harness.md` | Execution harness design | Harness |
 | `markform-interfaces.md` | CLI, Web UI, MCP, AI SDK | Interfaces |
@@ -320,7 +320,7 @@ This boundary enables “one set of tests, many interfaces.”
 ## Core Markform Specification
 
 The normative specification for Markform syntax, data model, validation, and tool API is
-defined in the standalone **[Markform Specification](./markform-spec.md)**.
+defined in the standalone **[Markform Specification](../../../markform-spec.md)**.
 
 The specification covers:
 
@@ -1393,7 +1393,7 @@ Documented but not required for MF/0.1 or MF/0.2:
 ## References
 
 For complete reference documentation, see the
-[Markform Specification](./markform-spec.md#references).
+[Markform Specification](../../../markform-spec.md#references).
 
 Key references used in this implementation document:
 
