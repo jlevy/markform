@@ -135,11 +135,14 @@ export class LiveAgent implements Agent {
     };
 
     // Combine all tools (custom tools win on name collision)
-    const tools: Record<string, Tool> = {
+    const rawTools: Record<string, Tool> = {
       generatePatches: generatePatchesTool,
       ...this.webSearchTools,
       ...this.additionalTools,
     };
+
+    // Wrap tools with callbacks for observability
+    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks);
 
     // Get model ID for callbacks (may not be available on all model types)
     const modelId = (this.model as { modelId?: string }).modelId ?? 'unknown';
@@ -372,6 +375,101 @@ function findField(form: ParsedForm, fieldId: string) {
     }
   }
   return null;
+}
+
+// =============================================================================
+// Tool Wrapping for Callbacks
+// =============================================================================
+
+/**
+ * Wrap tools with callbacks for observability.
+ *
+ * Only wraps tools that have an execute function.
+ * Declarative tools (schema only) are passed through unchanged.
+ */
+function wrapToolsWithCallbacks(
+  tools: Record<string, Tool>,
+  callbacks?: FillCallbacks,
+): Record<string, Tool> {
+  // Skip wrapping if no tool callbacks
+  if (!callbacks?.onToolStart && !callbacks?.onToolEnd) {
+    return tools;
+  }
+
+  const wrapped: Record<string, Tool> = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    // Check if tool has an execute function we can wrap
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+    const execute = (tool as any).execute;
+    if (typeof execute === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      wrapped[name] = wrapTool(name, tool, execute, callbacks);
+    } else {
+      // Pass through declarative tools unchanged
+      wrapped[name] = tool;
+    }
+  }
+  return wrapped;
+}
+
+/**
+ * Wrap a single tool with callbacks.
+ */
+function wrapTool(
+  name: string,
+  tool: Tool,
+  originalExecute: (input: unknown) => Promise<unknown>,
+  callbacks: FillCallbacks,
+): Tool {
+  return {
+    ...tool,
+    execute: async (input: unknown) => {
+      const startTime = Date.now();
+
+      // Call onToolStart (errors don't abort)
+      if (callbacks.onToolStart) {
+        try {
+          callbacks.onToolStart({ name, input });
+        } catch {
+          // Ignore callback errors
+        }
+      }
+
+      try {
+        const output = await originalExecute(input);
+
+        // Call onToolEnd on success (errors don't abort)
+        if (callbacks.onToolEnd) {
+          try {
+            callbacks.onToolEnd({
+              name,
+              output,
+              durationMs: Date.now() - startTime,
+            });
+          } catch {
+            // Ignore callback errors
+          }
+        }
+
+        return output;
+      } catch (error) {
+        // Call onToolEnd on error (errors don't abort)
+        if (callbacks.onToolEnd) {
+          try {
+            callbacks.onToolEnd({
+              name,
+              output: null,
+              durationMs: Date.now() - startTime,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          } catch {
+            // Ignore callback errors
+          }
+        }
+        throw error;
+      }
+    },
+  };
 }
 
 // =============================================================================
