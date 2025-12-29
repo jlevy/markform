@@ -77,7 +77,8 @@ export async function runResearch(
     model,
     provider,
     targetRole: config.targetRoles?.[0] ?? AGENT_ROLE,
-    enableWebSearch: true,
+    enableWebSearch: options.enableWebSearch,
+    additionalTools: options.additionalTools,
   });
 
   // Get available tools for logging
