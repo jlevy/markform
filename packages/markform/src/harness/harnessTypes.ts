@@ -130,6 +130,9 @@ export interface LiveAgentConfig {
    * ```
    */
   additionalTools?: Record<string, Tool>;
+
+  /** Optional callbacks for observing agent execution */
+  callbacks?: FillCallbacks;
 }
 
 // =============================================================================

@@ -18,7 +18,13 @@ import { PatchSchema } from '../engine/coreTypes.js';
 import { serialize } from '../engine/serialize.js';
 import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from '../settings.js';
 import { getWebSearchConfig } from '../llms.js';
-import type { Agent, AgentResponse, LiveAgentConfig, TurnStats } from './harnessTypes.js';
+import type {
+  Agent,
+  AgentResponse,
+  FillCallbacks,
+  LiveAgentConfig,
+  TurnStats,
+} from './harnessTypes.js';
 import {
   DEFAULT_SYSTEM_PROMPT,
   WEB_SEARCH_INSTRUCTIONS,
@@ -48,6 +54,7 @@ export class LiveAgent implements Agent {
   private enableWebSearch: boolean;
   private webSearchTools: Record<string, Tool> | null = null;
   private additionalTools: Record<string, Tool>;
+  private callbacks?: FillCallbacks;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -57,6 +64,7 @@ export class LiveAgent implements Agent {
     this.provider = config.provider;
     this.enableWebSearch = config.enableWebSearch;
     this.additionalTools = config.additionalTools ?? {};
+    this.callbacks = config.callbacks;
 
     // Eagerly load web search tools to enable early logging
     if (this.enableWebSearch && this.provider) {
@@ -133,6 +141,18 @@ export class LiveAgent implements Agent {
       ...this.additionalTools,
     };
 
+    // Get model ID for callbacks (may not be available on all model types)
+    const modelId = (this.model as { modelId?: string }).modelId ?? 'unknown';
+
+    // Call onLlmCallStart callback (errors don't abort)
+    if (this.callbacks?.onLlmCallStart) {
+      try {
+        this.callbacks.onLlmCallStart({ model: modelId });
+      } catch {
+        // Ignore callback errors
+      }
+    }
+
     // Call the model (stateless - full context provided each turn)
     const result = await generateText({
       model: this.model,
@@ -141,6 +161,19 @@ export class LiveAgent implements Agent {
       tools,
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
+
+    // Call onLlmCallEnd callback (errors don't abort)
+    if (this.callbacks?.onLlmCallEnd) {
+      try {
+        this.callbacks.onLlmCallEnd({
+          model: modelId,
+          inputTokens: result.usage?.inputTokens ?? 0,
+          outputTokens: result.usage?.outputTokens ?? 0,
+        });
+      } catch {
+        // Ignore callback errors
+      }
+    }
 
     // Extract patches from tool calls and count tool usage
     const patches: Patch[] = [];

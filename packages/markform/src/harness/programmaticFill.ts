@@ -231,6 +231,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       provider,
       enableWebSearch: options.enableWebSearch,
       additionalTools: options.additionalTools,
+      callbacks: options.callbacks,
     });
 
   // 5. Run harness loop
