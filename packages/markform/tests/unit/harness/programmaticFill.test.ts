@@ -17,11 +17,11 @@ markform:
 
 {% field-group id="basic" title="Basic Fields" %}
 
-{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}
+{% field kind="string" id="name" label="Name" role="user" required=true %}{% /field %}
 
-{% number-field id="age" label="Age" role="agent" required=true %}{% /number-field %}
+{% field kind="number" id="age" label="Age" role="agent" required=true %}{% /field %}
 
-{% string-field id="notes" label="Notes" role="agent" %}{% /string-field %}
+{% field kind="string" id="notes" label="Notes" role="agent" %}{% /field %}
 
 {% /field-group %}
 
@@ -41,23 +41,23 @@ markform:
 
 {% field-group id="basic" title="Basic Fields" %}
 
-{% string-field id="name" label="Name" role="user" required=true %}
+{% field kind="string" id="name" label="Name" role="user" required=true %}
 \`\`\`value
 John Doe
 \`\`\`
-{% /string-field %}
+{% /field %}
 
-{% number-field id="age" label="Age" role="agent" required=true %}
+{% field kind="number" id="age" label="Age" role="agent" required=true %}
 \`\`\`value
 30
 \`\`\`
-{% /number-field %}
+{% /field %}
 
-{% string-field id="notes" label="Notes" role="agent" %}
+{% field kind="string" id="notes" label="Notes" role="agent" %}
 \`\`\`value
 Test notes
 \`\`\`
-{% /string-field %}
+{% /field %}
 
 {% /field-group %}
 
@@ -446,12 +446,12 @@ describe('fillForm', () => {
     it('fillMode: continue skips already-filled fields', async () => {
       // Start with a form that has name pre-filled (using code fence format)
       const formWithName = SIMPLE_FORM.replace(
-        '{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}',
-        `{% string-field id="name" label="Name" role="user" required=true %}
+        '{% field kind="string" id="name" label="Name" role="user" required=true %}{% /field %}',
+        `{% field kind="string" id="name" label="Name" role="user" required=true %}
 \`\`\`value
 Original Name
 \`\`\`
-{% /string-field %}`,
+{% /field %}`,
       );
 
       const completedForm = parseForm(COMPLETED_FORM);

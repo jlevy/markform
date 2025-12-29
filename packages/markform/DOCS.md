@@ -64,13 +64,13 @@ representation. See the Type System section in SPEC.md for full details.
 Single-line or multi-line text.
 
 ````markdown
-{% string-field id="name" label="Name" required=true minLength=2 maxLength=100 %}{% /string-field %}
+{% field kind="string" id="name" label="Name" required=true minLength=2 maxLength=100 %}{% /field %}
 
-{% string-field id="bio" label="Biography" pattern="^[A-Z].*" %}
+{% field kind="string" id="bio" label="Biography" pattern="^[A-Z].*" %}
 ```value
 Existing value here
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 | Attribute | Type | Description |
@@ -84,13 +84,13 @@ Existing value here
 Numeric values with optional constraints.
 
 ```markdown
-{% number-field id="age" label="Age" required=true min=0 max=150 integer=true %}{% /number-field %}
+{% field kind="number" id="age" label="Age" required=true min=0 max=150 integer=true %}{% /field %}
 
-{% number-field id="price" label="Price" min=0.01 max=999999.99 %}
+{% field kind="number" id="price" label="Price" min=0.01 max=999999.99 %}
 ```value
 49.99
 ````
-{% /number-field %}
+{% /field %}
 ````
 
 | Attribute | Type | Description |
@@ -104,15 +104,15 @@ Numeric values with optional constraints.
 Array of strings, one per line.
 
 ```markdown
-{% string-list id="tags" label="Tags" required=true minItems=1 maxItems=10 uniqueItems=true %}{% /string-list %}
+{% field kind="string_list" id="tags" label="Tags" required=true minItems=1 maxItems=10 uniqueItems=true %}{% /field %}
 
-{% string-list id="features" label="Key Features" minItems=3 itemMinLength=10 %}
+{% field kind="string_list" id="features" label="Key Features" minItems=3 itemMinLength=10 %}
 ```value
 Feature one description
 Feature two description
 Feature three description
 ````
-{% /string-list %}
+{% /field %}
 ````
 
 | Attribute | Type | Description |
@@ -128,11 +128,11 @@ Feature three description
 Choose exactly one option.
 
 ```markdown
-{% single-select id="rating" label="Rating" required=true %}
+{% field kind="single_select" id="rating" label="Rating" required=true %}
 - [ ] Low {% #low %}
 - [ ] Medium {% #medium %}
 - [x] High {% #high %}
-{% /single-select %}
+{% /field %}
 ````
 
 Options use `[ ]` (unselected) or `[x]` (selected).
@@ -143,12 +143,12 @@ Each option needs `{% #id %}`.
 Choose multiple options.
 
 ```markdown
-{% multi-select id="categories" label="Categories" required=true minSelections=1 maxSelections=3 %}
+{% field kind="multi_select" id="categories" label="Categories" required=true minSelections=1 maxSelections=3 %}
 - [x] Frontend {% #frontend %}
 - [x] Backend {% #backend %}
 - [ ] Database {% #database %}
 - [ ] DevOps {% #devops %}
-{% /multi-select %}
+{% /field %}
 ```
 
 | Attribute | Type | Description |
@@ -163,13 +163,13 @@ Stateful checklists with three modes.
 **Multi Mode** (default) - 5 states for workflow tracking:
 
 ```markdown
-{% checkboxes id="tasks" label="Tasks" required=true checkboxMode="multi" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" required=true checkboxMode="multi" %}
 - [ ] Research {% #research %}
 - [x] Design {% #design %}
 - [/] Implementation {% #impl %}
 - [*] Testing {% #test %}
 - [-] N/A item {% #na %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 | Token | State | Meaning |
@@ -183,20 +183,20 @@ Stateful checklists with three modes.
 **Simple Mode** - 2 states (GFM compatible):
 
 ```markdown
-{% checkboxes id="agreements" label="Agreements" checkboxMode="simple" required=true %}
+{% field kind="checkboxes" id="agreements" label="Agreements" checkboxMode="simple" required=true %}
 - [x] I agree to terms {% #terms %}
 - [ ] Subscribe to newsletter {% #news %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 **Explicit Mode** - Requires yes/no for each:
 
 ```markdown
-{% checkboxes id="confirmations" label="Confirmations" checkboxMode="explicit" required=true %}
+{% field kind="checkboxes" id="confirmations" label="Confirmations" checkboxMode="explicit" required=true %}
 - [y] Backup completed {% #backup %}
 - [n] Stakeholders notified {% #notify %}
 - [ ] Deployment ready {% #deploy %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 | Token | Value | Meaning |
@@ -210,13 +210,13 @@ Stateful checklists with three modes.
 Single URL with format validation.
 
 ````markdown
-{% url-field id="website" label="Website" required=true %}{% /url-field %}
+{% field kind="url" id="website" label="Website" required=true %}{% /field %}
 
-{% url-field id="repo" label="Repository" %}
+{% field kind="url" id="repo" label="Repository" %}
 ```value
 https://github.com/example/repo
 ````
-{% /url-field %}
+{% /field %}
 ````
 
 ### URL List
@@ -224,12 +224,12 @@ https://github.com/example/repo
 Array of URLs.
 
 ```markdown
-{% url-list id="sources" label="Sources" required=true minItems=1 maxItems=10 uniqueItems=true %}
+{% field kind="url_list" id="sources" label="Sources" required=true minItems=1 maxItems=10 uniqueItems=true %}
 ```value
 https://example.com/source1
 https://example.com/source2
 ````
-{% /url-list %}
+{% /field %}
 `````
 
 ### Date Field
@@ -237,13 +237,13 @@ https://example.com/source2
 Date value in ISO 8601 format (YYYY-MM-DD).
 
 ````markdown
-{% date-field id="deadline" label="Deadline" required=true %}{% /date-field %}
+{% field kind="date" id="deadline" label="Deadline" required=true %}{% /field %}
 
-{% date-field id="start_date" label="Start Date" min="2020-01-01" max="2030-12-31" %}
+{% field kind="date" id="start_date" label="Start Date" min="2020-01-01" max="2030-12-31" %}
 ```value
 2024-06-15
 `````
-{% /date-field %}
+{% /field %}
 `````
 
 | Attribute | Type | Description |
@@ -256,13 +256,13 @@ Date value in ISO 8601 format (YYYY-MM-DD).
 Integer year with optional constraints.
 
 ````markdown
-{% year-field id="release_year" label="Release Year" required=true min=1888 max=2030 %}{% /year-field %}
+{% field kind="year" id="release_year" label="Release Year" required=true min=1888 max=2030 %}{% /field %}
 
-{% year-field id="founded" label="Year Founded" %}
+{% field kind="year" id="founded" label="Year Founded" %}
 ```value
 2015
 `````
-{% /year-field %}
+{% /field %}
 ````
 
 | Attribute | Type | Description |
@@ -290,8 +290,8 @@ All fields support these attributes:
 | `examples` | string[] | Example values (helps LLMs understand expected format) |
 
 ```markdown
-{% string-field id="name" label="Name" placeholder="Enter your name" examples=["John Doe", "Jane Smith"] %}{% /string-field %}
-{% number-field id="revenue" label="Revenue" placeholder="1000000" examples=["500000", "1000000"] %}{% /number-field %}
+{% field kind="string" id="name" label="Name" placeholder="Enter your name" examples=["John Doe", "Jane Smith"] %}{% /field %}
+{% field kind="number" id="revenue" label="Revenue" placeholder="1000000" examples=["500000", "1000000"] %}{% /field %}
 ```
 
 Note: `placeholder` and `examples` are NOT valid on chooser fields (single-select, multi-select, checkboxes).
@@ -339,8 +339,8 @@ roles:
 ```
 
 ```markdown
-{% string-field id="query" label="Search Query" role="user" %}{% /string-field %}
-{% string-field id="summary" label="AI Summary" role="agent" %}{% /string-field %}
+{% field kind="string" id="query" label="Search Query" role="user" %}{% /field %}
+{% field kind="string" id="summary" label="AI Summary" role="agent" %}{% /field %}
 ```
 
 ## Value Encoding
@@ -348,17 +348,17 @@ roles:
 Values use fenced code blocks with language `value`:
 
 ````markdown
-{% string-field id="name" label="Name" %}
+{% field kind="string" id="name" label="Name" %}
 ```value
 John Smith
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 Empty fields omit the value block entirely:
 
 ```markdown
-{% string-field id="name" label="Name" %}{% /string-field %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
 ````
 
 ## Complete Example
@@ -401,7 +401,7 @@ Pulls from IMDB, Rotten Tomatoes, and Metacritic.
 
 {% field-group id="movie_input" title="Movie Identification" %}
 
-{% string-field id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /string-field %}
+{% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 
 {% instructions ref="movie" %}
 Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson")
@@ -411,7 +411,7 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 
 {% field-group id="title_identification" title="Title Identification" %}
 
-{% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
+{% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
 
 {% instructions ref="full_title" %}
 Look up what film the user had in mind and fill in the official title including subtitle if any (e.g., "The Lord of the Rings: The Fellowship of the Ring").
@@ -421,19 +421,19 @@ Look up what film the user had in mind and fill in the official title including 
 
 {% field-group id="sources" title="Sources" %}
 
-{% url-field id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /url-field %}
+{% field kind="url" id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /field %}
 
 {% instructions ref="imdb_url" %}
 Direct link to the movie's IMDB page (e.g., https://www.imdb.com/title/tt0111161/).
 {% /instructions %}
 
-{% url-field id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /url-field %}
+{% field kind="url" id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /field %}
 
 {% instructions ref="rt_url" %}
 Direct link to the movie's Rotten Tomatoes page.
 {% /instructions %}
 
-{% url-field id="metacritic_url" label="Metacritic URL" role="agent" %}{% /url-field %}
+{% field kind="url" id="metacritic_url" label="Metacritic URL" role="agent" %}{% /field %}
 
 {% instructions ref="metacritic_url" %}
 Direct link to the movie's Metacritic page.
@@ -443,36 +443,36 @@ Direct link to the movie's Metacritic page.
 
 {% field-group id="basic_details" title="Basic Details" %}
 
-{% number-field id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /number-field %}
+{% field kind="number" id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /field %}
 
-{% string-list id="directors" label="Director(s)" role="agent" required=true %}{% /string-list %}
+{% field kind="string_list" id="directors" label="Director(s)" role="agent" required=true %}{% /field %}
 
 {% instructions ref="directors" %}
 One director per line. Most films have one; some have two or more co-directors.
 {% /instructions %}
 
-{% number-field id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 %}{% /number-field %}
+{% field kind="number" id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 %}{% /field %}
 
-{% single-select id="mpaa_rating" label="MPAA Rating" role="agent" %}
+{% field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" %}
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
 - [ ] PG-13 {% #pg_13 %}
 - [ ] R {% #r %}
 - [ ] NC-17 {% #nc_17 %}
 - [ ] NR/Unrated {% #nr %}
-{% /single-select %}
+{% /field %}
 
 {% /field-group %}
 
 {% field-group id="imdb_ratings" title="IMDB Ratings" %}
 
-{% number-field id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /number-field %}
+{% field kind="number" id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /field %}
 
 {% instructions ref="imdb_rating" %}
 IMDB user rating (1.0-10.0 scale).
 {% /instructions %}
 
-{% number-field id="imdb_votes" label="IMDB Vote Count" role="agent" min=0 %}{% /number-field %}
+{% field kind="number" id="imdb_votes" label="IMDB Vote Count" role="agent" min=0 %}{% /field %}
 
 {% instructions ref="imdb_votes" %}
 Number of IMDB user votes (e.g., 2800000 for a popular film).
@@ -482,15 +482,15 @@ Number of IMDB user votes (e.g., 2800000 for a popular film).
 
 {% field-group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
 
-{% number-field id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /number-field %}
+{% field kind="number" id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /field %}
 
 {% instructions ref="rt_critics_score" %}
 Tomatometer percentage (0-100).
 {% /instructions %}
 
-{% number-field id="rt_critics_count" label="Critics Review Count" role="agent" min=0 %}{% /number-field %}
+{% field kind="number" id="rt_critics_count" label="Critics Review Count" role="agent" min=0 %}{% /field %}
 
-{% number-field id="rt_audience_score" label="Audience Score" role="agent" min=0 max=100 %}{% /number-field %}
+{% field kind="number" id="rt_audience_score" label="Audience Score" role="agent" min=0 max=100 %}{% /field %}
 
 {% instructions ref="rt_audience_score" %}
 Audience Score percentage (0-100).
@@ -500,7 +500,7 @@ Audience Score percentage (0-100).
 
 {% field-group id="metacritic_ratings" title="Metacritic Ratings" %}
 
-{% number-field id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 %}{% /number-field %}
+{% field kind="number" id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 %}{% /field %}
 
 {% instructions ref="metacritic_score" %}
 Metascore (0-100 scale). Leave empty if not available.
@@ -510,13 +510,13 @@ Metascore (0-100 scale). Leave empty if not available.
 
 {% field-group id="summary" title="Summary" %}
 
-{% string-field id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /string-field %}
+{% field kind="string" id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /field %}
 
 {% instructions ref="logline" %}
 Brief plot summary in 1-2 sentences, no spoilers.
 {% /instructions %}
 
-{% string-list id="notable_awards" label="Notable Awards" role="agent" %}{% /string-list %}
+{% field kind="string_list" id="notable_awards" label="Notable Awards" role="agent" %}{% /field %}
 
 {% instructions ref="notable_awards" %}
 Major awards won. One per line.

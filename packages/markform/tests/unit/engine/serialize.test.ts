@@ -16,7 +16,7 @@ markform:
 {% form id="test_form" title="Test Form" %}
 
 {% field-group id="group1" title="Group 1" %}
-{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -40,11 +40,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% string-field id="company" label="Company" %}
+{% field kind="string" id="company" label="Company" %}
 \`\`\`value
 ACME Corp
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -69,11 +69,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% number-field id="revenue" label="Revenue" %}
+{% field kind="number" id="revenue" label="Revenue" %}
 \`\`\`value
 1234.56
 \`\`\`
-{% /number-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -98,13 +98,13 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% string-list id="tags" label="Tags" %}
+{% field kind="string_list" id="tags" label="Tags" %}
 \`\`\`value
 Tag One
 Tag Two
 Tag Three
 \`\`\`
-{% /string-list %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -129,11 +129,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% single-select id="rating" label="Rating" %}
+{% field kind="single_select" id="rating" label="Rating" %}
 - [ ] Bullish {% #bullish %}
 - [x] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
-{% /single-select %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -167,11 +167,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% multi-select id="categories" label="Categories" %}
+{% field kind="multi_select" id="categories" label="Categories" %}
 - [x] Tech {% #tech %}
 - [ ] Health {% #health %}
 - [x] Finance {% #finance %}
-{% /multi-select %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -198,13 +198,13 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% checkboxes id="tasks" label="Tasks" checkboxMode="multi" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="multi" %}
 - [x] Done task {% #done_task %}
 - [/] In progress {% #in_progress %}
 - [*] Active {% #active_task %}
 - [-] Not applicable {% #na_task %}
 - [ ] Todo {% #todo_task %}
-{% /checkboxes %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -233,11 +233,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% checkboxes id="confirms" label="Confirms" checkboxMode="explicit" %}
+{% field kind="checkboxes" id="confirms" label="Confirms" checkboxMode="explicit" %}
 - [y] Yes answer {% #yes_item %}
 - [n] No answer {% #no_item %}
 - [ ] Unfilled {% #unfilled_item %}
-{% /checkboxes %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -264,8 +264,8 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="Group Title" %}
-{% string-field id="email" label="Email" required=true minLength=5 maxLength=100 pattern="^[^@]+@[^@]+$" %}{% /string-field %}
-{% number-field id="count" label="Count" required=true min=0 max=1000 integer=true %}{% /number-field %}
+{% field kind="string" id="email" label="Email" required=true minLength=5 maxLength=100 pattern="^[^@]+@[^@]+$" %}{% /field %}
+{% field kind="number" id="count" label="Count" required=true min=0 max=1000 integer=true %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -305,7 +305,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% string-field id="name" label="Name" %}{% /string-field %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -327,8 +327,8 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% string-field id="summary" label="Summary" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
-{% string-field id="description" label="Description" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+{% field kind="string" id="summary" label="Summary" required=true validate=[{id: "min_words", min: 50}] %}{% /field %}
+{% field kind="string" id="description" label="Description" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -375,7 +375,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% string-field id="item" label="Item" validate=[{id: "custom", config: {threshold: 10, enabled: true}}] %}{% /string-field %}
+{% field kind="string" id="item" label="Item" validate=[{id: "custom", config: {threshold: 10, enabled: true}}] %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -406,7 +406,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-list id="notable_awards" label="Notable Awards" %}{% /string-list %}
+{% field kind="string_list" id="notable_awards" label="Notable Awards" %}{% /field %}
 
 {% instructions ref="notable_awards" %}
 Major awards won. One per line.
@@ -471,7 +471,7 @@ markform:
 
 {% form id="test" %}
 
-{% string-field id="movie" label="Favorite Movie" %}{% /string-field %}
+{% field kind="string" id="movie" label="Favorite Movie" %}{% /field %}
 
 {% /form %}
 `;
@@ -483,7 +483,7 @@ markform:
       expect(output).not.toContain('{% /field-group %}');
 
       // Should still have the field
-      expect(output).toContain('{% string-field id="movie"');
+      expect(output).toContain('{% field kind="string" id="movie"');
     });
 
     it('round-trips form with ungrouped fields and instructions', () => {
@@ -494,7 +494,7 @@ markform:
 
 {% form id="test" %}
 
-{% string-field id="movie" label="Favorite Movie" %}{% /string-field %}
+{% field kind="string" id="movie" label="Favorite Movie" %}{% /field %}
 
 {% instructions ref="movie" %}
 Please enter your favorite movie.
@@ -522,10 +522,10 @@ markform:
 
 {% form id="test" %}
 
-{% string-field id="ungrouped" label="Ungrouped" %}{% /string-field %}
+{% field kind="string" id="ungrouped" label="Ungrouped" %}{% /field %}
 
 {% field-group id="g1" title="Group 1" %}
-{% string-field id="grouped" label="Grouped" %}{% /string-field %}
+{% field kind="string" id="grouped" label="Grouped" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -538,8 +538,8 @@ markform:
       expect(output).toContain('{% /field-group %}');
 
       // Both fields should be present
-      expect(output).toContain('{% string-field id="ungrouped"');
-      expect(output).toContain('{% string-field id="grouped"');
+      expect(output).toContain('{% field kind="string" id="ungrouped"');
+      expect(output).toContain('{% field kind="string" id="grouped"');
 
       // Round-trip should work
       const reparsed = parseForm(output);
@@ -558,11 +558,11 @@ markform:
 {% form id="test" title="Test Form" %}
 
 {% field-group id="g1" title="Basic Info" %}
-{% string-field id="company" label="Company Name" %}
+{% field kind="string" id="company" label="Company Name" %}
 \`\`\`value
 ACME Corp
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -593,11 +593,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% number-field id="revenue" label="Revenue" %}
+{% field kind="number" id="revenue" label="Revenue" %}
 \`\`\`value
 1234567
 \`\`\`
-{% /number-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -619,13 +619,13 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-list id="tags" label="Tags" %}
+{% field kind="string_list" id="tags" label="Tags" %}
 \`\`\`value
 Technology
 Finance
 Healthcare
 \`\`\`
-{% /string-list %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -649,11 +649,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% single-select id="rating" label="Rating" %}
+{% field kind="single_select" id="rating" label="Rating" %}
 - [ ] Bullish {% #bullish %}
 - [x] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
-{% /single-select %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -675,11 +675,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% multi-select id="sectors" label="Sectors" %}
+{% field kind="multi_select" id="sectors" label="Sectors" %}
 - [x] Technology {% #tech %}
 - [ ] Finance {% #finance %}
 - [x] Healthcare {% #health %}
-{% /multi-select %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -702,11 +702,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% checkboxes id="tasks" label="Tasks" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" %}
 - [x] Task 1 {% #task1 %}
 - [ ] Task 2 {% #task2 %}
 - [/] Task 3 {% #task3 %}
-{% /checkboxes %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -731,7 +731,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="name" label="Name" %}{% /string-field %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -757,7 +757,7 @@ Please fill out this form carefully.
 {% /instructions %}
 
 {% field-group id="g1" title="Group 1" %}
-{% string-field id="name" label="Name" %}{% /string-field %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
 
 {% description ref="name" %}
 Enter your full legal name.
@@ -785,7 +785,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% field kind="string" id="notes" label="Notes" state="skipped" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -806,7 +806,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% number-field id="revenue" label="Revenue" state="aborted" %}{% /number-field %}
+{% field kind="number" id="revenue" label="Revenue" state="aborted" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -827,11 +827,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="name" label="Name" %}
+{% field kind="string" id="name" label="Name" %}
 \`\`\`value
 Alice
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -853,7 +853,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -874,7 +874,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% field kind="string" id="notes" label="Notes" state="skipped" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -896,7 +896,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% number-field id="count" label="Count" state="aborted" %}{% /number-field %}
+{% field kind="number" id="count" label="Count" state="aborted" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -920,7 +920,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% field kind="string" id="notes" label="Notes" state="skipped" %}{% /field %}
 {% /field-group %}
 
 {% note id="n1" ref="notes" role="agent" %}
@@ -948,8 +948,8 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="field1" label="Field 1" %}{% /string-field %}
-{% string-field id="field2" label="Field 2" %}{% /string-field %}
+{% field kind="string" id="field1" label="Field 1" %}{% /field %}
+{% field kind="string" id="field2" label="Field 2" %}{% /field %}
 {% /field-group %}
 
 {% note id="n10" ref="field1" role="agent" %}
@@ -988,7 +988,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="name" label="Name" %}{% /string-field %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
 {% /field-group %}
 
 {% note id="n1" ref="name" role="user" %}
@@ -1016,7 +1016,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="notes" label="Notes" state="skipped" %}{% /string-field %}
+{% field kind="string" id="notes" label="Notes" state="skipped" %}{% /field %}
 {% /field-group %}
 
 {% note id="n1" ref="notes" role="agent" %}
@@ -1048,11 +1048,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="notes" label="Notes" %}
+{% field kind="string" id="notes" label="Notes" %}
 \`\`\`value
 %SKIP%
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -1076,11 +1076,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% url-field id="website" label="Website" %}
+{% field kind="url" id="website" label="Website" %}
 \`\`\`value
 %ABORT%
 \`\`\`
-{% /url-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -1104,14 +1104,14 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="name" label="Name" required=true %}
+{% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 Alice
 \`\`\`
-{% /string-field %}
-{% string-field id="bio" label="Bio" state="skipped" %}{% /string-field %}
-{% number-field id="age" label="Age" state="aborted" %}{% /number-field %}
-{% string-field id="notes" label="Notes" %}{% /string-field %}
+{% /field %}
+{% field kind="string" id="bio" label="Bio" state="skipped" %}{% /field %}
+{% field kind="number" id="age" label="Age" state="aborted" %}{% /field %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
 {% /field-group %}
 
 {% note id="n1" ref="bio" role="agent" %}
@@ -1151,8 +1151,8 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="visible" label="Visible Field" /%}
-{% string-field id="hidden" label="Hidden Field" report=false /%}
+{% field kind="string" id="visible" label="Visible Field" /%}
+{% field kind="string" id="hidden" label="Hidden Field" report=false /%}
 {% /field-group %}
 
 {% /form %}
@@ -1176,11 +1176,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="visible_group" title="Visible" %}
-{% string-field id="f1" label="Field 1" /%}
+{% field kind="string" id="f1" label="Field 1" /%}
 {% /field-group %}
 
 {% field-group id="hidden_group" title="Hidden" report=false %}
-{% string-field id="f2" label="Field 2" /%}
+{% field kind="string" id="f2" label="Field 2" /%}
 {% /field-group %}
 
 {% /form %}
@@ -1204,7 +1204,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="name" label="Name" /%}
+{% field kind="string" id="name" label="Name" /%}
 {% /field-group %}
 
 {% instructions ref="name" report=true %}

@@ -119,7 +119,7 @@ turns:
             test: na
     after:
       required_issue_count: 2
-      markdown_sha256: 82602f5f6056a820211a8f06b532935392a64523b0067ff4b44df43225102332
+      markdown_sha256: b5b261b437d0ea9762f342d8a6e1f44ece1b1f0ae0bd4a8709e8ba84625ecae3
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
@@ -229,7 +229,7 @@ turns:
           reason: No value in mock form
     after:
       required_issue_count: 0
-      markdown_sha256: a31a9d2cbf5f79e89277a72e657efe68a5e7c2503e11458c035897cb3f92dd3f
+      markdown_sha256: 943a9dac5094e295b53bd4cf38733fcff32e4311b6e308d5904199f4898d4f5d
       answered_field_count: 13
       skipped_field_count: 7
   - turn: 3
@@ -249,7 +249,7 @@ turns:
           reason: No value in mock form
     after:
       required_issue_count: 0
-      markdown_sha256: bbf4b61b00d149e5bf28bcaed3e3ed8279c940763e85d4a2a7e1fcb7669fac9d
+      markdown_sha256: e19d2e529bceab1dc64310fe2a75d70d062fa060230d7109eb541766c0a0f4e5
       answered_field_count: 13
       skipped_field_count: 8
 final:

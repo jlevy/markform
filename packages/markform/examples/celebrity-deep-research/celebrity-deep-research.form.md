@@ -62,13 +62,13 @@ Many fields request tables. Use markdown table format:
 
 {% field-group id="user_input" title="Subject Identification" %}
 
-{% string-field id="celebrity_name" label="Celebrity Name" role="user" required=true minLength=2 maxLength=200 %}{% /string-field %}
+{% field kind="string" id="celebrity_name" label="Celebrity Name" role="user" required=true minLength=2 maxLength=200 %}{% /field %}
 
 {% instructions ref="celebrity_name" %}
 Enter the full professional name (e.g., "Margot Robbie", "Leonardo DiCaprio", "Timothée Chalamet").
 {% /instructions %}
 
-{% string-field id="disambiguation" label="Disambiguation Context" role="user" maxLength=500 %}{% /string-field %}
+{% field kind="string" id="disambiguation" label="Disambiguation Context" role="user" maxLength=500 %}{% /field %}
 
 {% instructions ref="disambiguation" %}
 Optional but helpful for common names:
@@ -87,16 +87,16 @@ Foundational biographical information. Primary source: Wikipedia biography page.
 Secondary sources: IMDb bio, official studio bios, agency websites.
 {% /description %}
 
-{% string-field id="full_legal_name" label="Full Legal Name" %}{% /string-field %}
+{% field kind="string" id="full_legal_name" label="Full Legal Name" %}{% /field %}
 
 {% instructions ref="full_legal_name" %}
 Birth name if different from stage name (e.g., "Stefani Joanne Angelina Germanotta" for Lady Gaga).
 Source: Wikipedia infobox, birth certificate records if public.
 {% /instructions %}
 
-{% string-field id="stage_name" label="Stage/Professional Name" required=true %}{% /string-field %}
+{% field kind="string" id="stage_name" label="Stage/Professional Name" required=true %}{% /field %}
 
-{% string-field id="birth_date" label="Birth Date" pattern="^\\d{4}-\\d{2}-\\d{2}$" %}{% /string-field %}
+{% field kind="string" id="birth_date" label="Birth Date" pattern="^\\d{4}-\\d{2}-\\d{2}$" %}{% /field %}
 
 {% instructions ref="birth_date" %}
 Format: YYYY-MM-DD (e.g., 1990-07-02).
@@ -104,21 +104,21 @@ Sources: Wikipedia, IMDb bio, Famous Birthdays.
 Note: Some celebrities obscure their birth year; note if disputed.
 {% /instructions %}
 
-{% string-field id="birth_place" label="Birth Place" %}{% /string-field %}
+{% field kind="string" id="birth_place" label="Birth Place" %}{% /field %}
 
 {% instructions ref="birth_place" %}
 Format: City, State/Province, Country.
 Source: Wikipedia, IMDb.
 {% /instructions %}
 
-{% string-field id="nationality" label="Nationality/Citizenship" %}{% /string-field %}
+{% field kind="string" id="nationality" label="Nationality/Citizenship" %}{% /field %}
 
 {% instructions ref="nationality" %}
 List all known citizenships (some celebrities hold multiple).
 Source: Wikipedia, press interviews.
 {% /instructions %}
 
-{% string-field id="height" label="Height" %}{% /string-field %}
+{% field kind="string" id="height" label="Height" %}{% /field %}
 
 {% instructions ref="height" %}
 Format: X'Y" (X cm) - e.g., 5'7" (170 cm).
@@ -126,7 +126,7 @@ Source: IMDb, CelebrityHeights.com (surprisingly accurate), Google Knowledge Pan
 Note: Heights are often disputed/inflated.
 {% /instructions %}
 
-{% string-field id="death_info" label="Death Information (if applicable)" %}{% /string-field %}
+{% field kind="string" id="death_info" label="Death Information (if applicable)" %}{% /field %}
 
 {% instructions ref="death_info" %}
 Format: YYYY-MM-DD | Location | Cause | Age at death
@@ -135,14 +135,14 @@ Sources: Wikipedia, obituaries, Find A Grave.
 Leave empty if person is living.
 {% /instructions %}
 
-{% string-field id="resting_place" label="Burial/Resting Place" %}{% /string-field %}
+{% field kind="string" id="resting_place" label="Burial/Resting Place" %}{% /field %}
 
 {% instructions ref="resting_place" %}
 For deceased: Cemetery name, location.
 Source: Find A Grave (findagrave.com), Wikipedia.
 {% /instructions %}
 
-{% string-list id="core_biography_sources" label="Core Bio Sources" %}{% /string-list %}
+{% field kind="string_list" id="core_biography_sources" label="Core Bio Sources" %}{% /field %}
 
 {% instructions ref="core_biography_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -157,7 +157,7 @@ Personal background often reveals interesting context.
 Sources: NNDB.com (excellent for religion/politics/causes), Wikipedia Personal Life section, in-depth magazine profiles.
 {% /description %}
 
-{% string-field id="ethnicity_ancestry" label="Ethnicity/Ancestry" %}{% /string-field %}
+{% field kind="string" id="ethnicity_ancestry" label="Ethnicity/Ancestry" %}{% /field %}
 
 {% instructions ref="ethnicity_ancestry" %}
 Ethnic background and known ancestry.
@@ -165,7 +165,7 @@ Sources: Wikipedia, celebrity interviews, Ancestry.com findings if public, NNDB.
 Handle sensitively; only include what the celebrity has publicly discussed.
 {% /instructions %}
 
-{% string-field id="religion" label="Religion/Spiritual Beliefs" %}{% /string-field %}
+{% field kind="string" id="religion" label="Religion/Spiritual Beliefs" %}{% /field %}
 
 {% instructions ref="religion" %}
 Religious upbringing and current beliefs if publicly stated.
@@ -173,7 +173,7 @@ Source: NNDB.com (tracks this specifically), Wikipedia, magazine interviews.
 Example: "Raised Catholic, currently practices Kabbalah"
 {% /instructions %}
 
-{% string-field id="political_affiliation" label="Political Affiliation/Views" %}{% /string-field %}
+{% field kind="string" id="political_affiliation" label="Political Affiliation/Views" %}{% /field %}
 
 {% instructions ref="political_affiliation" %}
 Known political views, party affiliation, endorsements.
@@ -184,31 +184,31 @@ Sources:
 Example: "Democrat; donated $50K to Obama 2012 per FEC; publicly endorsed Biden 2020"
 {% /instructions %}
 
-{% table-field id="causes_activism" label="Causes & Activism"
+{% field kind="table" id="causes_activism" label="Causes & Activism"
    columnIds=["cause", "role_involvement", "source"]
    columnTypes=["string", "string", "string"] %}
 | Cause | Role/Involvement | Source |
 |-------|------------------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="causes_activism" %}
 Example: Climate Change | Founded Earth Alliance with DiCaprio | earthalliance.org
 Sources: NNDB.com, Charity Navigator (for their foundations), Wikipedia, press.
 {% /instructions %}
 
-{% table-field id="education" label="Education History"
+{% field kind="table" id="education" label="Education History"
    columnIds=["institution", "degree_program", "years", "notes"]
    columnTypes=["string", "string", "string", "string"] %}
 | Institution | Degree/Program | Years | Notes |
 |-------------|----------------|-------|-------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="education" %}
 Example: Yale University | Drama (incomplete) | 2000-2002 | Left to pursue acting
 Sources: Wikipedia, LinkedIn (if they have one), university alumni lists, IMDb bio.
 {% /instructions %}
 
-{% string-list id="personal_details_sources" label="Personal Details Sources" %}{% /string-list %}
+{% field kind="string_list" id="personal_details_sources" label="Personal Details Sources" %}{% /field %}
 
 {% instructions ref="personal_details_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -223,7 +223,7 @@ Relationship history is a core area of celebrity coverage.
 Sources: Wikipedia, WhosDatedWho.com, tabloids (note if tabloid-sourced), court records for divorces.
 {% /description %}
 
-{% string-field id="parents" label="Parents" %}{% /string-field %}
+{% field kind="string" id="parents" label="Parents" %}{% /field %}
 
 {% instructions ref="parents" %}
 Format: Father: Name (occupation) | Mother: Name (occupation)
@@ -231,23 +231,23 @@ Note if parents were also in entertainment industry.
 Sources: Wikipedia, IMDb bio.
 {% /instructions %}
 
-{% table-field id="siblings" label="Siblings"
+{% field kind="table" id="siblings" label="Siblings"
    columnIds=["name", "relationship", "notable_info"]
    columnTypes=["string", "string", "string"] %}
 | Name | Relationship | Notable Info |
 |------|--------------|--------------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="siblings" %}
 Example: Jake Gyllenhaal | Brother | Actor, Oscar nominee
 {% /instructions %}
 
-{% table-field id="marriages" label="Marriage History"
+{% field kind="table" id="marriages" label="Marriage History"
    columnIds=["spouse_name", "wedding_date", "divorce_date", "duration", "source"]
    columnTypes=["string", "date", "string", "string", "string"] %}
 | Spouse Name | Wedding Date | Divorce Date | Duration | Source |
 |-------------|--------------|--------------|----------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="marriages" %}
 Chronological order. Divorce Date should be date or "present".
@@ -255,24 +255,24 @@ Example: Brad Pitt | 2000-07-29 | 2005-01-07 | 4.5 years | Court records
 Sources: Wikipedia, WhosDatedWho, court records for divorces.
 {% /instructions %}
 
-{% table-field id="children" label="Children"
+{% field kind="table" id="children" label="Children"
    columnIds=["name", "birth_year", "other_parent", "notes"]
    columnTypes=["string", "year", "string", "string"] %}
 | Name | Birth Year | Other Parent | Notes |
 |------|------------|--------------|-------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="children" %}
 Example: Shiloh Jolie-Pitt | 2006 | Brad Pitt | Biological child
 Note: Some celebrities keep children very private; respect when info is intentionally hidden.
 {% /instructions %}
 
-{% table-field id="notable_relationships" label="Notable Dating History"
+{% field kind="table" id="notable_relationships" label="Notable Dating History"
    columnIds=["partner_name", "dates", "reliability"]
    columnTypes=["string", "string", "string"] %}
 | Partner Name | Dates | Reliability |
 |--------------|-------|-------------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="notable_relationships" %}
 Significant relationships (not marriages), most recent first.
@@ -281,7 +281,7 @@ Sources: WhosDatedWho.com, tabloids (note reliability), press confirmations.
 Note if "rumored only" vs "confirmed."
 {% /instructions %}
 
-{% string-list id="family_relationships_sources" label="Family & Relationships Sources" %}{% /string-list %}
+{% field kind="string_list" id="family_relationships_sources" label="Family & Relationships Sources" %}{% /field %}
 
 {% instructions ref="family_relationships_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -297,7 +297,7 @@ Secondary: TMDb (themoviedb.org), Rotten Tomatoes, AllMovie.
 For TV: also check TV Guide archives.
 {% /description %}
 
-{% string-field id="primary_profession" label="Primary Profession(s)" required=true %}{% /string-field %}
+{% field kind="string" id="primary_profession" label="Primary Profession(s)" required=true %}{% /field %}
 
 {% instructions ref="primary_profession" %}
 Main profession(s) in entertainment.
@@ -305,14 +305,14 @@ Example: "Actor, Producer, Director" or "Singer, Actress, Dancer"
 Source: IMDb, Wikipedia lead paragraph.
 {% /instructions %}
 
-{% string-field id="career_start" label="Career Start Year" pattern="^\\d{4}$" %}{% /string-field %}
+{% field kind="string" id="career_start" label="Career Start Year" pattern="^\\d{4}$" %}{% /field %}
 
 {% instructions ref="career_start" %}
 Year of first professional credit.
 Source: IMDb earliest credit.
 {% /instructions %}
 
-{% string-field id="breakthrough_role" label="Breakthrough Role" %}{% /string-field %}
+{% field kind="string" id="breakthrough_role" label="Breakthrough Role" %}{% /field %}
 
 {% instructions ref="breakthrough_role" %}
 Format: "Project Title" (Year) as Character Name
@@ -320,7 +320,7 @@ Example: "Titanic (1997) as Jack Dawson"
 Source: Wikipedia, IMDb, press retrospectives.
 {% /instructions %}
 
-{% string-field id="notable_films_table" label="Notable Film Credits (Table)" maxLength=5000 %}{% /string-field %}
+{% field kind="string" id="notable_films_table" label="Notable Film Credits (Table)" maxLength=5000 %}{% /field %}
 
 {% instructions ref="notable_films_table" %}
 Top 10-15 most significant film roles. Use markdown table:
@@ -340,7 +340,7 @@ Columns:
 Sources: IMDb filmography, Rotten Tomatoes, Box Office Mojo.
 {% /instructions %}
 
-{% string-field id="notable_tv_table" label="Notable TV Credits (Table)" maxLength=5000 %}{% /string-field %}
+{% field kind="string" id="notable_tv_table" label="Notable TV Credits (Table)" maxLength=5000 %}{% /field %}
 
 {% instructions ref="notable_tv_table" %}
 Significant TV appearances. Use markdown table:
@@ -352,7 +352,7 @@ Significant TV appearances. Use markdown table:
 Sources: IMDb, TV Guide archives.
 {% /instructions %}
 
-{% string-field id="upcoming_projects" label="Upcoming/In Production Projects" maxLength=1000 %}{% /string-field %}
+{% field kind="string" id="upcoming_projects" label="Upcoming/In Production Projects" maxLength=1000 %}{% /field %}
 
 {% instructions ref="upcoming_projects" %}
 Announced future projects.
@@ -360,7 +360,7 @@ Sources: IMDb "In Development", Variety/THR/Deadline announcements, Production W
 Note status: Filming, Post-production, Announced.
 {% /instructions %}
 
-{% string-field id="box_office_stats" label="Career Box Office Statistics" %}{% /string-field %}
+{% field kind="string" id="box_office_stats" label="Career Box Office Statistics" %}{% /field %}
 
 {% instructions ref="box_office_stats" %}
 Format: Total Gross | # Films | Average | Highest | Source
@@ -368,7 +368,7 @@ Example: "$10.2B total | 35 films | $291M avg | Barbie ($1.4B) | Box Office Mojo
 Source: Box Office Mojo actor page, The Numbers.
 {% /instructions %}
 
-{% string-list id="filmography_career_sources" label="Filmography Sources" %}{% /string-list %}
+{% field kind="string_list" id="filmography_career_sources" label="Filmography Sources" %}{% /field %}
 
 {% instructions ref="filmography_career_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -383,7 +383,7 @@ Aggregate critic and audience scores.
 Sources: Rotten Tomatoes career page, Metacritic, Letterboxd (for film community sentiment).
 {% /description %}
 
-{% string-field id="rt_career_stats" label="Rotten Tomatoes Career Stats" %}{% /string-field %}
+{% field kind="string" id="rt_career_stats" label="Rotten Tomatoes Career Stats" %}{% /field %}
 
 {% instructions ref="rt_career_stats" %}
 Format: Avg Tomatometer | # Fresh films | # Rotten films | Notable scores
@@ -391,7 +391,7 @@ Example: "68% average | 25 Fresh | 12 Rotten | Best: Lady Bird (99%), Worst: Mov
 Source: rottentomatoes.com/celebrity/
 {% /instructions %}
 
-{% string-field id="letterboxd_rating" label="Letterboxd Average Rating" %}{% /string-field %}
+{% field kind="string" id="letterboxd_rating" label="Letterboxd Average Rating" %}{% /field %}
 
 {% instructions ref="letterboxd_rating" %}
 Average rating across their filmography on Letterboxd.
@@ -399,7 +399,7 @@ Format: X.X/5 | Most-logged film | Highest-rated film
 Source: letterboxd.com (search actor name).
 {% /instructions %}
 
-{% string-list id="critical_reception_sources" label="Critical Reception Sources" %}{% /string-list %}
+{% field kind="string_list" id="critical_reception_sources" label="Critical Reception Sources" %}{% /field %}
 
 {% instructions ref="critical_reception_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -414,7 +414,7 @@ Complete awards history including nominations and wins.
 Sources: IMDb Awards page, Oscars.org, Emmy database, Wikipedia filmography tables.
 {% /description %}
 
-{% string-field id="major_awards_summary" label="Major Awards Summary" %}{% /string-field %}
+{% field kind="string" id="major_awards_summary" label="Major Awards Summary" %}{% /field %}
 
 {% instructions ref="major_awards_summary" %}
 Quick summary of biggest wins.
@@ -422,7 +422,7 @@ Format: # Oscar wins/noms | # Emmy wins/noms | # Grammy wins/noms | # Golden Glo
 Example: "3 Oscar noms (1 win) | 0 Emmy | 0 Grammy | 4 GG noms (2 wins) | SAG Ensemble winner"
 {% /instructions %}
 
-{% string-field id="oscar_history" label="Academy Award History (Table)" maxLength=3000 %}{% /string-field %}
+{% field kind="string" id="oscar_history" label="Academy Award History (Table)" maxLength=3000 %}{% /field %}
 
 {% instructions ref="oscar_history" %}
 Use markdown table:
@@ -435,7 +435,7 @@ Use markdown table:
 Source: Oscars.org, IMDb Awards.
 {% /instructions %}
 
-{% string-field id="other_major_awards" label="Other Major Awards (Table)" maxLength=3000 %}{% /string-field %}
+{% field kind="string" id="other_major_awards" label="Other Major Awards (Table)" maxLength=3000 %}{% /field %}
 
 {% instructions ref="other_major_awards" %}
 Emmy, Grammy, Tony, Golden Globe, SAG, BAFTA, Cannes, etc.
@@ -448,14 +448,14 @@ Use markdown table:
 Sources: Respective award databases, IMDb Awards.
 {% /instructions %}
 
-{% string-list id="notable_honors" label="Other Honors & Recognition" %}{% /string-list %}
+{% field kind="string_list" id="notable_honors" label="Other Honors & Recognition" %}{% /field %}
 
 {% instructions ref="notable_honors" %}
 Non-award honors, one per line.
 Examples: Hollywood Walk of Fame star, Kennedy Center Honor, Presidential Medal, Honorary degrees, etc.
 {% /instructions %}
 
-{% string-list id="awards_recognition_sources" label="Awards Sources" %}{% /string-list %}
+{% field kind="string_list" id="awards_recognition_sources" label="Awards Sources" %}{% /field %}
 
 {% instructions ref="awards_recognition_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -471,7 +471,7 @@ Sources: CelebrityNetWorth (estimates only), Forbes Celebrity 100, SEC filings, 
 Note: Net worth figures are estimates and often disputed.
 {% /description %}
 
-{% string-field id="estimated_net_worth" label="Estimated Net Worth" %}{% /string-field %}
+{% field kind="string" id="estimated_net_worth" label="Estimated Net Worth" %}{% /field %}
 
 {% instructions ref="estimated_net_worth" %}
 Format: $XXM-$XXM (Source, Date)
@@ -479,12 +479,12 @@ Example: "$400M-$450M (CelebrityNetWorth, 2024; Forbes estimates $380M)"
 Note: Always include source and date; these estimates vary wildly.
 {% /instructions %}
 
-{% table-field id="known_salaries" label="Known Salary/Earnings"
+{% field kind="table" id="known_salaries" label="Known Salary/Earnings"
    columnIds=["project", "amount", "year", "source"]
    columnTypes=["string", "string", "year", "string"] %}
 | Project | Amount | Year | Source |
 |---------|--------|------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="known_salaries" %}
 Reported salaries per project.
@@ -492,7 +492,7 @@ Example: Barbie | $12.5M + $50M backend | 2023 | Variety
 Sources: Variety, THR salary reports, leaked studio documents.
 {% /instructions %}
 
-{% string-field id="forbes_rankings" label="Forbes Celebrity 100 History" %}{% /string-field %}
+{% field kind="string" id="forbes_rankings" label="Forbes Celebrity 100 History" %}{% /field %}
 
 {% instructions ref="forbes_rankings" %}
 Historical Forbes Celebrity 100 rankings if available.
@@ -501,12 +501,12 @@ Example: "2023: #8, $59M | 2022: #12, $42M"
 Source: Forbes.com Celebrity 100 lists.
 {% /instructions %}
 
-{% table-field id="business_ventures" label="Business Ventures & Companies"
+{% field kind="table" id="business_ventures" label="Business Ventures & Companies"
    columnIds=["company", "role", "industry", "status", "source"]
    columnTypes=["string", "string", "string", "string", "string"] %}
 | Company | Role | Industry | Status | Source |
 |---------|------|----------|--------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="business_ventures" %}
 Companies owned, founded, or invested in.
@@ -514,12 +514,12 @@ Example: Honest Company | Co-founder | Consumer goods | IPO 2021, now private | 
 Sources: Forbes, SEC EDGAR (for public companies), Crunchbase, press releases.
 {% /instructions %}
 
-{% table-field id="endorsements" label="Major Endorsements & Sponsorships"
+{% field kind="table" id="endorsements" label="Major Endorsements & Sponsorships"
    columnIds=["brand", "type", "value", "years", "source"]
    columnTypes=["string", "string", "string", "string", "string"] %}
 | Brand | Type | Value | Years | Source |
 |-------|------|-------|-------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="endorsements" %}
 Brand deals and endorsements.
@@ -527,12 +527,12 @@ Example: Chanel No. 5 | Global Ambassador | $5M/year | 2020-present | Variety
 Sources: Press releases, Variety/THR business coverage, social media sponsored posts.
 {% /instructions %}
 
-{% table-field id="real_estate" label="Known Real Estate Holdings"
+{% field kind="table" id="real_estate" label="Known Real Estate Holdings"
    columnIds=["property", "location", "price", "year", "source"]
    columnTypes=["string", "string", "string", "year", "string"] %}
 | Property | Location | Price | Year | Source |
 |----------|----------|-------|------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="real_estate" %}
 Significant property purchases/sales.
@@ -540,7 +540,7 @@ Example: $25M mansion | Beverly Hills, CA | $25M | 2021 | Variety Dirt
 Sources: Variety Dirt column, real estate news, property records.
 {% /instructions %}
 
-{% string-list id="financial_business_sources" label="Financial & Business Sources" %}{% /string-list %}
+{% field kind="string_list" id="financial_business_sources" label="Financial & Business Sources" %}{% /field %}
 
 {% instructions ref="financial_business_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -556,12 +556,12 @@ Sources: The Smoking Gun (legal docs), court records (PACER for federal, state c
 Note tabloid vs verified sources clearly.
 {% /description %}
 
-{% table-field id="legal_cases" label="Legal Cases & Lawsuits"
+{% field kind="table" id="legal_cases" label="Legal Cases & Lawsuits"
    columnIds=["case_type", "year", "parties", "outcome", "source"]
    columnTypes=["string", "year", "string", "string", "string"] %}
 | Case Type | Year | Parties | Outcome | Source |
 |-----------|------|---------|---------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="legal_cases" %}
 Court cases, lawsuits, legal proceedings.
@@ -570,12 +570,12 @@ Example: Defamation | 2022 | Depp v. Heard | Depp won $10.35M | Fairfax County C
 Sources: PACER, state court record searches, The Smoking Gun, Court Listener.
 {% /instructions %}
 
-{% table-field id="arrests_charges" label="Arrests & Criminal Charges"
+{% field kind="table" id="arrests_charges" label="Arrests & Criminal Charges"
    columnIds=["year", "charge", "location", "outcome", "source"]
    columnTypes=["year", "string", "string", "string", "string"] %}
 | Year | Charge | Location | Outcome | Source |
 |------|--------|----------|---------|--------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="arrests_charges" %}
 Criminal matters if any.
@@ -583,12 +583,12 @@ Example: 2007 | DUI | Los Angeles | Plea deal, probation | TMZ, court records
 Sources: The Smoking Gun (has mugshots/records), court records, news archives.
 {% /instructions %}
 
-{% table-field id="controversies" label="Public Controversies"
+{% field kind="table" id="controversies" label="Public Controversies"
    columnIds=["year", "issue", "description", "outcome", "reliability"]
    columnTypes=["year", "string", "string", "string", "string"] %}
 | Year | Issue | Description | Outcome | Reliability |
 |------|-------|-------------|---------|-------------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="controversies" %}
 Non-legal controversies.
@@ -597,7 +597,7 @@ Sources: Wikipedia Controversies section, press, tabloids.
 Always note source reliability (high/medium/low).
 {% /instructions %}
 
-{% string-field id="metoo_related" label="MeToo/Harassment Allegations" %}{% /string-field %}
+{% field kind="string" id="metoo_related" label="MeToo/Harassment Allegations" %}{% /field %}
 
 {% instructions ref="metoo_related" %}
 If applicable, summarize any MeToo-era allegations or involvement.
@@ -605,7 +605,7 @@ Note: Handle with appropriate seriousness. Include outcomes of any investigation
 Sources: Major news outlets, court records if any.
 {% /instructions %}
 
-{% string-list id="controversies_legal_sources" label="Controversies & Legal Sources" %}{% /string-list %}
+{% field kind="string_list" id="controversies_legal_sources" label="Controversies & Legal Sources" %}{% /field %}
 
 {% instructions ref="controversies_legal_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -619,7 +619,7 @@ URLs used as sources for this section. One URL per line.
 Search each platform directly for verified accounts. Note follower counts, engagement, and activity level.
 {% /description %}
 
-{% string-field id="instagram" label="Instagram" %}{% /string-field %}
+{% field kind="string" id="instagram" label="Instagram" %}{% /field %}
 
 {% instructions ref="instagram" %}
 Format: @handle | Followers | Verified? | Activity | URL
@@ -627,7 +627,7 @@ Example: "@margotrobbie | 28.5M followers | Verified | ~2 posts/week | instagram
 Source: Search instagram.com directly. Look for blue verification badge.
 {% /instructions %}
 
-{% string-field id="twitter_x" label="Twitter/X" %}{% /string-field %}
+{% field kind="string" id="twitter_x" label="Twitter/X" %}{% /field %}
 
 {% instructions ref="twitter_x" %}
 Format: @handle | Followers | Verified? | Activity | URL
@@ -635,7 +635,7 @@ Example: "@RealHughJackman | 15M followers | Verified | Active daily | x.com/Rea
 Source: Search x.com directly.
 {% /instructions %}
 
-{% string-field id="tiktok" label="TikTok" %}{% /string-field %}
+{% field kind="string" id="tiktok" label="TikTok" %}{% /field %}
 
 {% instructions ref="tiktok" %}
 Format: @handle | Followers | Verified? | Activity | URL
@@ -643,7 +643,7 @@ Or "No official account found"
 Source: Search tiktok.com directly.
 {% /instructions %}
 
-{% string-field id="youtube" label="YouTube" %}{% /string-field %}
+{% field kind="string" id="youtube" label="YouTube" %}{% /field %}
 
 {% instructions ref="youtube" %}
 Format: Channel Name | Subscribers | Videos | URL
@@ -652,14 +652,14 @@ Or "No official channel" if none exists.
 Source: Search youtube.com.
 {% /instructions %}
 
-{% string-field id="facebook" label="Facebook" %}{% /string-field %}
+{% field kind="string" id="facebook" label="Facebook" %}{% /field %}
 
 {% instructions ref="facebook" %}
 Format: Page Name | Followers | Verified? | URL
 Source: Search facebook.com.
 {% /instructions %}
 
-{% string-field id="threads" label="Threads" %}{% /string-field %}
+{% field kind="string" id="threads" label="Threads" %}{% /field %}
 
 {% instructions ref="threads" %}
 Format: @handle | Followers | URL
@@ -667,14 +667,14 @@ Or "Not on Threads"
 Source: Search threads.net.
 {% /instructions %}
 
-{% string-field id="other_platforms" label="Other Platforms (Twitch, Patreon, OnlyFans, etc.)" %}{% /string-field %}
+{% field kind="string" id="other_platforms" label="Other Platforms (Twitch, Patreon, OnlyFans, etc.)" %}{% /field %}
 
 {% instructions ref="other_platforms" %}
 Any other notable platform presence.
 Format: Platform | Handle | Followers | URL
 {% /instructions %}
 
-{% string-list id="social_media_sources" label="Social Media Sources" %}{% /string-list %}
+{% field kind="string_list" id="social_media_sources" label="Social Media Sources" %}{% /field %}
 
 {% instructions ref="social_media_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -690,7 +690,7 @@ Sources: Reddit, dedicated fan wikis, ONTD (Oh No They Didn't), Lipstick Alley, 
 Note: These sources provide "insider" perspective but vary in reliability.
 {% /description %}
 
-{% string-field id="reddit_presence" label="Reddit Presence" %}{% /string-field %}
+{% field kind="string" id="reddit_presence" label="Reddit Presence" %}{% /field %}
 
 {% instructions ref="reddit_presence" %}
 Format: Subreddit(s) | Members | Activity Level | URL
@@ -699,7 +699,7 @@ Also note if subject has done AMAs.
 Source: Search reddit.com.
 {% /instructions %}
 
-{% string-field id="fan_wiki" label="Fan Wiki/Fandom Page" %}{% /string-field %}
+{% field kind="string" id="fan_wiki" label="Fan Wiki/Fandom Page" %}{% /field %}
 
 {% instructions ref="fan_wiki" %}
 Dedicated fan wikis often have exhaustive detail.
@@ -708,7 +708,7 @@ Example: "Swiftie Wiki | taylor-swift.fandom.com | Extremely detailed, every con
 Source: Search [celebrity name] fandom.com or wikia.
 {% /instructions %}
 
-{% string-list id="fan_community_sentiment" label="Fan Community Sentiment" %}{% /string-list %}
+{% field kind="string_list" id="fan_community_sentiment" label="Fan Community Sentiment" %}{% /field %}
 
 {% instructions ref="fan_community_sentiment" %}
 General reputation within fan communities. One community per line.
@@ -719,7 +719,7 @@ Sources: ONTD (ohnotheydidnt.livejournal.com), Lipstick Alley, Data Lounge, r/en
 Note: These are fan opinions, not facts.
 {% /instructions %}
 
-{% string-list id="nicknames_memes" label="Nicknames, Memes & Cultural References" %}{% /string-list %}
+{% field kind="string_list" id="nicknames_memes" label="Nicknames, Memes & Cultural References" %}{% /field %}
 
 {% instructions ref="nicknames_memes" %}
 Notable nicknames, viral memes, or cultural references. One per line.
@@ -727,7 +727,7 @@ Example: "Leo pointing at TV meme | Once Upon a Time scene | Ubiquitous internet
 Example: "J.Lo | Common nickname since early career"
 {% /instructions %}
 
-{% string-list id="fan_community_sources" label="Fan Community Sources" %}{% /string-list %}
+{% field kind="string_list" id="fan_community_sources" label="Fan Community Sources" %}{% /field %}
 
 {% instructions ref="fan_community_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -742,12 +742,12 @@ Notable interviews and media appearances.
 Sources: YouTube (talk show archives), podcast platforms, major publications.
 {% /description %}
 
-{% table-field id="notable_interviews" label="Notable Interviews"
+{% field kind="table" id="notable_interviews" label="Notable Interviews"
    columnIds=["outlet_show", "date", "topic", "url"]
    columnTypes=["string", "string", "string", "url"] %}
 | Outlet/Show | Date | Topic | URL |
 |-------------|------|-------|-----|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="notable_interviews" %}
 Most revealing or significant interviews.
@@ -755,12 +755,12 @@ Example: WTF with Marc Maron | 2019-06 | Candid about childhood trauma | https:/
 Prioritize: Long-form podcasts (Maron, Armchair Expert, Fresh Air), major magazine profiles.
 {% /instructions %}
 
-{% table-field id="talk_show_appearances" label="Notable Talk Show Appearances"
+{% field kind="table" id="talk_show_appearances" label="Notable Talk Show Appearances"
    columnIds=["show", "date", "moment", "url"]
    columnTypes=["string", "string", "string", "url"] %}
 | Show | Date | Moment | URL |
 |------|------|--------|-----|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="talk_show_appearances" %}
 Memorable talk show moments.
@@ -768,7 +768,7 @@ Example: Graham Norton | 2023-07 | Viral story about meeting the Queen | https:/
 Source: YouTube archives of Fallon, Kimmel, Colbert, Graham Norton, etc.
 {% /instructions %}
 
-{% string-field id="podcast_appearances" label="Podcast Appearances Summary" maxLength=2000 %}{% /string-field %}
+{% field kind="string" id="podcast_appearances" label="Podcast Appearances Summary" maxLength=2000 %}{% /field %}
 
 {% instructions ref="podcast_appearances" %}
 Overview of podcast appearances.
@@ -776,7 +776,7 @@ Sources: Spotify, Apple Podcasts - search for celebrity name.
 Notable shows to check: WTF with Marc Maron, Armchair Expert, SmartLess, Conan O'Brien Needs a Friend.
 {% /instructions %}
 
-{% string-list id="interviews_appearances_sources" label="Media Appearances Sources" %}{% /string-list %}
+{% field kind="string_list" id="interviews_appearances_sources" label="Media Appearances Sources" %}{% /field %}
 
 {% instructions ref="interviews_appearances_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -791,7 +791,7 @@ These sources often contain information missed by mainstream coverage.
 Take time to check each one - they frequently reveal unique details.
 {% /description %}
 
-{% string-field id="nndb_summary" label="NNDB Profile Summary" %}{% /string-field %}
+{% field kind="string" id="nndb_summary" label="NNDB Profile Summary" %}{% /field %}
 
 {% instructions ref="nndb_summary" %}
 NNDB (Notable Names Database) tracks: religion, politics, causes, sexual orientation, relationships.
@@ -799,7 +799,7 @@ Source: nndb.com - search for celebrity name.
 Summarize key findings not covered elsewhere.
 {% /instructions %}
 
-{% string-field id="political_donations" label="Political Donation History" %}{% /string-field %}
+{% field kind="string" id="political_donations" label="Political Donation History" %}{% /field %}
 
 {% instructions ref="political_donations" %}
 Search FEC records for political contributions.
@@ -810,7 +810,7 @@ Sources:
 - FEC.gov individual contributor search
 {% /instructions %}
 
-{% string-field id="behind_the_voice" label="Voice Acting Credits" %}{% /string-field %}
+{% field kind="string" id="behind_the_voice" label="Voice Acting Credits" %}{% /field %}
 
 {% instructions ref="behind_the_voice" %}
 For actors: voice acting work often overlooked.
@@ -818,21 +818,21 @@ Source: behindthevoiceactors.com
 Format: # Voice credits | Notable roles
 {% /instructions %}
 
-{% string-field id="theater_credits" label="Theater/Broadway Credits" %}{% /string-field %}
+{% field kind="string" id="theater_credits" label="Theater/Broadway Credits" %}{% /field %}
 
 {% instructions ref="theater_credits" %}
 Stage work often overlooked in film star coverage.
 Sources: Playbill archives (playbill.com), BroadwayWorld (broadwayworld.com), IBDB (Internet Broadway Database).
 {% /instructions %}
 
-{% string-field id="discography_music" label="Music/Discography (if applicable)" %}{% /string-field %}
+{% field kind="string" id="discography_music" label="Music/Discography (if applicable)" %}{% /field %}
 
 {% instructions ref="discography_music" %}
 For actor-musicians or musicians-turned-actors.
 Source: Discogs.com, AllMusic.
 {% /instructions %}
 
-{% string-field id="wayback_findings" label="Historical Website/Social Media (Wayback Machine)" %}{% /string-field %}
+{% field kind="string" id="wayback_findings" label="Historical Website/Social Media (Wayback Machine)" %}{% /field %}
 
 {% instructions ref="wayback_findings" %}
 Old website content, deleted social media posts, early career materials.
@@ -840,7 +840,7 @@ Source: web.archive.org - search for their old personal sites, early social medi
 Example: "2005 MySpace page shows pre-fame persona, early demo recordings"
 {% /instructions %}
 
-{% string-field id="ancestry_findings" label="Ancestry/Family History" %}{% /string-field %}
+{% field kind="string" id="ancestry_findings" label="Ancestry/Family History" %}{% /field %}
 
 {% instructions ref="ancestry_findings" %}
 Notable genealogical findings.
@@ -848,7 +848,7 @@ Sources: Geni.com, FamilySearch.org, Ancestry (if publicly discussed).
 Example: "Related to British royalty through maternal line (per Finding Your Roots appearance)"
 {% /instructions %}
 
-{% string-list id="specialized_sources_urls" label="Specialized Sources" %}{% /string-list %}
+{% field kind="string_list" id="specialized_sources_urls" label="Specialized Sources" %}{% /field %}
 
 {% instructions ref="specialized_sources_urls" %}
 URLs used as sources for this section. One URL per line.
@@ -862,14 +862,14 @@ URLs used as sources for this section. One URL per line.
 Only fill if the subject is deceased.
 {% /description %}
 
-{% string-field id="find_a_grave" label="Find A Grave Entry" %}{% /string-field %}
+{% field kind="string" id="find_a_grave" label="Find A Grave Entry" %}{% /field %}
 
 {% instructions ref="find_a_grave" %}
 Format: Memorial ID | Cemetery | Location | URL
 Source: findagrave.com
 {% /instructions %}
 
-{% string-list id="obituary_sources" label="Notable Obituaries" %}{% /string-list %}
+{% field kind="string_list" id="obituary_sources" label="Notable Obituaries" %}{% /field %}
 
 {% instructions ref="obituary_sources" %}
 Major obituaries and tributes. One per line.
@@ -877,14 +877,14 @@ Format: Publication | Headline | URL
 Example: "New York Times | 'Actor Who Defined a Generation' | nytimes.com/..."
 {% /instructions %}
 
-{% string-field id="legacy_assessment" label="Legacy Assessment" maxLength=1000 %}{% /string-field %}
+{% field kind="string" id="legacy_assessment" label="Legacy Assessment" maxLength=1000 %}{% /field %}
 
 {% instructions ref="legacy_assessment" %}
 How is this person remembered? Cultural impact, ongoing influence.
 Sources: Retrospective articles, academic assessments, AFI tributes.
 {% /instructions %}
 
-{% string-list id="deceased_specific_sources" label="Deceased Celebrity Sources" %}{% /string-list %}
+{% field kind="string_list" id="deceased_specific_sources" label="Deceased Celebrity Sources" %}{% /field %}
 
 {% instructions ref="deceased_specific_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -899,7 +899,7 @@ The "juicy details" section - interesting facts that make profiles memorable.
 Sources: IMDb Trivia, interviews, biographies.
 {% /description %}
 
-{% string-list id="interesting_trivia" label="Interesting Trivia" %}{% /string-list %}
+{% field kind="string_list" id="interesting_trivia" label="Interesting Trivia" %}{% /field %}
 
 {% instructions ref="interesting_trivia" %}
 Unusual, surprising, or lesser-known facts. One per line.
@@ -911,12 +911,12 @@ Source: IMDb Trivia section, interviews, biographies.
 Prioritize: Surprising facts, near-misses on iconic roles, unusual skills, celebrity connections.
 {% /instructions %}
 
-{% table-field id="notable_quotes" label="Notable Quotes"
+{% field kind="table" id="notable_quotes" label="Notable Quotes"
    columnIds=["quote", "context_source"]
    columnTypes=["string", "string"] %}
 | Quote | Context/Source |
 |-------|----------------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="notable_quotes" %}
 Memorable quotes by the celebrity.
@@ -924,7 +924,7 @@ Example: I'd rather be hated for who I am than loved for who I'm not. | 2010 Van
 Sources: IMDb Quotes, Brainy Quote, notable interviews.
 {% /instructions %}
 
-{% string-list id="trivia_quotes_sources" label="Trivia & Quotes Sources" %}{% /string-list %}
+{% field kind="string_list" id="trivia_quotes_sources" label="Trivia & Quotes Sources" %}{% /field %}
 
 {% instructions ref="trivia_quotes_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -934,13 +934,13 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="research_metadata" title="Research Metadata" %}
 
-{% string-field id="research_date" label="Research Date" required=true pattern="^\\d{4}-\\d{2}-\\d{2}$" %}{% /string-field %}
+{% field kind="string" id="research_date" label="Research Date" required=true pattern="^\\d{4}-\\d{2}-\\d{2}$" %}{% /field %}
 
 {% instructions ref="research_date" %}
 Date research was conducted (YYYY-MM-DD). Critical for celebrity research as information changes rapidly.
 {% /instructions %}
 
-{% string-field id="research_limitations" label="Research Limitations & Notes" maxLength=2000 %}{% /string-field %}
+{% field kind="string" id="research_limitations" label="Research Limitations & Notes" maxLength=2000 %}{% /field %}
 
 {% instructions ref="research_limitations" %}
 Note any limitations:
@@ -952,7 +952,7 @@ Note any limitations:
 - Certain sections incomplete due to [reason]
 {% /instructions %}
 
-{% string-field id="confidence_assessment" label="Overall Research Confidence" %}{% /string-field %}
+{% field kind="string" id="confidence_assessment" label="Overall Research Confidence" %}{% /field %}
 
 {% instructions ref="confidence_assessment" %}
 Rate overall confidence: High / Medium / Low

@@ -20,46 +20,46 @@ markform:
 
 {% field-group id="basic" title="Basic Fields" %}
 
-{% string-field id="name" label="Name" role="user" required=true %}{% /string-field %}
+{% field kind="string" id="name" label="Name" role="user" required=true %}{% /field %}
 
-{% number-field id="age" label="Age" role="user" required=true %}{% /number-field %}
+{% field kind="number" id="age" label="Age" role="user" required=true %}{% /field %}
 
-{% string-list id="tags" label="Tags" role="user" %}{% /string-list %}
+{% field kind="string_list" id="tags" label="Tags" role="user" %}{% /field %}
 
 {% /field-group %}
 
 {% field-group id="selection" title="Selection Fields" %}
 
-{% single-select id="priority" label="Priority" role="user" %}
+{% field kind="single_select" id="priority" label="Priority" role="user" %}
 - [ ] Low {% #low %}
 - [ ] Medium {% #medium %}
 - [ ] High {% #high %}
-{% /single-select %}
+{% /field %}
 
-{% multi-select id="categories" label="Categories" role="user" %}
+{% field kind="multi_select" id="categories" label="Categories" role="user" %}
 - [ ] Frontend {% #frontend %}
 - [ ] Backend {% #backend %}
 - [ ] Database {% #database %}
-{% /multi-select %}
+{% /field %}
 
 {% /field-group %}
 
 {% field-group id="checkboxes" title="Checkbox Fields" %}
 
-{% checkboxes id="tasks_multi" label="Tasks (Multi)" role="user" checkboxMode="multi" %}
+{% field kind="checkboxes" id="tasks_multi" label="Tasks (Multi)" role="user" checkboxMode="multi" %}
 - [ ] Research {% #research %}
 - [ ] Design {% #design %}
-{% /checkboxes %}
+{% /field %}
 
-{% checkboxes id="tasks_simple" label="Tasks (Simple)" role="user" checkboxMode="simple" %}
+{% field kind="checkboxes" id="tasks_simple" label="Tasks (Simple)" role="user" checkboxMode="simple" %}
 - [ ] Read {% #read %}
 - [ ] Agree {% #agree %}
-{% /checkboxes %}
+{% /field %}
 
-{% checkboxes id="confirmations" label="Confirmations" role="user" checkboxMode="explicit" %}
+{% field kind="checkboxes" id="confirmations" label="Confirmations" role="user" checkboxMode="explicit" %}
 - [ ] Backed up {% #backup %}
 - [ ] Notified {% #notify %}
-{% /checkboxes %}
+{% /field %}
 
 {% /field-group %}
 

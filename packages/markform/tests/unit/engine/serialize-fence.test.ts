@@ -127,11 +127,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="desc" label="Description" %}
+{% field kind="string" id="desc" label="Description" %}
 \`\`\`value
 Plain text content
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -152,7 +152,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="code" label="Code" multiline=true %}
+{% field kind="string" id="code" label="Code" multiline=true %}
 \`\`\`\`value
 Here is some code:
 
@@ -160,7 +160,7 @@ Here is some code:
 print("hello")
 \`\`\`
 \`\`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -182,11 +182,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="docs" label="Documentation" multiline=true %}
+{% field kind="string" id="docs" label="Documentation" multiline=true %}
 \`\`\`value {% process=false %}
 Use the {% callout %} tag for emphasis.
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -207,14 +207,14 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="meta" label="Meta" multiline=true %}
+{% field kind="string" id="meta" label="Meta" multiline=true %}
 ~~~value
 This content has lots of backticks at line start:
 \`\`\`\`\`\`
 nested
 \`\`\`\`\`\`
 ~~~
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -247,11 +247,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="example" label="Example" multiline=true %}
+{% field kind="string" id="example" label="Example" multiline=true %}
 \`\`\`\`value
 ${codeContent}
 \`\`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -284,11 +284,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="shell" label="Shell" multiline=true %}
+{% field kind="string" id="shell" label="Shell" multiline=true %}
 \`\`\`value
 ${codeContent}
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -317,11 +317,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="docs" label="Docs" multiline=true %}
+{% field kind="string" id="docs" label="Docs" multiline=true %}
 \`\`\`value {% process=false %}
 ${docContent}
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -358,11 +358,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="mixed" label="Mixed" multiline=true %}
+{% field kind="string" id="mixed" label="Mixed" multiline=true %}
 \`\`\`\`value
 ${mixedContent}
 \`\`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -399,11 +399,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="extreme" label="Extreme" multiline=true %}
+{% field kind="string" id="extreme" label="Extreme" multiline=true %}
 ~~~~~~~~~~~value
 ${pathologicalContent}
 ~~~~~~~~~~~
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -428,7 +428,7 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="empty" label="Empty" %}{% /string-field %}
+{% field kind="string" id="empty" label="Empty" %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -449,11 +449,11 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" %}
-{% string-field id="notes" label="Notes" state="skipped" %}
+{% field kind="string" id="notes" label="Notes" state="skipped" %}
 \`\`\`value
 %SKIP% (Not applicable for this analysis)
 \`\`\`
-{% /string-field %}
+{% /field %}
 {% /field-group %}
 
 {% /form %}

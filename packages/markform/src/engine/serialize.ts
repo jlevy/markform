@@ -253,7 +253,7 @@ function getMarker(state: CheckboxValue): string {
  * Serialize a string field.
  */
 function serializeStringField(field: StringField, response: FieldResponse | undefined): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'string', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -310,14 +310,14 @@ function serializeStringField(field: StringField, response: FieldResponse | unde
     content = sentinelContent;
   }
 
-  return `{% string-field ${attrStr} %}${content}{% /string-field %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
  * Serialize a number field.
  */
 function serializeNumberField(field: NumberField, response: FieldResponse | undefined): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'number', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -371,7 +371,7 @@ function serializeNumberField(field: NumberField, response: FieldResponse | unde
     content = sentinelContent;
   }
 
-  return `{% number-field ${attrStr} %}${content}{% /number-field %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
@@ -381,7 +381,7 @@ function serializeStringListField(
   field: StringListField,
   response: FieldResponse | undefined,
 ): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'string_list', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -441,7 +441,7 @@ function serializeStringListField(
     content = sentinelContent;
   }
 
-  return `{% string-list ${attrStr} %}${content}{% /string-list %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
@@ -466,7 +466,11 @@ function serializeSingleSelectField(
   field: SingleSelectField,
   response: FieldResponse | undefined,
 ): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = {
+    kind: 'single_select',
+    id: field.id,
+    label: field.label,
+  };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -503,7 +507,7 @@ function serializeSingleSelectField(
   }
 
   const options = serializeOptions(field.options, selected);
-  return `{% single-select ${attrStr} %}\n${options}\n{% /single-select %}`;
+  return `{% field ${attrStr} %}\n${options}\n{% /field %}`;
 }
 
 /**
@@ -513,7 +517,7 @@ function serializeMultiSelectField(
   field: MultiSelectField,
   response: FieldResponse | undefined,
 ): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'multi_select', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -557,7 +561,7 @@ function serializeMultiSelectField(
   }
 
   const options = serializeOptions(field.options, selected);
-  return `{% multi-select ${attrStr} %}\n${options}\n{% /multi-select %}`;
+  return `{% field ${attrStr} %}\n${options}\n{% /field %}`;
 }
 
 /**
@@ -567,7 +571,7 @@ function serializeCheckboxesField(
   field: CheckboxesField,
   response: FieldResponse | undefined,
 ): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'checkboxes', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -607,14 +611,14 @@ function serializeCheckboxesField(
   }
 
   const options = serializeOptions(field.options, value?.values ?? {});
-  return `{% checkboxes ${attrStr} %}\n${options}\n{% /checkboxes %}`;
+  return `{% field ${attrStr} %}\n${options}\n{% /field %}`;
 }
 
 /**
  * Serialize a url-field.
  */
 function serializeUrlField(field: UrlField, response: FieldResponse | undefined): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'url', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -659,14 +663,14 @@ function serializeUrlField(field: UrlField, response: FieldResponse | undefined)
     content = sentinelContent;
   }
 
-  return `{% url-field ${attrStr} %}${content}{% /url-field %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
  * Serialize a url-list field.
  */
 function serializeUrlListField(field: UrlListField, response: FieldResponse | undefined): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'url_list', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -720,14 +724,14 @@ function serializeUrlListField(field: UrlListField, response: FieldResponse | un
     content = sentinelContent;
   }
 
-  return `{% url-list ${attrStr} %}${content}{% /url-list %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
  * Serialize a date-field.
  */
 function serializeDateField(field: DateField, response: FieldResponse | undefined): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'date', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -772,14 +776,14 @@ function serializeDateField(field: DateField, response: FieldResponse | undefine
     content = sentinelContent;
   }
 
-  return `{% date-field ${attrStr} %}${content}{% /date-field %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
  * Serialize a year-field.
  */
 function serializeYearField(field: YearField, response: FieldResponse | undefined): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'year', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -824,7 +828,7 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
     content = sentinelContent;
   }
 
-  return `{% year-field ${attrStr} %}${content}{% /year-field %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
@@ -888,7 +892,7 @@ function serializeMarkdownTable(value: TableValue, columns: TableColumn[]): stri
  * Serialize a table-field.
  */
 function serializeTableField(field: TableField, response: FieldResponse | undefined): string {
-  const attrs: Record<string, unknown> = { id: field.id, label: field.label };
+  const attrs: Record<string, unknown> = { kind: 'table', id: field.id, label: field.label };
   if (field.required) {
     attrs.required = field.required;
   }
@@ -945,7 +949,7 @@ function serializeTableField(field: TableField, response: FieldResponse | undefi
     content = sentinelContent;
   }
 
-  return `{% table-field ${attrStr} %}${content}{% /table-field %}`;
+  return `{% field ${attrStr} %}${content}{% /field %}`;
 }
 
 /**
