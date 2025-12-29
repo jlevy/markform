@@ -169,6 +169,50 @@ export interface ProviderInfo {
 }
 
 // =============================================================================
+// Fill Callbacks
+// =============================================================================
+
+/**
+ * Callbacks for observing form-filling execution in real-time.
+ *
+ * All callbacks are optional - implement only what you need.
+ * Callback errors are caught and ignored (won't abort fill).
+ *
+ * @example
+ * ```typescript
+ * await fillForm({
+ *   form: formMarkdown,
+ *   model: 'anthropic/claude-sonnet-4-5',
+ *   enableWebSearch: true,
+ *   callbacks: {
+ *     onTurnStart: ({ turnNumber }) => console.log(`Starting turn ${turnNumber}`),
+ *     onToolStart: ({ name }) => spinner.message(`🔧 ${name}...`),
+ *     onTurnComplete: (progress) => console.log(`Turn ${progress.turnNumber} done`),
+ *   },
+ * });
+ * ```
+ */
+export interface FillCallbacks {
+  /** Called when a turn begins */
+  onTurnStart?(turn: { turnNumber: number; issuesCount: number }): void;
+
+  /** Called when a turn completes */
+  onTurnComplete?(progress: TurnProgress): void;
+
+  /** Called before a tool executes */
+  onToolStart?(call: { name: string; input: unknown }): void;
+
+  /** Called after a tool completes */
+  onToolEnd?(call: { name: string; output: unknown; durationMs: number; error?: string }): void;
+
+  /** Called before an LLM request */
+  onLlmCallStart?(call: { model: string }): void;
+
+  /** Called after an LLM response */
+  onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+}
+
+// =============================================================================
 // Programmatic Fill Types
 // =============================================================================
 
@@ -198,8 +242,8 @@ export interface FillOptions {
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
   fillMode?: FillMode;
-  /** Progress callback called after each turn */
-  onTurnComplete?: (progress: TurnProgress) => void;
+  /** Callbacks for observing form-filling execution */
+  callbacks?: FillCallbacks;
   /** AbortSignal for cancellation */
   signal?: AbortSignal;
 

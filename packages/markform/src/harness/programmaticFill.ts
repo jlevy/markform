@@ -121,6 +121,7 @@ function buildResult(
  * const result = await fillForm({
  *   form: formMarkdown,
  *   model: 'anthropic/claude-sonnet-4-5',
+ *   enableWebSearch: true,
  *   inputContext: {
  *     company_name: 'Apple Inc.',
  *   },
@@ -128,8 +129,10 @@ function buildResult(
  *     ## Additional Context
  *     ${backgroundInfo}
  *   `,
- *   onTurnComplete: (progress) => {
- *     console.log(`Turn ${progress.turnNumber}: ${progress.requiredIssuesRemaining} remaining`);
+ *   callbacks: {
+ *     onTurnComplete: (progress) => {
+ *       console.log(`Turn ${progress.turnNumber}: ${progress.requiredIssuesRemaining} remaining`);
+ *     },
  *   },
  * });
  *
@@ -279,10 +282,10 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     turnCount++;
 
     // Call progress callback (errors don't abort fill)
-    if (options.onTurnComplete) {
+    if (options.callbacks?.onTurnComplete) {
       try {
         const requiredIssues = stepResult.issues.filter((i) => i.severity === 'required');
-        options.onTurnComplete({
+        options.callbacks.onTurnComplete({
           turnNumber: turnCount,
           issuesShown: stepResult.issues.length,
           patchesApplied: patches.length,

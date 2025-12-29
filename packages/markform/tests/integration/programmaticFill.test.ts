@@ -223,7 +223,7 @@ describe('programmatic fill API - integration tests', () => {
   });
 
   describe('progress tracking', () => {
-    it('onTurnComplete receives accurate progress info', async () => {
+    it('callbacks.onTurnComplete receives accurate progress info', async () => {
       const emptyForm = loadForm('simple/simple.form.md');
       const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
 
@@ -261,8 +261,10 @@ describe('programmatic fill API - integration tests', () => {
         },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
-        onTurnComplete: (progress) => {
-          progressUpdates.push({ ...progress });
+        callbacks: {
+          onTurnComplete: (progress) => {
+            progressUpdates.push({ ...progress });
+          },
         },
       });
 
@@ -323,8 +325,10 @@ describe('programmatic fill API - integration tests', () => {
         },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
-        onTurnComplete: (progress) => {
-          progressUpdates.push(progress.turnNumber);
+        callbacks: {
+          onTurnComplete: (progress) => {
+            progressUpdates.push(progress.turnNumber);
+          },
         },
       });
 

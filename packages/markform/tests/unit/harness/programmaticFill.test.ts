@@ -231,7 +231,7 @@ describe('fillForm', () => {
   });
 
   describe('progress callback', () => {
-    it('onTurnComplete called after each turn', async () => {
+    it('callbacks.onTurnComplete called after each turn', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
 
@@ -243,8 +243,10 @@ describe('fillForm', () => {
         enableWebSearch: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
-        onTurnComplete: (progress) => {
-          progressUpdates.push({ ...progress });
+        callbacks: {
+          onTurnComplete: (progress) => {
+            progressUpdates.push({ ...progress });
+          },
         },
       });
 
@@ -264,8 +266,10 @@ describe('fillForm', () => {
         enableWebSearch: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
-        onTurnComplete: (progress) => {
-          lastProgress = progress;
+        callbacks: {
+          onTurnComplete: (progress) => {
+            lastProgress = progress;
+          },
         },
       });
 
@@ -288,8 +292,10 @@ describe('fillForm', () => {
         inputContext: { name: 'John' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
-        onTurnComplete: () => {
-          throw new Error('Callback error');
+        callbacks: {
+          onTurnComplete: () => {
+            throw new Error('Callback error');
+          },
         },
       });
 

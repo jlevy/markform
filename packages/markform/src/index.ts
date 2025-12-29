@@ -298,6 +298,7 @@ export { MockAgent, createMockAgent } from './harness/mockAgent.js';
 export { fillForm } from './harness/programmaticFill.js';
 export { resolveHarnessConfig } from './harness/harnessConfigResolver.js';
 export type {
+  FillCallbacks,
   FillOptions,
   FillResult,
   FillStatus,
