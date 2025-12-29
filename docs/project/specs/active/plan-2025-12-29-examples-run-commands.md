@@ -1,22 +1,27 @@
 # Plan: Examples & Run Commands Redesign
 
-**Date:** 2025-12-29
-**Status:** Draft
-**Scope:** CLI commands, frontmatter schema, validation
+**Date:** 2025-12-29 **Status:** Draft **Scope:** CLI commands, frontmatter schema,
+validation
 
 ## Summary
 
-Redesign the `examples` command to be copy-only, add a new `run` command for browsing and running forms, add a `status` command for form inspection per-role, and introduce `run_mode` to frontmatter schema.
+Redesign the `examples` command to be copy-only, add a new `run` command for browsing
+and running forms, add a `status` command for form inspection per-role, and introduce
+`run_mode` to frontmatter schema.
 
 ## Goals
 
 1. Separate concerns: `examples` copies, `run` executes
+
 2. Enable users to browse and run their own forms (not just bundled examples)
+
 3. Provide per-role status information via `status` command
+
 4. Explicit `run_mode` in frontmatter (no heuristics)
+
 5. Consistent global options: `--forms-dir`, `--overwrite`
 
----
+* * *
 
 ## Global CLI Options
 
@@ -30,19 +35,25 @@ Already exists. Apply consistently to all relevant commands.
 
 ### New: `--overwrite`
 
-Add as global option. When set, overwrites existing values instead of continuing.
+Add as global option.
+When set, overwrites existing values instead of continuing.
 
 ```
 --overwrite         Overwrite existing field values (default: continue/skip filled)
 ```
 
 **Implementation:**
-- Add to `cli.ts` global options
-- Maps to `fillMode: 'overwrite'` vs `'continue'`
-- Remove any confirmation prompts for pre-filled forms
-- Log info when form has pre-filled values: `ℹ Form has 5 pre-filled fields (continuing)` or `(overwriting)`
 
----
+- Add to `cli.ts` global options
+
+- Maps to `fillMode: 'overwrite'` vs `'continue'`
+
+- Remove any confirmation prompts for pre-filled forms
+
+- Log info when form has pre-filled values: `ℹ Form has 5 pre-filled fields
+  (continuing)` or `(overwriting)`
+
+* * *
 
 ## Command: `examples` (Phase 1 - Copy Only)
 
@@ -57,26 +68,33 @@ markform examples --name=foo   # Copy specific example only
 ### Flow
 
 1. If `--list`: print example list and exit
+
 2. Log: `Copying N example forms to ./forms/...`
+
 3. For each example:
+
    - Copy to `./forms/{filename}`
-   - Log: `  ✓ movie-research-deep.form.md`
+
+   - Log: ` ✓ movie-research-deep.form.md`
+
    - If file exists and no `--overwrite`: skip with warning
+
 4. Log: `Done. Run 'markform run' to try one.`
 
 ### No Confirmations
 
-Remove all `p.confirm()` prompts. Use `--overwrite` flag instead.
+Remove all `p.confirm()` prompts.
+Use `--overwrite` flag instead.
 
 ### Changes from Current
 
 | Current | New |
-|---------|-----|
+| --- | --- |
 | Prompts for confirmation | No prompts |
 | Scaffolds + runs form | Copy only |
 | Interactive flow | Removed (moved to `run`) |
 
----
+* * *
 
 ## Command: `run` (Phase 2 - Interactive Launcher)
 
@@ -91,9 +109,13 @@ markform run --limit=50        # Override menu limit
 ### Flow (No Argument)
 
 1. Scan `--forms-dir` for `*.form.md` files
+
 2. If none found: `No forms found in ./forms/. Run 'markform examples' to get started.`
+
 3. Sort: mtime desc, then alphabetically
+
 4. Limit to `MAX_FORMS_IN_MENU` (30, configurable in settings.ts)
+
 5. Display menu:
    ```
    ? Select a form to run:
@@ -101,20 +123,27 @@ markform run --limit=50        # Override menu limit
      Earnings Analysis              [research]  1d ago
      Simple Form                    [fill]      3d ago
    ```
+
 6. Parse selected form
+
 7. Determine run mode (see below)
+
 8. Execute appropriate workflow
 
 ### Flow (With Argument)
 
 1. Resolve path (relative to `--forms-dir` or absolute)
+
 2. Parse form
+
 3. Determine run mode
+
 4. Execute workflow
 
 ### Run Mode Determination
 
-**No heuristics.** Use explicit `run_mode` from frontmatter, with fallback based on field roles.
+**No heuristics.** Use explicit `run_mode` from frontmatter, with fallback based on
+field roles.
 
 ```typescript
 function determineRunMode(form: ParsedForm): RunMode | Error {
@@ -155,18 +184,19 @@ function determineRunMode(form: ParsedForm): RunMode | Error {
 ### Run Mode Execution
 
 | Mode | Action |
-|------|--------|
+| --- | --- |
 | `interactive` | Launch interactive fill (`fill -i` style) |
 | `fill` | Prompt for model, run agent fill |
 | `research` | Prompt for web-search model, run research fill |
 
----
+* * *
 
 ## Command: `status` (New)
 
 ### Purpose
 
-Display form fill status with per-role breakdown. Complementary to `inspect` (which shows all details).
+Display form fill status with per-role breakdown.
+Complementary to `inspect` (which shows all details).
 
 ### Usage
 
@@ -219,9 +249,12 @@ interface StatusReport {
 }
 ```
 
----
+* * *
 
 ## Frontmatter Schema: `run_mode`
+
+**Note:** `run_mode` has been added to `docs/markform-spec.md` as a *recommended* (not
+required) field. It's a hint for CLI tools, not enforced by the engine.
 
 ### Schema Addition
 
@@ -262,7 +295,7 @@ markform:
 `run_mode` must be consistent with form structure:
 
 | run_mode | Validation |
-|----------|------------|
+| --- | --- |
 | `interactive` | Form MUST have at least one `role="user"` field |
 | `fill` | Form MUST have at least one `role="agent"` field |
 | `research` | Form MUST have at least one `role="agent"` field |
@@ -277,10 +310,12 @@ Available roles in form: agent
 ### Parser Changes
 
 - Add `runMode` to `FormMetadata` parsing in `parse.ts`
+
 - Add `RunModeSchema` Zod schema
+
 - Validate run_mode against form structure during parse
 
----
+* * *
 
 ## Settings Additions
 
@@ -294,7 +329,7 @@ export const MAX_FORMS_IN_MENU = 30;
 export type RunMode = 'interactive' | 'fill' | 'research';
 ```
 
----
+* * *
 
 ## Info Logging
 
@@ -324,44 +359,63 @@ Or:
 ℹ Run mode: fill (inferred: all fields are agent role)
 ```
 
----
+* * *
 
 ## Test Plan
 
 ### Unit Tests
 
 1. **run_mode validation**
+
    - `run_mode=interactive` with no user fields → error
+
    - `run_mode=fill` with no agent fields → error
+
    - `run_mode=research` with no agent fields → error
+
    - Valid combinations pass
 
 2. **run mode inference**
+
    - All user fields → interactive
+
    - All agent fields → fill
+
    - All agent fields + isResearchForm → research
+
    - Mixed roles + no run_mode → error
 
 3. **status command output**
+
    - Per-role counts are accurate
+
    - Overall counts match sum of roles
+
    - suggestedCommand is correct
 
 ### Integration Tests
 
 1. **examples command**
+
    - Copies all examples to forms dir
+
    - Skips existing without --overwrite
+
    - Overwrites with --overwrite
+
    - --list prints list without copying
 
 2. **run command**
+
    - Menu shows forms sorted by mtime
+
    - Respects --limit
+
    - Direct path argument works
+
    - Errors gracefully on invalid run_mode
 
----
+* * *
 
 ## Migration
 
@@ -370,7 +424,7 @@ Or:
 Add `run_mode` to all bundled example forms:
 
 | Example | run_mode |
-|---------|----------|
+| --- | --- |
 | simple.form.md | fill |
 | movie-research-*.form.md | research |
 | earnings-analysis.form.md | research |
@@ -378,28 +432,37 @@ Add `run_mode` to all bundled example forms:
 
 ### Existing User Forms
 
-Forms without `run_mode` will use inference. If inference fails, user gets helpful error message.
+Forms without `run_mode` will use inference.
+If inference fails, user gets helpful error message.
 
----
+* * *
 
 ## Implementation Order
 
 1. **Global options**: Add `--overwrite` to cli.ts
+
 2. **Schema**: Add `RunMode` type and `runMode` to FormMetadata
+
 3. **Parser**: Parse and validate `run_mode` from frontmatter
+
 4. **Validation**: Add run_mode vs form structure validation
+
 5. **status command**: New command with per-role stats
+
 6. **examples refactor**: Make copy-only, remove interactive flow
+
 7. **run command**: New command with menu + execution
+
 8. **Migrate examples**: Add run_mode to bundled forms
+
 9. **Update docs**: README, DOCS.md
 
----
+* * *
 
 ## Open Questions (Resolved)
 
 | Question | Resolution |
-|----------|------------|
+| --- | --- |
 | Confirmations for overwrite? | No - use `--overwrite` flag |
 | Complex run_mode heuristics? | No - explicit or simple role-based inference |
 | Per-role status? | Yes - `status` command |

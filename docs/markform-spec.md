@@ -118,11 +118,19 @@ Built on [Markdoc’s tag syntax specification][markdoc-spec] and
 ---
 markform:
   spec: MF/0.1
+  run_mode: research       # optional: interactive | fill | research
   form_summary: { ... }    # derived: structure summary
   form_progress: { ... }   # derived: progress summary
   form_state: complete|incomplete|invalid|empty   # derived: overall progress state
 ---
 ```
+
+**Optional metadata fields:**
+
+- `run_mode` (*recommended*): Suggests how CLI tools should execute this form. Values:
+  `interactive` (user fills via prompts), `fill` (agent fills), or `research` (agent
+  fills with web search). When omitted, tools may infer from field roles or require
+  explicit selection. This is a hint for tooling, not enforced by the engine.
 
 **Behavioral rules (*required*):**
 
@@ -1343,6 +1351,7 @@ interface FormMetadata {
   markformVersion: string;
   roles: string[];                        // available roles for field assignment
   roleInstructions: Record<string, string>; // instructions per role
+  runMode?: 'interactive' | 'fill' | 'research';  // optional: hint for CLI tools
 }
 
 // ParsedForm: canonical internal representation returned by parseForm()
