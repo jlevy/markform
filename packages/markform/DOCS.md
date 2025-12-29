@@ -230,7 +230,45 @@ https://example.com/source1
 https://example.com/source2
 ````
 {% /url-list %}
+`````
+
+### Date Field
+
+Date value in ISO 8601 format (YYYY-MM-DD).
+
+````markdown
+{% date-field id="deadline" label="Deadline" required=true %}{% /date-field %}
+
+{% date-field id="start_date" label="Start Date" min="2020-01-01" max="2030-12-31" %}
+```value
+2024-06-15
+`````
+{% /date-field %}
+`````
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `min` | string | Minimum date (ISO 8601: YYYY-MM-DD) |
+| `max` | string | Maximum date (ISO 8601: YYYY-MM-DD) |
+
+### Year Field
+
+Integer year with optional constraints.
+
+````markdown
+{% year-field id="release_year" label="Release Year" required=true min=1888 max=2030 %}{% /year-field %}
+
+{% year-field id="founded" label="Year Founded" %}
+```value
+2015
+`````
+{% /year-field %}
 ````
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `min` | number | Minimum year (inclusive) |
+| `max` | number | Maximum year (inclusive) |
 
 ## Common Attributes
 
@@ -562,3 +600,51 @@ markform fill template.form.md --mock --mock-source filled.form.md
 5. **Assign roles**: Separate user input from agent research
 
 6. **Document thoroughly**: Use `{% instructions %}` for complex fields
+
+## Programmatic API (AI SDK Tools)
+
+When using Markform via AI SDK tools (`markform_inspect`, `markform_apply`, etc.),
+agents interact with forms through patches.
+
+### Available Tools
+
+| Tool | Description |
+| --- | --- |
+| `markform_inspect` | Get form state, structure, progress, and validation issues |
+| `markform_apply` | Apply patches to update field values (1-20 per call) |
+| `markform_export` | Export schema and values as JSON |
+| `markform_get_markdown` | Get canonical markdown representation |
+
+### Patch Operations
+
+Use `markform_apply` with an array of patches.
+Each patch has an `op` and `fieldId`.
+
+| Operation | Fields | Value Format |
+| --- | --- | --- |
+| `set_string` | string-field | `{ "op": "set_string", "fieldId": "name", "value": "Alice" }` |
+| `set_number` | number-field | `{ "op": "set_number", "fieldId": "age", "value": 25 }` |
+| `set_string_list` | string-list | `{ "op": "set_string_list", "fieldId": "tags", "items": ["a", "b"] }` |
+| `set_single_select` | single-select | `{ "op": "set_single_select", "fieldId": "rating", "selected": "high" }` |
+| `set_multi_select` | multi-select | `{ "op": "set_multi_select", "fieldId": "cats", "selected": ["a", "b"] }` |
+| `set_checkboxes` | checkboxes | `{ "op": "set_checkboxes", "fieldId": "tasks", "values": {"item1": "done"} }` |
+| `set_url` | url-field | `{ "op": "set_url", "fieldId": "website", "value": "https://..." }` |
+| `set_url_list` | url-list | `{ "op": "set_url_list", "fieldId": "sources", "items": ["https://..."] }` |
+| `set_date` | date-field | `{ "op": "set_date", "fieldId": "deadline", "value": "2024-06-15" }` |
+| `set_year` | year-field | `{ "op": "set_year", "fieldId": "founded", "value": 2015 }` |
+| `clear_field` | any | `{ "op": "clear_field", "fieldId": "name" }` |
+| `skip_field` | optional fields | `{ "op": "skip_field", "fieldId": "notes", "reason": "Not applicable" }` |
+| `abort_field` | any | `{ "op": "abort_field", "fieldId": "data", "reason": "Unable to find" }` |
+
+### Checkbox Values
+
+For `set_checkboxes`, values depend on the checkbox mode:
+
+- **multi** (default): `todo`, `done`, `incomplete`, `active`, `na`
+
+- **simple**: `todo`, `done`
+
+- **explicit**: `unfilled`, `yes`, `no`
+
+Example: `{ "op": "set_checkboxes", "fieldId": "tasks", "values": {"research": "done",
+"design": "active"} }`

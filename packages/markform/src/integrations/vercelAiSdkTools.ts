@@ -133,7 +133,8 @@ const ApplyInputSchema = z
       .max(20)
       .describe(
         'Array of patches to apply to the form. Each patch sets or clears a field value. ' +
-          'Operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, set_checkboxes, clear_field. ' +
+          'Operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, ' +
+          'set_checkboxes, set_url, set_url_list, set_date, set_year, set_table, clear_field, skip_field, abort_field. ' +
           'Example: [{ "op": "set_string", "fieldId": "name", "value": "Alice" }]',
       ),
   })
@@ -219,7 +220,8 @@ export function createMarkformTools(options: CreateMarkformToolsOptions): Markfo
       'Apply patches to update form field values. Use this after inspecting the form to set values for ' +
       'fields that need to be filled. Patches are applied as a transaction - all succeed or all fail. ' +
       'Returns the updated form state and any remaining issues. ' +
-      'Patch operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, set_checkboxes, clear_field.',
+      'Patch operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, ' +
+      'set_checkboxes, set_url, set_url_list, set_date, set_year, set_table, clear_field, skip_field, abort_field.',
     inputSchema: ApplyInputSchema,
     execute: ({ patches }) => {
       const form = sessionStore.getForm();

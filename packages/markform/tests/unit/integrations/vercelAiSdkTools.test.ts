@@ -9,7 +9,7 @@ import {
   createMarkformTools,
   MarkformSessionStore,
   type MarkformToolSet,
-} from '../../../src/integrations/ai-sdk.js';
+} from '../../../src/integrations/vercelAiSdkTools.js';
 import { parseForm } from '../../../src/engine/parse.js';
 import type { ParsedForm, Patch } from '../../../src/engine/coreTypes.js';
 

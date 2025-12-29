@@ -925,17 +925,74 @@ See API Design Principles above.
 
 #### AI SDK Integration
 
-Helper: `createMarkformTools({ sessionStore, validatorRegistry, ... })`
+Provides [Vercel AI SDK][ai-sdk-tools] compatible tools for agent-driven form filling.
 
-Returns an AI SDK `ToolSet` with:
+**Session Store:**
 
-- `markform_inspect`
+The `MarkformSessionStore` class manages form state during AI interactions:
 
-- `markform_apply`
+```ts
+class MarkformSessionStore {
+  constructor(form: ParsedForm, validatorRegistry?: ValidatorRegistry)
+  getForm(): ParsedForm
+  getValidatorRegistry(): ValidatorRegistry
+  updateForm(form: ParsedForm): void
+}
+```
 
-- `markform_export`
+**Factory Function:**
 
-- `markform_get_markdown` (optional)
+```ts
+function createMarkformTools(options: CreateMarkformToolsOptions): MarkformToolSet
+
+interface CreateMarkformToolsOptions {
+  sessionStore: MarkformSessionStore;
+  includeGetMarkdown?: boolean;  // default: true
+}
+```
+
+**Tool Definitions:**
+
+| Tool | Input | Output | Description |
+| --- | --- | --- | --- |
+| `markform_inspect` | `{}` | `InspectToolResult` | Get form state, structure, progress, and validation issues |
+| `markform_apply` | `{ patches: Patch[] }` | `ApplyToolResult` | Apply 1-20 patches to update field values |
+| `markform_export` | `{}` | `ExportToolResult` | Export schema and values as JSON |
+| `markform_get_markdown` | `{}` | `GetMarkdownToolResult` | Get canonical markdown (optional) |
+
+**Result Types:**
+
+```ts
+// All tool results follow this pattern
+interface ToolResult<T> {
+  success: boolean;
+  data: T;
+  message: string;
+}
+
+// InspectToolResult.data is InspectResult (see Layer 4)
+// ApplyToolResult.data is ApplyResult (see Layer 4)
+// ExportToolResult.data is { schema: FormSchema; values: Record<Id, FieldResponse> }
+// GetMarkdownToolResult.data is { markdown: string }
+```
+
+**Usage Example:**
+
+```ts
+import { parseForm } from 'markform';
+import { createMarkformTools, MarkformSessionStore } from 'markform/ai-sdk';
+import { generateText } from 'ai';
+
+const form = parseForm(markdownContent);
+const store = new MarkformSessionStore(form);
+const tools = createMarkformTools({ sessionStore: store });
+
+const { text } = await generateText({
+  model: openai('gpt-4'),
+  tools,
+  prompt: 'Fill out this form...',
+});
+```
 
 #### MCP Server Integration (MF/0.2)
 
@@ -1168,7 +1225,7 @@ Deliverable: `cli/commands/*`
 
 Tool set using AI SDK `tool()` + Zod input schemas
 
-Deliverable: `integrations/ai-sdk.ts`
+Deliverable: `integrations/vercelAiSdkTools.ts`
 
 ### 10) MCP server mode (MF/0.2)
 

@@ -33,7 +33,7 @@ import { fileURLToPath } from 'node:url';
 import { parseForm } from '../src/engine/parse.js';
 import { serializeSession } from '../src/engine/session.js';
 import type { SessionTranscript, SessionTurn, Patch } from '../src/engine/coreTypes.js';
-import { createMarkformTools, MarkformSessionStore } from '../src/integrations/ai-sdk.js';
+import { createMarkformTools, MarkformSessionStore } from '../src/integrations/vercelAiSdkTools.js';
 
 // Get the directory of this script
 const __filename = fileURLToPath(import.meta.url);
