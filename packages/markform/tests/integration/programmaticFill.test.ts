@@ -42,6 +42,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: emptyForm,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: {
           // Pre-fill user fields that MockAgent won't fill
           name: 'Alice Johnson',
@@ -90,6 +91,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: emptyForm,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -131,6 +133,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: emptyForm,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -169,6 +172,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: 'not a valid markform document',
         model: 'mock/model',
+        enableWebSearch: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -184,6 +188,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: emptyForm,
         model: 'nonexistent/provider-model',
+        enableWebSearch: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -202,6 +207,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: emptyForm,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: {
           nonexistent_field: 'some value',
         },
@@ -236,6 +242,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: emptyForm,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -288,6 +295,7 @@ describe('programmatic fill API - integration tests', () => {
       const result = await fillForm({
         form: emptyForm,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',

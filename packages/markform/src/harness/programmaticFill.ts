@@ -226,7 +226,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       systemPromptAddition: options.systemPromptAddition,
       targetRole: targetRoles[0] ?? AGENT_ROLE,
       provider,
-      enableWebSearch: true,
+      enableWebSearch: options.enableWebSearch,
+      additionalTools: options.additionalTools,
     });
 
   // 5. Run harness loop

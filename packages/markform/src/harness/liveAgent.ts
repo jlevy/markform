@@ -47,6 +47,7 @@ export class LiveAgent implements Agent {
   private provider?: string;
   private enableWebSearch: boolean;
   private webSearchTools: Record<string, Tool> | null = null;
+  private additionalTools: Record<string, Tool>;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -54,7 +55,8 @@ export class LiveAgent implements Agent {
     this.systemPromptAddition = config.systemPromptAddition;
     this.targetRole = config.targetRole ?? AGENT_ROLE;
     this.provider = config.provider;
-    this.enableWebSearch = config.enableWebSearch ?? true;
+    this.enableWebSearch = config.enableWebSearch;
+    this.additionalTools = config.additionalTools ?? {};
 
     // Eagerly load web search tools to enable early logging
     if (this.enableWebSearch && this.provider) {
@@ -71,7 +73,10 @@ export class LiveAgent implements Agent {
     if (this.webSearchTools) {
       tools.push(...Object.keys(this.webSearchTools));
     }
-    return tools;
+    // Add custom tool names (may overlap with web search if replacing)
+    tools.push(...Object.keys(this.additionalTools));
+    // Dedupe in case custom tools replace built-in
+    return [...new Set(tools)];
   }
 
   /**
@@ -121,10 +126,11 @@ export class LiveAgent implements Agent {
       inputSchema: zodSchema(patchesSchema),
     };
 
-    // Combine all tools
+    // Combine all tools (custom tools win on name collision)
     const tools: Record<string, Tool> = {
       generatePatches: generatePatchesTool,
       ...this.webSearchTools,
+      ...this.additionalTools,
     };
 
     // Call the model (stateless - full context provided each turn)

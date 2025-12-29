@@ -281,7 +281,7 @@ async function runAgentFill(
 
   // Create harness and agent
   const harness = createHarness(form, harnessConfig);
-  const agent = createLiveAgent({ model, provider, targetRole: AGENT_ROLE });
+  const agent = createLiveAgent({ model, provider, targetRole: AGENT_ROLE, enableWebSearch: true });
 
   // Run harness loop with verbose output
   p.log.step(pc.bold('Agent fill in progress...'));

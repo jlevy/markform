@@ -8,7 +8,7 @@
  * - modelResolver.ts: ProviderName, ParsedModelId, ResolvedModel, ProviderInfo
  */
 
-import type { LanguageModel } from 'ai';
+import type { LanguageModel, Tool } from 'ai';
 
 import type { FillMode, FieldValue, InspectIssue, ParsedForm, Patch } from '../engine/coreTypes.js';
 import type { InputContext } from '../engine/valueCoercion.js';
@@ -101,8 +101,35 @@ export interface LiveAgentConfig {
   targetRole?: string;
   /** Provider name (needed for web search tool selection) */
   provider?: string;
-  /** Enable web search for providers that support it (default: true) */
-  enableWebSearch?: boolean;
+
+  /**
+   * Enable provider web search tools.
+   *
+   * **Required** — must explicitly choose to avoid accidental tool exposure.
+   *
+   * @example
+   * ```typescript
+   * enableWebSearch: true   // Use native provider web search
+   * enableWebSearch: false  // No web search (use additionalTools for custom)
+   * ```
+   */
+  enableWebSearch: boolean;
+
+  /**
+   * Additional custom tools to include.
+   *
+   * Tools are merged with enabled built-in tools.
+   * If a custom tool has the same name as a built-in tool, the custom tool wins.
+   *
+   * @example
+   * ```typescript
+   * additionalTools: {
+   *   web_search: myCustomSearchTool,  // Replace native
+   *   lookup_database: myDbTool,       // Add new capability
+   * }
+   * ```
+   */
+  additionalTools?: Record<string, Tool>;
 }
 
 // =============================================================================
@@ -175,6 +202,22 @@ export interface FillOptions {
   onTurnComplete?: (progress: TurnProgress) => void;
   /** AbortSignal for cancellation */
   signal?: AbortSignal;
+
+  /**
+   * Enable provider web search tools.
+   *
+   * **Required** — must explicitly choose to avoid accidental tool exposure.
+   */
+  enableWebSearch: boolean;
+
+  /**
+   * Additional custom tools for the agent.
+   *
+   * Tools are merged with enabled built-in tools.
+   * If a custom tool has the same name as a built-in tool, the custom tool wins.
+   */
+  additionalTools?: Record<string, Tool>;
+
   /**
    * TEST ONLY: Override agent for testing with MockAgent.
    * When provided, model is ignored and this agent is used instead.
