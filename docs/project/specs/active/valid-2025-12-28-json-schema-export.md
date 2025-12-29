@@ -14,7 +14,11 @@ This validation spec documents the testing performed and manual validation neede
 
 ### Unit Testing
 
-30 unit tests were created in `tests/unit/jsonSchema.test.ts` covering:
+32 unit tests in `tests/unit/jsonSchema.test.ts` covering:
+
+**Golden Schema Snapshot Test:**
+- Compares generated schema against `examples/simple/simple.schema.json` snapshot
+- Uses file-based test data from `simple.form.md` (not hardcoded inline form)
 
 **Form-Level Schema Generation:**
 - Generates valid JSON Schema with `$schema` and `$id`
@@ -46,19 +50,36 @@ This validation spec documents the testing performed and manual validation neede
 
 ### Integration and End-to-End Testing
 
-- All 704 tests pass including the 30 new JSON Schema tests
+- All 710 tests pass including the 32 JSON Schema tests
 - CLI command tested manually during development
 - Pre-commit hooks pass (typecheck, lint, format, full test suite)
 
+### Golden Test Refactoring (Latest Update)
+
+The JSON Schema testing was refactored to use file-based golden tests:
+
+1. **Schema Snapshot Test** - `tests/unit/jsonSchema.test.ts` now includes a golden schema comparison test that compares the generated schema against `examples/simple/simple.schema.json`
+
+2. **File-Based Test Data** - Replaced 118-line hardcoded `TEST_FORM_MD` with the actual `simple.form.md` example form, providing:
+   - Single source of truth for test data
+   - Consistent test data across session and schema tests
+   - Full diffability of schema changes in code review
+
+3. **Schema Regeneration Script** - Extended `scripts/regen-golden-sessions.ts` to also regenerate schema snapshots:
+   - Run `pnpm --filter markform test:golden:regen` to regenerate both session transcripts AND schema snapshots
+   - New `SCHEMAS` configuration array for forms with schema snapshots
+
+4. **Documentation Updated** - `docs/development.md` now documents the schema regeneration process alongside session transcript regeneration
+
 ### Not Implemented (From Plan Spec)
 
-The following items from the plan spec were not implemented in this iteration:
+The following items from the plan spec were not implemented:
 
-1. **Golden tests with Ajv meta-validation** - The plan specified adding `ajv` and `ajv-formats` dev dependencies and creating schema golden tests. This was not implemented as the unit tests provide comprehensive coverage.
+1. **Ajv meta-validation** - Not added as the snapshot comparison provides equivalent coverage with simpler tooling
 
-2. **DOCS.md update** - Documentation update was not performed.
+2. **DOCS.md update** - Documentation update was not performed (the CLI command is discoverable via `--help`)
 
-3. **zod-to-json-schema dependency** - Not needed as the implementation converts from `ParsedForm` directly.
+3. **zod-to-json-schema dependency** - Not needed as the implementation converts from `ParsedForm` directly
 
 ## Manual Testing Needed
 
