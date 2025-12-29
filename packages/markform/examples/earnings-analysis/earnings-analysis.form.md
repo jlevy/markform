@@ -423,10 +423,11 @@ Check what you actually used. Fill the log as you go.
 Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tier, Link or file path, Key takeaways. At least 3 sources required.
 {% /instructions %}
 
-{% table-field id="sources_accessed" label="Sources Accessed" required=true minRows=3 %}
+{% table-field id="sources_accessed" label="Sources Accessed" required=true minRows=3
+   columnIds=["date", "source", "type", "link", "takeaways"]
+   columnTypes=["date", "string", "string", "url", "string"] %}
 | Date | Source | Type | Link | Takeaways |
-| date | string | string | url | string |
-|----|----|----|----|----|
+|------|--------|------|------|-----------|
 {% /table-field %}
 
 {% /field-group %}
@@ -496,10 +497,11 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% field-group id="sources_experts" title="Q2.5 Key Experts and Analysts" %}
 
-{% table-field id="experts_list" label="Key Experts" minRows=0 %}
+{% table-field id="experts_list" label="Key Experts" minRows=0
+   columnIds=["name", "angle", "lead_time", "hit_rate", "tier"]
+   columnTypes=["string", "string", "string", "string", "string"] %}
 | Name | Angle | Lead Time | Hit Rate | Tier |
-| string | string | string | string | string |
-|----|----|----|----|----|
+|------|-------|-----------|----------|------|
 {% /table-field %}
 
 {% instructions ref="experts_list" %}

@@ -184,10 +184,11 @@ Sources:
 Example: "Democrat; donated $50K to Obama 2012 per FEC; publicly endorsed Biden 2020"
 {% /instructions %}
 
-{% table-field id="causes_activism" label="Causes & Activism" %}
+{% table-field id="causes_activism" label="Causes & Activism"
+   columnIds=["cause", "role_involvement", "source"]
+   columnTypes=["string", "string", "string"] %}
 | Cause | Role/Involvement | Source |
-| string | string | string |
-|----|----|----|
+|-------|------------------|--------|
 {% /table-field %}
 
 {% instructions ref="causes_activism" %}
@@ -195,10 +196,11 @@ Example: Climate Change | Founded Earth Alliance with DiCaprio | earthalliance.o
 Sources: NNDB.com, Charity Navigator (for their foundations), Wikipedia, press.
 {% /instructions %}
 
-{% table-field id="education" label="Education History" %}
+{% table-field id="education" label="Education History"
+   columnIds=["institution", "degree_program", "years", "notes"]
+   columnTypes=["string", "string", "string", "string"] %}
 | Institution | Degree/Program | Years | Notes |
-| string | string | string | string |
-|----|----|----|----|
+|-------------|----------------|-------|-------|
 {% /table-field %}
 
 {% instructions ref="education" %}
@@ -229,20 +231,22 @@ Note if parents were also in entertainment industry.
 Sources: Wikipedia, IMDb bio.
 {% /instructions %}
 
-{% table-field id="siblings" label="Siblings" %}
+{% table-field id="siblings" label="Siblings"
+   columnIds=["name", "relationship", "notable_info"]
+   columnTypes=["string", "string", "string"] %}
 | Name | Relationship | Notable Info |
-| string | string | string |
-|----|----|----|
+|------|--------------|--------------|
 {% /table-field %}
 
 {% instructions ref="siblings" %}
 Example: Jake Gyllenhaal | Brother | Actor, Oscar nominee
 {% /instructions %}
 
-{% table-field id="marriages" label="Marriage History" %}
+{% table-field id="marriages" label="Marriage History"
+   columnIds=["spouse_name", "wedding_date", "divorce_date", "duration", "source"]
+   columnTypes=["string", "date", "string", "string", "string"] %}
 | Spouse Name | Wedding Date | Divorce Date | Duration | Source |
-| string | date | string | string | string |
-|----|----|----|----|----|
+|-------------|--------------|--------------|----------|--------|
 {% /table-field %}
 
 {% instructions ref="marriages" %}
@@ -251,10 +255,11 @@ Example: Brad Pitt | 2000-07-29 | 2005-01-07 | 4.5 years | Court records
 Sources: Wikipedia, WhosDatedWho, court records for divorces.
 {% /instructions %}
 
-{% table-field id="children" label="Children" %}
+{% table-field id="children" label="Children"
+   columnIds=["name", "birth_year", "other_parent", "notes"]
+   columnTypes=["string", "year", "string", "string"] %}
 | Name | Birth Year | Other Parent | Notes |
-| string | year | string | string |
-|----|----|----|----|
+|------|------------|--------------|-------|
 {% /table-field %}
 
 {% instructions ref="children" %}
@@ -262,10 +267,11 @@ Example: Shiloh Jolie-Pitt | 2006 | Brad Pitt | Biological child
 Note: Some celebrities keep children very private; respect when info is intentionally hidden.
 {% /instructions %}
 
-{% table-field id="notable_relationships" label="Notable Dating History" %}
+{% table-field id="notable_relationships" label="Notable Dating History"
+   columnIds=["partner_name", "dates", "reliability"]
+   columnTypes=["string", "string", "string"] %}
 | Partner Name | Dates | Reliability |
-| string | string | string |
-|----|----|----|
+|--------------|-------|-------------|
 {% /table-field %}
 
 {% instructions ref="notable_relationships" %}
@@ -473,10 +479,11 @@ Example: "$400M-$450M (CelebrityNetWorth, 2024; Forbes estimates $380M)"
 Note: Always include source and date; these estimates vary wildly.
 {% /instructions %}
 
-{% table-field id="known_salaries" label="Known Salary/Earnings" %}
+{% table-field id="known_salaries" label="Known Salary/Earnings"
+   columnIds=["project", "amount", "year", "source"]
+   columnTypes=["string", "string", "year", "string"] %}
 | Project | Amount | Year | Source |
-| string | string | year | string |
-|----|----|----|----|
+|---------|--------|------|--------|
 {% /table-field %}
 
 {% instructions ref="known_salaries" %}
@@ -494,10 +501,11 @@ Example: "2023: #8, $59M | 2022: #12, $42M"
 Source: Forbes.com Celebrity 100 lists.
 {% /instructions %}
 
-{% table-field id="business_ventures" label="Business Ventures & Companies" %}
+{% table-field id="business_ventures" label="Business Ventures & Companies"
+   columnIds=["company", "role", "industry", "status", "source"]
+   columnTypes=["string", "string", "string", "string", "string"] %}
 | Company | Role | Industry | Status | Source |
-| string | string | string | string | string |
-|----|----|----|----|----|
+|---------|------|----------|--------|--------|
 {% /table-field %}
 
 {% instructions ref="business_ventures" %}
@@ -506,10 +514,11 @@ Example: Honest Company | Co-founder | Consumer goods | IPO 2021, now private | 
 Sources: Forbes, SEC EDGAR (for public companies), Crunchbase, press releases.
 {% /instructions %}
 
-{% table-field id="endorsements" label="Major Endorsements & Sponsorships" %}
+{% table-field id="endorsements" label="Major Endorsements & Sponsorships"
+   columnIds=["brand", "type", "value", "years", "source"]
+   columnTypes=["string", "string", "string", "string", "string"] %}
 | Brand | Type | Value | Years | Source |
-| string | string | string | string | string |
-|----|----|----|----|----|
+|-------|------|-------|-------|--------|
 {% /table-field %}
 
 {% instructions ref="endorsements" %}
@@ -518,10 +527,11 @@ Example: Chanel No. 5 | Global Ambassador | $5M/year | 2020-present | Variety
 Sources: Press releases, Variety/THR business coverage, social media sponsored posts.
 {% /instructions %}
 
-{% table-field id="real_estate" label="Known Real Estate Holdings" %}
+{% table-field id="real_estate" label="Known Real Estate Holdings"
+   columnIds=["property", "location", "price", "year", "source"]
+   columnTypes=["string", "string", "string", "year", "string"] %}
 | Property | Location | Price | Year | Source |
-| string | string | string | year | string |
-|----|----|----|----|----|
+|----------|----------|-------|------|--------|
 {% /table-field %}
 
 {% instructions ref="real_estate" %}
@@ -546,10 +556,11 @@ Sources: The Smoking Gun (legal docs), court records (PACER for federal, state c
 Note tabloid vs verified sources clearly.
 {% /description %}
 
-{% table-field id="legal_cases" label="Legal Cases & Lawsuits" %}
+{% table-field id="legal_cases" label="Legal Cases & Lawsuits"
+   columnIds=["case_type", "year", "parties", "outcome", "source"]
+   columnTypes=["string", "year", "string", "string", "string"] %}
 | Case Type | Year | Parties | Outcome | Source |
-| string | year | string | string | string |
-|----|----|----|----|----|
+|-----------|------|---------|---------|--------|
 {% /table-field %}
 
 {% instructions ref="legal_cases" %}
@@ -559,10 +570,11 @@ Example: Defamation | 2022 | Depp v. Heard | Depp won $10.35M | Fairfax County C
 Sources: PACER, state court record searches, The Smoking Gun, Court Listener.
 {% /instructions %}
 
-{% table-field id="arrests_charges" label="Arrests & Criminal Charges" %}
+{% table-field id="arrests_charges" label="Arrests & Criminal Charges"
+   columnIds=["year", "charge", "location", "outcome", "source"]
+   columnTypes=["year", "string", "string", "string", "string"] %}
 | Year | Charge | Location | Outcome | Source |
-| year | string | string | string | string |
-|----|----|----|----|----|
+|------|--------|----------|---------|--------|
 {% /table-field %}
 
 {% instructions ref="arrests_charges" %}
@@ -571,10 +583,11 @@ Example: 2007 | DUI | Los Angeles | Plea deal, probation | TMZ, court records
 Sources: The Smoking Gun (has mugshots/records), court records, news archives.
 {% /instructions %}
 
-{% table-field id="controversies" label="Public Controversies" %}
+{% table-field id="controversies" label="Public Controversies"
+   columnIds=["year", "issue", "description", "outcome", "reliability"]
+   columnTypes=["year", "string", "string", "string", "string"] %}
 | Year | Issue | Description | Outcome | Reliability |
-| year | string | string | string | string |
-|----|----|----|----|----|
+|------|-------|-------------|---------|-------------|
 {% /table-field %}
 
 {% instructions ref="controversies" %}
@@ -729,10 +742,11 @@ Notable interviews and media appearances.
 Sources: YouTube (talk show archives), podcast platforms, major publications.
 {% /description %}
 
-{% table-field id="notable_interviews" label="Notable Interviews" %}
+{% table-field id="notable_interviews" label="Notable Interviews"
+   columnIds=["outlet_show", "date", "topic", "url"]
+   columnTypes=["string", "string", "string", "url"] %}
 | Outlet/Show | Date | Topic | URL |
-| string | string | string | url |
-|----|----|----|----|
+|-------------|------|-------|-----|
 {% /table-field %}
 
 {% instructions ref="notable_interviews" %}
@@ -741,10 +755,11 @@ Example: WTF with Marc Maron | 2019-06 | Candid about childhood trauma | https:/
 Prioritize: Long-form podcasts (Maron, Armchair Expert, Fresh Air), major magazine profiles.
 {% /instructions %}
 
-{% table-field id="talk_show_appearances" label="Notable Talk Show Appearances" %}
+{% table-field id="talk_show_appearances" label="Notable Talk Show Appearances"
+   columnIds=["show", "date", "moment", "url"]
+   columnTypes=["string", "string", "string", "url"] %}
 | Show | Date | Moment | URL |
-| string | string | string | url |
-|----|----|----|----|
+|------|------|--------|-----|
 {% /table-field %}
 
 {% instructions ref="talk_show_appearances" %}
@@ -896,10 +911,11 @@ Source: IMDb Trivia section, interviews, biographies.
 Prioritize: Surprising facts, near-misses on iconic roles, unusual skills, celebrity connections.
 {% /instructions %}
 
-{% table-field id="notable_quotes" label="Notable Quotes" %}
+{% table-field id="notable_quotes" label="Notable Quotes"
+   columnIds=["quote", "context_source"]
+   columnTypes=["string", "string"] %}
 | Quote | Context/Source |
-| string | string |
-|----|----|
+|-------|----------------|
 {% /table-field %}
 
 {% instructions ref="notable_quotes" %}

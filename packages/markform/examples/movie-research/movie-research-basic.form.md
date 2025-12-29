@@ -151,10 +151,11 @@ Metascore (0-100 scale). Leave empty if not available.
 Brief plot summary in 1-2 sentences, no spoilers.
 {% /instructions %}
 
-{% table-field id="notable_awards" label="Notable Awards" role="agent" %}
+{% table-field id="notable_awards" label="Notable Awards" role="agent"
+   columnIds=["award", "category", "year"]
+   columnTypes=["string", "string", "year"] %}
 | Award | Category | Year |
-| string | string | year |
-|----|----|----|
+|-------|----------|------|
 {% /table-field %}
 
 {% instructions ref="notable_awards" %}

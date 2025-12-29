@@ -169,10 +169,11 @@ Most recent valuation if publicly known (e.g., "$1.5B").
 Source: Press releases, crunchbase.com, pitchbook.com.
 {% /instructions %}
 
-{% table-field id="funding_rounds" label="Funding Rounds" %}
+{% table-field id="funding_rounds" label="Funding Rounds"
+   columnIds=["round_type", "date", "amount", "lead_investors", "source_url"]
+   columnTypes=["string", "string", "string", "string", "url"] %}
 | Round Type | Date | Amount | Lead Investor(s) | Source URL |
-| string | string | string | string | url |
-|----|----|----|----|----|
+|------------|------|--------|------------------|------------|
 {% /table-field %}
 
 {% instructions ref="funding_rounds" %}
@@ -198,10 +199,11 @@ Primary market/category (e.g., "Developer Tools", "HR Tech", "FinTech - Payments
 Source: crunchbase.com categories, g2.com categories.
 {% /instructions %}
 
-{% table-field id="competitors" label="Key Competitors" minRows=0 maxRows=5 %}
+{% table-field id="competitors" label="Key Competitors" minRows=0 maxRows=5
+   columnIds=["company_name", "website", "one_liner", "funding_stage", "source_url"]
+   columnTypes=["string", "url", "string", "string", "url"] %}
 | Company Name | Website | One-liner | Funding/Stage | Source URL |
-| string | url | string | string | url |
-|----|----|----|----|----|
+|--------------|---------|-----------|---------------|------------|
 {% /table-field %}
 
 {% instructions ref="competitors" %}
@@ -301,10 +303,11 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="hacker_news_section" title="Hacker News Presence" %}
 
-{% table-field id="hn_posts" label="Notable Hacker News Posts" minRows=0 maxRows=5 %}
+{% table-field id="hn_posts" label="Notable Hacker News Posts" minRows=0 maxRows=5
+   columnIds=["title", "date", "points", "comments", "url"]
+   columnTypes=["string", "date", "number", "number", "url"] %}
 | Title | Date | Points | Comments | URL |
-| string | date | number | number | url |
-|----|----|----|----|----|
+|-------|------|--------|----------|-----|
 {% /table-field %}
 
 {% instructions ref="hn_posts" %}
@@ -323,10 +326,11 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="product_hunt_section" title="Product Hunt Presence" %}
 
-{% table-field id="ph_launches" label="Product Hunt Launches" %}
+{% table-field id="ph_launches" label="Product Hunt Launches"
+   columnIds=["product_name", "date", "upvotes", "badges", "url"]
+   columnTypes=["string", "date", "number", "string", "url"] %}
 | Product Name | Date | Upvotes | Badges | URL |
-| string | date | number | string | url |
-|----|----|----|----|----|
+|--------------|------|---------|--------|-----|
 {% /table-field %}
 
 {% instructions ref="ph_launches" %}
@@ -387,10 +391,11 @@ Example: "4.2/5 | 500 reviews | 85% CEO approval | https://glassdoor.com/..."
 Source: glassdoor.com. Provides employee sentiment and culture insights.
 {% /instructions %}
 
-{% table-field id="hiring_signals" label="Hiring Signals" %}
+{% table-field id="hiring_signals" label="Hiring Signals"
+   columnIds=["department", "roles", "notable_positions"]
+   columnTypes=["string", "string", "string"] %}
 | Department | Roles | Notable Positions |
-| string | string | string |
-|----|----|----|
+|------------|-------|-------------------|
 {% /table-field %}
 
 {% instructions ref="hiring_signals" %}
@@ -407,10 +412,11 @@ Example: "12 patents granted | NLP, recommendation systems | patents.google.com"
 Source: patents.google.com, USPTO (uspto.gov), Espacenet. Search for company name and founder names.
 {% /instructions %}
 
-{% table-field id="podcast_interviews" label="Podcast/Video Interviews" %}
+{% table-field id="podcast_interviews" label="Podcast/Video Interviews"
+   columnIds=["title", "podcast_show", "date", "url"]
+   columnTypes=["string", "string", "string", "url"] %}
 | Title | Podcast/Show | Date | URL |
-| string | string | string | url |
-|----|----|----|----|
+|-------|--------------|------|-----|
 {% /table-field %}
 
 {% instructions ref="podcast_interviews" %}
@@ -437,10 +443,11 @@ URLs used as sources for this section. One URL per line.
 
 {% field-group id="press_section" title="Notable Press Coverage" %}
 
-{% table-field id="press_coverage" label="Press Articles" minRows=0 maxRows=5 %}
+{% table-field id="press_coverage" label="Press Articles" minRows=0 maxRows=5
+   columnIds=["title", "publication", "date", "url"]
+   columnTypes=["string", "string", "date", "url"] %}
 | Title | Publication | Date | URL |
-| string | string | date | url |
-|----|----|----|----|
+|-------|-------------|------|-----|
 {% /table-field %}
 
 {% instructions ref="press_coverage" %}

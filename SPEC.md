@@ -400,14 +400,11 @@ type.
 
 | Attribute | Type | Required | Description |
 | --- | --- | --- | --- |
-| `columnIds` | string[] | Yes* | Array of snake_case column identifiers |
-| `columnLabels` | string[] | No | Array of display labels (defaults to header row or `columnIds`) |
+| `columnIds` | string[] | Yes | Array of snake_case column identifiers |
+| `columnLabels` | string[] | No | Array of display labels (backfilled from table header row if omitted) |
 | `columnTypes` | string[] | No | Array of column types (defaults to all `'string'`) |
 | `minRows` | number | No | Minimum row count (default: 0) |
 | `maxRows` | number | No | Maximum row count (default: unlimited) |
-
-*Note: `columnIds` can be omitted if column definitions are extracted from the inline
-table header row.
 
 **Column types and validation:**
 
@@ -424,15 +421,16 @@ table header row.
 columnTypes=[{type: "string", required: true}, "number", "url"]
 ```
 
-**Clean template syntax (columns from header row):**
+**Basic table-field (columnLabels backfilled from header row):**
 ```md
-{% table-field id="team" label="Team Members" %}
+{% table-field id="team" label="Team Members"
+   columnIds=["name", "title", "department"] %}
 | Name | Title | Department |
 |------|-------|------------|
 {% /table-field %}
 ```
 
-**Explicit column definition:**
+**Explicit column labels (when different from header row):**
 ```md
 {% table-field id="team" label="Team Members"
    columnIds=["name", "title", "department"]

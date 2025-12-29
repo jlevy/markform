@@ -208,10 +208,11 @@ Production countries, one per line.
 
 {% field-group id="cast_crew" title="Cast & Crew" %}
 
-{% table-field id="lead_cast" label="Lead Cast" role="agent" minRows=1 maxRows=10 %}
+{% table-field id="lead_cast" label="Lead Cast" role="agent" minRows=1 maxRows=10
+   columnIds=["actor_name", "character_name"]
+   columnTypes=["string", "string"] %}
 | Actor Name | Character Name |
-| string | string |
-|----|----|
+|------------|----------------|
 {% /table-field %}
 
 {% instructions ref="lead_cast" %}
@@ -452,10 +453,11 @@ Major themes explored in the film (e.g., "redemption", "family", "identity", "wa
 Brief plot summary in 1-2 sentences, no spoilers.
 {% /instructions %}
 
-{% table-field id="notable_awards" label="Notable Awards" role="agent" %}
+{% table-field id="notable_awards" label="Notable Awards" role="agent"
+   columnIds=["award", "category", "year"]
+   columnTypes=["string", "string", "year"] %}
 | Award | Category | Year |
-| string | string | year |
-|----|----|----|
+|-------|----------|------|
 {% /table-field %}
 
 {% instructions ref="notable_awards" %}
@@ -463,10 +465,11 @@ Major awards won.
 Example: Oscar | Best Picture | 1995
 {% /instructions %}
 
-{% table-field id="notable_quotes" label="Notable Critic Quotes" role="agent" maxRows=3 %}
+{% table-field id="notable_quotes" label="Notable Critic Quotes" role="agent" maxRows=3
+   columnIds=["quote", "critic", "publication"]
+   columnTypes=["string", "string", "string"] %}
 | Quote | Critic | Publication |
-| string | string | string |
-|----|----|----|
+|-------|--------|-------------|
 {% /table-field %}
 
 {% instructions ref="notable_quotes" %}

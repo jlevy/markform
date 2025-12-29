@@ -10,6 +10,7 @@ export {
   parseRawTable,
   parseInlineTable,
   extractColumnsFromTable,
+  extractTableHeaderLabels,
   type ParseTableResult,
   type ParsedRawTable,
   type ExtractColumnsResult,
