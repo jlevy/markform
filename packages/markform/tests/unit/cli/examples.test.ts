@@ -123,7 +123,7 @@ describe('examples registry', () => {
       const content = loadExampleContent('earnings-analysis');
       expect(content).toBeTruthy();
       expect(content).toContain('markform:');
-      expect(content).toContain('company_analysis');
+      expect(content).toContain('earnings_analysis');
     });
 
     it('throws for unknown example', () => {
@@ -144,7 +144,7 @@ describe('examples registry', () => {
       const content = loadExampleContent('earnings-analysis');
       const form = parseForm(content);
 
-      expect(form.schema.id).toBe('company_analysis');
+      expect(form.schema.id).toBe('earnings_analysis');
       expect(form.schema.groups.length).toBeGreaterThan(0);
     });
 
