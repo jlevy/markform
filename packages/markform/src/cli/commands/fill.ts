@@ -66,6 +66,7 @@ import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
 import { formatTurnIssues } from '../lib/formatting.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
+import { createCliToolCallbacks } from '../lib/fillCallbacks.js';
 
 /**
  * Format session transcript for console output.
@@ -347,6 +348,10 @@ export function registerFillCommand(program: Command): void {
           let agentProvider: string | undefined;
           let agentModelName: string | undefined;
 
+          // Mutable spinner reference for tool callbacks (updated each turn)
+          // Using explicit type to avoid narrowing issues in closures
+          let currentSpinner = null as SpinnerHandle | null;
+
           if (options.mock) {
             // Mock agent requires a completed form as source
             mockPath = resolve(options.mockSource!);
@@ -375,6 +380,20 @@ export function registerFillCommand(program: Command): void {
               systemPrompt = await readFile(promptPath);
             }
 
+            // Create callbacks that reference the mutable spinner
+            // Callbacks update spinner during tool execution (especially web search)
+            const callbacks = createCliToolCallbacks(
+              {
+                // Proxy to current spinner (may be null between turns)
+                message: (msg) => currentSpinner?.message(msg),
+                update: (context) => currentSpinner?.update(context),
+                stop: (msg) => currentSpinner?.stop(msg),
+                error: (msg) => currentSpinner?.error(msg),
+                getElapsedMs: () => currentSpinner?.getElapsedMs() ?? 0,
+              },
+              ctx,
+            );
+
             // Pass first target role to agent (for instruction lookup)
             const primaryRole = targetRoles[0] === '*' ? AGENT_ROLE : targetRoles[0];
             const liveAgent = createLiveAgent({
@@ -383,6 +402,7 @@ export function registerFillCommand(program: Command): void {
               systemPromptAddition: systemPrompt,
               targetRole: primaryRole,
               enableWebSearch: true,
+              callbacks,
             });
             agent = liveAgent;
 
@@ -429,6 +449,8 @@ export function registerFillCommand(program: Command): void {
                 model: agentModelName,
                 turnNumber: stepResult.turnNumber,
               });
+              // Set mutable reference so tool callbacks can update spinner
+              currentSpinner = spinner;
             }
 
             // Generate patches from agent
@@ -440,8 +462,10 @@ export function registerFillCommand(program: Command): void {
                 harnessConfig.maxPatchesPerTurn,
               );
               spinner?.stop();
+              currentSpinner = null; // Clear reference after spinner stops
             } catch (error) {
               spinner?.error('LLM call failed');
+              currentSpinner = null; // Clear reference on error
               throw error;
             }
             const { patches, stats } = response;
