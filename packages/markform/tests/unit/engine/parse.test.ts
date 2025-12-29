@@ -1675,6 +1675,232 @@ markform:
     });
   });
 
+  describe('fields outside field-groups (markform-371)', () => {
+    it('parses field directly under form (outside field-group)', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field kind="string" id="movie" label="Favorite Movie" %}{% /field %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.schema.groups).toHaveLength(1);
+      expect(result.schema.groups[0]?.implicit).toBe(true);
+      expect(result.schema.groups[0]?.children).toHaveLength(1);
+      expect(result.schema.groups[0]?.children[0]?.id).toBe('movie');
+      expect(result.idIndex.get('movie')?.nodeType).toBe('field');
+    });
+
+    it('allows instructions to reference ungrouped field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field kind="string" id="movie" label="Favorite Movie" %}{% /field %}
+
+{% instructions ref="movie" %}
+Please enter your favorite movie.
+{% /instructions %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.docs).toHaveLength(1);
+      expect(result.docs[0]?.ref).toBe('movie');
+      expect(result.docs[0]?.tag).toBe('instructions');
+    });
+
+    it('allows instructions before ungrouped field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% instructions ref="movie" %}
+Please enter your favorite movie.
+{% /instructions %}
+
+{% field kind="string" id="movie" label="Favorite Movie" %}{% /field %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.docs).toHaveLength(1);
+      expect(result.docs[0]?.ref).toBe('movie');
+      expect(result.schema.groups[0]?.children[0]?.id).toBe('movie');
+    });
+
+    it('parses multiple ungrouped fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% field kind="number" id="age" label="Age" %}{% /field %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.schema.groups).toHaveLength(1);
+      expect(result.schema.groups[0]?.implicit).toBe(true);
+      expect(result.schema.groups[0]?.children).toHaveLength(2);
+      expect(result.orderIndex).toContain('name');
+      expect(result.orderIndex).toContain('age');
+    });
+
+    it('handles mix of grouped and ungrouped fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field kind="string" id="ungrouped1" label="Ungrouped 1" %}{% /field %}
+
+{% field-group id="g1" title="Group 1" %}
+{% field kind="string" id="grouped" label="Grouped" %}{% /field %}
+{% /field-group %}
+
+{% field kind="string" id="ungrouped2" label="Ungrouped 2" %}{% /field %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      // Should have the explicit group and an implicit group for ungrouped fields
+      expect(result.schema.groups.length).toBeGreaterThanOrEqual(2);
+
+      // Check explicit group
+      const explicitGroup = result.schema.groups.find((g) => g.id === 'g1');
+      expect(explicitGroup).toBeDefined();
+      expect(explicitGroup?.implicit).toBeUndefined();
+
+      // Check implicit group
+      const implicitGroup = result.schema.groups.find((g) => g.implicit === true);
+      expect(implicitGroup).toBeDefined();
+      expect(implicitGroup?.children.length).toBe(2);
+
+      // All fields should be in idIndex
+      expect(result.idIndex.get('ungrouped1')?.nodeType).toBe('field');
+      expect(result.idIndex.get('grouped')?.nodeType).toBe('field');
+      expect(result.idIndex.get('ungrouped2')?.nodeType).toBe('field');
+    });
+
+    it('allows description and documentation blocks for ungrouped fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field kind="string" id="movie" label="Favorite Movie" %}{% /field %}
+
+{% description ref="movie" %}
+Your all-time favorite film.
+{% /description %}
+
+{% documentation ref="movie" %}
+This field is used for analytics.
+{% /documentation %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.docs).toHaveLength(2);
+      expect(result.docs.find((d) => d.tag === 'description')?.ref).toBe('movie');
+      expect(result.docs.find((d) => d.tag === 'documentation')?.ref).toBe('movie');
+    });
+
+    it('parses ungrouped select field with options', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field kind="single_select" id="rating" label="Rating" %}
+- [ ] Good {% #good %}
+- [ ] Bad {% #bad %}
+{% /field %}
+
+{% instructions ref="rating" %}
+Rate your experience.
+{% /instructions %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.schema.groups[0]?.implicit).toBe(true);
+      expect(result.idIndex.get('rating')?.nodeType).toBe('field');
+      expect(result.idIndex.get('rating.good')?.nodeType).toBe('option');
+      expect(result.idIndex.get('rating.bad')?.nodeType).toBe('option');
+      expect(result.docs[0]?.ref).toBe('rating');
+    });
+
+    it('rejects _default as user-defined ID when ungrouped fields exist', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="_default" title="My Group" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /field-group %}
+
+{% field kind="string" id="ungrouped" label="Ungrouped" %}{% /field %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(
+        /ID '_default' is reserved for implicit field groups/,
+      );
+    });
+
+    it('allows _default as user-defined ID when no ungrouped fields', () => {
+      // _default is only reserved when there are ungrouped fields
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="_default" title="My Group" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      expect(result.schema.groups[0]?.id).toBe('_default');
+      expect(result.schema.groups[0]?.implicit).toBeUndefined();
+    });
+  });
+
   describe('unified field syntax error cases', () => {
     it('throws error for field tag without kind attribute', () => {
       const markdown = `---
