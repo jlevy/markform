@@ -112,6 +112,9 @@ This is a **documentation-only change**. No code behavior changes.
 | **Scalar Type** | Single atomic value (optionally format-constrained). | `string`, `url`, `date`, `year` |
 | **Column Type** | Type of a cell in a table (subset of scalar types). | `string`, `number`, `url` |
 
+**Naming convention:** Field kind values use `snake_case` (e.g., `single_select`,
+`string_list`, `url_list`). This follows the general ID conventions in SPEC.md.
+
 ### Field Kind Categories
 
 The following taxonomy diagram is normative and should appear in SPEC.md exactly as
