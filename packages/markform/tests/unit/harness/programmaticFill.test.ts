@@ -73,6 +73,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model', // ignored when _testAgent provided
+        enableWebSearch: false,
         inputContext: { name: 'John Doe' }, // Pre-fill user field
         targetRoles: ['user', 'agent'], // Target both roles
         _testAgent: mockAgent,
@@ -90,6 +91,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -105,6 +107,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -122,6 +125,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -138,6 +142,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -155,6 +160,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'Pre-filled Name' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -171,6 +177,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { nonexistent: 'value' },
         _testAgent: mockAgent,
       });
@@ -189,6 +196,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: { complex: 'object' } },
         _testAgent: mockAgent,
       });
@@ -207,6 +215,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: {
           name: 123, // number will be coerced to string with warning
         },
@@ -231,6 +240,7 @@ describe('fillForm', () => {
       await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         onTurnComplete: (progress) => {
@@ -251,6 +261,7 @@ describe('fillForm', () => {
       await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         onTurnComplete: (progress) => {
@@ -273,6 +284,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -297,6 +309,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -318,6 +331,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'Pre-filled' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -347,6 +361,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         inputContext: { name: 'John' },
         _testAgent: cancellingAgent,
         signal: controller.signal,
@@ -381,6 +396,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         maxTurns: 2,
         _testAgent: emptyMockAgent,
       });
@@ -402,6 +418,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'mock/model',
+        enableWebSearch: false,
         maxTurns: 1,
         _testAgent: emptyMockAgent,
       });
@@ -417,6 +434,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: 'not a valid form',
         model: 'mock/model',
+        enableWebSearch: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -432,6 +450,7 @@ describe('fillForm', () => {
       const result = await fillForm({
         form: SIMPLE_FORM,
         model: 'invalid/model',
+        enableWebSearch: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -460,6 +479,7 @@ Original Name
       const result = await fillForm({
         form: formWithName,
         model: 'mock/model',
+        enableWebSearch: false,
         fillMode: 'continue',
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,

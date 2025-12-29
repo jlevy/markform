@@ -382,6 +382,7 @@ export function registerFillCommand(program: Command): void {
               provider,
               systemPromptAddition: systemPrompt,
               targetRole: primaryRole,
+              enableWebSearch: true,
             });
             agent = liveAgent;
 
