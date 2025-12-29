@@ -1,23 +1,57 @@
 # Markform
 
-***Structured Markdown documents for humans, agents, and APIs***
+**Markform** turns Markdown documents into executable specifications for structured data
+collection.
+Define fields, validation rules, and instructions in a single `.form.md` file
+that is readable by humans, parseable by machines, and fillable by LLM agents.
 
-**Markform** is a **file format**, **data model**, and **editing API** for
-**token-friendly, human-readable text forms**. Markform syntax is a superset of Markdown
-based on [Markdoc](https://github.com/markdoc/markdoc), stored as `.form.md` files.
+The core idea: **a form combines structure, unstructured context, and memory in a simple
+text document**. Users can give inputs via UIs or CLI. Agents can fill fields
+incrementally via tools or APIs.
+Validation catches errors early and humans can review or intervene at any point.
+The entire workflow is visible in a token-friendly text file you can read, diff, and
+version control.
 
-Markform is like if Markdown docs had a customizable API. The idea is to combine the
-simple utility of a Markdown document with structured tags that define typed fields and
-validation rules.
-Fields, validation rules, and instructions are encoded as Markdoc tags.
+Syntax is [Markdoc](https://github.com/markdoc/markdoc), which is Markdown extended with
+`{% tag %}` annotations, so LLMs are already quite good at writing Markform docs.
 
-Markform lets you build powerful agent workflows by structuring and validating *what*
-you want (the form structure and validations) instead of *how* to get it (coding up
-agent workflows). For deep research and other tasks where you want a high level of
-control on intermediate states and final output from an AI pipeline, this approach is a
-compelling alternative to programmatic or UI-based agent workflows.
-Because it’s just Markdown with tags, agents are also very good at writing Markform,
-which makes creating new workflows much easier.
+## Why?
+
+Many agent workflow frameworks emphasize *prompts* and the *flow* of information (the
+*how*) over the desired *structure* of the results (the *what*). Markform lets you build
+agent workflows by structuring and validating *what* you want (the structure of
+information, validations, and reviews encoded in a form) instead of *how* to run a
+workflow as code (via explicit workflows or just an unstructured swarm of agents).
+
+For centuries, humans have used paper forms to systematize and manage processes.
+A well-designed form with instructions, field definitions, and validations is a concise
+way to share context: background knowledge, goals, process rules, and memories.
+I don’t think AI changes this essential aspect of knowledge work.
+It’s time to bring bureaucracy to the agents.
+
+There’s one more key benefit to this approach: LLMs are good at writing forms!
+Because the syntax is just Markdown with Jinja-style tags, agents can convert an
+informal Markdown doc describing a process to a precise Markform process easily.
+
+(For more, see [the FAQ](#faq).)
+
+## Quick Start
+
+```bash
+# Try filling in one of a few example forms without installing.
+# First set OPENAI_API_KEY or ANTHROPIC_API_KEY in environment or .env file
+# to try the research examples.
+npx markform examples
+
+# Read the docs
+npx markform  # CLI help
+npx markform readme   # This file
+npx markform docs  # Quick start for humans or agents to write Markforms
+npx markform spec  # Read the full spec
+```
+
+This lets you walk through a form interactively from the CLI, with the option to have an
+agent fill in parts of the form.
 
 ## Installation
 
@@ -30,17 +64,6 @@ npm install -g markform
 # Or as a project dependency
 npm install markform
 ```
-
-## Quick Start
-
-```bash
-# Try it without installing
-npx markform examples
-```
-
-This walks you through an example form interactively, with optional AI agent filling.
-You’ll need at least one [API key](#supported-providers) form a provider with a model
-that supports web search to have LLMs fill in forms.
 
 ## Example: Research a Movie
 
@@ -156,37 +179,23 @@ Convicted banker Andy Dufresne is sent to Shawshank State Penitentiary, where he
 
 ### More Example Forms
 
-The package includes example forms in
-[`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples).
+The package includes example forms.
 View them with `markform examples --list` or try these interactively:
 
-- [`movie-research/movie-research-minimal.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-minimal.form.md)
-  \- The quick example above.
-
-- [`movie-research/movie-research-basic.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-basic.form.md)
-  \- Standard movie research with IMDB, Rotten Tomatoes, Metacritic.
-
-- [`movie-research/movie-research-deep.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-deep.form.md)
-  \- Comprehensive movie analysis with streaming, box office, analysis.
-
-- [`simple/simple.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/simple/simple.form.md)
+- [`simple.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/simple/simple.form.md)
   \- Basic form demonstrating all field kinds.
 
-- [`earnings-analysis/earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
+- [`movie-research-minimal.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-minimal.form.md)
+  \- The quick example above.
+
+- [`movie-research-basic.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-basic.form.md)
+  \- Standard movie research with IMDB, Rotten Tomatoes, Metacritic.
+
+- [`movie-research-deep.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-deep.form.md)
+  \- Comprehensive movie analysis with streaming, box office, analysis.
+
+- [`earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
   \- Financial analysis form.
-
-## Why?
-
-Many agent workflow frameworks emphasize the *flow* of information (the *how*) over its
-*structure* (the *what*). But the *how* is constantly changing.
-
-What we often really want is to express *desired structure and validation rules* for
-content directly in a way that provides clear context to agents and humans at all times.
-
-Humans have for centuries used paper forms to systematize and manage processes.
-The key insight of Markform is that the most natural way to express the state and
-context for a workflow is often *forms*. Just as Markdown is a transparent format for
-documents, Markform is a transparent text format for structured information.
 
 ## CLI Commands
 
@@ -415,6 +424,19 @@ const result = await generateText({
 
 ## FAQ
 
+### Can you say more why this is a good idea?
+
+Yes! I’ve come to believe forms are a missing piece of the workflow problem with agents.
+For deep research or complex multi-step workflows, key pieces need to be *precisely
+controlled*, *domain-specific*, and *always improving*. You need precise documentation
+on the key intermediate states and final output from an AI pipeline.
+
+But you don’t want structure in a GUI (not token friendly) or code (hard to update) or
+dependent on the whims of a thinking model (changes all the time).
+Forms define these pieces and are easy to edit.
+All other choices can be left to the agents themselves, with the structure and
+validations enforced by the form-filling tools the agents use.
+
 ### Is this mature?
 
 No! I just wrote it.
@@ -467,7 +489,8 @@ This enables powerful AI workflows that assemble information in a defined struct
 
 ### Does anything like this already exist?
 
-Not really. The closest alternatives are:
+Not that I have seen.
+The closest alternatives are:
 
 - Plain Markdown docs can be used as templates and filled in by agents.
   These are more expressive, but it is hard to edit them programmatically or use LLMs to
@@ -481,13 +504,13 @@ Not really. The closest alternatives are:
   human-friendly UI. But these do not have a human-friendly text format for use by
   agents as well as humans.
 
-| Approach | Has GUI | Human-readable text format | Agent-editable | APIs and validation rules |
+| Approach | Has GUI | Human-readable source format | Agent-editable | APIs and validation rules |
 | --- | :---: | :---: | :---: | :---: |
 | Plain Markdown | ☑️ existing tools | ✅ | ⚠️ fragile | ❌ |
-| JSON with schema | ☑️ existing tools | ⚠️ hey it’s JSON | ✅ | ✅ |
+| JSON with schema | ⚠️ in some apps | ⚠️ um it’s JSON | ✅ | ✅ |
 | SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️ rarely | ⚠️ if they add it | ⚠️ if they add it |
-| Excel/Google Sheets | ✅ | ❌ .xlsx | ⚠️ with tools | ✅ |
-| **Markform** | ☑️ existing tools | ✅ | ✅ | ✅ |
+| Excel/Google Sheets | ✅ | ❌ .csv (poor) or .xlsx (worse) | ⚠️ with tools | ✅ with some coding |
+| **Markform** | ☑️ existing tools | ✅ | ✅ with this package | ✅ with this package |
 
 ### What are example use cases?
 
