@@ -116,7 +116,7 @@ function resolveFieldRef(schema: FormSchema, ref: FieldScopeRef): ResolveScopeRe
 
 /**
  * Resolve a qualified reference against the schema.
- * Disambiguates between option and column references based on field type.
+ * Disambiguates between option and column references based on field kind.
  */
 function resolveQualifiedRef(schema: FormSchema, ref: QualifiedScopeRef): ResolveScopeRefResult {
   const field = findField(schema, ref.fieldId);

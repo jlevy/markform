@@ -30,7 +30,7 @@ export type {
   ExplicitCheckboxValue,
   CheckboxValue,
   CheckboxMode,
-  // Field types
+  // Field kinds
   FieldKind,
   FieldBase,
   StringField,
@@ -44,7 +44,7 @@ export type {
   UrlListField,
   DateField,
   YearField,
-  // Table field types
+  // Table field definitions
   ColumnTypeName,
   TableColumn,
   TableField,

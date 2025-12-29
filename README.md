@@ -113,7 +113,7 @@ Tomatoes, Metacritic) and comprehensive analysis.
 
 - **Roles**: Define who fills what (`user` for humans, `agent` for AI)
 
-- **Field types**: `string-field`, `number-field`, `date-field`, `year-field`,
+- **Field kinds**: `string-field`, `number-field`, `date-field`, `year-field`,
   `url-field`, `url-list`, `string-list`, `single-select`, `multi-select`, `checkboxes`
 
 - **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
@@ -137,7 +137,7 @@ The package includes example forms in
   \- Comprehensive analysis with streaming, box office
 
 - [`simple/simple.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/simple/simple.form.md)
-  \- Basic form demonstrating all field types
+  \- Basic form demonstrating all field kinds
 
 - [`earnings-analysis/earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
   \- Financial analysis form

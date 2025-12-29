@@ -1,8 +1,12 @@
 /**
- * Field Type Registry - Single source of truth for field type relationships.
+ * Field Kind Registry - Single source of truth for field kind relationships.
+ *
+ * Note: This registry maps field *kinds* (e.g., 'string', 'checkboxes') to their
+ * corresponding TypeScript types. The name "FieldTypeMap" is retained for stability
+ * but conceptually maps kinds → types.
  *
  * This module defines the relationships between FieldKind, Field, FieldValue,
- * and Patch types in a type-safe way. Adding a new field type requires:
+ * and Patch types in a type-safe way. Adding a new field kind requires:
  *
  * - Add the kind to FIELD_KINDS tuple below
  * - Add entry to FieldTypeMap interface
@@ -183,7 +187,7 @@ const _exactCheck: _AssertMapExact = true;
 // Derived union types - automatically include all registered types
 // =============================================================================
 
-/** Union of all Field types - derived from the registry */
+/** Union of all Field kinds - derived from the registry */
 export type Field = FieldTypeMap[FieldKind]['field'];
 
 /** Union of all FieldValue types - derived from the registry */
@@ -295,7 +299,7 @@ import {
 
 /**
  * Zod schema registry - maps each kind to its schemas.
- * This ensures schemas are defined for every field type.
+ * This ensures schemas are defined for every field kind.
  */
 export const FIELD_SCHEMAS = {
   string: {

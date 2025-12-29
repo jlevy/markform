@@ -102,7 +102,7 @@ export type MockMode = 'mock' | 'live';
 export type ApprovalMode = 'none' | 'blocking';
 
 // =============================================================================
-// Field Types
+// Field Kinds
 // =============================================================================
 
 /** Field kind discriminant */
@@ -120,7 +120,7 @@ export type FieldKind =
   | 'table';
 
 // =============================================================================
-// Table Field Types
+// Table Field Definitions
 // =============================================================================
 
 /** Base column type for table cells - simple types only */
@@ -146,7 +146,7 @@ export interface TableColumn {
 /** Field priority level for issue scoring */
 export type FieldPriorityLevel = 'high' | 'medium' | 'low';
 
-/** Base interface for all field types */
+/** Base interface for all field kinds */
 export interface FieldBase {
   id: Id;
   label: string;
@@ -280,7 +280,7 @@ export interface TableField extends FieldBase {
   maxRows?: number;
 }
 
-/** Union of all field types */
+/** Union of all field kinds */
 export type Field =
   | StringField
   | NumberField

@@ -145,7 +145,7 @@ function mapValidationToInspectReason(vi: ValidationIssue): IssueReason {
   const msg = vi.message.toLowerCase();
 
   // Check for specific patterns in the message or code
-  // Required empty - check code and message patterns for various field types
+  // Required empty - check code and message patterns for various field kinds
   if (
     vi.code === 'REQUIRED_EMPTY' ||
     (msg.includes('required') && msg.includes('empty')) ||
