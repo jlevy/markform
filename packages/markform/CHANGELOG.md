@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.4
+
+### Patch Changes
+
+- 5b1794b: Add custom tool injection, unified field tag syntax, table-field type, date/year field support, and various bug fixes
+
 ## 0.1.3
 
 ### Patch Changes
