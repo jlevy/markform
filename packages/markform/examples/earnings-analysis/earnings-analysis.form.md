@@ -1,8 +1,8 @@
 ---
 markform:
   spec: MF/0.1
-  title: Earnings Analysis (Simplified)
-  description: Quick company earnings analysis with key metrics and outlook.
+  title: Earnings Analysis
+  description: Company earnings analysis with key metrics, outlook, and custom validators.
   roles:
     - user
     - agent
@@ -49,8 +49,13 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 
 **Business summary:**
 
-{% field kind="string" id="business_summary" label="Business Summary" role="agent" maxLength=500 %}{% /field %}
-{% instructions ref="business_summary" %}Brief description of what the company does (2-3 sentences).{% /instructions %}
+{% field kind="string" id="business_summary" label="Business Summary" role="agent" maxLength=500 validate=[{id: "min_words", min: 20}] %}{% /field %}
+{% instructions ref="business_summary" %}Brief description of what the company does. Minimum 20 words.{% /instructions %}
+
+**Revenue segments:**
+
+{% field kind="string_list" id="revenue_segments" label="Revenue Segments" role="agent" minItems=1 validate=[{id: "sum_to_percent_list", target: 100}] %}{% /field %}
+{% instructions ref="revenue_segments" %}List each segment with percentage of revenue. Format: "Segment Name: XX%". Should sum to 100%.{% /instructions %}
 
 {% /field-group %}
 
@@ -84,6 +89,11 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 - [ ] Met {% #met %}
 - [ ] Missed {% #missed %}
 {% /field %}
+
+**Beat/miss details:**
+
+{% field kind="string" id="beat_miss_details" label="Beat/Miss Details" role="agent" validate=[{id: "required_if_set", when: "beat_miss"}] %}{% /field %}
+{% instructions ref="beat_miss_details" %}Required if beat/miss is selected. Explain the variance from consensus.{% /instructions %}
 
 {% /field-group %}
 
@@ -122,8 +132,8 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 
 **Key risks:**
 
-{% field kind="string" id="key_risks" label="Key Risks" role="agent" maxLength=500 %}{% /field %}
-{% instructions ref="key_risks" %}Primary risks or concerns mentioned in earnings or analyst reports.{% /instructions %}
+{% field kind="string_list" id="key_risks" label="Key Risks" role="agent" minItems=0 maxItems=5 %}{% /field %}
+{% instructions ref="key_risks" %}Primary risks or concerns (up to 5).{% /instructions %}
 
 **Analyst sentiment:**
 
@@ -133,10 +143,15 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 - [ ] Bearish {% #bearish %}
 {% /field %}
 
+**Sentiment rationale:**
+
+{% field kind="string" id="sentiment_rationale" label="Sentiment Rationale" role="agent" validate=[{id: "required_if_set", when: "analyst_sentiment"}, {id: "min_words", min: 10}] %}{% /field %}
+{% instructions ref="sentiment_rationale" %}Required if sentiment is selected. Explain why (minimum 10 words).{% /instructions %}
+
 **Summary:**
 
-{% field kind="string" id="summary" label="One-Line Summary" role="agent" maxLength=300 %}{% /field %}
-{% instructions ref="summary" %}Brief overall assessment of the company's earnings and outlook (1-2 sentences).{% /instructions %}
+{% field kind="string" id="summary" label="One-Line Summary" role="agent" maxLength=300 validate=[{id: "min_words", min: 10}, {id: "max_words", max: 50}] %}{% /field %}
+{% instructions ref="summary" %}Brief overall assessment (10-50 words).{% /instructions %}
 
 {% /field-group %}
 
