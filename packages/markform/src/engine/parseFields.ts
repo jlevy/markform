@@ -15,6 +15,8 @@ import type {
   CheckboxesValue,
   CheckboxMode,
   CheckboxValue,
+  ColumnTypeName,
+  ColumnTypeSpec,
   DateField,
   DateValue,
   Field,
@@ -31,6 +33,9 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  TableColumn,
+  TableField,
+  TableValue,
   UrlField,
   UrlListField,
   UrlListValue,
@@ -41,6 +46,7 @@ import type {
 import {
   CHECKBOX_MARKERS,
   extractFenceValue,
+  extractTableContent,
   extractOptionItems,
   getBooleanAttr,
   getNumberAttr,
@@ -52,6 +58,7 @@ import {
   parseOptionText,
 } from './parseHelpers.js';
 import { tryParseSentinelResponse } from './parseSentinels.js';
+import { parseMarkdownTable, extractColumnsFromTable } from './table/parseTable.js';
 
 // =============================================================================
 // Field Response Helpers
@@ -81,6 +88,8 @@ export function isValueEmpty(value: FieldValue): boolean {
       const values = Object.values(value.values);
       return values.every((v) => v === 'todo' || v === 'unfilled');
     }
+    case 'table':
+      return value.rows.length === 0;
   }
 }
 
@@ -959,6 +968,169 @@ export function parseYearField(node: Node): { field: YearField; response: FieldR
 }
 
 // =============================================================================
+// Table Field Parser
+// =============================================================================
+
+/**
+ * Validate column type string.
+ */
+function isValidColumnType(type: unknown): type is ColumnTypeName {
+  return (
+    type === 'string' || type === 'number' || type === 'url' || type === 'date' || type === 'year'
+  );
+}
+
+/**
+ * Parse column definitions from attributes.
+ * Returns null if columnIds attribute is not provided.
+ */
+function parseColumnsFromAttributes(node: Node, fieldId: string): TableColumn[] | null {
+  const columnIds = getStringArrayAttr(node, 'columnIds');
+  const columnLabels = getStringArrayAttr(node, 'columnLabels');
+  const columnTypesRaw = node.attributes?.columnTypes as ColumnTypeSpec[] | undefined;
+
+  if (!columnIds || columnIds.length === 0) {
+    return null; // No columnIds attribute - use inline format
+  }
+
+  // Validate unique column IDs
+  const seenIds = new Set<string>();
+  for (const id of columnIds) {
+    if (seenIds.has(id)) {
+      throw new ParseError(`table-field '${fieldId}' has duplicate column ID '${id}'`);
+    }
+    seenIds.add(id);
+  }
+
+  const columns: TableColumn[] = [];
+  for (let i = 0; i < columnIds.length; i++) {
+    const id = columnIds[i]!;
+    const label = columnLabels?.[i] ?? id;
+
+    // Parse column type - can be string or { type, required }
+    const typeSpec = columnTypesRaw?.[i];
+    let type: ColumnTypeName = 'string'; // default
+    let required = false;
+
+    if (typeSpec !== undefined) {
+      if (typeof typeSpec === 'string') {
+        if (!isValidColumnType(typeSpec)) {
+          throw new ParseError(
+            `table-field '${fieldId}' has invalid column type '${String(typeSpec)}' for column '${id}'. ` +
+              `Valid types: string, number, url, date, year`,
+          );
+        }
+        type = typeSpec;
+      } else if (typeof typeSpec === 'object' && typeSpec !== null) {
+        const typeObj = typeSpec as { type?: unknown; required?: boolean };
+        if (!isValidColumnType(typeObj.type)) {
+          throw new ParseError(
+            `table-field '${fieldId}' has invalid column type '${String(typeObj.type)}' for column '${id}'. ` +
+              `Valid types: string, number, url, date, year`,
+          );
+        }
+        type = typeObj.type;
+        required = typeObj.required ?? false;
+      }
+    }
+
+    columns.push({ id, label, type, required });
+  }
+
+  return columns;
+}
+
+/**
+ * Parse a table-field tag.
+ *
+ * Supports two column definition formats:
+ * 1. Attribute-based: columnIds, columnLabels, columnTypes attributes
+ * 2. Inline: columns defined in the markdown table content itself
+ *
+ * Table content is a raw markdown table inside the tag (NOT a value fence).
+ */
+export function parseTableField(node: Node): { field: TableField; response: FieldResponse } {
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
+
+  if (!id) {
+    throw new ParseError("table-field missing required 'id' attribute");
+  }
+  if (!label) {
+    throw new ParseError(`table-field '${id}' missing required 'label' attribute`);
+  }
+
+  const required = getBooleanAttr(node, 'required') ?? false;
+
+  // Check for sentinel values first (entire field can be skipped/aborted)
+  const sentinelResponse = tryParseSentinelResponse(node, id, required);
+
+  // Get table content - raw markdown table inside the tag
+  const tableContent = extractTableContent(node);
+
+  // Try attribute-based columns first
+  let columns = parseColumnsFromAttributes(node, id);
+  let columnsFromInline = false;
+  let dataStartLine = 2; // Default: header + separator
+
+  // If no attribute columns, try to extract from inline table
+  if (!columns) {
+    if (tableContent === null || tableContent.trim() === '') {
+      throw new ParseError(
+        `table-field '${id}' requires either columnIds attribute or inline column definitions in the table`,
+      );
+    }
+
+    const extractResult = extractColumnsFromTable(tableContent);
+    if (!extractResult.ok) {
+      throw new ParseError(`table-field '${id}': ${extractResult.error}`);
+    }
+    columns = extractResult.columns;
+    dataStartLine = extractResult.dataStartLine;
+    columnsFromInline = true;
+  }
+
+  const field: TableField = {
+    kind: 'table',
+    id,
+    label,
+    required,
+    priority: getPriorityAttr(node),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    columns,
+    minRows: getNumberAttr(node, 'minRows'),
+    maxRows: getNumberAttr(node, 'maxRows'),
+    validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
+  };
+
+  if (sentinelResponse) {
+    return { field, response: sentinelResponse };
+  }
+
+  if (tableContent === null || tableContent.trim() === '') {
+    // Empty table
+    const value: TableValue = { kind: 'table', rows: [] };
+    const response = parseFieldResponse(node, value, id, required);
+    return { field, response };
+  }
+
+  // Parse the markdown table with column schema
+  // When columns were extracted inline, pass dataStartLine to skip header/type/separator rows
+  const parseResult = parseMarkdownTable(
+    tableContent,
+    columns,
+    columnsFromInline ? dataStartLine : undefined,
+  );
+  if (!parseResult.ok) {
+    throw new ParseError(`table-field '${id}': ${parseResult.error}`);
+  }
+
+  const response = parseFieldResponse(node, parseResult.value, id, required);
+  return { field, response };
+}
+
+// =============================================================================
 // Field Dispatcher
 // =============================================================================
 
@@ -990,6 +1162,8 @@ export function parseField(node: Node): { field: Field; response: FieldResponse 
       return parseDateField(node);
     case 'year-field':
       return parseYearField(node);
+    case 'table-field':
+      return parseTableField(node);
     default:
       return null;
   }

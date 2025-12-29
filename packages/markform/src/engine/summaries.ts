@@ -8,6 +8,7 @@ import type {
   CheckboxesField,
   CheckboxesValue,
   CheckboxProgressCounts,
+  ColumnTypeName,
   DateValue,
   Field,
   FieldKind,
@@ -23,12 +24,14 @@ import type {
   ProgressCounts,
   ProgressState,
   ProgressSummary,
+  QualifiedColumnRef,
   QualifiedOptionRef,
   AnswerState,
   SingleSelectValue,
   StringListValue,
   StringValue,
   StructureSummary,
+  TableValue,
   UrlListValue,
   UrlValue,
   YearValue,
@@ -56,16 +59,20 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
     url_list: 0,
     date: 0,
     year: 0,
+    table: 0,
   };
 
   const groupsById: Record<Id, 'field_group'> = {};
   const fieldsById: Record<Id, FieldKind> = {};
   const optionsById: Record<QualifiedOptionRef, { parentFieldId: Id; parentFieldKind: FieldKind }> =
     {};
+  const columnsById: Record<QualifiedColumnRef, { parentFieldId: Id; columnType: ColumnTypeName }> =
+    {};
 
   let groupCount = 0;
   let fieldCount = 0;
   let optionCount = 0;
+  let columnCount = 0;
 
   for (const group of schema.groups) {
     groupCount++;
@@ -87,6 +94,18 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
           };
         }
       }
+
+      // Count columns for table fields
+      if (field.kind === 'table') {
+        for (const column of field.columns) {
+          columnCount++;
+          const qualifiedRef: QualifiedColumnRef = `${field.id}.${column.id}`;
+          columnsById[qualifiedRef] = {
+            parentFieldId: field.id,
+            columnType: column.type,
+          };
+        }
+      }
     }
   }
 
@@ -94,10 +113,12 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
     groupCount,
     fieldCount,
     optionCount,
+    columnCount,
     fieldCountByKind,
     groupsById,
     fieldsById,
     optionsById,
+    columnsById,
   };
 }
 
@@ -171,6 +192,10 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
     case 'year': {
       const v = value as YearValue;
       return v.value !== null;
+    }
+    case 'table': {
+      const v = value as TableValue;
+      return v.rows.length > 0;
     }
   }
 }

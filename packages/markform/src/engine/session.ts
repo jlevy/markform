@@ -93,7 +93,8 @@ function toCamelCaseDeep(obj: unknown, preserveKeys = false): unknown {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => toCamelCaseDeep(item, false));
+    // Pass preserveKeys through to array items
+    return obj.map((item) => toCamelCaseDeep(item, preserveKeys));
   }
 
   if (typeof obj === 'object') {
@@ -108,7 +109,11 @@ function toCamelCaseDeep(obj: unknown, preserveKeys = false): unknown {
       // The "values" object contains option IDs as keys which should be preserved
       const isCheckboxValues = key === 'values' && record.op === 'set_checkboxes';
 
-      result[resultKey] = toCamelCaseDeep(value, isCheckboxValues);
+      // Check if this is a "rows" key in a set_table patch
+      // The "rows" array contains objects with column IDs as keys which should be preserved
+      const isTableRows = key === 'rows' && record.op === 'set_table';
+
+      result[resultKey] = toCamelCaseDeep(value, isCheckboxValues || isTableRows);
     }
     return result;
   }
@@ -131,7 +136,8 @@ function toSnakeCaseDeep(obj: unknown, preserveKeys = false): unknown {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => toSnakeCaseDeep(item, false));
+    // Pass preserveKeys through to array items
+    return obj.map((item) => toSnakeCaseDeep(item, preserveKeys));
   }
 
   if (typeof obj === 'object') {
@@ -146,7 +152,11 @@ function toSnakeCaseDeep(obj: unknown, preserveKeys = false): unknown {
       // The "values" object contains option IDs as keys which should be preserved
       const isCheckboxValues = key === 'values' && record.op === 'set_checkboxes';
 
-      result[resultKey] = toSnakeCaseDeep(value, isCheckboxValues);
+      // Check if this is a "rows" key in a set_table patch
+      // The "rows" array contains objects with column IDs as keys which should be preserved
+      const isTableRows = key === 'rows' && record.op === 'set_table';
+
+      result[resultKey] = toSnakeCaseDeep(value, isCheckboxValues || isTableRows);
     }
     return result;
   }

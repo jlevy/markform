@@ -19,6 +19,8 @@ import type {
   SingleSelectValue,
   StringListValue,
   StringValue,
+  TableRowPatch,
+  TableValue,
   UrlListValue,
   UrlValue,
   YearValue,
@@ -156,6 +158,8 @@ export class MockAgent implements Agent {
         return value.value !== null;
       case 'year':
         return value.value !== null;
+      case 'table':
+        return value.rows.length > 0;
       default:
         return false;
     }
@@ -253,6 +257,25 @@ export class MockAgent implements Agent {
           op: 'set_year',
           fieldId,
           value: v.value,
+        };
+      }
+
+      case 'table': {
+        const v = value as TableValue;
+        // Convert TableRowResponse[] to TableRowPatch[]
+        // TableRowResponse has CellResponse {state, value}, but patch needs just the value
+        const patchRows: TableRowPatch[] = v.rows.map((row) => {
+          const patchRow: TableRowPatch = {};
+          for (const [colId, cellResponse] of Object.entries(row)) {
+            // Use null for undefined values (skipped/empty cells)
+            patchRow[colId] = cellResponse.value ?? null;
+          }
+          return patchRow;
+        });
+        return {
+          op: 'set_table',
+          fieldId,
+          rows: patchRows,
         };
       }
 

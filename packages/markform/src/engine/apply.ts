@@ -8,6 +8,7 @@ import type {
   AbortFieldPatch,
   AddNotePatch,
   ApplyResult,
+  CellResponse,
   CheckboxesValue,
   CheckboxValue,
   ClearFieldPatch,
@@ -31,6 +32,7 @@ import type {
   SetSingleSelectPatch,
   SetStringListPatch,
   SetStringPatch,
+  SetTablePatch,
   SetUrlListPatch,
   SetUrlPatch,
   SetYearPatch,
@@ -38,6 +40,8 @@ import type {
   SkipFieldPatch,
   StringListValue,
   StringValue,
+  TableRowResponse,
+  TableValue,
   UrlListValue,
   UrlValue,
   YearValue,
@@ -231,6 +235,29 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         };
       }
       break;
+
+    case 'set_table': {
+      if (field.kind !== 'table') {
+        return {
+          patchIndex: index,
+          message: `Cannot apply set_table to ${field.kind} field "${field.id}"`,
+        };
+      }
+      const tableField = field;
+      // Validate column IDs in the patch rows
+      const validColumns = new Set(tableField.columns.map((c) => c.id));
+      for (const row of patch.rows) {
+        for (const colId of Object.keys(row)) {
+          if (!validColumns.has(colId)) {
+            return {
+              patchIndex: index,
+              message: `Invalid column "${colId}" for table field "${field.id}"`,
+            };
+          }
+        }
+      }
+      break;
+    }
 
     case 'clear_field':
       // Any field can be cleared
@@ -434,6 +461,55 @@ function applySetYear(responses: Record<Id, FieldResponse>, patch: SetYearPatch)
 }
 
 /**
+ * Convert a patch row value to a cell response.
+ */
+function patchValueToCell(value: string | number | null | undefined): CellResponse {
+  // null or undefined => skipped
+  if (value === null || value === undefined) {
+    return { state: 'skipped' };
+  }
+
+  // Handle sentinel strings
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    const skipMatch = /^%SKIP(?:[:(](.*))?[)]?%$/i.exec(trimmed);
+    if (skipMatch) {
+      return { state: 'skipped', reason: skipMatch[1] };
+    }
+    const abortMatch = /^%ABORT(?:[:(](.*))?[)]?%$/i.exec(trimmed);
+    if (abortMatch) {
+      return { state: 'aborted', reason: abortMatch[1] };
+    }
+    // Regular string value
+    return { state: 'answered', value: trimmed };
+  }
+
+  // Number value
+  return { state: 'answered', value };
+}
+
+/**
+ * Apply a set_table patch.
+ */
+function applySetTable(responses: Record<Id, FieldResponse>, patch: SetTablePatch): void {
+  const rows: TableRowResponse[] = patch.rows.map((patchRow) => {
+    const row: TableRowResponse = {};
+    for (const [colId, value] of Object.entries(patchRow)) {
+      row[colId] = patchValueToCell(value);
+    }
+    return row;
+  });
+
+  responses[patch.fieldId] = {
+    state: 'answered',
+    value: {
+      kind: 'table',
+      rows,
+    } as TableValue,
+  };
+}
+
+/**
  * Apply a clear_field patch.
  */
 function applyClearField(responses: Record<Id, FieldResponse>, patch: ClearFieldPatch): void {
@@ -524,6 +600,9 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
       break;
     case 'set_year':
       applySetYear(responses, patch);
+      break;
+    case 'set_table':
+      applySetTable(responses, patch);
       break;
     case 'clear_field':
       applyClearField(responses, patch);

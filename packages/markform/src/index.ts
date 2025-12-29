@@ -22,6 +22,7 @@ export type {
   Id,
   OptionId,
   QualifiedOptionRef,
+  QualifiedColumnRef,
   ValidatorRef,
   // Checkbox types
   MultiCheckboxState,
@@ -39,6 +40,16 @@ export type {
   CheckboxesField,
   SingleSelectField,
   MultiSelectField,
+  UrlField,
+  UrlListField,
+  DateField,
+  YearField,
+  // Table field types
+  ColumnTypeName,
+  TableColumn,
+  TableField,
+  CellResponse,
+  TableRowResponse,
   Field,
   // Form structure
   FieldGroup,
@@ -50,6 +61,11 @@ export type {
   CheckboxesValue,
   SingleSelectValue,
   MultiSelectValue,
+  UrlValue,
+  UrlListValue,
+  DateValue,
+  YearValue,
+  TableValue,
   FieldValue,
   // Documentation
   DocumentationTag,
@@ -87,6 +103,12 @@ export type {
   SetCheckboxesPatch,
   SetSingleSelectPatch,
   SetMultiSelectPatch,
+  SetUrlPatch,
+  SetUrlListPatch,
+  SetDatePatch,
+  SetYearPatch,
+  TableRowPatch,
+  SetTablePatch,
   ClearFieldPatch,
   Patch,
   // Harness
@@ -129,6 +151,16 @@ export {
   CheckboxesFieldSchema,
   SingleSelectFieldSchema,
   MultiSelectFieldSchema,
+  UrlFieldSchema,
+  UrlListFieldSchema,
+  DateFieldSchema,
+  YearFieldSchema,
+  // Table field schemas
+  ColumnTypeNameSchema,
+  TableColumnSchema,
+  TableFieldSchema,
+  CellResponseSchema,
+  TableRowResponseSchema,
   FieldSchema,
   // Form schemas
   FieldGroupSchema,
@@ -140,6 +172,11 @@ export {
   CheckboxesValueSchema,
   SingleSelectValueSchema,
   MultiSelectValueSchema,
+  UrlValueSchema,
+  UrlListValueSchema,
+  DateValueSchema,
+  YearValueSchema,
+  TableValueSchema,
   FieldValueSchema,
   // Documentation schemas
   DocumentationTagSchema,
@@ -173,6 +210,12 @@ export {
   SetCheckboxesPatchSchema,
   SetSingleSelectPatchSchema,
   SetMultiSelectPatchSchema,
+  SetUrlPatchSchema,
+  SetUrlListPatchSchema,
+  SetDatePatchSchema,
+  SetYearPatchSchema,
+  TableRowPatchSchema,
+  SetTablePatchSchema,
   ClearFieldPatchSchema,
   PatchSchema,
   // Harness schemas
@@ -206,6 +249,33 @@ export { inspect } from './engine/inspect.js';
 export type { InspectOptions } from './engine/inspect.js';
 export { parseSession, serializeSession } from './engine/session.js';
 export { applyPatches } from './engine/apply.js';
+
+// =============================================================================
+// Table Parsing Exports
+// =============================================================================
+
+export { parseMarkdownTable, parseCellValue, parseRawTable } from './engine/table/index.js';
+export type { ParseTableResult, ParsedRawTable } from './engine/table/index.js';
+
+// =============================================================================
+// Scope Reference Exports
+// =============================================================================
+
+export {
+  parseScopeRef,
+  serializeScopeRef,
+  isCellRef,
+  isQualifiedRef,
+  isFieldRef,
+  getFieldId,
+} from './engine/scopeRef.js';
+export type {
+  FieldScopeRef,
+  QualifiedScopeRef,
+  CellScopeRef,
+  ParsedScopeRef,
+  ParseScopeRefResult,
+} from './engine/scopeRef.js';
 
 // =============================================================================
 // Value Coercion Exports
