@@ -1,9 +1,8 @@
 /**
- * Docs command - Display the Markform quick reference.
+ * APIs command - Display the Markform API documentation.
  *
- * Shows the markform-reference.md file, formatted for the terminal when interactive,
- * or as plain text when piped. This is a concise reference for writing forms,
- * optimized for agent consumption.
+ * Shows the markform-apis.md file, formatted for the terminal when interactive,
+ * or as plain text when piped. This documents the TypeScript and AI SDK APIs.
  */
 
 import type { Command } from 'commander';
@@ -16,32 +15,32 @@ import pc from 'picocolors';
 import { getCommandContext, logError } from '../lib/shared.js';
 
 /**
- * Get the path to the markform-reference.md file.
+ * Get the path to the markform-apis.md file.
  * Works both during development and when installed as a package.
  */
-function getDocsPath(): string {
+function getApisPath(): string {
   const thisDir = dirname(fileURLToPath(import.meta.url));
   const dirName = thisDir.split(/[/\\]/).pop();
 
   if (dirName === 'dist') {
-    // Bundled: dist -> package root -> docs/markform-reference.md
-    return join(dirname(thisDir), 'docs', 'markform-reference.md');
+    // Bundled: dist -> package root -> docs/markform-apis.md
+    return join(dirname(thisDir), 'docs', 'markform-apis.md');
   }
 
-  // Development: src/cli/commands -> src/cli -> src -> package root -> docs/markform-reference.md
-  return join(dirname(dirname(dirname(thisDir))), 'docs', 'markform-reference.md');
+  // Development: src/cli/commands -> src/cli -> src -> package root -> docs/markform-apis.md
+  return join(dirname(dirname(dirname(thisDir))), 'docs', 'markform-apis.md');
 }
 
 /**
- * Load the docs content.
+ * Load the APIs documentation content.
  */
-function loadDocs(): string {
-  const docsPath = getDocsPath();
+function loadApis(): string {
+  const apisPath = getApisPath();
   try {
-    return readFileSync(docsPath, 'utf-8');
+    return readFileSync(apisPath, 'utf-8');
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to load reference docs from ${docsPath}: ${message}`);
+    throw new Error(`Failed to load API docs from ${apisPath}: ${message}`);
   }
 }
 
@@ -124,23 +123,23 @@ function displayContent(content: string): void {
 }
 
 /**
- * Register the docs command.
+ * Register the apis command.
  */
-export function registerDocsCommand(program: Command): void {
+export function registerApisCommand(program: Command): void {
   program
-    .command('docs')
-    .description('Display concise Markform syntax reference (agent-friendly)')
+    .command('apis')
+    .description('Display Markform TypeScript and AI SDK API documentation')
     .option('--raw', 'Output raw markdown without formatting')
     .action((options: { raw?: boolean }, cmd: Command) => {
       const ctx = getCommandContext(cmd);
 
       try {
-        const docs = loadDocs();
+        const apis = loadApis();
 
         // Determine if we should colorize
         const shouldColorize = !options.raw && isInteractive() && !ctx.quiet;
 
-        const formatted = formatMarkdown(docs, shouldColorize);
+        const formatted = formatMarkdown(apis, shouldColorize);
         displayContent(formatted);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
