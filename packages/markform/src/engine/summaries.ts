@@ -8,6 +8,7 @@ import type {
   CheckboxesField,
   CheckboxesValue,
   CheckboxProgressCounts,
+  ColumnTypeName,
   DateValue,
   Field,
   FieldKind,
@@ -23,6 +24,7 @@ import type {
   ProgressCounts,
   ProgressState,
   ProgressSummary,
+  QualifiedColumnRef,
   QualifiedOptionRef,
   AnswerState,
   SingleSelectValue,
@@ -64,10 +66,13 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
   const fieldsById: Record<Id, FieldKind> = {};
   const optionsById: Record<QualifiedOptionRef, { parentFieldId: Id; parentFieldKind: FieldKind }> =
     {};
+  const columnsById: Record<QualifiedColumnRef, { parentFieldId: Id; columnType: ColumnTypeName }> =
+    {};
 
   let groupCount = 0;
   let fieldCount = 0;
   let optionCount = 0;
+  let columnCount = 0;
 
   for (const group of schema.groups) {
     groupCount++;
@@ -89,6 +94,18 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
           };
         }
       }
+
+      // Count columns for table fields
+      if (field.kind === 'table') {
+        for (const column of field.columns) {
+          columnCount++;
+          const qualifiedRef: QualifiedColumnRef = `${field.id}.${column.id}`;
+          columnsById[qualifiedRef] = {
+            parentFieldId: field.id,
+            columnType: column.type,
+          };
+        }
+      }
     }
   }
 
@@ -96,10 +113,12 @@ export function computeStructureSummary(schema: FormSchema): StructureSummary {
     groupCount,
     fieldCount,
     optionCount,
+    columnCount,
     fieldCountByKind,
     groupsById,
     fieldsById,
     optionsById,
+    columnsById,
   };
 }
 

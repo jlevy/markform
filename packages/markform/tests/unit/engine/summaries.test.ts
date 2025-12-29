@@ -89,6 +89,41 @@ markform:
         parentFieldKind: 'single_select',
       });
     });
+
+    it('counts columns for table fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="g1" title="G1" %}
+{% table-field id="people" label="People" columnIds=["name", "age", "email"] columnLabels=["Name", "Age", "Email"] columnTypes=["string", "number", "url"] %}
+| Name | Age | Email |
+| --- | --- | --- |
+{% /table-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const summary = computeStructureSummary(parsed.schema);
+
+      expect(summary.columnCount).toBe(3);
+      expect(summary.columnsById['people.name']).toEqual({
+        parentFieldId: 'people',
+        columnType: 'string',
+      });
+      expect(summary.columnsById['people.age']).toEqual({
+        parentFieldId: 'people',
+        columnType: 'number',
+      });
+      expect(summary.columnsById['people.email']).toEqual({
+        parentFieldId: 'people',
+        columnType: 'url',
+      });
+    });
   });
 
   describe('computeProgressSummary', () => {

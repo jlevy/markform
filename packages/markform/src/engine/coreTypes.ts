@@ -584,10 +584,14 @@ export interface StructureSummary {
   groupCount: number;
   fieldCount: number;
   optionCount: number;
+  /** Count of table columns across all table fields */
+  columnCount: number;
   fieldCountByKind: Record<FieldKind, number>;
   groupsById: Record<Id, 'field_group'>;
   fieldsById: Record<Id, FieldKind>;
   optionsById: Record<QualifiedOptionRef, { parentFieldId: Id; parentFieldKind: FieldKind }>;
+  /** Map of qualified column refs to column metadata */
+  columnsById: Record<QualifiedColumnRef, { parentFieldId: Id; columnType: ColumnTypeName }>;
 }
 
 /** Progress state for a field or form */
