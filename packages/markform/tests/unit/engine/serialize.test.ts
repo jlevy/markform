@@ -462,6 +462,92 @@ Example: "Oscar | Best Picture | 1995"
     });
   });
 
+  describe('serialize implicit groups (markform-371)', () => {
+    it('serializes implicit group without field-group wrapper', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% string-field id="movie" label="Favorite Movie" %}{% /string-field %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Should not have field-group wrapper for implicit group
+      expect(output).not.toContain('{% field-group');
+      expect(output).not.toContain('{% /field-group %}');
+
+      // Should still have the field
+      expect(output).toContain('{% string-field id="movie"');
+    });
+
+    it('round-trips form with ungrouped fields and instructions', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% string-field id="movie" label="Favorite Movie" %}{% /string-field %}
+
+{% instructions ref="movie" %}
+Please enter your favorite movie.
+{% /instructions %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      // Verify structure
+      expect(reparsed.schema.id).toBe('test');
+      expect(reparsed.orderIndex).toContain('movie');
+      expect(reparsed.docs).toHaveLength(1);
+      expect(reparsed.docs[0]?.ref).toBe('movie');
+      expect(reparsed.docs[0]?.tag).toBe('instructions');
+    });
+
+    it('serializes mix of grouped and ungrouped fields correctly', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% string-field id="ungrouped" label="Ungrouped" %}{% /string-field %}
+
+{% field-group id="g1" title="Group 1" %}
+{% string-field id="grouped" label="Grouped" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Should have explicit group wrapper
+      expect(output).toContain('{% field-group id="g1"');
+      expect(output).toContain('{% /field-group %}');
+
+      // Both fields should be present
+      expect(output).toContain('{% string-field id="ungrouped"');
+      expect(output).toContain('{% string-field id="grouped"');
+
+      // Round-trip should work
+      const reparsed = parseForm(output);
+      expect(reparsed.orderIndex).toContain('ungrouped');
+      expect(reparsed.orderIndex).toContain('grouped');
+    });
+  });
+
   describe('serializeRawMarkdown', () => {
     it('outputs plain markdown without markdoc directives for string field', () => {
       const markdown = `---
