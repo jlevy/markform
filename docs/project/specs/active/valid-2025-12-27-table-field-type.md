@@ -28,55 +28,214 @@ The table-field feature is a comprehensive addition requiring validation of:
 
 ### Unit Testing
 
-**All 637 tests pass.** Key test coverage includes:
+**All 639 tests pass.** Key test coverage includes:
 
-#### Type System Tests
-- `tests/unit/engine/coreTypes.test.ts` - Schema validation for TableField, TableColumn,
-  TableValue, CellResponse, TableRowPatch, SetTablePatch types
-- `tests/unit/engine/fieldRegistry.test.ts` - Registry includes 'table' field kind,
-  createEmptyValue for table fields
+---
 
-#### Parsing Tests
-- `tests/unit/engine/parse.test.ts` - Table field parsing from Markdoc AST
-- `tests/unit/engine/simple-form-validation.test.ts` - Simple form with table fields
-  (21 fields including 2 tables, 8 groups)
+#### Type System Tests (`coreTypes.test.ts`)
 
-#### Serialization Tests
-- `tests/unit/engine/serialize.test.ts` - Table field serialization to markdown
-- `tests/unit/engine/serialize-fence.test.ts` - Value fence handling
+**Schema validation for table-related types:**
 
-#### Validation Tests
-- `tests/unit/engine/validate.test.ts` - Table validation including:
-  - minRows/maxRows constraints
-  - Cell type validation (string, number, url, date, year)
-  - Required column validation (REQUIRED_CELL_SKIPPED)
-  - Empty cell detection
+- `TableField` schema validation with all required and optional attributes
+- `TableColumn` schema with id, label, type, and required fields
+- `TableValue` schema with kind='table' and rows array
+- `CellResponse` schema with state ('answered', 'skipped', 'aborted') and value
+- `TableRowPatch` schema for row objects in patches
+- `SetTablePatch` schema with op='set_table', fieldId, and rows
+- `ColumnTypeName` enum validation ('string', 'number', 'url', 'date', 'year')
 
-#### Apply/Patch Tests
-- `tests/unit/engine/apply.test.ts` - set_table patch application
-  - Row structure validation
-  - Cell type coercion
-  - Sentinel value handling in patches
+---
 
-#### Session Tests
-- `tests/unit/engine/session.test.ts` - Session serialization/parsing with table patches
-  - Column ID preservation during YAML snake_case/camelCase conversion
+#### Field Registry Tests (`fieldRegistry.test.ts`)
 
-#### Value Coercion Tests
-- `tests/unit/valueCoercion.test.ts` - coerceToTable function
-  - Array of row objects → SetTablePatch
-  - Empty array handling
-  - Invalid input rejection
+**Registry includes table field support:**
+
+- 'table' field kind is registered
+- `createEmptyValue('table')` returns `{ kind: 'table', rows: [] }`
+
+---
+
+#### Table Parsing Tests (`parse.test.ts`)
+
+**Markdoc AST table parsing:**
+
+- Parsing table-field with columnIds attribute
+- Parsing table-field with inline column extraction from header row
+- Header row extraction for column labels backfilling
+- Column ID validation (snake_case identifiers only)
+- Duplicate column ID detection and error reporting
+- Array length validation between columnIds, columnLabels, columnTypes
+
+**Sentinel value parsing in table cells:**
+
+- `%SKIP%` sentinel detection in cell values
+- `%SKIP% (reason)` with parenthesized reason extraction
+- `%ABORT%` sentinel detection
+- `%ABORT% (reason)` with reason extraction
+- Sentinel rejection for required columns
+
+**Cell value parsing with type coercion:**
+
+- String columns: any text value accepted
+- Number columns: integer and float parsing
+- URL columns: URL format validation
+- Date columns: ISO 8601 (YYYY-MM-DD) validation
+- Year columns: integer year (1000-9999) validation
+
+**Edge cases:**
+
+- Empty tables (header + separator only)
+- Single row tables
+- Escaped pipe characters (`\|`) in cell values
+- Whitespace handling in cells
+
+**Attribute-based column validation:**
+
+- Header reordering with attribute columns maps values by header name
+- Invalid separator rejection with attribute columns
+
+---
+
+#### Table Serialization Tests (`serialize.test.ts`)
+
+**Markdown table generation:**
+
+- Header row with column labels
+- Separator row with `---` markers
+- Data rows with cell values
+- Proper column alignment in output
+
+**Cell value escaping:**
+
+- Pipe character escaping (`|` → `\|`)
+- Backslash-pipe preservation (`\|` → `\\|`)
+
+**Sentinel value preservation:**
+
+- `%SKIP%` serializes as-is
+- `%SKIP% (reason)` includes reason in parentheses
+- `%ABORT%` and `%ABORT% (reason)` preserved
+
+**Attribute serialization:**
+
+- columnIds array formatting
+- columnLabels array formatting
+- columnTypes array (omitted if all 'string')
+- minRows, maxRows constraints
+- required, role, priority, report attributes
+
+---
+
+#### Table Validation Tests (`validate.test.ts`)
+
+**Row count constraints:**
+
+- minRows validation with specific error codes
+- maxRows validation with specific error codes
+- required=true implies minRows >= 1
+
+**Cell type validation:**
+
+- String cells accept any text
+- Number cells reject non-numeric input
+- URL cells reject invalid URL formats
+- Date cells reject invalid ISO 8601 formats
+- Year cells reject out-of-range integers
+
+**Empty cell handling:**
+
+- Empty cells without sentinels produce validation errors
+- Error message includes field.column reference
+
+**Required column validation:**
+
+- REQUIRED_CELL_SKIPPED error when required column has %SKIP%
+- Required flag respected from columnTypes attribute
+
+---
+
+#### Apply/Patch Tests (`apply.test.ts`)
+
+**set_table patch application:**
+
+- Creates TableValue from PatchTableRow array
+- Wraps cell values in CellResponse with state='answered'
+- Converts sentinel strings to skipped/aborted state
+
+**Row structure validation:**
+
+- All columns must be present in each row
+- Extra columns are ignored
+
+**Cell type coercion during apply:**
+
+- String values preserved as-is
+- Number values stored as numbers
+- Null values preserved for optional cells
+
+---
+
+#### Session Tests (`session.test.ts`)
+
+**Session serialization with table patches:**
+
+- set_table patches serialize to YAML correctly
+- Row arrays preserve structure
+
+**Column ID preservation:**
+
+- Column IDs like `start_date` NOT converted to `startDate`
+- YAML snake_case conversion preserves user-defined IDs
+- Round-trip serialization maintains column ID integrity
+
+---
+
+#### Value Coercion Tests (`valueCoercion.test.ts`)
+
+**coerceToTable function:**
+
+- Array of row objects → SetTablePatch conversion
+- Empty array handling
+- Invalid input (non-array) rejection
+- Nested object row structure preserved
+
+---
 
 #### Harness/Fill Tests
-- `tests/unit/harness/harness.test.ts` - Harness with table fields
-- `tests/unit/harness/programmaticFill.test.ts` - Programmatic fill with tables
-- `tests/integration/programmaticFill.test.ts` - End-to-end programmatic fill
 
-#### Golden Tests
-- `tests/golden/golden.test.ts` - Session replay with table field turns
-  - `simple/simple.session.yaml` - Mock fill with table data
-  - `simple/simple-with-skips.session.yaml` - Mock fill with table skips
+**harness.test.ts:**
+
+- Harness with table fields in schema
+- Table field appears in pending fields
+- Table patches applied correctly
+
+**programmaticFill.test.ts:**
+
+- Programmatic fill with inputContext containing table values
+- Table values coerced to patches
+- Fill completion with table fields
+
+---
+
+#### Golden Tests (`golden.test.ts`)
+
+**Session replay with table field turns:**
+
+- `simple/simple.session.yaml` - Mock fill with table data
+  - Turn 3: set_table patch with 2 rows
+  - Column IDs preserved in patches
+- `simple/simple-with-skips.session.yaml` - Mock fill with table skips
+  - Table field with skip_field patch
+
+---
+
+#### Summary Tests (`summaries.test.ts`)
+
+**Structure summary with table fields:**
+
+- columnCount: total columns across all table fields
+- columnsById: map of qualified refs (e.g., "people.name") to column metadata
+- fieldCountByKind includes 'table' count
 
 ### Integration and End-to-End Testing
 
