@@ -114,8 +114,7 @@ Tomatoes, Metacritic) and comprehensive analysis.
 - **Roles**: Define who fills what (`user` for humans, `agent` for AI)
 
 - **Field types**: `string-field`, `number-field`, `date-field`, `year-field`,
-  `url-field`, `url-list`, `string-list`, `single-select`, `multi-select`,
-  `checkboxes`
+  `url-field`, `url-list`, `string-list`, `single-select`, `multi-select`, `checkboxes`
 
 - **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
 
@@ -447,12 +446,13 @@ Not really. The closest alternatives are:
   human-friendly UI. But these do not have a human-friendly text format for use by
   agents as well as humans.
 
-| Approach | Human-readable | Agent-editable | Custom validations |
-| --- | :---: | :---: | :---: |
-| Plain Markdown | ✅ | ⚠️ fragile | ❌ |
-| JSON Schema | ❌ | ✅ | ✅ |
-| PDF Forms, SaaS tools | ⚠️ | ❌ | ⚠️ |
-| **Markform** | ✅ | ✅ | ✅ |
+| Approach | Has GUI | Human-readable text format | Agent-editable | APIs and validation rules |
+| --- | :---: | :---: | :---: | :---: |
+| Plain Markdown | ☑️ existing tools | ✅ | ⚠️ fragile | ❌ |
+| JSON with schema | ☑️ existing tools | ⚠️ hey it’s JSON | ✅ | ✅ |
+| SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️ rarely | ⚠️ if they add it | ⚠️ if they add it |
+| Excel/Google Sheets | ✅ | ❌ .xlsx | ⚠️ with tools | ✅ |
+| **Markform** | ☑️ existing tools | ✅ | ✅ | ✅ |
 
 ### What are example use cases?
 
