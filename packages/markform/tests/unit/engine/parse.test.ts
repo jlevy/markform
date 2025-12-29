@@ -1858,5 +1858,46 @@ Rate your experience.
       expect(result.idIndex.get('rating.bad')?.nodeType).toBe('option');
       expect(result.docs[0]?.ref).toBe('rating');
     });
+
+    it('rejects _default as user-defined ID when ungrouped fields exist', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="_default" title="My Group" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% string-field id="ungrouped" label="Ungrouped" %}{% /string-field %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(
+        /ID '_default' is reserved for implicit field groups/,
+      );
+    });
+
+    it('allows _default as user-defined ID when no ungrouped fields', () => {
+      // _default is only reserved when there are ungrouped fields
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% field-group id="_default" title="My Group" %}
+{% string-field id="name" label="Name" %}{% /string-field %}
+{% /field-group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      expect(result.schema.groups[0]?.id).toBe('_default');
+      expect(result.schema.groups[0]?.implicit).toBeUndefined();
+    });
   });
 });

@@ -295,6 +295,12 @@ function parseFormTag(
   // If there are ungrouped fields, create an implicit group to hold them
   if (ungroupedFields.length > 0) {
     const implicitGroupId = `_default`;
+    if (idIndex.has(implicitGroupId)) {
+      throw new ParseError(
+        `ID '${implicitGroupId}' is reserved for implicit field groups. ` +
+          `Please use a different ID for your field or group.`,
+      );
+    }
     idIndex.set(implicitGroupId, { nodeType: 'group', parentId: id });
     groups.push({
       id: implicitGroupId,
