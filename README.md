@@ -68,18 +68,18 @@ markform:
 
 ## Movie Research Example
 
-{% field-group id="movie_input" title="Movie Identification" %}
+{% group id="movie_input" title="Movie Identification" %}
 
 What movie do you want to research? \[*This field is filled in by the user (`role="user"`).*\]
 
 {% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 {% instructions ref="movie" %}Enter the movie title (add year or details for disambiguation).{% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## About the Movie
 
-{% field-group id="about_the_movie" title="About the Movie" %}
+{% group id="about_the_movie" title="About the Movie" %}
 
 **Title:**
 
@@ -115,7 +115,7 @@ What movie do you want to research? \[*This field is filled in by the user (`rol
 {% field kind="string" id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /field %}
 {% instructions ref="logline" %}Brief plot summary in 1-2 sentences, no spoilers.{% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 ```
@@ -304,7 +304,7 @@ flowchart LR
     subgraph SPEC["<b>MARKFORM SPEC</b>"]
         direction TB
 
-        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, field-group, string-field, checkboxes, etc.)"]
+        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, group, string-field, checkboxes, etc.)"]
         end
 
         subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]

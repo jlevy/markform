@@ -15,7 +15,7 @@ markform:
 
 {% form id="test_form" title="Test Form" %}
 
-{% field-group id="basic" title="Basic Fields" %}
+{% group id="basic" title="Basic Fields" %}
 
 {% field kind="string" id="name" label="Name" role="user" required=true %}{% /field %}
 
@@ -23,7 +23,7 @@ markform:
 
 {% field kind="string" id="notes" label="Notes" role="agent" %}{% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -39,7 +39,7 @@ markform:
 
 {% form id="test_form" title="Test Form" %}
 
-{% field-group id="basic" title="Basic Fields" %}
+{% group id="basic" title="Basic Fields" %}
 
 {% field kind="string" id="name" label="Name" role="user" required=true %}
 \`\`\`value
@@ -59,7 +59,7 @@ Test notes
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;

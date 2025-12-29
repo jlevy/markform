@@ -52,9 +52,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render string field as text input', () => {
@@ -82,9 +82,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="number" id="age" label="Age" required=true min=0 max=150 integer=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render number field as number input', () => {
@@ -118,9 +118,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="string_list" id="tags" label="Tags" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render string_list as textarea', () => {
@@ -145,13 +145,13 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="single_select" id="priority" label="Priority" required=true %}
 - [ ] Low {% #low %}
 - [ ] Medium {% #medium %}
 - [ ] High {% #high %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render single_select as select element', () => {
@@ -190,13 +190,13 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="multi_select" id="categories" label="Categories" required=true %}
 - [ ] Frontend {% #frontend %}
 - [ ] Backend {% #backend %}
 - [ ] Database {% #database %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render multi_select as checkboxes', () => {
@@ -233,12 +233,12 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="checkboxes" id="agreements" label="Agreements" checkboxMode="simple" required=true %}
 - [ ] I agree {% #agree %}
 - [ ] I confirm {% #confirm %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render simple checkboxes as HTML checkboxes', () => {
@@ -265,12 +265,12 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="multi" required=true %}
 - [ ] Research {% #research %}
 - [ ] Design {% #design %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render multi checkboxes as select elements', () => {
@@ -302,12 +302,12 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="checkboxes" id="confirmations" label="Confirmations" checkboxMode="explicit" required=true %}
 - [ ] Backed up {% #backed_up %}
 - [ ] Notified {% #notified %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render explicit checkboxes as select elements', () => {
@@ -336,9 +336,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" title="Test Form" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should wrap form in a form element with POST method', () => {
@@ -373,7 +373,7 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="string" id="name" label="Name" %}
 \`\`\`value
 John Doe
@@ -389,7 +389,7 @@ John Doe
 - [ ] Medium {% #medium %}
 - [ ] High {% #high %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should pre-fill string value', () => {
@@ -421,9 +421,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="url" id="website" label="Website" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render url field as url input', () => {
@@ -464,9 +464,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="url_list" id="references" label="References" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render url_list as textarea', () => {
@@ -498,7 +498,7 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="url" id="website" label="Website" %}
 \`\`\`value
 https://example.com
@@ -510,7 +510,7 @@ https://example1.com
 https://example2.com
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should pre-fill url value', () => {
@@ -535,9 +535,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="date" id="deadline" label="Deadline" required=true min="2020-01-01" max="2030-12-31" %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render date field as date input', () => {
@@ -579,13 +579,13 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="date" id="deadline" label="Deadline" %}
 \`\`\`value
 2025-06-15
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should pre-fill date value', () => {
@@ -602,9 +602,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="year" id="founded_year" label="Founded Year" required=true min=1900 max=2030 %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should render year field as number input', () => {
@@ -660,13 +660,13 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="year" id="founded_year" label="Founded Year" %}
 \`\`\`value
 2020
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should pre-fill year value', () => {
@@ -684,10 +684,10 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="string" id="notes" label="Notes" required=false %}{% /field %}
 {% field kind="number" id="score" label="Score" required=false %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
       it('should render skip button for optional string field', () => {
@@ -713,9 +713,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
       it('should not render skip button for required fields', () => {
@@ -733,9 +733,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field-group id="group1" title="Group 1" %}
+{% group id="group1" title="Group 1" %}
 {% field kind="string" id="notes" label="Notes" required=false %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
       it('should show skipped indicator for previously skipped fields', () => {
@@ -763,7 +763,7 @@ markform:
   spec: MF/0.1
 ---
 {% form id="all_types" %}
-{% field-group id="g1" title="All Field Kinds" %}
+{% group id="g1" title="All Field Kinds" %}
 {% field kind="string" id="f_string" label="String Field" %}{% /field %}
 {% field kind="number" id="f_number" label="Number Field" %}{% /field %}
 {% field kind="string_list" id="f_string_list" label="String List" %}{% /field %}
@@ -781,7 +781,7 @@ markform:
 {% /field %}
 {% field kind="url" id="f_url" label="URL Field" %}{% /field %}
 {% field kind="url_list" id="f_url_list" label="URL List" %}{% /field %}
-{% /field-group %}
+{% /group %}
 {% /form %}`;
 
     it('should not have any unknown field kinds in output', () => {

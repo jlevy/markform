@@ -24,13 +24,13 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="main" %}
+{% group id="main" %}
 
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
 {% field kind="number" id="age" label="Age" required=true %}{% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -42,7 +42,7 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="main" %}
+{% group id="main" %}
 
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
@@ -56,7 +56,7 @@ Alice
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;

@@ -17,13 +17,13 @@ spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 
-{% field-group id="basic" title="Basic" %}
+{% group id="basic" title="Basic" %}
 
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
 {% field kind="number" id="age" label="Age" %}{% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -33,7 +33,7 @@ spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 
-{% field-group id="basic" title="Basic" %}
+{% group id="basic" title="Basic" %}
 
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
@@ -47,7 +47,7 @@ John Doe
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -57,7 +57,7 @@ spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 
-{% field-group id="basic" title="Basic" %}
+{% group id="basic" title="Basic" %}
 
 {% field kind="number" id="count" label="Count" min=1 max=10 %}
 \`\`\`value
@@ -65,7 +65,7 @@ spec: MF/0.1
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -75,7 +75,7 @@ spec: MF/0.1
 ---
 {% form id="test_form" title="Test Form" %}
 
-{% field-group id="basic" title="Basic" %}
+{% group id="basic" title="Basic" %}
 
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
@@ -87,7 +87,7 @@ spec: MF/0.1
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;

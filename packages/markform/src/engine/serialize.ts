@@ -1043,7 +1043,7 @@ function serializeNotes(notes: Note[]): string {
 /**
  * Serialize a field group.
  * Implicit groups (fields placed directly under the form) are serialized
- * without the field-group wrapper tags.
+ * without the group wrapper tags.
  */
 function serializeFieldGroup(
   group: FieldGroup,
@@ -1066,7 +1066,7 @@ function serializeFieldGroup(
     }
 
     const attrStr = serializeAttrs(attrs);
-    lines.push(`{% field-group ${attrStr} %}`);
+    lines.push(`{% group ${attrStr} %}`);
   }
 
   // Group doc blocks by ref
@@ -1094,7 +1094,7 @@ function serializeFieldGroup(
   // Implicit groups don't have wrapper tags
   if (!group.implicit) {
     lines.push('');
-    lines.push('{% /field-group %}');
+    lines.push('{% /group %}');
   }
 
   return lines.join('\n');

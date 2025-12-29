@@ -124,7 +124,7 @@ function extractFrontmatter(content: string): FrontmatterResult {
 // =============================================================================
 
 /**
- * Parse a field-group tag.
+ * Parse a group tag.
  */
 function parseFieldGroup(
   node: Node,
@@ -137,18 +137,18 @@ function parseFieldGroup(
   const title = getStringAttr(node, 'title');
 
   if (!id) {
-    throw new ParseError("field-group missing required 'id' attribute");
+    throw new ParseError("group missing required 'id' attribute");
   }
 
   if (idIndex.has(id)) {
     throw new ParseError(`Duplicate ID '${id}'`);
   }
 
-  // Validate that state attribute is not on field-group
+  // Validate that state attribute is not on group
   const stateAttr = getStringAttr(node, 'state');
   if (stateAttr !== undefined) {
     throw new ParseError(
-      `Field-group '${id}' has state attribute. state attribute is not allowed on field-groups.`,
+      `Field-group '${id}' has state attribute. state attribute is not allowed on groups.`,
     );
   }
 
@@ -213,7 +213,7 @@ function parseFieldGroup(
 
 /**
  * Parse a form tag.
- * Handles both explicit field-groups and fields placed directly under the form.
+ * Handles both explicit groups and fields placed directly under the form.
  */
 function parseFormTag(
   node: Node,
@@ -237,19 +237,26 @@ function parseFormTag(
   const groups: FieldGroup[] = [];
   const ungroupedFields: FieldGroup['children'] = [];
 
-  // Process children to find field-groups and ungrouped fields
+  // Process children to find groups and ungrouped fields
   function processContent(child: Node): void {
     if (!child || typeof child !== 'object') {
       return;
     }
 
-    if (isTagNode(child, 'field-group')) {
+    if (isTagNode(child, 'group')) {
       const group = parseFieldGroup(child, responsesByFieldId, orderIndex, idIndex, id);
       groups.push(group);
       return; // parseFieldGroup already processed the children
     }
 
-    // Check for field tags directly under the form (not in a field-group)
+    // Reject legacy field-group tag with helpful error
+    if (isTagNode(child, 'field-group')) {
+      throw new ParseError(
+        "Legacy tag 'field-group' is no longer supported. Use {% group %} instead",
+      );
+    }
+
+    // Check for field tags directly under the form (not in a group)
     const result = parseField(child);
     if (result) {
       if (idIndex.has(result.field.id)) {
@@ -278,7 +285,7 @@ function parseFormTag(
       return; // Don't recurse into field children
     }
 
-    // Recurse into children for non-field-group, non-field nodes
+    // Recurse into children for non-group, non-field nodes
     if (child.children && Array.isArray(child.children)) {
       for (const c of child.children) {
         processContent(c);

@@ -1288,9 +1288,9 @@ Specified in this document but deferred from MF/0.1 proof of concept:
   auto-generated with sequential suffixes: `{base_id}_1`, `{base_id}_2`.
   ```md
   {% repeat ref="risk_entry" minItems=5 %}
-    {% field-group id="risk_entry" title="Risk entry template" %}
+    {% group id="risk_entry" title="Risk entry template" %}
     ...
-    {% /field-group %}
+    {% /group %}
   {% /repeat %}
   ```
 
@@ -1926,7 +1926,7 @@ export const validators = {
 
 <!-- Validate three number fields sum to 100% -->
 
-{% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
+{% group id="scenarios" validate=[{id: "sum_to", fields: ["base_probability", "bull_probability", "bear_probability"], target: 100}] %}
 
 <!-- Validate string-list entries sum to 100% -->
 
@@ -2104,7 +2104,7 @@ When repeating groups are implemented, these will be converted to:
 
 ```md
 {% repeat id="offering_families" label="Offering Families" minItems=1 %}
-  {% field-group id="offering_family" title="Offering Family" %}
+  {% group id="offering_family" title="Offering Family" %}
     {% field kind="string" id="name" label="Offering family name" required=true %}{% /field %}
     {% field kind="string" id="value_prop" label="Value proposition" required=true %}{% /field %}
     {% field kind="single_select" id="delivery" label="Delivery type" required=true %}
@@ -2113,7 +2113,7 @@ When repeating groups are implemented, these will be converted to:
       - [ ] Hybrid {% #hybrid %}
     {% /field %}
     ...
-  {% /field-group %}
+  {% /group %}
 {% /repeat %}
 ```
 
@@ -2132,7 +2132,7 @@ The `company-analysis.form.md` exercises the following Markform features:
 | `single-select` basic | ✅ Many instances |
 | `multi-select` with `minSelections` | ✅ Business model, moats |
 | `checkboxes` with `checkboxMode="simple"` | ✅ Source checklists |
-| `field-group` (flat) | ✅ Many groups |
+| `group` (flat) | ✅ Many groups |
 | Documentation blocks (`description`, `instructions`, etc.) | ✅ Instructions throughout |
 | Code validators | ⏳ Planned in `.valid.ts` |
 

@@ -16,18 +16,18 @@ markform:
 
 ## Company Earnings Analysis
 
-{% field-group id="company_input" title="Company Identification" %}
+{% group id="company_input" title="Company Identification" %}
 
 Which company do you want to analyze? \[*This field is filled in by the user (`role="user"`).*\]
 
 {% field kind="string" id="company" label="Company" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 {% instructions ref="company" %}Enter the company name and ticker symbol (e.g., "Apple (AAPL)" or "Microsoft MSFT").{% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Company Overview
 
-{% field-group id="company_overview" title="Company Overview" %}
+{% group id="company_overview" title="Company Overview" %}
 
 **Company name:**
 
@@ -57,11 +57,11 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 {% field kind="string_list" id="revenue_segments" label="Revenue Segments" role="agent" minItems=1 validate=[{id: "sum_to_percent_list", target: 100}] %}{% /field %}
 {% instructions ref="revenue_segments" %}List each segment with percentage of revenue. Format: "Segment Name: XX%". Should sum to 100%.{% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Recent Earnings
 
-{% field-group id="recent_earnings" title="Recent Earnings" %}
+{% group id="recent_earnings" title="Recent Earnings" %}
 
 **Fiscal quarter:**
 
@@ -95,11 +95,11 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 {% field kind="string" id="beat_miss_details" label="Beat/Miss Details" role="agent" validate=[{id: "required_if_set", when: "beat_miss"}] %}{% /field %}
 {% instructions ref="beat_miss_details" %}Required if beat/miss is selected. Explain the variance from consensus.{% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Key Metrics
 
-{% field-group id="key_metrics" title="Key Metrics" %}
+{% group id="key_metrics" title="Key Metrics" %}
 
 **Gross margin:**
 
@@ -119,11 +119,11 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 {% field kind="number" id="pe_ratio" label="P/E Ratio" role="agent" %}{% /field %}
 {% instructions ref="pe_ratio" %}Trailing twelve month P/E ratio.{% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Outlook
 
-{% field-group id="outlook" title="Outlook" %}
+{% group id="outlook" title="Outlook" %}
 
 **Guidance:**
 
@@ -153,6 +153,6 @@ Which company do you want to analyze? \[*This field is filled in by the user (`r
 {% field kind="string" id="summary" label="One-Line Summary" role="agent" maxLength=300 validate=[{id: "min_words", min: 10}, {id: "max_words", max: 50}] %}{% /field %}
 {% instructions ref="summary" %}Brief overall assessment (10-50 words).{% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}

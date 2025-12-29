@@ -16,7 +16,7 @@ A fully interactive form demonstrating all Markform v0.1 field types.
 Fill all fields using interactive prompts - no LLM API key needed.
 {% /description %}
 
-{% field-group id="basic_fields" title="Basic Fields" %}
+{% group id="basic_fields" title="Basic Fields" %}
 
 {% field kind="string" id="name" label="Name" maxLength=50 minLength=2 required=true role="user" placeholder="Enter your name" examples=["John Smith", "Jane Doe"] %}
 ```value
@@ -50,9 +50,9 @@ test@example.com
 Enter a score between 0 and 100 (optional).
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="list_fields" title="List Fields" %}
+{% group id="list_fields" title="List Fields" %}
 
 {% field kind="string_list" id="tags" itemMinLength=2 label="Tags" maxItems=5 minItems=1 required=true role="user" uniqueItems=true %}
 ```value
@@ -65,9 +65,9 @@ testing
 Add 1-5 unique tags (each at least 2 characters).
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="selection_fields" title="Selection Fields" %}
+{% group id="selection_fields" title="Selection Fields" %}
 
 {% field kind="single_select" id="priority" label="Priority" required=true role="user" %}
 - [ ] Low {% #low %}
@@ -82,9 +82,9 @@ Add 1-5 unique tags (each at least 2 characters).
 - [ ] DevOps {% #devops %}
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="checkbox_fields" title="Checkbox Fields" %}
+{% group id="checkbox_fields" title="Checkbox Fields" %}
 
 {% field kind="checkboxes" id="tasks_multi" label="Tasks (Multi Mode)" required=true role="user" %}
 - [x] Research {% #research %}
@@ -111,9 +111,9 @@ Track task progress. All must reach done or na state to complete.
 Answer yes or no for each confirmation. All must be explicitly answered.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="url_fields" title="URL Fields" %}
+{% group id="url_fields" title="URL Fields" %}
 
 {% field kind="url" id="website" label="Website" required=true role="user" placeholder="https://example.com" examples=["https://github.com/user/repo", "https://company.com"] %}
 ```value
@@ -135,9 +135,9 @@ https://docs.example.com
 Add 1-5 unique reference URLs for sources or documentation.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="date_fields" title="Date and Year Fields" %}
+{% group id="date_fields" title="Date and Year Fields" %}
 
 {% field kind="date" id="event_date" label="Event Date" max="2030-12-31" min="2020-01-01" required=true role="user" %}
 ```value
@@ -159,9 +159,9 @@ Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
 Enter the year the company was founded (1900-2030).
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="table_fields" title="Table Fields" %}
+{% group id="table_fields" title="Table Fields" %}
 
 {% field kind="table" id="team_members" label="Team Members" role="user" minRows=0 maxRows=5 state="skipped"
    columnIds=["name", "role", "start_date"]
@@ -185,9 +185,9 @@ Add team members with their name (required), role, and start date.
 Optionally add project tasks with estimated hours and reference links.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="optional_fields" title="Optional Fields" %}
+{% group id="optional_fields" title="Optional Fields" %}
 
 {% field kind="string" id="notes" label="Notes" role="user" state="skipped" %}
 ```value
@@ -223,7 +223,7 @@ Optionally add a date (YYYY-MM-DD format).
 Optionally add a year.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 {% note id="note-summary" ref="simple_test" role="user" %}
 All required fields completed successfully. Optional fields skipped.

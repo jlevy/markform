@@ -31,7 +31,7 @@ markform:
 A comprehensive research form for gathering intelligence on startups including company basics, founders, funding, competitors, social media presence, and community signals.
 {% /description %}
 
-{% field-group id="user_input" title="Company to Research" %}
+{% group id="user_input" title="Company to Research" %}
 
 {% field kind="string" id="company_name" label="Company Name" role="user" required=true minLength=1 maxLength=200 %}{% /field %}
 
@@ -53,9 +53,9 @@ Optional but helpful: Include any details or sources you already have to aid res
 The more context you provide, the more accurate and relevant the research will be.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="basic_info" title="Company Overview" %}
+{% group id="basic_info" title="Company Overview" %}
 
 {% field kind="string" id="website" label="Website URL" %}{% /field %}
 
@@ -112,9 +112,9 @@ Source: Company website About page, crunchbase.com, Wikipedia if notable.
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="founders_section" title="Founders & Key People" %}
+{% group id="founders_section" title="Founders & Key People" %}
 
 {% description ref="founders_section" %}
 List up to 4 founders/co-founders. Leave unused slots empty.
@@ -151,9 +151,9 @@ Brief background: prior companies, notable roles, education.
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="funding_section" title="Funding History" %}
+{% group id="funding_section" title="Funding History" %}
 
 {% field kind="string" id="total_funding" label="Total Funding Raised" %}{% /field %}
 
@@ -188,9 +188,9 @@ Source: crunchbase.com funding rounds, pitchbook.com, techcrunch.com, company pr
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="competitors_section" title="Competitors & Market Position" %}
+{% group id="competitors_section" title="Competitors & Market Position" %}
 
 {% field kind="string" id="market_category" label="Market Category" %}{% /field %}
 
@@ -225,9 +225,9 @@ Source: Company website, product pages, press interviews, g2.com reviews.
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="social_media_section" title="Social Media Presence" %}
+{% group id="social_media_section" title="Social Media Presence" %}
 
 {% description ref="social_media_section" %}
 Search each platform directly for official company accounts. Note follower counts and activity level.
@@ -299,9 +299,9 @@ Source: Search reddit.com for company name, check for official subreddit.
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="hacker_news_section" title="Hacker News Presence" %}
+{% group id="hacker_news_section" title="Hacker News Presence" %}
 
 {% field kind="table" id="hn_posts" label="Notable Hacker News Posts" minRows=0 maxRows=5
    columnIds=["title", "date", "points", "comments", "url"]
@@ -322,9 +322,9 @@ Source: Search hn.algolia.com for company name, product name, and founder names.
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="product_hunt_section" title="Product Hunt Presence" %}
+{% group id="product_hunt_section" title="Product Hunt Presence" %}
 
 {% field kind="table" id="ph_launches" label="Product Hunt Launches"
    columnIds=["product_name", "date", "upvotes", "badges", "url"]
@@ -344,9 +344,9 @@ Source: Search producthunt.com for company name and product names.
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="deep_intel_section" title="Deep Intelligence Sources" %}
+{% group id="deep_intel_section" title="Deep Intelligence Sources" %}
 
 {% description ref="deep_intel_section" %}
 Alternative sources for deeper startup intelligence beyond standard databases.
@@ -439,9 +439,9 @@ Source: web.archive.org - search for company domain, review snapshots from diffe
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="press_section" title="Notable Press Coverage" %}
+{% group id="press_section" title="Notable Press Coverage" %}
 
 {% field kind="table" id="press_coverage" label="Press Articles" minRows=0 maxRows=5
    columnIds=["title", "publication", "date", "url"]
@@ -462,9 +462,9 @@ Source: techcrunch.com, theinformation.com, bloomberg.com, forbes.com, wired.com
 URLs used as sources for this section. One URL per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="sources_section" title="Research Metadata" %}
+{% group id="sources_section" title="Research Metadata" %}
 
 {% field kind="date" id="research_date" label="Research Date" required=true %}{% /field %}
 
@@ -478,6 +478,6 @@ Date this research was conducted. Important for tracking data freshness.
 Any caveats, limitations, or notes about the research (e.g., "PitchBook access unavailable", "Company is in stealth mode", "Limited public information available", "Paywalled sources not accessed").
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}

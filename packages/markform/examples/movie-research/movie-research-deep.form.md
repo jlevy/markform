@@ -45,7 +45,7 @@ markform:
 Comprehensive movie research covering ratings from multiple sources, box office performance, full cast and crew, technical specifications, streaming availability, and cultural impact analysis.
 {% /description %}
 
-{% field-group id="movie_input" title="Movie Identification" %}
+{% group id="movie_input" title="Movie Identification" %}
 
 {% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 
@@ -53,11 +53,11 @@ Comprehensive movie research covering ratings from multiple sources, box office 
 Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson").
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Title Identification
 
-{% field-group id="title_identification" title="Title Identification" %}
+{% group id="title_identification" title="Title Identification" %}
 
 {% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
 
@@ -67,11 +67,11 @@ Official title including subtitle if any (e.g., "The Lord of the Rings: The Fell
 
 {% field kind="number" id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /field %}
 
-{% /field-group %}
+{% /group %}
 
 ## Sources
 
-{% field-group id="primary_sources" title="Primary Sources" %}
+{% group id="primary_sources" title="Primary Sources" %}
 
 {% field kind="url" id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /field %}
 
@@ -92,9 +92,9 @@ Direct link to the movie's Rotten Tomatoes page.
 Direct link to the movie's Metacritic page.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="box_office_sources" title="Box Office Sources" %}
+{% group id="box_office_sources" title="Box Office Sources" %}
 
 {% field kind="url" id="boxofficemojo_url" label="Box Office Mojo URL" role="agent" %}{% /field %}
 
@@ -109,9 +109,9 @@ Format: https://www.boxofficemojo.com/title/tt0111161/
 Alternative/supplementary box office data and profitability analysis.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="availability_sources" title="Availability Sources" %}
+{% group id="availability_sources" title="Availability Sources" %}
 
 {% field kind="url" id="justwatch_url" label="JustWatch URL" role="agent" %}{% /field %}
 
@@ -120,9 +120,9 @@ Best source for current streaming availability. Use US region.
 Format: https://www.justwatch.com/us/movie/the-shawshank-redemption
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="additional_sources" title="Additional Sources" %}
+{% group id="additional_sources" title="Additional Sources" %}
 
 {% field kind="url" id="letterboxd_url" label="Letterboxd URL" role="agent" %}{% /field %}
 
@@ -142,11 +142,11 @@ For production history, cultural impact, comprehensive awards list.
 Studio or film's official website, if still active.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Basic Details
 
-{% field-group id="basic_details" title="Basic Details" %}
+{% group id="basic_details" title="Basic Details" %}
 
 {% field kind="string_list" id="directors" label="Director(s)" role="agent" required=true %}{% /field %}
 
@@ -202,11 +202,11 @@ Select all applicable genres from IMDB (up to 5).
 Production countries, one per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Cast & Crew
 
-{% field-group id="cast_crew" title="Cast & Crew" %}
+{% group id="cast_crew" title="Cast & Crew" %}
 
 {% field kind="table" id="lead_cast" label="Lead Cast" role="agent" minRows=1 maxRows=10
    columnIds=["actor_name", "character_name"]
@@ -244,11 +244,11 @@ Format: Name (producer type)
 Example: "Emma Thomas (producer)"
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Ratings
 
-{% field-group id="imdb_ratings" title="IMDB Ratings" %}
+{% group id="imdb_ratings" title="IMDB Ratings" %}
 
 {% field kind="number" id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /field %}
 
@@ -262,9 +262,9 @@ IMDB user rating (1.0-10.0 scale).
 Number of IMDB user votes (e.g., 2800000 for a popular film).
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
+{% group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
 
 {% field kind="number" id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /field %}
 
@@ -286,9 +286,9 @@ Audience Score percentage (0-100).
 The official Rotten Tomatoes critics consensus statement, if available.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="metacritic_ratings" title="Metacritic Ratings" %}
+{% group id="metacritic_ratings" title="Metacritic Ratings" %}
 
 {% field kind="number" id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 %}{% /field %}
 
@@ -296,9 +296,9 @@ The official Rotten Tomatoes critics consensus statement, if available.
 Metascore (0-100 scale). Leave empty if not available.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="additional_ratings" title="Additional Ratings" %}
+{% group id="additional_ratings" title="Additional Ratings" %}
 
 {% field kind="number" id="letterboxd_rating" label="Letterboxd Rating" role="agent" min=0.5 max=5.0 %}{% /field %}
 
@@ -312,11 +312,11 @@ Letterboxd average rating (0.5-5.0 scale, in 0.1 increments).
 Opening weekend audience grade (A+ to F). Only available for theatrical releases.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Box Office
 
-{% field-group id="box_office" title="Box Office" %}
+{% group id="box_office" title="Box Office" %}
 
 {% field kind="number" id="budget_millions" label="Budget ($M)" role="agent" min=0 %}{% /field %}
 
@@ -342,11 +342,11 @@ Global theatrical gross in millions USD.
 US opening weekend gross in millions USD.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Technical Specifications
 
-{% field-group id="technical_specs" title="Technical Specifications" %}
+{% group id="technical_specs" title="Technical Specifications" %}
 
 {% field kind="single_select" id="aspect_ratio" label="Aspect Ratio" role="agent" %}
 - [ ] 1.33:1 (Academy) {% #ratio_133 %}
@@ -381,11 +381,11 @@ Primary sound format (e.g., "Dolby Atmos", "DTS", "Dolby Digital").
 Primary camera system used (e.g., "Arri Alexa 65", "IMAX 15-perf", "Panavision Panaflex").
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Streaming Availability
 
-{% field-group id="streaming_availability" title="Streaming Availability (US)" %}
+{% group id="streaming_availability" title="Streaming Availability (US)" %}
 
 {% field kind="multi_select" id="streaming_subscription" label="Streaming (Subscription)" role="agent" %}
 - [ ] Netflix {% #netflix %}
@@ -414,11 +414,11 @@ Select all platforms where this film is currently available to stream (subscript
 - [ ] 4K UHD available {% #uhd_4k %}
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 ## Content & Themes
 
-{% field-group id="content_themes" title="Content & Themes" %}
+{% group id="content_themes" title="Content & Themes" %}
 
 {% field kind="checkboxes" id="content_warnings" label="Content Warnings" role="agent" checkboxMode="simple" %}
 - [ ] Intense violence {% #violence %}
@@ -441,11 +441,11 @@ Check any content warnings that apply. Use IMDB Parents Guide as reference.
 Major themes explored in the film (e.g., "redemption", "family", "identity", "war").
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 ## Summary & Legacy
 
-{% field-group id="summary" title="Summary" %}
+{% group id="summary" title="Summary" %}
 
 {% field kind="string" id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /field %}
 
@@ -476,9 +476,9 @@ Example: Oscar | Best Picture | 1995
 2-3 memorable critic quotes that capture reception.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="cultural_legacy" title="Cultural Legacy" %}
+{% group id="cultural_legacy" title="Cultural Legacy" %}
 
 {% field kind="string" id="cultural_impact" label="Cultural Impact" role="agent" maxLength=500 %}{% /field %}
 
@@ -493,6 +493,6 @@ Leave empty for recent releases without established legacy.
 Films with similar themes, style, or appeal. One per line.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}

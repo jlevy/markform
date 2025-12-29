@@ -18,7 +18,7 @@ markform:
 
 {% form id="test_form" title="Test Form" %}
 
-{% field-group id="basic" title="Basic Fields" %}
+{% group id="basic" title="Basic Fields" %}
 
 {% field kind="string" id="name" label="Name" role="user" required=true %}{% /field %}
 
@@ -26,9 +26,9 @@ markform:
 
 {% field kind="string_list" id="tags" label="Tags" role="user" %}{% /field %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="selection" title="Selection Fields" %}
+{% group id="selection" title="Selection Fields" %}
 
 {% field kind="single_select" id="priority" label="Priority" role="user" %}
 - [ ] Low {% #low %}
@@ -42,9 +42,9 @@ markform:
 - [ ] Database {% #database %}
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="checkboxes" title="Checkbox Fields" %}
+{% group id="checkboxes" title="Checkbox Fields" %}
 
 {% field kind="checkboxes" id="tasks_multi" label="Tasks (Multi)" role="user" checkboxMode="multi" %}
 - [ ] Research {% #research %}
@@ -61,7 +61,7 @@ markform:
 - [ ] Notified {% #notify %}
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;

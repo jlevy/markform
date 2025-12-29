@@ -41,7 +41,7 @@ The user provides the company name, and the agent researches and fills all remai
 - Tech news publications
 {% /documentation %}
 
-{% field-group id="basic_info" title="Company Information" %}
+{% group id="basic_info" title="Company Information" %}
 
 {% field kind="string" id="company_name" label="Company Name" role="user" required=true minLength=2 maxLength=200 %}
 ```value
@@ -103,9 +103,9 @@ Anthropic is an AI safety company focused on building reliable, interpretable, a
 Brief description of what the company does. 100-200 words max.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="funding_info" title="Funding Information" %}
+{% group id="funding_info" title="Funding Information" %}
 
 {% field kind="string" id="total_funding" label="Total Funding Raised" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" %}
 ```value
@@ -162,9 +162,9 @@ https://techcrunch.com/2023/09/25/amazon-to-invest-up-to-4-billion-in-anthropic/
 URLs to press releases or articles about funding rounds.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="people" title="Key People" %}
+{% group id="people" title="Key People" %}
 
 {% field kind="string" id="ceo" label="CEO / Founder" %}
 ```value
@@ -210,9 +210,9 @@ List all founders, one per line.
 Approximate number of employees.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="market_info" title="Market & Industry" %}
+{% group id="market_info" title="Market & Industry" %}
 
 {% field kind="multi_select" id="industry_sectors" label="Industry Sectors" minSelections=1 maxSelections=5 %}
 - [x] AI/ML {% #ai_ml %}
@@ -253,9 +253,9 @@ https://mistral.ai
 Website URLs of main competitors.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="press_coverage" title="Press & Coverage" %}
+{% group id="press_coverage" title="Press & Coverage" %}
 
 {% field kind="url_list" id="press_articles" label="Press Coverage URLs" minItems=1 maxItems=10 uniqueItems=true %}
 ```value
@@ -285,9 +285,9 @@ Crunchbase company profile URL.
 PitchBook company profile URL if available.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="sources_section" title="Research Sources" %}
+{% group id="sources_section" title="Research Sources" %}
 
 {% field kind="url_list" id="sources" label="Source URLs" minItems=1 uniqueItems=true %}
 ```value
@@ -302,6 +302,6 @@ https://en.wikipedia.org/wiki/Anthropic
 List all source URLs used for this research. Include Crunchbase, company website, and any additional sources consulted.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}

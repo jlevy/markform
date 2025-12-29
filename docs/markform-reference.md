@@ -39,11 +39,11 @@ markform:
 
 {% form id="form_id" title="Form Title" %}
 
-{% field-group id="group_id" title="Group Title" %}
+{% group id="group_id" title="Group Title" %}
 
 <!-- fields go here -->
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 ```
@@ -399,7 +399,7 @@ A focused research form for gathering ratings and key statistics for any film.
 Pulls from IMDB, Rotten Tomatoes, and Metacritic.
 {% /description %}
 
-{% field-group id="movie_input" title="Movie Identification" %}
+{% group id="movie_input" title="Movie Identification" %}
 
 {% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 
@@ -407,9 +407,9 @@ Pulls from IMDB, Rotten Tomatoes, and Metacritic.
 Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson")
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="title_identification" title="Title Identification" %}
+{% group id="title_identification" title="Title Identification" %}
 
 {% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
 
@@ -417,9 +417,9 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 Look up what film the user had in mind and fill in the official title including subtitle if any (e.g., "The Lord of the Rings: The Fellowship of the Ring").
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="sources" title="Sources" %}
+{% group id="sources" title="Sources" %}
 
 {% field kind="url" id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /field %}
 
@@ -439,9 +439,9 @@ Direct link to the movie's Rotten Tomatoes page.
 Direct link to the movie's Metacritic page.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="basic_details" title="Basic Details" %}
+{% group id="basic_details" title="Basic Details" %}
 
 {% field kind="number" id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /field %}
 
@@ -462,9 +462,9 @@ One director per line. Most films have one; some have two or more co-directors.
 - [ ] NR/Unrated {% #nr %}
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="imdb_ratings" title="IMDB Ratings" %}
+{% group id="imdb_ratings" title="IMDB Ratings" %}
 
 {% field kind="number" id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /field %}
 
@@ -478,9 +478,9 @@ IMDB user rating (1.0-10.0 scale).
 Number of IMDB user votes (e.g., 2800000 for a popular film).
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
+{% group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
 
 {% field kind="number" id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /field %}
 
@@ -496,9 +496,9 @@ Tomatometer percentage (0-100).
 Audience Score percentage (0-100).
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="metacritic_ratings" title="Metacritic Ratings" %}
+{% group id="metacritic_ratings" title="Metacritic Ratings" %}
 
 {% field kind="number" id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 %}{% /field %}
 
@@ -506,9 +506,9 @@ Audience Score percentage (0-100).
 Metascore (0-100 scale). Leave empty if not available.
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
-{% field-group id="summary" title="Summary" %}
+{% group id="summary" title="Summary" %}
 
 {% field kind="string" id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /field %}
 
@@ -524,7 +524,7 @@ Format: Award | Category | Year
 Example: "Oscar | Best Picture | 1995"
 {% /instructions %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 ```
@@ -595,7 +595,7 @@ markform fill template.form.md --mock --mock-source filled.form.md
 
 3. **Set constraints**: Use `min`, `max`, `minLength`, `pattern` to validate
 
-4. **Group logically**: Related fields in the same `field-group`
+4. **Group logically**: Related fields in the same `group`
 
 5. **Assign roles**: Separate user input from agent research
 

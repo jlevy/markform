@@ -310,8 +310,8 @@ export interface FieldGroup {
   report?: boolean;
   /**
    * True if this group was implicitly created for fields placed directly
-   * under the form (not wrapped in an explicit field-group).
-   * Implicit groups are serialized without field-group wrapper tags.
+   * under the form (not wrapped in an explicit group).
+   * Implicit groups are serialized without group wrapper tags.
    */
   implicit?: boolean;
 }

@@ -19,13 +19,13 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="basics" %}
+{% group id="basics" %}
 
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
 {% field kind="number" id="age" label="Age" required=true %}{% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -37,7 +37,7 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="basics" %}
+{% group id="basics" %}
 
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
@@ -51,7 +51,7 @@ John Doe
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -251,17 +251,17 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="group_a" %}
+{% group id="group_a" %}
 {% field kind="string" id="field_a1" label="A1" required=true %}{% /field %}
 {% field kind="string" id="field_a2" label="A2" required=true %}{% /field %}
 {% field kind="string" id="field_a3" label="A3" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 
-{% field-group id="group_b" %}
+{% group id="group_b" %}
 {% field kind="string" id="field_b1" label="B1" required=true %}{% /field %}
 {% field kind="string" id="field_b2" label="B2" required=true %}{% /field %}
 {% field kind="string" id="field_b3" label="B3" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -431,13 +431,13 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="urls" %}
+{% group id="urls" %}
 
 {% field kind="url" id="website" label="Website" required=true %}{% /field %}
 
 {% field kind="url_list" id="sources" label="Sources" required=true %}{% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -449,7 +449,7 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="urls" %}
+{% group id="urls" %}
 
 {% field kind="url" id="website" label="Website" required=true %}
 \`\`\`value
@@ -464,7 +464,7 @@ https://github.com/example
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -615,7 +615,7 @@ markform:
 
 {% form id="test_form" %}
 
-{% field-group id="basics" %}
+{% group id="basics" %}
 
 {% field kind="string" id="agent_field" label="Agent Field" required=true role="agent" %}
 \`\`\`value
@@ -629,7 +629,7 @@ User Value
 \`\`\`
 {% /field %}
 
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;

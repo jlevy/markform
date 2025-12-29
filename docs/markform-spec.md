@@ -143,7 +143,7 @@ Data Model section for complete type definitions.
 
 IDs are organized into **two scoping levels** with different uniqueness requirements:
 
-**1. Structural IDs** (form, field-group, field):
+**1. Structural IDs** (form, group, field):
 
 - *required:* Must be globally unique across the entire document
 
@@ -196,7 +196,7 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 
 - `form` — the root container
 
-- `field-group` — containers for fields or nested groups
+- `group` — containers for fields or nested groups
 
 #### Field Tags
 
@@ -494,7 +494,7 @@ Example values or usage...
 
 **Placement rules (MF/0.1):**
 
-- Doc blocks MAY appear inside `form` and `field-group` as direct children
+- Doc blocks MAY appear inside `form` and `group` as direct children
 
 - *required:* Parser will reject doc blocks that appear inside field tag bodies (doc
   blocks MUST NOT be nested inside a field tag)
@@ -770,12 +770,12 @@ Analysis completed with partial data due to API limitations.
 ````md
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
 
-{% field-group id="company_info" title="Company Info" %}
+{% group id="company_info" title="Company Info" %}
 {% field kind="string" id="company_name" label="Company name" state="skipped" %}
 ```value
 %SKIP% (Not applicable for this analysis type)
 ````
-{% /field %} {% /field-group %}
+{% /field %} {% /group %}
 
 {% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
 data due to API limitations.
@@ -846,35 +846,35 @@ markform:
 Prepare an earnings-call brief by extracting key financials and writing a thesis.
 {% /description %}
 
-{% field-group id="company_info" title="Company Info" %}
+{% group id="company_info" title="Company Info" %}
 {% field kind="string" id="company_name" label="Company name" required=true %}{% /field %}
 {% field kind="string" id="ticker" label="Ticker" required=true %}{% /field %}
 {% field kind="string" id="fiscal_period" label="Fiscal period" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 
-{% field-group id="source_docs" title="Source Documents" %}
+{% group id="source_docs" title="Source Documents" %}
 {% field kind="checkboxes" id="docs_reviewed" label="Documents reviewed" required=true %}
 - [ ] 10-K {% #ten_k %}
 - [ ] 10-Q {% #ten_q %}
 - [ ] Earnings release {% #earnings_release %}
 - [ ] Earnings call transcript {% #call_transcript %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 
-{% field-group id="financials" title="Key Financials" %}
+{% group id="financials" title="Key Financials" %}
 {% field kind="number" id="revenue_m" label="Revenue (USD millions)" required=true %}{% /field %}
 {% field kind="number" id="gross_margin_pct" label="Gross margin (%)" %}{% /field %}
 {% field kind="number" id="eps_diluted" label="Diluted EPS" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 
-{% field-group id="analysis" title="Analysis" %}
+{% group id="analysis" title="Analysis" %}
 {% field kind="single_select" id="rating" label="Overall rating" required=true %}
 - [ ] Bullish {% #bullish %}
 - [ ] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
 {% /field %}
 {% field kind="string" id="thesis" label="Investment thesis" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 ````
@@ -886,7 +886,7 @@ Hand-authored forms only need the `spec` field.
 #### Example: Incomplete Form
 
 ````md
-{% field-group id="company_info" title="Company Info" %}
+{% group id="company_info" title="Company Info" %}
 {% field kind="string" id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
@@ -896,9 +896,9 @@ ACME Corp
 ACME
 ```
 {% /field %} {% field kind="string" id="fiscal_period" label="Fiscal period"
-required=true %}{% /field %} {% /field-group %}
+required=true %}{% /field %} {% /group %}
 
-{% field-group id="source_docs" title="Source Documents" %} {% checkboxes
+{% group id="source_docs" title="Source Documents" %} {% checkboxes
 id="docs_reviewed" label="Documents reviewed" required=true %}
 
 - [x] 10-K {% #ten_k %}
@@ -907,7 +907,7 @@ id="docs_reviewed" label="Documents reviewed" required=true %}
 
 - [/] Earnings release {% #earnings_release %}
 
-- [ ] Earnings call transcript {% #call_transcript %} {% /field %} {% /field-group
+- [ ] Earnings call transcript {% #call_transcript %} {% /field %} {% /group
   %}
 ````
 
@@ -1399,7 +1399,7 @@ Describes the static structure of the form schema:
 type FieldKind = 'string' | 'number' | 'string_list' | 'checkboxes' | 'single_select' | 'multi_select' | 'url' | 'url_list';
 
 interface StructureSummary {
-  groupCount: number;           // total field-groups
+  groupCount: number;           // total groups
   fieldCount: number;           // total fields (all kinds)
   optionCount: number;          // total options across all select/checkbox fields
 
@@ -2051,7 +2051,7 @@ A completed form must have all checkbox options resolved to either `done` or `na
 
 **Field group `required` attribute:**
 
-The `required` attribute on `field-group` is **not supported in MF/0.1**. Groups may
+The `required` attribute on `group` is **not supported in MF/0.1**. Groups may
 have `validate` references for custom validation, but the `required` attribute should
 not be used on groups.
 If present, it is ignored with a warning.
@@ -2165,7 +2165,7 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
 
 <!-- Sum-to validator with configurable target -->
 
-{% field-group id="scenarios" validate=[{id: "sum_to", fields: ["base_prob", "bull_prob", "bear_prob"], target: 100}] %}
+{% group id="scenarios" validate=[{id: "sum_to", fields: ["base_prob", "bull_prob", "bear_prob"], target: 100}] %}
 ```
 
 **Runtime loading (engine):**

@@ -21,14 +21,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
 {% field kind="number" id="age" label="Age" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
-{% field-group id="g2" %}
+{% group id="g2" %}
 {% field kind="string" id="email" label="Email" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -49,9 +49,9 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -70,13 +70,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="single_select" id="rating" label="Rating" %}
 - [ ] Low {% #low %}
 - [ ] Medium {% #medium %}
 - [ ] High {% #high %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -98,12 +98,12 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" title="G1" %}
+{% group id="g1" title="G1" %}
 {% field kind="table" id="people" label="People" columnIds=["name", "age", "email"] columnLabels=["Name", "Age", "Email"] columnTypes=["string", "number", "url"] %}
 | Name | Age | Email |
 | --- | --- | --- |
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -135,9 +135,9 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -163,13 +163,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}
 \`\`\`value
 John Doe
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -197,13 +197,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 X
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -241,14 +241,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
 \`\`\`
 {% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -272,13 +272,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="multi" %}
 - [x] Done {% #done %}
 - [/] In progress {% #progress %}
 - [ ] Todo {% #todo %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -304,12 +304,12 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="multi" %}
 - [x] Done {% #done %}
 - [ ] Todo {% #todo %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -334,12 +334,12 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="checkboxes" id="confirms" label="Confirms" checkboxMode="explicit" %}
 - [y] Answered yes {% #yes %}
 - [ ] Not answered {% #unfilled %}
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -366,9 +366,9 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -392,13 +392,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -422,13 +422,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 X
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -462,14 +462,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
 \`\`\`
 {% /field %}
 {% field kind="string" id="email" label="Email" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -496,13 +496,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -525,9 +525,9 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -550,13 +550,13 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}
 \`\`\`value
 X
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -591,14 +591,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
 \`\`\`
 {% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -626,7 +626,7 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}
 \`\`\`value
 Alice
@@ -639,7 +639,7 @@ alice@example.com
 {% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
 {% field kind="string" id="bio" label="Bio" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -667,14 +667,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
 \`\`\`
 {% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -702,7 +702,7 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
@@ -710,7 +710,7 @@ John
 {% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
 {% field kind="string" id="bio" label="Bio" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -739,7 +739,7 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
@@ -747,7 +747,7 @@ John
 {% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
 {% field kind="string" id="bio" label="Bio" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -778,14 +778,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John
 \`\`\`
 {% /field %}
 {% field kind="number" id="age" label="Age" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -821,7 +821,7 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 Alice
@@ -830,7 +830,7 @@ Alice
 {% field kind="string" id="bio" label="Bio" state="skipped" %}{% /field %}
 {% field kind="number" id="age" label="Age" state="aborted" %}{% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -872,7 +872,7 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}
 \`\`\`value
 Alice
@@ -881,7 +881,7 @@ Alice
 {% field kind="string" id="bio" label="Bio" state="skipped" %}{% /field %}
 {% field kind="number" id="age" label="Age" state="aborted" %}{% /field %}
 {% field kind="string" id="notes" label="Notes" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -907,10 +907,10 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
 {% field kind="string" id="bio" label="Bio" state="skipped" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% note id="n1" ref="bio" role="agent" %}
 Not available.
@@ -945,9 +945,9 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true state="aborted" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -974,14 +974,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 Alice
 \`\`\`
 {% /field %}
 {% field kind="number" id="age" label="Age" state="aborted" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -1005,14 +1005,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 Alice
 \`\`\`
 {% /field %}
 {% field kind="number" id="age" label="Age" state="aborted" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -1036,7 +1036,7 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 Alice
@@ -1044,7 +1044,7 @@ Alice
 {% /field %}
 {% field kind="string" id="bio" label="Bio" state="skipped" %}{% /field %}
 {% field kind="string" id="notes" label="Notes" state="skipped" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -1070,9 +1070,9 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true state="aborted" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -1097,14 +1097,14 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 Alice
 \`\`\`
 {% /field %}
 {% field kind="string" id="bio" label="Bio" %}{% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
@@ -1130,7 +1130,7 @@ markform:
 
 {% form id="test" %}
 
-{% field-group id="g1" %}
+{% group id="g1" %}
 {% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 Alice
@@ -1142,7 +1142,7 @@ Alice
 Some notes
 \`\`\`
 {% /field %}
-{% /field-group %}
+{% /group %}
 
 {% /form %}
 `;
