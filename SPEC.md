@@ -203,8 +203,8 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 [Markdoc Config][markdoc-config] for how to register custom tags.
 
-Each field tag maps to a **kind** value that identifies the field type.
-The `kind` property is reserved exclusively for field types—it identifies what type of
+Each field tag maps to a **kind** value that identifies the field kind.
+The `kind` property is reserved exclusively for field kinds—it identifies what type of
 field a `Field` or `FieldValue` represents.
 (In TypeScript, the type is `FieldKind`.)
 
@@ -226,7 +226,7 @@ field a `Field` or `FieldValue` represents.
 expression string (without delimiters).
 Example: `pattern="^[A-Z]{1,5}$"` for a ticker symbol.
 
-**Common attributes (all field types):**
+**Common attributes (all field kinds):**
 
 | Attribute | Type | Description |
 | --- | --- | --- |
@@ -245,7 +245,7 @@ to different actors.
 | `placeholder` | string | Hint text shown in empty fields (displayed in UI) |
 | `examples` | string[] | Example values for the field (helps LLMs, shown in prompts) |
 
-These attributes are only valid on text-entry field types. Using them on chooser fields
+These attributes are only valid on text-entry field kinds. Using them on chooser fields
 (single-select, multi-select, checkboxes) will result in a parse error.
 
 **Example with placeholder and examples:**
@@ -272,10 +272,10 @@ See **Role-filtered completion** in the ProgressState Definitions section.
 Markdoc does **not** natively support GFM-style task list checkbox syntax.
 The `[ ]` and `[x]` markers are **Markform-specific syntax** parsed within tag content.
 
-All selection field types use checkbox-style markers for broad markdown renderer
+All selection field kinds use checkbox-style markers for broad markdown renderer
 compatibility:
 
-| Field Type | Marker | Meaning | Example |
+| Field Kind | Marker | Meaning | Example |
 | --- | --- | --- | --- |
 | `checkboxes` | `[ ]` | Unchecked / todo / unfilled | `- [ ] Item {% #item_id %}` |
 | `checkboxes` | `[x]` | Checked / done | `- [x] Item {% #item_id %}` |
@@ -518,7 +518,7 @@ without filtering out nested doc blocks.
 
 #### Field Values
 
-Values are encoded differently based on field type.
+Values are encoded differently based on field kind.
 The `fence` node with `language="value"` is used for scalar values (see
 [Markdoc Nodes][markdoc-nodes] for fence handling).
 
@@ -1055,6 +1055,107 @@ language (e.g., Pydantic for Python, JSON Schema for language-agnostic interchan
 The schemas below are normative—conforming implementations must support equivalent
 data structures.
 
+#### Type System
+
+This section formalizes the distinction between **field kinds** (Markform's field
+classification) and **data types** (the underlying value representation).
+
+##### Terminology
+
+| Term | Definition | Examples |
+| --- | --- | --- |
+| **Field Kind** | Markform field classification. Determines syntax, validation, and behavior. | `string`, `single_select`, `table` |
+| **Data Type** | TypeScript/JSON type of the value. | `string`, `number`, `string[]` |
+| **Value Type** | Complete type expression including nullability. | `string \| null`, `OptionId[]` |
+| **Scalar Type** | Single atomic value (optionally format-constrained). | `string`, `url`, `date` |
+| **Column Type** | Type of a cell in a table field (subset of scalar types). | `string`, `number`, `url` |
+
+##### Data Type Taxonomy
+
+**Primitive Types** — Base JSON types:
+
+| Primitive | Description |
+| --- | --- |
+| `string` | UTF-8 text |
+| `number` | IEEE 754 float (includes integers) |
+| `boolean` | true/false |
+| `null` | Absence of value |
+
+**Scalar Types** — Primitives with optional format constraints:
+
+| Scalar Type | Base Primitive | Format Constraint |
+| --- | --- | --- |
+| `string` | `string` | — |
+| `number` | `number` | — |
+| `url` | `string` | Valid URL |
+| `date` | `string` | ISO 8601 (YYYY-MM-DD) |
+| `year` | `number` | Integer in valid year range |
+
+**Enum Types** — Values constrained to a defined set:
+
+| Enum Type | Base Primitive | Values |
+| --- | --- | --- |
+| `OptionId` | `string` | One of the field's defined option IDs |
+| `CheckboxValue` | `string` | State tokens based on `checkboxMode` |
+
+**Collection Types** — Compound types:
+
+| Collection Type | Structure |
+| --- | --- |
+| `Array<T>` | Ordered list of `T` |
+| `Record<K, V>` | Key-value map |
+
+**Structured Types** — Complex domain objects:
+
+| Structured Type | Definition |
+| --- | --- |
+| `TableRow` | `Record<ColumnId, CellValue>` |
+| `CellValue` | Scalar type determined by column's type |
+
+##### Field Kind Taxonomy
+
+Field kinds are organized into four categories:
+
+```
+Field Kinds
+├── Simple Kinds ──────── Single scalar value (nullable)
+│   ├── string           Also usable as column types
+│   ├── number           in table fields
+│   ├── url
+│   ├── date
+│   └── year
+│
+├── List Kinds ────────── Ordered array of scalars
+│   ├── string_list      Open-ended (user provides items)
+│   └── url_list
+│
+├── Chooser Kinds ─────── Selection from predefined options
+│   ├── single_select    Pick one
+│   ├── multi_select     Pick many
+│   └── checkboxes       State per option
+│
+└── Structured Kinds ──── Complex nested data
+    └── table            Rows × typed columns
+```
+
+**Simple Kinds** can also be used as column types in table fields.
+
+##### Kind → Type Mapping
+
+| Field Kind | Category | Value Type | Base Type | Notes |
+| --- | --- | --- | --- | --- |
+| `string` | Simple | `string \| null` | `string` | Plain text |
+| `number` | Simple | `number \| null` | `number` | Integer or float |
+| `url` | Simple | `string \| null` | `string` | URL format validated |
+| `date` | Simple | `string \| null` | `string` | ISO 8601 format |
+| `year` | Simple | `number \| null` | `number` | Integer year |
+| `string_list` | List | `string[]` | `Array<string>` | Empty = `[]` |
+| `url_list` | List | `string[]` | `Array<string>` | URL format validated |
+| `single_select` | Chooser | `OptionId \| null` | `string` (enum) | One of defined options |
+| `multi_select` | Chooser | `OptionId[]` | `Array<string>` (enum) | Subset of options |
+| `checkboxes` | Chooser | `Record<OptionId, CheckboxValue>` | `Record<string, string>` | State per option |
+| `table` | Structured | `TableRow[]` | `Array<Record<string, CellValue>>` | Typed columns |
+
 #### Canonical TypeScript Types
 
 ```ts
@@ -1063,7 +1164,7 @@ type Id = string; // validated snake_case, e.g., /^[a-z][a-z0-9_]*$/
 // Validator reference: simple string ID or parameterized object
 type ValidatorRef = string | { id: string; [key: string]: unknown };
 
-// Answer state for a field - orthogonal to field type
+// Answer state for a field - orthogonal to field kind
 // Any field can be in any answer state
 type AnswerState = 'unanswered' | 'answered' | 'skipped' | 'aborted';
 
@@ -1298,10 +1399,10 @@ type FieldKind = 'string' | 'number' | 'string_list' | 'checkboxes' | 'single_se
 
 interface StructureSummary {
   groupCount: number;           // total field-groups
-  fieldCount: number;           // total fields (all types)
+  fieldCount: number;           // total fields (all kinds)
   optionCount: number;          // total options across all select/checkbox fields
 
-  fieldCountByKind: Record<FieldKind, number>;  // breakdown by field type
+  fieldCountByKind: Record<FieldKind, number>;  // breakdown by field kind
 
   /** Map of group ID -> 'field_group' (for completeness; groups have one kind) */
   groupsById: Record<Id, 'field_group'>;
@@ -1339,7 +1440,7 @@ Tracks filling progress per field without exposing actual values:
 type ProgressState = 'empty' | 'incomplete' | 'invalid' | 'complete';
 
 interface FieldProgress {
-  kind: FieldKind;             // field type
+  kind: FieldKind;             // field kind
   required: boolean;           // whether field has required=true
 
   answerState: AnswerState;    // unified answer state (unanswered/answered/skipped/aborted)
@@ -1492,7 +1593,7 @@ else:
 For form completion purposes, fields with constraints are treated as implicitly
 required:
 
-| Field Type | Implicit Required When |
+| Field Kind | Implicit Required When |
 | --- | --- |
 | `string-list` | `minItems > 0` |
 | `multi-select` | `minSelections > 0` |
@@ -1679,10 +1780,10 @@ const MarkformFrontmatterSchema = z.object({
 Use a `toSnakeCaseDeep()` helper for deterministic conversion at the frontmatter
 boundary.
 
-#### Comprehensive Field Type Reference
+#### Comprehensive Field Kind Reference
 
 This section provides a complete mapping between Markdoc syntax, TypeScript types, and
-schema representations for all field types.
+schema representations for all field kinds.
 
 ##### Naming Conventions
 
@@ -1695,7 +1796,7 @@ schema representations for all field types.
 | JSON Schema keywords | camelCase | `minItems`, `maxLength`, `uniqueItems` |
 | IDs (values) | snake_case | `company_name`, `ten_k`, `quarterly_earnings` |
 | YAML keys (frontmatter, session transcripts) | snake_case | `spec`, `form_summary`, `field_count_by_kind` |
-| Kind values (field types) | snake_case | `'string'`, `'single_select'` |
+| Kind values (field kinds) | snake_case | `'string'`, `'single_select'` |
 | Patch operations | snake_case | `set_string`, `set_single_select` |
 
 **Rationale:** Using camelCase for Markdoc attributes aligns with JSON Schema keywords
@@ -1707,11 +1808,11 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 
 | Property | Used on | Values | Notes |
 | --- | --- | --- | --- |
-| `kind` | `Field`, `FieldValue` | `FieldKind` values | Reserved for field type discrimination only |
+| `kind` | `Field`, `FieldValue` | `FieldKind` values | Reserved for field kind discrimination only |
 | `tag` | `DocumentationBlock` | `DocumentationTag` values | Identifies doc block type |
 | `nodeType` | `IdIndexEntry` | `'form' \| 'group' \| 'field'` | Identifies structural element type |
 
-##### Field Type Mappings
+##### Field Kind Mappings
 
 **`string-field`** — Single string value
 
@@ -1883,7 +1984,7 @@ Validation happens at two levels: Markdoc syntax validation (see
 
 Schema checks (always available, deterministic):
 
-| Check | Field Type | Constraint Source |
+| Check | Field Kind | Constraint Source |
 | --- | --- | --- |
 | Required fields present | All | `required=true` attribute |
 | Number parsing success | `number-field` | Built-in |
@@ -1907,10 +2008,10 @@ Output: `ValidationIssue[]`
 
 #### Required Field Semantics
 
-The `required` attribute has specific semantics for each field type.
+The `required` attribute has specific semantics for each field kind.
 This section provides normative definitions:
 
-| Field Type | `required=true` means | `required=false` (or omitted) means |
+| Field Kind | `required=true` means | `required=false` (or omitted) means |
 | --- | --- | --- |
 | `string-field` | `value !== null && value.trim() !== ""` | Value may be null or empty |
 | `number-field` | `value !== null` (and parseable as number) | Value may be null |

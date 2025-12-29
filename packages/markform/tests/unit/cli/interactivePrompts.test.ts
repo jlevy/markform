@@ -1036,13 +1036,13 @@ describe('interactivePrompts', () => {
     });
   });
 
-  describe('field type coverage', () => {
-    // This test ensures ALL field types defined in FieldKind are handled by promptForField.
-    // If a new field type is added to coreTypes.ts but not to interactivePrompts.ts,
+  describe('field kind coverage', () => {
+    // This test ensures ALL field kinds defined in FieldKind are handled by promptForField.
+    // If a new field kind is added to coreTypes.ts but not to interactivePrompts.ts,
     // this test will fail.
 
-    // All field type definitions
-    const allFieldTypes: Field[] = [
+    // All field kind definitions
+    const allFieldKinds: Field[] = [
       {
         kind: 'string',
         id: 'f_string',
@@ -1130,25 +1130,25 @@ describe('interactivePrompts', () => {
       },
     ];
 
-    it('handles all FieldKind types without returning null unexpectedly', async () => {
-      // Set up mocks to return valid values for all field types
+    it('handles all FieldKind values without returning null unexpectedly', async () => {
+      // Set up mocks to return valid values for all field kinds
       vi.mocked(p.text).mockResolvedValue('test value');
       vi.mocked(p.select).mockResolvedValue('a');
       vi.mocked(p.multiselect).mockResolvedValue(['a']);
       vi.mocked(p.isCancel).mockReturnValue(false);
 
-      for (const field of allFieldTypes) {
+      for (const field of allFieldKinds) {
         const patch = await promptForField(createContext(field));
 
-        // Every field type should return a valid patch, not null
-        // (null means unknown field type in default case)
+        // Every field kind should return a valid patch, not null
+        // (null means unknown field kind in default case)
         expect(patch).not.toBeNull();
         expect(patch).toHaveProperty('op');
         expect(patch).toHaveProperty('fieldId', field.id);
       }
     });
 
-    it('returns correct patch operations for each field type', async () => {
+    it('returns correct patch operations for each field kind', async () => {
       vi.mocked(p.text).mockResolvedValue('test');
       vi.mocked(p.select).mockResolvedValue('a');
       vi.mocked(p.multiselect).mockResolvedValue(['a']);
@@ -1167,7 +1167,7 @@ describe('interactivePrompts', () => {
         year: 'set_year',
       };
 
-      for (const field of allFieldTypes) {
+      for (const field of allFieldKinds) {
         vi.clearAllMocks();
         vi.mocked(p.text).mockResolvedValue('test');
         vi.mocked(p.select).mockResolvedValue('a');

@@ -53,7 +53,7 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
       expect(summary.fieldCount).toBe(21);
       expect(summary.groupCount).toBe(8);
 
-      // Check field types
+      // Check field kinds
       expect(summary.fieldCountByKind.string).toBe(3); // name, email, notes
       expect(summary.fieldCountByKind.number).toBe(3); // age, score, optional_number
       expect(summary.fieldCountByKind.string_list).toBe(1); // tags

@@ -1,7 +1,7 @@
 /**
- * Field type parsers for Markform.
+ * Field kind parsers for Markform.
  *
- * This module contains the parsing logic for each field type:
+ * This module contains the parsing logic for each field kind:
  * string, number, string-list, single-select, multi-select, checkboxes,
  * url, url-list, date, and year.
  */

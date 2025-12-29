@@ -1036,7 +1036,7 @@ http://third.com
   });
 
   describe('complete form validation', () => {
-    it('validates a form with multiple field types', () => {
+    it('validates a form with multiple field kinds', () => {
       const markdown = `---
 markform:
   spec: MF/0.1

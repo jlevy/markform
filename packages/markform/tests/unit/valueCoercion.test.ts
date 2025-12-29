@@ -7,7 +7,7 @@ import {
   findFieldById,
 } from '../../src/engine/valueCoercion.js';
 
-// Test form with various field types
+// Test form with various field kinds
 const TEST_FORM_MD = `---
 markform:
   spec: MF/0.1

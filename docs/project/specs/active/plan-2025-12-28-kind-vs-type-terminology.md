@@ -343,17 +343,17 @@ Update comments only:
 
 **Goal:** Add the formal taxonomy to SPEC.md as specified below.
 
-- [ ] Add “Type System” subsection after Layer 2 intro (~line 1045)
+- [x] Add "Type System" subsection after Layer 2 intro (~line 1045)
 
-- [ ] Add terminology definitions table (as shown below)
+- [x] Add terminology definitions table (as shown below)
 
-- [ ] Add data type taxonomy (primitives, scalars, enums, collections, structured)
+- [x] Add data type taxonomy (primitives, scalars, enums, collections, structured)
 
-- [ ] Add field kind taxonomy diagram (as shown below)
+- [x] Add field kind taxonomy diagram (as shown below)
 
-- [ ] Add kind → type mapping table (as shown below)
+- [x] Add kind → type mapping table (as shown below)
 
-- [ ] Cross-reference from ColumnType definition
+- [x] Cross-reference from ColumnType definition
 
 **The following content should be added to SPEC.md** (insert after line 1045, before
 “#### Canonical TypeScript Types”). The taxonomy diagram and mapping table are normative
@@ -468,102 +468,102 @@ Field Kinds
 
 **Layer 1 (Syntax) updates:**
 
-- [ ] Line 206-209: “field type” → “field kind” (2 occurrences)
+- [x] Line 206-209: "field type" → "field kind" (2 occurrences)
 
-- [ ] Line 229: “all field types” → “all field kinds”
+- [x] Line 229: "all field types" → "all field kinds"
 
-- [ ] Line 248: “text-entry field types” → “text-entry field kinds”
+- [x] Line 248: "text-entry field types" → "text-entry field kinds"
 
-- [ ] Line 276: “selection field types” → “selection field kinds”
+- [x] Line 276: "selection field types" → "selection field kinds"
 
-- [ ] Line 279: Table header “Field Type” → “Field Kind”
+- [x] Line 279: Table header "Field Type" → "Field Kind"
 
-- [ ] Line 510: “field type” → “field kind”
+- [x] Line 510: "field type" → "field kind"
 
 **Layer 2 (Data Model) updates:**
 
-- [ ] Line 1055: Comment “orthogonal to field type” → “orthogonal to field kind”
+- [x] Line 1055: Comment "orthogonal to field type" → "orthogonal to field kind"
 
-- [ ] Line 1671: Section header “Field Type Reference” → “Field Kind Reference”
+- [x] Line 1671: Section header "Field Type Reference" → "Field Kind Reference"
 
-- [ ] Line 1674: “for all field types” → “for all field kinds”
+- [x] Line 1674: "for all field types" → "for all field kinds"
 
-- [ ] Line 1687: Table row update
+- [x] Line 1687: Table row update
 
-- [ ] Line 1699: “field type discrimination” → “field kind discrimination”
+- [x] Line 1699: "field type discrimination" → "field kind discrimination"
 
-- [ ] Line 1703: Section header “Field Type Mappings” → “Field Kind Mappings”
+- [x] Line 1703: Section header "Field Type Mappings" → "Field Kind Mappings"
 
 **Layer 3 (Validation) updates:**
 
-- [ ] Line 1484: Table header “Field Type” → “Field Kind” (implicit requiredness table)
+- [x] Line 1484: Table header "Field Type" → "Field Kind" (implicit requiredness table)
 
-- [ ] Line 1875: Table header “Field Type” → “Field Kind” (validation checks table)
+- [x] Line 1875: Table header "Field Type" → "Field Kind" (validation checks table)
 
-- [ ] Line 1899: “for each field type” → “for each field kind”
+- [x] Line 1899: "for each field type" → "for each field kind"
 
-- [ ] Line 1902: Table header “Field Type” → “Field Kind”
+- [x] Line 1902: Table header "Field Type" → "Field Kind"
 
 ### Phase 3: DOCS.md and README.md
 
 **Goal:** Update user-facing docs
 
-- [ ] DOCS.md: “Field Types” section header → “Field Kinds”
+- [x] DOCS.md: "Field Types" section header → "Field Kinds"
 
-- [ ] DOCS.md: Add terminology note
+- [x] DOCS.md: Add terminology note
 
-- [ ] DOCS.md: Replace “field type” → “field kind” throughout
+- [x] DOCS.md: Replace "field type" → "field kind" throughout
 
-- [ ] README.md: Line 116 update
+- [x] README.md: Line 116 update
 
-- [ ] README.md: Line 141 update
+- [x] README.md: Line 141 update
 
 ### Phase 4: Code Comments
 
 **Goal:** Update code comments for consistency
 
-- [ ] `parseFields.ts`: Lines 2, 4
+- [x] `parseFields.ts`: Lines 2, 4
 
-- [ ] `fieldRegistry.ts`: Lines 2, 5, 186, 298 + add clarifying docstring for
+- [x] `fieldRegistry.ts`: Lines 2, 5, 186, 298 + add clarifying docstring for
   `FieldTypeMap`
 
-- [ ] `coreTypes.ts`: Lines 102, 122, 247, 297 section headers
+- [x] `coreTypes.ts`: Lines 102, 122, 247, 297 section headers
 
-- [ ] `interactivePrompts.ts`: Lines 703, 750
+- [x] `interactivePrompts.ts`: Lines 703, 750
 
-- [ ] `serve.ts`: Line 782
+- [x] `serve.ts`: Line 782
 
-- [ ] `prompts.ts`: Lines 89, 94
+- [x] `prompts.ts`: Lines 89, 94
 
-- [ ] `inspect.ts`: Line 148
+- [x] `inspect.ts`: Line 148
 
-- [ ] `index.ts`: Line 32
+- [x] `index.ts`: Line 32
 
 ### Phase 5: Test Comments
 
 **Goal:** Update test descriptions
 
-- [ ] `serve-render.test.ts`: Update descriptions
+- [x] `serve-render.test.ts`: Update descriptions
 
-- [ ] `interactivePrompts.test.ts`: Update descriptions
+- [x] `interactivePrompts.test.ts`: Update descriptions
 
 ## Stage 4: Validation
 
 ### Checklist
 
-- [ ] SPEC.md has formal Type System section with complete taxonomy
+- [x] SPEC.md has formal Type System section with complete taxonomy
 
-- [ ] All “field type” occurrences reviewed and updated where appropriate
+- [x] All "field type" occurrences reviewed and updated where appropriate
 
-- [ ] DOCS.md section headers use “Field Kinds”
+- [x] DOCS.md section headers use "Field Kinds"
 
-- [ ] README.md uses consistent terminology
+- [x] README.md uses consistent terminology
 
-- [ ] Code comments updated
+- [x] Code comments updated
 
-- [ ] No functional changes to code behavior
+- [x] No functional changes to code behavior
 
-- [ ] `grep -i "field type"` shows only intentional uses (data types, not field kinds)
+- [x] `grep -i "field type"` shows only intentional uses (data types, not field kinds)
 
 ### Verification Commands
 
