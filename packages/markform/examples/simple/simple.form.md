@@ -18,17 +18,17 @@ Fill all fields using interactive prompts - no LLM API key needed.
 
 {% field-group id="basic_fields" title="Basic Fields" %}
 
-{% string-field id="name" label="Name" role="user" required=true minLength=2 maxLength=50 placeholder="Enter your name" examples=["John Smith", "Jane Doe"] %}{% /string-field %}
+{% field kind="string" id="name" label="Name" role="user" required=true minLength=2 maxLength=50 placeholder="Enter your name" examples=["John Smith", "Jane Doe"] %}{% /field %}
 
 {% instructions ref="name" %}
 Enter your full name (2-50 characters).
 {% /instructions %}
 
-{% string-field id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" examples=["alice@company.com", "bob@example.org"] %}{% /string-field %}
+{% field kind="string" id="email" label="Email" role="user" required=true pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" examples=["alice@company.com", "bob@example.org"] %}{% /field %}
 
-{% number-field id="age" label="Age" role="user" required=true min=0 max=150 integer=true placeholder="25" examples=["18", "30", "45"] %}{% /number-field %}
+{% field kind="number" id="age" label="Age" role="user" required=true min=0 max=150 integer=true placeholder="25" examples=["18", "30", "45"] %}{% /field %}
 
-{% number-field id="score" label="Score" role="user" min=0.0 max=100.0 placeholder="85.5" examples=["75.0", "90.5", "100.0"] %}{% /number-field %}
+{% field kind="number" id="score" label="Score" role="user" min=0.0 max=100.0 placeholder="85.5" examples=["75.0", "90.5", "100.0"] %}{% /field %}
 
 {% instructions ref="score" %}
 Enter a score between 0 and 100 (optional).
@@ -38,7 +38,7 @@ Enter a score between 0 and 100 (optional).
 
 {% field-group id="list_fields" title="List Fields" %}
 
-{% string-list id="tags" label="Tags" role="user" required=true minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}{% /string-list %}
+{% field kind="string_list" id="tags" label="Tags" role="user" required=true minItems=1 maxItems=5 itemMinLength=2 uniqueItems=true %}{% /field %}
 
 {% instructions ref="tags" %}
 Add 1-5 unique tags (each at least 2 characters).
@@ -48,43 +48,43 @@ Add 1-5 unique tags (each at least 2 characters).
 
 {% field-group id="selection_fields" title="Selection Fields" %}
 
-{% single-select id="priority" label="Priority" role="user" required=true %}
+{% field kind="single_select" id="priority" label="Priority" role="user" required=true %}
 - [ ] Low {% #low %}
 - [ ] Medium {% #medium %}
 - [ ] High {% #high %}
-{% /single-select %}
+{% /field %}
 
-{% multi-select id="categories" label="Categories" role="user" required=true minSelections=1 maxSelections=3 %}
+{% field kind="multi_select" id="categories" label="Categories" role="user" required=true minSelections=1 maxSelections=3 %}
 - [ ] Frontend {% #frontend %}
 - [ ] Backend {% #backend %}
 - [ ] Database {% #database %}
 - [ ] DevOps {% #devops %}
-{% /multi-select %}
+{% /field %}
 
 {% /field-group %}
 
 {% field-group id="checkbox_fields" title="Checkbox Fields" %}
 
-{% checkboxes id="tasks_multi" label="Tasks (Multi Mode)" role="user" checkboxMode="multi" required=true %}
+{% field kind="checkboxes" id="tasks_multi" label="Tasks (Multi Mode)" role="user" checkboxMode="multi" required=true %}
 - [ ] Research {% #research %}
 - [ ] Design {% #design %}
 - [ ] Implement {% #implement %}
 - [ ] Test {% #test %}
-{% /checkboxes %}
+{% /field %}
 
 {% instructions ref="tasks_multi" %}
 Track task progress. All must reach done or na state to complete.
 {% /instructions %}
 
-{% checkboxes id="tasks_simple" label="Agreements (Simple Mode)" role="user" checkboxMode="simple" required=true %}
+{% field kind="checkboxes" id="tasks_simple" label="Agreements (Simple Mode)" role="user" checkboxMode="simple" required=true %}
 - [ ] I have read the guidelines {% #read_guidelines %}
 - [ ] I agree to the terms {% #agree_terms %}
-{% /checkboxes %}
+{% /field %}
 
-{% checkboxes id="confirmations" label="Confirmations (Explicit Mode)" role="user" checkboxMode="explicit" required=true %}
+{% field kind="checkboxes" id="confirmations" label="Confirmations (Explicit Mode)" role="user" checkboxMode="explicit" required=true %}
 - [ ] Data has been backed up {% #backed_up %}
 - [ ] Stakeholders notified {% #notified %}
-{% /checkboxes %}
+{% /field %}
 
 {% instructions ref="confirmations" %}
 Answer yes or no for each confirmation. All must be explicitly answered.
@@ -94,13 +94,13 @@ Answer yes or no for each confirmation. All must be explicitly answered.
 
 {% field-group id="url_fields" title="URL Fields" %}
 
-{% url-field id="website" label="Website" role="user" required=true placeholder="https://example.com" examples=["https://github.com/user/repo", "https://company.com"] %}{% /url-field %}
+{% field kind="url" id="website" label="Website" role="user" required=true placeholder="https://example.com" examples=["https://github.com/user/repo", "https://company.com"] %}{% /field %}
 
 {% instructions ref="website" %}
 Enter your website URL (must be http or https).
 {% /instructions %}
 
-{% url-list id="references" label="References" role="user" minItems=1 maxItems=5 uniqueItems=true placeholder="https://docs.example.com" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] %}{% /url-list %}
+{% field kind="url_list" id="references" label="References" role="user" minItems=1 maxItems=5 uniqueItems=true placeholder="https://docs.example.com" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] %}{% /field %}
 
 {% instructions ref="references" %}
 Add 1-5 unique reference URLs for sources or documentation.
@@ -110,13 +110,13 @@ Add 1-5 unique reference URLs for sources or documentation.
 
 {% field-group id="date_fields" title="Date and Year Fields" %}
 
-{% date-field id="event_date" label="Event Date" role="user" required=true min="2020-01-01" max="2030-12-31" %}{% /date-field %}
+{% field kind="date" id="event_date" label="Event Date" role="user" required=true min="2020-01-01" max="2030-12-31" %}{% /field %}
 
 {% instructions ref="event_date" %}
 Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
 {% /instructions %}
 
-{% year-field id="founded_year" label="Founded Year" role="user" required=true min=1900 max=2030 %}{% /year-field %}
+{% field kind="year" id="founded_year" label="Founded Year" role="user" required=true min=1900 max=2030 %}{% /field %}
 
 {% instructions ref="founded_year" %}
 Enter the year the company was founded (1900-2030).
@@ -126,23 +126,23 @@ Enter the year the company was founded (1900-2030).
 
 {% field-group id="table_fields" title="Table Fields" %}
 
-{% table-field id="team_members" label="Team Members" role="user" minRows=0 maxRows=5
+{% field kind="table" id="team_members" label="Team Members" role="user" minRows=0 maxRows=5
    columnIds=["name", "role", "start_date"]
    columnTypes=[{type: "string", required: true}, "string", "date"] %}
 | Name | Role | Start Date |
 |------|------|------------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="team_members" %}
 Add team members with their name (required), role, and start date.
 {% /instructions %}
 
-{% table-field id="project_tasks" label="Project Tasks" role="user" minRows=0 maxRows=10
+{% field kind="table" id="project_tasks" label="Project Tasks" role="user" minRows=0 maxRows=10
    columnIds=["task", "estimate_hrs", "link"]
    columnTypes=[{type: "string", required: true}, "number", "url"] %}
 | Task | Estimate (hrs) | Link |
 |------|----------------|------|
-{% /table-field %}
+{% /field %}
 
 {% instructions ref="project_tasks" %}
 Optionally add project tasks with estimated hours and reference links.
@@ -152,27 +152,27 @@ Optionally add project tasks with estimated hours and reference links.
 
 {% field-group id="optional_fields" title="Optional Fields" %}
 
-{% string-field id="notes" label="Notes" role="user" %}{% /string-field %}
+{% field kind="string" id="notes" label="Notes" role="user" %}{% /field %}
 
 {% instructions ref="notes" %}
 Add any relevant notes or observations (optional).
 {% /instructions %}
 
-{% number-field id="optional_number" label="Optional Number" role="user" %}{% /number-field %}
+{% field kind="number" id="optional_number" label="Optional Number" role="user" %}{% /field %}
 
-{% url-field id="related_url" label="Related URL" role="user" %}{% /url-field %}
+{% field kind="url" id="related_url" label="Related URL" role="user" %}{% /field %}
 
 {% instructions ref="related_url" %}
 Optionally add a URL to related documentation or resources.
 {% /instructions %}
 
-{% date-field id="optional_date" label="Optional Date" role="user" %}{% /date-field %}
+{% field kind="date" id="optional_date" label="Optional Date" role="user" %}{% /field %}
 
 {% instructions ref="optional_date" %}
 Optionally add a date (YYYY-MM-DD format).
 {% /instructions %}
 
-{% year-field id="optional_year" label="Optional Year" role="user" %}{% /year-field %}
+{% field kind="year" id="optional_year" label="Optional Year" role="user" %}{% /field %}
 
 {% instructions ref="optional_year" %}
 Optionally add a year.

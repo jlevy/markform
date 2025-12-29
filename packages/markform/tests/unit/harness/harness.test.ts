@@ -21,9 +21,9 @@ markform:
 
 {% field-group id="basics" %}
 
-{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
-{% number-field id="age" label="Age" required=true %}{% /number-field %}
+{% field kind="number" id="age" label="Age" required=true %}{% /field %}
 
 {% /field-group %}
 
@@ -39,17 +39,17 @@ markform:
 
 {% field-group id="basics" %}
 
-{% string-field id="name" label="Name" required=true %}
+{% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John Doe
 \`\`\`
-{% /string-field %}
+{% /field %}
 
-{% number-field id="age" label="Age" required=true %}
+{% field kind="number" id="age" label="Age" required=true %}
 \`\`\`value
 30
 \`\`\`
-{% /number-field %}
+{% /field %}
 
 {% /field-group %}
 
@@ -225,7 +225,7 @@ describe('FormHarness', () => {
       const markdown = harness.getMarkdown();
 
       expect(markdown).toContain('{% form');
-      expect(markdown).toContain('{% string');
+      expect(markdown).toContain('{% field kind="string"');
     });
   });
 
@@ -252,15 +252,15 @@ markform:
 {% form id="test_form" %}
 
 {% field-group id="group_a" %}
-{% string-field id="field_a1" label="A1" required=true %}{% /string-field %}
-{% string-field id="field_a2" label="A2" required=true %}{% /string-field %}
-{% string-field id="field_a3" label="A3" required=true %}{% /string-field %}
+{% field kind="string" id="field_a1" label="A1" required=true %}{% /field %}
+{% field kind="string" id="field_a2" label="A2" required=true %}{% /field %}
+{% field kind="string" id="field_a3" label="A3" required=true %}{% /field %}
 {% /field-group %}
 
 {% field-group id="group_b" %}
-{% string-field id="field_b1" label="B1" required=true %}{% /string-field %}
-{% string-field id="field_b2" label="B2" required=true %}{% /string-field %}
-{% string-field id="field_b3" label="B3" required=true %}{% /string-field %}
+{% field kind="string" id="field_b1" label="B1" required=true %}{% /field %}
+{% field kind="string" id="field_b2" label="B2" required=true %}{% /field %}
+{% field kind="string" id="field_b3" label="B3" required=true %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -433,9 +433,9 @@ markform:
 
 {% field-group id="urls" %}
 
-{% url-field id="website" label="Website" required=true %}{% /url-field %}
+{% field kind="url" id="website" label="Website" required=true %}{% /field %}
 
-{% url-list id="sources" label="Sources" required=true %}{% /url-list %}
+{% field kind="url_list" id="sources" label="Sources" required=true %}{% /field %}
 
 {% /field-group %}
 
@@ -451,18 +451,18 @@ markform:
 
 {% field-group id="urls" %}
 
-{% url-field id="website" label="Website" required=true %}
+{% field kind="url" id="website" label="Website" required=true %}
 \`\`\`value
 https://example.com
 \`\`\`
-{% /url-field %}
+{% /field %}
 
-{% url-list id="sources" label="Sources" required=true %}
+{% field kind="url_list" id="sources" label="Sources" required=true %}
 \`\`\`value
 https://docs.example.com
 https://github.com/example
 \`\`\`
-{% /url-list %}
+{% /field %}
 
 {% /field-group %}
 
@@ -617,17 +617,17 @@ markform:
 
 {% field-group id="basics" %}
 
-{% string-field id="agent_field" label="Agent Field" required=true role="agent" %}
+{% field kind="string" id="agent_field" label="Agent Field" required=true role="agent" %}
 \`\`\`value
 Agent Value
 \`\`\`
-{% /string-field %}
+{% /field %}
 
-{% string-field id="user_field" label="User Field" required=true role="user" %}
+{% field kind="string" id="user_field" label="User Field" required=true role="user" %}
 \`\`\`value
 User Value
 \`\`\`
-{% /string-field %}
+{% /field %}
 
 {% /field-group %}
 
