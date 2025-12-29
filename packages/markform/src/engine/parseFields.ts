@@ -41,6 +41,7 @@ import type {
   UrlListField,
   UrlListValue,
   UrlValue,
+  ValidatorRef,
   YearField,
   YearValue,
 } from './coreTypes.js';
@@ -181,6 +182,54 @@ function getPriorityAttr(node: Node): 'high' | 'medium' | 'low' {
 }
 
 // =============================================================================
+// Common Field Attribute Helpers
+// =============================================================================
+
+interface BaseFieldAttrs {
+  id: string;
+  label: string;
+  required: boolean;
+}
+
+/**
+ * Parse and validate base field attributes (id, label, required).
+ * Throws ParseError if id or label is missing.
+ */
+function parseBaseFieldAttrs(node: Node, kind: FieldKind): BaseFieldAttrs {
+  const id = getStringAttr(node, 'id');
+  const label = getStringAttr(node, 'label');
+
+  if (!id) {
+    throw new ParseError(`field kind="${kind}" missing required 'id' attribute`);
+  }
+  if (!label) {
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
+  }
+
+  const required = getBooleanAttr(node, 'required') ?? false;
+  return { id, label, required };
+}
+
+interface CommonFieldAttrs {
+  priority: 'high' | 'medium' | 'low';
+  role: string;
+  validate?: ValidatorRef[];
+  report?: boolean;
+}
+
+/**
+ * Get common field attributes (priority, role, validate, report).
+ */
+function getCommonFieldAttrs(node: Node): CommonFieldAttrs {
+  return {
+    priority: getPriorityAttr(node),
+    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    validate: getValidateAttr(node),
+    report: getBooleanAttr(node, 'report'),
+  };
+}
+
+// =============================================================================
 // Placeholder/Examples Validation Helpers
 // =============================================================================
 
@@ -278,31 +327,18 @@ function _warnPlaceholderTypeMismatch(
  * Parse a string-field tag.
  */
 export function parseStringField(node: Node): { field: StringField; response: FieldResponse } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="string" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'string');
 
   const field: StringField = {
     kind: 'string',
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     multiline: getBooleanAttr(node, 'multiline'),
     pattern: getStringAttr(node, 'pattern'),
     minLength: getNumberAttr(node, 'minLength'),
     maxLength: getNumberAttr(node, 'maxLength'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
     placeholder: getStringAttr(node, 'placeholder'),
     examples: getStringArrayAttr(node, 'examples'),
   };
@@ -333,17 +369,7 @@ export function parseStringField(node: Node): { field: StringField; response: Fi
  * Parse a number-field tag.
  */
 export function parseNumberField(node: Node): { field: NumberField; response: FieldResponse } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="number" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'number');
 
   const placeholder = getStringAttr(node, 'placeholder');
   const examples = getStringArrayAttr(node, 'examples');
@@ -359,13 +385,10 @@ export function parseNumberField(node: Node): { field: NumberField; response: Fi
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     min: getNumberAttr(node, 'min'),
     max: getNumberAttr(node, 'max'),
     integer: getBooleanAttr(node, 'integer'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
     placeholder,
     examples,
   };
@@ -407,32 +430,19 @@ export function parseStringListField(node: Node): {
   field: StringListField;
   response: FieldResponse;
 } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="string_list" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'string_list');
 
   const field: StringListField = {
     kind: 'string_list',
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     minItems: getNumberAttr(node, 'minItems'),
     maxItems: getNumberAttr(node, 'maxItems'),
     itemMinLength: getNumberAttr(node, 'itemMinLength'),
     itemMaxLength: getNumberAttr(node, 'itemMaxLength'),
     uniqueItems: getBooleanAttr(node, 'uniqueItems'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
     placeholder: getStringAttr(node, 'placeholder'),
     examples: getStringArrayAttr(node, 'examples'),
   };
@@ -520,20 +530,11 @@ export function parseSingleSelectField(node: Node): {
   field: SingleSelectField;
   response: FieldResponse;
 } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="single_select" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
+  const { id, label, required } = parseBaseFieldAttrs(node, 'single_select');
 
   // Validate that placeholder/examples are not used on chooser fields
   validateNoPlaceholderExamples(node, 'single-select', id);
 
-  const required = getBooleanAttr(node, 'required') ?? false;
   const { options, selected } = parseOptions(node, id);
 
   const field: SingleSelectField = {
@@ -541,11 +542,8 @@ export function parseSingleSelectField(node: Node): {
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     options,
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
   };
 
   // Find the selected option (exactly one with done/[x] state)
@@ -577,20 +575,11 @@ export function parseMultiSelectField(node: Node): {
   field: MultiSelectField;
   response: FieldResponse;
 } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="multi_select" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
+  const { id, label, required } = parseBaseFieldAttrs(node, 'multi_select');
 
   // Validate that placeholder/examples are not used on chooser fields
   validateNoPlaceholderExamples(node, 'multi-select', id);
 
-  const required = getBooleanAttr(node, 'required') ?? false;
   const { options, selected } = parseOptions(node, id);
 
   const field: MultiSelectField = {
@@ -598,13 +587,10 @@ export function parseMultiSelectField(node: Node): {
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     options,
     minSelections: getNumberAttr(node, 'minSelections'),
     maxSelections: getNumberAttr(node, 'maxSelections'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
   };
 
   // Collect all selected options (those with done/[x] state)
@@ -635,6 +621,7 @@ export function parseCheckboxesField(node: Node): {
   field: CheckboxesField;
   response: FieldResponse;
 } {
+  // Checkboxes has special id/label handling (can't use parseBaseFieldAttrs due to required logic)
   const id = getStringAttr(node, 'id');
   const label = getStringAttr(node, 'label');
 
@@ -688,14 +675,11 @@ export function parseCheckboxesField(node: Node): {
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     checkboxMode,
     minDone: getNumberAttr(node, 'minDone'),
     options,
     approvalMode,
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
   };
 
   // Initialize all options to their default state based on mode
@@ -728,17 +712,7 @@ export function parseCheckboxesField(node: Node): {
  * Parse a url-field tag.
  */
 export function parseUrlField(node: Node): { field: UrlField; response: FieldResponse } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="url" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'url');
 
   const placeholder = getStringAttr(node, 'placeholder');
   const examples = getStringArrayAttr(node, 'examples');
@@ -753,10 +727,7 @@ export function parseUrlField(node: Node): { field: UrlField; response: FieldRes
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
+    ...getCommonFieldAttrs(node),
     placeholder,
     examples,
   };
@@ -787,17 +758,7 @@ export function parseUrlField(node: Node): { field: UrlField; response: FieldRes
  * Parse a url-list tag.
  */
 export function parseUrlListField(node: Node): { field: UrlListField; response: FieldResponse } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="url_list" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'url_list');
 
   const placeholder = getStringAttr(node, 'placeholder');
   const examples = getStringArrayAttr(node, 'examples');
@@ -812,13 +773,10 @@ export function parseUrlListField(node: Node): { field: UrlListField; response: 
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     minItems: getNumberAttr(node, 'minItems'),
     maxItems: getNumberAttr(node, 'maxItems'),
     uniqueItems: getBooleanAttr(node, 'uniqueItems'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
     placeholder,
     examples,
   };
@@ -859,29 +817,16 @@ export function parseUrlListField(node: Node): { field: UrlListField; response: 
  * Parse a date-field tag.
  */
 export function parseDateField(node: Node): { field: DateField; response: FieldResponse } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="date" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'date');
 
   const field: DateField = {
     kind: 'date',
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     min: getStringAttr(node, 'min'),
     max: getStringAttr(node, 'max'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -917,29 +862,16 @@ export function parseDateField(node: Node): { field: DateField; response: FieldR
  * Parse a year-field tag.
  */
 export function parseYearField(node: Node): { field: YearField; response: FieldResponse } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="year" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'year');
 
   const field: YearField = {
     kind: 'year',
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     min: getNumberAttr(node, 'min'),
     max: getNumberAttr(node, 'max'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
   };
 
   // Check for sentinel values first
@@ -1060,17 +992,7 @@ function parseColumnsFromAttributes(
  * Table content is a raw markdown table inside the tag (NOT a value fence).
  */
 export function parseTableField(node: Node): { field: TableField; response: FieldResponse } {
-  const id = getStringAttr(node, 'id');
-  const label = getStringAttr(node, 'label');
-
-  if (!id) {
-    throw new ParseError('field kind="table" missing required \'id\' attribute');
-  }
-  if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
-  }
-
-  const required = getBooleanAttr(node, 'required') ?? false;
+  const { id, label, required } = parseBaseFieldAttrs(node, 'table');
 
   // Check for sentinel values first (entire field can be skipped/aborted)
   const sentinelResponse = tryParseSentinelResponse(node, id, required);
@@ -1090,13 +1012,10 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
     id,
     label,
     required,
-    priority: getPriorityAttr(node),
-    role: getStringAttr(node, 'role') ?? AGENT_ROLE,
+    ...getCommonFieldAttrs(node),
     columns,
     minRows: getNumberAttr(node, 'minRows'),
     maxRows: getNumberAttr(node, 'maxRows'),
-    validate: getValidateAttr(node),
-    report: getBooleanAttr(node, 'report'),
   };
 
   if (sentinelResponse) {
