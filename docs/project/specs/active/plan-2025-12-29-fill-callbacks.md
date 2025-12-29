@@ -7,11 +7,15 @@ execution in real-time, including turn lifecycle, tool calls, and LLM interactio
 
 ## Background
 
-Markform is used as a library in other applications (e.g., Arena) that need visibility into
-what's happening during form filling. Currently:
+Markform is used as a library in other applications (e.g., Arena) that need visibility
+into what’s happening during form filling.
+Currently:
 
 - `fillForm()` has `onTurnComplete` callback providing basic `TurnProgress`
-- `TurnStats` includes token usage and tool call *counts* but not individual call details
+
+- `TurnStats` includes token usage and tool call *counts* but not individual call
+  details
+
 - No hooks for observing individual tool executions or LLM calls as they happen
 
 Arena has rich logging infrastructure (`EventLogger`) with methods like `toolStart()`,
@@ -19,17 +23,24 @@ Arena has rich logging infrastructure (`EventLogger`) with methods like `toolSta
 
 ### Related Documentation
 
-- [programmaticFill.ts](packages/markform/src/harness/programmaticFill.ts) - Main `fillForm()` entry point
-- [liveAgent.ts](packages/markform/src/harness/liveAgent.ts) - LLM agent that makes tool/LLM calls
-- [harnessTypes.ts](packages/markform/src/harness/harnessTypes.ts) - `FillOptions`, `TurnProgress`, `TurnStats`
+- [programmaticFill.ts](packages/markform/src/harness/programmaticFill.ts) - Main
+  `fillForm()` entry point
+
+- [liveAgent.ts](packages/markform/src/harness/liveAgent.ts) - LLM agent that makes
+  tool/LLM calls
+
+- [harnessTypes.ts](packages/markform/src/harness/harnessTypes.ts) - `FillOptions`,
+  `TurnProgress`, `TurnStats`
 
 ## Summary of Task
 
-Replace the existing `onTurnComplete` callback with a comprehensive `callbacks` interface
-that provides hooks for:
+Replace the existing `onTurnComplete` callback with a comprehensive `callbacks`
+interface that provides hooks for:
 
 1. **Turn lifecycle** - `onTurnStart`, `onTurnComplete`
+
 2. **Tool calls** - `onToolStart`, `onToolEnd`
+
 3. **LLM calls** - `onLlmCallStart`, `onLlmCallEnd`
 
 All callbacks are optional - consumers implement only what they need.
@@ -38,8 +49,8 @@ All callbacks are optional - consumers implement only what they need.
 
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
-- **Code types, methods, and function signatures**: DO NOT MAINTAIN - Remove `onTurnComplete`
-  from `FillOptions`, replace with `callbacks` object.
+- **Code types, methods, and function signatures**: DO NOT MAINTAIN - Remove
+  `onTurnComplete` from `FillOptions`, replace with `callbacks` object.
 
 - **Library APIs**: DO NOT MAINTAIN - This is a breaking change to the public API.
 
@@ -56,8 +67,11 @@ All callbacks are optional - consumers implement only what they need.
 **Core Requirements:**
 
 1. New `FillCallbacks` interface with optional lifecycle hooks
+
 2. Replace `onTurnComplete` callback with `callbacks?: FillCallbacks` in `FillOptions`
+
 3. Call appropriate hooks at each stage of form filling
+
 4. All callbacks optional - no-op if not provided
 
 **Callback Interface:**
@@ -98,20 +112,30 @@ interface FillOptions {
 **Out of Scope (Not Implementing):**
 
 - [ ] Event stream/observable pattern (rejected as overkill)
+
 - [ ] Storing events in `FillResult` (memory overhead concern)
+
 - [ ] Async callbacks (keep sync for simplicity)
 
 ### Acceptance Criteria
 
 1. `FillCallbacks` interface exported from markform
+
 2. `onTurnStart` called at start of each turn with turn number and issue count
+
 3. `onTurnComplete` called after each turn with full `TurnProgress`
+
 4. `onToolStart` called before each tool execution with name and input
+
 5. `onToolEnd` called after each tool with output, duration, and optional error
+
 6. `onLlmCallStart` called before `generateText()` with model name
+
 7. `onLlmCallEnd` called after `generateText()` with token counts
+
 8. All callbacks are optional - form filling works with no callbacks
-9. Callback errors don't abort form filling (caught and ignored)
+
+9. Callback errors don’t abort form filling (caught and ignored)
 
 ### Consumer Usage Examples
 
@@ -158,7 +182,7 @@ await fillForm({
 
 ### Implementation Approach
 
-**Challenge:** Tool calls happen inside Vercel AI SDK's `generateText()` which runs
+**Challenge:** Tool calls happen inside Vercel AI SDK’s `generateText()` which runs
 autonomously. We need to instrument tools to capture before/after timing.
 
 **Solution:** Wrap tools before passing to `generateText()`:
@@ -246,12 +270,15 @@ fillForm()
 ### Reusable Components
 
 - Existing `TurnProgress` type can be reused for `onTurnComplete`
+
 - Tool wrapping pattern is self-contained, no external dependencies
 
 ### Simplifications
 
 1. **No new files** - All changes fit in existing files
+
 2. **No new dependencies** - Pure TypeScript implementation
+
 3. **Callbacks passed through** - `fillForm` → `LiveAgent` → tool wrappers
 
 ### Implementation Phases
@@ -259,33 +286,45 @@ fillForm()
 **Phase 1: Types and Interface**
 
 - [ ] Add `FillCallbacks` interface to `harnessTypes.ts`
+
 - [ ] Remove `onTurnComplete` from `FillOptions`, add `callbacks`
+
 - [ ] Export `FillCallbacks` from `index.ts`
 
 **Phase 2: Turn Lifecycle Callbacks**
 
 - [ ] Add `onTurnStart` call in `programmaticFill.ts` before agent call
+
 - [ ] Update `onTurnComplete` call to use `callbacks?.onTurnComplete`
+
 - [ ] Add unit tests for turn callbacks
 
 **Phase 3: LLM Call Callbacks**
 
 - [ ] Pass callbacks to `LiveAgent` constructor
+
 - [ ] Add `onLlmCallStart` before `generateText()` in `liveAgent.ts`
+
 - [ ] Add `onLlmCallEnd` after `generateText()` with token counts
+
 - [ ] Add unit tests for LLM callbacks
 
 **Phase 4: Tool Call Callbacks**
 
 - [ ] Implement `wrapToolsWithCallbacks()` helper in `liveAgent.ts`
+
 - [ ] Wrap tools before passing to `generateText()`
+
 - [ ] Add unit tests for tool callbacks (mock tools)
 
 **Phase 5: Integration Testing**
 
 - [ ] Test full flow with all callbacks
+
 - [ ] Test partial callbacks (only some implemented)
-- [ ] Test callback errors don't abort fill
+
+- [ ] Test callback errors don’t abort fill
+
 - [ ] Update any existing tests that use `onTurnComplete`
 
 ## Stage 4: Validation Stage
@@ -295,27 +334,40 @@ fillForm()
 **1. Unit Tests** (`tests/unit/harness/callbacks.test.ts`):
 
 - `FillCallbacks` with all hooks receives all events
+
 - `FillCallbacks` with only `onTurnComplete` works
+
 - `FillCallbacks` with only tool hooks works
-- Callback that throws doesn't abort fill
+
+- Callback that throws doesn’t abort fill
+
 - No callbacks (undefined) works
 
 **2. Integration Tests**:
 
 - Mock agent with tool calls triggers tool callbacks
+
 - Real form fill with callbacks captures expected events
-- Event ordering is correct (turnStart → llmStart → toolStart → toolEnd → llmEnd → turnComplete)
+
+- Event ordering is correct (turnStart → llmStart → toolStart → toolEnd → llmEnd →
+  turnComplete)
 
 **3. Manual Testing**:
 
 - Console logger callbacks with CLI `fill` command
+
 - Verify timing values are reasonable (durationMs > 0)
 
 ### Success Criteria
 
 - [ ] All unit tests pass
+
 - [ ] All integration tests pass
-- [ ] Callback errors are caught and don't abort fill
+
+- [ ] Callback errors are caught and don’t abort fill
+
 - [ ] No performance regression (benchmark optional)
+
 - [ ] Types exported correctly (`import { FillCallbacks } from 'markform'`)
+
 - [ ] Arena can integrate with `createEventLoggerCallbacks` pattern
