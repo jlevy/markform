@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.5
+
+### Patch Changes
+
+- 367c2bc: Add unknown tag validation in parser and rename field-group tag to group
+
 ## 0.1.4
 
 ### Patch Changes
