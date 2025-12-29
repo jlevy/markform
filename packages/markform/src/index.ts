@@ -22,6 +22,7 @@ export type {
   Id,
   OptionId,
   QualifiedOptionRef,
+  QualifiedColumnRef,
   ValidatorRef,
   // Checkbox types
   MultiCheckboxState,

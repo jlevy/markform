@@ -20,6 +20,9 @@ export type OptionId = string;
 /** Qualified option reference - used in doc blocks and external references */
 export type QualifiedOptionRef = `${Id}.${OptionId}`;
 
+/** Qualified column reference - used in table field references (e.g., "team.name") */
+export type QualifiedColumnRef = `${Id}.${Id}`;
+
 /** Validator reference - simple ID or parameterized object */
 export type ValidatorRef = string | { id: string; [key: string]: unknown };
 
