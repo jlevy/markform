@@ -22,11 +22,11 @@ import {
 } from '../../llms.js';
 import {
   AGENT_ROLE,
-  getFormsDir,
   DEFAULT_MAX_TURNS,
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
 } from '../../settings.js';
+import { getFormsDir } from '../lib/paths.js';
 import {
   createSpinner,
   getCommandContext,

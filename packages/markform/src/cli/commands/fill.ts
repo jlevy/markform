@@ -34,8 +34,8 @@ import {
   AGENT_ROLE,
   USER_ROLE,
   parseRolesFlag,
-  getFormsDir,
 } from '../../settings.js';
+import { getFormsDir } from '../lib/paths.js';
 import { formatSuggestedLlms } from '../../llms.js';
 import type { Agent } from '../../harness/mockAgent.js';
 import { resolveModel } from '../../harness/modelResolver.js';

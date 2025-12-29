@@ -28,8 +28,8 @@ import {
   DEFAULT_MAX_ISSUES_PER_TURN,
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
-  getFormsDir,
 } from '../../settings.js';
+import { getFormsDir } from '../lib/paths.js';
 import { SUGGESTED_LLMS, hasWebSearchSupport, parseModelIdForDisplay } from '../../llms.js';
 import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';

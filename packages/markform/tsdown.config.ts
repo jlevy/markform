@@ -1,5 +1,7 @@
 import { defineConfig } from 'tsdown';
 
+import pkg from './package.json' with { type: 'json' };
+
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
@@ -14,4 +16,7 @@ export default defineConfig({
   dts: true,
   clean: true,
   banner: ({ fileName }) => (fileName.includes('bin') ? '#!/usr/bin/env node\n' : ''),
+  define: {
+    __MARKFORM_VERSION__: JSON.stringify(pkg.version),
+  },
 });

@@ -9,7 +9,7 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 
 import { VERSION } from '../index.js';
-import { DEFAULT_FORMS_DIR } from '../settings.js';
+import { DEFAULT_FORMS_DIR } from './lib/paths.js';
 import { registerApisCommand } from './commands/apis.js';
 import { registerApplyCommand } from './commands/apply.js';
 import { registerDocsCommand } from './commands/docs.js';
