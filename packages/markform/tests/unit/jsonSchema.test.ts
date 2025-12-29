@@ -311,7 +311,17 @@ describe('jsonSchema', () => {
       expect(schema.title).toBe('Start Date');
     });
 
-    it('includes minDate/maxDate in x-markform for date field', () => {
+    it('includes formatMinimum/formatMaximum in schema for date constraints', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const dateField = getField(form, 4, 1);
+      const schema = fieldToJsonSchema(dateField, form.docs);
+
+      // Standard JSON Schema 2019-09/2020-12 keywords for format validation
+      expect(schema.formatMinimum).toBe('2020-01-01');
+      expect(schema.formatMaximum).toBe('2030-12-31');
+    });
+
+    it('includes minDate/maxDate in x-markform for backward compatibility', () => {
       const form = parseForm(TEST_FORM_MD);
       const dateField = getField(form, 4, 1);
       const schema = fieldToJsonSchema(dateField, form.docs);
@@ -401,6 +411,28 @@ describe('jsonSchema', () => {
 
       expect(schema['x-markform']?.checkboxMode).toBe('explicit');
       expect(schema['x-markform']?.approvalMode).toBe('blocking');
+    });
+
+    it('includes minDone in x-markform for checkbox fields with minDone constraint', () => {
+      const formWithMinDone = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="simple" minDone=2 %}
+- [ ] Task A {% #a %}
+- [ ] Task B {% #b %}
+- [ ] Task C {% #c %}
+{% /field %}
+{% /form %}
+`;
+      const form = parseForm(formWithMinDone);
+      const tasksField = getField(form, 0, 0);
+      const schema = fieldToJsonSchema(tasksField, form.docs);
+
+      expect(schema['x-markform']?.checkboxMode).toBe('simple');
+      expect(schema['x-markform']?.minDone).toBe(2);
     });
   });
 

@@ -49,6 +49,9 @@ interface JsonSchemaProperty {
   maxLength?: number;
   minimum?: number;
   maximum?: number;
+  // JSON Schema 2019-09/2020-12 format validation keywords
+  formatMinimum?: string;
+  formatMaximum?: string;
   items?: JsonSchemaProperty;
   properties?: Record<string, JsonSchemaProperty>;
   required?: string[];
@@ -90,6 +93,7 @@ export interface MarkformFieldExtension {
   group?: string;
   checkboxMode?: CheckboxMode;
   approvalMode?: ApprovalMode;
+  minDone?: number;
   placeholder?: string;
   examples?: string[];
 }
@@ -226,8 +230,16 @@ function dateFieldToJsonSchema(
     schema.description = description;
   }
 
-  // Date min/max are stored as strings, but JSON Schema doesn't have native min/max for date format
-  // We put them in the extension
+  // Use formatMinimum/formatMaximum (JSON Schema 2019-09/2020-12) for date constraints
+  // This ensures pure JSON Schema consumers can validate date bounds
+  if (field.min) {
+    schema.formatMinimum = field.min;
+  }
+  if (field.max) {
+    schema.formatMaximum = field.max;
+  }
+
+  // Also include in x-markform extension for backward compatibility
   if (options.includeExtensions) {
     const ext = buildFieldExtension(field, groupId);
     if (field.min) {
@@ -463,6 +475,9 @@ function checkboxesFieldToJsonSchema(
   if (options.includeExtensions) {
     const ext = buildFieldExtension(field, groupId);
     ext.checkboxMode = field.checkboxMode;
+    if (field.minDone !== undefined) {
+      ext.minDone = field.minDone;
+    }
     if (field.approvalMode !== 'none') {
       ext.approvalMode = field.approvalMode;
     }
