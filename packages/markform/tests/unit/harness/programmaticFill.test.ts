@@ -326,6 +326,74 @@ describe('fillForm', () => {
       // Should still complete despite callback error
       expect(result.status.ok).toBe(true);
     });
+
+    it('onTurnStart and onTurnComplete both called in order', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const events: string[] = [];
+
+      await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+        callbacks: {
+          onTurnStart: ({ turnNumber }) => {
+            events.push(`start:${turnNumber}`);
+          },
+          onTurnComplete: ({ turnNumber }) => {
+            events.push(`complete:${turnNumber}`);
+          },
+        },
+      });
+
+      // Verify order: start before complete for each turn
+      expect(events.length).toBeGreaterThanOrEqual(2);
+      expect(events[0]).toBe('start:1');
+      expect(events[1]).toBe('complete:1');
+    });
+
+    it('works with partial callbacks (only onTurnStart)', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const turnStarts: number[] = [];
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+        callbacks: {
+          onTurnStart: ({ turnNumber }) => {
+            turnStarts.push(turnNumber);
+          },
+          // onTurnComplete not provided
+        },
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(turnStarts.length).toBeGreaterThan(0);
+    });
+
+    it('works with no callbacks (undefined)', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+        // No callbacks option at all
+      });
+
+      expect(result.status.ok).toBe(true);
+    });
   });
 
   describe('cancellation', () => {
