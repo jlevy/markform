@@ -425,7 +425,7 @@ Maintain a log of sources accessed. Record: Date accessed, Source name, Type/tie
 
 {% table-field id="sources_accessed" label="Sources Accessed" required=true minRows=3
    columnIds=["date", "source", "type", "link", "takeaways"]
-   columnTypes=["date", "string", "string", "url", "string"] %}
+   columnTypes=[{type: "date", required: true}, {type: "string", required: true}, {type: "string", required: true}, {type: "url", required: true}, {type: "string", required: true}] %}
 | Date | Source | Type | Link | Takeaways |
 |------|--------|------|------|-----------|
 {% /table-field %}
