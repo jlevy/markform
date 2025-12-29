@@ -231,6 +231,30 @@ describe('fillForm', () => {
   });
 
   describe('progress callback', () => {
+    it('callbacks.onTurnStart called before each turn', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const turnStarts: { turnNumber: number; issuesCount: number }[] = [];
+
+      await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+        callbacks: {
+          onTurnStart: (turn) => {
+            turnStarts.push({ ...turn });
+          },
+        },
+      });
+
+      expect(turnStarts.length).toBeGreaterThan(0);
+      expect(turnStarts[0]?.turnNumber).toBe(1);
+      expect(typeof turnStarts[0]?.issuesCount).toBe('number');
+    });
+
     it('callbacks.onTurnComplete called after each turn', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);

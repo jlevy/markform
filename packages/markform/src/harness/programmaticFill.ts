@@ -250,6 +250,18 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       );
     }
 
+    // Call turn start callback (errors don't abort fill)
+    if (options.callbacks?.onTurnStart) {
+      try {
+        options.callbacks.onTurnStart({
+          turnNumber: turnCount + 1,
+          issuesCount: stepResult.issues.length,
+        });
+      } catch {
+        // Ignore callback errors
+      }
+    }
+
     // Generate patches using agent
     const response = await agent.generatePatches(stepResult.issues, form, maxPatchesPerTurn);
     const { patches, stats } = response;
