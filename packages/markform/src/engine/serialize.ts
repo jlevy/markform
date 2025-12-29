@@ -1042,25 +1042,32 @@ function serializeNotes(notes: Note[]): string {
 
 /**
  * Serialize a field group.
+ * Implicit groups (fields placed directly under the form) are serialized
+ * without the field-group wrapper tags.
  */
 function serializeFieldGroup(
   group: FieldGroup,
   responses: Record<Id, FieldResponse>,
   docs: DocumentationBlock[],
 ): string {
-  const attrs: Record<string, unknown> = { id: group.id };
-  if (group.title) {
-    attrs.title = group.title;
-  }
-  if (group.validate) {
-    attrs.validate = group.validate;
-  }
-  if (group.report !== undefined) {
-    attrs.report = group.report;
-  }
+  const lines: string[] = [];
 
-  const attrStr = serializeAttrs(attrs);
-  const lines: string[] = [`{% field-group ${attrStr} %}`];
+  // Implicit groups don't have wrapper tags
+  if (!group.implicit) {
+    const attrs: Record<string, unknown> = { id: group.id };
+    if (group.title) {
+      attrs.title = group.title;
+    }
+    if (group.validate) {
+      attrs.validate = group.validate;
+    }
+    if (group.report !== undefined) {
+      attrs.report = group.report;
+    }
+
+    const attrStr = serializeAttrs(attrs);
+    lines.push(`{% field-group ${attrStr} %}`);
+  }
 
   // Group doc blocks by ref
   const docsByRef = new Map<string, DocumentationBlock[]>();
@@ -1084,8 +1091,11 @@ function serializeFieldGroup(
     }
   }
 
-  lines.push('');
-  lines.push('{% /field-group %}');
+  // Implicit groups don't have wrapper tags
+  if (!group.implicit) {
+    lines.push('');
+    lines.push('{% /field-group %}');
+  }
 
   return lines.join('\n');
 }

@@ -308,6 +308,12 @@ export interface FieldGroup {
   children: Field[];
   /** Whether to include this group in report output. Default: true */
   report?: boolean;
+  /**
+   * True if this group was implicitly created for fields placed directly
+   * under the form (not wrapped in an explicit field-group).
+   * Implicit groups are serialized without field-group wrapper tags.
+   */
+  implicit?: boolean;
 }
 
 /** Form schema - root container with groups */

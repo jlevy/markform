@@ -15,7 +15,7 @@ import pc from 'picocolors';
 import { getCommandContext, logError } from '../lib/shared.js';
 
 /**
- * Get the path to the SPEC.md file.
+ * Get the path to the markform-spec.md file.
  * Works both during development and when installed as a package.
  */
 function getSpecPath(): string {
@@ -23,12 +23,12 @@ function getSpecPath(): string {
   const dirName = thisDir.split(/[/\\]/).pop();
 
   if (dirName === 'dist') {
-    // Bundled: dist -> package root -> SPEC.md
-    return join(dirname(thisDir), 'SPEC.md');
+    // Bundled: dist -> package root -> docs/markform-spec.md
+    return join(dirname(thisDir), 'docs', 'markform-spec.md');
   }
 
-  // Development: src/cli/commands -> src/cli -> src -> package root -> SPEC.md
-  return join(dirname(dirname(dirname(thisDir))), 'SPEC.md');
+  // Development: src/cli/commands -> src/cli -> src -> package root -> docs/markform-spec.md
+  return join(dirname(dirname(dirname(thisDir))), 'docs', 'markform-spec.md');
 }
 
 /**

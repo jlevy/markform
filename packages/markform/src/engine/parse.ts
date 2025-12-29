@@ -213,6 +213,7 @@ function parseFieldGroup(
 
 /**
  * Parse a form tag.
+ * Handles both explicit field-groups and fields placed directly under the form.
  */
 function parseFormTag(
   node: Node,
@@ -234,9 +235,10 @@ function parseFormTag(
   idIndex.set(id, { nodeType: 'form' });
 
   const groups: FieldGroup[] = [];
+  const ungroupedFields: FieldGroup['children'] = [];
 
-  // Process children to find field-groups
-  function findFieldGroups(child: Node): void {
+  // Process children to find field-groups and ungrouped fields
+  function processContent(child: Node): void {
     if (!child || typeof child !== 'object') {
       return;
     }
@@ -244,20 +246,67 @@ function parseFormTag(
     if (isTagNode(child, 'field-group')) {
       const group = parseFieldGroup(child, responsesByFieldId, orderIndex, idIndex, id);
       groups.push(group);
-      return;
+      return; // parseFieldGroup already processed the children
     }
 
+    // Check for field tags directly under the form (not in a field-group)
+    const result = parseField(child);
+    if (result) {
+      if (idIndex.has(result.field.id)) {
+        throw new ParseError(`Duplicate ID '${result.field.id}'`);
+      }
+
+      idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
+      ungroupedFields.push(result.field);
+      responsesByFieldId[result.field.id] = result.response;
+      orderIndex.push(result.field.id);
+
+      // Add options to idIndex for select/checkbox fields
+      if ('options' in result.field) {
+        for (const opt of result.field.options) {
+          const qualifiedRef = `${result.field.id}.${opt.id}`;
+          if (idIndex.has(qualifiedRef)) {
+            throw new ParseError(`Duplicate option ref '${qualifiedRef}'`);
+          }
+          idIndex.set(qualifiedRef, {
+            nodeType: 'option',
+            parentId: id,
+            fieldId: result.field.id,
+          });
+        }
+      }
+      return; // Don't recurse into field children
+    }
+
+    // Recurse into children for non-field-group, non-field nodes
     if (child.children && Array.isArray(child.children)) {
       for (const c of child.children) {
-        findFieldGroups(c);
+        processContent(c);
       }
     }
   }
 
   if (node.children && Array.isArray(node.children)) {
     for (const child of node.children) {
-      findFieldGroups(child);
+      processContent(child);
     }
+  }
+
+  // If there are ungrouped fields, create an implicit group to hold them
+  if (ungroupedFields.length > 0) {
+    const implicitGroupId = `_default`;
+    if (idIndex.has(implicitGroupId)) {
+      throw new ParseError(
+        `ID '${implicitGroupId}' is reserved for implicit field groups. ` +
+          `Please use a different ID for your field or group.`,
+      );
+    }
+    idIndex.set(implicitGroupId, { nodeType: 'group', parentId: id });
+    groups.push({
+      id: implicitGroupId,
+      children: ungroupedFields,
+      implicit: true,
+    });
   }
 
   return { id, title, groups };

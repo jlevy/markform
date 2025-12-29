@@ -10,6 +10,7 @@ import pc from 'picocolors';
 
 import { VERSION } from '../index.js';
 import { DEFAULT_FORMS_DIR } from '../settings.js';
+import { registerApisCommand } from './commands/apis.js';
 import { registerApplyCommand } from './commands/apply.js';
 import { registerDocsCommand } from './commands/docs.js';
 import { registerDumpCommand } from './commands/dump.js';
@@ -62,6 +63,7 @@ function createProgram(): Command {
   registerReadmeCommand(program);
   registerDocsCommand(program);
   registerSpecCommand(program);
+  registerApisCommand(program);
   // Rest alphabetical for help display
   registerApplyCommand(program);
   registerDumpCommand(program);

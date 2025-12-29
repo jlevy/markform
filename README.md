@@ -250,8 +250,11 @@ markform serve my-form.form.md
 # Quick reference for writing forms (agent-friendly)
 markform docs
 
-# Full specification (SPEC.md)
+# Full specification
 markform spec
+
+# TypeScript and AI SDK API documentation
+markform apis
 
 # This README
 markform readme
@@ -389,9 +392,9 @@ But it’s been useful for me already.
 
 ### Was it Vibe Coded?
 
-It’s all written by LLMs but using a strongly spec-driven process, using rules from
+It's all written by LLMs but using a strongly spec-driven process, using rules from
 [Speculate](https://github.com/jlevy/speculate).
-See [the spec](SPEC.md) and the architecture docs and specs in [docs/](docs/).
+See [the spec](docs/markform-spec.md) and the architecture docs and specs in [docs/](docs/).
 
 ### What are the goals of Markform?
 
@@ -497,11 +500,14 @@ Or see [markdoc/language-server](https://github.com/markdoc/language-server).
 ## Documentation
 
 - **[Quick
-  Reference](https://github.com/jlevy/markform/blob/main/packages/markform/DOCS.md)**
+  Reference](https://github.com/jlevy/markform/blob/main/docs/markform-reference.md)**
   (or run `markform docs`) - Concise syntax reference (agent-friendly)
 
-- **[Markform Spec](https://github.com/jlevy/markform/blob/main/SPEC.md)** (or run
-  `markform spec`) - Complete syntax and semantics
+- **[Markform Spec](https://github.com/jlevy/markform/blob/main/docs/markform-spec.md)**
+  (or run `markform spec`) - Complete syntax and semantics
+
+- **[API Documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)**
+  (or run `markform apis`) - TypeScript and AI SDK APIs
 
 - **[Design
   Doc](https://github.com/jlevy/markform/blob/main/docs/project/architecture/current/arch-markform-design.md)**
