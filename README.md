@@ -21,6 +21,8 @@ which makes creating new workflows much easier.
 
 ## Installation
 
+Requires Node.js 20+.
+
 ```bash
 # As a global CLI
 npm install -g markform
@@ -28,8 +30,6 @@ npm install -g markform
 # Or as a project dependency
 npm install markform
 ```
-
-Requires Node.js 20+ (v24 recommended).
 
 ## Quick Start
 
@@ -39,7 +39,8 @@ npx markform examples
 ```
 
 This walks you through an example form interactively, with optional AI agent filling.
-You’ll need at least one [API key](#supported-providers) to have LLMs fill in forms.
+You’ll need at least one [API key](#supported-providers) form a provider with a model
+that supports web search to have LLMs fill in forms.
 
 ## Example: Research a Movie
 
@@ -153,31 +154,26 @@ One-Line Summary:
 Convicted banker Andy Dufresne is sent to Shawshank State Penitentiary, where he forms an unexpected friendship with inmate Red while holding onto hope and striving to maintain his dignity in a corrupt prison system.
 ```
 
-See the
-[examples/](https://github.com/jlevy/markform/tree/main/packages/markform/examples)
-directory for a few more complex form examples.
-
 ### More Example Forms
 
 The package includes example forms in
-[`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples):
+[`examples/`](https://github.com/jlevy/markform/tree/main/packages/markform/examples).
+View them with `markform examples --list` or try these interactively:
 
 - [`movie-research/movie-research-minimal.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-minimal.form.md)
-  \- Quick movie lookup (title, year, rating)
+  \- The quick example above.
 
 - [`movie-research/movie-research-basic.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-basic.form.md)
-  \- Standard research with IMDB, Rotten Tomatoes, Metacritic
+  \- Standard movie research with IMDB, Rotten Tomatoes, Metacritic.
 
 - [`movie-research/movie-research-deep.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-deep.form.md)
-  \- Comprehensive analysis with streaming, box office
+  \- Comprehensive movie analysis with streaming, box office, analysis.
 
 - [`simple/simple.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/simple/simple.form.md)
-  \- Basic form demonstrating all field kinds
+  \- Basic form demonstrating all field kinds.
 
 - [`earnings-analysis/earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
-  \- Financial analysis form
-
-View them with `markform examples --list` or try them interactively.
+  \- Financial analysis form.
 
 ## Why?
 
