@@ -220,6 +220,7 @@ field a `Field` or `FieldValue` represents.
 | `checkboxes` | `'checkboxes'` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no); optional `minDone` for completion threshold |
 | `url-field` | `'url'` | Single URL value with built-in format validation |
 | `url-list` | `'url_list'` | Array of URLs (for citations, sources, references); supports `minItems`, `maxItems`, `uniqueItems` |
+| `table-field` | `'table'` | Structured tabular data with typed columns; supports `columnIds`, `columnLabels`, `columnTypes`, `minRows`, `maxRows` |
 
 **Note on `pattern`:** The `pattern` attribute accepts a JavaScript-compatible regular
 expression string (without delimiters).
@@ -388,6 +389,81 @@ The parser enforces this:
 
 - `active` (`[*]`): This item is the current focus right now (useful for showing where
   an agent is in a multi-step workflow)
+
+#### Table Fields
+
+Table fields enable structured tabular data collection with typed columns.
+They use standard markdown table syntax for values and support validation per column
+type.
+
+**Table field attributes:**
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| `columnIds` | string[] | Yes* | Array of snake_case column identifiers |
+| `columnLabels` | string[] | No | Array of display labels (defaults to header row or `columnIds`) |
+| `columnTypes` | string[] | No | Array of column types (defaults to all `'string'`) |
+| `minRows` | number | No | Minimum row count (default: 0) |
+| `maxRows` | number | No | Maximum row count (default: unlimited) |
+
+*Note: `columnIds` can be omitted if column definitions are extracted from the inline
+table header row.
+
+**Column types and validation:**
+
+| Type | Description | Validation |
+| --- | --- | --- |
+| `string` | Any text value | None |
+| `number` | Numeric value | Integer or float |
+| `url` | URL value | Valid URL format |
+| `date` | Date value | ISO 8601 format (YYYY-MM-DD) |
+| `year` | Year value | Integer (1000-9999) |
+
+**Per-column required setting:** Column types can optionally specify a `required` flag:
+```md
+columnTypes=[{type: "string", required: true}, "number", "url"]
+```
+
+**Clean template syntax (columns from header row):**
+```md
+{% table-field id="team" label="Team Members" %}
+| Name | Title | Department |
+|------|-------|------------|
+{% /table-field %}
+```
+
+**Explicit column definition:**
+```md
+{% table-field id="team" label="Team Members"
+   columnIds=["name", "title", "department"]
+   columnLabels=["Full Name", "Job Title", "Department"]
+   columnTypes=["string", "string", "string"] %}
+| Full Name | Job Title | Department |
+|-----------|-----------|------------|
+{% /table-field %}
+```
+
+**Complete example with types and data:**
+```md
+{% table-field id="films" label="Notable Films" required=true
+   columnIds=["release_year", "title", "rt_score", "box_office_m"]
+   columnLabels=["Year", "Title", "RT Score", "Box Office ($M)"]
+   columnTypes=["year", "string", "number", "number"]
+   minRows=1 maxRows=10 %}
+| Year | Title | RT Score | Box Office ($M) |
+|------|-------|----------|-----------------|
+| 2023 | Barbie | 88 | 1441.8 |
+| 2019 | Once Upon a Time in Hollywood | 85 | 374.3 |
+{% /table-field %}
+```
+
+**Sentinel values in table cells:**
+Cells can use `%SKIP%` and `%ABORT%` sentinels with optional reasons:
+```md
+| 2017 | I, Tonya | 90 | %SKIP% (Box office not tracked) |
+```
+
+**Cell escaping:** Use `\|` for literal pipe characters in cell values.
 
 #### Documentation Blocks
 
@@ -1768,6 +1844,19 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | Patch operation | `{ op: 'set_year'; fieldId: Id; value: number \| null }` |
 | Zod | `z.number().int().min(min).max(max)` |
 | JSON Schema | `{ type: "integer", minimum: min, maximum: max }` |
+
+**`table-field`** — Structured tabular data with typed columns
+
+| Aspect | Value |
+| --- | --- |
+| Markdoc tag | `table-field` |
+| TypeScript interface | `TableField` |
+| TypeScript kind | `'table'` |
+| Attributes | `id`, `label`, `required`, `columnIds`, `columnLabels`, `columnTypes`, `minRows`, `maxRows` |
+| FieldValue | `{ kind: 'table'; rows: TableRowResponse[] }` |
+| Patch operation | `{ op: 'set_table'; fieldId: Id; rows: PatchTableRow[] }` |
+| Zod | `z.object({ kind: z.literal('table'), rows: z.array(TableRowResponseSchema) })` |
+| JSON Schema | `{ type: "object", properties: { kind: { const: "table" }, rows: { type: "array" } } }` |
 
 **Note:** `OptionId` values are local to the field (e.g., `"ten_k"`, `"bullish"`). They
 are NOT qualified with the field ID in patches or FieldValue—the field context is
