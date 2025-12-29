@@ -44,6 +44,7 @@ import type {
   YearValue,
 } from './coreTypes.js';
 import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
+import { priorityKeyComparator } from '../utils/keySort.js';
 
 // =============================================================================
 // Smart Fence Selection Helpers
@@ -198,11 +199,15 @@ function serializeAttrValue(value: unknown): string {
   throw new Error(`Cannot serialize value of type ${typeof value} to Markdoc`);
 }
 
+/** Priority keys that appear first in serialized attributes, in this order. */
+const ATTR_PRIORITY_KEYS = ['kind', 'id', 'role'];
+
 /**
- * Serialize attributes to Markdoc format with alphabetical ordering.
+ * Serialize attributes to Markdoc format.
+ * Priority keys (kind, id, role) appear first in order, then remaining keys alphabetically.
  */
 function serializeAttrs(attrs: Record<string, unknown>): string {
-  const keys = Object.keys(attrs).sort();
+  const keys = Object.keys(attrs).sort(priorityKeyComparator(ATTR_PRIORITY_KEYS));
   const parts: string[] = [];
 
   for (const key of keys) {

@@ -2,6 +2,8 @@ session_version: 0.1.0
 mode: mock
 form:
   path: simple.form.md
+mock:
+  completed_mock: simple-skipped-filled.form.md
 harness:
   max_turns: 100
   max_patches_per_turn: 20
@@ -117,7 +119,7 @@ turns:
             test: na
     after:
       required_issue_count: 2
-      markdown_sha256: 666b3c193559362c56fd59c50e88668e6f65c1480cb1e0557034033d595601ed
+      markdown_sha256: 82602f5f6056a820211a8f06b532935392a64523b0067ff4b44df43225102332
       answered_field_count: 10
       skipped_field_count: 0
   - turn: 2
@@ -227,7 +229,7 @@ turns:
           reason: No value in mock form
     after:
       required_issue_count: 0
-      markdown_sha256: b8c874ebe92b16c29e77eb2eab62d7d8cca4cc72b0ba27bd23e7a22c0c820171
+      markdown_sha256: a31a9d2cbf5f79e89277a72e657efe68a5e7c2503e11458c035897cb3f92dd3f
       answered_field_count: 13
       skipped_field_count: 7
   - turn: 3
@@ -247,11 +249,9 @@ turns:
           reason: No value in mock form
     after:
       required_issue_count: 0
-      markdown_sha256: be8ce3ef1d8b1e76e6e0f72202d0f75cb432ba2cb2200dc581fedd8b99806878
+      markdown_sha256: bbf4b61b00d149e5bf28bcaed3e3ed8279c940763e85d4a2a7e1fcb7669fac9d
       answered_field_count: 13
       skipped_field_count: 8
 final:
   expect_complete: true
   expected_completed_form: simple-skipped-filled.form.md
-mock:
-  completed_mock: simple-skipped-filled.form.md
