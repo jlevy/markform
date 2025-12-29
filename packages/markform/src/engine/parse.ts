@@ -34,6 +34,19 @@ import {
 // Re-export ParseError for backward compatibility
 export { ParseError } from './parseHelpers.js';
 
+/**
+ * Valid tag names inside a form.
+ * Any other tag will produce a ParseError.
+ */
+const VALID_FORM_TAGS = new Set([
+  'group',
+  'field',
+  'note',
+  'description',
+  'instructions',
+  'documentation',
+]);
+
 // =============================================================================
 // Frontmatter Parsing
 // =============================================================================
@@ -243,17 +256,15 @@ function parseFormTag(
       return;
     }
 
+    // Check for unknown tags inside form
+    if (isTagNode(child) && !VALID_FORM_TAGS.has((child as { tag: string }).tag)) {
+      throw new ParseError(`Unknown tag '${(child as { tag: string }).tag}' inside form`);
+    }
+
     if (isTagNode(child, 'group')) {
       const group = parseFieldGroup(child, responsesByFieldId, orderIndex, idIndex, id);
       groups.push(group);
       return; // parseFieldGroup already processed the children
-    }
-
-    // Reject legacy field-group tag with helpful error
-    if (isTagNode(child, 'field-group')) {
-      throw new ParseError(
-        "Legacy tag 'field-group' is no longer supported. Use {% group %} instead",
-      );
     }
 
     // Check for field tags directly under the form (not in a group)

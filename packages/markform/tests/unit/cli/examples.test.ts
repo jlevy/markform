@@ -132,6 +132,17 @@ describe('examples registry', () => {
   });
 
   describe('example form validation', () => {
+    it('ALL examples parse as valid forms', () => {
+      // This test ensures unknown tags, invalid syntax, etc. are caught
+      for (const example of EXAMPLE_DEFINITIONS) {
+        const content = loadExampleContent(example.id);
+        const form = parseForm(content);
+
+        expect(form.schema.id).toBeTruthy();
+        expect(form.schema.groups.length).toBeGreaterThan(0);
+      }
+    });
+
     it('simple example parses as valid form', () => {
       const content = loadExampleContent('simple');
       const form = parseForm(content);

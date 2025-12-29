@@ -386,7 +386,25 @@ No form here.
       expect(() => parseForm(markdown)).toThrow(ParseError);
     });
 
-    it('throws on legacy field-group tag with migration hint', () => {
+    it('throws on unknown tag inside form', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% unknown-tag id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /unknown-tag %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/unknown.*tag.*unknown-tag/i);
+    });
+
+    it('throws on legacy field-group tag as unknown tag', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -401,7 +419,7 @@ markform:
 {% /form %}
 `;
       expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/field-group.*no longer supported.*{% group %}/i);
+      expect(() => parseForm(markdown)).toThrow(/unknown.*tag.*field-group/i);
     });
   });
 
