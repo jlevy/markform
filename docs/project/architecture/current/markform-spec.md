@@ -319,11 +319,11 @@ Type: `integer`, default: `-1` (require all).
 
 Example with partial completion allowed:
 ```md
-{% checkboxes id="optional_tasks" label="Optional tasks" required=true minDone=1 %}
+{% field kind="checkboxes" id="optional_tasks" label="Optional tasks" required=true minDone=1 %}
 - [ ] Task A {% #task_a %}
 - [ ] Task B {% #task_b %}
 - [ ] Task C {% #task_c %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 **Note:** `minDone` only applies to `simple` mode.
@@ -418,32 +418,32 @@ The `fence` node with `language="value"` is used for scalar values (see
 
 **Empty:** Omit the body entirely:
 ```md
-{% string-field id="company_name" label="Company name" required=true %}{% /string-field %}
+{% field kind="string" id="company_name" label="Company name" required=true %}{% /field %}
 ```
 
 **Filled:** Value in a fenced code block with language `value`:
 ````md
-{% string-field id="company_name" label="Company name" required=true %}
+{% field kind="string" id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 ##### Number Fields
 
 **Empty:**
 ```md
-{% number-field id="revenue_m" label="Revenue (millions)" %}{% /number-field %}
+{% field kind="number" id="revenue_m" label="Revenue (millions)" %}{% /field %}
 ````
 
 **Filled:** Numeric value as string in fence (parsed to number):
 ````md
-{% number-field id="revenue_m" label="Revenue (millions)" %}
+{% field kind="number" id="revenue_m" label="Revenue (millions)" %}
 ```value
 1234.56
 ````
-{% /number-field %}
+{% /field %}
 ````
 
 ##### Single-Select Fields
@@ -451,11 +451,11 @@ ACME Corp
 Values are encoded **inline** via `[x]` marker—at most one option may be selected (if
 `required=true`, exactly one must be selected):
 ```md
-{% single-select id="rating" label="Rating" %}
+{% field kind="single_select" id="rating" label="Rating" %}
 - [ ] Bullish {% #bullish %}
 - [x] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
-{% /single-select %}
+{% /field %}
 ````
 
 Option IDs are scoped to the field—reference as `rating.bullish`, `rating.neutral`, etc.
@@ -464,41 +464,41 @@ Option IDs are scoped to the field—reference as `rating.bullish`, `rating.neut
 
 Values are encoded **inline** via `[x]` markers—no separate value fence:
 ```md
-{% multi-select id="categories" label="Categories" %}
+{% field kind="multi_select" id="categories" label="Categories" %}
 - [x] Technology {% #tech %}
 - [ ] Healthcare {% #health %}
 - [x] Finance {% #finance %}
-{% /multi-select %}
+{% /field %}
 ```
 
 ##### Checkboxes Fields
 
 Values are encoded **inline** via state markers—no separate value fence:
 ```md
-{% checkboxes id="tasks" label="Tasks" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" %}
 - [x] Review docs {% #review %}
 - [/] Write tests {% #tests %}
 - [*] Run CI {% #ci %}
 - [ ] Deploy {% #deploy %}
 - [-] Manual QA {% #manual_qa %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 For simple two-state checkboxes:
 ```md
-{% checkboxes id="agreements" label="Agreements" checkboxMode="simple" %}
+{% field kind="checkboxes" id="agreements" label="Agreements" checkboxMode="simple" %}
 - [x] I agree to terms {% #terms %}
 - [ ] Subscribe to newsletter {% #newsletter %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 For explicit yes/no checkboxes (requires answer for each):
 ```md
-{% checkboxes id="risk_factors" label="Risk Assessment" checkboxMode="explicit" required=true %}
+{% field kind="checkboxes" id="risk_factors" label="Risk Assessment" checkboxMode="explicit" required=true %}
 - [y] Market volatility risk assessed {% #market %}
 - [n] Regulatory risk assessed {% #regulatory %}
 - [ ] Currency risk assessed {% #currency %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 In this example, `risk_factors.currency` is unfilled (`[ ]`) and will fail validation
@@ -512,18 +512,18 @@ Items do not have individual IDs—the field has an ID and items are positional 
 
 **Empty:**
 ```md
-{% string-list id="key_commitments" label="Key commitments" minItems=1 %}{% /string-list %}
+{% field kind="string_list" id="key_commitments" label="Key commitments" minItems=1 %}{% /field %}
 ```
 
 **Filled:** One item per non-empty line in the value fence:
 ````md
-{% string-list id="key_commitments" label="Key commitments" minItems=1 %}
+{% field kind="string_list" id="key_commitments" label="Key commitments" minItems=1 %}
 ```value
 Ship v1.0 by end of Q1
 Complete security audit
 Migrate legacy users to new platform
 ````
-{% /string-list %}
+{% /field %}
 ````
 
 **Parsing rules:**
@@ -552,7 +552,7 @@ Regulatory changes in EU market
 Competitor launching similar feature in Q2
 Customer concentration risk (top 3 = 60% revenue)
 ````
-{% /string-list %}
+{% /field %}
 
 {% instructions ref="top_risks" %} One risk per line.
 Be specific (company- or product-specific), not generic.
@@ -569,12 +569,12 @@ serialized on the opening tag:
 
 **Skipped field (no reason):**
 ```md
-{% string-field id="optional_notes" label="Optional notes" state="skipped" %}{% /string-field %}
+{% field kind="string" id="optional_notes" label="Optional notes" state="skipped" %}{% /field %}
 ````
 
 **Aborted field (no reason):**
 ```md
-{% string-field id="company_name" label="Company name" required=true state="aborted" %}{% /string-field %}
+{% field kind="string" id="company_name" label="Company name" required=true state="aborted" %}{% /field %}
 ```
 
 **State attribute values:**
@@ -589,19 +589,19 @@ When a field has a skip or abort state AND a reason was provided via the patch, 
 reason is embedded in the sentinel value using parentheses:
 
 ````md
-{% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
+{% field kind="string" id="competitor_analysis" label="Competitor analysis" state="skipped" %}
 ```value
 %SKIP% (Information not publicly available)
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 ```md
-{% number-field id="projected_revenue" label="Projected revenue" state="aborted" %}
+{% field kind="number" id="projected_revenue" label="Projected revenue" state="aborted" %}
 ```value
 %ABORT% (Financial projections cannot be determined from available data)
 ````
-{% /number-field %}
+{% /field %}
 ````
 
 **Parsing rules:**
@@ -662,11 +662,11 @@ Analysis completed with partial data due to API limitations.
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
 
 {% field-group id="company_info" title="Company Info" %}
-{% string-field id="company_name" label="Company name" state="skipped" %}
+{% field kind="string" id="company_name" label="Company name" state="skipped" %}
 ```value
 %SKIP% (Not applicable for this analysis type)
 ````
-{% /string-field %} {% /field-group %}
+{% /field %} {% /field-group %}
 
 {% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
 data due to API limitations.
@@ -703,20 +703,20 @@ function containsMarkdocSyntax(value: string): boolean {
 
 **Example (process=false required):**
 ````md
-{% string-field id="notes" label="Notes" %}
+{% field kind="string" id="notes" label="Notes" %}
 ```value {% process=false %}
 Use {% tag %} for special formatting.
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 **Example (process=false not needed):**
 ```md
-{% string-field id="name" label="Name" %}
+{% field kind="string" id="name" label="Name" %}
 ```value
 Alice Johnson
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 See [GitHub Discussion #261][markdoc-process-false] for background on the attribute.
@@ -738,33 +738,33 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 {% /description %}
 
 {% field-group id="company_info" title="Company Info" %}
-{% string-field id="company_name" label="Company name" required=true %}{% /string-field %}
-{% string-field id="ticker" label="Ticker" required=true %}{% /string-field %}
-{% string-field id="fiscal_period" label="Fiscal period" required=true %}{% /string-field %}
+{% field kind="string" id="company_name" label="Company name" required=true %}{% /field %}
+{% field kind="string" id="ticker" label="Ticker" required=true %}{% /field %}
+{% field kind="string" id="fiscal_period" label="Fiscal period" required=true %}{% /field %}
 {% /field-group %}
 
 {% field-group id="source_docs" title="Source Documents" %}
-{% checkboxes id="docs_reviewed" label="Documents reviewed" required=true %}
+{% field kind="checkboxes" id="docs_reviewed" label="Documents reviewed" required=true %}
 - [ ] 10-K {% #ten_k %}
 - [ ] 10-Q {% #ten_q %}
 - [ ] Earnings release {% #earnings_release %}
 - [ ] Earnings call transcript {% #call_transcript %}
-{% /checkboxes %}
+{% /field %}
 {% /field-group %}
 
 {% field-group id="financials" title="Key Financials" %}
-{% number-field id="revenue_m" label="Revenue (USD millions)" required=true %}{% /number-field %}
-{% number-field id="gross_margin_pct" label="Gross margin (%)" %}{% /number-field %}
-{% number-field id="eps_diluted" label="Diluted EPS" required=true %}{% /number-field %}
+{% field kind="number" id="revenue_m" label="Revenue (USD millions)" required=true %}{% /field %}
+{% field kind="number" id="gross_margin_pct" label="Gross margin (%)" %}{% /field %}
+{% field kind="number" id="eps_diluted" label="Diluted EPS" required=true %}{% /field %}
 {% /field-group %}
 
 {% field-group id="analysis" title="Analysis" %}
-{% single-select id="rating" label="Overall rating" required=true %}
+{% field kind="single_select" id="rating" label="Overall rating" required=true %}
 - [ ] Bullish {% #bullish %}
 - [ ] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
-{% /single-select %}
-{% string-field id="thesis" label="Investment thesis" required=true %}{% /string-field %}
+{% /field %}
+{% field kind="string" id="thesis" label="Investment thesis" required=true %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -778,16 +778,16 @@ Hand-authored forms only need the `spec` field.
 
 ````md
 {% field-group id="company_info" title="Company Info" %}
-{% string-field id="company_name" label="Company name" required=true %}
+{% field kind="string" id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
 ````
-{% /string-field %} {% string-field id="ticker" label="Ticker" required=true %}
+{% /field %} {% field kind="string" id="ticker" label="Ticker" required=true %}
 ```value
 ACME
 ```
-{% /string-field %} {% string-field id="fiscal_period" label="Fiscal period"
-required=true %}{% /string-field %} {% /field-group %}
+{% /field %} {% field kind="string" id="fiscal_period" label="Fiscal period"
+required=true %}{% /field %} {% /field-group %}
 
 {% field-group id="source_docs" title="Source Documents" %} {% checkboxes
 id="docs_reviewed" label="Documents reviewed" required=true %}
@@ -798,7 +798,7 @@ id="docs_reviewed" label="Documents reviewed" required=true %}
 
 - [/] Earnings release {% #earnings_release %}
 
-- [ ] Earnings call transcript {% #call_transcript %} {% /checkboxes %} {% /field-group
+- [ ] Earnings call transcript {% #call_transcript %} {% /field %} {% /field-group
   %}
 ````
 
@@ -1855,11 +1855,11 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
 
 <!-- Parameterized: pass min word count as parameter -->
 
-{% string-field id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+{% field kind="string" id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /field %}
 
 <!-- Multiple validators with different params -->
 
-{% string-field id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+{% field kind="string" id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /field %}
 
 <!-- Sum-to validator with configurable target -->
 

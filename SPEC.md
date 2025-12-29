@@ -190,7 +190,7 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 
 - IDs use `snake_case` (e.g., `company_info`, `ten_k`)
 
-- Tag names use `kebab-case` (Markdoc convention, e.g., `string-field`)
+- The `field` tag uses a `kind` attribute to specify the field kind
 
 #### Structural Tags
 
@@ -203,24 +203,25 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 [Markdoc Config][markdoc-config] for how to register custom tags.
 
-Each field tag maps to a **kind** value that identifies the field kind.
-The `kind` property is reserved exclusively for field kinds—it identifies what type of
-field a `Field` or `FieldValue` represents.
+All fields use the unified `{% field kind="..." %}` syntax. The `kind` attribute
+identifies what type of field a `Field` or `FieldValue` represents.
 (In TypeScript, the type is `FieldKind`.)
 
-| Tag | Kind | Description |
-| --- | --- | --- |
-| `string-field` | `'string'` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
-| `number-field` | `'number'` | Numeric value; optional `min`, `max`, `integer` |
-| `date-field` | `'date'` | ISO 8601 date (YYYY-MM-DD); optional `min`, `max` date constraints |
-| `year-field` | `'year'` | Integer year; optional `min`, `max` year constraints |
-| `string-list` | `'string_list'` | Array of strings (open-ended list); supports `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
-| `single-select` | `'single_select'` | Select one option from enumerated list |
-| `multi-select` | `'multi_select'` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
-| `checkboxes` | `'checkboxes'` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no); optional `minDone` for completion threshold |
-| `url-field` | `'url'` | Single URL value with built-in format validation |
-| `url-list` | `'url_list'` | Array of URLs (for citations, sources, references); supports `minItems`, `maxItems`, `uniqueItems` |
-| `table-field` | `'table'` | Structured tabular data with typed columns; supports `columnIds`, `columnLabels`, `columnTypes`, `minRows`, `maxRows` |
+| Kind | Description |
+| --- | --- |
+| `string` | String value; optional `required`, `pattern`, `minLength`, `maxLength` |
+| `number` | Numeric value; optional `min`, `max`, `integer` |
+| `date` | ISO 8601 date (YYYY-MM-DD); optional `min`, `max` date constraints |
+| `year` | Integer year; optional `min`, `max` year constraints |
+| `string_list` | Array of strings (open-ended list); supports `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
+| `single_select` | Select one option from enumerated list |
+| `multi_select` | Select multiple options; supports `minSelections`, `maxSelections` constraints |
+| `checkboxes` | Stateful checklist; supports `checkboxMode` with values `multi` (5 states), `simple` (2 states), or `explicit` (yes/no); optional `minDone` for completion threshold |
+| `url` | Single URL value with built-in format validation |
+| `url_list` | Array of URLs (for citations, sources, references); supports `minItems`, `maxItems`, `uniqueItems` |
+| `table` | Structured tabular data with typed columns; supports `columnIds`, `columnLabels`, `columnTypes`, `minRows`, `maxRows` |
+
+**Syntax:** `{% field kind="<kind>" id="..." label="..." %}...{% /field %}`
 
 **Note on `pattern`:** The `pattern` attribute accepts a JavaScript-compatible regular
 expression string (without delimiters).
@@ -250,17 +251,17 @@ These attributes are only valid on text-entry field kinds. Using them on chooser
 
 **Example with placeholder and examples:**
 ```md
-{% string-field id="company_name" label="Company name" placeholder="Enter company name" examples=["ACME Corp", "Globex Inc"] %}{% /string-field %}
+{% field kind="string" id="company_name" label="Company name" placeholder="Enter company name" examples=["ACME Corp", "Globex Inc"] %}{% /field %}
 ```
 
 For number fields, examples must be valid numbers:
 ```md
-{% number-field id="revenue" label="Revenue (USD)" placeholder="1000000" examples=["500000", "1000000", "5000000"] %}{% /number-field %}
+{% field kind="number" id="revenue" label="Revenue (USD)" placeholder="1000000" examples=["500000", "1000000", "5000000"] %}{% /field %}
 ```
 
 For URL fields, examples must be valid URLs:
 ```md
-{% url-field id="website" label="Website" placeholder="https://example.com" examples=["https://example.com", "https://github.com"] %}{% /url-field %}
+{% field kind="url" id="website" label="Website" placeholder="https://example.com" examples=["https://example.com", "https://github.com"] %}{% /field %}
 ```
 
 When running the fill harness with `targetRoles`, only fields matching those roles are
@@ -284,13 +285,13 @@ compatibility:
 | `checkboxes` | `[-]` | Not applicable (multi only) | `- [-] Item {% #item_id %}` |
 | `checkboxes` | `[y]` | Yes (explicit only) | `- [y] Item {% #item_id %}` |
 | `checkboxes` | `[n]` | No (explicit only) | `- [n] Item {% #item_id %}` |
-| `single-select` | `[ ]` | Unselected | `- [ ] Option {% #opt_id %}` |
-| `single-select` | `[x]` | Selected (exactly one) | `- [x] Option {% #opt_id %}` |
-| `multi-select` | `[ ]` | Unselected | `- [ ] Option {% #opt_id %}` |
-| `multi-select` | `[x]` | Selected | `- [x] Option {% #opt_id %}` |
+| `single_select` | `[ ]` | Unselected | `- [ ] Option {% #opt_id %}` |
+| `single_select` | `[x]` | Selected (exactly one) | `- [x] Option {% #opt_id %}` |
+| `multi_select` | `[ ]` | Unselected | `- [ ] Option {% #opt_id %}` |
+| `multi_select` | `[x]` | Selected | `- [x] Option {% #opt_id %}` |
 
-**Note:** `single-select` enforces that exactly one option has `[x]`. The distinction
-between `single-select` and `multi-select` is in the tag name, not the marker syntax.
+**Note:** `single_select` enforces that exactly one option has `[x]`. The distinction
+between `single_select` and `multi_select` is in the `kind` attribute, not the marker syntax.
 
 The `{% #id %}` annotation **is** native Markdoc syntax (see
 [Attributes][markdoc-attributes]).
@@ -354,11 +355,11 @@ Type: `integer`, default: `-1` (require all).
 
 Example with partial completion allowed:
 ```md
-{% checkboxes id="optional_tasks" label="Optional tasks" required=true minDone=1 %}
+{% field kind="checkboxes" id="optional_tasks" label="Optional tasks" required=true minDone=1 %}
 - [ ] Task A {% #task_a %}
 - [ ] Task B {% #task_b %}
 - [ ] Task C {% #task_c %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 **Note:** `minDone` only applies to `simple` mode.
@@ -423,27 +424,27 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
 
 **Basic table-field (columnLabels backfilled from header row):**
 ```md
-{% table-field id="team" label="Team Members"
+{% field kind="table" id="team" label="Team Members"
    columnIds=["name", "title", "department"] %}
 | Name | Title | Department |
 |------|-------|------------|
-{% /table-field %}
+{% /field %}
 ```
 
 **Explicit column labels (when different from header row):**
 ```md
-{% table-field id="team" label="Team Members"
+{% field kind="table" id="team" label="Team Members"
    columnIds=["name", "title", "department"]
    columnLabels=["Full Name", "Job Title", "Department"]
    columnTypes=["string", "string", "string"] %}
 | Full Name | Job Title | Department |
 |-----------|-----------|------------|
-{% /table-field %}
+{% /field %}
 ```
 
 **Complete example with types and data:**
 ```md
-{% table-field id="films" label="Notable Films" required=true
+{% field kind="table" id="films" label="Notable Films" required=true
    columnIds=["release_year", "title", "rt_score", "box_office_m"]
    columnLabels=["Year", "Title", "RT Score", "Box Office ($M)"]
    columnTypes=["year", "string", "number", "number"]
@@ -452,7 +453,7 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
 |------|-------|----------|-----------------|
 | 2023 | Barbie | 88 | 1441.8 |
 | 2019 | Once Upon a Time in Hollywood | 85 | 374.3 |
-{% /table-field %}
+{% /field %}
 ```
 
 **Sentinel values in table cells:**
@@ -526,32 +527,32 @@ The `fence` node with `language="value"` is used for scalar values (see
 
 **Empty:** Omit the body entirely:
 ```md
-{% string-field id="company_name" label="Company name" required=true %}{% /string-field %}
+{% field kind="string" id="company_name" label="Company name" required=true %}{% /field %}
 ```
 
 **Filled:** Value in a fenced code block with language `value`:
 ````md
-{% string-field id="company_name" label="Company name" required=true %}
+{% field kind="string" id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 ##### Number Fields
 
 **Empty:**
 ```md
-{% number-field id="revenue_m" label="Revenue (millions)" %}{% /number-field %}
+{% field kind="number" id="revenue_m" label="Revenue (millions)" %}{% /field %}
 ````
 
 **Filled:** Numeric value as string in fence (parsed to number):
 ````md
-{% number-field id="revenue_m" label="Revenue (millions)" %}
+{% field kind="number" id="revenue_m" label="Revenue (millions)" %}
 ```value
 1234.56
 ````
-{% /number-field %}
+{% /field %}
 ````
 
 ##### Single-Select Fields
@@ -559,11 +560,11 @@ ACME Corp
 Values are encoded **inline** via `[x]` marker—at most one option may be selected (if
 `required=true`, exactly one must be selected):
 ```md
-{% single-select id="rating" label="Rating" %}
+{% field kind="single_select" id="rating" label="Rating" %}
 - [ ] Bullish {% #bullish %}
 - [x] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
-{% /single-select %}
+{% /field %}
 ````
 
 Option IDs are scoped to the field—reference as `rating.bullish`, `rating.neutral`, etc.
@@ -572,41 +573,41 @@ Option IDs are scoped to the field—reference as `rating.bullish`, `rating.neut
 
 Values are encoded **inline** via `[x]` markers—no separate value fence:
 ```md
-{% multi-select id="categories" label="Categories" %}
+{% field kind="multi_select" id="categories" label="Categories" %}
 - [x] Technology {% #tech %}
 - [ ] Healthcare {% #health %}
 - [x] Finance {% #finance %}
-{% /multi-select %}
+{% /field %}
 ```
 
 ##### Checkboxes Fields
 
 Values are encoded **inline** via state markers—no separate value fence:
 ```md
-{% checkboxes id="tasks" label="Tasks" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" %}
 - [x] Review docs {% #review %}
 - [/] Write tests {% #tests %}
 - [*] Run CI {% #ci %}
 - [ ] Deploy {% #deploy %}
 - [-] Manual QA {% #manual_qa %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 For simple two-state checkboxes:
 ```md
-{% checkboxes id="agreements" label="Agreements" checkboxMode="simple" %}
+{% field kind="checkboxes" id="agreements" label="Agreements" checkboxMode="simple" %}
 - [x] I agree to terms {% #terms %}
 - [ ] Subscribe to newsletter {% #newsletter %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 For explicit yes/no checkboxes (requires answer for each):
 ```md
-{% checkboxes id="risk_factors" label="Risk Assessment" checkboxMode="explicit" required=true %}
+{% field kind="checkboxes" id="risk_factors" label="Risk Assessment" checkboxMode="explicit" required=true %}
 - [y] Market volatility risk assessed {% #market %}
 - [n] Regulatory risk assessed {% #regulatory %}
 - [ ] Currency risk assessed {% #currency %}
-{% /checkboxes %}
+{% /field %}
 ```
 
 In this example, `risk_factors.currency` is unfilled (`[ ]`) and will fail validation
@@ -620,18 +621,18 @@ Items do not have individual IDs—the field has an ID and items are positional 
 
 **Empty:**
 ```md
-{% string-list id="key_commitments" label="Key commitments" minItems=1 %}{% /string-list %}
+{% field kind="string_list" id="key_commitments" label="Key commitments" minItems=1 %}{% /field %}
 ```
 
 **Filled:** One item per non-empty line in the value fence:
 ````md
-{% string-list id="key_commitments" label="Key commitments" minItems=1 %}
+{% field kind="string_list" id="key_commitments" label="Key commitments" minItems=1 %}
 ```value
 Ship v1.0 by end of Q1
 Complete security audit
 Migrate legacy users to new platform
 ````
-{% /string-list %}
+{% /field %}
 ````
 
 **Parsing rules:**
@@ -660,7 +661,7 @@ Regulatory changes in EU market
 Competitor launching similar feature in Q2
 Customer concentration risk (top 3 = 60% revenue)
 ````
-{% /string-list %}
+{% /field %}
 
 {% instructions ref="top_risks" %} One risk per line.
 Be specific (company- or product-specific), not generic.
@@ -677,12 +678,12 @@ serialized on the opening tag:
 
 **Skipped field (no reason):**
 ```md
-{% string-field id="optional_notes" label="Optional notes" state="skipped" %}{% /string-field %}
+{% field kind="string" id="optional_notes" label="Optional notes" state="skipped" %}{% /field %}
 ````
 
 **Aborted field (no reason):**
 ```md
-{% string-field id="company_name" label="Company name" required=true state="aborted" %}{% /string-field %}
+{% field kind="string" id="company_name" label="Company name" required=true state="aborted" %}{% /field %}
 ```
 
 **State attribute values:**
@@ -697,19 +698,19 @@ When a field has a skip or abort state AND a reason was provided via the patch, 
 reason is embedded in the sentinel value using parentheses:
 
 ````md
-{% string-field id="competitor_analysis" label="Competitor analysis" state="skipped" %}
+{% field kind="string" id="competitor_analysis" label="Competitor analysis" state="skipped" %}
 ```value
 %SKIP% (Information not publicly available)
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 ```md
-{% number-field id="projected_revenue" label="Projected revenue" state="aborted" %}
+{% field kind="number" id="projected_revenue" label="Projected revenue" state="aborted" %}
 ```value
 %ABORT% (Financial projections cannot be determined from available data)
 ````
-{% /number-field %}
+{% /field %}
 ````
 
 **Parsing rules:**
@@ -770,11 +771,11 @@ Analysis completed with partial data due to API limitations.
 {% form id="quarterly_earnings" title="Quarterly Earnings Analysis" %}
 
 {% field-group id="company_info" title="Company Info" %}
-{% string-field id="company_name" label="Company name" state="skipped" %}
+{% field kind="string" id="company_name" label="Company name" state="skipped" %}
 ```value
 %SKIP% (Not applicable for this analysis type)
 ````
-{% /string-field %} {% /field-group %}
+{% /field %} {% /field-group %}
 
 {% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
 data due to API limitations.
@@ -811,20 +812,20 @@ function containsMarkdocSyntax(value: string): boolean {
 
 **Example (process=false required):**
 ````md
-{% string-field id="notes" label="Notes" %}
+{% field kind="string" id="notes" label="Notes" %}
 ```value {% process=false %}
 Use {% tag %} for special formatting.
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 **Example (process=false not needed):**
 ```md
-{% string-field id="name" label="Name" %}
+{% field kind="string" id="name" label="Name" %}
 ```value
 Alice Johnson
 ````
-{% /string-field %}
+{% /field %}
 ````
 
 See [GitHub Discussion #261][markdoc-process-false] for background on the attribute.
@@ -846,33 +847,33 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 {% /description %}
 
 {% field-group id="company_info" title="Company Info" %}
-{% string-field id="company_name" label="Company name" required=true %}{% /string-field %}
-{% string-field id="ticker" label="Ticker" required=true %}{% /string-field %}
-{% string-field id="fiscal_period" label="Fiscal period" required=true %}{% /string-field %}
+{% field kind="string" id="company_name" label="Company name" required=true %}{% /field %}
+{% field kind="string" id="ticker" label="Ticker" required=true %}{% /field %}
+{% field kind="string" id="fiscal_period" label="Fiscal period" required=true %}{% /field %}
 {% /field-group %}
 
 {% field-group id="source_docs" title="Source Documents" %}
-{% checkboxes id="docs_reviewed" label="Documents reviewed" required=true %}
+{% field kind="checkboxes" id="docs_reviewed" label="Documents reviewed" required=true %}
 - [ ] 10-K {% #ten_k %}
 - [ ] 10-Q {% #ten_q %}
 - [ ] Earnings release {% #earnings_release %}
 - [ ] Earnings call transcript {% #call_transcript %}
-{% /checkboxes %}
+{% /field %}
 {% /field-group %}
 
 {% field-group id="financials" title="Key Financials" %}
-{% number-field id="revenue_m" label="Revenue (USD millions)" required=true %}{% /number-field %}
-{% number-field id="gross_margin_pct" label="Gross margin (%)" %}{% /number-field %}
-{% number-field id="eps_diluted" label="Diluted EPS" required=true %}{% /number-field %}
+{% field kind="number" id="revenue_m" label="Revenue (USD millions)" required=true %}{% /field %}
+{% field kind="number" id="gross_margin_pct" label="Gross margin (%)" %}{% /field %}
+{% field kind="number" id="eps_diluted" label="Diluted EPS" required=true %}{% /field %}
 {% /field-group %}
 
 {% field-group id="analysis" title="Analysis" %}
-{% single-select id="rating" label="Overall rating" required=true %}
+{% field kind="single_select" id="rating" label="Overall rating" required=true %}
 - [ ] Bullish {% #bullish %}
 - [ ] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
-{% /single-select %}
-{% string-field id="thesis" label="Investment thesis" required=true %}{% /string-field %}
+{% /field %}
+{% field kind="string" id="thesis" label="Investment thesis" required=true %}{% /field %}
 {% /field-group %}
 
 {% /form %}
@@ -886,16 +887,16 @@ Hand-authored forms only need the `spec` field.
 
 ````md
 {% field-group id="company_info" title="Company Info" %}
-{% string-field id="company_name" label="Company name" required=true %}
+{% field kind="string" id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
 ````
-{% /string-field %} {% string-field id="ticker" label="Ticker" required=true %}
+{% /field %} {% field kind="string" id="ticker" label="Ticker" required=true %}
 ```value
 ACME
 ```
-{% /string-field %} {% string-field id="fiscal_period" label="Fiscal period"
-required=true %}{% /string-field %} {% /field-group %}
+{% /field %} {% field kind="string" id="fiscal_period" label="Fiscal period"
+required=true %}{% /field %} {% /field-group %}
 
 {% field-group id="source_docs" title="Source Documents" %} {% checkboxes
 id="docs_reviewed" label="Documents reviewed" required=true %}
@@ -906,7 +907,7 @@ id="docs_reviewed" label="Documents reviewed" required=true %}
 
 - [/] Earnings release {% #earnings_release %}
 
-- [ ] Earnings call transcript {% #call_transcript %} {% /checkboxes %} {% /field-group
+- [ ] Earnings call transcript {% #call_transcript %} {% /field %} {% /field-group
   %}
 ````
 
@@ -1014,7 +1015,7 @@ would create ambiguous or malformed output.
 **Example—Markdown documentation inside a value:**
 
 ```md
-{% string-field id="setup_guide" label="Setup Guide" %}
+{% field kind="string" id="setup_guide" label="Setup Guide" %}
 ~~~value
 ## Installation
 
@@ -1032,7 +1033,7 @@ Then configure:
 }
 ```
 ~~~
-{% /string-field %}
+{% /field %}
 ```
 
 Here the serializer chose tildes (`~~~`) because the content contains backticks. The
@@ -2156,11 +2157,11 @@ export const validators: Record<string, (ctx: ValidatorContext) => ValidationIss
 
 <!-- Parameterized: pass min word count as parameter -->
 
-{% string-field id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+{% field kind="string" id="thesis" label="Investment thesis" validate=[{id: "min_words", min: 50}] %}{% /field %}
 
 <!-- Multiple validators with different params -->
 
-{% string-field id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+{% field kind="string" id="summary" label="Summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /field %}
 
 <!-- Sum-to validator with configurable target -->
 

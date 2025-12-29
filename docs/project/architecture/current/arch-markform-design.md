@@ -514,12 +514,12 @@ This mirrors what `markform inspect` outputs, making each turn self-contained:
 │   ...                                                                       |
 │ ---                                                                         |
 │ {% form id="example" %}                                                     |
-│ {% string-field id="name" label="Name" %}                                   |
+│ {% field kind="string" id="name" label="Name" %}                                   |
 │ ```value                                                                    |
 │ Alice                                                                       |
 │ ```                                                                         |
-│ {% /string-field %}                                                         |
-│ {% string-field id="email" label="Email" %}{% /string-field %}             |
+│ {% /field %}                                                         |
+│ {% field kind="string" id="email" label="Email" %}{% /field %}             |
 │ ...                                                                         |
 │ {% /form %}                                                                 |
 │ ```                                                                         |
@@ -1308,11 +1308,11 @@ Specified in this document but deferred from MF/0.1 proof of concept:
   list.
 
   ```md
-  {% single-select id="delivery_type" label="Delivery type" allowOther=true %}
+  {% field kind="single_select" id="delivery_type" label="Delivery type" allowOther=true %}
   - [ ] Physical {% #physical %}
   - [ ] Digital {% #digital %}
   - [ ] Hybrid {% #hybrid %}
-  {% /single-select %}
+  {% /field %}
   ```
 
   Schema additions:
@@ -1330,8 +1330,8 @@ Specified in this document but deferred from MF/0.1 proof of concept:
   validation. Supports ISO 8601 format by default.
 
   ```md
-  {% date-field id="deadline" label="Deadline" required=true %}{% /date-field %}
-  {% date-field id="fiscal_year_end" label="Fiscal year end" format="MM-DD" %}{% /date-field %}
+  {% field kind="date" id="deadline" label="Deadline" required=true %}{% /field %}
+  {% field kind="date" id="fiscal_year_end" label="Fiscal year end" format="MM-DD" %}{% /field %}
   ```
 
   Attributes:
@@ -1718,11 +1718,11 @@ custom value not in the predefined list.
 **Proposed solution:** Add `allowOther` attribute to `single-select` and `multi-select`:
 
 ```md
-{% single-select id="delivery_type" label="Delivery type" allowOther=true %}
+{% field kind="single_select" id="delivery_type" label="Delivery type" allowOther=true %}
 - [ ] Physical {% #physical %}
 - [ ] Digital {% #digital %}
 - [ ] Hybrid {% #hybrid %}
-{% /single-select %}
+{% /field %}
 ```
 
 **Schema changes:**
@@ -1780,7 +1780,7 @@ Ant Design’s `allowOther`, Google Forms’ “Other” option pattern).
 **Proposed solution:** Add `date-field` with built-in parsing and format options:
 
 ```md
-{% date-field id="deadline" label="Deadline" format="YYYY-MM-DD" %}{% /date-field %}
+{% field kind="date" id="deadline" label="Deadline" format="YYYY-MM-DD" %}{% /field %}
 ```
 
 **Attributes:**
@@ -1856,9 +1856,9 @@ export const validators = {
 **Usage in form:**
 
 ```md
-{% string-field id="thesis" label="Investment thesis" required=true validate=[{id: "min_words", min: 50}] %}{% /string-field %}
+{% field kind="string" id="thesis" label="Investment thesis" required=true validate=[{id: "min_words", min: 50}] %}{% /field %}
 
-{% string-field id="summary" label="Brief summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /string-field %}
+{% field kind="string" id="summary" label="Brief summary" validate=[{id: "min_words", min: 25}, {id: "max_words", max: 100}] %}{% /field %}
 ```
 
 #### 2. Sum-To Validation for Percentage Fields
@@ -1930,7 +1930,7 @@ export const validators = {
 
 <!-- Validate string-list entries sum to 100% -->
 
-{% string-list id="revenue_segments" label="Revenue segments (Name: X%)" validate=[{id: "sum_to_percent_list", target: 100}] %}{% /string-list %}
+{% field kind="string_list" id="revenue_segments" label="Revenue segments (Name: X%)" validate=[{id: "sum_to_percent_list", target: 100}] %}{% /field %}
 ```
 
 #### 3. Conditional Requirement Validation
@@ -1980,11 +1980,11 @@ export const validators = {
 
 <!-- Require explanation when moat factors are selected -->
 
-{% string-field id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /string-field %}
+{% field kind="string" id="moat_explanation" label="Moat explanation" validate=[{id: "required_if", when: "moat_diagnosis"}] %}{% /field %}
 
 <!-- Require evidence when whisper values provided -->
 
-{% string-field id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /string-field %}
+{% field kind="string" id="whisper_evidence" label="Evidence" validate=[{id: "required_if", when: "whisper_revenue"}, {id: "required_if", when: "whisper_eps"}] %}{% /field %}
 ```
 
 **Variant: `required_if_equals`**
@@ -2033,7 +2033,7 @@ export const validators = {
 
 <!-- Require details when "Yes" is selected -->
 
-{% string-field id="price_change_details" label="Price change details" validate=[{id: "required_if_equals", when: "price_changes_recently", equals: "yes"}] %}{% /string-field %}
+{% field kind="string" id="price_change_details" label="Price change details" validate=[{id: "required_if_equals", when: "price_changes_recently", equals: "yes"}] %}{% /field %}
 ```
 
 #### 4. Format Validation
@@ -2076,11 +2076,11 @@ export const validators = {
 
 <!-- Validate KPIs have "Name: reason" format -->
 
-{% string-list id="key_kpis" label="Key KPIs" validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /string-list %}
+{% field kind="string_list" id="key_kpis" label="Key KPIs" validate=[{id: "item_format", pattern: "^.+:.+$", example: "Revenue Growth: tracks core business momentum"}] %}{% /field %}
 
 <!-- Validate sources have expected format -->
 
-{% string-list id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /string-list %}
+{% field kind="string_list" id="sources" label="Sources" validate=[{id: "item_format", pattern: "^\\d{4}-\\d{2}-\\d{2}\\s*\\|", example: "2024-01-15 | SEC Filing | 10-K | ..."}] %}{% /field %}
 ```
 
 ### Patterns Requiring Repeating Groups (MF/0.2)
@@ -2105,13 +2105,13 @@ When repeating groups are implemented, these will be converted to:
 ```md
 {% repeat id="offering_families" label="Offering Families" minItems=1 %}
   {% field-group id="offering_family" title="Offering Family" %}
-    {% string-field id="name" label="Offering family name" required=true %}{% /string-field %}
-    {% string-field id="value_prop" label="Value proposition" required=true %}{% /string-field %}
-    {% single-select id="delivery" label="Delivery type" required=true %}
+    {% field kind="string" id="name" label="Offering family name" required=true %}{% /field %}
+    {% field kind="string" id="value_prop" label="Value proposition" required=true %}{% /field %}
+    {% field kind="single_select" id="delivery" label="Delivery type" required=true %}
       - [ ] Physical {% #physical %}
       - [ ] Digital {% #digital %}
       - [ ] Hybrid {% #hybrid %}
-    {% /single-select %}
+    {% /field %}
     ...
   {% /field-group %}
 {% /repeat %}

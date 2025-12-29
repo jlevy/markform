@@ -9,6 +9,7 @@
 import type { Node } from '@markdoc/markdoc';
 
 import { AGENT_ROLE, DEFAULT_PRIORITY } from '../settings.js';
+import { FIELD_KINDS, type FieldKind } from './fieldRegistry.js';
 import type {
   ApprovalMode,
   CheckboxesField,
@@ -281,10 +282,10 @@ export function parseStringField(node: Node): { field: StringField; response: Fi
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("string-field missing required 'id' attribute");
+    throw new ParseError('field kind="string" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`string-field '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -336,10 +337,10 @@ export function parseNumberField(node: Node): { field: NumberField; response: Fi
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("number-field missing required 'id' attribute");
+    throw new ParseError('field kind="number" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`number-field '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -410,10 +411,10 @@ export function parseStringListField(node: Node): {
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("string-list missing required 'id' attribute");
+    throw new ParseError('field kind="string_list" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`string-list '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -523,10 +524,10 @@ export function parseSingleSelectField(node: Node): {
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("single-select missing required 'id' attribute");
+    throw new ParseError('field kind="single_select" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`single-select '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   // Validate that placeholder/examples are not used on chooser fields
@@ -580,10 +581,10 @@ export function parseMultiSelectField(node: Node): {
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("multi-select missing required 'id' attribute");
+    throw new ParseError('field kind="multi_select" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`multi-select '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   // Validate that placeholder/examples are not used on chooser fields
@@ -638,10 +639,10 @@ export function parseCheckboxesField(node: Node): {
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("checkboxes missing required 'id' attribute");
+    throw new ParseError('field kind="checkboxes" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`checkboxes '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   // Validate that placeholder/examples are not used on chooser fields
@@ -731,10 +732,10 @@ export function parseUrlField(node: Node): { field: UrlField; response: FieldRes
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("url-field missing required 'id' attribute");
+    throw new ParseError('field kind="url" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`url-field '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -790,10 +791,10 @@ export function parseUrlListField(node: Node): { field: UrlListField; response: 
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("url-list missing required 'id' attribute");
+    throw new ParseError('field kind="url_list" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`url-list '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -862,10 +863,10 @@ export function parseDateField(node: Node): { field: DateField; response: FieldR
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("date-field missing required 'id' attribute");
+    throw new ParseError('field kind="date" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`date-field '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -920,10 +921,10 @@ export function parseYearField(node: Node): { field: YearField; response: FieldR
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("year-field missing required 'id' attribute");
+    throw new ParseError('field kind="year" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`year-field '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -1063,10 +1064,10 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError("table-field missing required 'id' attribute");
+    throw new ParseError('field kind="table" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`table-field '${id}' missing required 'label' attribute`);
+    throw new ParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -1121,40 +1122,97 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
 }
 
 // =============================================================================
+// Unified Field Parser
+// =============================================================================
+
+/**
+ * Map legacy tag names to field kinds for error messages.
+ */
+const LEGACY_TAG_TO_KIND: Record<string, FieldKind> = {
+  'string-field': 'string',
+  'number-field': 'number',
+  'string-list': 'string_list',
+  'single-select': 'single_select',
+  'multi-select': 'multi_select',
+  checkboxes: 'checkboxes',
+  'url-field': 'url',
+  'url-list': 'url_list',
+  'date-field': 'date',
+  'year-field': 'year',
+  'table-field': 'table',
+};
+
+/**
+ * Parse a unified field tag: {% field kind="..." ... %}
+ */
+function parseUnifiedField(node: Node): { field: Field; response: FieldResponse } {
+  const kind = getStringAttr(node, 'kind');
+
+  if (!kind) {
+    throw new ParseError("field tag missing required 'kind' attribute");
+  }
+
+  // Validate kind is a known field kind
+  if (!FIELD_KINDS.includes(kind as FieldKind)) {
+    throw new ParseError(
+      `field tag has invalid kind '${kind}'. Valid kinds: ${FIELD_KINDS.join(', ')}`,
+    );
+  }
+
+  // Dispatch to specific parsers based on kind
+  switch (kind as FieldKind) {
+    case 'string':
+      return parseStringField(node);
+    case 'number':
+      return parseNumberField(node);
+    case 'string_list':
+      return parseStringListField(node);
+    case 'single_select':
+      return parseSingleSelectField(node);
+    case 'multi_select':
+      return parseMultiSelectField(node);
+    case 'checkboxes':
+      return parseCheckboxesField(node);
+    case 'url':
+      return parseUrlField(node);
+    case 'url_list':
+      return parseUrlListField(node);
+    case 'date':
+      return parseDateField(node);
+    case 'year':
+      return parseYearField(node);
+    case 'table':
+      return parseTableField(node);
+  }
+}
+
+// =============================================================================
 // Field Dispatcher
 // =============================================================================
 
 /**
  * Parse a field tag and return field schema and response.
+ * Accepts both unified field syntax {% field kind="..." %} and legacy tags.
  */
 export function parseField(node: Node): { field: Field; response: FieldResponse } | null {
   if (!isTagNode(node)) {
     return null;
   }
-  switch (node.tag) {
-    case 'string-field':
-      return parseStringField(node);
-    case 'number-field':
-      return parseNumberField(node);
-    case 'string-list':
-      return parseStringListField(node);
-    case 'single-select':
-      return parseSingleSelectField(node);
-    case 'multi-select':
-      return parseMultiSelectField(node);
-    case 'checkboxes':
-      return parseCheckboxesField(node);
-    case 'url-field':
-      return parseUrlField(node);
-    case 'url-list':
-      return parseUrlListField(node);
-    case 'date-field':
-      return parseDateField(node);
-    case 'year-field':
-      return parseYearField(node);
-    case 'table-field':
-      return parseTableField(node);
-    default:
-      return null;
+
+  // Handle unified field tag
+  if (node.tag === 'field') {
+    return parseUnifiedField(node);
   }
+
+  // Reject legacy tags with clear error messages
+  if (node.tag) {
+    const kind = LEGACY_TAG_TO_KIND[node.tag];
+    if (kind !== undefined) {
+      throw new ParseError(
+        `Legacy field tag '${node.tag}' is no longer supported. Use {% field kind="${kind}" %} instead`,
+      );
+    }
+  }
+
+  return null;
 }

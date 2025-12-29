@@ -19,9 +19,9 @@ spec: MF/0.1
 
 {% field-group id="basic" title="Basic" %}
 
-{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
-{% number-field id="age" label="Age" %}{% /number-field %}
+{% field kind="number" id="age" label="Age" %}{% /field %}
 
 {% /field-group %}
 
@@ -35,17 +35,17 @@ spec: MF/0.1
 
 {% field-group id="basic" title="Basic" %}
 
-{% string-field id="name" label="Name" required=true %}
+{% field kind="string" id="name" label="Name" required=true %}
 \`\`\`value
 John Doe
 \`\`\`
-{% /string-field %}
+{% /field %}
 
-{% number-field id="age" label="Age" %}
+{% field kind="number" id="age" label="Age" %}
 \`\`\`value
 30
 \`\`\`
-{% /number-field %}
+{% /field %}
 
 {% /field-group %}
 
@@ -59,11 +59,11 @@ spec: MF/0.1
 
 {% field-group id="basic" title="Basic" %}
 
-{% number-field id="count" label="Count" min=1 max=10 %}
+{% field kind="number" id="count" label="Count" min=1 max=10 %}
 \`\`\`value
 100
 \`\`\`
-{% /number-field %}
+{% /field %}
 
 {% /field-group %}
 
@@ -77,15 +77,15 @@ spec: MF/0.1
 
 {% field-group id="basic" title="Basic" %}
 
-{% string-field id="name" label="Name" required=true %}{% /string-field %}
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
-{% string-field id="email" label="Email" required=true %}{% /string-field %}
+{% field kind="string" id="email" label="Email" required=true %}{% /field %}
 
-{% number-field id="age" label="Age" min=0 max=150 %}
+{% field kind="number" id="age" label="Age" min=0 max=150 %}
 \`\`\`value
 -5
 \`\`\`
-{% /number-field %}
+{% /field %}
 
 {% /field-group %}
 
