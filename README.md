@@ -41,7 +41,9 @@ npx markform examples
 This walks you through an example form interactively, with optional AI agent filling.
 You’ll need at least one [API key](#supported-providers) to have LLMs fill in forms.
 
-### A Minimal Form
+## Example: Research a Movie
+
+### Form Definition
 
 A `.form.md` file is simply a Markdoc file.
 It combines YAML frontmatter with Markdoc-tagged content:
@@ -117,6 +119,8 @@ What movie do you want to research? \[*This field is filled in by the user (`rol
 {% /form %}
 ```
 
+### Form Report Output
+
 Run the `npx markform examples` and select the `Movie Research (Minimal)` example and
 view the report:
 
@@ -153,19 +157,6 @@ See the
 [examples/](https://github.com/jlevy/markform/tree/main/packages/markform/examples)
 directory for a few more complex form examples.
 
-**Key concepts:**
-
-- **Roles**: Define who fills what (`user` for humans, `agent` for AI)
-
-- **Field kinds**: `string-field`, `number-field`, `date-field`, `year-field`,
-  `url-field`, `url-list`, `string-list`, `single-select`, `multi-select`, `checkboxes`
-
-- **Validation**: `required`, `min/max`, `minLength/maxLength`, `pattern`
-
-- **Structure**: Fields organized in `field-group` containers
-
-- **Instructions**: Per-field guidance for users or agents
-
 ### More Example Forms
 
 The package includes example forms in
@@ -187,25 +178,6 @@ The package includes example forms in
   \- Financial analysis form
 
 View them with `markform examples --list` or try them interactively.
-
-## Supported Providers
-
-Standard LLMs can be used to fill in forms or create research reports from form
-templates. The package currently has support for these models built in, and enables web
-search tools for them if possible.
-
-| Provider | Env Variable | Example Models |
-| --- | --- | --- |
-| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
-| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
-| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
-| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
-| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
-
-Set the appropriate environment variable for your provider before running `markform
-fill`. See
-[`src/settings.ts`](https://github.com/jlevy/markform/blob/main/packages/markform/src/settings.ts)
-for the full list of models.
 
 ## Why?
 
@@ -309,6 +281,25 @@ markform models
 # See all commands
 markform --help
 ```
+
+## Supported Providers
+
+Standard LLMs can be used to fill in forms or create research reports from form
+templates. The package currently has support for these models built in, and enables web
+search tools for them if possible.
+
+| Provider | Env Variable | Example Models |
+| --- | --- | --- |
+| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
+| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
+| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
+| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
+| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
+
+Set the appropriate environment variable for your provider before running `markform
+fill`. See
+[`src/settings.ts`](https://github.com/jlevy/markform/blob/main/packages/markform/src/settings.ts)
+for the full list of models.
 
 ## Architecture
 
