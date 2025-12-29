@@ -31,7 +31,7 @@ kinds.
 
 ## Background
 
-Markform currently uses 12 distinct tag names to define fields:
+Markform currently uses 11 distinct tag names to define fields:
 
 | Current Tag | Kind |
 | --- | --- |
@@ -50,7 +50,7 @@ Markform currently uses 12 distinct tag names to define fields:
 This design was inherited from early prototyping.
 A unified tag offers:
 
-1. **Simpler mental model**: One tag pattern instead of 12
+1. **Simpler mental model**: One tag pattern instead of 11
 
 2. **Easier documentation**: Single section covers all field kinds
 
@@ -63,13 +63,21 @@ A unified tag offers:
 - `docs/project/specs/active/plan-2025-12-28-kind-vs-type-terminology.md` — Establishes
   the formal “field kind” vs “data type” terminology (assumed complete)
 
-- `SPEC.md` — Current spec with distinct tag syntax
+- `SPEC.md` — Root-level spec (symlink or copy of packages/markform/SPEC.md)
+
+- `packages/markform/SPEC.md` — Package-level spec with distinct tag syntax
 
 - `packages/markform/DOCS.md` — User-facing quick reference
 
+- `docs/project/architecture/current/markform-spec.md` — Architecture spec with field
+  tag examples
+
+- `docs/project/architecture/current/arch-markform-design.md` — Design doc with field
+  tag examples
+
 ## Summary of Task
 
-Replace the 12 distinct field tag names with a single `{% field kind="..." %}` tag:
+Replace the 11 distinct field tag names with a single `{% field kind="..." %}` tag:
 
 1. **Parser changes**: Single `parseField()` dispatcher that reads `kind` attribute
 
@@ -103,7 +111,7 @@ Replace the 12 distinct field tag names with a single `{% field kind="..." %}` t
 
 **In scope:**
 
-- Unified `{% field kind="..." %}` syntax for all 12 field kinds
+- Unified `{% field kind="..." %}` syntax for all 11 field kinds
 
 - Parser that dispatches on `kind` attribute
 
@@ -127,11 +135,15 @@ Replace the 12 distinct field tag names with a single `{% field kind="..." %}` t
 
 2. Parser accepts new syntax and produces identical `ParsedForm` structures
 
-3. Serializer outputs new syntax
+3. Parser rejects legacy field tags with clear `ParseError` messages
 
-4. All tests pass
+4. Parser rejects `{% field %}` without valid `kind` attribute
 
-5. Documentation is complete and consistent
+5. Serializer outputs new syntax with `kind` attribute first
+
+6. All tests pass
+
+7. Documentation is complete and consistent across all docs
 
 ### Decisions
 
@@ -142,6 +154,31 @@ Replace the 12 distinct field tag names with a single `{% field kind="..." %}` t
 2. **Kind values use `snake_case`**: Matches `FieldKind` enum values (e.g.,
    `kind="single_select"`, `kind="string_list"`). This follows ID conventions documented
    in SPEC.md and the terminology spec.
+
+3. **Legacy tags produce parse errors**: The 11 legacy field tags (`string-field`,
+   `number-field`, `date-field`, `year-field`, `string-list`, `url-field`, `url-list`,
+   `single-select`, `multi-select`, `checkboxes`, `table-field`) must produce explicit
+   `ParseError` when encountered.
+   This ensures old forms fail fast with clear messages rather than silently dropping
+   fields.
+
+4. **Attribute ordering**: The serializer outputs priority keys (`kind`, `id`, `role`)
+   first in that order, followed by remaining attributes alphabetically.
+   This is implemented via `priorityKeyComparator(['kind', 'id', 'role'])` in
+   `serializeAttrs()`. (Already done.)
+
+### Error Semantics
+
+The parser must produce clear `ParseError` messages for:
+
+| Condition | Error Message |
+| --- | --- |
+| `{% field %}` without `kind` attribute | `field tag missing required 'kind' attribute` |
+| `{% field kind="invalid" %}` with unknown kind | `field tag has invalid kind 'invalid'. Valid kinds: string, number, date, year, string_list, url, url_list, single_select, multi_select, checkboxes, table` |
+| `{% string-field %}` or other legacy tag | `Legacy field tag 'string-field' is no longer supported. Use {% field kind="string" %} instead` |
+
+The valid `kind` values are defined in `FIELD_KINDS` tuple in
+`packages/markform/src/engine/fieldRegistry.ts` — this is the single source of truth.
 
 ## Stage 2: Architecture Stage
 
@@ -171,17 +208,37 @@ Change the dispatcher to:
 
 **Engine (parsing/serializing):**
 
-- `packages/markform/src/engine/parseFields.ts` — Modify `parseField()` dispatcher
+- `packages/markform/src/engine/parseFields.ts` — Modify `parseField()` dispatcher to:
 
-- `packages/markform/src/engine/serialize.ts` — Change tag name output to `field`
+  - Accept only `{% field kind="..." %}` tags
 
-**Documentation:**
+  - Produce `ParseError` for legacy field tags
 
-- `SPEC.md` — Layer 1 syntax section updates
+  - Produce `ParseError` for missing/invalid `kind` attribute
+
+- `packages/markform/src/engine/serialize.ts` — Change tag name output to `field` with
+  `kind` attribute first, using `priorityKeyComparator` from utils
+
+**Utilities (already created):**
+
+- `packages/markform/src/utils/keySort.ts` — Key sorting utilities for attribute
+  ordering (created, with tests)
+
+**Documentation (all contain field tag syntax examples):**
+
+- `SPEC.md` — Root-level spec (if separate from packages/markform/SPEC.md)
+
+- `packages/markform/SPEC.md` — Layer 1 syntax section updates
 
 - `packages/markform/DOCS.md` — Field Types section becomes unified
 
-- `README.md` — Any syntax examples
+- `packages/markform/README.md` — Package README syntax examples
+
+- `README.md` — Root README if it contains syntax examples
+
+- `docs/project/architecture/current/markform-spec.md` — Architecture spec examples
+
+- `docs/project/architecture/current/arch-markform-design.md` — Design doc examples
 
 **Examples and fixtures:**
 
@@ -250,9 +307,11 @@ The `kind` attribute uses exact `FieldKind` values (snake_case):
 
 The change is primarily in two places:
 
-1. **`parseField()` dispatcher** (~30 lines): Add `kind` attribute check
+1. **`parseField()` dispatcher** (~50 lines): Add `kind` attribute check, legacy tag
+   errors
 
-2. **`serializeField()` functions** (~20 lines each × 12 fields): Change tag name
+2. **`serializeXxxField()` functions** (~20 lines each × 11 kinds): Change tag name to
+   `field` and add `kind` attribute first
 
 Total estimated: ~300 lines changed, mostly mechanical find/replace.
 
@@ -260,29 +319,66 @@ Total estimated: ~300 lines changed, mostly mechanical find/replace.
 
 ### Phase 1: Parser Update
 
-- [ ] Modify `parseField()` in `parseFields.ts` to accept only `{% field kind="..." %}`
+- [ ] Modify `parseField()` in `parseFields.ts`:
 
-- [ ] Remove old tag name cases from dispatcher
+  - Accept only `{% field kind="..." %}` tags
 
-- [ ] Add parse error for missing/invalid `kind` attribute on `field` tags
+  - Read `kind` from `getStringAttr(node, 'kind')` (not `node.kind`)
+
+  - Dispatch to existing `parseStringField()`, `parseNumberField()`, etc.
+    based on kind
+
+- [ ] Add explicit `ParseError` for legacy field tags:
+
+  - Check if `node.tag` matches any of the 11 legacy tag names
+
+  - Throw `ParseError` with message like: `Legacy field tag 'string-field' is no longer
+    supported. Use {% field kind="string" %} instead`
+
+- [ ] Add `ParseError` for invalid `kind` attribute:
+
+  - Missing `kind` → `field tag missing required 'kind' attribute`
+
+  - Invalid `kind` → `field tag has invalid kind 'xxx'.
+    Valid kinds: ...`
+
+  - Use `FIELD_KINDS` from `fieldRegistry.ts` as the canonical list
 
 ### Phase 2: Serializer Update
 
 - [ ] Update all `serializeXxxField()` functions to output `{% field kind="xxx" %}`
 
-- [ ] Ensure `kind` appears first in attribute list
+- [x] Ensure priority keys appear first in attribute list: ✅ DONE
+
+  - Using `priorityKeyComparator(['kind', 'id', 'role'])` from `src/utils/keySort.ts`
+
+  - `serializeAttrs()` updated to use this instead of plain `.sort()`
+
+  - Golden tests regenerated with new attribute ordering
 
 - [ ] Update closing tag to `{% /field %}`
 
+- [ ] Table field note: Table content remains raw markdown table inside the tag (not a
+  value fence). The serializer already handles this correctly; just change the tag name.
+
 ### Phase 3: Documentation
 
-- [ ] Update SPEC.md Layer 1 syntax section
+- [ ] Update `packages/markform/SPEC.md` Layer 1 syntax section
 
 - [ ] Update Field Tags table to show unified syntax
 
-- [ ] Update DOCS.md Field Types section
+- [ ] Update `packages/markform/DOCS.md` Field Types section
 
-- [ ] Update README.md examples if any
+- [ ] Update `packages/markform/README.md` examples if any
+
+- [ ] Update `README.md` (root) examples if any
+
+- [ ] Update `docs/project/architecture/current/markform-spec.md` field tag examples
+
+- [ ] Update `docs/project/architecture/current/arch-markform-design.md` field tag
+  examples
+
+- [ ] Verify `SPEC.md` (root) is in sync with `packages/markform/SPEC.md`
 
 ### Phase 4: Form File Migration
 
@@ -290,6 +386,27 @@ Convert all `.form.md` files to the new unified syntax.
 
 **Migration approach:** Run serializer on each file (parse → serialize) to auto-convert,
 or use find/replace with manual review.
+
+**Precondition:** The serializer must be updated (Phase 2) before migration.
+The migration should happen BEFORE the parser is updated to reject legacy tags (Phase
+1), or use a transitional parser that accepts both old and new syntax during migration.
+
+**Recommended implementation order** (differs from phase numbering):
+
+1. Update serializer to output new syntax (Phase 2)
+
+2. Migrate all form files using parse → serialize (Phase 4)
+
+3. Migrate unit tests (Phase 5)
+
+4. Update parser to reject legacy tags (Phase 1)
+
+5. Update documentation (Phase 3)
+
+6. Final validation (Phase 6)
+
+This ensures forms and tests are converted before the parser starts rejecting them.
+The phase numbering reflects logical grouping, not execution order.
 
 **Example template files** (10 files):
 
@@ -389,31 +506,67 @@ Update all unit tests that contain inline form markdown with old tag syntax.
 **Migration approach:** Find/replace in each test file:
 
 ```
-string-field  →  field kind="string"
-number-field  →  field kind="number"
-date-field    →  field kind="date"
-year-field    →  field kind="year"
-string-list   →  field kind="string_list"
-url-field     →  field kind="url"
-url-list      →  field kind="url_list"
-single-select →  field kind="single_select"
-multi-select  →  field kind="multi_select"
-checkboxes    →  field kind="checkboxes"
-table-field   →  field kind="table"
+{% string-field   →  {% field kind="string"
+{% number-field   →  {% field kind="number"
+{% date-field     →  {% field kind="date"
+{% year-field     →  {% field kind="year"
+{% string-list    →  {% field kind="string_list"
+{% url-field      →  {% field kind="url"
+{% url-list       →  {% field kind="url_list"
+{% single-select  →  {% field kind="single_select"
+{% multi-select   →  {% field kind="multi_select"
+{% checkboxes     →  {% field kind="checkboxes"
+{% table-field    →  {% field kind="table"
 ```
 
-Also update closing tags: `{% /string-field %}` → `{% /field %}`, etc.
+Also update closing tags (all become `{% /field %}`):
+
+```
+{% /string-field %}   →  {% /field %}
+{% /number-field %}   →  {% /field %}
+{% /date-field %}     →  {% /field %}
+{% /year-field %}     →  {% /field %}
+{% /string-list %}    →  {% /field %}
+{% /url-field %}      →  {% /field %}
+{% /url-list %}       →  {% /field %}
+{% /single-select %}  →  {% /field %}
+{% /multi-select %}   →  {% /field %}
+{% /checkboxes %}     →  {% /field %}
+{% /table-field %}    →  {% /field %}
+```
+
+**Note:** `checkboxes` is a legacy tag even though the tag name matches the kind value.
+It still needs to become `{% field kind="checkboxes" %}`.
+
+**Add new tests for error cases:**
+
+- [ ] Add test: `{% field %}` without `kind` produces `ParseError`
+
+- [ ] Add test: `{% field kind="invalid" %}` produces `ParseError` with valid kinds list
+
+- [ ] Add test for each legacy tag: `{% string-field %}` etc.
+  produces `ParseError` with migration hint
 
 ### Phase 6: Final Validation
 
 - [ ] Run full test suite: `pnpm precommit`
 
-- [ ] Verify no old tag names in source:
+- [ ] Verify no old tag names in source (note: pattern includes all 11 legacy tags):
   ```bash
-  grep -rn 'string-field\|number-field\|date-field\|year-field\|url-field\|url-list\|string-list\|single-select\|multi-select\|table-field' packages/markform/src packages/markform/tests packages/markform/examples
+  grep -rn 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' \
+    packages/markform/src \
+    packages/markform/tests \
+    packages/markform/examples \
+    docs/project/architecture/current
   ```
 
-- [ ] Exceptions allowed: CHANGELOG.md, docs/project/specs/done/*, revision history
+- [ ] Verify no old tag names in form files across repo:
+  ```bash
+  find . -name '*.form.md' -exec grep -l 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' {} \;
+  ```
+
+- [ ] Exceptions allowed: CHANGELOG.md, docs/project/specs/done/*, revision history,
+  comments explaining the migration
 
 ## Stage 5: Validation
 
@@ -425,20 +578,44 @@ Also update closing tags: `{% /string-field %}` → `{% /field %}`, etc.
 
 - [ ] Manual inspection: `pnpm markform inspect` on a converted form
 
-- [ ] Documentation consistent across SPEC.md, DOCS.md, README.md
+- [ ] Legacy tag produces clear `ParseError` (test with old syntax)
 
-- [ ] No old tag names in active source/tests/examples
+- [ ] Documentation consistent across:
+
+  - `packages/markform/SPEC.md`
+
+  - `packages/markform/DOCS.md`
+
+  - `packages/markform/README.md`
+
+  - `docs/project/architecture/current/markform-spec.md`
+
+  - `docs/project/architecture/current/arch-markform-design.md`
+
+- [ ] No old tag names in active source/tests/examples/docs
+
+- [ ] No old tag names in any `.form.md` files in repo
 
 ### Verification Commands
 
 ```bash
-# Verify no old tag names remain in active code
-grep -rn 'string-field\|number-field\|date-field\|year-field\|url-field\|url-list\|string-list\|single-select\|multi-select\|table-field' \
+# Verify no old tag names remain in active code (includes all 11 legacy tags)
+grep -rn 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' \
   packages/markform/src \
   packages/markform/tests \
-  packages/markform/examples
+  packages/markform/examples \
+  docs/project/architecture/current
 
 # Should return nothing (or only comments explaining the migration)
+
+# Verify no old tags in any form files across repo
+find . -name '*.form.md' -exec grep -l 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' {} \;
+
+# Should return nothing
+
+# Test that legacy tags produce parse errors (after implementation)
+echo '{% form id="test" %}{% field-group id="g" %}{% string-field id="f" label="L" %}{% /string-field %}{% /field-group %}{% /form %}' | pnpm markform inspect -
+# Should produce: ParseError: Legacy field tag 'string-field' is no longer supported...
 
 # Test a converted form
 pnpm markform inspect packages/markform/examples/movie-research/movie-research-minimal.form.md
