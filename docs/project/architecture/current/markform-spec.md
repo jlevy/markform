@@ -837,6 +837,9 @@ Follows [Markdoc's render phases][markdoc-render] (parse → transform → rende
      have `{% #id %}` annotation; missing annotation is a parse error
    - **Option ID uniqueness** (*required*): Option IDs must be unique within their
      containing field; duplicates are a parse error
+   - **Valid tags enforcement** (*required*): Only recognized Markform tags are allowed
+     inside form: `group`, `field`, `note`, `description`, `instructions`, `documentation`.
+     Any other tag produces a `ParseError` with message "Unknown tag 'X' inside form".
 
 **Non-Markform content policy (*required*):**
 
@@ -850,7 +853,7 @@ Markform files may contain content outside of Markform tags. This content is han
 
 `) | Allowed, preserved verbatim on round-trip |
 | Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
-| Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
+| Unknown Markdoc tags inside form | **ParseError** (invalid syntax) |
 
 **MF/0.1 scope:** Only HTML comments are guaranteed to be preserved. Do not rely on
 non-Markform content surviving serialization. Future versions may support full
@@ -2000,7 +2003,10 @@ Examples:
 
 - Duplicate IDs within the form
 
-- Invalid field state attribute value (not ‘skipped’ or ‘aborted’)
+- Unknown tag inside form (only `group`, `field`, `note`, `description`, `instructions`,
+  `documentation` are valid)
+
+- Invalid field state attribute value (not 'skipped' or 'aborted')
 
 - Malformed sentinel values in value fences
 
