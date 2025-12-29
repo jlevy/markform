@@ -152,9 +152,56 @@ High-level API for filling a form with an AI model.
 const result = await fillForm({
   form: parsedForm,
   model: 'anthropic/claude-sonnet-4-5',
-  roles: ['agent'],
+  enableWebSearch: true,
+  targetRoles: ['agent'],
 });
 ```
+
+### FillCallbacks
+
+Optional callbacks for observing form-filling execution in real-time.
+All callbacks are optional and errors in callbacks don't abort filling.
+
+```typescript
+import type { FillCallbacks } from 'markform';
+
+const callbacks: FillCallbacks = {
+  onTurnStart: ({ turnNumber, issuesCount }) => {
+    console.log(`Turn ${turnNumber}: ${issuesCount} issues`);
+  },
+  onTurnComplete: (progress) => {
+    console.log(`Completed: ${progress.patchesApplied} patches applied`);
+  },
+  onToolStart: ({ name }) => {
+    spinner.message(`🔧 ${name}...`);
+  },
+  onToolEnd: ({ name, durationMs }) => {
+    console.log(`${name} completed in ${durationMs}ms`);
+  },
+  onLlmCallStart: ({ model }) => {
+    console.log(`Calling ${model}...`);
+  },
+  onLlmCallEnd: ({ inputTokens, outputTokens }) => {
+    console.log(`Tokens: ${inputTokens} in, ${outputTokens} out`);
+  },
+};
+
+await fillForm({
+  form: parsedForm,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: true,
+  callbacks,
+});
+```
+
+| Callback | Parameters | Description |
+| --- | --- | --- |
+| `onTurnStart` | `{ turnNumber, issuesCount }` | Called when a turn begins |
+| `onTurnComplete` | `TurnProgress` | Called when a turn completes |
+| `onToolStart` | `{ name, input }` | Called before a tool executes |
+| `onToolEnd` | `{ name, output, durationMs, error? }` | Called after a tool completes |
+| `onLlmCallStart` | `{ model }` | Called before an LLM request |
+| `onLlmCallEnd` | `{ model, inputTokens, outputTokens }` | Called after an LLM response |
 
 ### createHarness(form, config?): FormHarness
 
@@ -187,6 +234,10 @@ import type {
   FieldValue,
   Patch,
   InspectResult,
+  FillCallbacks,
+  FillOptions,
+  FillResult,
+  TurnProgress,
   // ... many more
 } from 'markform';
 ```
