@@ -192,6 +192,27 @@ function parseTableRow(line: string): string[] {
 }
 
 /**
+ * Extract header labels from table content.
+ * Returns array of header labels from the first row, or empty array if no valid header.
+ */
+export function extractTableHeaderLabels(content: string | null): string[] {
+  if (!content || content.trim() === '') {
+    return [];
+  }
+
+  const lines = content
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim());
+
+  if (lines.length === 0) {
+    return [];
+  }
+
+  return parseTableRow(lines[0]!);
+}
+
+/**
  * Check if a line is a valid table separator row.
  * Each cell should contain only dashes and optional colons for alignment.
  */
@@ -235,8 +256,23 @@ export function parseMarkdownTable(
     return { ok: true, value: { kind: 'table', rows: [] } };
   }
 
-  // When dataStartLine is provided, columns were already extracted inline
-  // Skip header/separator validation and just parse data rows
+  // Need at least header and separator (unless empty)
+  if (lines.length < 2) {
+    return { ok: false, error: 'Table must have at least a header and separator row' };
+  }
+
+  // Parse header row
+  const headerLine = lines[0]!;
+  const headers = parseTableRow(headerLine);
+
+  // Validate separator row
+  const separatorLine = lines[1]!;
+  if (!isValidSeparator(separatorLine, headers.length)) {
+    return { ok: false, error: 'Invalid table separator row' };
+  }
+
+  // When dataStartLine is provided, parse data positionally based on columns
+  // (attribute-based column definitions)
   if (dataStartLine !== undefined) {
     const rows: TableRowResponse[] = [];
 
@@ -256,18 +292,7 @@ export function parseMarkdownTable(
     return { ok: true, value: { kind: 'table', rows } };
   }
 
-  // Standard parsing: header + separator + data rows
-
-  // Need at least header and separator
-  if (lines.length < 2) {
-    return { ok: false, error: 'Table must have at least a header and separator row' };
-  }
-
-  // Parse header row
-  const headerLine = lines[0]!;
-  const headers = parseTableRow(headerLine);
-
-  // Build column ID to index mapping from headers
+  // Build column ID to index mapping from headers (for inline column parsing)
   // Headers should match column IDs or labels
   const columnIdToIndex = new Map<Id, number>();
 
@@ -278,12 +303,6 @@ export function parseMarkdownTable(
     if (column) {
       columnIdToIndex.set(column.id, i);
     }
-  }
-
-  // Validate separator row
-  const separatorLine = lines[1]!;
-  if (!isValidSeparator(separatorLine, headers.length)) {
-    return { ok: false, error: 'Invalid table separator row' };
   }
 
   // Parse data rows

@@ -166,10 +166,11 @@ Enter the year the company was founded (1900-2030).
 
 {% field-group id="table_fields" title="Table Fields" %}
 
-{% table-field id="team_members" label="Team Members" role="user" minRows=0 maxRows=5 %}
+{% table-field id="team_members" label="Team Members" role="user" minRows=0 maxRows=5
+   columnIds=["name", "role", "start_date"]
+   columnTypes=[{type: "string", required: true}, "string", "date"] %}
 | Name | Role | Start Date |
-| string,required | string | date |
-|----|----|----|
+|------|------|------------|
 | Alice | Engineer | 2024-01-15 |
 | Bob | Designer | 2023-06-01 |
 {% /table-field %}
@@ -178,10 +179,11 @@ Enter the year the company was founded (1900-2030).
 Add team members with their name (required), role, and start date.
 {% /instructions %}
 
-{% table-field id="project_tasks" label="Project Tasks" role="user" minRows=0 maxRows=10 %}
+{% table-field id="project_tasks" label="Project Tasks" role="user" minRows=0 maxRows=10
+   columnIds=["task", "estimate_hrs", "link"]
+   columnTypes=[{type: "string", required: true}, "number", "url"] %}
 | Task | Estimate (hrs) | Link |
-| string,required | number | url |
-|----|----|----|
+|------|----------------|------|
 {% /table-field %}
 
 {% instructions ref="project_tasks" %}

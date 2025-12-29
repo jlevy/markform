@@ -208,12 +208,16 @@ Production countries, one per line.
 
 {% field-group id="cast_crew" title="Cast & Crew" %}
 
-{% string-list id="lead_cast" label="Lead Cast" role="agent" minItems=1 maxItems=10 %}{% /string-list %}
+{% table-field id="lead_cast" label="Lead Cast" role="agent" minRows=1 maxRows=10
+   columnIds=["actor_name", "character_name"]
+   columnTypes=["string", "string"] %}
+| Actor Name | Character Name |
+|------------|----------------|
+{% /table-field %}
 
 {% instructions ref="lead_cast" %}
 Top-billed cast members with their character names.
-Format: Actor Name | Character Name
-Example: "Leonardo DiCaprio | Dom Cobb"
+Example: Leonardo DiCaprio | Dom Cobb
 {% /instructions %}
 
 {% string-list id="writers" label="Writers" role="agent" %}{% /string-list %}
@@ -449,19 +453,27 @@ Major themes explored in the film (e.g., "redemption", "family", "identity", "wa
 Brief plot summary in 1-2 sentences, no spoilers.
 {% /instructions %}
 
-{% string-list id="notable_awards" label="Notable Awards" role="agent" %}{% /string-list %}
+{% table-field id="notable_awards" label="Notable Awards" role="agent"
+   columnIds=["award", "category", "year"]
+   columnTypes=["string", "string", "year"] %}
+| Award | Category | Year |
+|-------|----------|------|
+{% /table-field %}
 
 {% instructions ref="notable_awards" %}
-Major awards won. One per line.
-Format: Award | Category | Year
-Example: "Oscar | Best Picture | 1995"
+Major awards won.
+Example: Oscar | Best Picture | 1995
 {% /instructions %}
 
-{% string-list id="notable_quotes" label="Notable Critic Quotes" role="agent" maxItems=3 %}{% /string-list %}
+{% table-field id="notable_quotes" label="Notable Critic Quotes" role="agent" maxRows=3
+   columnIds=["quote", "critic", "publication"]
+   columnTypes=["string", "string", "string"] %}
+| Quote | Critic | Publication |
+|-------|--------|-------------|
+{% /table-field %}
 
 {% instructions ref="notable_quotes" %}
 2-3 memorable critic quotes that capture reception.
-Format: "Quote" - Critic, Publication
 {% /instructions %}
 
 {% /field-group %}

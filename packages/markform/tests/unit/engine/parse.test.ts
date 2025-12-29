@@ -1612,10 +1612,9 @@ markform:
   });
 
   describe('table-field with attribute-based columns', () => {
-    it('validates header row matches attribute-defined columns', () => {
-      // With attribute-based columns, the parser should validate that the header row
-      // matches the defined column IDs/labels. If headers are reordered or mismatched,
-      // it should still map values correctly by header name, not position.
+    it('parses table data positionally based on columnIds order', () => {
+      // With attribute-based columns, data is parsed positionally based on columnIds order
+      // Header row is used for display labels (backfilled to columnLabels if not provided)
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1624,12 +1623,12 @@ markform:
 {% form id="test" %}
 
 {% field-group id="g1" title="G1" %}
-{% table-field id="people" label="People" columnIds=["name", "age"] columnLabels=["Name", "Age"] columnTypes=["string", "number"] %}
+{% table-field id="people" label="People" columnIds=["name", "age"] columnTypes=["string", "number"] %}
 
-| Age | Name |
+| Name | Age |
 | --- | --- |
-| 25 | Alice |
-| 30 | Bob |
+| Alice | 25 |
+| Bob | 30 |
 
 {% /table-field %}
 {% /field-group %}
@@ -1642,10 +1641,7 @@ markform:
       expect(value).toBeDefined();
       expect(value?.kind).toBe('table');
       if (value?.kind === 'table') {
-        // With proper header validation, values should be mapped by header name
-        // Age column contains 25, 30 and Name column contains Alice, Bob
-        // If parsed correctly by header matching:
-        // Cells are CellResponse objects with { state, value }
+        // Data is parsed positionally: first cell goes to first columnId, etc.
         expect(value.rows[0]?.name?.value).toBe('Alice');
         expect(value.rows[0]?.age?.value).toBe(25);
         expect(value.rows[1]?.name?.value).toBe('Bob');

@@ -58,7 +58,7 @@ import {
   parseOptionText,
 } from './parseHelpers.js';
 import { tryParseSentinelResponse } from './parseSentinels.js';
-import { parseMarkdownTable, extractColumnsFromTable } from './table/parseTable.js';
+import { parseMarkdownTable, extractTableHeaderLabels } from './table/parseTable.js';
 
 // =============================================================================
 // Field Response Helpers
@@ -982,15 +982,22 @@ function isValidColumnType(type: unknown): type is ColumnTypeName {
 
 /**
  * Parse column definitions from attributes.
- * Returns null if columnIds attribute is not provided.
+ * columnIds is required. columnLabels is optional (backfilled from tableHeaderLabels if provided).
  */
-function parseColumnsFromAttributes(node: Node, fieldId: string): TableColumn[] | null {
+function parseColumnsFromAttributes(
+  node: Node,
+  fieldId: string,
+  tableHeaderLabels?: string[],
+): TableColumn[] {
   const columnIds = getStringArrayAttr(node, 'columnIds');
   const columnLabels = getStringArrayAttr(node, 'columnLabels');
   const columnTypesRaw = node.attributes?.columnTypes as ColumnTypeSpec[] | undefined;
 
   if (!columnIds || columnIds.length === 0) {
-    return null; // No columnIds attribute - use inline format
+    throw new ParseError(
+      `table-field '${fieldId}' requires 'columnIds' attribute. ` +
+        `Example: columnIds=["name", "title", "department"]`,
+    );
   }
 
   // Validate unique column IDs
@@ -1005,7 +1012,8 @@ function parseColumnsFromAttributes(node: Node, fieldId: string): TableColumn[] 
   const columns: TableColumn[] = [];
   for (let i = 0; i < columnIds.length; i++) {
     const id = columnIds[i]!;
-    const label = columnLabels?.[i] ?? id;
+    // Priority: explicit columnLabels > table header labels > column ID
+    const label = columnLabels?.[i] ?? tableHeaderLabels?.[i] ?? id;
 
     // Parse column type - can be string or { type, required }
     const typeSpec = columnTypesRaw?.[i];
@@ -1043,9 +1051,10 @@ function parseColumnsFromAttributes(node: Node, fieldId: string): TableColumn[] 
 /**
  * Parse a table-field tag.
  *
- * Supports two column definition formats:
- * 1. Attribute-based: columnIds, columnLabels, columnTypes attributes
- * 2. Inline: columns defined in the markdown table content itself
+ * Column definitions come from attributes:
+ * - columnIds (required): array of snake_case column identifiers
+ * - columnLabels (optional): array of display labels (backfilled from table header row if omitted)
+ * - columnTypes (optional): array of column types (defaults to all 'string')
  *
  * Table content is a raw markdown table inside the tag (NOT a value fence).
  */
@@ -1068,27 +1077,12 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
   // Get table content - raw markdown table inside the tag
   const tableContent = extractTableContent(node);
 
-  // Try attribute-based columns first
-  let columns = parseColumnsFromAttributes(node, id);
-  let columnsFromInline = false;
-  let dataStartLine = 2; // Default: header + separator
+  // Extract header labels from table content for label backfilling
+  const tableHeaderLabels = extractTableHeaderLabels(tableContent);
 
-  // If no attribute columns, try to extract from inline table
-  if (!columns) {
-    if (tableContent === null || tableContent.trim() === '') {
-      throw new ParseError(
-        `table-field '${id}' requires either columnIds attribute or inline column definitions in the table`,
-      );
-    }
-
-    const extractResult = extractColumnsFromTable(tableContent);
-    if (!extractResult.ok) {
-      throw new ParseError(`table-field '${id}': ${extractResult.error}`);
-    }
-    columns = extractResult.columns;
-    dataStartLine = extractResult.dataStartLine;
-    columnsFromInline = true;
-  }
+  // Parse columns from attributes (columnIds is required)
+  const columns = parseColumnsFromAttributes(node, id, tableHeaderLabels);
+  const dataStartLine = 2; // header + separator
 
   const field: TableField = {
     kind: 'table',
@@ -1116,12 +1110,8 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
   }
 
   // Parse the markdown table with column schema
-  // When columns were extracted inline, pass dataStartLine to skip header/type/separator rows
-  const parseResult = parseMarkdownTable(
-    tableContent,
-    columns,
-    columnsFromInline ? dataStartLine : undefined,
-  );
+  // dataStartLine = 2 to skip header + separator rows
+  const parseResult = parseMarkdownTable(tableContent, columns, dataStartLine);
   if (!parseResult.ok) {
     throw new ParseError(`table-field '${id}': ${parseResult.error}`);
   }
