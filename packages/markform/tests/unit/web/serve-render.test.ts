@@ -2,7 +2,7 @@
  * Tests for serve command HTML rendering.
  *
  * These tests verify that the web UI renders proper interactive HTML form elements
- * for all field types, allowing users to edit and save forms.
+ * for all field kinds, allowing users to edit and save forms.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -753,17 +753,17 @@ markform:
     });
   });
 
-  describe('field type coverage', () => {
-    // This test ensures ALL field types defined in FieldKind are handled by the web renderer.
-    // If a new field type is added to coreTypes.ts but not to serve.ts, this test will fail.
+  describe('field kind coverage', () => {
+    // This test ensures ALL field kinds defined in FieldKind are handled by the web renderer.
+    // If a new field kind is added to coreTypes.ts but not to serve.ts, this test will fail.
 
-    // Form that includes ALL field types
-    const allFieldTypesForm = `---
+    // Form that includes ALL field kinds
+    const allFieldKindsForm = `---
 markform:
   spec: MF/0.1
 ---
 {% form id="all_types" %}
-{% field-group id="g1" title="All Field Types" %}
+{% field-group id="g1" title="All Field Kinds" %}
 {% string-field id="f_string" label="String Field" %}{% /string-field %}
 {% number-field id="f_number" label="Number Field" %}{% /number-field %}
 {% string-list id="f_string_list" label="String List" %}{% /string-list %}
@@ -784,19 +784,19 @@ markform:
 {% /field-group %}
 {% /form %}`;
 
-    it('should not have any unknown field types in output', () => {
-      const form = parseForm(allFieldTypesForm);
+    it('should not have any unknown field kinds in output', () => {
+      const form = parseForm(allFieldKindsForm);
       const html = renderFormHtml(form);
 
-      // The "(unknown field type)" message indicates a field type wasn't handled
-      expect(html).not.toContain('unknown field type');
+      // The "(unknown field kind)" message indicates a field kind wasn't handled
+      expect(html).not.toContain('unknown field kind');
     });
 
-    it('should show correct type badges for all field types', () => {
-      const form = parseForm(allFieldTypesForm);
+    it('should show correct type badges for all field kinds', () => {
+      const form = parseForm(allFieldKindsForm);
       const html = renderFormHtml(form);
 
-      // Verify each field type badge is present
+      // Verify each field kind badge is present
       expect(html).toContain('type-badge">string</span>');
       expect(html).toContain('type-badge">number</span>');
       expect(html).toContain('type-badge">string_list</span>');
@@ -807,8 +807,8 @@ markform:
       expect(html).toContain('type-badge">url_list</span>');
     });
 
-    it('should render appropriate input elements for all field types', () => {
-      const form = parseForm(allFieldTypesForm);
+    it('should render appropriate input elements for all field kinds', () => {
+      const form = parseForm(allFieldKindsForm);
       const html = renderFormHtml(form);
 
       // string -> text input

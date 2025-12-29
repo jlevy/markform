@@ -86,12 +86,12 @@ export function getIssuesIntro(maxPatches: number): string {
 /**
  * Instructions section for the context prompt.
  *
- * This explains the patch format for each field type.
+ * This explains the patch format for each field kind.
  */
 export const PATCH_FORMAT_INSTRUCTIONS = `# Instructions
 
 Use the generatePatches tool to submit patches for the fields above.
-Each patch should match the field type:
+Each patch should match the field kind:
 - string: { op: "set_string", fieldId: "...", value: "..." }
 - number: { op: "set_number", fieldId: "...", value: 123 }
 - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }

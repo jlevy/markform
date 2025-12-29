@@ -1,5 +1,5 @@
 /**
- * Tests for the Field Type Registry.
+ * Tests for the Field Kind Registry.
  *
  * These tests verify that:
  * 1. All field kinds are properly registered

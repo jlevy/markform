@@ -779,7 +779,7 @@ export function renderFieldHtml(
       inputHtml = renderYearInput(field, value, disabledAttr);
       break;
     default:
-      inputHtml = '<div class="field-help">(unknown field type)</div>';
+      inputHtml = '<div class="field-help">(unknown field kind)</div>';
   }
 
   // Add skip button for optional, non-skipped fields

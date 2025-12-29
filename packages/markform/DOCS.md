@@ -53,7 +53,11 @@ markform:
 Use `.form.md` for Markform files.
 They are Markdoc syntax, which is a superset of Markdown.
 
-## Field Types
+## Field Kinds
+
+Markform uses the term **field kind** to refer to the type of a field (e.g., `string`,
+`number`, `checkboxes`). The term **data type** refers to the underlying value
+representation. See the Type System section in SPEC.md for full details.
 
 ### String Field
 

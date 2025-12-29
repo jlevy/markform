@@ -700,7 +700,7 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
 }
 
 /**
- * Prompt user for a single field value based on field type.
+ * Prompt user for a single field value based on field kind.
  * Returns a Patch to set the value, or null if skipped/cancelled.
  *
  * For optional fields, first offers a choice to skip or fill.
@@ -747,7 +747,7 @@ export async function promptForField(ctx: FieldPromptContext): Promise<Patch | n
     case 'year':
       return promptForYear(ctx);
     default:
-      // Unknown field type - skip
+      // Unknown field kind - skip
       return null;
   }
 }
