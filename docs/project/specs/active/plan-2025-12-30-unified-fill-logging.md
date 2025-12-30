@@ -6,6 +6,20 @@ Consolidate and unify logging across all CLI commands that run agent fills (fill
 using an expanded FillCallbacks architecture. This enables consistent CLI output and allows API
 consumers to receive detailed progress information via injected callbacks.
 
+## Verbosity Levels
+
+**Important:** The detailed turn/patch logging that `fill.ts` currently has should be the **default**
+behavior for all CLI commands (fill, run, examples). This includes:
+
+| Level | What's Shown |
+|-------|--------------|
+| **Default** | Turn numbers, issues per turn (field IDs + issue types), patches per turn (field ID + value), completion status |
+| **--verbose** | All default output PLUS: token counts, tool call start/end with timing, full prompt/response sizes, detailed stats, LLM call metadata |
+| **--quiet** | Minimal output: just final success/failure and output paths |
+
+The current problem is that `run.ts` and `examples.ts` show less detail than `fill.ts` by default.
+After this work, all three commands should show the same detailed output by default.
+
 ## Problem
 
 ### Current State Issues
@@ -100,16 +114,22 @@ Create a factory function that produces FillCallbacks with CLI logging:
 // In packages/markform/src/cli/lib/fillLogging.ts
 
 export interface FillLoggingOptions {
-  /** Show per-patch details (always shown, not just verbose) */
-  showPatches?: boolean;
-  /** Show stats/prompts (verbose only) */
-  showVerbose?: boolean;
   /** Spinner handle for LLM call progress */
   spinner?: SpinnerHandle;
 }
 
 /**
  * Create FillCallbacks that produce standard CLI logging output.
+ *
+ * Default output (always shown unless --quiet):
+ * - Turn numbers with issues list (field IDs + issue types)
+ * - Patches per turn (field ID + value)
+ * - Completion status
+ *
+ * Verbose output (--verbose flag):
+ * - Token counts per turn
+ * - Tool call start/end with timing
+ * - Detailed stats and LLM metadata
  *
  * This is used by fill, run, and examples commands for consistent output.
  */
@@ -118,20 +138,14 @@ export function createFillLoggingCallbacks(
   options: FillLoggingOptions = {},
 ): FillCallbacks {
   return {
-    onTurnStart: ({ turnNumber, issuesCount }) => {
-      // Log: "Turn 1: 5 issue(s): field1 (missing), field2 (invalid), ..."
-      // (issues detail comes from onIssuesIdentified)
-    },
-
+    // DEFAULT: Always show turn number and issues
     onIssuesIdentified: ({ turnNumber, issues }) => {
       logInfo(ctx, `${pc.bold(`Turn ${turnNumber}:`)} ${formatTurnIssues(issues)}`);
     },
 
+    // DEFAULT: Always show patches with field IDs and values
     onPatchesGenerated: ({ turnNumber, patches, stats }) => {
-      const tokenSuffix = stats
-        ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
-        : '';
-      logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patches${tokenSuffix}:`);
+      logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patch(es):`);
 
       for (const patch of patches) {
         const typeName = formatPatchType(patch);
@@ -144,9 +158,9 @@ export function createFillLoggingCallbacks(
         }
       }
 
-      // Verbose stats
+      // VERBOSE: Token counts and detailed stats
       if (stats && ctx.verbose) {
-        logVerbose(ctx, `  Stats: tokens ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0}`);
+        logVerbose(ctx, `  Tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0}`);
         if (stats.toolCalls?.length) {
           const toolSummary = stats.toolCalls.map(t => `${t.name}(${t.count})`).join(', ');
           logVerbose(ctx, `  Tools: ${toolSummary}`);
@@ -154,13 +168,16 @@ export function createFillLoggingCallbacks(
       }
     },
 
+    // DEFAULT: Show completion status
     onTurnComplete: ({ isComplete }) => {
       if (isComplete) {
         logInfo(ctx, pc.green(`  ✓ Complete`));
       }
     },
 
+    // VERBOSE: Tool call details
     onToolStart: ({ name }) => {
+      // Web search gets spinner update even without --verbose
       if (name.includes('search')) {
         options.spinner?.message(`🔍 Web search...`);
       }
@@ -173,6 +190,15 @@ export function createFillLoggingCallbacks(
       } else {
         logVerbose(ctx, `  Tool ${name} completed (${durationMs}ms)`);
       }
+    },
+
+    // VERBOSE: LLM call metadata
+    onLlmCallStart: ({ model }) => {
+      logVerbose(ctx, `  LLM call: ${model}`);
+    },
+
+    onLlmCallEnd: ({ model, inputTokens, outputTokens }) => {
+      logVerbose(ctx, `  LLM response: ${model} (↓${inputTokens} ↑${outputTokens})`);
     },
   };
 }
