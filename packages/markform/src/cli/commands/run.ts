@@ -47,7 +47,7 @@ import {
 } from '../lib/interactivePrompts.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
 import { formatTurnIssues, formatFormLabel, formatFormHint } from '../lib/formatting.js';
-import type { FormDisplayInfo } from '../lib/cliTypes.js';
+import type { FormDisplayInfo, ExportResult } from '../lib/cliTypes.js';
 import {
   getExampleOrder,
   getExampleById,
@@ -257,12 +257,13 @@ async function collectUserInput(form: ParsedForm): Promise<boolean> {
 
 /**
  * Run interactive fill workflow.
+ * @returns ExportResult with paths to output files, or undefined if cancelled/no fields
  */
 async function runInteractiveWorkflow(
   form: ParsedForm,
   filePath: string,
   formsDir: string,
-): Promise<void> {
+): Promise<ExportResult | undefined> {
   const startTime = Date.now();
   const targetRoles = [USER_ROLE];
 
@@ -273,7 +274,7 @@ async function runInteractiveWorkflow(
 
   if (uniqueFieldIds.size === 0) {
     p.log.info('No user-role fields to fill.');
-    return;
+    return undefined;
   }
 
   // Show intro
@@ -285,7 +286,7 @@ async function runInteractiveWorkflow(
 
   if (cancelled) {
     showInteractiveOutro(0, true);
-    return;
+    return undefined;
   }
 
   // Apply patches
@@ -296,25 +297,28 @@ async function runInteractiveWorkflow(
   // Export
   await ensureFormsDir(formsDir);
   const outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
-  const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(form, outputPath);
+  const exportResult = await exportMultiFormat(form, outputPath);
 
   showInteractiveOutro(patches.length, false);
   console.log('');
   p.log.success('Outputs:');
-  console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
-  console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
-  console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
-  console.log(`  ${formatPath(schemaPath)}  ${pc.dim('(JSON Schema)')}`);
+  console.log(`  ${formatPath(exportResult.reportPath)}  ${pc.dim('(output report)')}`);
+  console.log(`  ${formatPath(exportResult.yamlPath)}  ${pc.dim('(output values)')}`);
+  console.log(`  ${formatPath(exportResult.formPath)}  ${pc.dim('(filled markform source)')}`);
+  console.log(`  ${formatPath(exportResult.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
   logTiming(
     { verbose: false, format: 'console', dryRun: false, quiet: false, overwrite: false },
     'Fill time',
     Date.now() - startTime,
   );
+
+  return exportResult;
 }
 
 /**
  * Run agent fill workflow.
+ * @returns ExportResult with paths to output files
  */
 async function runAgentFillWorkflow(
   form: ParsedForm,
@@ -323,7 +327,7 @@ async function runAgentFillWorkflow(
   filePath: string,
   isResearch: boolean,
   overwrite: boolean,
-): Promise<void> {
+): Promise<ExportResult> {
   const startTime = Date.now();
   const { provider: providerName, model: modelName } = parseModelIdForDisplay(modelId);
 
@@ -437,23 +441,22 @@ async function runAgentFillWorkflow(
   // Export
   await ensureFormsDir(formsDir);
   const outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
-  const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(
-    harness.getForm(),
-    outputPath,
-  );
+  const exportResult = await exportMultiFormat(harness.getForm(), outputPath);
 
   console.log('');
   p.log.success(`${workflowLabel} complete. Outputs:`);
-  console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
-  console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
-  console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
-  console.log(`  ${formatPath(schemaPath)}  ${pc.dim('(JSON Schema)')}`);
+  console.log(`  ${formatPath(exportResult.reportPath)}  ${pc.dim('(output report)')}`);
+  console.log(`  ${formatPath(exportResult.yamlPath)}  ${pc.dim('(output values)')}`);
+  console.log(`  ${formatPath(exportResult.formPath)}  ${pc.dim('(filled markform source)')}`);
+  console.log(`  ${formatPath(exportResult.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
   logTiming(
     { verbose: false, format: 'console', dryRun: false, quiet: false, overwrite: false },
     isResearch ? 'Research time' : 'Fill time',
     Date.now() - startTime,
   );
+
+  return exportResult;
 }
 
 // =============================================================================
@@ -463,12 +466,14 @@ async function runAgentFillWorkflow(
 /**
  * Run a form directly (callable from other commands).
  * This executes the same workflow as `markform run <file>`.
+ *
+ * @returns ExportResult with paths to output files, or undefined if cancelled/no output
  */
 export async function runForm(
   selectedPath: string,
   formsDir: string,
   overwrite: boolean,
-): Promise<void> {
+): Promise<ExportResult | undefined> {
   const content = await readFile(selectedPath);
   const form = parseForm(content);
 
@@ -481,8 +486,7 @@ export async function runForm(
 
   switch (runMode) {
     case 'interactive':
-      await runInteractiveWorkflow(form, selectedPath, formsDir);
-      break;
+      return runInteractiveWorkflow(form, selectedPath, formsDir);
 
     case 'fill':
     case 'research': {
@@ -492,17 +496,16 @@ export async function runForm(
       const userInputSuccess = await collectUserInput(form);
       if (!userInputSuccess) {
         p.cancel('Cancelled.');
-        return;
+        return undefined;
       }
 
       // Then prompt for model and run agent fill
       const modelId = await promptForModel(isResearch);
       if (!modelId) {
         p.cancel('Cancelled.');
-        return;
+        return undefined;
       }
-      await runAgentFillWorkflow(form, modelId, formsDir, selectedPath, isResearch, overwrite);
-      break;
+      return runAgentFillWorkflow(form, modelId, formsDir, selectedPath, isResearch, overwrite);
     }
   }
 }

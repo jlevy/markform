@@ -12,6 +12,7 @@ import { CLI_VERSION } from './lib/cliVersion.js';
 import { DEFAULT_FORMS_DIR } from './lib/paths.js';
 import { registerApisCommand } from './commands/apis.js';
 import { registerApplyCommand } from './commands/apply.js';
+import { registerBrowseCommand } from './commands/browse.js';
 import { registerDocsCommand } from './commands/docs.js';
 import { registerDumpCommand } from './commands/dump.js';
 import { registerExamplesCommand } from './commands/examples.js';
@@ -70,6 +71,7 @@ function createProgram(): Command {
   registerApisCommand(program);
   // Rest alphabetical for help display
   registerApplyCommand(program);
+  registerBrowseCommand(program);
   registerDumpCommand(program);
   registerExamplesCommand(program);
   registerExportCommand(program);

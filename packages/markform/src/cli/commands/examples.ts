@@ -40,6 +40,7 @@ import { parseForm } from '../../engine/parse.js';
 import { determineRunMode } from '../lib/runMode.js';
 import type { FormDisplayInfo, FormRunMode } from '../lib/cliTypes.js';
 import { runForm } from './run.js';
+import { browseOutputFiles } from './browse.js';
 
 /**
  * Print non-interactive list of examples.
@@ -321,7 +322,22 @@ export function registerExamplesCommand(program: Command): void {
               if (selectedPath) {
                 console.log('');
                 // Run the selected form directly
-                await runForm(selectedPath, formsDir, ctx.overwrite);
+                const exportResult = await runForm(selectedPath, formsDir, ctx.overwrite);
+
+                // Offer to browse output files if form was completed
+                if (exportResult) {
+                  console.log('');
+                  const wantToBrowse = await p.confirm({
+                    message: 'Would you like to view the output files?',
+                    initialValue: true,
+                  });
+
+                  if (!p.isCancel(wantToBrowse) && wantToBrowse) {
+                    // Get base path by removing extension from form path
+                    const basePath = exportResult.formPath.replace(/\.form\.md$/, '');
+                    await browseOutputFiles(basePath);
+                  }
+                }
               }
             }
           }

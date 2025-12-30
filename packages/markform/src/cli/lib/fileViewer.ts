@@ -197,7 +197,7 @@ async function displayWithPager(content: string, title: string): Promise<void> {
 /**
  * Load and display a file with formatting and pagination.
  */
-async function viewFile(filePath: string): Promise<void> {
+export async function viewFile(filePath: string): Promise<void> {
   const content = readFileSync(filePath, 'utf-8');
   const filename = basename(filePath);
   const formatted = formatContent(content, filename);
