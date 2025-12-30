@@ -92,7 +92,7 @@ markform status forms/simple.form.md
 #   - Run Mode: interactive (explicit)
 
 # Test status on research form
-markform status forms/movie-research-minimal.form.md
+markform status forms/movie-research-demo.form.md
 # Verify output shows:
 #   - By Role breakdown (user and agent)
 #   - Run Mode: research (explicit)
@@ -113,7 +113,7 @@ markform run forms/simple.form.md
 # Verify: Detects run_mode=interactive, starts interactive fill
 
 # Test with research form (cancel before model selection)
-markform run forms/movie-research-minimal.form.md
+markform run forms/movie-research-demo.form.md
 # Verify: Detects run_mode=research, prompts for model selection
 ```
 
@@ -127,7 +127,7 @@ head -10 packages/markform/examples/simple/simple.form.md
 # Verify: run_mode: interactive
 
 # Check research form
-head -10 packages/markform/examples/movie-research/movie-research-minimal.form.md
+head -10 packages/markform/examples/movie-research/movie-research-demo.form.md
 # Verify: run_mode: research
 ```
 

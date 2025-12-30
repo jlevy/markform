@@ -1,7 +1,7 @@
 ---
 markform:
   spec: MF/0.1
-  title: Movie Research (Minimal)
+  title: Movie Research (Demo)
   description: Quick movie lookup with just the essentials (title, year, ratings, summary).
   run_mode: research
   roles:
@@ -11,9 +11,9 @@ markform:
     user: "Enter the movie title."
     agent: |
       Quickly identify the movie and fill in basic info from IMDB.
-      This is a minimal lookup - just get the core facts.
+      This is a demo lookup - just get the core facts.
 ---
-{% form id="movie_research_minimal" title="Movie Research (Minimal)" %}
+{% form id="movie_research_demo" title="Movie Research (Demo)" %}
 
 ## Movie Research Example
 

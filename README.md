@@ -38,20 +38,22 @@ informal Markdown doc describing a process to a precise Markform process easily.
 ## Quick Start
 
 ```bash
-# Try filling in one of a few example forms without installing.
-# First set OPENAI_API_KEY or ANTHROPIC_API_KEY in environment or .env file
-# to try the research examples.
-npx markform examples
+# Copy example forms to ./forms/ and run one interactively
+# Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env) for research examples
+npx markform examples  # Copy examples to ./forms/, then offers to run one
 
-# Read the docs
+# Or run forms directly
+npx markform run  # Browse and run forms interactively
+
+# Read the docs (tell your agents to run these; they are agent-friendly!)
 npx markform  # CLI help
 npx markform readme   # This file
-npx markform docs  # Quick start for humans or agents to write Markforms
+npx markform docs  # Quick reference for writing Markforms
 npx markform spec  # Read the full spec
 ```
 
-This lets you walk through a form interactively from the CLI, with the option to have an
-agent fill in parts of the form.
+The `markform examples` command copies sample forms locally and prompts you to run one.
+Pick `movie-research-demo.form.md` for a quick example.
 
 ## Installation
 
@@ -76,7 +78,7 @@ It combines YAML frontmatter with Markdoc-tagged content:
 ---
 markform:
   spec: MF/0.1
-  title: Movie Research (Minimal)
+  title: Movie Research (Demo)
   description: Quick movie lookup with just the essentials (title, year, ratings, summary).
   roles:
     - user
@@ -85,9 +87,9 @@ markform:
     user: "Enter the movie title."
     agent: |
       Quickly identify the movie and fill in basic info from IMDB.
-      This is a minimal lookup - just get the core facts.
+      This is a demo lookup - just get the core facts.
 ---
-{% form id="movie_research_minimal" title="Movie Research (Minimal)" %}
+{% form id="movie_research_demo" title="Movie Research (Demo)" %}
 
 ## Movie Research Example
 
@@ -145,11 +147,12 @@ What movie do you want to research? \[*This field is filled in by the user (`rol
 
 ### Form Report Output
 
-Run the `npx markform examples` and select the `Movie Research (Minimal)` example and
-view the report:
+Run `npx markform examples` to copy examples, then `npx markform run` and select `Movie
+Research (Demo)` to fill it.
+The report output looks like:
 
 ```markdown
-# Movie Research (Minimal)
+# Movie Research (Demo)
 
 ## Movie Identification
 
@@ -180,12 +183,13 @@ Convicted banker Andy Dufresne is sent to Shawshank State Penitentiary, where he
 ### More Example Forms
 
 The package includes example forms.
-View them with `markform examples --list` or try these interactively:
+View them with `markform examples --list`, copy with `markform examples`, and run with
+`markform run`:
 
 - [`simple.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/simple/simple.form.md)
   \- Basic form demonstrating all field kinds.
 
-- [`movie-research-minimal.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-minimal.form.md)
+- [`movie-research-demo.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-demo.form.md)
   \- The quick example above.
 
 - [`movie-research-basic.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-basic.form.md)
@@ -199,17 +203,34 @@ View them with `markform examples --list` or try these interactively:
 
 ## CLI Commands
 
-### Explore Examples
+### Copy and Run Examples
 
 ```bash
-# Interactive: select an example, fill it, optionally run agent
+# Copy all bundled examples to ./forms/
 markform examples
 
 # List available examples
 markform examples --list
 
-# Start with a specific example
-markform examples --name political-research
+# Copy a specific example
+markform examples --name movie-research-demo
+```
+
+### Browse and Run Forms
+
+```bash
+# Browse forms in ./forms/ and run one interactively
+markform run
+
+# Run a specific form directly
+markform run forms/movie-research-demo.form.md
+```
+
+### Check Form Status
+
+```bash
+# Show fill progress with per-role breakdown
+markform status my-form.form.md
 ```
 
 ### Inspect Forms
@@ -445,10 +466,24 @@ But it’s been useful for me already.
 
 ### Was it Vibe Coded?
 
-It’s all written by LLMs but using a strongly spec-driven process, using rules from
-[Speculate](https://github.com/jlevy/speculate).
-See [the spec](docs/markform-spec.md) and the architecture docs and specs in
-[docs/](docs/).
+This is 100% agent-written code and the planning specs are also 100% agent written,
+using a mix of Opus 4.5, GPT 5.2, GPT-5 Pro, Gemini 3, and occasionally others.
+
+But it’s not slop. It is written via a strongly spec-driven process, using rules from my
+[Speculate](https://github.com/jlevy/speculate) repo and Steve Yegge’s
+[beads](https://github.com/steveyegge/beads) for tracking work.
+
+See
+[my post](https://github.com/jlevy/speculate/blob/main/about/lessons_in_spec_coding.md)
+for more thoughts on how this works.
+And see [the complete history of
+specs](https://github.com/jlevy/markform/tree/main/docs/project/specs/done) for examples
+of how everything is done with specs and with
+
+Although I didn’t have to write much there was a *lot* of management and review by me
+and a lot of thought and iteration for all design decisions.
+And this doc is written by me.
+:)
 
 ### What are the goals of Markform?
 

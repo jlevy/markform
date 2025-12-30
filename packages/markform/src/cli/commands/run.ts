@@ -21,7 +21,7 @@ import pc from 'picocolors';
 import { parseForm } from '../../engine/parse.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
-import type { ParsedForm, HarnessConfig, RunMode } from '../../engine/coreTypes.js';
+import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
 import { createHarness } from '../../harness/harness.js';
 import { createLiveAgent } from '../../harness/liveAgent.js';
 import { resolveModel, getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
@@ -46,7 +46,13 @@ import {
   showInteractiveOutro,
 } from '../lib/interactivePrompts.js';
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
-import { formatTurnIssues } from '../lib/formatting.js';
+import { formatTurnIssues, formatFormLabel, formatFormHint } from '../lib/formatting.js';
+import type { FormDisplayInfo } from '../lib/cliTypes.js';
+import {
+  getExampleOrder,
+  getExampleById,
+  DEFAULT_EXAMPLE_ID,
+} from '../examples/exampleRegistry.js';
 import {
   createSpinner,
   ensureFormsDir,
@@ -63,12 +69,9 @@ import {
 // Types
 // =============================================================================
 
-interface FormEntry {
+interface FormEntry extends FormDisplayInfo {
   path: string;
-  filename: string;
   mtime: Date;
-  title?: string;
-  runMode?: RunMode;
 }
 
 // =============================================================================
@@ -104,10 +107,10 @@ function scanFormsDirectory(formsDir: string): FormEntry[] {
     // Directory doesn't exist or can't be read
   }
 
-  // Sort by mtime desc, then alphabetically
+  // Sort by canonical example order, then alphabetically for unknown files
   entries.sort((a, b) => {
-    const mtimeDiff = b.mtime.getTime() - a.mtime.getTime();
-    if (mtimeDiff !== 0) return mtimeDiff;
+    const orderDiff = getExampleOrder(a.filename) - getExampleOrder(b.filename);
+    if (orderDiff !== 0) return orderDiff;
     return a.filename.localeCompare(b.filename);
   });
 
@@ -126,28 +129,12 @@ async function enrichFormEntry(entry: FormEntry): Promise<FormEntry> {
     return {
       ...entry,
       title: form.schema.title,
+      description: form.schema.description,
       runMode: runModeResult.success ? runModeResult.runMode : undefined,
     };
   } catch {
     return entry;
   }
-}
-
-/**
- * Format relative time for display.
- */
-function formatRelativeTime(date: Date): string {
-  const now = Date.now();
-  const diffMs = now - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
 }
 
 /**
@@ -229,6 +216,43 @@ async function promptForModel(webSearchRequired: boolean): Promise<string | null
   }
 
   return selection;
+}
+
+/**
+ * Collect user input interactively (without exporting).
+ * Returns true if successful, false if cancelled.
+ */
+async function collectUserInput(form: ParsedForm): Promise<boolean> {
+  const targetRoles = [USER_ROLE];
+
+  // Inspect form to get user-role issues
+  const inspectResult = inspect(form, { targetRoles });
+  const fieldIssues = inspectResult.issues.filter((i) => i.scope === 'field');
+  const uniqueFieldIds = new Set(fieldIssues.map((i) => i.ref));
+
+  if (uniqueFieldIds.size === 0) {
+    return true; // No user fields to fill
+  }
+
+  // Show intro
+  const formTitle = form.schema.title ?? form.schema.id;
+  showInteractiveIntro(formTitle, targetRoles.join(', '), uniqueFieldIds.size);
+
+  // Run interactive prompts
+  const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
+
+  if (cancelled) {
+    showInteractiveOutro(0, true);
+    return false;
+  }
+
+  // Apply patches to form (in place)
+  if (patches.length > 0) {
+    applyPatches(form, patches);
+  }
+
+  showInteractiveOutro(patches.length, false);
+  return true;
 }
 
 /**
@@ -433,6 +457,57 @@ async function runAgentFillWorkflow(
 }
 
 // =============================================================================
+// Exported Workflow Function
+// =============================================================================
+
+/**
+ * Run a form directly (callable from other commands).
+ * This executes the same workflow as `markform run <file>`.
+ */
+export async function runForm(
+  selectedPath: string,
+  formsDir: string,
+  overwrite: boolean,
+): Promise<void> {
+  const content = await readFile(selectedPath);
+  const form = parseForm(content);
+
+  const runModeResult = determineRunMode(form);
+  if (!runModeResult.success) {
+    throw new Error(runModeResult.error);
+  }
+
+  const { runMode } = runModeResult;
+
+  switch (runMode) {
+    case 'interactive':
+      await runInteractiveWorkflow(form, selectedPath, formsDir);
+      break;
+
+    case 'fill':
+    case 'research': {
+      const isResearch = runMode === 'research';
+
+      // First collect user input if form has user-role fields
+      const userInputSuccess = await collectUserInput(form);
+      if (!userInputSuccess) {
+        p.cancel('Cancelled.');
+        return;
+      }
+
+      // Then prompt for model and run agent fill
+      const modelId = await promptForModel(isResearch);
+      if (!modelId) {
+        p.cancel('Cancelled.');
+        return;
+      }
+      await runAgentFillWorkflow(form, modelId, formsDir, selectedPath, isResearch, overwrite);
+      break;
+    }
+  }
+}
+
+// =============================================================================
 // Command Registration
 // =============================================================================
 
@@ -485,17 +560,17 @@ export function registerRunCommand(program: Command): void {
           const entriesToShow = entries.slice(0, limit);
           const enrichedEntries = await Promise.all(entriesToShow.map(enrichFormEntry));
 
-          // Build menu options
-          const menuOptions = enrichedEntries.map((entry) => {
-            const runModeLabel = entry.runMode ? pc.dim(`[${entry.runMode}]`) : '';
-            const timeLabel = pc.dim(formatRelativeTime(entry.mtime));
-            const title = entry.title ?? entry.filename;
-            return {
-              value: entry.path,
-              label: `${title} ${runModeLabel}`,
-              hint: timeLabel,
-            };
-          });
+          // Build menu options using shared formatters
+          const menuOptions = enrichedEntries.map((entry) => ({
+            value: entry.path,
+            label: formatFormLabel(entry),
+            hint: formatFormHint(entry),
+          }));
+
+          // Find the default example for initial selection
+          const defaultExample = getExampleById(DEFAULT_EXAMPLE_ID);
+          const defaultEntry = enrichedEntries.find((e) => e.filename === defaultExample?.filename);
+          const initialValue = defaultEntry?.path;
 
           if (entries.length > limit) {
             console.log(pc.dim(`Showing ${limit} of ${entries.length} forms`));
@@ -504,6 +579,7 @@ export function registerRunCommand(program: Command): void {
           const selection = await p.select({
             message: 'Select a form to run:',
             options: menuOptions,
+            initialValue,
           });
 
           if (p.isCancel(selection)) {
@@ -541,6 +617,15 @@ export function registerRunCommand(program: Command): void {
           case 'fill':
           case 'research': {
             const isResearch = runMode === 'research';
+
+            // First collect user input if form has user-role fields
+            const userInputSuccess = await collectUserInput(form);
+            if (!userInputSuccess) {
+              p.cancel('Cancelled.');
+              process.exit(0);
+            }
+
+            // Then prompt for model and run agent fill
             const modelId = await promptForModel(isResearch);
             if (!modelId) {
               p.cancel('Cancelled.');

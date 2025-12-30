@@ -75,16 +75,24 @@ markform examples --name=foo   # Copy specific example only
 
    - Copy to `./forms/{filename}`
 
-   - Log: ` ✓ movie-research-deep.form.md`
+   - Log: ` ✓ movie-research-deep.form.md - Movie Research (Deep)`
 
    - If file exists and no `--overwrite`: skip with warning
 
-4. Log: `Done. Run 'markform run' to try one.`
+4. Log summary: `Done! Copied 7 example forms to ./forms/`
 
-### No Confirmations
+5. Prompt: `Do you want to try running a form? (Y/n)`
 
-Remove all `p.confirm()` prompts.
-Use `--overwrite` flag instead.
+6. If yes:
+   - Show form selection menu (default: movie-research-demo)
+   - If user selects a form, spawn `markform run <path>`
+
+7. If no (or cancelled):
+   - Log: `Run 'markform run' to select and run a form later.`
+
+### No Overwrite Confirmations
+
+Use `--overwrite` flag instead of prompts for overwrite behavior.
 
 ### Changes from Current
 
@@ -119,9 +127,12 @@ markform run --limit=50        # Override menu limit
 5. Display menu:
    ```
    ? Select a form to run:
-   ❯ Movie Research (Deep)          [research]  2h ago
-     Earnings Analysis              [research]  1d ago
-     Simple Form                    [fill]      3d ago
+   ❯ movie-research-deep.form.md - Movie Research (Deep) [research]
+       Comprehensive movie lookup with multiple sources
+     earnings-analysis.form.md - Earnings Analysis [research]
+       Quarterly earnings report analysis
+     simple.form.md - Simple Form [fill]
+       Basic form example
    ```
 
 6. Parse selected form
@@ -186,8 +197,11 @@ function determineRunMode(form: ParsedForm): RunMode | Error {
 | Mode | Action |
 | --- | --- |
 | `interactive` | Launch interactive fill (`fill -i` style) |
-| `fill` | Prompt for model, run agent fill |
-| `research` | Prompt for web-search model, run research fill |
+| `fill` | Collect user input (if any user-role fields), prompt for model, run agent fill |
+| `research` | Collect user input (if any user-role fields), prompt for web-search model, run research fill |
+
+**Note:** For `fill` and `research` modes, if the form has user-role fields, the user is
+prompted to fill those first (interactively) before model selection and agent execution.
 
 * * *
 

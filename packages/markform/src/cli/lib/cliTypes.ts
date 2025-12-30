@@ -55,6 +55,30 @@ export interface ExportResult {
 }
 
 // =============================================================================
+// Form Display Types
+// =============================================================================
+
+/**
+ * Run mode for forms (used in display and execution).
+ */
+export type FormRunMode = 'interactive' | 'fill' | 'research';
+
+/**
+ * Information about a form for display in menus and lists.
+ * Used by both `run` and `examples` commands for consistent display.
+ */
+export interface FormDisplayInfo {
+  /** Filename (e.g., 'movie-research-deep.form.md') */
+  filename: string;
+  /** Human-readable title from frontmatter */
+  title?: string;
+  /** One-line description from frontmatter */
+  description?: string;
+  /** Run mode (interactive/fill/research) */
+  runMode?: FormRunMode;
+}
+
+// =============================================================================
 // Example Types
 // =============================================================================
 

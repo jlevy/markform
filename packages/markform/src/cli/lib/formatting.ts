@@ -5,6 +5,7 @@
 import pc from 'picocolors';
 
 import type { InspectIssue, IssueReason } from '../../engine/coreTypes.js';
+import type { FormDisplayInfo } from './cliTypes.js';
 
 /**
  * Semantic color helpers for consistent CLI output.
@@ -137,4 +138,37 @@ export function formatTurnIssues(issues: InspectIssue[], maxShow = 5): string {
   const suffix = count > maxShow ? `, +${count - maxShow} more` : '';
 
   return `${count} issue(s): ${summary}${suffix}`;
+}
+
+// =============================================================================
+// Form Display Formatting
+// =============================================================================
+
+/**
+ * Format form info for menu label display.
+ * Format: "filename - Title [runMode]"
+ * Example: "movie-research-deep.form.md - Movie Research (Deep) [research]"
+ */
+export function formatFormLabel(info: FormDisplayInfo): string {
+  const titlePart = info.title ? ` - ${info.title}` : '';
+  const runModePart = info.runMode ? ` [${info.runMode}]` : '';
+  return `${info.filename}${titlePart}${runModePart}`;
+}
+
+/**
+ * Format form info for menu hint display.
+ * Returns description without parentheses (prompts library adds them).
+ */
+export function formatFormHint(info: FormDisplayInfo): string {
+  return info.description ?? '';
+}
+
+/**
+ * Format form info for log line (e.g., after copying).
+ * Format: "filename - Title" (dimmed title)
+ * Example: "✓ movie-research-deep.form.md - Movie Research (Deep)"
+ */
+export function formatFormLogLine(info: FormDisplayInfo, prefix: string): string {
+  const titlePart = info.title ? ` - ${info.title}` : '';
+  return `${prefix} ${info.filename}${pc.dim(titlePart)}`;
 }

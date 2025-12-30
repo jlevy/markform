@@ -10,16 +10,19 @@
  *   markform examples --name=foo   # Copy specific example only
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { Command } from 'commander';
+import * as p from '@clack/prompts';
 import pc from 'picocolors';
 
 import {
   EXAMPLE_DEFINITIONS,
+  DEFAULT_EXAMPLE_ID,
   getExampleById,
   getExamplePath,
+  getExampleOrder,
   loadExampleContent,
   getAllExamplesWithMetadata,
 } from '../examples/exampleRegistry.js';
@@ -29,8 +32,14 @@ import {
   formatPath,
   getCommandContext,
   logError,
+  readFile,
   writeFile,
 } from '../lib/shared.js';
+import { formatFormLogLine, formatFormLabel, formatFormHint } from '../lib/formatting.js';
+import { parseForm } from '../../engine/parse.js';
+import { determineRunMode } from '../lib/runMode.js';
+import type { FormDisplayInfo, FormRunMode } from '../lib/cliTypes.js';
+import { runForm } from './run.js';
 
 /**
  * Print non-interactive list of examples.
@@ -80,14 +89,58 @@ async function copyExample(
   return { copied: true, skipped: false, path: outputPath };
 }
 
+interface FormEntry extends FormDisplayInfo {
+  path: string;
+}
+
+/**
+ * Scan forms directory and enrich entries with metadata.
+ */
+async function getFormEntries(formsDir: string): Promise<FormEntry[]> {
+  const entries: FormEntry[] = [];
+
+  try {
+    const files = readdirSync(formsDir);
+    for (const file of files) {
+      if (!file.endsWith('.form.md')) continue;
+
+      const fullPath = join(formsDir, file);
+      try {
+        const stat = statSync(fullPath);
+        if (stat.isFile()) {
+          // Load metadata
+          const content = await readFile(fullPath);
+          const form = parseForm(content);
+          const runModeResult = determineRunMode(form);
+
+          entries.push({
+            path: fullPath,
+            filename: file,
+            title: form.schema.title,
+            description: form.schema.description,
+            runMode: runModeResult.success ? (runModeResult.runMode as FormRunMode) : undefined,
+          });
+        }
+      } catch {
+        // Skip files we can't read
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
+
+  return entries;
+}
+
 /**
  * Copy all examples to the forms directory.
+ * Returns { copied, skipped } counts for the caller to handle prompts.
  */
 async function copyAllExamples(
   formsDir: string,
   overwrite: boolean,
   quiet: boolean,
-): Promise<void> {
+): Promise<{ copied: number; skipped: number }> {
   const examples = getAllExamplesWithMetadata();
   const total = examples.length;
 
@@ -105,12 +158,14 @@ async function copyAllExamples(
     if (result.copied) {
       copied++;
       if (!quiet) {
-        console.log(`  ${pc.green('✓')} ${example.filename}`);
+        console.log(formatFormLogLine(example, `  ${pc.green('✓')}`));
       }
     } else if (result.skipped) {
       skipped++;
       if (!quiet) {
-        console.log(`  ${pc.yellow('○')} ${example.filename} ${pc.dim('(exists, skipped)')}`);
+        console.log(
+          `${formatFormLogLine(example, `  ${pc.yellow('○')}`)} ${pc.dim('(exists, skipped)')}`,
+        );
       }
     }
   }
@@ -122,9 +177,52 @@ async function copyAllExamples(
         pc.yellow(`Skipped ${skipped} existing file(s). Use --overwrite to replace them.`),
       );
     }
-    console.log(pc.green(`Done. ${copied} file(s) copied.`));
-    console.log(pc.dim(`Run 'markform run' to try one.`));
+    console.log(pc.green(`Done! Copied ${copied} example form(s) to ${formatPath(formsDir)}`));
   }
+
+  return { copied, skipped };
+}
+
+/**
+ * Show form selection menu and return the selected path.
+ */
+async function showFormMenu(formsDir: string): Promise<string | null> {
+  const entries = await getFormEntries(formsDir);
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  // Sort by canonical order from exampleRegistry
+  const sortedEntries = [...entries].sort((a, b) => {
+    return getExampleOrder(a.filename) - getExampleOrder(b.filename);
+  });
+
+  // Find the default example index for initial selection
+  const defaultExample = getExampleById(DEFAULT_EXAMPLE_ID);
+  const defaultIndex = sortedEntries.findIndex((e) => e.filename === defaultExample?.filename);
+
+  const menuOptions = sortedEntries.map((entry) => ({
+    value: entry.path,
+    label: formatFormLabel(entry),
+    hint: formatFormHint(entry),
+  }));
+
+  // Use the default example's path as initial value
+  const defaultEntry = defaultIndex >= 0 ? sortedEntries[defaultIndex] : undefined;
+  const initialValue = defaultEntry?.path;
+
+  const selection = await p.select({
+    message: 'Select a form to run:',
+    options: menuOptions,
+    initialValue,
+  });
+
+  if (p.isCancel(selection)) {
+    return null;
+  }
+
+  return selection;
 }
 
 /**
@@ -149,14 +247,16 @@ async function copySingleExample(
 
   if (result.copied) {
     if (!quiet) {
-      console.log(`  ${pc.green('✓')} ${example.filename}`);
+      console.log(formatFormLogLine(example, `  ${pc.green('✓')}`));
       console.log('');
-      console.log(pc.green('Done.'));
-      console.log(pc.dim(`Run 'markform run ${example.filename}' to try it.`));
+      console.log(pc.green('Done!'));
+      console.log(`Run ${pc.cyan(`'markform run ${example.filename}'`)} to try it.`);
     }
   } else if (result.skipped) {
     if (!quiet) {
-      console.log(`  ${pc.yellow('○')} ${example.filename} ${pc.dim('(exists, skipped)')}`);
+      console.log(
+        `${formatFormLogLine(example, `  ${pc.yellow('○')}`)} ${pc.dim('(exists, skipped)')}`,
+      );
       console.log('');
       console.log(pc.yellow(`File already exists. Use --overwrite to replace it.`));
     }
@@ -202,7 +302,29 @@ export function registerExamplesCommand(program: Command): void {
           await copySingleExample(options.name, formsDir, ctx.overwrite, ctx.quiet);
         } else {
           // Copy all examples
-          await copyAllExamples(formsDir, ctx.overwrite, ctx.quiet);
+          const { copied } = await copyAllExamples(formsDir, ctx.overwrite, ctx.quiet);
+
+          // Prompt to run a form (only if not quiet and we copied something)
+          if (!ctx.quiet && copied > 0) {
+            console.log('');
+            const wantToRun = await p.confirm({
+              message: 'Do you want to try running a form?',
+              initialValue: true,
+            });
+
+            if (p.isCancel(wantToRun) || !wantToRun) {
+              console.log('');
+              console.log(`Run ${pc.cyan("'markform run'")} to select and run a form later.`);
+            } else {
+              // Show form selection menu
+              const selectedPath = await showFormMenu(formsDir);
+              if (selectedPath) {
+                console.log('');
+                // Run the selected form directly
+                await runForm(selectedPath, formsDir, ctx.overwrite);
+              }
+            }
+          }
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

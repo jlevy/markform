@@ -320,6 +320,7 @@ export interface FieldGroup {
 export interface FormSchema {
   id: Id;
   title?: string;
+  description?: string;
   groups: FieldGroup[];
 }
 

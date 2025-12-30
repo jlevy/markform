@@ -23,16 +23,16 @@ export type { ExampleDefinition } from '../lib/cliTypes.js';
  */
 export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
   {
+    id: 'movie-research-demo',
+    filename: 'movie-research-demo.form.md',
+    path: 'movie-research/movie-research-demo.form.md',
+    type: 'research',
+  },
+  {
     id: 'simple',
     filename: 'simple.form.md',
     path: 'simple/simple.form.md',
     type: 'fill',
-  },
-  {
-    id: 'movie-research-minimal',
-    filename: 'movie-research-minimal.form.md',
-    path: 'movie-research/movie-research-minimal.form.md',
-    type: 'research',
   },
   {
     id: 'movie-research-basic',
@@ -47,18 +47,30 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     type: 'research',
   },
   {
-    id: 'earnings-analysis',
-    filename: 'earnings-analysis.form.md',
-    path: 'earnings-analysis/earnings-analysis.form.md',
-    type: 'research',
-  },
-  {
     id: 'startup-deep-research',
     filename: 'startup-deep-research.form.md',
     path: 'startup-deep-research/startup-deep-research.form.md',
     type: 'research',
   },
+  {
+    id: 'earnings-analysis',
+    filename: 'earnings-analysis.form.md',
+    path: 'earnings-analysis/earnings-analysis.form.md',
+    type: 'research',
+  },
 ];
+
+/** Default example ID for menus (movie-research-demo, index 0) */
+export const DEFAULT_EXAMPLE_ID = 'movie-research-demo';
+
+/**
+ * Get the canonical order index for an example by filename.
+ * Returns -1 if not found (unknown files sort to the end).
+ */
+export function getExampleOrder(filename: string): number {
+  const index = EXAMPLE_DEFINITIONS.findIndex((e) => e.filename === filename);
+  return index >= 0 ? index : EXAMPLE_DEFINITIONS.length;
+}
 
 /**
  * Get the path to the examples directory.

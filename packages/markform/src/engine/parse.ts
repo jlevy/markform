@@ -59,6 +59,8 @@ interface FrontmatterResult {
   frontmatter: Record<string, unknown>;
   body: string;
   metadata?: FormMetadata;
+  /** Description from markform.description in frontmatter */
+  description?: string;
 }
 
 /**
@@ -132,6 +134,10 @@ function extractFrontmatter(content: string): FrontmatterResult {
       runMode = parsed.data;
     }
 
+    // Extract description from markform.description
+    const description =
+      typeof markformSection.description === 'string' ? markformSection.description : undefined;
+
     // Build metadata
     const metadata: FormMetadata = {
       markformVersion: (markformSection.spec as string) ?? 'MF/0.1',
@@ -142,7 +148,7 @@ function extractFrontmatter(content: string): FrontmatterResult {
       ...(runMode && { runMode }),
     };
 
-    return { frontmatter, body, metadata };
+    return { frontmatter, body, metadata, description };
   } catch (error) {
     // Re-throw ParseError as-is, wrap other errors
     if (error instanceof ParseError) {
@@ -537,7 +543,7 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
  */
 export function parseForm(markdown: string): ParsedForm {
   // Step 1: Extract frontmatter and metadata
-  const { body, metadata } = extractFrontmatter(markdown);
+  const { body, metadata, description } = extractFrontmatter(markdown);
 
   // Step 2: Parse Markdoc AST (raw AST, not transformed)
   const ast = Markdoc.parse(body);
@@ -574,6 +580,14 @@ export function parseForm(markdown: string): ParsedForm {
     throw new ParseError('No form tag found in document');
   }
 
+  // Build final schema with description from frontmatter
+  // Type assertion needed because TypeScript doesn't track closure assignments well
+  const parsedSchema = formSchema as FormSchema;
+  const schema: FormSchema = {
+    ...parsedSchema,
+    ...(description && { description }),
+  };
+
   // Step 4: Extract notes (needs idIndex to validate refs)
   const notes = extractNotes(ast, idIndex);
 
@@ -581,7 +595,7 @@ export function parseForm(markdown: string): ParsedForm {
   const docs = extractDocBlocks(ast, idIndex);
 
   return {
-    schema: formSchema,
+    schema,
     responsesByFieldId,
     notes,
     docs,
