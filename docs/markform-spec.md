@@ -1912,7 +1912,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | Attributes | `id`, `label`, `required` |
 | FieldValue | `{ kind: 'url'; value: string \| null }` |
 | Patch operation | `{ op: 'set_url'; fieldId: Id; value: string \| null }` |
-| Zod | `z.string().url()` |
+| Zod | `z.url()` |
 | JSON Schema | `{ type: "string", format: "uri" }` |
 
 **`url-list`** — Array of URLs (for citations, sources, references)
@@ -1925,7 +1925,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | Attributes | `id`, `label`, `required`, `minItems`, `maxItems`, `uniqueItems` |
 | FieldValue | `{ kind: 'url_list'; items: string[] }` |
 | Patch operation | `{ op: 'set_url_list'; fieldId: Id; items: string[] }` |
-| Zod | `z.array(z.string().url()).min(n).max(m)` |
+| Zod | `z.array(z.url()).min(n).max(m)` |
 | JSON Schema | `{ type: "array", items: { type: "string", format: "uri" }, minItems, maxItems, uniqueItems }` |
 
 **`date-field`** — ISO 8601 date value (YYYY-MM-DD)
