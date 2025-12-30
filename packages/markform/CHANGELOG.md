@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.7
+
+### Patch Changes
+
+- 71692eb: Unified fill logging, CLI improvements, JSON Schema enhancements, Zod v4 upgrade
+
 ## 0.1.6
 
 ### Patch Changes
