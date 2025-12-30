@@ -263,9 +263,37 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       }
     }
 
+    // Store issues shown this turn (before agent generates patches)
+    const turnIssues = stepResult.issues;
+
+    // Call onIssuesIdentified callback (before agent generates patches)
+    if (options.callbacks?.onIssuesIdentified) {
+      try {
+        options.callbacks.onIssuesIdentified({
+          turnNumber: turnCount + 1,
+          issues: turnIssues,
+        });
+      } catch {
+        // Ignore callback errors
+      }
+    }
+
     // Generate patches using agent
-    const response = await agent.generatePatches(stepResult.issues, form, maxPatchesPerTurn);
+    const response = await agent.generatePatches(turnIssues, form, maxPatchesPerTurn);
     const { patches, stats } = response;
+
+    // Call onPatchesGenerated callback (after agent, before applying)
+    if (options.callbacks?.onPatchesGenerated) {
+      try {
+        options.callbacks.onPatchesGenerated({
+          turnNumber: turnCount + 1,
+          patches,
+          stats,
+        });
+      } catch {
+        // Ignore callback errors
+      }
+    }
 
     // Re-check for cancellation after agent call (signal may have fired during LLM call)
     if (options.signal?.aborted) {
@@ -275,7 +303,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         totalPatches,
         { ok: false, reason: 'cancelled' },
         inputContextWarnings,
-        stepResult.issues,
+        turnIssues,
       );
     }
 
@@ -290,7 +318,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
 
     // Apply patches
-    stepResult = harness.apply(patches, stepResult.issues, llmStats);
+    stepResult = harness.apply(patches, turnIssues, llmStats);
     totalPatches += patches.length;
     turnCount++;
 
@@ -300,11 +328,13 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         const requiredIssues = stepResult.issues.filter((i) => i.severity === 'required');
         options.callbacks.onTurnComplete({
           turnNumber: turnCount,
-          issuesShown: stepResult.issues.length,
+          issuesShown: turnIssues.length,
           patchesApplied: patches.length,
           requiredIssuesRemaining: requiredIssues.length,
           isComplete: stepResult.isComplete,
           stats,
+          issues: turnIssues,
+          patches,
         });
       } catch {
         // Ignore callback errors

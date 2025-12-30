@@ -189,6 +189,8 @@ export interface ProviderInfo {
  *   enableWebSearch: true,
  *   callbacks: {
  *     onTurnStart: ({ turnNumber }) => console.log(`Starting turn ${turnNumber}`),
+ *     onIssuesIdentified: ({ issues }) => console.log(`Found ${issues.length} issues`),
+ *     onPatchesGenerated: ({ patches }) => console.log(`Generated ${patches.length} patches`),
  *     onToolStart: ({ name }) => spinner.message(`🔧 ${name}...`),
  *     onTurnComplete: (progress) => console.log(`Turn ${progress.turnNumber} done`),
  *   },
@@ -198,6 +200,12 @@ export interface ProviderInfo {
 export interface FillCallbacks {
   /** Called when a turn begins */
   onTurnStart?(turn: { turnNumber: number; issuesCount: number }): void;
+
+  /** Called after inspect identifies issues for this turn (before agent generates patches) */
+  onIssuesIdentified?(info: { turnNumber: number; issues: InspectIssue[] }): void;
+
+  /** Called after LLM generates patches (before applying) */
+  onPatchesGenerated?(info: { turnNumber: number; patches: Patch[]; stats?: TurnStats }): void;
 
   /** Called when a turn completes */
   onTurnComplete?(progress: TurnProgress): void;
@@ -283,6 +291,10 @@ export interface TurnProgress {
   isComplete: boolean;
   /** Per-turn stats from LLM (undefined for MockAgent) */
   stats?: TurnStats;
+  /** Issues shown this turn (for detailed logging) */
+  issues: InspectIssue[];
+  /** Patches applied this turn (for detailed logging) */
+  patches: Patch[];
 }
 
 /**
