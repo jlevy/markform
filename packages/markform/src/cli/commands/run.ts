@@ -272,7 +272,7 @@ async function runInteractiveWorkflow(
   // Export
   await ensureFormsDir(formsDir);
   const outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
-  const { reportPath, yamlPath, formPath } = await exportMultiFormat(form, outputPath);
+  const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(form, outputPath);
 
   showInteractiveOutro(patches.length, false);
   console.log('');
@@ -280,6 +280,7 @@ async function runInteractiveWorkflow(
   console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
   console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
   console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
+  console.log(`  ${formatPath(schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
   logTiming(
     { verbose: false, format: 'console', dryRun: false, quiet: false, overwrite: false },
@@ -412,13 +413,17 @@ async function runAgentFillWorkflow(
   // Export
   await ensureFormsDir(formsDir);
   const outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
-  const { reportPath, yamlPath, formPath } = await exportMultiFormat(harness.getForm(), outputPath);
+  const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(
+    harness.getForm(),
+    outputPath,
+  );
 
   console.log('');
   p.log.success(`${workflowLabel} complete. Outputs:`);
   console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
   console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
   console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
+  console.log(`  ${formatPath(schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
   logTiming(
     { verbose: false, format: 'console', dryRun: false, quiet: false, overwrite: false },

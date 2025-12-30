@@ -215,12 +215,16 @@ export function registerResearchCommand(program: Command): void {
         }
 
         // Export filled form
-        const { reportPath, yamlPath, formPath } = await exportMultiFormat(result.form, outputPath);
+        const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(
+          result.form,
+          outputPath,
+        );
 
         logSuccess(ctx, 'Outputs:');
         console.log(`  ${reportPath}  ${pc.dim('(output report)')}`);
         console.log(`  ${yamlPath}  ${pc.dim('(output values)')}`);
         console.log(`  ${formPath}  ${pc.dim('(filled markform source)')}`);
+        console.log(`  ${schemaPath}  ${pc.dim('(JSON Schema)')}`);
 
         // Save transcript if requested
         if (options.transcript && result.transcript) {

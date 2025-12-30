@@ -25,6 +25,7 @@ import { registerSpecCommand } from './commands/spec.js';
 import { registerModelsCommand } from './commands/models.js';
 import { registerRenderCommand } from './commands/render.js';
 import { registerResearchCommand } from './commands/research.js';
+import { registerSchemaCommand } from './commands/schema.js';
 import { registerServeCommand } from './commands/serve.js';
 import { registerStatusCommand } from './commands/status.js';
 import { registerValidateCommand } from './commands/validate.js';
@@ -79,6 +80,7 @@ function createProgram(): Command {
   registerReportCommand(program);
   registerResearchCommand(program);
   registerRunCommand(program);
+  registerSchemaCommand(program);
   registerServeCommand(program);
   registerStatusCommand(program);
   registerValidateCommand(program);

@@ -5,13 +5,15 @@
  * - Markform format (.form.md) - canonical form with directives
  * - Raw markdown (.raw.md) - plain readable markdown
  * - YAML values (.yml) - extracted field values
+ * - JSON Schema (.schema.json) - form structure for validation/tooling
  */
 
 import YAML from 'yaml';
 
 import { serialize, serializeReportMarkdown } from '../../engine/serialize.js';
+import { formToJsonSchema } from '../../engine/jsonSchema.js';
 import type { ParsedForm } from '../../engine/coreTypes.js';
-import { deriveExportPath, deriveReportPath } from '../../settings.js';
+import { deriveExportPath, deriveReportPath, deriveSchemaPath } from '../../settings.js';
 import type { ExportResult } from './cliTypes.js';
 import { writeFile } from './shared.js';
 
@@ -110,7 +112,7 @@ export function toNotesArray(form: ParsedForm) {
  * Derive export paths from a base form path.
  * Uses centralized extension constants from settings.ts.
  *
- * Standard exports: report, values (yaml), form.
+ * Standard exports: report, values (yaml), form, schema.
  * Raw markdown is available via CLI but not in standard exports.
  *
  * @param basePath - Path to the .form.md file
@@ -121,6 +123,7 @@ export function deriveExportPaths(basePath: string): ExportResult {
     reportPath: deriveReportPath(basePath),
     yamlPath: deriveExportPath(basePath, 'yaml'),
     formPath: deriveExportPath(basePath, 'form'),
+    schemaPath: deriveSchemaPath(basePath),
   };
 }
 
@@ -131,6 +134,7 @@ export function deriveExportPaths(basePath: string): ExportResult {
  * - Report format (.report.md) - filtered markdown (excludes instructions, report=false)
  * - YAML values (.yml) - structured format with state and notes
  * - Markform format (.form.md) - canonical form with directives
+ * - JSON Schema (.schema.json) - form structure for validation/tooling
  *
  * Note: Raw markdown (.raw.md) is available via CLI `markform export --raw`
  * but is not included in standard multi-format export.
@@ -159,6 +163,11 @@ export async function exportMultiFormat(form: ParsedForm, basePath: string): Pro
   // Export form markdown
   const formContent = serialize(form);
   await writeFile(paths.formPath, formContent);
+
+  // Export JSON Schema
+  const schemaResult = formToJsonSchema(form);
+  const schemaContent = JSON.stringify(schemaResult.schema, null, 2) + '\n';
+  await writeFile(paths.schemaPath, schemaContent);
 
   return paths;
 }

@@ -243,7 +243,7 @@ mismatches, regenerate them:
 # 1. Review failures to understand what changed
 pnpm test:golden
 
-# 2. Regenerate session files with updated hashes
+# 2. Regenerate session files and schema snapshots
 pnpm --filter markform test:golden:regen
 
 # 3. Review diffs to verify changes are expected
@@ -252,10 +252,21 @@ git diff packages/markform/examples/
 # 4. Run tests again to confirm they pass
 pnpm test:golden
 
-# 5. Commit the updated session files
+# 5. Commit the updated session and schema files
 git add packages/markform/examples/
-git commit -m "Update golden session hashes after format change"
+git commit -m "Update golden test files after format change"
 ```
+
+The regeneration script updates two types of golden test files:
+
+1. **Session transcripts** (`.session.yaml`): Records of mock agent interactions with
+   SHA256 hashes for form state verification
+
+2. **Schema snapshots** (`.schema.json`): JSON Schema exports that verify the schema
+   generation logic remains stable
+
+Both types of golden files are stored in `examples/` directories alongside the source
+forms and can be reviewed/diffed like any other test artifact.
 
 ### Watch Mode
 

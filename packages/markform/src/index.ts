@@ -254,6 +254,19 @@ export { parseSession, serializeSession } from './engine/session.js';
 export { applyPatches } from './engine/apply.js';
 
 // =============================================================================
+// JSON Schema Export
+// =============================================================================
+
+export { formToJsonSchema, fieldToJsonSchema } from './engine/jsonSchema.js';
+export type {
+  JsonSchemaOptions,
+  JsonSchemaResult,
+  JsonSchemaDraft,
+  MarkformSchemaExtension,
+  MarkformFieldExtension,
+} from './engine/jsonSchema.js';
+
+// =============================================================================
 // Table Parsing Exports
 // =============================================================================
 

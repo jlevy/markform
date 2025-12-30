@@ -175,16 +175,23 @@ export const EXPORT_EXTENSIONS = {
 export const REPORT_EXTENSION = '.report.md' as const;
 
 /**
+ * Schema extension - generated JSON Schema for form structure.
+ * Used for validation, code generation, and LLM tooling.
+ */
+export const SCHEMA_EXTENSION = '.schema.json' as const;
+
+/**
  * All recognized markform file extensions.
- * Combines export formats with report format.
+ * Combines export formats with report and schema formats.
  */
 export const ALL_EXTENSIONS = {
   ...EXPORT_EXTENSIONS,
   report: REPORT_EXTENSION,
+  schema: SCHEMA_EXTENSION,
 } as const;
 
 /** Union type of recognized file types for routing and rendering */
-export type FileType = 'form' | 'raw' | 'report' | 'yaml' | 'json' | 'unknown';
+export type FileType = 'form' | 'raw' | 'report' | 'yaml' | 'json' | 'schema' | 'unknown';
 
 /**
  * Detect file type from path based on extension.
@@ -195,6 +202,7 @@ export function detectFileType(filePath: string): FileType {
   if (filePath.endsWith(ALL_EXTENSIONS.raw)) return 'raw';
   if (filePath.endsWith(ALL_EXTENSIONS.report)) return 'report';
   if (filePath.endsWith(ALL_EXTENSIONS.yaml)) return 'yaml';
+  if (filePath.endsWith(ALL_EXTENSIONS.schema)) return 'schema';
   if (filePath.endsWith(ALL_EXTENSIONS.json)) return 'json';
   // Generic .md files are treated as raw markdown
   if (filePath.endsWith('.md')) return 'raw';
@@ -230,6 +238,21 @@ export function deriveReportPath(basePath: string): string {
     }
   }
   return base + REPORT_EXTENSION;
+}
+
+/**
+ * Derive schema path from any markform file path.
+ * Strips known extensions and appends .schema.json.
+ */
+export function deriveSchemaPath(basePath: string): string {
+  let base = basePath;
+  for (const ext of Object.values(ALL_EXTENSIONS)) {
+    if (base.endsWith(ext)) {
+      base = base.slice(0, -ext.length);
+      break;
+    }
+  }
+  return base + SCHEMA_EXTENSION;
 }
 
 // =============================================================================
