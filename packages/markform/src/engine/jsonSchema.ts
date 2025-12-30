@@ -230,13 +230,15 @@ function dateFieldToJsonSchema(
     schema.description = description;
   }
 
-  // Use formatMinimum/formatMaximum (JSON Schema 2019-09/2020-12) for date constraints
-  // This ensures pure JSON Schema consumers can validate date bounds
-  if (field.min) {
-    schema.formatMinimum = field.min;
-  }
-  if (field.max) {
-    schema.formatMaximum = field.max;
+  // Use formatMinimum/formatMaximum for date constraints (JSON Schema 2019-09/2020-12 only)
+  // These keywords don't exist in draft-07, so we skip them for that draft
+  if (options.draft !== 'draft-07') {
+    if (field.min) {
+      schema.formatMinimum = field.min;
+    }
+    if (field.max) {
+      schema.formatMaximum = field.max;
+    }
   }
 
   // Also include in x-markform extension for backward compatibility

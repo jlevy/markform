@@ -326,6 +326,33 @@ describe('jsonSchema', () => {
       expect(ext.maxDate).toBe('2030-12-31');
     });
 
+    it('omits formatMinimum/formatMaximum for draft-07 (not supported)', () => {
+      const form = loadSimpleForm();
+      const dateField = getFieldById(form, 'event_date');
+      // draft-07 does not support formatMinimum/formatMaximum
+      const schema = fieldToJsonSchema(dateField, form.docs, { draft: 'draft-07' });
+
+      expect(schema.formatMinimum).toBeUndefined();
+      expect(schema.formatMaximum).toBeUndefined();
+      // x-markform should still have the date constraints for Markform consumers
+      const ext = schema['x-markform'] as { minDate?: string; maxDate?: string };
+      expect(ext.minDate).toBe('2020-01-01');
+      expect(ext.maxDate).toBe('2030-12-31');
+    });
+
+    it('includes formatMinimum/formatMaximum for 2019-09 and 2020-12', () => {
+      const form = loadSimpleForm();
+      const dateField = getFieldById(form, 'event_date');
+
+      const schema2019 = fieldToJsonSchema(dateField, form.docs, { draft: '2019-09' });
+      expect(schema2019.formatMinimum).toBe('2020-01-01');
+      expect(schema2019.formatMaximum).toBe('2030-12-31');
+
+      const schema2020 = fieldToJsonSchema(dateField, form.docs, { draft: '2020-12' });
+      expect(schema2020.formatMinimum).toBe('2020-01-01');
+      expect(schema2020.formatMaximum).toBe('2030-12-31');
+    });
+
     it('generates integer for year field with min/max', () => {
       const form = loadSimpleForm();
       const yearField = getFieldById(form, 'founded_year');
