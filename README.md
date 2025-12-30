@@ -30,6 +30,8 @@ manage processes. A well-designed form with instructions, field definitions, and
 validations is a concise way to share context: background knowledge, goals, process
 rules, and memories.
 I don’t think AI changes this essential aspect of knowledge work.
+
+Forms codify operational excellence.
 It’s time to bring bureaucracy to the agents!
 
 There’s one more key benefit to this approach: Because LLMs are good at using Markdown
