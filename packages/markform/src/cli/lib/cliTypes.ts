@@ -32,6 +32,8 @@ export interface CommandContext {
   format: OutputFormat;
   /** Optional forms directory override from --forms-dir CLI option */
   formsDir?: string;
+  /** Whether to overwrite existing field values (default: continue/skip filled) */
+  overwrite: boolean;
 }
 
 // =============================================================================

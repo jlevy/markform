@@ -120,6 +120,8 @@ export type {
   // Frontmatter
   MarkformFrontmatter,
   FrontmatterHarnessConfig,
+  // Run mode
+  RunMode,
   // Validators
   ValidatorContext,
   ValidatorFn,
@@ -225,6 +227,8 @@ export {
   SessionTranscriptSchema,
   // Frontmatter schema
   MarkformFrontmatterSchema,
+  // Run mode schema
+  RunModeSchema,
 } from './engine/coreTypes.js';
 
 // =============================================================================

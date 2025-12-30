@@ -3,6 +3,7 @@ markform:
   spec: MF/0.1
   title: Startup Deep Research
   description: Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.
+  run_mode: research
   roles:
     - user
     - agent

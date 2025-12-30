@@ -20,7 +20,9 @@ import type {
   IdIndexEntry,
   Note,
   ParsedForm,
+  RunMode,
 } from './coreTypes.js';
+import { RunModeSchema } from './coreTypes.js';
 import { DEFAULT_ROLES, DEFAULT_ROLE_INSTRUCTIONS } from '../settings.js';
 import { parseField } from './parseFields.js';
 import {
@@ -117,6 +119,19 @@ function extractFrontmatter(content: string): FrontmatterResult {
     // Parse harness config from markform.harness
     const harnessConfig = parseHarnessConfig(markformSection.harness);
 
+    // Parse run_mode from markform.run_mode
+    let runMode: RunMode | undefined;
+    const rawRunMode = markformSection.run_mode;
+    if (rawRunMode !== undefined) {
+      const parsed = RunModeSchema.safeParse(rawRunMode);
+      if (!parsed.success) {
+        throw new ParseError(
+          `Invalid run_mode: '${typeof rawRunMode === 'string' ? rawRunMode : JSON.stringify(rawRunMode)}'. Must be one of: interactive, fill, research`,
+        );
+      }
+      runMode = parsed.data;
+    }
+
     // Build metadata
     const metadata: FormMetadata = {
       markformVersion: (markformSection.spec as string) ?? 'MF/0.1',
@@ -124,10 +139,15 @@ function extractFrontmatter(content: string): FrontmatterResult {
       roleInstructions:
         (frontmatter.role_instructions as Record<string, string>) ?? DEFAULT_ROLE_INSTRUCTIONS,
       ...(harnessConfig && { harnessConfig }),
+      ...(runMode && { runMode }),
     };
 
     return { frontmatter, body, metadata };
-  } catch (_error) {
+  } catch (error) {
+    // Re-throw ParseError as-is, wrap other errors
+    if (error instanceof ParseError) {
+      throw error;
+    }
     throw new ParseError('Failed to parse frontmatter YAML');
   }
 }

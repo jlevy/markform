@@ -3,6 +3,7 @@ markform:
   spec: MF/0.1
   title: Movie Research (Basic)
   description: Standard movie research form pulling ratings and key stats from IMDB, Rotten Tomatoes, and Metacritic.
+  run_mode: research
   roles:
     - user
     - agent

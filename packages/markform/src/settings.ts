@@ -103,6 +103,12 @@ export const DEFAULT_PRIORITY: FieldPriorityLevel = 'medium';
 export const DEFAULT_FORMS_DIR = './forms';
 
 /**
+ * Maximum forms to display in 'markform run' menu.
+ * Additional forms are not shown but can be run directly by path.
+ */
+export const MAX_FORMS_IN_MENU = 30;
+
+/**
  * The default port for the serve command.
  */
 export const DEFAULT_PORT = 3344;
