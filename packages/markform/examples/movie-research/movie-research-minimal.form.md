@@ -3,6 +3,7 @@ markform:
   spec: MF/0.1
   title: Movie Research (Minimal)
   description: Quick movie lookup with just the essentials (title, year, ratings, summary).
+  run_mode: research
   roles:
     - user
     - agent

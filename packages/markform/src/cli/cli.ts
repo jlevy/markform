@@ -20,11 +20,13 @@ import { registerFillCommand } from './commands/fill.js';
 import { registerInspectCommand } from './commands/inspect.js';
 import { registerReadmeCommand } from './commands/readme.js';
 import { registerReportCommand } from './commands/report.js';
+import { registerRunCommand } from './commands/run.js';
 import { registerSpecCommand } from './commands/spec.js';
 import { registerModelsCommand } from './commands/models.js';
 import { registerRenderCommand } from './commands/render.js';
 import { registerResearchCommand } from './commands/research.js';
 import { registerServeCommand } from './commands/serve.js';
+import { registerStatusCommand } from './commands/status.js';
 import { registerValidateCommand } from './commands/validate.js';
 import { OUTPUT_FORMATS } from './lib/shared.js';
 
@@ -56,7 +58,8 @@ function createProgram(): Command {
     .option('--quiet', 'Suppress non-essential output')
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--format <format>', `Output format: ${OUTPUT_FORMATS.join(', ')}`, 'console')
-    .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`);
+    .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`)
+    .option('--overwrite', 'Overwrite existing field values (default: continue/skip filled)');
 
   // Register commands
   // Help/docs first
@@ -75,7 +78,9 @@ function createProgram(): Command {
   registerRenderCommand(program);
   registerReportCommand(program);
   registerResearchCommand(program);
+  registerRunCommand(program);
   registerServeCommand(program);
+  registerStatusCommand(program);
   registerValidateCommand(program);
 
   return program;

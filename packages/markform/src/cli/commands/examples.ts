@@ -1,42 +1,21 @@
 /**
- * Examples command - Scaffold and fill example forms interactively.
+ * Examples command - Copy bundled example forms to the forms directory.
  *
- * Provides a complete workflow:
- * 1. Select an example form
- * 2. Scaffold it with a versioned filename
- * 3. Automatically run interactive fill for user-role fields
- * 4. Optionally run agent fill for remaining fields
- * 5. Export results in multiple formats
+ * This command provides a simple way to get started with markform by
+ * copying bundled example forms to your local forms directory.
+ *
+ * Usage:
+ *   markform examples              # Copy all bundled examples to ./forms/
+ *   markform examples --list       # List bundled examples (no copy)
+ *   markform examples --name=foo   # Copy specific example only
  */
 
-import type { Command } from 'commander';
-
-import * as p from '@clack/prompts';
 import { existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
+
+import type { Command } from 'commander';
 import pc from 'picocolors';
 
-import { parseForm } from '../../engine/parse.js';
-import { inspect } from '../../engine/inspect.js';
-import { applyPatches } from '../../engine/apply.js';
-import { exportMultiFormat } from '../lib/exportHelpers.js';
-import {
-  USER_ROLE,
-  AGENT_ROLE,
-  DEFAULT_MAX_TURNS,
-  DEFAULT_MAX_PATCHES_PER_TURN,
-  DEFAULT_MAX_ISSUES_PER_TURN,
-  DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
-  DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
-} from '../../settings.js';
-import { getFormsDir } from '../lib/paths.js';
-import { SUGGESTED_LLMS, hasWebSearchSupport, parseModelIdForDisplay } from '../../llms.js';
-import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
-import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
-import { formatTurnIssues } from '../lib/formatting.js';
-import { createHarness } from '../../harness/harness.js';
-import { createLiveAgent } from '../../harness/liveAgent.js';
-import { resolveModel, getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
 import {
   EXAMPLE_DEFINITIONS,
   getExampleById,
@@ -44,22 +23,14 @@ import {
   loadExampleContent,
   getAllExamplesWithMetadata,
 } from '../examples/exampleRegistry.js';
+import { getFormsDir } from '../lib/paths.js';
 import {
-  createSpinner,
   ensureFormsDir,
   formatPath,
   getCommandContext,
   logError,
-  logTiming,
   writeFile,
 } from '../lib/shared.js';
-import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
-import {
-  runInteractiveFill,
-  showInteractiveIntro,
-  showInteractiveOutro,
-} from '../lib/interactivePrompts.js';
-import { showFileViewerChooser, type FileOption } from '../lib/fileViewer.js';
 
 /**
  * Print non-interactive list of examples.
@@ -78,575 +49,118 @@ function printExamplesList(): void {
 }
 
 /**
- * Display API availability status at startup.
- */
-function showApiStatus(): void {
-  console.log('API Status:');
-  for (const [provider, _models] of Object.entries(SUGGESTED_LLMS)) {
-    const info = getProviderInfo(provider as ProviderName);
-    const hasKey = !!process.env[info.envVar];
-    const status = hasKey ? pc.green('✓') : '○';
-    const envVar = hasKey ? info.envVar : pc.yellow(info.envVar);
-    console.log(`  ${status} ${provider} (${envVar})`);
-  }
-  console.log('');
-}
-
-/**
- * Build model options for the select prompt.
- */
-function buildModelOptions(): { value: string; label: string; hint?: string }[] {
-  const options: { value: string; label: string; hint?: string }[] = [];
-
-  for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
-    const info = getProviderInfo(provider as ProviderName);
-    const hasKey = !!process.env[info.envVar];
-    const keyStatus = hasKey ? pc.green('✓') : '○';
-
-    for (const model of models) {
-      options.push({
-        value: `${provider}/${model}`,
-        label: `${provider}/${model}`,
-        hint: `${keyStatus} ${info.envVar}`,
-      });
-    }
-  }
-
-  options.push({
-    value: 'custom',
-    label: 'Enter custom model ID...',
-    hint: 'provider/model-id format',
-  });
-
-  return options;
-}
-
-/**
- * Prompt user to select a model for agent fill.
- */
-async function promptForModel(): Promise<string | null> {
-  const modelOptions = buildModelOptions();
-
-  const selection = await p.select({
-    message: 'Select LLM model:',
-    options: modelOptions,
-  });
-
-  if (p.isCancel(selection)) {
-    return null;
-  }
-
-  if (selection === 'custom') {
-    const customModel = await p.text({
-      message: 'Model ID (provider/model-id):',
-      placeholder: 'anthropic/claude-sonnet-4-20250514',
-      validate: (value) => {
-        if (!value.includes('/')) {
-          return 'Format: provider/model-id (e.g., anthropic/claude-sonnet-4-20250514)';
-        }
-        return undefined;
-      },
-    });
-
-    if (p.isCancel(customModel)) {
-      return null;
-    }
-
-    return customModel;
-  }
-
-  return selection;
-}
-
-/**
- * Build model options filtered to providers with web search support.
- */
-function buildWebSearchModelOptions(): { value: string; label: string; hint?: string }[] {
-  const options: { value: string; label: string; hint?: string }[] = [];
-
-  for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
-    // Only include providers with web search support
-    if (!hasWebSearchSupport(provider)) {
-      continue;
-    }
-
-    const info = getProviderInfo(provider as ProviderName);
-    const hasKey = !!process.env[info.envVar];
-    const keyStatus = hasKey ? pc.green('✓') : '○';
-
-    for (const model of models) {
-      options.push({
-        value: `${provider}/${model}`,
-        label: `${provider}/${model}`,
-        hint: `${keyStatus} ${info.envVar}`,
-      });
-    }
-  }
-
-  options.push({
-    value: 'custom',
-    label: 'Enter custom model ID...',
-    hint: 'provider/model-id format',
-  });
-
-  return options;
-}
-
-/**
- * Prompt user to select a model with web search capability for research workflow.
- */
-async function promptForWebSearchModel(): Promise<string | null> {
-  const modelOptions = buildWebSearchModelOptions();
-
-  if (modelOptions.length === 1) {
-    // Only "custom" option available, no web-search-capable providers configured
-    p.log.warn('No web-search-capable providers found. OpenAI, Google, or xAI API key required.');
-  }
-
-  const selection = await p.select({
-    message: 'Select LLM model (web search required):',
-    options: modelOptions,
-  });
-
-  if (p.isCancel(selection)) {
-    return null;
-  }
-
-  if (selection === 'custom') {
-    const customModel = await p.text({
-      message: 'Model ID (provider/model-id):',
-      placeholder: 'openai/gpt-5-mini',
-      validate: (value) => {
-        if (!value.includes('/')) {
-          return 'Format: provider/model-id (e.g., openai/gpt-5-mini)';
-        }
-        return undefined;
-      },
-    });
-
-    if (p.isCancel(customModel)) {
-      return null;
-    }
-
-    return customModel;
-  }
-
-  return selection;
-}
-
-/**
- * Run the agent fill workflow.
- * Accepts optional harness config overrides - research uses different defaults.
- */
-async function runAgentFill(
-  form: ParsedForm,
-  modelId: string,
-  _outputPath: string,
-  configOverrides?: Partial<HarnessConfig>,
-): Promise<{ success: boolean; turnCount: number }> {
-  // Extract provider and model name for spinner display
-  const { provider: providerName, model: modelName } = parseModelIdForDisplay(modelId);
-
-  // Use enhanced spinner for model resolution
-  const resolveSpinner = createSpinner({
-    type: 'compute',
-    operation: `Resolving model: ${modelId}`,
-  });
-
-  let model, provider;
-  try {
-    const result = await resolveModel(modelId);
-    model = result.model;
-    provider = result.provider;
-    resolveSpinner.stop(`✓ Model resolved: ${modelId}`);
-  } catch (error) {
-    resolveSpinner.error('Model resolution failed');
-    throw error;
-  }
-
-  // Create harness config with defaults, then apply overrides
-  const harnessConfig: Partial<HarnessConfig> = {
-    maxTurns: configOverrides?.maxTurns ?? DEFAULT_MAX_TURNS,
-    maxPatchesPerTurn: configOverrides?.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN,
-    maxIssuesPerTurn: configOverrides?.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN,
-    targetRoles: [AGENT_ROLE],
-    fillMode: 'continue',
-  };
-
-  // Log config for visibility
-  console.log('');
-  console.log(
-    `Config: max_turns=${harnessConfig.maxTurns}, max_issues_per_turn=${harnessConfig.maxIssuesPerTurn}, max_patches_per_turn=${harnessConfig.maxPatchesPerTurn}`,
-  );
-
-  // Create harness and agent
-  const harness = createHarness(form, harnessConfig);
-  const agent = createLiveAgent({ model, provider, targetRole: AGENT_ROLE, enableWebSearch: true });
-
-  // Run harness loop with verbose output
-  p.log.step(pc.bold('Agent fill in progress...'));
-  let stepResult = harness.step();
-
-  while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-    console.log(
-      `  ${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
-    );
-
-    // Create spinner for LLM call with provider, model, and turn number
-    const llmSpinner = createSpinner({
-      type: 'api',
-      provider: providerName,
-      model: modelName,
-      turnNumber: stepResult.turnNumber,
-    });
-
-    // Generate patches from agent
-    let response;
-    try {
-      response = await agent.generatePatches(
-        stepResult.issues,
-        harness.getForm(),
-        harnessConfig.maxPatchesPerTurn!,
-      );
-      llmSpinner.stop();
-    } catch (error) {
-      llmSpinner.error('LLM call failed');
-      throw error;
-    }
-    const { patches, stats } = response;
-
-    // Log each patch with field id, type, and value (truncated)
-    for (const patch of patches) {
-      const typeName = formatPatchType(patch);
-      const value = formatPatchValue(patch);
-      // Some patches (add_note, remove_note) don't have fieldId
-      const fieldId = 'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
-      if (fieldId) {
-        console.log(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`);
-      } else {
-        console.log(`    (${typeName}) = ${pc.green(value)}`);
-      }
-    }
-
-    // Apply patches
-    stepResult = harness.apply(patches, stepResult.issues);
-    const tokenInfo = stats
-      ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
-      : '';
-    console.log(
-      `    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining${tokenInfo}`,
-    );
-
-    if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-      stepResult = harness.step();
-    }
-  }
-
-  if (stepResult.isComplete) {
-    p.log.success(pc.green(`Form completed in ${harness.getTurnNumber()} turn(s)`));
-  } else {
-    p.log.warn(pc.yellow(`Max turns reached (${harnessConfig.maxTurns})`));
-  }
-
-  // Copy final form state
-  Object.assign(form, harness.getForm());
-
-  return {
-    success: stepResult.isComplete,
-    turnCount: harness.getTurnNumber(),
-  };
-}
-
-/**
- * Run the interactive example scaffolding and filling flow.
+ * Copy an example form to the forms directory.
  *
- * @param preselectedId Optional example ID to pre-select
- * @param formsDirOverride Optional forms directory override from CLI option
+ * @returns true if copied, false if skipped
  */
-async function runInteractiveFlow(
-  preselectedId?: string,
-  formsDirOverride?: string,
-): Promise<void> {
-  const startTime = Date.now();
-
-  p.intro(pc.bgCyan(pc.black(' markform examples ')));
-
-  // Ensure forms directory exists (use override if provided)
-  const formsDir = getFormsDir(formsDirOverride);
-  await ensureFormsDir(formsDir);
-
-  // Show API availability status
-  showApiStatus();
-
-  // Step 1: Select example (or use preselected)
-  let selectedId = preselectedId;
-
-  if (!selectedId) {
-    const examples = getAllExamplesWithMetadata();
-    const selection = await p.select({
-      message: 'Select an example form to scaffold:',
-      options: examples.map((example) => ({
-        value: example.id,
-        label: example.title ?? example.id,
-        hint: example.description,
-      })),
-    });
-
-    if (p.isCancel(selection)) {
-      p.cancel('Cancelled.');
-      process.exit(0);
-    }
-
-    selectedId = selection;
-  }
-
-  const example = getExampleById(selectedId);
+async function copyExample(
+  exampleId: string,
+  formsDir: string,
+  overwrite: boolean,
+  _quiet: boolean,
+): Promise<{ copied: boolean; skipped: boolean; path: string }> {
+  const example = getExampleById(exampleId);
   if (!example) {
-    p.cancel(`Unknown example: ${selectedId}`);
-    process.exit(1);
+    throw new Error(`Unknown example: ${exampleId}`);
   }
 
-  // Step 2: Prompt for output filename (use filled naming convention)
-  // Generate versioned path in forms directory
-  const defaultOutputPath = generateVersionedPathInFormsDir(example.filename, formsDir);
-  const defaultFilename = basename(defaultOutputPath);
-  const filenameResult = await p.text({
-    message: `Output filename (in ${formatPath(formsDir)}):`,
-    initialValue: defaultFilename,
-    validate: (value) => {
-      if (!value.trim()) {
-        return 'Filename is required';
-      }
-      if (!value.endsWith('.form.md') && !value.endsWith('.md')) {
-        return 'Filename should end with .form.md or .md';
-      }
-      return undefined;
-    },
-  });
+  const outputPath = join(formsDir, example.filename);
 
-  if (p.isCancel(filenameResult)) {
-    p.cancel('Cancelled.');
-    process.exit(0);
-  }
-
-  const filename = filenameResult;
-  const outputPath = join(formsDir, filename);
-
-  // Step 3: Check for existing file
+  // Check if file exists
   if (existsSync(outputPath)) {
-    const overwrite = await p.confirm({
-      message: `${filename} already exists. Overwrite?`,
-      initialValue: false,
-    });
-
-    if (p.isCancel(overwrite) || !overwrite) {
-      p.cancel('Cancelled.');
-      process.exit(0);
+    if (!overwrite) {
+      return { copied: false, skipped: true, path: outputPath };
     }
   }
 
-  // Step 4: Load and write the example
-  let content: string;
-  try {
-    content = loadExampleContent(selectedId);
-    await writeFile(outputPath, content);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    p.cancel(`Failed to write file: ${message}`);
-    process.exit(1);
-  }
+  // Load and write the example
+  const content = loadExampleContent(exampleId);
+  await writeFile(outputPath, content);
 
-  p.log.success(`Created ${formatPath(outputPath)}`);
+  return { copied: true, skipped: false, path: outputPath };
+}
 
-  // Step 5: Parse the form and run interactive fill
-  const form = parseForm(content);
-  const targetRoles = [USER_ROLE];
+/**
+ * Copy all examples to the forms directory.
+ */
+async function copyAllExamples(
+  formsDir: string,
+  overwrite: boolean,
+  quiet: boolean,
+): Promise<void> {
+  const examples = getAllExamplesWithMetadata();
+  const total = examples.length;
 
-  // Track output paths from user fill (will be used for file viewer if no agent fill)
-  let userFillOutputs: { reportPath: string; yamlPath: string; formPath: string } | null = null;
-
-  // Inspect form to get issues for user role
-  const inspectResult = inspect(form, { targetRoles });
-  const fieldIssues = inspectResult.issues.filter((i) => i.scope === 'field');
-  const uniqueFieldIds = new Set(fieldIssues.map((i) => i.ref));
-
-  if (uniqueFieldIds.size === 0) {
-    p.log.info('No user-role fields to fill in this example.');
-    // Check if there are agent fields
-    const agentInspect = inspect(form, { targetRoles: [AGENT_ROLE] });
-    const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === 'field');
-
-    if (agentFieldIssues.length === 0) {
-      logTiming(
-        { verbose: false, format: 'console', dryRun: false, quiet: false },
-        'Total time',
-        Date.now() - startTime,
-      );
-      p.outro('Form scaffolded with no fields to fill.');
-      return;
-    }
-    // Skip to agent fill
-  } else {
-    // Show interactive fill intro
-    const formTitle = form.schema.title ?? form.schema.id;
-    showInteractiveIntro(formTitle, targetRoles.join(', '), uniqueFieldIds.size);
-
-    // Run interactive prompts
-    const { patches, cancelled } = await runInteractiveFill(form, inspectResult.issues);
-
-    if (cancelled) {
-      showInteractiveOutro(0, true);
-      process.exit(1);
-    }
-
-    // Apply patches to form
-    if (patches.length > 0) {
-      applyPatches(form, patches);
-    }
-
-    // Export filled form in all formats (examples command always exports all formats)
-    userFillOutputs = await exportMultiFormat(form, outputPath);
-
-    showInteractiveOutro(patches.length, false);
+  if (!quiet) {
+    console.log(`Copying ${total} example forms to ${formatPath(formsDir)}...`);
     console.log('');
-    p.log.success('Outputs:');
-    console.log(`  ${formatPath(userFillOutputs.reportPath)}  ${pc.dim('(output report)')}`);
-    console.log(`  ${formatPath(userFillOutputs.yamlPath)}  ${pc.dim('(output values)')}`);
-    console.log(`  ${formatPath(userFillOutputs.formPath)}  ${pc.dim('(filled markform source)')}`);
-
-    logTiming(
-      { verbose: false, format: 'console', dryRun: false, quiet: false },
-      'Fill time',
-      Date.now() - startTime,
-    );
   }
 
-  // Step 6: Check for agent-role fields and prompt for agent fill
-  const agentInspect = inspect(form, { targetRoles: [AGENT_ROLE] });
-  const agentFieldIssues = agentInspect.issues.filter((i) => i.scope === 'field');
-  const isResearchExample = example.type === 'research';
+  let copied = 0;
+  let skipped = 0;
 
-  if (agentFieldIssues.length > 0) {
+  for (const example of examples) {
+    const result = await copyExample(example.id, formsDir, overwrite, quiet);
+
+    if (result.copied) {
+      copied++;
+      if (!quiet) {
+        console.log(`  ${pc.green('✓')} ${example.filename}`);
+      }
+    } else if (result.skipped) {
+      skipped++;
+      if (!quiet) {
+        console.log(`  ${pc.yellow('○')} ${example.filename} ${pc.dim('(exists, skipped)')}`);
+      }
+    }
+  }
+
+  if (!quiet) {
     console.log('');
-    const workflowLabel = isResearchExample ? 'research' : 'agent fill';
-    p.log.info(`This form has ${agentFieldIssues.length} agent-role field(s) remaining.`);
-
-    const confirmMessage = isResearchExample
-      ? 'Run research now? (requires web search)'
-      : 'Run agent fill now?';
-    const runAgent = await p.confirm({
-      message: confirmMessage,
-      initialValue: true,
-    });
-
-    if (p.isCancel(runAgent) || !runAgent) {
-      console.log('');
-      const cliCommand = isResearchExample
-        ? `  markform research ${formatPath(outputPath)} --model=<provider/model>`
-        : `  markform fill ${formatPath(outputPath)} --model=<provider/model>`;
-      console.log(`You can run ${workflowLabel} later with:`);
-      console.log(cliCommand);
-
-      // Offer to view user fill output files (if any were created)
-      if (userFillOutputs) {
-        const files: FileOption[] = [
-          { path: userFillOutputs.reportPath, label: 'Report', hint: 'output report' },
-          { path: userFillOutputs.yamlPath, label: 'Values', hint: 'output values' },
-          { path: userFillOutputs.formPath, label: 'Form', hint: 'filled markform source' },
-        ];
-        await showFileViewerChooser(files);
-      }
-
-      p.outro('Happy form filling!');
-      return;
-    }
-
-    // Step 7: Model selection - use web search prompt for research examples
-    const modelId = isResearchExample ? await promptForWebSearchModel() : await promptForModel();
-    if (!modelId) {
-      p.cancel('Cancelled.');
-      process.exit(0);
-    }
-
-    // Step 8: Agent output filename (in forms directory)
-    const agentDefaultOutputPath = generateVersionedPathInFormsDir(outputPath, formsDir);
-    const agentDefaultFilename = basename(agentDefaultOutputPath);
-    const agentFilenameResult = await p.text({
-      message: `Agent output filename (in ${formatPath(formsDir)}):`,
-      initialValue: agentDefaultFilename,
-      validate: (value) => {
-        if (!value.trim()) {
-          return 'Filename is required';
-        }
-        return undefined;
-      },
-    });
-
-    if (p.isCancel(agentFilenameResult)) {
-      p.cancel('Cancelled.');
-      process.exit(0);
-    }
-
-    const agentOutputPath = join(formsDir, agentFilenameResult);
-
-    // Step 9: Run agent fill (research examples use different defaults)
-    const agentStartTime = Date.now();
-    const timingLabel = isResearchExample ? 'Research time' : 'Agent fill time';
-
-    // Research examples use tighter per-turn limits for focused web search
-    const configOverrides = isResearchExample
-      ? {
-          maxIssuesPerTurn: DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
-          maxPatchesPerTurn: DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
-        }
-      : undefined;
-
-    try {
-      const { success } = await runAgentFill(form, modelId, agentOutputPath, configOverrides);
-
-      logTiming(
-        { verbose: false, format: 'console', dryRun: false, quiet: false },
-        timingLabel,
-        Date.now() - agentStartTime,
+    if (skipped > 0) {
+      console.log(
+        pc.yellow(`Skipped ${skipped} existing file(s). Use --overwrite to replace them.`),
       );
-
-      // Step 10: Multi-format export
-      const { reportPath, yamlPath, formPath } = await exportMultiFormat(form, agentOutputPath);
-
-      console.log('');
-      const successMessage = isResearchExample
-        ? 'Research complete. Outputs:'
-        : 'Agent fill complete. Outputs:';
-      p.log.success(successMessage);
-      console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
-      console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
-      console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
-
-      if (!success) {
-        p.log.warn('Agent did not complete all fields. You may need to run it again.');
-      }
-
-      // Offer to view output files
-      const agentFillFiles: FileOption[] = [
-        { path: reportPath, label: 'Report', hint: 'output report' },
-        { path: yamlPath, label: 'Values', hint: 'output values' },
-        { path: formPath, label: 'Form', hint: 'filled markform source' },
-      ];
-      await showFileViewerChooser(agentFillFiles);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const failMessage = isResearchExample ? 'Research failed' : 'Agent fill failed';
-      p.log.error(`${failMessage}: ${message}`);
-      console.log('');
-      console.log('You can try again with:');
-      const retryCommand = isResearchExample
-        ? `  markform research ${formatPath(outputPath)} --model=${modelId}`
-        : `  markform fill ${formatPath(outputPath)} --model=${modelId}`;
-      console.log(retryCommand);
     }
+    console.log(pc.green(`Done. ${copied} file(s) copied.`));
+    console.log(pc.dim(`Run 'markform run' to try one.`));
+  }
+}
+
+/**
+ * Copy a specific example to the forms directory.
+ */
+async function copySingleExample(
+  exampleId: string,
+  formsDir: string,
+  overwrite: boolean,
+  quiet: boolean,
+): Promise<void> {
+  const example = getExampleById(exampleId);
+  if (!example) {
+    throw new Error(`Unknown example: ${exampleId}`);
   }
 
-  p.outro('Happy form filling!');
+  if (!quiet) {
+    console.log(`Copying ${example.filename} to ${formatPath(formsDir)}...`);
+  }
+
+  const result = await copyExample(exampleId, formsDir, overwrite, quiet);
+
+  if (result.copied) {
+    if (!quiet) {
+      console.log(`  ${pc.green('✓')} ${example.filename}`);
+      console.log('');
+      console.log(pc.green('Done.'));
+      console.log(pc.dim(`Run 'markform run ${example.filename}' to try it.`));
+    }
+  } else if (result.skipped) {
+    if (!quiet) {
+      console.log(`  ${pc.yellow('○')} ${example.filename} ${pc.dim('(exists, skipped)')}`);
+      console.log('');
+      console.log(pc.yellow(`File already exists. Use --overwrite to replace it.`));
+    }
+  }
 }
 
 /**
@@ -655,9 +169,9 @@ async function runInteractiveFlow(
 export function registerExamplesCommand(program: Command): void {
   program
     .command('examples')
-    .description('Try out some example forms interactively using the console')
-    .option('--list', 'List available examples without interactive selection')
-    .option('--name <example>', 'Select example by ID (still prompts for filename)')
+    .description('Copy bundled example forms to the forms directory')
+    .option('--list', 'List available examples without copying')
+    .option('--name <example>', 'Copy specific example by ID')
     .action(async (options: { list?: boolean; name?: string }, cmd: Command) => {
       const ctx = getCommandContext(cmd);
 
@@ -667,6 +181,10 @@ export function registerExamplesCommand(program: Command): void {
           printExamplesList();
           return;
         }
+
+        // Ensure forms directory exists
+        const formsDir = getFormsDir(ctx.formsDir);
+        await ensureFormsDir(formsDir);
 
         // Validate --name if provided
         if (options.name) {
@@ -679,10 +197,13 @@ export function registerExamplesCommand(program: Command): void {
             }
             process.exit(1);
           }
-        }
 
-        // Run interactive flow with optional formsDir override
-        await runInteractiveFlow(options.name, ctx.formsDir);
+          // Copy single example
+          await copySingleExample(options.name, formsDir, ctx.overwrite, ctx.quiet);
+        } else {
+          // Copy all examples
+          await copyAllExamples(formsDir, ctx.overwrite, ctx.quiet);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logError(message);

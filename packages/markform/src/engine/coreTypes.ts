@@ -461,6 +461,14 @@ export interface FrontmatterHarnessConfig {
   maxIssuesPerTurn?: number;
 }
 
+/**
+ * Run mode for the form - determines how 'markform run' executes.
+ * - interactive: Launch interactive fill for user-role fields
+ * - fill: Prompt for model, run agent fill
+ * - research: Prompt for web-search model, run research fill
+ */
+export type RunMode = 'interactive' | 'fill' | 'research';
+
 /** Form-level metadata from YAML frontmatter, including role configuration */
 export interface FormMetadata {
   markformVersion: string;
@@ -468,6 +476,8 @@ export interface FormMetadata {
   roleInstructions: Record<string, string>;
   /** Optional harness configuration from frontmatter */
   harnessConfig?: FrontmatterHarnessConfig;
+  /** How this form should be executed by 'markform run' */
+  runMode?: RunMode;
 }
 
 // =============================================================================
@@ -1294,12 +1304,16 @@ export const FrontmatterHarnessConfigSchema = z.object({
   maxIssuesPerTurn: z.number().int().positive().optional(),
 });
 
+// Run mode schema
+export const RunModeSchema = z.enum(['interactive', 'fill', 'research']);
+
 // Form metadata schema
 export const FormMetadataSchema = z.object({
   markformVersion: z.string(),
   roles: z.array(z.string()).min(1),
   roleInstructions: z.record(z.string(), z.string()),
   harnessConfig: FrontmatterHarnessConfigSchema.optional(),
+  runMode: RunModeSchema.optional(),
 });
 
 // Validation schemas

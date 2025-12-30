@@ -223,6 +223,7 @@ export function getCommandContext(command: Command): CommandContext {
     quiet?: boolean;
     format?: OutputFormat;
     formsDir?: string;
+    overwrite?: boolean;
   }>();
   return {
     dryRun: opts.dryRun ?? false,
@@ -230,6 +231,7 @@ export function getCommandContext(command: Command): CommandContext {
     quiet: opts.quiet ?? false,
     format: opts.format ?? 'console',
     formsDir: opts.formsDir,
+    overwrite: opts.overwrite ?? false,
   };
 }
 

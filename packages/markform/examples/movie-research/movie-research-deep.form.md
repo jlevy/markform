@@ -3,6 +3,7 @@ markform:
   spec: MF/0.1
   title: Movie Research (Deep)
   description: Comprehensive movie research form with ratings, box office, cast/crew, technical specs, streaming availability, and cultural analysis.
+  run_mode: research
   roles:
     - user
     - agent

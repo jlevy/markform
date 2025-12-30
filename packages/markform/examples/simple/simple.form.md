@@ -3,6 +3,7 @@ markform:
   spec: MF/0.1
   title: Simple Test Form
   description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
+  run_mode: interactive
   roles:
     - user
   role_instructions:

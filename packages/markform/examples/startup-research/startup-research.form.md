@@ -1,6 +1,7 @@
 ---
 markform:
   spec: MF/0.1
+  run_mode: research
   roles:
     - user
     - agent
