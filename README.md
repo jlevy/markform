@@ -13,27 +13,31 @@ The entire workflow is visible in a token-friendly text file you can read, diff,
 version control.
 
 Syntax is [Markdoc](https://github.com/markdoc/markdoc), which is Markdown extended with
-`{% tag %}` annotations, so LLMs are already quite good at writing Markform docs.
+Jinja-style `{% tag %}` annotations.
+LLMs are already quite good at writing Markform docs.
 
 ## Why?
 
 Many agent workflow frameworks emphasize *prompts* and the *flow* of information (the
-*how*) over the desired *structure* of the results (the *what*). Markform lets you build
-agent workflows by structuring and validating *what* you want (the structure of
-information, validations, and reviews encoded in a form) instead of *how* to run a
-workflow as code (via explicit workflows or just an unstructured swarm of agents).
+*how*) over the desired *structure* of the results (the *what*). Markform lets you focus
+on *what* information matters (the structure of instructions, process, validations, and
+reviews encoded in a form) instead of *how* to run a workflow (by spending time encoding
+it all in code, yet another agent framework, or workflow GUIs).
 
-For centuries, humans have used paper forms to systematize and manage processes.
-A well-designed form with instructions, field definitions, and validations is a concise
-way to share context: background knowledge, goals, process rules, and memories.
+For centuries, humans have used paper forms and
+[checklists](https://en.wikipedia.org/wiki/The_Checklist_Manifesto) to systematize and
+manage processes. A well-designed form with instructions, field definitions, and
+validations is a concise way to share context: background knowledge, goals, process
+rules, and memories.
 I don’t think AI changes this essential aspect of knowledge work.
-It’s time to bring bureaucracy to the agents.
+It’s time to bring bureaucracy to the agents!
 
-There’s one more key benefit to this approach: LLMs are good at writing forms!
-Because the syntax is just Markdown with Jinja-style tags, agents can convert an
-informal Markdown doc describing a process to a precise Markform process easily.
-
-(For more, see [the FAQ](#faq).)
+There’s one more key benefit to this approach: Because LLMs are good at using Markdown
+and Jinja-style tags, agents can edit forms reliably.
+Agents can help with the meta-loop of creating or improving the form.
+You can convert any text document describing a process to a precise Markform process
+that you can validate, review, and improve.
+See [the FAQ](#faq) for more.
 
 ## Quick Start
 
@@ -74,7 +78,7 @@ npm install markform
 A `.form.md` file is simply a Markdoc file.
 It combines YAML frontmatter with Markdoc-tagged content:
 
-```markdown
+```jinja
 ---
 markform:
   spec: MF/0.1
@@ -308,24 +312,25 @@ markform models
 markform --help
 ```
 
-## Supported Providers
+## API Key Setup
 
 Standard LLMs can be used to fill in forms or create research reports from form
-templates. The package currently has support for these models built in, and enables web
-search tools for them if possible.
+templates. The package currently has support for these providers built in, and enables
+web search tools for them if possible.
 
-| Provider | Env Variable | Example Models |
-| --- | --- | --- |
-| openai | `OPENAI_API_KEY` | gpt-5-mini, gpt-5.1, gpt-5.2 |
-| anthropic | `ANTHROPIC_API_KEY` | claude-sonnet-4-5, claude-opus-4-5 |
-| google | `GOOGLE_API_KEY` | gemini-2.5-pro, gemini-2.5-flash |
-| xai | `XAI_API_KEY` | grok-4, grok-4-fast |
-| deepseek | `DEEPSEEK_API_KEY` | deepseek-chat, deepseek-reasoner |
+| Provider | Env Variable |
+| --- | --- |
+| openai | `OPENAI_API_KEY` |
+| anthropic | `ANTHROPIC_API_KEY` |
+| google | `GOOGLE_API_KEY` |
+| xai | `XAI_API_KEY` |
+| deepseek | `DEEPSEEK_API_KEY` |
 
 Set the appropriate environment variable for your provider before running `markform
-fill`. See
+fill`. Run `markform models` to see available models.
+See
 [`src/settings.ts`](https://github.com/jlevy/markform/blob/main/packages/markform/src/settings.ts)
-for the full list of models.
+for default model settings.
 
 ## Architecture
 
@@ -478,7 +483,7 @@ See
 for more thoughts on how this works.
 And see [the complete history of
 specs](https://github.com/jlevy/markform/tree/main/docs/project/specs/done) for examples
-of how everything is done with specs and with
+of how everything is done with specs.
 
 Although I didn’t have to write much there was a *lot* of management and review by me
 and a lot of thought and iteration for all design decisions.
