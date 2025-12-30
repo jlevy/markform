@@ -21,10 +21,8 @@ import pc from 'picocolors';
 import { parseForm } from '../../engine/parse.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
-import type { ParsedForm, HarnessConfig } from '../../engine/coreTypes.js';
-import { createHarness } from '../../harness/harness.js';
-import { createLiveAgent } from '../../harness/liveAgent.js';
-import { resolveModel, getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
+import type { ParsedForm } from '../../engine/coreTypes.js';
+import { getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
 import {
   AGENT_ROLE,
   USER_ROLE,
@@ -36,7 +34,7 @@ import {
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
 } from '../../settings.js';
 import { getFormsDir } from '../lib/paths.js';
-import { SUGGESTED_LLMS, hasWebSearchSupport, parseModelIdForDisplay } from '../../llms.js';
+import { SUGGESTED_LLMS, hasWebSearchSupport } from '../../llms.js';
 import { determineRunMode, formatRunModeSource } from '../lib/runMode.js';
 import { exportMultiFormat } from '../lib/exportHelpers.js';
 import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
@@ -45,8 +43,7 @@ import {
   showInteractiveIntro,
   showInteractiveOutro,
 } from '../lib/interactivePrompts.js';
-import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
-import { formatTurnIssues, formatFormLabel, formatFormHint } from '../lib/formatting.js';
+import { formatFormLabel, formatFormHint } from '../lib/formatting.js';
 import type { FormDisplayInfo, ExportResult } from '../lib/cliTypes.js';
 import {
   getExampleOrder,
@@ -54,7 +51,6 @@ import {
   DEFAULT_EXAMPLE_ID,
 } from '../examples/exampleRegistry.js';
 import {
-  createSpinner,
   ensureFormsDir,
   formatPath,
   getCommandContext,
@@ -63,7 +59,10 @@ import {
   logTiming,
   logVerbose,
   readFile,
+  type CommandContext,
 } from '../lib/shared.js';
+import { createFillLoggingCallbacks } from '../lib/fillLogging.js';
+import { fillForm } from '../../harness/programmaticFill.js';
 
 // =============================================================================
 // Types
@@ -317,7 +316,7 @@ async function runInteractiveWorkflow(
 }
 
 /**
- * Run agent fill workflow.
+ * Run agent fill workflow using fillForm with logging callbacks.
  * @returns ExportResult with paths to output files
  */
 async function runAgentFillWorkflow(
@@ -327,121 +326,56 @@ async function runAgentFillWorkflow(
   filePath: string,
   isResearch: boolean,
   overwrite: boolean,
+  ctx: CommandContext,
 ): Promise<ExportResult> {
   const startTime = Date.now();
-  const { provider: providerName, model: modelName } = parseModelIdForDisplay(modelId);
-
-  // Resolve model
-  const resolveSpinner = createSpinner({
-    type: 'compute',
-    operation: `Resolving model: ${modelId}`,
-  });
-
-  let model, provider;
-  try {
-    const result = await resolveModel(modelId);
-    model = result.model;
-    provider = result.provider;
-    resolveSpinner.stop(`✓ Model resolved: ${modelId}`);
-  } catch (error) {
-    resolveSpinner.error('Model resolution failed');
-    throw error;
-  }
 
   // Config based on mode
-  const harnessConfig: Partial<HarnessConfig> = {
-    maxTurns: DEFAULT_MAX_TURNS,
-    maxPatchesPerTurn: isResearch
-      ? DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN
-      : DEFAULT_MAX_PATCHES_PER_TURN,
-    maxIssuesPerTurn: isResearch
-      ? DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN
-      : DEFAULT_MAX_ISSUES_PER_TURN,
-    targetRoles: [AGENT_ROLE],
-    fillMode: overwrite ? 'overwrite' : 'continue',
-  };
+  const maxTurns = DEFAULT_MAX_TURNS;
+  const maxPatchesPerTurn = isResearch
+    ? DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN
+    : DEFAULT_MAX_PATCHES_PER_TURN;
+  const maxIssuesPerTurn = isResearch
+    ? DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN
+    : DEFAULT_MAX_ISSUES_PER_TURN;
 
-  console.log('');
-  console.log(
-    `Config: max_turns=${harnessConfig.maxTurns}, max_issues_per_turn=${harnessConfig.maxIssuesPerTurn}, max_patches_per_turn=${harnessConfig.maxPatchesPerTurn}`,
+  logVerbose(
+    ctx,
+    `Config: max_turns=${maxTurns}, max_issues_per_turn=${maxIssuesPerTurn}, max_patches_per_turn=${maxPatchesPerTurn}`,
   );
 
-  // Create harness and agent
-  const harness = createHarness(form, harnessConfig);
-  const agent = createLiveAgent({
-    model,
-    provider,
-    targetRole: AGENT_ROLE,
-    enableWebSearch: isResearch,
-  });
+  // Create logging callbacks
+  const callbacks = createFillLoggingCallbacks(ctx);
 
-  // Run harness loop
+  // Run form fill
   const workflowLabel = isResearch ? 'Research' : 'Agent fill';
   p.log.step(pc.bold(`${workflowLabel} in progress...`));
-  let stepResult = harness.step();
 
-  while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-    console.log(
-      `  ${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
-    );
+  const result = await fillForm({
+    form,
+    model: modelId,
+    maxTurns,
+    maxPatchesPerTurn,
+    maxIssuesPerTurn,
+    targetRoles: [AGENT_ROLE],
+    fillMode: overwrite ? 'overwrite' : 'continue',
+    enableWebSearch: isResearch,
+    callbacks,
+  });
 
-    const llmSpinner = createSpinner({
-      type: 'api',
-      provider: providerName,
-      model: modelName,
-      turnNumber: stepResult.turnNumber,
-    });
-
-    let response;
-    try {
-      response = await agent.generatePatches(
-        stepResult.issues,
-        harness.getForm(),
-        harnessConfig.maxPatchesPerTurn!,
-      );
-      llmSpinner.stop();
-    } catch (error) {
-      llmSpinner.error('LLM call failed');
-      throw error;
-    }
-    const { patches, stats } = response;
-
-    // Log patches
-    for (const patch of patches) {
-      const typeName = formatPatchType(patch);
-      const value = formatPatchValue(patch);
-      const fieldId = 'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
-      if (fieldId) {
-        console.log(`    ${pc.cyan(fieldId)} (${typeName}) = ${pc.green(value)}`);
-      } else {
-        console.log(`    (${typeName}) = ${pc.green(value)}`);
-      }
-    }
-
-    // Apply patches
-    stepResult = harness.apply(patches, stepResult.issues);
-    const tokenInfo = stats
-      ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
-      : '';
-    console.log(
-      `    ${patches.length} patch(es) applied, ${stepResult.issues.length} remaining${tokenInfo}`,
-    );
-
-    if (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
-      stepResult = harness.step();
-    }
-  }
-
-  if (stepResult.isComplete) {
-    p.log.success(pc.green(`Form completed in ${harness.getTurnNumber()} turn(s)`));
+  // Check result
+  if (result.status.ok) {
+    p.log.success(pc.green(`Form completed in ${result.turns} turn(s)`));
+  } else if (result.status.reason === 'max_turns') {
+    p.log.warn(pc.yellow(`Max turns reached (${maxTurns})`));
   } else {
-    p.log.warn(pc.yellow(`Max turns reached (${harnessConfig.maxTurns})`));
+    throw new Error(result.status.message ?? `Fill failed: ${result.status.reason}`);
   }
 
   // Export
   await ensureFormsDir(formsDir);
   const outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
-  const exportResult = await exportMultiFormat(harness.getForm(), outputPath);
+  const exportResult = await exportMultiFormat(result.form, outputPath);
 
   console.log('');
   p.log.success(`${workflowLabel} complete. Outputs:`);
@@ -450,11 +384,7 @@ async function runAgentFillWorkflow(
   console.log(`  ${formatPath(exportResult.formPath)}  ${pc.dim('(filled markform source)')}`);
   console.log(`  ${formatPath(exportResult.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
-  logTiming(
-    { verbose: false, format: 'console', dryRun: false, quiet: false, overwrite: false },
-    isResearch ? 'Research time' : 'Fill time',
-    Date.now() - startTime,
-  );
+  logTiming(ctx, isResearch ? 'Research time' : 'Fill time', Date.now() - startTime);
 
   return exportResult;
 }
@@ -467,13 +397,27 @@ async function runAgentFillWorkflow(
  * Run a form directly (callable from other commands).
  * This executes the same workflow as `markform run <file>`.
  *
+ * @param selectedPath - Path to the form file
+ * @param formsDir - Directory for output files
+ * @param overwrite - Whether to overwrite existing field values
+ * @param ctx - Optional command context for logging (defaults to non-verbose/quiet)
  * @returns ExportResult with paths to output files, or undefined if cancelled/no output
  */
 export async function runForm(
   selectedPath: string,
   formsDir: string,
   overwrite: boolean,
+  ctx?: CommandContext,
 ): Promise<ExportResult | undefined> {
+  // Default context for when called programmatically without CLI context
+  const effectiveCtx: CommandContext = ctx ?? {
+    verbose: false,
+    quiet: false,
+    dryRun: false,
+    format: 'console',
+    overwrite,
+  };
+
   const content = await readFile(selectedPath);
   const form = parseForm(content);
 
@@ -505,7 +449,15 @@ export async function runForm(
         p.cancel('Cancelled.');
         return undefined;
       }
-      return runAgentFillWorkflow(form, modelId, formsDir, selectedPath, isResearch, overwrite);
+      return runAgentFillWorkflow(
+        form,
+        modelId,
+        formsDir,
+        selectedPath,
+        isResearch,
+        overwrite,
+        effectiveCtx,
+      );
     }
   }
 }
@@ -641,6 +593,7 @@ export function registerRunCommand(program: Command): void {
               selectedPath,
               isResearch,
               ctx.overwrite,
+              ctx,
             );
             break;
           }
