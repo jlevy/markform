@@ -14,11 +14,16 @@ This validation spec documents the testing performed and manual validation neede
 
 ### Unit Testing
 
-32 unit tests in `tests/unit/jsonSchema.test.ts` covering:
+35 unit tests in `tests/unit/jsonSchema.test.ts` covering:
 
 **Golden Schema Snapshot Test:**
 - Compares generated schema against `examples/simple/simple.schema.json` snapshot
 - Uses file-based test data from `simple.form.md` (not hardcoded inline form)
+
+**Ajv Meta-Validation (3 tests):**
+- Validates that Ajv can compile the generated schema (valid JSON Schema structure)
+- Tests all draft versions (2020-12, 2019-09, draft-07)
+- Tests pure mode schema (no extensions) compiles correctly
 
 **Form-Level Schema Generation:**
 - Generates valid JSON Schema with `$schema` and `$id`
@@ -50,7 +55,7 @@ This validation spec documents the testing performed and manual validation neede
 
 ### Integration and End-to-End Testing
 
-- All 710 tests pass including the 32 JSON Schema tests
+- All 705 tests pass including the 35 JSON Schema tests
 - CLI command tested manually during development
 - Pre-commit hooks pass (typecheck, lint, format, full test suite)
 
@@ -71,15 +76,24 @@ The JSON Schema testing was refactored to use file-based golden tests:
 
 4. **Documentation Updated** - `docs/development.md` now documents the schema regeneration process alongside session transcript regeneration
 
+### Multi-Format Schema Export
+
+The `exportMultiFormat()` function now includes JSON Schema in its output alongside other formats:
+
+- `.report.md` - filtered markdown report
+- `.yml` - YAML values export
+- `.form.md` - canonical markform source
+- `.schema.json` - JSON Schema for form structure (NEW)
+
+This integrates with the `markform examples` command and other CLI workflows that use multi-format export.
+
 ### Not Implemented (From Plan Spec)
 
 The following items from the plan spec were not implemented:
 
-1. **Ajv meta-validation** - Not added as the snapshot comparison provides equivalent coverage with simpler tooling
+1. **DOCS.md update** - Documentation update was not performed (the CLI command is discoverable via `--help`)
 
-2. **DOCS.md update** - Documentation update was not performed (the CLI command is discoverable via `--help`)
-
-3. **zod-to-json-schema dependency** - Not needed as the implementation converts from `ParsedForm` directly
+2. **zod-to-json-schema dependency** - Not needed as the implementation converts from `ParsedForm` directly
 
 ## Manual Testing Needed
 
