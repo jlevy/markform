@@ -463,7 +463,12 @@ async function runInteractiveFlow(
   const targetRoles = [USER_ROLE];
 
   // Track output paths from user fill (will be used for file viewer if no agent fill)
-  let userFillOutputs: { reportPath: string; yamlPath: string; formPath: string } | null = null;
+  let userFillOutputs: {
+    reportPath: string;
+    yamlPath: string;
+    formPath: string;
+    schemaPath: string;
+  } | null = null;
 
   // Inspect form to get issues for user role
   const inspectResult = inspect(form, { targetRoles });
@@ -513,6 +518,7 @@ async function runInteractiveFlow(
     console.log(`  ${formatPath(userFillOutputs.reportPath)}  ${pc.dim('(output report)')}`);
     console.log(`  ${formatPath(userFillOutputs.yamlPath)}  ${pc.dim('(output values)')}`);
     console.log(`  ${formatPath(userFillOutputs.formPath)}  ${pc.dim('(filled markform source)')}`);
+    console.log(`  ${formatPath(userFillOutputs.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
     logTiming(
       { verbose: false, format: 'console', dryRun: false, quiet: false },
@@ -553,6 +559,7 @@ async function runInteractiveFlow(
           { path: userFillOutputs.reportPath, label: 'Report', hint: 'output report' },
           { path: userFillOutputs.yamlPath, label: 'Values', hint: 'output values' },
           { path: userFillOutputs.formPath, label: 'Form', hint: 'filled markform source' },
+          { path: userFillOutputs.schemaPath, label: 'Schema', hint: 'JSON Schema' },
         ];
         await showFileViewerChooser(files);
       }
@@ -611,7 +618,10 @@ async function runInteractiveFlow(
       );
 
       // Step 10: Multi-format export
-      const { reportPath, yamlPath, formPath } = await exportMultiFormat(form, agentOutputPath);
+      const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(
+        form,
+        agentOutputPath,
+      );
 
       console.log('');
       const successMessage = isResearchExample
@@ -621,6 +631,7 @@ async function runInteractiveFlow(
       console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
       console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
       console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
+      console.log(`  ${formatPath(schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
       if (!success) {
         p.log.warn('Agent did not complete all fields. You may need to run it again.');
@@ -631,6 +642,7 @@ async function runInteractiveFlow(
         { path: reportPath, label: 'Report', hint: 'output report' },
         { path: yamlPath, label: 'Values', hint: 'output values' },
         { path: formPath, label: 'Form', hint: 'filled markform source' },
+        { path: schemaPath, label: 'Schema', hint: 'JSON Schema' },
       ];
       await showFileViewerChooser(agentFillFiles);
     } catch (error) {

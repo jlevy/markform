@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import Ajv from 'ajv';
+import addFormats from 'ajv-formats';
 import { describe, expect, it } from 'vitest';
 
 import type { Field, ParsedForm } from '../../src/engine/coreTypes.js';
@@ -54,6 +56,24 @@ function getFieldGroupId(form: ParsedForm, fieldId: string): string | undefined 
   return undefined;
 }
 
+/**
+ * Create an Ajv instance configured for JSON Schema validation.
+ * Uses 'log' strict mode to allow x-markform extensions while still catching errors.
+ * Validates schema structure can be compiled (not against meta-schema URL).
+ */
+function createAjvValidator(): Ajv {
+  const ajv = new Ajv({
+    // Use 'log' to warn on unknown keywords (x-markform) but not fail
+    strict: 'log',
+    allErrors: true,
+    validateFormats: true,
+    // Don't try to fetch/validate against $schema URL, just validate structure
+    validateSchema: false,
+  });
+  addFormats(ajv);
+  return ajv;
+}
+
 describe('jsonSchema', () => {
   describe('formToJsonSchema - snapshot comparison', () => {
     it('matches the golden schema snapshot for simple.form.md', () => {
@@ -63,6 +83,42 @@ describe('jsonSchema', () => {
 
       // Full schema comparison - this is the primary golden test
       expect(result.schema).toEqual(expectedSchema);
+    });
+  });
+
+  describe('formToJsonSchema - Ajv meta-validation', () => {
+    it('generates a schema that Ajv can compile (valid JSON Schema)', () => {
+      const form = loadSimpleForm();
+      const result = formToJsonSchema(form);
+      const ajv = createAjvValidator();
+
+      // This will throw if the schema is invalid JSON Schema
+      const validate = ajv.compile(result.schema);
+      expect(validate).toBeDefined();
+      expect(typeof validate).toBe('function');
+    });
+
+    it('generates valid JSON Schema for all draft versions', () => {
+      const form = loadSimpleForm();
+      const drafts = ['2020-12', '2019-09', 'draft-07'] as const;
+
+      for (const draft of drafts) {
+        const result = formToJsonSchema(form, { draft });
+        const ajv = createAjvValidator();
+
+        // Ajv should be able to compile the schema without errors
+        expect(() => ajv.compile(result.schema)).not.toThrow();
+      }
+    });
+
+    it('generates valid JSON Schema in pure mode (no extensions)', () => {
+      const form = loadSimpleForm();
+      const result = formToJsonSchema(form, { includeExtensions: false });
+      const ajv = createAjvValidator();
+
+      // Pure mode schema should be strictly valid JSON Schema
+      const validate = ajv.compile(result.schema);
+      expect(validate).toBeDefined();
     });
   });
 
