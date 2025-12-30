@@ -8,7 +8,7 @@
 import { Command } from 'commander';
 import pc from 'picocolors';
 
-import { VERSION } from '../index.js';
+import { CLI_VERSION } from './lib/cliVersion.js';
 import { DEFAULT_FORMS_DIR } from './lib/paths.js';
 import { registerApisCommand } from './commands/apis.js';
 import { registerApplyCommand } from './commands/apply.js';
@@ -53,7 +53,7 @@ function createProgram(): Command {
   program
     .name('markform')
     .description('Agent-friendly, human-readable, editable forms')
-    .version(VERSION, '--version', 'output the version number')
+    .version(CLI_VERSION, '--version', 'output the version number')
     .showHelpAfterError()
     .option('--verbose', 'Enable verbose output')
     .option('--quiet', 'Suppress non-essential output')
