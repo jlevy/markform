@@ -3,17 +3,20 @@
 **IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking.
 Do NOT use markdown TODOs or other ad-hoc issue tracking methods.
 
-**Run this now** to check if `bd` is available:
+**Check if bd is installed and get workflow context:**
 
 ```bash
-bd status || echo "bd not installed"
+if command -v bd &>/dev/null; then
+  bd prime
+else
+  echo "bd not installed - run installation below"
+fi
 ```
 
-**If bd is not installed:**
+If bd is already installed, `bd prime` loads the workflow context.
+**Skip to the “Workflow for AI Agents” section below.**
 
-Note: `npm install -g @beads/bd` and `go install` methods exist but typically fail in
-cloud environments (Claude Code web, containers) due to network restrictions.
-Use the direct download method:
+**If bd is not installed**, use the direct download method:
 
 **Quick install (Linux x86_64 / amd64):**
 

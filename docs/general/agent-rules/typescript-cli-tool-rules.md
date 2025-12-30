@@ -177,6 +177,29 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
   console.log(colors.green(`⏰ Total time: ${totalTime}s`));
   ```
 
+## Development vs Built CLI
+
+For packages with CLIs, provide two root scripts to avoid the “forgot to build” problem:
+
+```json
+{
+  "scripts": {
+    "mycli": "npx tsx packages/mycli/src/cli/bin.ts",
+    "mycli:bin": "node packages/mycli/dist/bin.mjs"
+  }
+}
+```
+
+- **`pnpm mycli`** — Runs TypeScript source directly via `tsx`. Use this during
+  development—always current, no build step needed.
+
+- **`pnpm mycli:bin`** — Runs the built binary from `dist/`. Use this to verify the
+  published output works correctly before release.
+
+The `bin` entry in `package.json` (e.g., `"bin": { "mycli": "./dist/bin.mjs" }`) is only
+used when the package is installed via npm/pnpm.
+During development, always use the tsx-based script.
+
 ## Script Structure
 
 - **Use TypeScript for all CLI scripts:** Write scripts as `.ts` files with proper
