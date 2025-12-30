@@ -303,10 +303,10 @@ export function registerExamplesCommand(program: Command): void {
           await copySingleExample(options.name, formsDir, ctx.overwrite, ctx.quiet);
         } else {
           // Copy all examples
-          const { copied } = await copyAllExamples(formsDir, ctx.overwrite, ctx.quiet);
+          const { copied, skipped } = await copyAllExamples(formsDir, ctx.overwrite, ctx.quiet);
 
-          // Prompt to run a form (only if not quiet and we copied something)
-          if (!ctx.quiet && copied > 0) {
+          // Prompt to run a form (if not quiet and forms exist - either copied or already present)
+          if (!ctx.quiet && (copied > 0 || skipped > 0)) {
             console.log('');
             const wantToRun = await p.confirm({
               message: 'Do you want to try running a form?',

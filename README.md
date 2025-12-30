@@ -46,7 +46,7 @@ See [the FAQ](#faq) for more.
 ```bash
 # Copy example forms to ./forms/ and run one interactively
 # Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env) for research examples
-npx markform examples  # Copy examples to ./forms/, then offers to run one
+npx markform@latest examples  # Copy examples to ./forms/, then offers to run one
 
 # Or run forms directly
 npx markform run  # Browse and run forms interactively
