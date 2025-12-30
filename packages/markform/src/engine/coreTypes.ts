@@ -978,7 +978,7 @@ export const IdSchema = z.string().min(1);
 export const OptionIdSchema = z.string().min(1);
 export const NoteIdSchema = z.string().min(1);
 
-export const ValidatorRefSchema = z.union([z.string(), z.object({ id: z.string() }).passthrough()]);
+export const ValidatorRefSchema = z.union([z.string(), z.looseObject({ id: z.string() })]);
 
 // Answer state schema (markform-255)
 export const AnswerStateSchema = z.enum(['unanswered', 'answered', 'skipped', 'aborted']);
