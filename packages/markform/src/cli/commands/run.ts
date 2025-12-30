@@ -297,6 +297,7 @@ async function runAgentFillWorkflow(
   formsDir: string,
   filePath: string,
   isResearch: boolean,
+  overwrite: boolean,
 ): Promise<void> {
   const startTime = Date.now();
   const { provider: providerName, model: modelName } = parseModelIdForDisplay(modelId);
@@ -328,7 +329,7 @@ async function runAgentFillWorkflow(
       ? DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN
       : DEFAULT_MAX_ISSUES_PER_TURN,
     targetRoles: [AGENT_ROLE],
-    fillMode: 'continue',
+    fillMode: overwrite ? 'overwrite' : 'continue',
   };
 
   console.log('');
@@ -540,7 +541,14 @@ export function registerRunCommand(program: Command): void {
               p.cancel('Cancelled.');
               process.exit(0);
             }
-            await runAgentFillWorkflow(form, modelId, formsDir, selectedPath, isResearch);
+            await runAgentFillWorkflow(
+              form,
+              modelId,
+              formsDir,
+              selectedPath,
+              isResearch,
+              ctx.overwrite,
+            );
             break;
           }
         }
