@@ -177,29 +177,6 @@ These rules apply to all CLI tools, command-line scripts, and terminal utilities
   console.log(colors.green(`⏰ Total time: ${totalTime}s`));
   ```
 
-## Development vs Built CLI
-
-For packages with CLIs, provide two root scripts to avoid the “forgot to build” problem:
-
-```json
-{
-  "scripts": {
-    "mycli": "npx tsx packages/mycli/src/cli/bin.ts",
-    "mycli:bin": "node packages/mycli/dist/bin.mjs"
-  }
-}
-```
-
-- **`pnpm mycli`** — Runs TypeScript source directly via `tsx`. Use this during
-  development—always current, no build step needed.
-
-- **`pnpm mycli:bin`** — Runs the built binary from `dist/`. Use this to verify the
-  published output works correctly before release.
-
-The `bin` entry in `package.json` (e.g., `"bin": { "mycli": "./dist/bin.mjs" }`) is only
-used when the package is installed via npm/pnpm.
-During development, always use the tsx-based script.
-
 ## Script Structure
 
 - **Use TypeScript for all CLI scripts:** Write scripts as `.ts` files with proper
@@ -693,36 +670,83 @@ this.output.data(
 
 ### Version Handling
 
-Use `git describe` for accurate version information:
+Use git-based dynamic versioning for accurate, npm-compatible version strings. This format
+embeds the git hash in the pre-release identifier (since npm strips build metadata).
+
+**Version format**: `X.Y.Z-dev.N.hash`
+
+| State | Format | Example |
+| --- | --- | --- |
+| On tag | `X.Y.Z` | `1.2.3` |
+| After tag | `X.Y.Z-dev.N.hash` | `1.2.4-dev.12.a1b2c3d` |
+| Dirty working dir | `X.Y.Z-dev.N.hash-dirty` | `1.2.4-dev.12.a1b2c3d-dirty` |
+| No tags | `0.0.0-dev.0.hash` | `0.0.0-dev.0.a1b2c3d` |
+
+**Why bump patch for dev versions**: Ensures correct sorting. Dev versions should sort
+*before* the next release, not after the current one:
+
+```
+1.2.3 < 1.2.4-dev.1.abc < 1.2.4-dev.12.def < 1.2.4  ✓ correct
+1.2.3 < 1.2.3-dev.1.abc                              ✗ wrong (dev after release)
+```
+
+**Implementation for tsdown.config.ts**:
 
 ```ts
-// lib/version.ts
-export function getVersionInfo(): VersionInfo {
-  let version = 'unknown';
+import { execSync } from 'node:child_process';
+import { defineConfig } from 'tsdown';
+import pkg from './package.json' with { type: 'json' };
 
-  // Primary: git describe (shows tag + commits since tag + commit hash)
+/**
+ * Get version from git tags: X.Y.Z-dev.N.hash
+ * Falls back to package.json if not in a git repo.
+ */
+function getGitVersion(): string {
   try {
-    const gitDescribe = execSync('git describe --tags --always --dirty', {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim();
+    const git = (args: string) =>
+      execSync(`git ${args}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 
-    // Prefix bare commit hashes with 'g' for consistency
-    version = gitDescribe.startsWith('v') ? gitDescribe : 'g' + gitDescribe;
+    const tag = git('describe --tags --abbrev=0');
+    const tagVersion = tag.replace(/^v/, '');
+    const [major, minor, patch] = tagVersion.split('.').map(Number);
+    const commitsSinceTag = parseInt(git(`rev-list ${tag}..HEAD --count`), 10);
+    const hash = git('rev-parse --short=7 HEAD');
+
+    let dirty = false;
+    try {
+      git('diff --quiet');
+      git('diff --cached --quiet');
+    } catch {
+      dirty = true;
+    }
+
+    if (commitsSinceTag === 0 && !dirty) {
+      return tagVersion;
+    }
+
+    const bumpedPatch = (patch ?? 0) + 1;
+    const suffix = dirty ? `${hash}-dirty` : hash;
+    return `${major}.${minor}.${bumpedPatch}-dev.${commitsSinceTag}.${suffix}`;
   } catch {
-    // Fall back to package.json version
-    const pkg = JSON.parse(readFileSync('package.json', 'utf-8'));
-    version = pkg.version || version;
+    return pkg.version;
   }
-
-  return { version, /* ... other git info */ };
 }
 
-// Version formats:
-// - Tagged release: v1.2.3
-// - After tag: v1.2.3-5-g1234567 (5 commits after tag)
-// - No tags: g1234567
-// - Dirty: g1234567-dirty (uncommitted changes)
+export default defineConfig({
+  // ... other config
+  define: {
+    __VERSION__: JSON.stringify(getGitVersion()),
+  },
+});
+```
+
+**Usage in library code**:
+
+```ts
+// src/index.ts
+declare const __VERSION__: string;
+export const VERSION: string =
+  typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'development';
 ```
 
 ### Global Options

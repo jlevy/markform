@@ -646,6 +646,105 @@ It integrates seamlessly with pnpm and GitHub Actions.
 
 * * *
 
+#### Dynamic Git-Based Versioning
+
+**Status**: Recommended for dev builds
+
+**Details**:
+
+While Changesets handles release versioning, development builds benefit from dynamic
+git-based version strings. This provides traceability during development without manual
+version bumps.
+
+**Format**: `X.Y.Z-dev.N.hash`
+
+| State | Format | Example |
+| --- | --- | --- |
+| On tag | `X.Y.Z` | `1.2.3` |
+| After tag | `X.Y.Z-dev.N.hash` | `1.2.4-dev.12.a1b2c3d` |
+| Dirty working dir | `X.Y.Z-dev.N.hash-dirty` | `1.2.4-dev.12.a1b2c3d-dirty` |
+| No tags | `0.0.0-dev.0.hash` | `0.0.0-dev.0.a1b2c3d` |
+
+**Key design decisions**:
+
+1. **Bump patch for dev versions**: Ensures correct semver sorting—dev versions sort
+   *before* the next release, not after the current one
+
+2. **Hash in pre-release, not metadata**: npm strips build metadata (`+hash`), so embed
+   the hash in the pre-release identifier (`-dev.N.hash`)
+
+3. **Dirty marker**: Identifies uncommitted changes during development
+
+**Implementation in tsdown.config.ts**:
+
+```ts
+import { execSync } from 'node:child_process';
+import { defineConfig } from 'tsdown';
+import pkg from './package.json' with { type: 'json' };
+
+function getGitVersion(): string {
+  try {
+    const git = (args: string) =>
+      execSync(`git ${args}`, { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+
+    const tag = git('describe --tags --abbrev=0');
+    const tagVersion = tag.replace(/^v/, '');
+    const [major, minor, patch] = tagVersion.split('.').map(Number);
+    const commitsSinceTag = parseInt(git(`rev-list ${tag}..HEAD --count`), 10);
+    const hash = git('rev-parse --short=7 HEAD');
+
+    let dirty = false;
+    try {
+      git('diff --quiet');
+      git('diff --cached --quiet');
+    } catch {
+      dirty = true;
+    }
+
+    if (commitsSinceTag === 0 && !dirty) {
+      return tagVersion;
+    }
+
+    const bumpedPatch = (patch ?? 0) + 1;
+    const suffix = dirty ? `${hash}-dirty` : hash;
+    return `${major}.${minor}.${bumpedPatch}-dev.${commitsSinceTag}.${suffix}`;
+  } catch {
+    return pkg.version;
+  }
+}
+
+export default defineConfig({
+  // ...
+  define: {
+    __VERSION__: JSON.stringify(getGitVersion()),
+  },
+});
+```
+
+**Library usage**:
+
+```ts
+// src/index.ts
+declare const __VERSION__: string;
+export const VERSION: string =
+  typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'development';
+```
+
+**Comparison with Python (uv-dynamic-versioning)**:
+
+| Aspect | npm (this approach) | Python (PEP 440) |
+| --- | --- | --- |
+| Format | `1.2.4-dev.12.a1b2c3d` | `1.2.4.dev12+a1b2c3d` |
+| Metadata handling | In pre-release (preserved) | Local version `+` (may be stripped) |
+| Sorting | Standard semver | PEP 440 compliant |
+| Configuration | In bundler config | In `pyproject.toml` |
+
+**Assessment**: Dynamic versioning complements Changesets—use Changesets for releases and
+git-based versioning for development builds. This provides full traceability without
+manual intervention.
+
+* * *
+
 ### 8. CI/CD Configuration
 
 #### GitHub Actions: CI Workflow
@@ -1447,6 +1546,10 @@ experience.
 
 17. **Run format before lint in builds**: The `build` script should run `format` then
     `lint:check` to ensure formatting is applied before linting.
+
+18. **Use dynamic git-based versioning**: Inject version at build time using
+    `X.Y.Z-dev.N.hash` format. This provides traceability during development without
+    manual version bumps. See "Dynamic Git-Based Versioning" section for implementation.
 
 * * *
 

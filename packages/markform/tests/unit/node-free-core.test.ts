@@ -14,7 +14,6 @@ import { describe, it, expect } from 'vitest';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(__dirname, '../../src');
 const DIST_DIR = join(__dirname, '../../dist');
-const PKG_PATH = join(__dirname, '../../package.json');
 
 // Directories that ARE allowed to use Node.js
 const NODE_ALLOWED_DIRS = ['cli'];
@@ -80,10 +79,22 @@ describe('Node-free core library', () => {
     expect(matches, 'ai-sdk.mjs contains node: imports').toBeNull();
   });
 
-  it('built VERSION should match package.json version', async () => {
+  it('built VERSION should be valid semver derived from git tags', async () => {
     // Dynamic import to get built output
     const { VERSION } = await import('../../dist/index.mjs');
-    const pkg = JSON.parse(readFileSync(PKG_PATH, 'utf-8'));
-    expect(VERSION).toBe(pkg.version);
+
+    // VERSION can be:
+    // - Exact tag version: "1.2.3"
+    // - Dev version: "1.2.4-dev.12.a1b2c3d" (bumped patch + commits + hash)
+    // - Dirty dev: "1.2.4-dev.12.a1b2c3d-dirty"
+    // - Fallback: package.json version
+
+    // Must be a non-empty string
+    expect(typeof VERSION).toBe('string');
+    expect(VERSION.length).toBeGreaterThan(0);
+
+    // Must match semver-like pattern (X.Y.Z with optional pre-release)
+    const semverPattern = /^\d+\.\d+\.\d+(-dev\.\d+\.[a-f0-9]+(-dirty)?)?$/;
+    expect(VERSION).toMatch(semverPattern);
   });
 });
