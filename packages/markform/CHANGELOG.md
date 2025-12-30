@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.6
+
+### Patch Changes
+
+- 3862a96: Add FillCallbacks for harness observability, make core library Node.js-free
+
 ## 0.1.5
 
 ### Patch Changes

@@ -3,6 +3,7 @@ markform:
   spec: MF/0.1
   title: Earnings Analysis
   description: Company earnings analysis with key metrics, outlook, and custom validators.
+  run_mode: research
   roles:
     - user
     - agent

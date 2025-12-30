@@ -6,7 +6,7 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { getFormsDir, DEFAULT_FORMS_DIR } from '../../../src/settings.js';
+import { getFormsDir, DEFAULT_FORMS_DIR } from '../../../src/cli/lib/paths.js';
 import { ensureFormsDir } from '../../../src/cli/lib/shared.js';
 
 // Mock fs/promises for testing ensureFormsDir

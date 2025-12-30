@@ -34,8 +34,8 @@ import {
   AGENT_ROLE,
   USER_ROLE,
   parseRolesFlag,
-  getFormsDir,
 } from '../../settings.js';
+import { getFormsDir } from '../lib/paths.js';
 import { formatSuggestedLlms } from '../../llms.js';
 import type { Agent } from '../../harness/mockAgent.js';
 import { resolveModel } from '../../harness/modelResolver.js';
@@ -282,8 +282,11 @@ export function registerFillCommand(program: Command): void {
               logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
               showInteractiveOutro(patches.length, false);
             } else {
-              // Export all formats (report, yaml, form)
-              const { reportPath, yamlPath, formPath } = await exportMultiFormat(form, outputPath);
+              // Export all formats (report, yaml, form, schema)
+              const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(
+                form,
+                outputPath,
+              );
 
               showInteractiveOutro(patches.length, false);
               console.log('');
@@ -291,6 +294,7 @@ export function registerFillCommand(program: Command): void {
               console.log(`  ${formatPath(reportPath)}  ${pc.dim('(output report)')}`);
               console.log(`  ${formatPath(yamlPath)}  ${pc.dim('(output values)')}`);
               console.log(`  ${formatPath(formPath)}  ${pc.dim('(filled markform source)')}`);
+              console.log(`  ${formatPath(schemaPath)}  ${pc.dim('(JSON Schema)')}`);
             }
 
             logTiming(ctx, 'Fill time', durationMs);

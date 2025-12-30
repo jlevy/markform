@@ -22,11 +22,11 @@ import {
 } from '../../llms.js';
 import {
   AGENT_ROLE,
-  getFormsDir,
   DEFAULT_MAX_TURNS,
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
 } from '../../settings.js';
+import { getFormsDir } from '../lib/paths.js';
 import {
   createSpinner,
   getCommandContext,
@@ -215,12 +215,16 @@ export function registerResearchCommand(program: Command): void {
         }
 
         // Export filled form
-        const { reportPath, yamlPath, formPath } = await exportMultiFormat(result.form, outputPath);
+        const { reportPath, yamlPath, formPath, schemaPath } = await exportMultiFormat(
+          result.form,
+          outputPath,
+        );
 
         logSuccess(ctx, 'Outputs:');
         console.log(`  ${reportPath}  ${pc.dim('(output report)')}`);
         console.log(`  ${yamlPath}  ${pc.dim('(output values)')}`);
         console.log(`  ${formPath}  ${pc.dim('(filled markform source)')}`);
+        console.log(`  ${schemaPath}  ${pc.dim('(JSON Schema)')}`);
 
         // Save transcript if requested
         if (options.transcript && result.transcript) {

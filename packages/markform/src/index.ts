@@ -5,13 +5,12 @@
  * types, and utilities for working with .form.md files.
  */
 
-import { createRequire } from 'node:module';
+// Build-time injected by tsdown (see tsdown.config.ts)
+declare const __MARKFORM_VERSION__: string;
 
-const require = createRequire(import.meta.url);
-const pkg = require('../package.json') as { version: string };
-
-/** Markform version (read from package.json). */
-export const VERSION: string = pkg.version;
+/** Markform version (injected at build time). */
+export const VERSION: string =
+  typeof __MARKFORM_VERSION__ !== 'undefined' ? __MARKFORM_VERSION__ : 'development';
 
 // =============================================================================
 // Type Exports
@@ -121,6 +120,8 @@ export type {
   // Frontmatter
   MarkformFrontmatter,
   FrontmatterHarnessConfig,
+  // Run mode
+  RunMode,
   // Validators
   ValidatorContext,
   ValidatorFn,
@@ -226,6 +227,8 @@ export {
   SessionTranscriptSchema,
   // Frontmatter schema
   MarkformFrontmatterSchema,
+  // Run mode schema
+  RunModeSchema,
 } from './engine/coreTypes.js';
 
 // =============================================================================

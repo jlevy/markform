@@ -6,8 +6,6 @@
  * are compile-time constants.
  */
 
-import { resolve } from 'node:path';
-
 import type { FieldPriorityLevel } from './engine/coreTypes.js';
 
 // =============================================================================
@@ -99,28 +97,21 @@ export const DEFAULT_PRIORITY: FieldPriorityLevel = 'medium';
 // =============================================================================
 
 /**
- * The default port for the serve command.
- */
-export const DEFAULT_PORT = 3344;
-
-/**
  * Default forms directory for CLI output (relative to cwd).
  * Commands write form outputs here to avoid cluttering the workspace.
  */
 export const DEFAULT_FORMS_DIR = './forms';
 
 /**
- * Resolve the forms directory path to an absolute path.
- * Uses the provided override or falls back to DEFAULT_FORMS_DIR.
- *
- * @param override Optional override path from CLI --forms-dir option
- * @param cwd Base directory for resolving relative paths (defaults to process.cwd())
- * @returns Absolute path to the forms directory
+ * Maximum forms to display in 'markform run' menu.
+ * Additional forms are not shown but can be run directly by path.
  */
-export function getFormsDir(override?: string, cwd: string = process.cwd()): string {
-  const formsDir = override ?? DEFAULT_FORMS_DIR;
-  return resolve(cwd, formsDir);
-}
+export const MAX_FORMS_IN_MENU = 30;
+
+/**
+ * The default port for the serve command.
+ */
+export const DEFAULT_PORT = 3344;
 
 // =============================================================================
 // Harness Defaults

@@ -178,12 +178,16 @@ pnpm markform:bin --help
 
 | Command | Description |
 | --- | --- |
+| `examples` | Copy bundled example forms to the forms directory |
+| `run [file]` | Browse and run forms from the forms directory |
+| `status <file>` | Display form fill status with per-role breakdown |
 | `inspect <file>` | Display form structure, progress, and issues (YAML or JSON) |
 | `export <file>` | Export form schema and values as JSON |
 | `dump <file>` | Extract and display form values only (lightweight inspect) |
 | `apply <file>` | Apply JSON patches to update field values |
 | `serve <file>` | Start a web server to browse/edit the form |
 | `fill <file>` | Fill a form using an agent (mock or live LLM) |
+| `research <file>` | Fill a form using a web-search-enabled model |
 
 ### CLI Development
 
