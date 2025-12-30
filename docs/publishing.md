@@ -116,26 +116,56 @@ Review and commit:
 git diff  # Verify package.json and CHANGELOG.md
 git add .
 git commit -m "chore: release PACKAGE v0.2.0"
-git push
 ```
 
-### Step 5: Tag and Release
+### Step 5: Push and Tag
+
+**Option A: Direct git push (local development)**
 
 ```bash
+git push
 git tag v0.2.0
 git push --tags
 ```
 
+**Option B: Via PR and GitHub API (restricted environments like Claude Code Web)**
+
+When direct push to main is restricted, use GitHub CLI. See
+[GitHub CLI Setup](general/agent-setup/github-cli-setup.md) for installation.
+
+```bash
+# 1. Push to feature branch
+git push -u origin <branch-name>
+
+# 2. Create and merge PR
+gh pr create -R OWNER/PACKAGE --base main --head <branch-name> \
+  --title "chore: release PACKAGE v0.2.0" \
+  --body "Release v0.2.0"
+gh pr merge <pr-number> -R OWNER/PACKAGE --merge
+
+# 3. Get merge commit SHA
+MERGE_SHA=$(gh pr view <pr-number> -R OWNER/PACKAGE --json mergeCommit -q '.mergeCommit.oid')
+
+# 4. Create tag via API (triggers release workflow)
+gh api repos/OWNER/PACKAGE/git/refs -X POST \
+  -f ref="refs/tags/v0.2.0" \
+  -f sha="$MERGE_SHA"
+```
+
+The release workflow will automatically create the GitHub Release when the tag is pushed.
+
 ### Step 6: Verify
 
 ```bash
-gh run list --limit 1  # Check release workflow started
-gh run view --log      # Watch progress
+gh run list -R OWNER/PACKAGE --limit 3  # Check release workflow started
+gh run view --log                        # Watch progress
 ```
 
 The GitHub Actions workflow will build and publish to npm using OIDC authentication.
 
 ## Quick Reference
+
+### Local Development (direct push)
 
 ```bash
 # Full release sequence (replace version as needed)
@@ -145,6 +175,29 @@ git add .changeset && git commit -m "chore: add changeset for v0.2.0"
 pnpm version-packages
 git add . && git commit -m "chore: release PACKAGE v0.2.0"
 git push && git tag v0.2.0 && git push --tags
+```
+
+### Restricted Environments (via PR and API)
+
+```bash
+# Prepare release on feature branch
+pnpm changeset:add minor 0.2.0 "Summary of changes"
+git add .changeset && git commit -m "chore: add changeset for v0.2.0"
+pnpm version-packages
+git add . && git commit -m "chore: release PACKAGE v0.2.0"
+git push -u origin <branch-name>
+
+# Merge via PR
+gh pr create -R OWNER/PACKAGE --base main --head <branch-name> \
+  --title "chore: release PACKAGE v0.2.0" --body "Release v0.2.0"
+gh pr merge <pr-number> -R OWNER/PACKAGE --merge
+
+# Create tag via API (triggers release workflow)
+MERGE_SHA=$(gh pr view <pr-number> -R OWNER/PACKAGE --json mergeCommit -q '.mergeCommit.oid')
+gh api repos/OWNER/PACKAGE/git/refs -X POST -f ref="refs/tags/v0.2.0" -f sha="$MERGE_SHA"
+
+# Verify (release workflow creates GitHub Release automatically)
+gh run list -R OWNER/PACKAGE --limit 3
 ```
 
 ## How OIDC Publishing Works
