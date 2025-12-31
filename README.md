@@ -358,6 +358,19 @@ markform export my-form.form.md --format=yaml
 markform dump my-form.form.md
 ```
 
+### Export JSON Schema
+
+```bash
+# Export form structure as JSON Schema (for validation, code generation, etc.)
+markform schema my-form.form.md
+
+# Pure JSON Schema without Markform extensions
+markform schema my-form.form.md --pure
+
+# Specify JSON Schema draft version
+markform schema my-form.form.md --draft draft-07
+```
+
 ### Apply Patches
 
 ```bash

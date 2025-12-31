@@ -603,6 +603,11 @@ markform export form.md --format=json    # Export values as JSON
 markform export form.md --format=yaml    # Export values as YAML
 markform export form.md --format=markdown  # Readable markdown (strips tags)
 
+# Export form structure as JSON Schema
+markform schema form.md                  # Full schema with x-markform extensions
+markform schema form.md --pure           # Pure JSON Schema (no extensions)
+markform schema form.md --draft draft-07 # Specify draft version
+
 # Other commands
 markform serve form.md       # Web UI for browsing
 markform examples            # Try built-in examples
