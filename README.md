@@ -507,26 +507,25 @@ All other choices can be left to the agents themselves, with the structure and
 validations enforced by the form-filling tools the agents use.
 
 Another cool thing about forms: they get rid of the inefficiencies of conversation chat
-history. Often when an agentic loop is built, it just saves the chat history for
-context. But a form is inherently more efficient: the harness itself can be stateless.
+history.
+Often when an agentic loop is built, it just saves the chat history for context.
+But a form is inherently more efficient: the harness itself can be stateless.
 It just shares the partly-filled form with the agent, and it has full context in one
 message. That’s what the agentic loop in this implementation does.
 
-Finally, the meta-loop of *creating and improving* the form defining a process way
-easier to automate:
+Finally, the meta-loop of *creating and improving* forms is easier to automate:
 
-- To get started, you can convert any unstructured doc describing a process to a form,
-  use the CLI to validate it, and do a pretty good first job.
+- To get started, you can ask a good coding model to convert any unstructured doc
+  describing a process to a form.
+  The model can also use the CLI or tools to validate and test it.
 
 - Any time you have a workflow problem, you can ask an LLM to diagnose it and if
   possible, go back and fix up the form with an additional instruction or field or check
   that would prevent it from happening again.
 
-In fact, I suspect use of dynamic form structure like this would make complex deep
-research tools more powerful.
-With a coding agent, you plan a spec before implementing it.
-With a research agent, you could can use a Markform doc to encode steps of a research
-plan before asking multiple agents to fill in the form(s).
+I suspect dynamic form structures like this could make complex deep research more
+powerful. Just as you plan a spec before implementing with a coding agent, you could use
+Markform to encode a research plan before dispatching agents to fill it.
 
 ### Is this mature?
 
@@ -550,9 +549,9 @@ And see [the complete history of
 specs](https://github.com/jlevy/markform/tree/main/docs/project/specs/done) for examples
 of how everything is done with specs.
 
-Although I didn’t have to write much there was a *lot* of management and review by me
-and a lot of thought and iteration for all design decisions.
-And this doc is written by me.
+Although I didn’t write much code, there was a *lot* of management, review, and
+iteration on design decisions.
+And yes, this README is written by me.
 :)
 
 ### What are the goals of Markform?
@@ -611,12 +610,12 @@ The closest alternatives are:
 
 | Approach | Usable GUI editor | Human-readable source format | Agent-editable | APIs and validation rules |
 | --- | :---: | :---: | :---: | :---: |
-| Plain Markdown | ✅ | ✅ | ⚠️ fragile | ❌ |
+| Plain Markdown | ✅ IDEs/editors | ✅ | ⚠️ fragile | ❌ |
 | JSON with schema | ⚠️ rarely | ⚠️ JSON | ✅ | ✅ |
 | SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️ rarely | ⚠️ if they add it | ⚠️ if they add it |
-| HTML/web Forms | ✅ | ⚠️ HTML+code | ⚠️ coding agent | ✅ |
+| HTML/web Forms | ✅ IDEs/editors | ⚠️ HTML+code | ⚠️ coding agent | ✅ |
 | Excel/Google Sheets | ✅ | ❌ .csv/.xlsx | ⚠️ with tools | ✅ with some coding |
-| **Markform** | ☑️ editors | ✅ | ✅ with this package | ✅ with this package |
+| **Markform** | ✅ IDEs/editors | ✅ | ✅ with this package | ✅ with this package |
 
 ### What are example use cases?
 
