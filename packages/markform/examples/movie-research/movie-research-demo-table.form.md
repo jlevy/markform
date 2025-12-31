@@ -13,21 +13,23 @@ markform:
       Identify the movie with web searches and use imdb.com and rottentomatoes.com to fill in the ratings.
 
 ---
-{% form id="movie_research_demo" title="Movie Research (Demo)" %}
+{% form id="movie_research_demo" %}
+{% group id="movie_input" %}
 
-## Movie Research Example
-
-{% group id="movie_input" title="Movie Identification" %}
-What movie do you want to research?
+## What movie do you want to research?
 
 {% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 {% instructions ref="movie" %}Enter the movie title (add year or details for disambiguation).{% /instructions %}
+
 {% /group %}
+
+{% group id="about_the_movie" title="About the Movie" %}
 
 ## Movie Ratings
 
-{% group id="about_the_movie" title="About the Movie" %}
-{% field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" %}
+Here are the ratings for the movie:
+
+{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
 - [ ] PG-13 {% #pg_13 %}
@@ -36,18 +38,20 @@ What movie do you want to research?
 - [ ] NR/Unrated {% #nr %}
 {% /field %}
 
-{% field kind="table" id="ratings_table" label="Ratings" role="agent" required=true
+{% field kind="table" id="ratings_table" role="agent"
+   label="Ratings" required=true
    columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"]
    minRows=0 maxRows=3 %}
 | Source | Score | Votes |
 |--------|-------|-------|
 {% /field %}
+
 {% instructions ref="ratings_table" %}
 Fill in scores and vote counts from each source:
 - IMDB: Rating (1.0-10.0 scale), vote count
 - RT Critics: Tomatometer (0-100%), review count
 - RT Audience: Audience Score (0-100%), rating count
 {% /instructions %}
-{% /group %}
 
+{% /group %}
 {% /form %}
