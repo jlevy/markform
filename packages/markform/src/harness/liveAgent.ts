@@ -39,6 +39,7 @@ import {
   getIssuesIntro,
   PATCH_FORMAT_INSTRUCTIONS,
   SECTION_HEADERS,
+  getPatchFormatHint,
 } from './prompts.js';
 
 // Re-export types for backwards compatibility
@@ -352,6 +353,15 @@ function buildContextPrompt(
     lines.push('');
     for (const rejection of previousRejections) {
       lines.push(`- **Error:** ${rejection.message}`);
+      // If we have field info, show the correct patch format
+      if (rejection.fieldKind) {
+        const hint = getPatchFormatHint(
+          rejection.fieldKind,
+          rejection.fieldId,
+          rejection.columnIds,
+        );
+        lines.push(`  **Use instead:** ${hint}`);
+      }
     }
     lines.push('');
   }

@@ -84,25 +84,71 @@ export function getIssuesIntro(maxPatches: number): string {
 }
 
 /**
+ * Patch format examples by field kind.
+ *
+ * This is the single source of truth for patch format documentation.
+ * Used in PATCH_FORMAT_INSTRUCTIONS and rejection feedback hints.
+ */
+export const PATCH_FORMATS: Record<string, string> = {
+  string: '{ op: "set_string", fieldId: "...", value: "..." }',
+  number: '{ op: "set_number", fieldId: "...", value: 123 }',
+  string_list: '{ op: "set_string_list", fieldId: "...", items: ["...", "..."] }',
+  single_select: '{ op: "set_single_select", fieldId: "...", selected: "option_id" }',
+  multi_select: '{ op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }',
+  checkboxes:
+    '{ op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }',
+  url: '{ op: "set_url", fieldId: "...", value: "https://..." }',
+  url_list: '{ op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }',
+  date: '{ op: "set_date", fieldId: "...", value: "2024-01-15" }',
+  year: '{ op: "set_year", fieldId: "...", value: 2024 }',
+  table: '{ op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }',
+};
+
+/**
+ * Get the correct patch format for a field kind.
+ *
+ * @param fieldKind - The field kind (e.g., "table", "string")
+ * @param fieldId - Optional field ID to substitute in the example
+ * @param columnIds - Optional column IDs for table fields
+ * @returns The patch format example string
+ */
+export function getPatchFormatHint(
+  fieldKind: string,
+  fieldId?: string,
+  columnIds?: string[],
+): string {
+  let format = PATCH_FORMATS[fieldKind];
+  if (!format) {
+    return `Use the correct set_${fieldKind} operation for this field type.`;
+  }
+
+  // Substitute field ID if provided
+  if (fieldId) {
+    format = format.replace('fieldId: "..."', `fieldId: "${fieldId}"`);
+  }
+
+  // For table fields, show actual column IDs if available
+  if (fieldKind === 'table' && columnIds && columnIds.length > 0) {
+    const colExample = columnIds.map((id) => `"${id}": "..."`).join(', ');
+    format = format.replace('{ col1: "value1", col2: "value2" }', `{ ${colExample} }`);
+  }
+
+  return format;
+}
+
+/**
  * Instructions section for the context prompt.
  *
  * This explains the patch format for each field kind.
+ * Generated from PATCH_FORMATS to ensure consistency.
  */
 export const PATCH_FORMAT_INSTRUCTIONS = `# Instructions
 
 Use the generatePatches tool to submit patches for the fields above.
 Each patch should match the field kind:
-- string: { op: "set_string", fieldId: "...", value: "..." }
-- number: { op: "set_number", fieldId: "...", value: 123 }
-- string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-- single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-- multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-- checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-- url: { op: "set_url", fieldId: "...", value: "https://..." }
-- url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-- date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-- year: { op: "set_year", fieldId: "...", value: 2024 }
-- table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+${Object.entries(PATCH_FORMATS)
+  .map(([kind, format]) => `- ${kind}: ${format}`)
+  .join('\n')}
 
 For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
 

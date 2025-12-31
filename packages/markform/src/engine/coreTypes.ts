@@ -696,6 +696,12 @@ export interface InspectResult {
 export interface PatchRejection {
   patchIndex: number;
   message: string;
+  /** Field ID if available (for type mismatch errors) */
+  fieldId?: string;
+  /** Field kind if available (for type mismatch errors) */
+  fieldKind?: string;
+  /** Column IDs if available (for table fields) */
+  columnIds?: string[];
 }
 
 /** Result from apply operation */
