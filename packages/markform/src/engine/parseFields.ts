@@ -92,6 +92,11 @@ export function isValueEmpty(value: FieldValue): boolean {
     }
     case 'table':
       return value.rows.length === 0;
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = value;
+      throw new Error(`Unhandled field value kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 

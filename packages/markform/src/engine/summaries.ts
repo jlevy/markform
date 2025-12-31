@@ -197,6 +197,11 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
       const v = value as TableValue;
       return v.rows.length > 0;
     }
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 

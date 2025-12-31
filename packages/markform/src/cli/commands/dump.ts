@@ -72,8 +72,17 @@ function formatFieldResponse(response: FieldResponse, useColors: boolean): strin
       return value.value ? green(`"${value.value}"`) : dim('(empty)');
     case 'url_list':
       return value.items.length > 0 ? green(`[${value.items.join(', ')}]`) : dim('(empty)');
-    default:
-      return dim('(unknown)');
+    case 'date':
+      return value.value ? green(value.value) : dim('(empty)');
+    case 'year':
+      return value.value !== null ? green(String(value.value)) : dim('(empty)');
+    case 'table':
+      return value.rows.length > 0 ? green(`(${value.rows.length} rows)`) : dim('(empty)');
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = value;
+      throw new Error(`Unhandled field value kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 

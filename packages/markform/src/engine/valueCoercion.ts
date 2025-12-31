@@ -565,6 +565,11 @@ export function coerceToFieldPatch(
       return coerceToYear(fieldId, rawValue);
     case 'table':
       return coerceToTable(fieldId, rawValue);
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 

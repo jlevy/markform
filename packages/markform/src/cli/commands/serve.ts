@@ -34,6 +34,8 @@ import type {
   SingleSelectValue,
   StringField,
   StringListField,
+  TableField,
+  TableValue,
   UrlField,
   UrlListField,
   YearField,
@@ -381,6 +383,18 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
         }
         break;
       }
+
+      case 'table': {
+        // Table fields are read-only in the web UI for now
+        // Table editing would require a more complex UI (add/remove rows, cell editing)
+        break;
+      }
+
+      default: {
+        // Exhaustiveness check - TypeScript will error if a case is missing
+        const _exhaustive: never = field;
+        throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+      }
     }
   }
 
@@ -620,6 +634,28 @@ export function renderFormHtml(form: ParsedForm): string {
       border-radius: 3px;
       margin-left: 0.5rem;
     }
+    .table-container {
+      overflow-x: auto;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .data-table th,
+    .data-table td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border: 1px solid #dee2e6;
+    }
+    .data-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #495057;
+    }
+    .data-table tbody tr:hover {
+      background: #f8f9fa;
+    }
   </style>
 </head>
 <body>
@@ -778,8 +814,14 @@ export function renderFieldHtml(
     case 'year':
       inputHtml = renderYearInput(field, value, disabledAttr);
       break;
-    default:
-      inputHtml = '<div class="field-help">(unknown field kind)</div>';
+    case 'table':
+      inputHtml = renderTableInput(field, value as TableValue | undefined, disabledAttr);
+      break;
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 
   // Add skip button for optional, non-skipped fields
@@ -1054,6 +1096,58 @@ function renderCheckboxesInput(
 
   return `<div class="checkbox-group">
       ${rows}
+    </div>`;
+}
+
+/**
+ * Render a table field as an HTML table.
+ * Currently read-only display; editing requires more complex UI.
+ */
+function renderTableInput(
+  field: TableField,
+  value: TableValue | undefined,
+  _disabledAttr: string,
+): string {
+  const rows = value?.rows ?? [];
+
+  if (rows.length === 0) {
+    return '<div class="field-help">(no data)</div>';
+  }
+
+  // Build header row
+  const headerHtml = field.columns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join('');
+
+  // Build data rows
+  const dataRowsHtml = rows
+    .map((row) => {
+      const cellsHtml = field.columns
+        .map((col) => {
+          const cell = row[col.id];
+          let cellValue = '';
+          if (cell?.state === 'answered' && cell.value !== undefined && cell.value !== null) {
+            cellValue = String(cell.value);
+          } else if (cell?.state === 'skipped') {
+            cellValue = cell.reason ? `[skipped: ${cell.reason}]` : '[skipped]';
+          } else if (cell?.state === 'aborted') {
+            cellValue = cell.reason ? `[aborted: ${cell.reason}]` : '[aborted]';
+          }
+          return `<td>${escapeHtml(cellValue)}</td>`;
+        })
+        .join('');
+      return `<tr>${cellsHtml}</tr>`;
+    })
+    .join('\n        ');
+
+  return `<div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>${headerHtml}</tr>
+        </thead>
+        <tbody>
+          ${dataRowsHtml}
+        </tbody>
+      </table>
+      <div class="field-help">(table fields are currently read-only in the web UI)</div>
     </div>`;
 }
 
