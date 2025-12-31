@@ -986,6 +986,11 @@ function serializeField(field: Field, responses: Record<Id, FieldResponse>): str
       return serializeYearField(field, response);
     case 'table':
       return serializeTableField(field, response);
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 

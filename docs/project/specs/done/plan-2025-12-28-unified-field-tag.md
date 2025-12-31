@@ -416,7 +416,7 @@ The phase numbering reflects logical grouping, not execution order.
 
 - [ ] `packages/markform/examples/movie-research/movie-research-basic.form.md`
 
-- [ ] `packages/markform/examples/movie-research/movie-research-deep.form.md`
+- [ ] `packages/markform/examples/movie-research/movie-deep-research.form.md`
 
 - [ ] `packages/markform/examples/startup-research/startup-research.form.md`
 

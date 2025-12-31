@@ -2,19 +2,24 @@
 
 ## Purpose
 
-This is a validation spec for the export and reporting improvements (markform-324).
-It documents testing already performed and remaining manual validation needed.
+This is a validation spec for the export and reporting improvements (markform-324). It
+documents testing already performed and remaining manual validation needed.
 
-**Feature Plan:** [plan-2025-12-27-export-and-reporting-improvements.md](plan-2025-12-27-export-and-reporting-improvements.md)
+**Feature Plan:**
+[plan-2025-12-27-export-and-reporting-improvements.md](plan-2025-12-27-export-and-reporting-improvements.md)
 
 ## Stage 4: Validation Stage
 
 ## Validation Planning
 
 The implementation covers four phases:
+
 - Phase 0: File extension constants and helpers
+
 - Phase 1: Dump command improvements (state-aware output)
+
 - Phase 2: Report command (filtered markdown output)
+
 - Phase 3: Multi-format serve (read-only viewers for non-form files)
 
 ## Automated Validation (Testing Performed)
@@ -22,48 +27,78 @@ The implementation covers four phases:
 ### Unit Testing
 
 1. **File Extension Constants and Helpers** (`tests/unit/settings.test.ts`)
+
    - `EXPORT_EXTENSIONS` has correct values (.form.md, .raw.md, .yml, .json)
+
    - `REPORT_EXTENSION` is correct (.report.md)
+
    - `ALL_EXTENSIONS` includes all formats
+
    - `detectFileType()` correctly identifies:
-     - `.form.md` as 'form'
-     - `.raw.md` as 'raw'
-     - `.report.md` as 'report'
-     - `.yml` as 'yaml'
-     - `.json` as 'json'
-     - Generic `.md` as 'raw'
-     - Unknown extensions as 'unknown'
+
+     - `.form.md` as ‘form’
+
+     - `.raw.md` as ‘raw’
+
+     - `.report.md` as ‘report’
+
+     - `.yml` as ‘yaml’
+
+     - `.json` as ‘json’
+
+     - Generic `.md` as ‘raw’
+
+     - Unknown extensions as ‘unknown’
+
    - `deriveExportPath()` correctly converts between formats
+
    - `deriveReportPath()` correctly generates report paths
 
 2. **Dump Command State Output**
+
    - Uses `toStructuredValues()` for structured JSON/YAML output
+
    - Console output shows field states (answered, skipped, unanswered)
-   - Existing `toStructuredValues()` tests in `exportHelpers.test.ts` cover structured output
+
+   - Existing `toStructuredValues()` tests in `exportHelpers.test.ts` cover structured
+     output
 
 3. **Serve Command Rendering** (`tests/unit/web/serve-render.test.ts`)
+
    - Form rendering tests (42 tests) validate existing form HTML generation
+
    - All existing serve tests pass with new multi-format dispatch
 
 4. **Parser Report Attribute**
+
    - Report attribute added to FieldBase, FieldGroup, DocumentationBlock types
+
    - Parser extracts `report` boolean attribute from all field types
+
    - Existing parse tests (54 tests) validate parser behavior
 
 5. **Serializer Report Output**
+
    - `serializeReportMarkdown()` filters based on `report` attribute
+
    - Instructions blocks excluded by default
+
    - Fields/groups with `report=false` excluded
+
    - Existing serialize tests (35 tests) validate serialization
 
 ### Integration and End-to-End Testing
 
 1. **Golden Tests** (`tests/golden/golden.test.ts`)
+
    - Round-trip parsing and serialization tests pass
+
    - Form structure preserved through parse/serialize cycle
 
 2. **Programmatic Fill Integration** (`tests/integration/programmaticFill.test.ts`)
+
    - 8 integration tests verify form filling workflows
+
    - Export functionality tested through fill operations
 
 ### Manual Testing Needed
@@ -75,7 +110,7 @@ The following manual validation should be performed to confirm the implementatio
 ```bash
 # Create a test form with mixed states
 cd packages/markform
-pnpm markform dump examples/movie-research-deep.form.md
+pnpm markform dump examples/movie-deep-research.form.md
 
 # Expected: Console output shows each field with its state:
 # - answered fields show their values in green
@@ -83,7 +118,7 @@ pnpm markform dump examples/movie-research-deep.form.md
 # - unanswered fields show (unanswered) in dim
 
 # Test JSON output
-pnpm markform dump examples/movie-research-deep.form.md --format json
+pnpm markform dump examples/movie-deep-research.form.md --format json
 
 # Expected: Structured output with state for each field
 ```
@@ -92,7 +127,7 @@ pnpm markform dump examples/movie-research-deep.form.md --format json
 
 ```bash
 # Generate a report from a filled form
-pnpm markform report examples/movie-research-deep.form.md
+pnpm markform report examples/movie-deep-research.form.md
 
 # Expected: Filtered markdown output to stdout
 # - Instructions blocks should be excluded
@@ -100,7 +135,7 @@ pnpm markform report examples/movie-research-deep.form.md
 # - All field values displayed in readable format
 
 # Test output to file
-pnpm markform report examples/movie-research-deep.form.md -o /tmp/test.report.md
+pnpm markform report examples/movie-deep-research.form.md -o /tmp/test.report.md
 cat /tmp/test.report.md
 
 # Expected: Same content written to file with .report.md extension
@@ -123,7 +158,7 @@ pnpm markform serve /tmp/test.raw.md --no-open
 # - Content is read-only (no save button)
 
 # Test YAML serving (read-only)
-pnpm markform dump examples/movie-research-deep.form.md --format yaml > /tmp/test.yml
+pnpm markform dump examples/movie-deep-research.form.md --format yaml > /tmp/test.yml
 pnpm markform serve /tmp/test.yml --no-open
 # Visit http://localhost:3000 and verify:
 # - YAML is displayed with syntax highlighting
@@ -131,7 +166,7 @@ pnpm markform serve /tmp/test.yml --no-open
 # - Page shows "YAML" badge
 
 # Test JSON serving (read-only)
-pnpm markform dump examples/movie-research-deep.form.md --format json > /tmp/test.json
+pnpm markform dump examples/movie-deep-research.form.md --format json > /tmp/test.json
 pnpm markform serve /tmp/test.json --no-open
 # Visit http://localhost:3000 and verify:
 # - JSON is pretty-printed with syntax highlighting
@@ -182,4 +217,4 @@ pnpm markform serve --help
 
 ## Feedback and Revisions
 
-_To be updated based on user testing feedback._
+*To be updated based on user testing feedback.*

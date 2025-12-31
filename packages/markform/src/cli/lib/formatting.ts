@@ -147,7 +147,7 @@ export function formatTurnIssues(issues: InspectIssue[], maxShow = 5): string {
 /**
  * Format form info for menu label display.
  * Format: "filename - Title [runMode]"
- * Example: "movie-research-deep.form.md - Movie Research (Deep) [research]"
+ * Example: "movie-deep-research.form.md - Movie Deep Research [research]"
  */
 export function formatFormLabel(info: FormDisplayInfo): string {
   const titlePart = info.title ? ` - ${info.title}` : '';
@@ -166,7 +166,7 @@ export function formatFormHint(info: FormDisplayInfo): string {
 /**
  * Format form info for log line (e.g., after copying).
  * Format: "filename - Title" (dimmed title)
- * Example: "✓ movie-research-deep.form.md - Movie Research (Deep)"
+ * Example: "✓ movie-deep-research.form.md - Movie Deep Research"
  */
 export function formatFormLogLine(info: FormDisplayInfo, prefix: string): string {
   const titlePart = info.title ? ` - ${info.title}` : '';
