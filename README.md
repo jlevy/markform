@@ -1,5 +1,8 @@
 # Markform
 
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/workflows/ci.yml)
+![Coverage](./badges/coverage-total.svg)
+
 **Markform** is a text format for defining structured forms that humans can read,
 machines can parse, and agents can fill via tool calls.
 

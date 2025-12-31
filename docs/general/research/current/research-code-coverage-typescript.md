@@ -2,7 +2,7 @@
 
 ## Research Date
 
-2025-12-23
+2025-12-23 (updated 2025-12-31)
 
 ## Tool Versions Researched
 
@@ -11,6 +11,12 @@
 | Vitest | 4.0.16 | Testing framework |
 | @vitest/coverage-v8 | 4.0.16 | V8-based coverage (recommended) |
 | TypeScript | 5.9.3 | Language version |
+| vitest-coverage-report-action | v2 (v2.8.3) | PR comments (GitHub Action) |
+| coverage-badges-action | v1.4.6 | Badge generation (GitHub Action) |
+| actions/checkout | v6 | Repository checkout |
+| actions/setup-node | v6 | Node.js setup |
+| actions/upload-artifact | v4 | Artifact upload |
+| pnpm/action-setup | v4 | pnpm setup |
 
 ## Executive Summary
 
@@ -186,6 +192,138 @@ thresholds: {
 }
 ```
 
+## GitHub Actions Visibility (2025 Best Practices)
+
+### PR Coverage Comments
+
+The `vitest-coverage-report-action` provides native Vitest integration for PR visibility:
+
+```yaml
+- name: Run tests with coverage
+  run: pnpm test:coverage
+
+- name: Coverage Report
+  uses: davelosert/vitest-coverage-report-action@v2
+  if: github.event_name == 'pull_request'
+  with:
+    json-summary-path: ./coverage/coverage-summary.json
+    json-final-path: ./coverage/coverage-final.json
+    file-coverage-mode: changes  # Only show changed files
+```
+
+**Key features:**
+
+- Markdown-formatted PR comments with coverage tables
+- Updates in place (no comment spam)
+- File-specific coverage for changed files only
+- Comparison against base branch
+- Works directly with Vitest's `json-summary` output
+
+**Required Vitest reporters:**
+
+- `json-summary` (required) - For summary tables
+- `json` (optional) - For file-specific reports
+
+### Coverage Badges
+
+Generate coverage badges using `coverage-badges-action`:
+
+```yaml
+- name: Update Coverage Badge
+  uses: jpb06/coverage-badges-action@latest
+  if: github.ref == 'refs/heads/main'
+  with:
+    coverage-summary-path: ./coverage/coverage-summary.json
+    output-folder: ./badges
+```
+
+**Badge hosting options:**
+
+1. **GitHub Gist** - Works with protected branches
+2. **Repository branch** - Simpler but requires push access
+3. **External service** - Codecov, Shields.io
+
+### Complete CI Workflow Example
+
+```yaml
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm test:coverage
+
+      # PR coverage comment
+      - name: Coverage Report
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          json-summary-path: ./coverage/coverage-summary.json
+          json-final-path: ./coverage/coverage-final.json
+          file-coverage-mode: changes
+
+      # Upload coverage artifacts
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+```
+
+### Vitest Configuration for CI
+
+Enable `reportOnFailure` to generate reports even when thresholds fail:
+
+```typescript
+coverage: {
+  provider: 'v8',
+  reporter: ['text', 'text-summary', 'html', 'json', 'json-summary', 'lcov'],
+  reportsDirectory: './coverage',
+  thresholds: {
+    statements: 70,
+    branches: 65,
+    functions: 70,
+    lines: 70,
+  },
+  // Critical: Generate reports even when thresholds fail
+  reportOnFailure: true,
+}
+```
+
+### When to Use Codecov vs Native Actions
+
+**Use native GitHub Actions when:**
+
+- Single package or simple monorepo
+- Don't need historical trend analysis
+- Want to minimize external dependencies
+- GitHub-only workflow
+
+**Consider Codecov when:**
+
+- Need coverage trend graphs over time
+- Multiple packages with aggregated reporting
+- Team features (PR blocking, notifications)
+- Cross-repository coverage tracking
+
 ## Development Workflow
 
 ### Coverage-Driven Development
@@ -292,3 +430,12 @@ thresholds: {
   Practices](https://www.atlassian.com/continuous-delivery/software-testing/code-coverage)
 
 - [Codecov Documentation](https://docs.codecov.com/)
+
+- [vitest-coverage-report-action](https://github.com/marketplace/actions/vitest-coverage-report) -
+  PR comments for Vitest
+
+- [coverage-badges-action](https://github.com/jpb06/coverage-badges-action) - Badge generation
+
+- [Vitest Code Coverage with GitHub
+  Actions](https://medium.com/@alvarado.david/vitest-code-coverage-with-github-actions-report-compare-and-block-prs-on-low-coverage-67fceaa79a47) -
+  Comprehensive tutorial
