@@ -2,8 +2,6 @@ session_version: 0.1.0
 mode: mock
 form:
   path: simple.form.md
-mock:
-  completed_mock: simple-mock-filled.form.md
 harness:
   max_turns: 100
   max_patches_per_turn: 20
@@ -123,6 +121,639 @@ turns:
       markdown_sha256: e6cb237f40f14343b6616099b1ab4cededabc99e9434c2e72ea600b4473d0048
       answered_field_count: 10
       skipped_field_count: 0
+    context:
+      system_prompt: |-
+        # Form Instructions
+        Carefully research answers to all questions in the form, using all available tools you have.
+
+        Guidelines:
+        1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+        2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+        3. NEVER fabricate or guess information - only use data you can verify
+        4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+        5. For string fields: use appropriate text from verified sources
+        6. For number fields: use appropriate numeric values from verified sources
+        7. For single_select: choose one valid option ID
+        8. For multi_select: choose one or more valid option IDs
+        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+        CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+        Always use the generatePatches tool to submit your field values.
+
+
+        # Instructions for agent role
+        Complete the remaining fields based on the provided context.
+
+        # Field-specific instructions
+        **confirmations:** Answer yes or no for each confirmation. All must be explicitly answered.
+        **event_date:** Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+        **founded_year:** Enter the year the company was founded (1900-2030).
+        **name:** Enter your full name (2-50 characters).
+        **tags:** Add 1-5 unique tags (each at least 2 characters).
+        **tasks_multi:** Track task progress. All must reach done or na state to complete.
+      context_prompt: |-
+        # Current Form State
+
+        Below is the complete form with all currently filled values.
+        Fields marked with `[ ]` or empty values still need to be filled.
+
+        ```markdown
+        ---
+        markform:
+          spec: "MF/0.1"
+          run_mode: "interactive"
+        role_instructions:
+          user: "Fill in the fields you have direct knowledge of."
+          agent: "Complete the remaining fields based on the provided context."
+        ---
+
+        {% form id="simple_test" title="Simple Test Form" %}
+
+        {% description ref="simple_test" %}
+        A fully interactive form demonstrating all Markform v0.1 field types.
+        Fill all fields using interactive prompts - no LLM API key needed.
+        {% /description %}
+
+        {% group id="basic_fields" title="Basic Fields" %}
+
+        {% field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true %}{% /field %}
+
+        {% instructions ref="name" %}
+        Enter your full name (2-50 characters).
+        {% /instructions %}
+
+        {% field kind="string" id="email" role="user" examples=["alice@company.com", "bob@example.org"] label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" required=true %}{% /field %}
+
+        {% field kind="number" id="age" role="user" examples=["18", "30", "45"] integer=true label="Age" max=150 min=0 placeholder="25" required=true %}{% /field %}
+
+        {% field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" %}{% /field %}
+
+        {% instructions ref="score" %}
+        Enter a score between 0 and 100 (optional).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="list_fields" title="List Fields" %}
+
+        {% field kind="string_list" id="tags" role="user" itemMinLength=2 label="Tags" maxItems=5 minItems=1 required=true uniqueItems=true %}{% /field %}
+
+        {% instructions ref="tags" %}
+        Add 1-5 unique tags (each at least 2 characters).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="selection_fields" title="Selection Fields" %}
+
+        {% field kind="single_select" id="priority" role="user" label="Priority" required=true %}
+        - [ ] Low {% #low %}
+        - [ ] Medium {% #medium %}
+        - [ ] High {% #high %}
+        {% /field %}
+
+        {% field kind="multi_select" id="categories" role="user" label="Categories" maxSelections=3 minSelections=1 required=true %}
+        - [ ] Frontend {% #frontend %}
+        - [ ] Backend {% #backend %}
+        - [ ] Database {% #database %}
+        - [ ] DevOps {% #devops %}
+        {% /field %}
+
+        {% /group %}
+
+        {% group id="checkbox_fields" title="Checkbox Fields" %}
+
+        {% field kind="checkboxes" id="tasks_multi" role="user" label="Tasks (Multi Mode)" required=true %}
+        - [ ] Research {% #research %}
+        - [ ] Design {% #design %}
+        - [ ] Implement {% #implement %}
+        - [ ] Test {% #test %}
+        {% /field %}
+
+        {% instructions ref="tasks_multi" %}
+        Track task progress. All must reach done or na state to complete.
+        {% /instructions %}
+
+        {% field kind="checkboxes" id="tasks_simple" role="user" checkboxMode="simple" label="Agreements (Simple Mode)" required=true %}
+        - [ ] I have read the guidelines {% #read_guidelines %}
+        - [ ] I agree to the terms {% #agree_terms %}
+        {% /field %}
+
+        {% field kind="checkboxes" id="confirmations" role="user" checkboxMode="explicit" label="Confirmations (Explicit Mode)" required=true %}
+        - [ ] Data has been backed up {% #backed_up %}
+        - [ ] Stakeholders notified {% #notified %}
+        {% /field %}
+
+        {% instructions ref="confirmations" %}
+        Answer yes or no for each confirmation. All must be explicitly answered.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="url_fields" title="URL Fields" %}
+
+        {% field kind="url" id="website" role="user" examples=["https://github.com/user/repo", "https://company.com"] label="Website" placeholder="https://example.com" required=true %}{% /field %}
+
+        {% instructions ref="website" %}
+        Enter your website URL (must be http or https).
+        {% /instructions %}
+
+        {% field kind="url_list" id="references" role="user" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] label="References" maxItems=5 minItems=1 placeholder="https://docs.example.com" uniqueItems=true %}{% /field %}
+
+        {% instructions ref="references" %}
+        Add 1-5 unique reference URLs for sources or documentation.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="date_fields" title="Date and Year Fields" %}
+
+        {% field kind="date" id="event_date" role="user" label="Event Date" max="2030-12-31" min="2020-01-01" required=true %}{% /field %}
+
+        {% instructions ref="event_date" %}
+        Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+        {% /instructions %}
+
+        {% field kind="year" id="founded_year" role="user" label="Founded Year" max=2030 min=1900 required=true %}{% /field %}
+
+        {% instructions ref="founded_year" %}
+        Enter the year the company was founded (1900-2030).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="table_fields" title="Table Fields" %}
+
+        {% field kind="table" id="team_members" role="user" columnIds=["name", "role", "start_date"] columnLabels=["Name", "Role", "Start Date"] columnTypes=[{type: "string", required: true}, "string", "date"] label="Team Members" maxRows=5 minRows=0 %}{% /field %}
+
+        {% instructions ref="team_members" %}
+        Add team members with their name (required), role, and start date.
+        {% /instructions %}
+
+        {% field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 %}{% /field %}
+
+        {% instructions ref="project_tasks" %}
+        Optionally add project tasks with estimated hours and reference links.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="optional_fields" title="Optional Fields" %}
+
+        {% field kind="string" id="notes" role="user" label="Notes" %}{% /field %}
+
+        {% instructions ref="notes" %}
+        Add any relevant notes or observations (optional).
+        {% /instructions %}
+
+        {% field kind="number" id="optional_number" role="user" label="Optional Number" %}{% /field %}
+
+        {% field kind="url" id="related_url" role="user" label="Related URL" %}{% /field %}
+
+        {% instructions ref="related_url" %}
+        Optionally add a URL to related documentation or resources.
+        {% /instructions %}
+
+        {% field kind="date" id="optional_date" role="user" label="Optional Date" %}{% /field %}
+
+        {% instructions ref="optional_date" %}
+        Optionally add a date (YYYY-MM-DD format).
+        {% /instructions %}
+
+        {% field kind="year" id="optional_year" role="user" label="Optional Year" %}{% /field %}
+
+        {% instructions ref="optional_year" %}
+        Optionally add a year.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% /form %}
+
+        ```
+
+        # Current Form Issues
+
+        You need to address up to 20 issues. Here are the current issues:
+
+        - **age** (field): Required field "Age" is empty
+          Severity: required, Priority: P1
+          Type: number
+
+        - **categories** (field): Required field "Categories" has no selections
+          Severity: required, Priority: P1
+          Type: multi_select
+          Options: frontend, backend, database, devops
+
+        - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
+          Severity: required, Priority: P1
+          Type: checkboxes
+          Options: backed_up, notified
+          Mode: explicit
+
+        - **email** (field): Required field "Email" is empty
+          Severity: required, Priority: P1
+          Type: string
+
+        - **event_date** (field): Required field "Event Date" is empty
+          Severity: required, Priority: P1
+          Type: date
+
+        - **founded_year** (field): Required field "Founded Year" is empty
+          Severity: required, Priority: P1
+          Type: year
+
+        - **name** (field): Required field "Name" is empty
+          Severity: required, Priority: P1
+          Type: string
+
+        - **priority** (field): Required field "Priority" has no selection
+          Severity: required, Priority: P1
+          Type: single_select
+          Options: low, medium, high
+
+        - **tags** (field): Required field "Tags" is empty
+          Severity: required, Priority: P1
+          Type: string_list
+
+        - **tasks_multi** (field): All items in "Tasks (Multi Mode)" must be completed
+          Severity: required, Priority: P1
+          Type: checkboxes
+          Options: research, design, implement, test
+          Mode: multi
+
+        # Instructions
+
+        Use the generatePatches tool to submit patches for the fields above.
+        Each patch should match the field kind:
+        - string: { op: "set_string", fieldId: "...", value: "..." }
+        - number: { op: "set_number", fieldId: "...", value: 123 }
+        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+        - url: { op: "set_url", fieldId: "...", value: "https://..." }
+        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+        - year: { op: "set_year", fieldId: "...", value: 2024 }
+        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+        If you cannot find verifiable information for a field, skip it:
+        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+    wire:
+      request:
+        system: |-
+          # Form Instructions
+          Carefully research answers to all questions in the form, using all available tools you have.
+
+          Guidelines:
+          1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+          2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+          3. NEVER fabricate or guess information - only use data you can verify
+          4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+          5. For string fields: use appropriate text from verified sources
+          6. For number fields: use appropriate numeric values from verified sources
+          7. For single_select: choose one valid option ID
+          8. For multi_select: choose one or more valid option IDs
+          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+          CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+          Always use the generatePatches tool to submit your field values.
+
+
+          # Instructions for agent role
+          Complete the remaining fields based on the provided context.
+
+          # Field-specific instructions
+          **confirmations:** Answer yes or no for each confirmation. All must be explicitly answered.
+          **event_date:** Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+          **founded_year:** Enter the year the company was founded (1900-2030).
+          **name:** Enter your full name (2-50 characters).
+          **tags:** Add 1-5 unique tags (each at least 2 characters).
+          **tasks_multi:** Track task progress. All must reach done or na state to complete.
+        prompt: |-
+          # Current Form State
+
+          Below is the complete form with all currently filled values.
+          Fields marked with `[ ]` or empty values still need to be filled.
+
+          ```markdown
+          ---
+          markform:
+            spec: "MF/0.1"
+            run_mode: "interactive"
+          role_instructions:
+            user: "Fill in the fields you have direct knowledge of."
+            agent: "Complete the remaining fields based on the provided context."
+          ---
+
+          {% form id="simple_test" title="Simple Test Form" %}
+
+          {% description ref="simple_test" %}
+          A fully interactive form demonstrating all Markform v0.1 field types.
+          Fill all fields using interactive prompts - no LLM API key needed.
+          {% /description %}
+
+          {% group id="basic_fields" title="Basic Fields" %}
+
+          {% field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true %}{% /field %}
+
+          {% instructions ref="name" %}
+          Enter your full name (2-50 characters).
+          {% /instructions %}
+
+          {% field kind="string" id="email" role="user" examples=["alice@company.com", "bob@example.org"] label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" required=true %}{% /field %}
+
+          {% field kind="number" id="age" role="user" examples=["18", "30", "45"] integer=true label="Age" max=150 min=0 placeholder="25" required=true %}{% /field %}
+
+          {% field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" %}{% /field %}
+
+          {% instructions ref="score" %}
+          Enter a score between 0 and 100 (optional).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="list_fields" title="List Fields" %}
+
+          {% field kind="string_list" id="tags" role="user" itemMinLength=2 label="Tags" maxItems=5 minItems=1 required=true uniqueItems=true %}{% /field %}
+
+          {% instructions ref="tags" %}
+          Add 1-5 unique tags (each at least 2 characters).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="selection_fields" title="Selection Fields" %}
+
+          {% field kind="single_select" id="priority" role="user" label="Priority" required=true %}
+          - [ ] Low {% #low %}
+          - [ ] Medium {% #medium %}
+          - [ ] High {% #high %}
+          {% /field %}
+
+          {% field kind="multi_select" id="categories" role="user" label="Categories" maxSelections=3 minSelections=1 required=true %}
+          - [ ] Frontend {% #frontend %}
+          - [ ] Backend {% #backend %}
+          - [ ] Database {% #database %}
+          - [ ] DevOps {% #devops %}
+          {% /field %}
+
+          {% /group %}
+
+          {% group id="checkbox_fields" title="Checkbox Fields" %}
+
+          {% field kind="checkboxes" id="tasks_multi" role="user" label="Tasks (Multi Mode)" required=true %}
+          - [ ] Research {% #research %}
+          - [ ] Design {% #design %}
+          - [ ] Implement {% #implement %}
+          - [ ] Test {% #test %}
+          {% /field %}
+
+          {% instructions ref="tasks_multi" %}
+          Track task progress. All must reach done or na state to complete.
+          {% /instructions %}
+
+          {% field kind="checkboxes" id="tasks_simple" role="user" checkboxMode="simple" label="Agreements (Simple Mode)" required=true %}
+          - [ ] I have read the guidelines {% #read_guidelines %}
+          - [ ] I agree to the terms {% #agree_terms %}
+          {% /field %}
+
+          {% field kind="checkboxes" id="confirmations" role="user" checkboxMode="explicit" label="Confirmations (Explicit Mode)" required=true %}
+          - [ ] Data has been backed up {% #backed_up %}
+          - [ ] Stakeholders notified {% #notified %}
+          {% /field %}
+
+          {% instructions ref="confirmations" %}
+          Answer yes or no for each confirmation. All must be explicitly answered.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="url_fields" title="URL Fields" %}
+
+          {% field kind="url" id="website" role="user" examples=["https://github.com/user/repo", "https://company.com"] label="Website" placeholder="https://example.com" required=true %}{% /field %}
+
+          {% instructions ref="website" %}
+          Enter your website URL (must be http or https).
+          {% /instructions %}
+
+          {% field kind="url_list" id="references" role="user" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] label="References" maxItems=5 minItems=1 placeholder="https://docs.example.com" uniqueItems=true %}{% /field %}
+
+          {% instructions ref="references" %}
+          Add 1-5 unique reference URLs for sources or documentation.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="date_fields" title="Date and Year Fields" %}
+
+          {% field kind="date" id="event_date" role="user" label="Event Date" max="2030-12-31" min="2020-01-01" required=true %}{% /field %}
+
+          {% instructions ref="event_date" %}
+          Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+          {% /instructions %}
+
+          {% field kind="year" id="founded_year" role="user" label="Founded Year" max=2030 min=1900 required=true %}{% /field %}
+
+          {% instructions ref="founded_year" %}
+          Enter the year the company was founded (1900-2030).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="table_fields" title="Table Fields" %}
+
+          {% field kind="table" id="team_members" role="user" columnIds=["name", "role", "start_date"] columnLabels=["Name", "Role", "Start Date"] columnTypes=[{type: "string", required: true}, "string", "date"] label="Team Members" maxRows=5 minRows=0 %}{% /field %}
+
+          {% instructions ref="team_members" %}
+          Add team members with their name (required), role, and start date.
+          {% /instructions %}
+
+          {% field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 %}{% /field %}
+
+          {% instructions ref="project_tasks" %}
+          Optionally add project tasks with estimated hours and reference links.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="optional_fields" title="Optional Fields" %}
+
+          {% field kind="string" id="notes" role="user" label="Notes" %}{% /field %}
+
+          {% instructions ref="notes" %}
+          Add any relevant notes or observations (optional).
+          {% /instructions %}
+
+          {% field kind="number" id="optional_number" role="user" label="Optional Number" %}{% /field %}
+
+          {% field kind="url" id="related_url" role="user" label="Related URL" %}{% /field %}
+
+          {% instructions ref="related_url" %}
+          Optionally add a URL to related documentation or resources.
+          {% /instructions %}
+
+          {% field kind="date" id="optional_date" role="user" label="Optional Date" %}{% /field %}
+
+          {% instructions ref="optional_date" %}
+          Optionally add a date (YYYY-MM-DD format).
+          {% /instructions %}
+
+          {% field kind="year" id="optional_year" role="user" label="Optional Year" %}{% /field %}
+
+          {% instructions ref="optional_year" %}
+          Optionally add a year.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% /form %}
+
+          ```
+
+          # Current Form Issues
+
+          You need to address up to 20 issues. Here are the current issues:
+
+          - **age** (field): Required field "Age" is empty
+            Severity: required, Priority: P1
+            Type: number
+
+          - **categories** (field): Required field "Categories" has no selections
+            Severity: required, Priority: P1
+            Type: multi_select
+            Options: frontend, backend, database, devops
+
+          - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
+            Severity: required, Priority: P1
+            Type: checkboxes
+            Options: backed_up, notified
+            Mode: explicit
+
+          - **email** (field): Required field "Email" is empty
+            Severity: required, Priority: P1
+            Type: string
+
+          - **event_date** (field): Required field "Event Date" is empty
+            Severity: required, Priority: P1
+            Type: date
+
+          - **founded_year** (field): Required field "Founded Year" is empty
+            Severity: required, Priority: P1
+            Type: year
+
+          - **name** (field): Required field "Name" is empty
+            Severity: required, Priority: P1
+            Type: string
+
+          - **priority** (field): Required field "Priority" has no selection
+            Severity: required, Priority: P1
+            Type: single_select
+            Options: low, medium, high
+
+          - **tags** (field): Required field "Tags" is empty
+            Severity: required, Priority: P1
+            Type: string_list
+
+          - **tasks_multi** (field): All items in "Tasks (Multi Mode)" must be completed
+            Severity: required, Priority: P1
+            Type: checkboxes
+            Options: research, design, implement, test
+            Mode: multi
+
+          # Instructions
+
+          Use the generatePatches tool to submit patches for the fields above.
+          Each patch should match the field kind:
+          - string: { op: "set_string", fieldId: "...", value: "..." }
+          - number: { op: "set_number", fieldId: "...", value: 123 }
+          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+          - url: { op: "set_url", fieldId: "...", value: "https://..." }
+          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+          - year: { op: "set_year", fieldId: "...", value: 2024 }
+          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+          If you cannot find verifiable information for a field, skip it:
+          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        tools:
+          generatePatches:
+            description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
+            input_schema:
+              $defs:
+                _patch:
+                  description: A patch operation (see tool description for full schema)
+              properties:
+                patches:
+                  description: Array of patches to apply to the form
+                  items:
+                    $ref: '#/$defs/Patch'
+                  type: array
+              required:
+                - patches
+              type: object
+      response:
+        steps:
+          - tool_calls:
+              - tool_name: generatePatches
+                input:
+                  patches:
+                    - field_id: age
+                      op: set_number
+                      value: 32
+                    - field_id: categories
+                      op: set_multi_select
+                      selected:
+                        - frontend
+                        - backend
+                    - field_id: confirmations
+                      op: set_checkboxes
+                      values:
+                        backed_up: yes
+                        notified: no
+                    - field_id: email
+                      op: set_string
+                      value: alice@example.com
+                    - field_id: event_date
+                      op: set_date
+                      value: 2025-06-15
+                    - field_id: founded_year
+                      op: set_year
+                      value: 2020
+                    - field_id: name
+                      op: set_string
+                      value: Alice Johnson
+                    - field_id: priority
+                      op: set_single_select
+                      selected: medium
+                    - field_id: tags
+                      items:
+                        - typescript
+                        - testing
+                        - forms
+                      op: set_string_list
+                    - field_id: tasks_multi
+                      op: set_checkboxes
+                      values:
+                        design: done
+                        implement: done
+                        research: done
+                        test: na
+            tool_results: []
+            text: null
+        usage:
+          input_tokens: 0
+          output_tokens: 0
   - turn: 2
     inspect:
       issues:
@@ -232,6 +863,689 @@ turns:
       markdown_sha256: 54b5d3fe131f5dd0179a116bf7d25f356ada1eb5cec0df2223a2716e145801ee
       answered_field_count: 16
       skipped_field_count: 4
+    context:
+      system_prompt: |-
+        # Form Instructions
+        Carefully research answers to all questions in the form, using all available tools you have.
+
+        Guidelines:
+        1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+        2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+        3. NEVER fabricate or guess information - only use data you can verify
+        4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+        5. For string fields: use appropriate text from verified sources
+        6. For number fields: use appropriate numeric values from verified sources
+        7. For single_select: choose one valid option ID
+        8. For multi_select: choose one or more valid option IDs
+        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+        CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+        Always use the generatePatches tool to submit your field values.
+
+
+        # Instructions for agent role
+        Complete the remaining fields based on the provided context.
+
+        # Field-specific instructions
+        **website:** Enter your website URL (must be http or https).
+        **notes:** Add any relevant notes or observations (optional).
+        **optional_date:** Optionally add a date (YYYY-MM-DD format).
+        **optional_year:** Optionally add a year.
+        **project_tasks:** Optionally add project tasks with estimated hours and reference links.
+        **references:** Add 1-5 unique reference URLs for sources or documentation.
+        **related_url:** Optionally add a URL to related documentation or resources.
+        **score:** Enter a score between 0 and 100 (optional).
+      context_prompt: |-
+        # Current Form State
+
+        Below is the complete form with all currently filled values.
+        Fields marked with `[ ]` or empty values still need to be filled.
+
+        ```markdown
+        ---
+        markform:
+          spec: "MF/0.1"
+          run_mode: "interactive"
+        role_instructions:
+          user: "Fill in the fields you have direct knowledge of."
+          agent: "Complete the remaining fields based on the provided context."
+        ---
+
+        {% form id="simple_test" title="Simple Test Form" %}
+
+        {% description ref="simple_test" %}
+        A fully interactive form demonstrating all Markform v0.1 field types.
+        Fill all fields using interactive prompts - no LLM API key needed.
+        {% /description %}
+
+        {% group id="basic_fields" title="Basic Fields" %}
+
+        {% field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true %}
+        ```value
+        Alice Johnson
+        ```
+        {% /field %}
+
+        {% instructions ref="name" %}
+        Enter your full name (2-50 characters).
+        {% /instructions %}
+
+        {% field kind="string" id="email" role="user" examples=["alice@company.com", "bob@example.org"] label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" required=true %}
+        ```value
+        alice@example.com
+        ```
+        {% /field %}
+
+        {% field kind="number" id="age" role="user" examples=["18", "30", "45"] integer=true label="Age" max=150 min=0 placeholder="25" required=true %}
+        ```value
+        32
+        ```
+        {% /field %}
+
+        {% field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" %}{% /field %}
+
+        {% instructions ref="score" %}
+        Enter a score between 0 and 100 (optional).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="list_fields" title="List Fields" %}
+
+        {% field kind="string_list" id="tags" role="user" itemMinLength=2 label="Tags" maxItems=5 minItems=1 required=true uniqueItems=true %}
+        ```value
+        typescript
+        testing
+        forms
+        ```
+        {% /field %}
+
+        {% instructions ref="tags" %}
+        Add 1-5 unique tags (each at least 2 characters).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="selection_fields" title="Selection Fields" %}
+
+        {% field kind="single_select" id="priority" role="user" label="Priority" required=true %}
+        - [ ] Low {% #low %}
+        - [x] Medium {% #medium %}
+        - [ ] High {% #high %}
+        {% /field %}
+
+        {% field kind="multi_select" id="categories" role="user" label="Categories" maxSelections=3 minSelections=1 required=true %}
+        - [x] Frontend {% #frontend %}
+        - [x] Backend {% #backend %}
+        - [ ] Database {% #database %}
+        - [ ] DevOps {% #devops %}
+        {% /field %}
+
+        {% /group %}
+
+        {% group id="checkbox_fields" title="Checkbox Fields" %}
+
+        {% field kind="checkboxes" id="tasks_multi" role="user" label="Tasks (Multi Mode)" required=true %}
+        - [x] Research {% #research %}
+        - [x] Design {% #design %}
+        - [x] Implement {% #implement %}
+        - [-] Test {% #test %}
+        {% /field %}
+
+        {% instructions ref="tasks_multi" %}
+        Track task progress. All must reach done or na state to complete.
+        {% /instructions %}
+
+        {% field kind="checkboxes" id="tasks_simple" role="user" checkboxMode="simple" label="Agreements (Simple Mode)" required=true %}
+        - [ ] I have read the guidelines {% #read_guidelines %}
+        - [ ] I agree to the terms {% #agree_terms %}
+        {% /field %}
+
+        {% field kind="checkboxes" id="confirmations" role="user" checkboxMode="explicit" label="Confirmations (Explicit Mode)" required=true %}
+        - [y] Data has been backed up {% #backed_up %}
+        - [n] Stakeholders notified {% #notified %}
+        {% /field %}
+
+        {% instructions ref="confirmations" %}
+        Answer yes or no for each confirmation. All must be explicitly answered.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="url_fields" title="URL Fields" %}
+
+        {% field kind="url" id="website" role="user" examples=["https://github.com/user/repo", "https://company.com"] label="Website" placeholder="https://example.com" required=true %}{% /field %}
+
+        {% instructions ref="website" %}
+        Enter your website URL (must be http or https).
+        {% /instructions %}
+
+        {% field kind="url_list" id="references" role="user" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] label="References" maxItems=5 minItems=1 placeholder="https://docs.example.com" uniqueItems=true %}{% /field %}
+
+        {% instructions ref="references" %}
+        Add 1-5 unique reference URLs for sources or documentation.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="date_fields" title="Date and Year Fields" %}
+
+        {% field kind="date" id="event_date" role="user" label="Event Date" max="2030-12-31" min="2020-01-01" required=true %}
+        ```value
+        2025-06-15
+        ```
+        {% /field %}
+
+        {% instructions ref="event_date" %}
+        Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+        {% /instructions %}
+
+        {% field kind="year" id="founded_year" role="user" label="Founded Year" max=2030 min=1900 required=true %}
+        ```value
+        2020
+        ```
+        {% /field %}
+
+        {% instructions ref="founded_year" %}
+        Enter the year the company was founded (1900-2030).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="table_fields" title="Table Fields" %}
+
+        {% field kind="table" id="team_members" role="user" columnIds=["name", "role", "start_date"] columnLabels=["Name", "Role", "Start Date"] columnTypes=[{type: "string", required: true}, "string", "date"] label="Team Members" maxRows=5 minRows=0 %}{% /field %}
+
+        {% instructions ref="team_members" %}
+        Add team members with their name (required), role, and start date.
+        {% /instructions %}
+
+        {% field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 %}{% /field %}
+
+        {% instructions ref="project_tasks" %}
+        Optionally add project tasks with estimated hours and reference links.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="optional_fields" title="Optional Fields" %}
+
+        {% field kind="string" id="notes" role="user" label="Notes" %}{% /field %}
+
+        {% instructions ref="notes" %}
+        Add any relevant notes or observations (optional).
+        {% /instructions %}
+
+        {% field kind="number" id="optional_number" role="user" label="Optional Number" %}{% /field %}
+
+        {% field kind="url" id="related_url" role="user" label="Related URL" %}{% /field %}
+
+        {% instructions ref="related_url" %}
+        Optionally add a URL to related documentation or resources.
+        {% /instructions %}
+
+        {% field kind="date" id="optional_date" role="user" label="Optional Date" %}{% /field %}
+
+        {% instructions ref="optional_date" %}
+        Optionally add a date (YYYY-MM-DD format).
+        {% /instructions %}
+
+        {% field kind="year" id="optional_year" role="user" label="Optional Year" %}{% /field %}
+
+        {% instructions ref="optional_year" %}
+        Optionally add a year.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% /form %}
+
+        ```
+
+        # Current Form Issues
+
+        You need to address up to 20 issues. Here are the current issues:
+
+        - **tasks_simple** (field): All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
+          Severity: required, Priority: P1
+          Type: checkboxes
+          Options: read_guidelines, agree_terms
+          Mode: simple
+
+        - **website** (field): Required field "Website" is empty
+          Severity: required, Priority: P1
+          Type: url
+
+        - **notes** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: string
+
+        - **optional_date** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: date
+
+        - **optional_number** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: number
+
+        - **optional_year** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: year
+
+        - **project_tasks** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: table
+          Columns: task (required), estimate_hrs, link
+          Rows: min: 0, max: 10
+
+        - **references** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: url_list
+
+        - **related_url** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: url
+
+        - **score** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: number
+
+        # Instructions
+
+        Use the generatePatches tool to submit patches for the fields above.
+        Each patch should match the field kind:
+        - string: { op: "set_string", fieldId: "...", value: "..." }
+        - number: { op: "set_number", fieldId: "...", value: 123 }
+        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+        - url: { op: "set_url", fieldId: "...", value: "https://..." }
+        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+        - year: { op: "set_year", fieldId: "...", value: 2024 }
+        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+        If you cannot find verifiable information for a field, skip it:
+        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+    wire:
+      request:
+        system: |-
+          # Form Instructions
+          Carefully research answers to all questions in the form, using all available tools you have.
+
+          Guidelines:
+          1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+          2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+          3. NEVER fabricate or guess information - only use data you can verify
+          4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+          5. For string fields: use appropriate text from verified sources
+          6. For number fields: use appropriate numeric values from verified sources
+          7. For single_select: choose one valid option ID
+          8. For multi_select: choose one or more valid option IDs
+          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+          CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+          Always use the generatePatches tool to submit your field values.
+
+
+          # Instructions for agent role
+          Complete the remaining fields based on the provided context.
+
+          # Field-specific instructions
+          **website:** Enter your website URL (must be http or https).
+          **notes:** Add any relevant notes or observations (optional).
+          **optional_date:** Optionally add a date (YYYY-MM-DD format).
+          **optional_year:** Optionally add a year.
+          **project_tasks:** Optionally add project tasks with estimated hours and reference links.
+          **references:** Add 1-5 unique reference URLs for sources or documentation.
+          **related_url:** Optionally add a URL to related documentation or resources.
+          **score:** Enter a score between 0 and 100 (optional).
+        prompt: |-
+          # Current Form State
+
+          Below is the complete form with all currently filled values.
+          Fields marked with `[ ]` or empty values still need to be filled.
+
+          ```markdown
+          ---
+          markform:
+            spec: "MF/0.1"
+            run_mode: "interactive"
+          role_instructions:
+            user: "Fill in the fields you have direct knowledge of."
+            agent: "Complete the remaining fields based on the provided context."
+          ---
+
+          {% form id="simple_test" title="Simple Test Form" %}
+
+          {% description ref="simple_test" %}
+          A fully interactive form demonstrating all Markform v0.1 field types.
+          Fill all fields using interactive prompts - no LLM API key needed.
+          {% /description %}
+
+          {% group id="basic_fields" title="Basic Fields" %}
+
+          {% field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true %}
+          ```value
+          Alice Johnson
+          ```
+          {% /field %}
+
+          {% instructions ref="name" %}
+          Enter your full name (2-50 characters).
+          {% /instructions %}
+
+          {% field kind="string" id="email" role="user" examples=["alice@company.com", "bob@example.org"] label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" required=true %}
+          ```value
+          alice@example.com
+          ```
+          {% /field %}
+
+          {% field kind="number" id="age" role="user" examples=["18", "30", "45"] integer=true label="Age" max=150 min=0 placeholder="25" required=true %}
+          ```value
+          32
+          ```
+          {% /field %}
+
+          {% field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" %}{% /field %}
+
+          {% instructions ref="score" %}
+          Enter a score between 0 and 100 (optional).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="list_fields" title="List Fields" %}
+
+          {% field kind="string_list" id="tags" role="user" itemMinLength=2 label="Tags" maxItems=5 minItems=1 required=true uniqueItems=true %}
+          ```value
+          typescript
+          testing
+          forms
+          ```
+          {% /field %}
+
+          {% instructions ref="tags" %}
+          Add 1-5 unique tags (each at least 2 characters).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="selection_fields" title="Selection Fields" %}
+
+          {% field kind="single_select" id="priority" role="user" label="Priority" required=true %}
+          - [ ] Low {% #low %}
+          - [x] Medium {% #medium %}
+          - [ ] High {% #high %}
+          {% /field %}
+
+          {% field kind="multi_select" id="categories" role="user" label="Categories" maxSelections=3 minSelections=1 required=true %}
+          - [x] Frontend {% #frontend %}
+          - [x] Backend {% #backend %}
+          - [ ] Database {% #database %}
+          - [ ] DevOps {% #devops %}
+          {% /field %}
+
+          {% /group %}
+
+          {% group id="checkbox_fields" title="Checkbox Fields" %}
+
+          {% field kind="checkboxes" id="tasks_multi" role="user" label="Tasks (Multi Mode)" required=true %}
+          - [x] Research {% #research %}
+          - [x] Design {% #design %}
+          - [x] Implement {% #implement %}
+          - [-] Test {% #test %}
+          {% /field %}
+
+          {% instructions ref="tasks_multi" %}
+          Track task progress. All must reach done or na state to complete.
+          {% /instructions %}
+
+          {% field kind="checkboxes" id="tasks_simple" role="user" checkboxMode="simple" label="Agreements (Simple Mode)" required=true %}
+          - [ ] I have read the guidelines {% #read_guidelines %}
+          - [ ] I agree to the terms {% #agree_terms %}
+          {% /field %}
+
+          {% field kind="checkboxes" id="confirmations" role="user" checkboxMode="explicit" label="Confirmations (Explicit Mode)" required=true %}
+          - [y] Data has been backed up {% #backed_up %}
+          - [n] Stakeholders notified {% #notified %}
+          {% /field %}
+
+          {% instructions ref="confirmations" %}
+          Answer yes or no for each confirmation. All must be explicitly answered.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="url_fields" title="URL Fields" %}
+
+          {% field kind="url" id="website" role="user" examples=["https://github.com/user/repo", "https://company.com"] label="Website" placeholder="https://example.com" required=true %}{% /field %}
+
+          {% instructions ref="website" %}
+          Enter your website URL (must be http or https).
+          {% /instructions %}
+
+          {% field kind="url_list" id="references" role="user" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] label="References" maxItems=5 minItems=1 placeholder="https://docs.example.com" uniqueItems=true %}{% /field %}
+
+          {% instructions ref="references" %}
+          Add 1-5 unique reference URLs for sources or documentation.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="date_fields" title="Date and Year Fields" %}
+
+          {% field kind="date" id="event_date" role="user" label="Event Date" max="2030-12-31" min="2020-01-01" required=true %}
+          ```value
+          2025-06-15
+          ```
+          {% /field %}
+
+          {% instructions ref="event_date" %}
+          Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+          {% /instructions %}
+
+          {% field kind="year" id="founded_year" role="user" label="Founded Year" max=2030 min=1900 required=true %}
+          ```value
+          2020
+          ```
+          {% /field %}
+
+          {% instructions ref="founded_year" %}
+          Enter the year the company was founded (1900-2030).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="table_fields" title="Table Fields" %}
+
+          {% field kind="table" id="team_members" role="user" columnIds=["name", "role", "start_date"] columnLabels=["Name", "Role", "Start Date"] columnTypes=[{type: "string", required: true}, "string", "date"] label="Team Members" maxRows=5 minRows=0 %}{% /field %}
+
+          {% instructions ref="team_members" %}
+          Add team members with their name (required), role, and start date.
+          {% /instructions %}
+
+          {% field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 %}{% /field %}
+
+          {% instructions ref="project_tasks" %}
+          Optionally add project tasks with estimated hours and reference links.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="optional_fields" title="Optional Fields" %}
+
+          {% field kind="string" id="notes" role="user" label="Notes" %}{% /field %}
+
+          {% instructions ref="notes" %}
+          Add any relevant notes or observations (optional).
+          {% /instructions %}
+
+          {% field kind="number" id="optional_number" role="user" label="Optional Number" %}{% /field %}
+
+          {% field kind="url" id="related_url" role="user" label="Related URL" %}{% /field %}
+
+          {% instructions ref="related_url" %}
+          Optionally add a URL to related documentation or resources.
+          {% /instructions %}
+
+          {% field kind="date" id="optional_date" role="user" label="Optional Date" %}{% /field %}
+
+          {% instructions ref="optional_date" %}
+          Optionally add a date (YYYY-MM-DD format).
+          {% /instructions %}
+
+          {% field kind="year" id="optional_year" role="user" label="Optional Year" %}{% /field %}
+
+          {% instructions ref="optional_year" %}
+          Optionally add a year.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% /form %}
+
+          ```
+
+          # Current Form Issues
+
+          You need to address up to 20 issues. Here are the current issues:
+
+          - **tasks_simple** (field): All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
+            Severity: required, Priority: P1
+            Type: checkboxes
+            Options: read_guidelines, agree_terms
+            Mode: simple
+
+          - **website** (field): Required field "Website" is empty
+            Severity: required, Priority: P1
+            Type: url
+
+          - **notes** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: string
+
+          - **optional_date** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: date
+
+          - **optional_number** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: number
+
+          - **optional_year** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: year
+
+          - **project_tasks** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: table
+            Columns: task (required), estimate_hrs, link
+            Rows: min: 0, max: 10
+
+          - **references** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: url_list
+
+          - **related_url** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: url
+
+          - **score** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: number
+
+          # Instructions
+
+          Use the generatePatches tool to submit patches for the fields above.
+          Each patch should match the field kind:
+          - string: { op: "set_string", fieldId: "...", value: "..." }
+          - number: { op: "set_number", fieldId: "...", value: 123 }
+          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+          - url: { op: "set_url", fieldId: "...", value: "https://..." }
+          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+          - year: { op: "set_year", fieldId: "...", value: 2024 }
+          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+          If you cannot find verifiable information for a field, skip it:
+          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        tools:
+          generatePatches:
+            description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
+            input_schema:
+              $defs:
+                _patch:
+                  description: A patch operation (see tool description for full schema)
+              properties:
+                patches:
+                  description: Array of patches to apply to the form
+                  items:
+                    $ref: '#/$defs/Patch'
+                  type: array
+              required:
+                - patches
+              type: object
+      response:
+        steps:
+          - tool_calls:
+              - tool_name: generatePatches
+                input:
+                  patches:
+                    - field_id: tasks_simple
+                      op: set_checkboxes
+                      values:
+                        agree_terms: done
+                        read_guidelines: done
+                    - field_id: website
+                      op: set_url
+                      value: https://alice.dev
+                    - field_id: notes
+                      op: set_string
+                      value: This is a test note.
+                    - field_id: optional_date
+                      op: skip_field
+                      reason: No value in mock form
+                      role: agent
+                    - field_id: optional_number
+                      op: skip_field
+                      reason: No value in mock form
+                      role: agent
+                    - field_id: optional_year
+                      op: skip_field
+                      reason: No value in mock form
+                      role: agent
+                    - field_id: project_tasks
+                      op: skip_field
+                      reason: No value in mock form
+                      role: agent
+                    - field_id: references
+                      items:
+                        - https://docs.example.com/guide
+                        - https://github.com/example/project
+                        - https://medium.com/article-about-forms
+                      op: set_url_list
+                    - field_id: related_url
+                      op: set_url
+                      value: https://markform.dev/docs
+                    - field_id: score
+                      op: set_number
+                      value: 87.5
+            tool_results: []
+            text: null
+        usage:
+          input_tokens: 0
+          output_tokens: 0
   - turn: 3
     inspect:
       issues:
@@ -257,6 +1571,647 @@ turns:
       markdown_sha256: b59a771c156f4391e4fcb352a98cea568aac90660a8b264f8de8390cafb0bc02
       answered_field_count: 17
       skipped_field_count: 4
+    context:
+      system_prompt: |-
+        # Form Instructions
+        Carefully research answers to all questions in the form, using all available tools you have.
+
+        Guidelines:
+        1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+        2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+        3. NEVER fabricate or guess information - only use data you can verify
+        4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+        5. For string fields: use appropriate text from verified sources
+        6. For number fields: use appropriate numeric values from verified sources
+        7. For single_select: choose one valid option ID
+        8. For multi_select: choose one or more valid option IDs
+        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+        CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+        Always use the generatePatches tool to submit your field values.
+
+
+        # Instructions for agent role
+        Complete the remaining fields based on the provided context.
+
+        # Field-specific instructions
+        **team_members:** Add team members with their name (required), role, and start date.
+      context_prompt: |-
+        # Current Form State
+
+        Below is the complete form with all currently filled values.
+        Fields marked with `[ ]` or empty values still need to be filled.
+
+        ```markdown
+        ---
+        markform:
+          spec: "MF/0.1"
+          run_mode: "interactive"
+        role_instructions:
+          user: "Fill in the fields you have direct knowledge of."
+          agent: "Complete the remaining fields based on the provided context."
+        ---
+
+        {% form id="simple_test" title="Simple Test Form" %}
+
+        {% description ref="simple_test" %}
+        A fully interactive form demonstrating all Markform v0.1 field types.
+        Fill all fields using interactive prompts - no LLM API key needed.
+        {% /description %}
+
+        {% group id="basic_fields" title="Basic Fields" %}
+
+        {% field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true %}
+        ```value
+        Alice Johnson
+        ```
+        {% /field %}
+
+        {% instructions ref="name" %}
+        Enter your full name (2-50 characters).
+        {% /instructions %}
+
+        {% field kind="string" id="email" role="user" examples=["alice@company.com", "bob@example.org"] label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" required=true %}
+        ```value
+        alice@example.com
+        ```
+        {% /field %}
+
+        {% field kind="number" id="age" role="user" examples=["18", "30", "45"] integer=true label="Age" max=150 min=0 placeholder="25" required=true %}
+        ```value
+        32
+        ```
+        {% /field %}
+
+        {% field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" %}
+        ```value
+        87.5
+        ```
+        {% /field %}
+
+        {% instructions ref="score" %}
+        Enter a score between 0 and 100 (optional).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="list_fields" title="List Fields" %}
+
+        {% field kind="string_list" id="tags" role="user" itemMinLength=2 label="Tags" maxItems=5 minItems=1 required=true uniqueItems=true %}
+        ```value
+        typescript
+        testing
+        forms
+        ```
+        {% /field %}
+
+        {% instructions ref="tags" %}
+        Add 1-5 unique tags (each at least 2 characters).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="selection_fields" title="Selection Fields" %}
+
+        {% field kind="single_select" id="priority" role="user" label="Priority" required=true %}
+        - [ ] Low {% #low %}
+        - [x] Medium {% #medium %}
+        - [ ] High {% #high %}
+        {% /field %}
+
+        {% field kind="multi_select" id="categories" role="user" label="Categories" maxSelections=3 minSelections=1 required=true %}
+        - [x] Frontend {% #frontend %}
+        - [x] Backend {% #backend %}
+        - [ ] Database {% #database %}
+        - [ ] DevOps {% #devops %}
+        {% /field %}
+
+        {% /group %}
+
+        {% group id="checkbox_fields" title="Checkbox Fields" %}
+
+        {% field kind="checkboxes" id="tasks_multi" role="user" label="Tasks (Multi Mode)" required=true %}
+        - [x] Research {% #research %}
+        - [x] Design {% #design %}
+        - [x] Implement {% #implement %}
+        - [-] Test {% #test %}
+        {% /field %}
+
+        {% instructions ref="tasks_multi" %}
+        Track task progress. All must reach done or na state to complete.
+        {% /instructions %}
+
+        {% field kind="checkboxes" id="tasks_simple" role="user" checkboxMode="simple" label="Agreements (Simple Mode)" required=true %}
+        - [x] I have read the guidelines {% #read_guidelines %}
+        - [x] I agree to the terms {% #agree_terms %}
+        {% /field %}
+
+        {% field kind="checkboxes" id="confirmations" role="user" checkboxMode="explicit" label="Confirmations (Explicit Mode)" required=true %}
+        - [y] Data has been backed up {% #backed_up %}
+        - [n] Stakeholders notified {% #notified %}
+        {% /field %}
+
+        {% instructions ref="confirmations" %}
+        Answer yes or no for each confirmation. All must be explicitly answered.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="url_fields" title="URL Fields" %}
+
+        {% field kind="url" id="website" role="user" examples=["https://github.com/user/repo", "https://company.com"] label="Website" placeholder="https://example.com" required=true %}
+        ```value
+        https://alice.dev
+        ```
+        {% /field %}
+
+        {% instructions ref="website" %}
+        Enter your website URL (must be http or https).
+        {% /instructions %}
+
+        {% field kind="url_list" id="references" role="user" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] label="References" maxItems=5 minItems=1 placeholder="https://docs.example.com" uniqueItems=true %}
+        ```value
+        https://docs.example.com/guide
+        https://github.com/example/project
+        https://medium.com/article-about-forms
+        ```
+        {% /field %}
+
+        {% instructions ref="references" %}
+        Add 1-5 unique reference URLs for sources or documentation.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="date_fields" title="Date and Year Fields" %}
+
+        {% field kind="date" id="event_date" role="user" label="Event Date" max="2030-12-31" min="2020-01-01" required=true %}
+        ```value
+        2025-06-15
+        ```
+        {% /field %}
+
+        {% instructions ref="event_date" %}
+        Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+        {% /instructions %}
+
+        {% field kind="year" id="founded_year" role="user" label="Founded Year" max=2030 min=1900 required=true %}
+        ```value
+        2020
+        ```
+        {% /field %}
+
+        {% instructions ref="founded_year" %}
+        Enter the year the company was founded (1900-2030).
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="table_fields" title="Table Fields" %}
+
+        {% field kind="table" id="team_members" role="user" columnIds=["name", "role", "start_date"] columnLabels=["Name", "Role", "Start Date"] columnTypes=[{type: "string", required: true}, "string", "date"] label="Team Members" maxRows=5 minRows=0 %}{% /field %}
+
+        {% instructions ref="team_members" %}
+        Add team members with their name (required), role, and start date.
+        {% /instructions %}
+
+        {% field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 state="skipped" %}
+        ```value
+        %SKIP% (No value in mock form)
+        ```
+        {% /field %}
+
+        {% instructions ref="project_tasks" %}
+        Optionally add project tasks with estimated hours and reference links.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% group id="optional_fields" title="Optional Fields" %}
+
+        {% field kind="string" id="notes" role="user" label="Notes" %}
+        ```value
+        This is a test note.
+        ```
+        {% /field %}
+
+        {% instructions ref="notes" %}
+        Add any relevant notes or observations (optional).
+        {% /instructions %}
+
+        {% field kind="number" id="optional_number" role="user" label="Optional Number" state="skipped" %}
+        ```value
+        %SKIP% (No value in mock form)
+        ```
+        {% /field %}
+
+        {% field kind="url" id="related_url" role="user" label="Related URL" %}
+        ```value
+        https://markform.dev/docs
+        ```
+        {% /field %}
+
+        {% instructions ref="related_url" %}
+        Optionally add a URL to related documentation or resources.
+        {% /instructions %}
+
+        {% field kind="date" id="optional_date" role="user" label="Optional Date" state="skipped" %}
+        ```value
+        %SKIP% (No value in mock form)
+        ```
+        {% /field %}
+
+        {% instructions ref="optional_date" %}
+        Optionally add a date (YYYY-MM-DD format).
+        {% /instructions %}
+
+        {% field kind="year" id="optional_year" role="user" label="Optional Year" state="skipped" %}
+        ```value
+        %SKIP% (No value in mock form)
+        ```
+        {% /field %}
+
+        {% instructions ref="optional_year" %}
+        Optionally add a year.
+        {% /instructions %}
+
+        {% /group %}
+
+        {% /form %}
+
+        ```
+
+        # Current Form Issues
+
+        You need to address up to 20 issues. Here are the current issues:
+
+        - **team_members** (field): Optional field not yet addressed
+          Severity: recommended, Priority: P3
+          Type: table
+          Columns: name (required), role, start_date
+          Rows: min: 0, max: 5
+
+        # Instructions
+
+        Use the generatePatches tool to submit patches for the fields above.
+        Each patch should match the field kind:
+        - string: { op: "set_string", fieldId: "...", value: "..." }
+        - number: { op: "set_number", fieldId: "...", value: 123 }
+        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+        - url: { op: "set_url", fieldId: "...", value: "https://..." }
+        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+        - year: { op: "set_year", fieldId: "...", value: 2024 }
+        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+        If you cannot find verifiable information for a field, skip it:
+        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+    wire:
+      request:
+        system: |-
+          # Form Instructions
+          Carefully research answers to all questions in the form, using all available tools you have.
+
+          Guidelines:
+          1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+          2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+          3. NEVER fabricate or guess information - only use data you can verify
+          4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+          5. For string fields: use appropriate text from verified sources
+          6. For number fields: use appropriate numeric values from verified sources
+          7. For single_select: choose one valid option ID
+          8. For multi_select: choose one or more valid option IDs
+          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+          CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+          Always use the generatePatches tool to submit your field values.
+
+
+          # Instructions for agent role
+          Complete the remaining fields based on the provided context.
+
+          # Field-specific instructions
+          **team_members:** Add team members with their name (required), role, and start date.
+        prompt: |-
+          # Current Form State
+
+          Below is the complete form with all currently filled values.
+          Fields marked with `[ ]` or empty values still need to be filled.
+
+          ```markdown
+          ---
+          markform:
+            spec: "MF/0.1"
+            run_mode: "interactive"
+          role_instructions:
+            user: "Fill in the fields you have direct knowledge of."
+            agent: "Complete the remaining fields based on the provided context."
+          ---
+
+          {% form id="simple_test" title="Simple Test Form" %}
+
+          {% description ref="simple_test" %}
+          A fully interactive form demonstrating all Markform v0.1 field types.
+          Fill all fields using interactive prompts - no LLM API key needed.
+          {% /description %}
+
+          {% group id="basic_fields" title="Basic Fields" %}
+
+          {% field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true %}
+          ```value
+          Alice Johnson
+          ```
+          {% /field %}
+
+          {% instructions ref="name" %}
+          Enter your full name (2-50 characters).
+          {% /instructions %}
+
+          {% field kind="string" id="email" role="user" examples=["alice@company.com", "bob@example.org"] label="Email" pattern="^[^@]+@[^@]+\\.[^@]+$" placeholder="email@example.com" required=true %}
+          ```value
+          alice@example.com
+          ```
+          {% /field %}
+
+          {% field kind="number" id="age" role="user" examples=["18", "30", "45"] integer=true label="Age" max=150 min=0 placeholder="25" required=true %}
+          ```value
+          32
+          ```
+          {% /field %}
+
+          {% field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" %}
+          ```value
+          87.5
+          ```
+          {% /field %}
+
+          {% instructions ref="score" %}
+          Enter a score between 0 and 100 (optional).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="list_fields" title="List Fields" %}
+
+          {% field kind="string_list" id="tags" role="user" itemMinLength=2 label="Tags" maxItems=5 minItems=1 required=true uniqueItems=true %}
+          ```value
+          typescript
+          testing
+          forms
+          ```
+          {% /field %}
+
+          {% instructions ref="tags" %}
+          Add 1-5 unique tags (each at least 2 characters).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="selection_fields" title="Selection Fields" %}
+
+          {% field kind="single_select" id="priority" role="user" label="Priority" required=true %}
+          - [ ] Low {% #low %}
+          - [x] Medium {% #medium %}
+          - [ ] High {% #high %}
+          {% /field %}
+
+          {% field kind="multi_select" id="categories" role="user" label="Categories" maxSelections=3 minSelections=1 required=true %}
+          - [x] Frontend {% #frontend %}
+          - [x] Backend {% #backend %}
+          - [ ] Database {% #database %}
+          - [ ] DevOps {% #devops %}
+          {% /field %}
+
+          {% /group %}
+
+          {% group id="checkbox_fields" title="Checkbox Fields" %}
+
+          {% field kind="checkboxes" id="tasks_multi" role="user" label="Tasks (Multi Mode)" required=true %}
+          - [x] Research {% #research %}
+          - [x] Design {% #design %}
+          - [x] Implement {% #implement %}
+          - [-] Test {% #test %}
+          {% /field %}
+
+          {% instructions ref="tasks_multi" %}
+          Track task progress. All must reach done or na state to complete.
+          {% /instructions %}
+
+          {% field kind="checkboxes" id="tasks_simple" role="user" checkboxMode="simple" label="Agreements (Simple Mode)" required=true %}
+          - [x] I have read the guidelines {% #read_guidelines %}
+          - [x] I agree to the terms {% #agree_terms %}
+          {% /field %}
+
+          {% field kind="checkboxes" id="confirmations" role="user" checkboxMode="explicit" label="Confirmations (Explicit Mode)" required=true %}
+          - [y] Data has been backed up {% #backed_up %}
+          - [n] Stakeholders notified {% #notified %}
+          {% /field %}
+
+          {% instructions ref="confirmations" %}
+          Answer yes or no for each confirmation. All must be explicitly answered.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="url_fields" title="URL Fields" %}
+
+          {% field kind="url" id="website" role="user" examples=["https://github.com/user/repo", "https://company.com"] label="Website" placeholder="https://example.com" required=true %}
+          ```value
+          https://alice.dev
+          ```
+          {% /field %}
+
+          {% instructions ref="website" %}
+          Enter your website URL (must be http or https).
+          {% /instructions %}
+
+          {% field kind="url_list" id="references" role="user" examples=["https://wikipedia.org/wiki/Example", "https://docs.github.com/en"] label="References" maxItems=5 minItems=1 placeholder="https://docs.example.com" uniqueItems=true %}
+          ```value
+          https://docs.example.com/guide
+          https://github.com/example/project
+          https://medium.com/article-about-forms
+          ```
+          {% /field %}
+
+          {% instructions ref="references" %}
+          Add 1-5 unique reference URLs for sources or documentation.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="date_fields" title="Date and Year Fields" %}
+
+          {% field kind="date" id="event_date" role="user" label="Event Date" max="2030-12-31" min="2020-01-01" required=true %}
+          ```value
+          2025-06-15
+          ```
+          {% /field %}
+
+          {% instructions ref="event_date" %}
+          Enter the event date (YYYY-MM-DD format, between 2020 and 2030).
+          {% /instructions %}
+
+          {% field kind="year" id="founded_year" role="user" label="Founded Year" max=2030 min=1900 required=true %}
+          ```value
+          2020
+          ```
+          {% /field %}
+
+          {% instructions ref="founded_year" %}
+          Enter the year the company was founded (1900-2030).
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="table_fields" title="Table Fields" %}
+
+          {% field kind="table" id="team_members" role="user" columnIds=["name", "role", "start_date"] columnLabels=["Name", "Role", "Start Date"] columnTypes=[{type: "string", required: true}, "string", "date"] label="Team Members" maxRows=5 minRows=0 %}{% /field %}
+
+          {% instructions ref="team_members" %}
+          Add team members with their name (required), role, and start date.
+          {% /instructions %}
+
+          {% field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 state="skipped" %}
+          ```value
+          %SKIP% (No value in mock form)
+          ```
+          {% /field %}
+
+          {% instructions ref="project_tasks" %}
+          Optionally add project tasks with estimated hours and reference links.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% group id="optional_fields" title="Optional Fields" %}
+
+          {% field kind="string" id="notes" role="user" label="Notes" %}
+          ```value
+          This is a test note.
+          ```
+          {% /field %}
+
+          {% instructions ref="notes" %}
+          Add any relevant notes or observations (optional).
+          {% /instructions %}
+
+          {% field kind="number" id="optional_number" role="user" label="Optional Number" state="skipped" %}
+          ```value
+          %SKIP% (No value in mock form)
+          ```
+          {% /field %}
+
+          {% field kind="url" id="related_url" role="user" label="Related URL" %}
+          ```value
+          https://markform.dev/docs
+          ```
+          {% /field %}
+
+          {% instructions ref="related_url" %}
+          Optionally add a URL to related documentation or resources.
+          {% /instructions %}
+
+          {% field kind="date" id="optional_date" role="user" label="Optional Date" state="skipped" %}
+          ```value
+          %SKIP% (No value in mock form)
+          ```
+          {% /field %}
+
+          {% instructions ref="optional_date" %}
+          Optionally add a date (YYYY-MM-DD format).
+          {% /instructions %}
+
+          {% field kind="year" id="optional_year" role="user" label="Optional Year" state="skipped" %}
+          ```value
+          %SKIP% (No value in mock form)
+          ```
+          {% /field %}
+
+          {% instructions ref="optional_year" %}
+          Optionally add a year.
+          {% /instructions %}
+
+          {% /group %}
+
+          {% /form %}
+
+          ```
+
+          # Current Form Issues
+
+          You need to address up to 20 issues. Here are the current issues:
+
+          - **team_members** (field): Optional field not yet addressed
+            Severity: recommended, Priority: P3
+            Type: table
+            Columns: name (required), role, start_date
+            Rows: min: 0, max: 5
+
+          # Instructions
+
+          Use the generatePatches tool to submit patches for the fields above.
+          Each patch should match the field kind:
+          - string: { op: "set_string", fieldId: "...", value: "..." }
+          - number: { op: "set_number", fieldId: "...", value: 123 }
+          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+          - url: { op: "set_url", fieldId: "...", value: "https://..." }
+          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+          - year: { op: "set_year", fieldId: "...", value: 2024 }
+          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+          If you cannot find verifiable information for a field, skip it:
+          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        tools:
+          generatePatches:
+            description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
+            input_schema:
+              $defs:
+                _patch:
+                  description: A patch operation (see tool description for full schema)
+              properties:
+                patches:
+                  description: Array of patches to apply to the form
+                  items:
+                    $ref: '#/$defs/Patch'
+                  type: array
+              required:
+                - patches
+              type: object
+      response:
+        steps:
+          - tool_calls:
+              - tool_name: generatePatches
+                input:
+                  patches:
+                    - field_id: team_members
+                      op: set_table
+                      rows:
+                        - name: Alice
+                          role: Engineer
+                          start_date: 2024-01-15
+                        - name: Bob
+                          role: Designer
+                          start_date: 2023-06-01
+            tool_results: []
+            text: null
+        usage:
+          input_tokens: 0
+          output_tokens: 0
 final:
   expect_complete: true
   expected_completed_form: simple-mock-filled.form.md
+mock:
+  completed_mock: simple-mock-filled.form.md
