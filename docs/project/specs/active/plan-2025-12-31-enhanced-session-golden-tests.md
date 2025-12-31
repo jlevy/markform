@@ -1,4 +1,4 @@
-# Plan: Enhanced Session Golden Tests with Full LLM Wire Format
+# Plan Spec: Enhanced Session Golden Tests with Full LLM Wire Format
 
 ## Purpose
 
@@ -8,16 +8,34 @@ and prompt engineering visibility.
 
 ## Background
 
-### What Are Session Golden Tests?
+### The Session Testing Methodology
 
 Session golden tests are a powerful testing methodology that captures the complete
 execution trace of an agent session and replays it for verification. This approach:
 
-1. **Records everything** - All input, output, and intermediate states are serialized
-2. **Enables diffing** - Changes between test runs are visible through version control
+1. **Records everything** - All input, output, and intermediate states are serialized to
+   a `.session.yaml` file alongside each test form
+
+2. **Enables diffing** - Changes between test runs are visible through version control,
+   making regressions immediately apparent
+
 3. **Catches regressions** - Any change to LLM prompts, error messages, or behavior is
-   immediately detected
-4. **Documents behavior** - Session files serve as living documentation of system behavior
+   immediately detected by hash mismatches or content diffs
+
+4. **Documents behavior** - Session files serve as living documentation of exactly how
+   the system behaves with specific inputs
+
+### Why Capture Everything?
+
+The key insight of session testing is that the session log should be the **single source
+of truth** for all LLM interactions. By capturing the complete wire format:
+
+- **Prompt changes are visible** - If someone edits a system prompt or error message,
+  the exact change appears in git diff
+- **Regressions are caught** - Any unintended change to what the LLM sees is detected
+- **Debugging is easier** - When a session fails, the full context is available
+- **Iteration is systematic** - Improve prompts and error messages by seeing exactly
+  what the LLM receives and how it responds
 
 ### Current State
 
@@ -45,42 +63,48 @@ turns:
       context_prompt: "..."
 ```
 
-This captures the **semantic** content but not the **exact wire format**.
+This captures the **semantic** content but not the **exact wire format** as sent to and
+received from the LLM.
 
 ### What's Missing
 
 The current approach does NOT capture:
 
-1. **Raw JSON tool calls** - The exact JSON sent to/from the LLM via Vercel AI SDK
-2. **Multi-step tool execution** - Each step in `result.steps` with intermediate results
-3. **LLM text responses** - Any text output from the model between tool calls
-4. **Exact error messages** - The precise validation error strings the LLM sees when
-   patches fail
+1. **Raw tool call inputs** - The exact JSON structure sent to tool calls
+2. **Tool call results** - What the tools return (for executable tools)
+3. **Multi-step execution** - Each step in `result.steps` with intermediate state
+4. **LLM text responses** - Any text output from the model between tool calls
+5. **Tool schemas** - The inputSchema definitions that constrain tool inputs
+
+### Related Documentation
+
+- [development.md](../../development.md) - Development guide and testing overview
+- [general-tdd-guidelines.md](../../general/agent-guidelines/general-tdd-guidelines.md) -
+  Golden test methodology
+- [plan-2025-12-30-unified-fill-logging.md](plan-2025-12-30-unified-fill-logging.md) -
+  Related logging improvements
+- [plan-2025-12-29-fill-callbacks.md](../done/plan-2025-12-29-fill-callbacks.md) -
+  Callback infrastructure this builds on
 
 ## Summary of Task
 
-Enhance the session logging to include a **transparent wire format view** alongside the
-existing clean YAML representation. This enables:
+Enhance the session logging to include a **transparent wire format view** that captures
+the exact JSON structure sent to and received from the LLM via Vercel AI SDK. This
+includes:
 
-1. **Exact regression detection** - Any change to prompt format, error messages, or tool
-   schemas is immediately visible in diffs
-2. **Prompt engineering visibility** - Engineers can see exactly what the LLM receives
-   and responds with
-3. **Error message improvement** - Iterate on validation error messages by seeing exactly
-   what the LLM sees and how it responds
-4. **Complete audit trail** - Every aspect of LLM interaction is captured for debugging
+1. The complete request (system prompt, context prompt, tool schemas)
+2. The complete response (steps with tool calls, tool results, text, usage)
+3. Serialization that is stable across runs (deterministic ordering, no timestamps)
 
 ### Key Example: Validation Error Messages
 
 When an agent sends invalid patches (wrong field type, invalid column IDs, etc.), the
-system returns error messages to help the agent correct its mistakes. Currently, these
-errors are constructed in `buildContextPrompt()`:
+system returns error messages to help the agent correct its mistakes. These messages
+are constructed in `buildContextPrompt()` in `liveAgent.ts`:
 
 ```typescript
-// In liveAgent.ts
 if (previousRejections && previousRejections.length > 0) {
   lines.push('# Previous Patch Errors');
-  lines.push('');
   lines.push('Your previous patches were rejected due to the following errors...');
   for (const rejection of previousRejections) {
     lines.push(`- **Error:** ${rejection.message}`);
@@ -94,152 +118,195 @@ if (previousRejections && previousRejections.length > 0) {
 
 With the enhanced session logging, we can:
 
-1. See the **exact** error message text the LLM receives
+1. See the **exact** error message text the LLM receives in the session log
 2. Review how well the LLM understands and corrects from these errors
 3. Iterate on error message wording to improve agent recovery
-4. Detect any regressions in error message format through diffs
+4. Detect any unintended regressions in error message format through diffs
 
-## The Session Testing Methodology
+## Backward Compatibility
 
-### Principles
+**BACKWARD COMPATIBILITY REQUIREMENTS:**
 
-1. **Capture everything** - The session log should contain all information needed to
-   understand and reproduce the LLM interaction
+- **Code types, methods, and function signatures**: DO NOT MAINTAIN - All changes are
+  additive (new optional fields). Existing code continues to work unchanged.
 
-2. **Make it diffable** - Changes between sessions should be meaningful and reviewable
-   through git diffs
+- **Library APIs**: N/A - This is an internal enhancement to session logging, not a
+  public API change.
 
-3. **Keep it stable** - Avoid capturing non-deterministic fields (timestamps, UUIDs) that
-   would cause false-positive test failures
+- **Server APIs**: N/A - No server component.
 
-4. **Two levels of detail** - Provide both a clean semantic view (current YAML) and a raw
-   wire format view (new JSON)
+- **File formats**: SUPPORT BOTH - Session files with or without `wire` section are
+  valid. The new `wire` field is optional. Existing session files remain valid.
 
-### Why This Matters
-
-Consider this scenario:
-
-- Engineer changes an error message from "Invalid field type" to "Expected set_number for
-  field 'age', got set_string"
-- Without wire format logging: The change is invisible to tests, might improve or degrade
-  agent behavior without anyone knowing
-- With wire format logging: The exact text change appears in the git diff, can be reviewed
-  and correlated with any changes in agent success rates
-
-This methodology turns the session log into a **single source of truth** for all LLM
-interactions, enabling systematic improvement of prompts and error handling.
+- **Database schemas**: N/A - No database component.
 
 ## Stage 1: Planning Stage
 
-### What to Capture (Vercel AI SDK Format)
+### Vercel AI SDK Research
 
-The Vercel AI SDK's `generateText` function returns a structured result:
+The project uses **AI SDK v6.0.3** (`"ai": "^6.0.3"` in package.json).
+
+The `generateText` function returns a result object with the following structure
+(from [AI SDK documentation](https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text)):
 
 ```typescript
 const result = await generateText({
   model: this.model,
-  system: systemPrompt,     // Capture this
-  prompt: contextPrompt,    // Capture this
-  tools,
+  system: systemPrompt,     // String - captured in wire.request.system
+  prompt: contextPrompt,    // String - captured in wire.request.prompt
+  tools,                    // Record<string, Tool> - captured in wire.request.tools
   stopWhen: stepCountIs(this.maxStepsPerTurn),
 });
 
-// result.steps contains the full execution trace:
-for (const step of result.steps) {
-  step.toolCalls     // Array of { toolName, input, ... }
-  step.toolResults   // Array of { toolName, result, ... }
-  step.text          // Any text output
+// Result object properties:
+result.steps        // Array of steps - each step contains toolCalls, toolResults, text
+result.usage        // { inputTokens, outputTokens, ... }
+result.text         // Final text output (if any)
+result.toolCalls    // Tool calls from last step
+result.toolResults  // Tool results from last step
+result.finishReason // Why generation stopped
+result.request      // Request metadata
+result.response     // Response metadata
+```
+
+Each step in `result.steps` contains:
+
+```typescript
+interface Step {
+  toolCalls: Array<{
+    toolName: string;      // Name of the tool called
+    input: unknown;        // The input passed to the tool
+    toolCallId: string;    // Unique ID for this call
+  }>;
+  toolResults: Array<{
+    toolName: string;
+    result: unknown;       // Return value from tool.execute()
+    toolCallId: string;
+  }>;
+  text: string | null;     // Any text output in this step
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+  };
 }
-
-// result.usage contains token counts:
-result.usage.inputTokens
-result.usage.outputTokens
 ```
 
-### Proposed Enhanced Session Format
+The current code in `liveAgent.ts` already iterates over `result.steps`:
 
-Add a new `wire` section to each turn with the raw JSON:
+```typescript
+for (const step of result.steps) {
+  for (const toolCall of step.toolCalls) {
+    const count = toolCallCounts.get(toolCall.toolName) ?? 0;
+    toolCallCounts.set(toolCall.toolName, count + 1);
 
-```yaml
-turns:
-  - turn: 1
-    # Existing clean semantic view (unchanged)
-    inspect:
-      issues: [...]
-    apply:
-      patches: [...]
-      rejected_patches: [...]
-    after:
-      required_issue_count: 2
-      markdown_sha256: <hash>
-      answered_field_count: 10
-
-    # NEW: Raw wire format (Vercel AI SDK format)
-    wire:
-      request:
-        system: |
-          You are a form-filling agent...
-        prompt: |
-          # Current Form State
-          ...
-          # Remaining Issues
-          ...
-        tools:
-          generatePatches:
-            description: "..."
-            inputSchema: { ... }
-      response:
-        steps:
-          - tool_calls:
-              - tool_name: generatePatches
-                input: { patches: [...] }
-            tool_results:
-              - tool_name: generatePatches
-                result: { ... }  # or null for declarative tools
-            text: null  # or any model text
-        usage:
-          input_tokens: 1234
-          output_tokens: 567
+    if (toolCall.toolName === 'generatePatches' && 'input' in toolCall) {
+      const input = toolCall.input as { patches: Patch[] };
+      patches.push(...input.patches);
+    }
+  }
+}
 ```
 
-### Stability Considerations
+### Feature Requirements
 
-Fields that must be **excluded or normalized** to avoid test churn:
+**Core Requirements:**
 
-| Field | Stability Issue | Solution |
-|-------|----------------|----------|
-| Timestamps | Changes every run | Omit entirely |
-| Request IDs | Changes every run | Omit entirely |
-| Token counts | May vary slightly | Include (deterministic with same input) |
-| Tool schemas | Zod descriptions change | Include (want to catch changes) |
-| Prompt text | Changes intentionally | Include (want to catch changes) |
+1. Add `WireFormat` interface capturing request and response structure
+2. Capture wire format in `LiveAgent.generatePatches()` after `generateText()` returns
+3. Flow wire format through `TurnStats` to `SessionTurn`
+4. Serialize wire format in session YAML output
+5. Ensure wire format is deterministically ordered (stable across runs)
 
-The goal is that re-running a mock session with the same mock agent should produce
-**identical** session files, while changes to prompts/schemas are detected.
+**Wire Format Structure:**
+
+```typescript
+interface WireFormat {
+  request: {
+    system: string;           // System prompt sent to LLM
+    prompt: string;           // Context prompt sent to LLM
+    tools: Record<string, {   // Tool definitions
+      description: string;
+      inputSchema: unknown;   // JSON Schema from Zod
+    }>;
+  };
+  response: {
+    steps: Array<{
+      toolCalls: Array<{
+        toolName: string;
+        input: unknown;
+      }>;
+      toolResults: Array<{
+        toolName: string;
+        result: unknown;
+      }>;
+      text: string | null;
+    }>;
+    usage: {
+      inputTokens: number;
+      outputTokens: number;
+    };
+  };
+}
+```
+
+**Stability Requirements:**
+
+| Field | Stability | Handling |
+|-------|-----------|----------|
+| Timestamps | Unstable | Omit (not present in relevant data) |
+| Tool call IDs | Unstable | Omit from wire format |
+| Token counts | Stable | Include (deterministic for same input) |
+| Tool schemas | Stable | Include (want to catch schema changes) |
+| Prompt text | Stable | Include (want to catch prompt changes) |
+| JSON ordering | Must stabilize | Sort object keys deterministically |
+
+**Out of Scope (Not Implementing):**
+
+- [ ] Streaming response capture (we use `generateText`, not `streamText`)
+- [ ] Request/response headers or HTTP-level details
+- [ ] Provider-specific metadata (model fingerprints, etc.)
+- [ ] Caching of wire format between runs
+- [ ] Compression of wire format in session files
+
+### Acceptance Criteria
+
+1. [ ] `WireFormat` type is defined and exported
+2. [ ] `TurnStats.wire` optional field captures complete request/response
+3. [ ] `SessionTurn.wire` optional field is serialized to YAML
+4. [ ] Wire format includes system prompt, context prompt, and tool schemas
+5. [ ] Wire format includes all steps with tool calls, results, and text
+6. [ ] Wire format is deterministically ordered (identical output for identical input)
+7. [ ] Existing session files without `wire` field remain valid
+8. [ ] Mock agent sessions produce stable wire format (no timestamp-like churn)
+9. [ ] Golden tests pass after regeneration with wire format
+
+## Stage 2: Architecture Stage
 
 ### Implementation Approach
 
-1. **Extend TurnStats** - Add raw request/response data to the stats passed through the
-   harness
+**Capture Point:** Inside `LiveAgent.generatePatches()` after `generateText()` returns.
 
-2. **Extend SessionTurn** - Add optional `wire` section to the turn structure
+This is the ideal capture point because:
+- We have access to the request (systemPrompt, contextPrompt, tools)
+- We have access to the response (result.steps, result.usage)
+- The data flows naturally through existing TurnStats plumbing
 
-3. **Capture in LiveAgent** - Serialize the request and response in `generatePatches()`
+**Serialization Strategy:**
 
-4. **Serialize carefully** - Ensure JSON is deterministically ordered and formatted
-
-5. **Test the tests** - Verify that mock sessions are stable across runs
-
-## Stage 2: Architecture Stage
+1. Extract wire format data in `LiveAgent.generatePatches()`
+2. Add to `TurnStats.wire` (optional field)
+3. Flow through to `SessionTurn.wire` in harness recording
+4. Serialize as YAML (not embedded JSON) for readability and diffability
+5. Use deterministic key ordering for stable output
 
 ### Current Data Flow
 
 ```
 LiveAgent.generatePatches()
-  ↓ builds systemPrompt, contextPrompt
+  ↓ builds systemPrompt, contextPrompt, tools
   ↓ calls generateText(...)
   ↓ extracts patches from result.steps
-  ↓ builds TurnStats with usage, prompts
+  ↓ builds TurnStats { usage, toolCalls, prompts }    ← ADD wire HERE
   ↓
 programmaticFill()
   ↓ receives patches and stats
@@ -247,195 +314,194 @@ programmaticFill()
   ↓
 Harness.apply()
   ↓ records turn via recordTurn()
-  ↓ includes stats in SessionTurn
+  ↓ includes stats in SessionTurn                     ← wire flows through
   ↓
 SessionTranscript
-  ↓ serialized to YAML
+  ↓ serialized to YAML via serializeSession()         ← wire serialized here
 ```
 
-### Where to Add Wire Format Capture
-
-**Option A: Extend TurnStats (Recommended)**
-
-Add wire format to the existing `TurnStats` interface:
-
-```typescript
-// In harnessTypes.ts
-export interface TurnStats {
-  inputTokens?: number;
-  outputTokens?: number;
-  toolCalls: { name: string; count: number }[];
-  prompts?: { system: string; context: string };
-
-  // NEW: Raw wire format
-  wire?: {
-    request: {
-      system: string;
-      prompt: string;
-      tools: Record<string, { description: string; inputSchema: unknown }>;
-    };
-    response: {
-      steps: Array<{
-        toolCalls: Array<{ toolName: string; input: unknown }>;
-        toolResults: Array<{ toolName: string; result: unknown }>;
-        text: string | null;
-      }>;
-      usage: { inputTokens: number; outputTokens: number };
-    };
-  };
-}
-```
-
-**Benefits:**
-
-- Minimal changes to data flow
-- Wire format flows through existing plumbing
-- Can be conditionally included based on recording mode
-
-**Option B: Separate capture in harness**
-
-Have the harness capture wire format directly via callbacks. More invasive, less clean.
-
-### Files to Modify
+### File Changes
 
 | File | Changes |
 |------|---------|
-| `src/harness/harnessTypes.ts` | Extend TurnStats with wire format |
-| `src/harness/liveAgent.ts` | Capture and return wire format |
-| `src/engine/coreTypes.ts` | Extend SessionTurn with wire section |
-| `src/engine/session.ts` | Handle wire format in serialization |
-| `tests/golden/runner.ts` | Verify or skip wire format in replay |
+| `src/harness/harnessTypes.ts` | Add `WireFormat` interface, add `wire?: WireFormat` to `TurnStats` |
+| `src/harness/liveAgent.ts` | Capture wire format after `generateText()`, return in stats |
+| `src/engine/coreTypes.ts` | Add `wire?: WireFormat` to `SessionTurn`, update Zod schemas |
+| `src/engine/session.ts` | Handle wire format in `serializeSession()` / `parseSession()` |
+| `tests/golden/runner.ts` | Wire format flows through; may add optional validation |
 
-### Serialization Format
+### Tool Schema Extraction
 
-Use JSON within YAML for the wire format:
+To capture tool schemas, we need to extract them from the tools object:
 
-```yaml
-wire:
-  request: |
-    {
-      "system": "You are a form-filling agent...",
-      "prompt": "# Current Form State\n...",
-      "tools": {
-        "generatePatches": {
-          "description": "...",
-          "inputSchema": { ... }
-        }
-      }
-    }
-  response: |
-    {
-      "steps": [...],
-      "usage": { "inputTokens": 1234, "outputTokens": 567 }
-    }
+```typescript
+function extractToolSchemas(tools: Record<string, Tool>): Record<string, { description: string; inputSchema: unknown }> {
+  const schemas: Record<string, { description: string; inputSchema: unknown }> = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    schemas[name] = {
+      description: tool.description ?? '',
+      inputSchema: tool.inputSchema ?? {},
+    };
+  }
+  return schemas;
+}
 ```
 
-Or use YAML flow style for cleaner diffs:
+Note: The AI SDK's `Tool` interface has `description?: string` and `inputSchema` (the
+Zod-wrapped schema). We capture the raw schema for the wire format.
 
-```yaml
-wire:
-  request:
-    system: "You are a form-filling agent..."
-    prompt: "# Current Form State\n..."
-    tools:
-      generatePatches: { description: "...", inputSchema: {...} }
-  response:
-    steps: [...]
-    usage: { input_tokens: 1234, output_tokens: 567 }
+### Deterministic Serialization
+
+To ensure stable output, we need to sort object keys before serialization:
+
+```typescript
+function sortObjectKeys(obj: unknown): unknown {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sortObjectKeys);
+
+  const sorted: Record<string, unknown> = {};
+  for (const key of Object.keys(obj).sort()) {
+    sorted[key] = sortObjectKeys((obj as Record<string, unknown>)[key]);
+  }
+  return sorted;
+}
 ```
 
-**Decision:** Use YAML flow style (second option) for human readability while maintaining
-diffability.
+This is applied to wire format data before adding to TurnStats.
 
 ## Stage 3: Refine Architecture
 
 ### Reusable Components
 
 1. **Existing session serialization** (`session.ts`) - Already handles snake_case
-   conversion and YAML output
+   conversion and YAML output. Wire format will flow through this.
 
-2. **Existing TurnStats flow** - Already captures prompts, just need to extend
+2. **Existing TurnStats flow** - Already captures prompts via `stats.prompts`. Wire
+   format is a superset that includes prompts plus tool schemas and response steps.
 
-3. **Existing callback infrastructure** - Could use onLlmCallEnd to capture wire format
+3. **Existing step iteration** - `liveAgent.ts` already iterates over `result.steps`
+   to extract patches. We extend this to capture the full step data.
 
-### Configuration
+### Simplifications
 
-Add a flag to control wire format capture:
+1. **Reuse prompts data** - The wire format includes system/prompt which overlaps with
+   existing `context` section. We can either:
+   - Keep both (wire is complete, context is convenient shorthand)
+   - Remove context in favor of wire (breaking change, not recommended)
 
-```typescript
-// In harness config
-interface HarnessConfig {
-  // ... existing fields
-  captureWireFormat?: boolean;  // Default false for production, true for golden tests
-}
-```
+   **Decision:** Keep both. Wire is for comprehensive capture; context is for quick
+   reference. They should match.
 
-Or enable automatically when in `mock` mode (golden tests always use mock mode).
+2. **Skip tool results for declarative tools** - The `generatePatches` tool is
+   declarative (no execute function), so `toolResults` will be empty for it. Other
+   tools (like web search) have actual results to capture.
+
+3. **No separate wire format file** - Wire format is embedded in session YAML, not
+   a separate file. This keeps everything in one place for easy diffing.
 
 ### Implementation Phases
 
-**Phase 1: Extend Types**
+**Phase 1: Define Types (TDD: Write Tests First)**
 
-1. Add `WireFormat` interface to `harnessTypes.ts`
-2. Add optional `wire` field to `TurnStats`
-3. Add optional `wire` field to `SessionTurn`
-4. Update Zod schemas in `coreTypes.ts`
+- [ ] Add `WireFormat` interface to `harnessTypes.ts`
+- [ ] Add `WireRequestFormat` and `WireResponseFormat` sub-interfaces
+- [ ] Add `wire?: WireFormat` to `TurnStats`
+- [ ] Write unit test: `WireFormat` interface matches expected structure
+- [ ] Run tests (expect fail), implement, run tests (expect pass)
 
-**Phase 2: Capture in LiveAgent**
+**Phase 2: Update Session Types**
 
-1. Extract tool schemas for wire format
-2. Capture result.steps with tool calls and results
-3. Return wire format in TurnStats
+- [ ] Add `wire?: WireFormat` to `SessionTurn` in `coreTypes.ts`
+- [ ] Add `WireFormatSchema` Zod schema for validation
+- [ ] Update `SessionTurnSchema` to include optional `wire` field
+- [ ] Write unit test: Session with wire format parses correctly
+- [ ] Write unit test: Session without wire format still parses (backward compat)
+- [ ] Run tests, implement, verify
 
-**Phase 3: Flow Through Harness**
+**Phase 3: Capture Wire Format in LiveAgent**
 
-1. Pass wire format through `harness.apply()`
-2. Include in `recordTurn()`
-3. Serialize in session output
+- [ ] Add `extractToolSchemas()` helper function
+- [ ] Add `sortObjectKeys()` helper for deterministic ordering
+- [ ] Capture wire format after `generateText()` in `generatePatches()`
+- [ ] Add wire format to returned `TurnStats`
+- [ ] Write unit test: `generatePatches()` returns wire format in stats
+- [ ] Write integration test: Wire format contains expected request/response structure
+- [ ] Run tests, implement, verify
 
-**Phase 4: Update Golden Test Infrastructure**
+**Phase 4: Flow Through Harness and Serialize**
 
-1. Regenerate session files with wire format
-2. Verify mock sessions are stable
-3. Update test comparison logic (optional: skip wire comparison for now)
+- [ ] Update `Harness.recordTurn()` to include wire format in SessionTurn
+- [ ] Update `serializeSession()` to handle wire format serialization
+- [ ] Update `parseSession()` to handle wire format parsing
+- [ ] Write unit test: Session round-trips with wire format intact
+- [ ] Write unit test: Wire format YAML is deterministically ordered
+- [ ] Run tests, implement, verify
 
-**Phase 5: Documentation and Validation**
+**Phase 5: Regenerate Golden Tests and Validate**
 
-1. Document wire format in session file comments
-2. Verify error messages appear correctly
-3. Create example of iterating on error message text
+- [ ] Run `pnpm test:golden:regen` to regenerate session files with wire format
+- [ ] Review diffs to verify wire format content is correct and stable
+- [ ] Run `pnpm test:golden` twice to verify identical output (stability)
+- [ ] Commit regenerated session files
+- [ ] Document wire format in session file header comments
 
-## Benefits
+## Stage 4: Validation Stage
 
-1. **Complete visibility** - See exactly what the LLM receives and responds with
+### Test Plan
 
-2. **Regression detection** - Any change to prompts, schemas, or error messages is
-   captured in diffs
+**1. Unit Tests** (`tests/unit/harness/wireFormat.test.ts`):
 
-3. **Prompt engineering** - Iterate on prompts with confidence, seeing exact effects
+- `WireFormat` type validation with Zod schema
+- `extractToolSchemas()` extracts description and inputSchema
+- `sortObjectKeys()` produces deterministic ordering
+- Wire format round-trips through YAML serialization
+- Session with wire format parses correctly
+- Session without wire format parses correctly (backward compat)
 
-4. **Error message improvement** - Tune validation error messages by seeing agent response
+**2. Integration Tests**:
 
-5. **Debugging** - When a session fails, the full wire format is available for analysis
+- `LiveAgent.generatePatches()` returns wire format in TurnStats
+- Wire format contains system prompt, context prompt, tool schemas
+- Wire format contains all steps with tool calls
+- Wire format usage matches result.usage
 
-6. **Documentation** - Session files document the exact API contract with the LLM
+**3. Stability Tests**:
 
-## Testing
+- Run mock session twice, verify identical wire format output
+- Change prompt text, verify it appears in wire format diff
+- Change tool schema, verify it appears in wire format diff
 
-1. **Stability test** - Run mock session twice, verify identical output
+**4. Golden Test Validation**:
 
-2. **Regression test** - Change error message text, verify it appears in session diff
+- Regenerate all session files with wire format
+- Verify all golden tests pass
+- Review diffs to ensure wire format content is complete and correct
 
-3. **Completeness test** - Verify wire format captures all steps, tool calls, results
+### Success Criteria
 
-4. **Golden test update** - Regenerate all session files, review diffs
+- [ ] All unit tests pass
+- [ ] All integration tests pass
+- [ ] Wire format is deterministically ordered (no random key ordering)
+- [ ] Mock sessions produce identical wire format on repeated runs
+- [ ] Existing session files without wire format remain valid
+- [ ] Golden tests pass after regeneration
+- [ ] Error messages appear in wire format prompts as expected
+- [ ] Tool schemas are captured in wire format for diffing
+
+### Manual Testing
+
+1. Run `pnpm markform fill examples/simple/simple.form.md --mock`
+2. Inspect generated session file for wire format section
+3. Verify system prompt, context prompt, and tool schemas are present
+4. Verify steps contain tool calls with input data
+5. Change an error message in `liveAgent.ts`, regenerate, verify diff shows change
 
 ## References
 
-- Current session types: `src/engine/coreTypes.ts`
-- Current session serialization: `src/engine/session.ts`
-- Live agent implementation: `src/harness/liveAgent.ts`
-- Harness recording: `src/harness/harness.ts`
-- Golden test runner: `tests/golden/runner.ts`
-- Vercel AI SDK types: `node_modules/ai/dist/index.d.ts`
-- Related spec: `docs/project/specs/active/plan-2025-12-30-unified-fill-logging.md`
+- Current session types: `packages/markform/src/engine/coreTypes.ts`
+- Current session serialization: `packages/markform/src/engine/session.ts`
+- Live agent implementation: `packages/markform/src/harness/liveAgent.ts`
+- Harness recording: `packages/markform/src/harness/harness.ts`
+- Golden test runner: `packages/markform/tests/golden/runner.ts`
+- Vercel AI SDK generateText: [ai-sdk.dev/docs/reference/ai-sdk-core/generate-text](https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text)
+- AI SDK GitHub: [github.com/vercel/ai](https://github.com/vercel/ai)
