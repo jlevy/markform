@@ -19,6 +19,8 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  WireFormat,
+  WireResponseStep,
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 import { serialize } from '../engine/serialize.js';
@@ -219,6 +221,9 @@ export class LiveAgent implements Agent {
     const requiredRemaining = issues.filter((i) => i.severity === 'required').length;
     const optionalRemaining = issues.filter((i) => i.severity === 'recommended').length;
 
+    // Build wire format for session logging (captures complete request/response)
+    const wire = buildWireFormat(systemPrompt, contextPrompt, rawTools, result);
+
     // Build stats
     const stats: TurnStats = {
       inputTokens: result.usage?.inputTokens,
@@ -240,6 +245,7 @@ export class LiveAgent implements Agent {
         system: systemPrompt,
         context: contextPrompt,
       },
+      wire,
     };
 
     // Limit to maxPatches and return with stats
@@ -248,6 +254,98 @@ export class LiveAgent implements Agent {
       stats,
     };
   }
+}
+
+// =============================================================================
+// Wire Format Capture Helpers
+// =============================================================================
+
+/**
+ * Extract tool schemas from tools object for wire format logging.
+ * Captures description and inputSchema for each tool.
+ */
+function extractToolSchemas(
+  tools: Record<string, Tool>,
+): Record<string, { description: string; inputSchema: unknown }> {
+  const schemas: Record<string, { description: string; inputSchema: unknown }> = {};
+
+  // Sort tool names for deterministic ordering
+  const sortedNames = Object.keys(tools).sort();
+  for (const name of sortedNames) {
+    const tool = tools[name];
+    if (tool) {
+      schemas[name] = {
+        description: tool.description ?? '',
+        // Extract the JSON schema from the tool's inputSchema
+        // The AI SDK Tool type has inputSchema as a JsonSchema object
+        inputSchema: sortObjectKeys(tool.inputSchema ?? {}),
+      };
+    }
+  }
+  return schemas;
+}
+
+/**
+ * Sort object keys recursively for deterministic serialization.
+ * This ensures wire format is stable across runs for diffing.
+ */
+function sortObjectKeys(obj: unknown): unknown {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sortObjectKeys);
+
+  const sorted: Record<string, unknown> = {};
+  for (const key of Object.keys(obj as Record<string, unknown>).sort()) {
+    sorted[key] = sortObjectKeys((obj as Record<string, unknown>)[key]);
+  }
+  return sorted;
+}
+
+/**
+ * Build wire format from generateText result.
+ * Captures complete request/response for session logging.
+ *
+ * Uses loose typing to handle AI SDK's complex result structure.
+ */
+function buildWireFormat(
+  systemPrompt: string,
+  contextPrompt: string,
+  tools: Record<string, Tool>,
+  result: {
+    steps: {
+      toolCalls: { toolName: string; input?: unknown }[];
+      toolResults?: { toolName: string; result?: unknown }[];
+      text?: string | null;
+    }[];
+    usage?: { inputTokens?: number; outputTokens?: number };
+  },
+): WireFormat {
+  // Build response steps (omit toolCallId for stability)
+  const steps: WireResponseStep[] = result.steps.map((step) => ({
+    toolCalls: step.toolCalls.map((tc) => ({
+      toolName: tc.toolName,
+      input: sortObjectKeys(tc.input),
+    })),
+    toolResults: (step.toolResults ?? []).map((tr) => ({
+      toolName: tr.toolName,
+      result: sortObjectKeys(tr.result),
+    })),
+    text: step.text ?? null,
+  }));
+
+  return {
+    request: {
+      system: systemPrompt,
+      prompt: contextPrompt,
+      tools: extractToolSchemas(tools),
+    },
+    response: {
+      steps,
+      usage: {
+        inputTokens: result.usage?.inputTokens ?? 0,
+        outputTokens: result.usage?.outputTokens ?? 0,
+      },
+    },
+  };
 }
 
 // =============================================================================

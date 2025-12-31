@@ -919,6 +919,94 @@ export interface SessionTurnContext {
   contextPrompt: string;
 }
 
+// =============================================================================
+// Wire Format Types (for comprehensive session logging)
+// =============================================================================
+
+/**
+ * Tool call captured from LLM response step.
+ * Omits toolCallId for stability (changes each run).
+ */
+export interface WireToolCall {
+  /** Name of the tool that was called */
+  toolName: string;
+  /** Input passed to the tool */
+  input: unknown;
+}
+
+/**
+ * Tool result captured from LLM response step.
+ * Omits toolCallId for stability (changes each run).
+ */
+export interface WireToolResult {
+  /** Name of the tool that returned this result */
+  toolName: string;
+  /** Result returned by tool.execute() */
+  result: unknown;
+}
+
+/**
+ * A single step in the LLM response.
+ * Corresponds to one iteration of the tool-calling loop.
+ */
+export interface WireResponseStep {
+  /** Tool calls made in this step */
+  toolCalls: WireToolCall[];
+  /** Results returned by tools in this step */
+  toolResults: WireToolResult[];
+  /** Text output from the model in this step (null if none) */
+  text: string | null;
+}
+
+/**
+ * The request sent to the LLM via Vercel AI SDK generateText().
+ */
+export interface WireRequestFormat {
+  /** System prompt with agent instructions */
+  system: string;
+  /** Context prompt with form state and issues */
+  prompt: string;
+  /** Tool definitions with descriptions and schemas */
+  tools: Record<
+    string,
+    {
+      /** Tool description shown to LLM */
+      description: string;
+      /** JSON Schema for tool input */
+      inputSchema: unknown;
+    }
+  >;
+}
+
+/**
+ * The response received from the LLM via Vercel AI SDK generateText().
+ */
+export interface WireResponseFormat {
+  /** Steps in the tool-calling loop */
+  steps: WireResponseStep[];
+  /** Token usage for this call */
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+  };
+}
+
+/**
+ * Complete wire format capturing the LLM request and response.
+ *
+ * This captures the exact data sent to and received from the LLM,
+ * enabling comprehensive regression testing and prompt engineering visibility.
+ *
+ * Used in session logging to provide a "transparent view" of LLM interactions
+ * that can be diffed to catch changes in prompts, schemas, or error messages.
+ */
+export interface WireFormat {
+  /** The request sent to the LLM */
+  request: WireRequestFormat;
+  /** The response received from the LLM */
+  response: WireResponseFormat;
+}
+
 /** Session turn - one iteration of the harness loop */
 export interface SessionTurn {
   turn: number;
@@ -940,6 +1028,12 @@ export interface SessionTurn {
   };
   /** LLM stats (only present for live agent sessions) */
   llm?: SessionTurnStats;
+  /**
+   * Complete wire format for comprehensive session logging.
+   * Captures exact LLM request/response for regression testing.
+   * Optional - only populated when wire format capture is enabled.
+   */
+  wire?: WireFormat;
 }
 
 /** Final session expectations */
@@ -1671,6 +1765,48 @@ export const SessionTurnContextSchema = z.object({
   contextPrompt: z.string(),
 });
 
+// Wire format Zod schemas for session logging
+export const WireToolCallSchema = z.object({
+  toolName: z.string(),
+  input: z.unknown(),
+});
+
+export const WireToolResultSchema = z.object({
+  toolName: z.string(),
+  result: z.unknown(),
+});
+
+export const WireResponseStepSchema = z.object({
+  toolCalls: z.array(WireToolCallSchema),
+  toolResults: z.array(WireToolResultSchema),
+  text: z.string().nullable(),
+});
+
+export const WireRequestFormatSchema = z.object({
+  system: z.string(),
+  prompt: z.string(),
+  tools: z.record(
+    z.string(),
+    z.object({
+      description: z.string(),
+      inputSchema: z.unknown(),
+    }),
+  ),
+});
+
+export const WireResponseFormatSchema = z.object({
+  steps: z.array(WireResponseStepSchema),
+  usage: z.object({
+    inputTokens: z.number().int().nonnegative(),
+    outputTokens: z.number().int().nonnegative(),
+  }),
+});
+
+export const WireFormatSchema = z.object({
+  request: WireRequestFormatSchema,
+  response: WireResponseFormatSchema,
+});
+
 export const SessionTurnSchema = z.object({
   turn: z.number().int().positive(),
   inspect: z.object({
@@ -1688,6 +1824,7 @@ export const SessionTurnSchema = z.object({
     skippedFieldCount: z.number().int().nonnegative(),
   }),
   llm: SessionTurnStatsSchema.optional(),
+  wire: WireFormatSchema.optional(),
 });
 
 export const SessionFinalSchema = z.object({
