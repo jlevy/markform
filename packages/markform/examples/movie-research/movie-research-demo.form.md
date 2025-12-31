@@ -14,11 +14,13 @@ markform:
 
 ---
 {% form id="movie_research_demo" %}
+
 {% group id="movie_input" %}
 
 ## What movie do you want to research?
 
 {% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
+
 {% instructions ref="movie" %}Enter the movie title (add year or details for disambiguation).{% /instructions %}
 
 {% /group %}
@@ -54,4 +56,5 @@ Fill in scores and vote counts from each source:
 {% /instructions %}
 
 {% /group %}
+
 {% /form %}

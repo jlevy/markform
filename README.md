@@ -140,7 +140,9 @@ Checkboxes can be single-select or multi-select.
 
 Here’s a full example:
 
-<details> <summary>Markform for Movie Research Demo (click to expand)</summary>
+<details>
+
+<summary>Markform for Movie Research Demo (click to expand)</summary>
 
 ```jinja
 ---
@@ -200,6 +202,7 @@ Fill in scores and vote counts from each source:
 {% /group %}
 {% /form %}
 ```
+
 </details>
 
 ### Form Report Output
@@ -239,6 +242,7 @@ Ratings:
 Here is the schema and YAML values for the form above.
 
 <details> <summary>Filled Markform (click to expand)</summary>
+
 ````jinja
 {% form id="movie_research_demo" %}
 
@@ -286,6 +290,7 @@ Fill in scores and vote counts from each source:IMDB: Rating (1.0-10.0 scale), v
 
 {% /form %}
 ````
+
 </details>
 
 <details> <summary>YAML Export (click to expand)</summary>
