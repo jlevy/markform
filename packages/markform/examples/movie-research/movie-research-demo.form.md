@@ -1,8 +1,8 @@
 ---
 markform:
   spec: MF/0.1
-  title: Movie Research (Demo)
-  description: Quick movie lookup with just the essentials (title, year, ratings, summary).
+  title: Movie Research Demo
+  description: Movie lookup with ratings from IMDB and Rotten Tomatoes.
   run_mode: research
   roles:
     - user
@@ -10,42 +10,26 @@ markform:
   role_instructions:
     user: "Enter the movie title."
     agent: |
-      Quickly identify the movie and fill in basic info from IMDB.
-      This is a demo lookup - just get the core facts.
+      Identify the movie with web searches and use imdb.com and rottentomatoes.com to fill in the ratings.
+
 ---
-{% form id="movie_research_demo" title="Movie Research (Demo)" %}
+{% form id="movie_research_demo" %}
+{% group id="movie_input" %}
 
-## Movie Research Example
-
-{% group id="movie_input" title="Movie Identification" %}
-
-What movie do you want to research? \[*This field is filled in by the user (`role="user"`).*\]
+## What movie do you want to research?
 
 {% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 {% instructions ref="movie" %}Enter the movie title (add year or details for disambiguation).{% /instructions %}
 
 {% /group %}
 
-## About the Movie
-
 {% group id="about_the_movie" title="About the Movie" %}
 
-**Title:**
+## Movie Ratings
 
-{% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
-{% instructions ref="full_title" %}Official title, including subtitle if any.{% /instructions %}
+Here are the ratings for the movie:
 
-**Release year:**
-
-{% field kind="number" id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /field %}
-
-**IMDB:**
-
-{% field kind="url" id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /field %}
-
-**MPAA rating:**
-
-{% field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" %}
+{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
 - [ ] PG-13 {% #pg_13 %}
@@ -54,16 +38,20 @@ What movie do you want to research? \[*This field is filled in by the user (`rol
 - [ ] NR/Unrated {% #nr %}
 {% /field %}
 
-**IMDB rating:**
+{% field kind="table" id="ratings_table" role="agent"
+   label="Ratings" required=true
+   columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"]
+   minRows=0 maxRows=3 %}
+| Source | Score | Votes |
+|--------|-------|-------|
+{% /field %}
 
-{% field kind="number" id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /field %}
-{% instructions ref="imdb_rating" %}IMDB user rating (1.0-10.0 scale).{% /instructions %}
-
-**Summary:**
-
-{% field kind="string" id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /field %}
-{% instructions ref="logline" %}Brief plot summary in 1-2 sentences, no spoilers.{% /instructions %}
+{% instructions ref="ratings_table" %}
+Fill in scores and vote counts from each source:
+- IMDB: Rating (1.0-10.0 scale), vote count
+- RT Critics: Tomatometer (0-100%), review count
+- RT Audience: Audience Score (0-100%), rating count
+{% /instructions %}
 
 {% /group %}
-
 {% /form %}
