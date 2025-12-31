@@ -289,9 +289,53 @@ The CI workflow (`.github/workflows/ci.yml`) runs these commands in order:
 
 5. `pnpm publint`
 
-6. `pnpm test`
+6. `pnpm test:coverage`
 
 To match CI behavior locally, run `pnpm precommit` which executes the same checks.
+
+### Code Coverage
+
+Coverage is collected using Vitest with the v8 provider. Reports are generated in multiple
+formats for different use cases.
+
+**Run coverage locally:**
+
+```bash
+# Run tests with coverage
+pnpm --filter markform test:coverage
+
+# View HTML report
+open packages/markform/coverage/index.html
+```
+
+**Coverage reports:**
+
+| Format | Location | Purpose |
+| --- | --- | --- |
+| `text` | Terminal | Quick summary during development |
+| `html` | `coverage/index.html` | Detailed visual report |
+| `json-summary` | `coverage/coverage-summary.json` | CI/PR comments |
+| `lcov` | `coverage/lcov.info` | External tools (Codecov, etc.) |
+
+**Current thresholds:**
+
+| Metric | Threshold | Target |
+| --- | --- | --- |
+| Statements | 50% | 80% |
+| Branches | 49% | 75% |
+| Functions | 50% | 80% |
+| Lines | 50% | 80% |
+
+Thresholds will be increased as coverage improves. CI will fail if coverage drops below
+thresholds.
+
+**PR coverage comments:**
+
+Pull requests automatically receive coverage comments showing:
+
+- Overall coverage summary
+- Coverage for changed files only
+- Comparison against base branch
 
 ## AI SDK Integration
 

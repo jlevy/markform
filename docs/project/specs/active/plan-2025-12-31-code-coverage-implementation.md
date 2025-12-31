@@ -184,12 +184,12 @@ Update coverage configuration to be production-ready.
 
 **Tasks:**
 
-- [ ] Update `vitest.config.ts` with correct reporters (`json-summary` required)
-- [ ] Add `reportOnFailure: true` to continue even when thresholds fail
-- [ ] Lower thresholds to realistic starting points (50/49/50/50)
-- [ ] Update exclude patterns for completeness
-- [ ] Test locally with `pnpm test:coverage`
-- [ ] Verify `coverage/coverage-summary.json` is generated
+- [x] Update `vitest.config.ts` with correct reporters (`json-summary` required)
+- [x] Add `reportOnFailure: true` to continue even when thresholds fail
+- [x] Lower thresholds to realistic starting points (50/49/50/50)
+- [x] Update exclude patterns for completeness
+- [x] Test locally with `pnpm test:coverage`
+- [x] Verify `coverage/coverage-summary.json` is generated
 
 ### Phase 2: Add GitHub Actions Coverage Integration
 
@@ -197,11 +197,11 @@ Add coverage reporting to CI workflow.
 
 **Tasks:**
 
-- [ ] Add `vitest-coverage-report-action` to CI workflow
-- [ ] Configure for monorepo paths (`packages/markform/coverage/`)
-- [ ] Set `file-coverage-mode: changes` for PR-only file reports
-- [ ] Add step for coverage artifacts upload
-- [ ] Test with a PR to verify comments appear
+- [x] Add `vitest-coverage-report-action` to CI workflow
+- [x] Configure for monorepo paths (`packages/markform/coverage/`)
+- [x] Set `file-coverage-mode: changes` for PR-only file reports
+- [x] Add step for coverage artifacts upload
+- [ ] Test with a PR to verify comments appear (requires merge to test)
 
 ### Phase 3: Add Coverage Badge
 
@@ -209,10 +209,9 @@ Add visible coverage badge to README.
 
 **Tasks:**
 
-- [ ] Add `coverage-badges-action` to workflow (main branch only)
-- [ ] Create GitHub Gist for badge storage (or use repo branch)
-- [ ] Update README with badge markdown
-- [ ] Verify badge updates after main branch push
+- [ ] ~~Add `coverage-badges-action` to workflow~~ (deferred - requires gist setup)
+- [x] Update README with badge markdown (static badge for now)
+- [ ] Automated badge updates tracked in markform-486
 
 ### Phase 4: Validation and Documentation
 
@@ -220,12 +219,12 @@ Verify end-to-end functionality and document.
 
 **Tasks:**
 
-- [ ] Create test PR to verify full pipeline
+- [ ] Create test PR to verify full pipeline (this PR will test it)
 - [ ] Verify coverage comment appears and updates on new commits
-- [ ] Verify badge shows in README
-- [ ] Verify threshold failures block CI (when intentional)
-- [ ] Update `docs/development.md` with coverage section
-- [ ] Update research report with implementation notes
+- [x] Verify badge shows in README
+- [x] Verify threshold failures block CI (when intentional) - tested locally
+- [x] Update `docs/development.md` with coverage section
+- [x] Update research report with implementation notes
 
 ## Stage 4: Validation Stage
 

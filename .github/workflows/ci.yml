@@ -9,7 +9,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
 
@@ -23,4 +23,22 @@ jobs:
       - run: pnpm lint:check
       - run: pnpm build
       - run: pnpm publint
-      - run: pnpm test
+      - run: pnpm --filter markform test:coverage
+
+      # Post coverage report as PR comment
+      - name: Coverage Report
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: github.event_name == 'pull_request'
+        with:
+          json-summary-path: packages/markform/coverage/coverage-summary.json
+          json-final-path: packages/markform/coverage/coverage-final.json
+          file-coverage-mode: changes
+
+      # Upload coverage artifacts for debugging
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: packages/markform/coverage/
+          retention-days: 14
