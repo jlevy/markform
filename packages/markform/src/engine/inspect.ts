@@ -65,8 +65,12 @@ export function inspect(form: ParsedForm, options: InspectOptions = {}): Inspect
   );
   const formState = computeFormState(progressSummary);
 
-  // Add issues for empty optional fields
-  const allIssues = addOptionalEmptyIssues(validationInspectIssues, form, progressSummary.fields);
+  // Add issues for unanswered optional fields
+  const allIssues = addOptionalUnansweredIssues(
+    validationInspectIssues,
+    form,
+    progressSummary.fields,
+  );
 
   // Sort and assign priorities
   const sortedIssues = sortAndAssignPriorities(allIssues, form);
@@ -76,7 +80,7 @@ export function inspect(form: ParsedForm, options: InspectOptions = {}): Inspect
 
   // Form is complete when all issues for the target role(s) are resolved.
   // This is role-aware: if targeting only "agent" role, user-role fields don't matter.
-  // Each field must be either filled (no optional_empty issue) or skipped.
+  // Each field must be either filled (no optional_unanswered issue) or skipped.
   const isComplete = issues.length === 0;
 
   return {
@@ -106,10 +110,20 @@ function convertValidationIssues(
 }
 
 /**
- * Add issues for empty optional fields that don't already have issues.
- * Fields that have been explicitly skipped do not get optional_empty issues.
+ * Add issues for unanswered optional fields.
+ *
+ * An `optional_unanswered` issue is only added when:
+ * - The field is optional (not required)
+ * - The field has no value (empty=true)
+ * - The field is unanswered (answerState='unanswered')
+ *
+ * Fields that have been addressed (answered, skipped, or aborted) do NOT get
+ * optional_unanswered issues, even if their value is empty. For example:
+ * - A multi_select answered with no selections (selected=[])
+ * - A string_list answered with no items (items=[])
+ * These are intentional "none" answers, not missing data.
  */
-function addOptionalEmptyIssues(
+function addOptionalUnansweredIssues(
   existingIssues: InspectIssue[],
   form: ParsedForm,
   fieldProgress: Record<string, FieldProgress>,
@@ -118,8 +132,10 @@ function addOptionalEmptyIssues(
   const fieldsWithIssues = new Set(existingIssues.map((i) => i.ref));
 
   for (const [fieldId, progress] of Object.entries(fieldProgress)) {
-    // Skip if field is already addressed via skip_field or abort_field
-    if (progress.answerState === 'skipped' || progress.answerState === 'aborted') {
+    // Only add optional_unanswered for truly unanswered fields.
+    // Fields that have been addressed (answered/skipped/aborted) should not
+    // get this issue - the agent has made a decision about them.
+    if (progress.answerState !== 'unanswered') {
       continue;
     }
 
@@ -127,8 +143,8 @@ function addOptionalEmptyIssues(
       issues.push({
         ref: fieldId,
         scope: 'field',
-        reason: 'optional_empty',
-        message: 'Optional field has no value',
+        reason: 'optional_unanswered',
+        message: 'Optional field not yet addressed',
         severity: 'recommended',
         priority: 0,
       });
@@ -232,7 +248,7 @@ function isRequiredField(fieldId: string, form: ParsedForm): boolean {
  * - validation_error: 2
  * - checkbox_incomplete: 3 (when required), 2 (when recommended)
  * - min_items_not_met: 2
- * - optional_empty: 1
+ * - optional_unanswered: 1
  *
  * Total score = field_priority_weight + issue_type_score
  *
@@ -254,7 +270,7 @@ const ISSUE_TYPE_SCORES: Record<IssueReason, number> = {
   validation_error: 2,
   checkbox_incomplete: 2, // Base score, adjusted by severity
   min_items_not_met: 2,
-  optional_empty: 1,
+  optional_unanswered: 1,
 };
 
 /**
@@ -293,7 +309,7 @@ function getIssueTypeScore(reason: IssueReason, severity: 'required' | 'recommen
  *
  * Priority is computed as a tier (1-5, P1-P5) based on:
  * - Field priority weight (high=3, medium=2, low=1)
- * - Issue type score (required_missing=3, validation_error=2, optional_empty=1)
+ * - Issue type score (required_missing=3, validation_error=2, optional_unanswered=1)
  *
  * Within each tier, issues are sorted by severity (required first) then by ref.
  */

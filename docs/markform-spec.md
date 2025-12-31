@@ -1385,12 +1385,12 @@ type IssueReason =
   | 'checkbox_incomplete'    // Required checkboxes with non-terminal states
   | 'min_items_not_met'      // String-list or multi-select below minimum
   // Severity: *recommended* (optional improvements)
-  | 'optional_empty';        // Optional field with no value
+  | 'optional_unanswered';   // Optional field not yet addressed
 
 // Mapping from ValidationIssue to InspectIssue:
 // - ValidationIssue.severity='error' → InspectIssue.severity='required'
 // - ValidationIssue.severity='warning'/'info' → InspectIssue.severity='recommended'
-// - Missing optional fields → severity='recommended', reason='optional_empty'
+// - Unanswered optional fields → severity='recommended', reason='optional_unanswered'
 ```
 
 #### StructureSummary and ProgressSummary
@@ -2695,7 +2695,7 @@ type.
 | `checkbox_incomplete` | 3 (required) / 2 (recommended) |
 | `validation_error` | 2 |
 | `min_items_not_met` | 2 |
-| `optional_empty` | 1 |
+| `optional_unanswered` | 1 |
 
 **Total Score** = Field Priority Weight + Issue Type Score
 

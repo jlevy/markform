@@ -260,6 +260,9 @@ function computeFieldProgress(
   const fieldIssues = issues.filter((i) => i.ref === field.id);
   const issueCount = fieldIssues.length;
   const value = response.value;
+  // `empty` means "field has no substantive value" - this is about value presence,
+  // not workflow state. A multi_select with selected=[] is empty even if answered.
+  // The answerState dimension (unanswered/answered/skipped/aborted) tracks workflow.
   const empty = isFieldEmpty(field, value);
 
   // Determine validity:
