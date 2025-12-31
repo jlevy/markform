@@ -14,6 +14,7 @@ import type {
   FieldValue,
   InspectIssue,
   ParsedForm,
+  SessionTurnContext,
   SessionTurnStats,
 } from '../engine/coreTypes.js';
 import { coerceInputContext } from '../engine/valueCoercion.js';
@@ -309,16 +310,24 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
     // Convert TurnStats to SessionTurnStats (only include fields relevant for session logs)
     let llmStats: SessionTurnStats | undefined;
+    let context: SessionTurnContext | undefined;
     if (stats) {
       llmStats = {
         inputTokens: stats.inputTokens,
         outputTokens: stats.outputTokens,
         toolCalls: stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
       };
+      // Capture prompts sent to LLM for session logging (helps debug prompt issues)
+      if (stats.prompts) {
+        context = {
+          systemPrompt: stats.prompts.system,
+          contextPrompt: stats.prompts.context,
+        };
+      }
     }
 
     // Apply patches
-    stepResult = harness.apply(patches, turnIssues, llmStats);
+    stepResult = harness.apply(patches, turnIssues, llmStats, context);
     // Use actual applied count from harness (0 if patches were rejected)
     const actualPatchesApplied = stepResult.patchesApplied ?? patches.length;
     totalPatches += actualPatchesApplied;

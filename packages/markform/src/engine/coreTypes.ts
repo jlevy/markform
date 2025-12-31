@@ -905,12 +905,22 @@ export interface SessionTurnStats {
   toolCalls?: { name: string; count: number }[];
 }
 
+/** Context prompts sent to LLM (for session logging and debugging) */
+export interface SessionTurnContext {
+  /** System prompt with instructions */
+  systemPrompt: string;
+  /** Context prompt with issues and field schema */
+  contextPrompt: string;
+}
+
 /** Session turn - one iteration of the harness loop */
 export interface SessionTurn {
   turn: number;
   inspect: {
     issues: InspectIssue[];
   };
+  /** Context sent to LLM (prompts with field schema info) */
+  context?: SessionTurnContext;
   apply: {
     patches: Patch[];
   };
@@ -1639,11 +1649,17 @@ export const SessionTurnStatsSchema = z.object({
     .optional(),
 });
 
+export const SessionTurnContextSchema = z.object({
+  systemPrompt: z.string(),
+  contextPrompt: z.string(),
+});
+
 export const SessionTurnSchema = z.object({
   turn: z.number().int().positive(),
   inspect: z.object({
     issues: z.array(InspectIssueSchema),
   }),
+  context: SessionTurnContextSchema.optional(),
   apply: z.object({
     patches: z.array(PatchSchema),
   }),
