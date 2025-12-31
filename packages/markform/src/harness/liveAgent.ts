@@ -708,6 +708,8 @@ export function buildMockWireFormat(
   const contextPrompt = buildContextPrompt(issues, form, maxPatches, previousRejections);
 
   // Build tool schema for generatePatches
+  // Note: Using lowercase 'patch' in $defs to avoid case conversion issues in YAML serialization
+  // (uppercase 'Patch' would become '_patch' in snake_case, breaking the $ref)
   const tools: Record<string, { description: string; inputSchema: unknown }> = {
     generatePatches: {
       description: GENERATE_PATCHES_TOOL_DESCRIPTION,
@@ -716,13 +718,13 @@ export function buildMockWireFormat(
         properties: {
           patches: {
             type: 'array',
-            items: { $ref: '#/$defs/Patch' },
+            items: { $ref: '#/$defs/patch' },
             description: 'Array of patches to apply to the form',
           },
         },
         required: ['patches'],
         $defs: {
-          Patch: { description: 'A patch operation (see tool description for full schema)' },
+          patch: { description: 'A patch operation (see tool description for full schema)' },
         },
       }),
     },
