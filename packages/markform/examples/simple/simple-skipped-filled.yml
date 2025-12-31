@@ -1,0 +1,77 @@
+values:
+  name:
+    state: answered
+    value: Test User
+  email:
+    state: answered
+    value: test@example.com
+  age:
+    state: answered
+    value: 25
+  score:
+    state: skipped
+    reason: Not needed for this test
+  tags:
+    state: answered
+    value:
+      - typescript
+      - testing
+  priority:
+    state: answered
+    value: high
+  categories:
+    state: answered
+    value:
+      - frontend
+      - backend
+  tasks_multi:
+    state: answered
+    value:
+      research: done
+      design: done
+      implement: done
+      test: na
+  tasks_simple:
+    state: answered
+    value:
+      read_guidelines: done
+      agree_terms: done
+  confirmations:
+    state: answered
+    value:
+      backed_up: yes
+      notified: no
+  website:
+    state: answered
+    value: https://test.example.com
+  references:
+    state: answered
+    value:
+      - https://docs.example.com
+  event_date:
+    state: answered
+    value: 2025-03-15
+  founded_year:
+    state: answered
+    value: 2021
+  team_members:
+    state: skipped
+  project_tasks:
+    state: skipped
+  notes:
+    state: skipped
+    reason: No notes required
+  optional_number:
+    state: skipped
+  related_url:
+    state: skipped
+    reason: No related URL needed
+  optional_date:
+    state: skipped
+  optional_year:
+    state: skipped
+notes:
+  - id: note-summary
+    ref: simple_test
+    role: user
+    text: All required fields completed successfully. Optional fields skipped.

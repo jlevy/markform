@@ -13,11 +13,14 @@ import { readFileSync } from 'node:fs';
 import { writeFile } from 'atomically';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import YAML from 'yaml';
 
 import type { HarnessConfig, SessionTranscript } from '../src/engine/coreTypes.js';
 import { parseForm } from '../src/engine/parse.js';
 import { formToJsonSchema } from '../src/engine/jsonSchema.js';
 import { serializeSession } from '../src/engine/session.js';
+import { serializeReportMarkdown } from '../src/engine/serialize.js';
+import { toStructuredValues, toNotesArray } from '../src/cli/lib/exportHelpers.js';
 import { FormHarness } from '../src/harness/harness.js';
 import { createMockAgent } from '../src/harness/mockAgent.js';
 import { createRejectionMockAgent } from '../src/harness/rejectionMockAgent.js';
@@ -37,6 +40,14 @@ interface SessionConfig {
   sessionFile: string;
   /** Use rejection mock agent (intentionally makes type mismatch errors) */
   useRejectionMock?: boolean;
+}
+
+/** Export files configuration - derived from the filled form */
+interface ExportConfig {
+  form: string; // Path to the completed/filled form file
+  reportFile: string; // .report.md output
+  yamlFile: string; // .yml output
+  schemaFile: string; // .schema.json output
 }
 
 /** Sessions to regenerate (paths relative to examples/) */
@@ -73,6 +84,31 @@ const SCHEMAS: SchemaConfig[] = [
   {
     form: 'simple/simple.form.md',
     schemaFile: 'simple/simple.schema.json',
+  },
+];
+
+/**
+ * Export files to regenerate for filled forms.
+ * These are the multi-format exports (report, yaml, schema) of completed forms.
+ */
+const EXPORTS: ExportConfig[] = [
+  {
+    form: 'simple/simple-mock-filled.form.md',
+    reportFile: 'simple/simple-mock-filled.report.md',
+    yamlFile: 'simple/simple-mock-filled.yml',
+    schemaFile: 'simple/simple-mock-filled.schema.json',
+  },
+  {
+    form: 'simple/simple-skipped-filled.form.md',
+    reportFile: 'simple/simple-skipped-filled.report.md',
+    yamlFile: 'simple/simple-skipped-filled.yml',
+    schemaFile: 'simple/simple-skipped-filled.schema.json',
+  },
+  {
+    form: 'rejection-test/rejection-test-mock-filled.form.md',
+    reportFile: 'rejection-test/rejection-test-mock-filled.report.md',
+    yamlFile: 'rejection-test/rejection-test-mock-filled.yml',
+    schemaFile: 'rejection-test/rejection-test-mock-filled.schema.json',
   },
 ];
 
@@ -178,6 +214,42 @@ async function regenSchema(config: SchemaConfig): Promise<void> {
 }
 
 // =============================================================================
+// Export Regeneration
+// =============================================================================
+
+/** Regenerate export files (report, yaml, schema) for a filled form */
+async function regenExports(config: ExportConfig): Promise<void> {
+  console.log(`\nRegenerating exports for: ${config.form}`);
+
+  const formContent = readFileSync(resolve(EXAMPLES_DIR, config.form), 'utf-8');
+  const form = parseForm(formContent);
+
+  // Generate report markdown
+  const reportContent = serializeReportMarkdown(form);
+  const reportPath = resolve(EXAMPLES_DIR, config.reportFile);
+  await writeFile(reportPath, reportContent);
+  console.log(`  ✓ Written: ${reportPath}`);
+
+  // Generate YAML values
+  const values = toStructuredValues(form);
+  const notes = toNotesArray(form);
+  const exportData = {
+    values,
+    ...(notes.length > 0 && { notes }),
+  };
+  const yamlContent = YAML.stringify(exportData);
+  const yamlPath = resolve(EXAMPLES_DIR, config.yamlFile);
+  await writeFile(yamlPath, yamlContent);
+  console.log(`  ✓ Written: ${yamlPath}`);
+
+  // Generate JSON Schema
+  const result = formToJsonSchema(form);
+  const schemaPath = resolve(EXAMPLES_DIR, config.schemaFile);
+  await writeFile(schemaPath, JSON.stringify(result.schema, null, 2) + '\n');
+  console.log(`  ✓ Written: ${schemaPath}`);
+}
+
+// =============================================================================
 // Main
 // =============================================================================
 
@@ -190,10 +262,16 @@ async function main(): Promise<void> {
     await regenSession(config);
   }
 
-  // Regenerate JSON Schema snapshots
-  console.log('\n--- JSON Schema Snapshots ---');
+  // Regenerate JSON Schema snapshots for empty forms
+  console.log('\n--- JSON Schema Snapshots (empty forms) ---');
   for (const config of SCHEMAS) {
     await regenSchema(config);
+  }
+
+  // Regenerate export files for filled forms
+  console.log('\n--- Export Files (filled forms) ---');
+  for (const config of EXPORTS) {
+    await regenExports(config);
   }
 
   console.log('\n✓ All golden test files regenerated');

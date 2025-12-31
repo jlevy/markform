@@ -1,0 +1,87 @@
+values:
+  name:
+    state: answered
+    value: Alice Johnson
+  email:
+    state: answered
+    value: alice@example.com
+  age:
+    state: answered
+    value: 32
+  score:
+    state: answered
+    value: 87.5
+  tags:
+    state: answered
+    value:
+      - typescript
+      - testing
+      - forms
+  priority:
+    state: answered
+    value: medium
+  categories:
+    state: answered
+    value:
+      - frontend
+      - backend
+  tasks_multi:
+    state: answered
+    value:
+      research: done
+      design: done
+      implement: done
+      test: na
+  tasks_simple:
+    state: answered
+    value:
+      read_guidelines: done
+      agree_terms: done
+  confirmations:
+    state: answered
+    value:
+      backed_up: yes
+      notified: no
+  website:
+    state: answered
+    value: https://alice.dev
+  references:
+    state: answered
+    value:
+      - https://docs.example.com/guide
+      - https://github.com/example/project
+      - https://medium.com/article-about-forms
+  event_date:
+    state: answered
+    value: 2025-06-15
+  founded_year:
+    state: answered
+    value: 2020
+  team_members:
+    state: answered
+    value:
+      - name: Alice
+        role: Engineer
+        start_date: 2024-01-15
+      - name: Bob
+        role: Designer
+        start_date: 2023-06-01
+  project_tasks:
+    state: unanswered
+  notes:
+    state: answered
+    value: This is a test note.
+  optional_number:
+    state: unanswered
+  related_url:
+    state: answered
+    value: https://markform.dev/docs
+  optional_date:
+    state: unanswered
+  optional_year:
+    state: unanswered
+notes:
+  - id: note-review
+    ref: simple_test
+    role: user
+    text: Form completed with all required fields.

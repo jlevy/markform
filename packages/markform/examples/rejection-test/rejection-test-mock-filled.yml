@@ -1,0 +1,13 @@
+values:
+  ratings:
+    state: answered
+    value:
+      - source: IMDB
+        score: 85
+        votes: 12500
+      - source: Rotten Tomatoes
+        score: 92
+        votes: 450
+  title:
+    state: answered
+    value: Test Movie
