@@ -34,6 +34,15 @@ jobs:
           json-final-path: packages/markform/coverage/coverage-final.json
           file-coverage-mode: changes
 
+      # Generate and commit coverage badges (main branch only)
+      - name: Coverage Badges
+        uses: jpb06/coverage-badges-action@v1.4.6
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        with:
+          coverage-summary-path: packages/markform/coverage/coverage-summary.json
+          output-folder: ./badges
+          branches: main
+
       # Upload coverage artifacts for debugging
       - name: Upload Coverage
         uses: actions/upload-artifact@v4

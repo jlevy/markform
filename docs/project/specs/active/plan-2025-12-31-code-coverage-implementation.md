@@ -209,9 +209,9 @@ Add visible coverage badge to README.
 
 **Tasks:**
 
-- [ ] ~~Add `coverage-badges-action` to workflow~~ (deferred - requires gist setup)
-- [x] Update README with badge markdown (static badge for now)
-- [ ] Automated badge updates tracked in markform-486
+- [x] Add `coverage-badges-action@v1.4.6` to workflow (main branch only)
+- [x] Update README with badge markdown (uses ./badges/coverage-total.svg)
+- [x] Create initial placeholder badge in ./badges/
 
 ### Phase 4: Validation and Documentation
 
