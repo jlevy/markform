@@ -1,0 +1,88 @@
+session_version: 0.1.0
+mode: mock
+form:
+  path: rejection-test.form.md
+mock:
+  completed_mock: rejection-test-mock-filled.form.md
+harness:
+  max_turns: 100
+  max_patches_per_turn: 20
+  max_issues_per_turn: 10
+  target_roles:
+    - '*'
+  fill_mode: continue
+turns:
+  - turn: 1
+    inspect:
+      issues:
+        - ref: ratings
+          scope: field
+          reason: required_missing
+          message: Required field "Ratings" is empty
+          severity: required
+          priority: 1
+        - ref: title
+          scope: field
+          reason: required_missing
+          message: Required field "Title" is empty
+          severity: required
+          priority: 1
+    apply:
+      patches:
+        - op: set_string
+          field_id: ratings
+          value: Intentional type mismatch - testing rejection feedback
+        - op: set_string
+          field_id: title
+          value: Test Movie
+      rejected_patches:
+        - patch_index: 0
+          message: Cannot apply set_string to table field "ratings"
+          field_id: ratings
+          field_kind: table
+          column_ids:
+            - source
+            - score
+            - votes
+    after:
+      required_issue_count: 2
+      markdown_sha256: 3d152e9940e49ade3e889a6536c6d1635dcc2f3cd89ad63e44ccdb8d29458025
+      answered_field_count: 0
+      skipped_field_count: 0
+  - turn: 2
+    inspect:
+      issues:
+        - ref: ratings
+          scope: field
+          reason: required_missing
+          message: Required field "Ratings" is empty
+          severity: required
+          priority: 1
+        - ref: title
+          scope: field
+          reason: required_missing
+          message: Required field "Title" is empty
+          severity: required
+          priority: 1
+    apply:
+      patches:
+        - op: set_table
+          field_id: ratings
+          rows:
+            - source: IMDB
+              score: 85
+              votes: 12500
+            - source: Rotten Tomatoes
+              score: 92
+              votes: 450
+        - op: set_string
+          field_id: title
+          value: Test Movie
+    after:
+      required_issue_count: 0
+      markdown_sha256: 6603727adb1ee0dd116038f600e58edb75e5354ebf69879d0d02c0008759ed91
+      answered_field_count: 2
+      skipped_field_count: 0
+final:
+  expect_complete: true
+  expected_completed_form: rejection-test-mock-filled.form.md

@@ -20,6 +20,8 @@ import { formToJsonSchema } from '../src/engine/jsonSchema.js';
 import { serializeSession } from '../src/engine/session.js';
 import { FormHarness } from '../src/harness/harness.js';
 import { createMockAgent } from '../src/harness/mockAgent.js';
+import { createRejectionMockAgent } from '../src/harness/rejectionMockAgent.js';
+import type { Agent } from '../src/harness/harnessTypes.js';
 
 // =============================================================================
 // Configuration
@@ -33,6 +35,8 @@ interface SessionConfig {
   form: string;
   mockSource: string;
   sessionFile: string;
+  /** Use rejection mock agent (intentionally makes type mismatch errors) */
+  useRejectionMock?: boolean;
 }
 
 /** Sessions to regenerate (paths relative to examples/) */
@@ -46,6 +50,12 @@ const SESSIONS: SessionConfig[] = [
     form: 'simple/simple.form.md',
     mockSource: 'simple/simple-skipped-filled.form.md',
     sessionFile: 'simple/simple-with-skips.session.yaml',
+  },
+  {
+    form: 'rejection-test/rejection-test.form.md',
+    mockSource: 'rejection-test/rejection-test-mock-filled.form.md',
+    sessionFile: 'rejection-test/rejection-test.session.yaml',
+    useRejectionMock: true,
   },
 ];
 
@@ -75,11 +85,25 @@ async function runMockFill(
   formContent: string,
   mockContent: string,
   config: HarnessConfig,
+  useRejectionMock = false,
 ): Promise<SessionTranscript['turns']> {
   const form = parseForm(formContent);
   const mockForm = parseForm(mockContent);
-  const agent = createMockAgent(mockForm);
+  const agent: Agent = useRejectionMock
+    ? createRejectionMockAgent(mockForm)
+    : createMockAgent(mockForm);
   const harness = new FormHarness(form, config);
+
+  // Track rejections between turns (like programmaticFill does)
+  let previousRejections:
+    | Array<{
+        patchIndex: number;
+        message: string;
+        fieldId?: string;
+        fieldKind?: string;
+        columnIds?: string[];
+      }>
+    | undefined;
 
   while (harness.getState() !== 'complete') {
     const step = harness.step();
@@ -89,8 +113,13 @@ async function runMockFill(
       step.issues,
       harness.getForm(),
       config.maxPatchesPerTurn,
+      previousRejections,
     );
-    harness.apply(response.patches, step.issues);
+
+    const applyResult = harness.apply(response.patches, step.issues);
+
+    // Track rejections for next turn
+    previousRejections = applyResult.rejectedPatches;
   }
 
   return harness.getTurns();
@@ -111,7 +140,7 @@ async function regenSession(config: SessionConfig): Promise<void> {
     fillMode: 'continue',
   };
 
-  const turns = await runMockFill(formContent, mockContent, harnessConfig);
+  const turns = await runMockFill(formContent, mockContent, harnessConfig, config.useRejectionMock);
 
   const transcript: SessionTranscript = {
     sessionVersion: '0.1.0',

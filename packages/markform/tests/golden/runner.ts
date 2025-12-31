@@ -42,12 +42,15 @@ export interface TurnResult {
   issuesMatch: boolean;
   hashMatch: boolean;
   countsMatch: boolean;
+  rejectionsMatch: boolean;
   expectedHash: string;
   actualHash: string;
   expectedAnswered: number;
   actualAnswered: number;
   expectedSkipped: number;
   actualSkipped: number;
+  expectedRejections: number;
+  actualRejections: number;
   issuesDiff?: IssueDiff[];
 }
 
@@ -136,6 +139,11 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
         `Turn ${turn.turn}: Counts mismatch (answered: expected ${turnResult.expectedAnswered}, got ${turnResult.actualAnswered}; skipped: expected ${turnResult.expectedSkipped}, got ${turnResult.actualSkipped})`,
       );
     }
+    if (!turnResult.rejectionsMatch) {
+      errors.push(
+        `Turn ${turn.turn}: Rejections mismatch (expected ${turnResult.expectedRejections}, got ${turnResult.actualRejections})`,
+      );
+    }
     // Note: patches are applied within replayTurn, so form is already updated
   }
 
@@ -167,7 +175,7 @@ export function runGoldenTest(sessionPath: string): GoldenTestResult {
 
   const success =
     errors.length === 0 &&
-    turnResults.every((t) => t.issuesMatch && t.hashMatch && t.countsMatch) &&
+    turnResults.every((t) => t.issuesMatch && t.hashMatch && t.countsMatch && t.rejectionsMatch) &&
     formMatches;
 
   return {
@@ -212,17 +220,25 @@ function replayTurn(form: ParsedForm, turn: SessionTurn): TurnResult {
   const expectedSkipped = turn.after.skippedFieldCount;
   const countsMatch = actualAnswered === expectedAnswered && actualSkipped === expectedSkipped;
 
+  // Verify rejections count
+  const expectedRejections = turn.apply.rejectedPatches?.length ?? 0;
+  const actualRejections = applyResult.rejectedPatches.length;
+  const rejectionsMatch = actualRejections === expectedRejections;
+
   return {
     turn: turn.turn,
     issuesMatch,
     hashMatch,
     countsMatch,
+    rejectionsMatch,
     expectedHash,
     actualHash,
     expectedAnswered,
     actualAnswered,
     expectedSkipped,
     actualSkipped,
+    expectedRejections,
+    actualRejections,
     issuesDiff: issuesDiff.length > 0 ? issuesDiff : undefined,
   };
 }
