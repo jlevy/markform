@@ -68,7 +68,7 @@ export type FormRunMode = 'interactive' | 'fill' | 'research';
  * Used by both `run` and `examples` commands for consistent display.
  */
 export interface FormDisplayInfo {
-  /** Filename (e.g., 'movie-research-deep.form.md') */
+  /** Filename (e.g., 'movie-deep-research.form.md') */
   filename: string;
   /** Human-readable title from frontmatter */
   title?: string;
@@ -93,7 +93,7 @@ export type ExampleType = 'fill' | 'research';
  * because they are loaded dynamically from the form's YAML frontmatter.
  */
 export interface ExampleDefinition {
-  /** Machine-readable identifier (e.g., 'simple', 'movie-research-deep'). */
+  /** Machine-readable identifier (e.g., 'simple', 'movie-deep-research'). */
   id: string;
   /** Human-readable title for menu display. Loaded from frontmatter. */
   title?: string;
