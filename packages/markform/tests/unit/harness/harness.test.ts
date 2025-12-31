@@ -172,6 +172,52 @@ describe('FormHarness', () => {
       expect(turns[0]?.turn).toBe(1);
       expect(turns[0]?.apply.patches.length).toBe(1);
     });
+
+    it('reports patchesApplied count when patches succeed', () => {
+      const form = parseForm(SIMPLE_FORM);
+      const harness = createHarness(form);
+
+      const stepResult = harness.step();
+      const result = harness.apply(
+        [
+          { op: 'set_string', fieldId: 'name', value: 'Test' },
+          { op: 'set_number', fieldId: 'age', value: 25 },
+        ],
+        stepResult.issues,
+      );
+
+      expect(result.patchesApplied).toBe(2);
+      expect(result.patchesRejected).toBe(false);
+    });
+
+    it('reports patchesApplied=0 and patchesRejected=true when patches fail validation', () => {
+      const form = parseForm(SIMPLE_FORM);
+      const harness = createHarness(form);
+
+      const stepResult = harness.step();
+      // Wrong type: applying string to number field should fail
+      const result = harness.apply(
+        [{ op: 'set_string', fieldId: 'age', value: 'not a number' }],
+        stepResult.issues,
+      );
+
+      expect(result.patchesApplied).toBe(0);
+      expect(result.patchesRejected).toBe(true);
+    });
+
+    it('reports patchesApplied=0 when all patches rejected due to nonexistent field', () => {
+      const form = parseForm(SIMPLE_FORM);
+      const harness = createHarness(form);
+
+      const stepResult = harness.step();
+      const result = harness.apply(
+        [{ op: 'set_string', fieldId: 'nonexistent', value: 'test' }],
+        stepResult.issues,
+      );
+
+      expect(result.patchesApplied).toBe(0);
+      expect(result.patchesRejected).toBe(true);
+    });
   });
 
   describe('completion', () => {

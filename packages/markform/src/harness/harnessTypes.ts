@@ -297,7 +297,7 @@ export interface TurnProgress {
   /** Patches generated this turn (may not all be applied if rejected) */
   patches: Patch[];
   /** True if patches were rejected due to validation errors */
-  patchesRejected?: boolean;
+  patchesRejected: boolean;
 }
 
 /**

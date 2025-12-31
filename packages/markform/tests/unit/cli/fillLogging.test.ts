@@ -202,6 +202,7 @@ describe('fillLogging', () => {
           isComplete: true,
           issues: [],
           patches: [],
+          patchesRejected: false,
         });
 
         expect(consoleOutput.length).toBe(1);
@@ -226,6 +227,7 @@ describe('fillLogging', () => {
           isComplete: false,
           issues: [],
           patches: [],
+          patchesRejected: false,
         });
 
         expect(consoleOutput.length).toBe(0);

@@ -507,7 +507,7 @@ All other choices can be left to the agents themselves, with the structure and
 validations enforced by the form-filling tools the agents use.
 
 Another cool thing about forms: they get rid of the inefficiencies of conversation chat
-history. Often when an agentic loop sis built, it just saves the chat history for
+history. Often when an agentic loop is built, it just saves the chat history for
 context. But a form is inherently more efficient: the harness itself can be stateless.
 It just shares the partly-filled form with the agent, and it has full context in one
 message. That’s what the agentic loop in this implementation does.

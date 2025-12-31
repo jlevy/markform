@@ -170,7 +170,11 @@ const callbacks: FillCallbacks = {
     console.log(`Turn ${turnNumber}: ${issuesCount} issues`);
   },
   onTurnComplete: (progress) => {
-    console.log(`Completed: ${progress.patchesApplied} patches applied`);
+    if (progress.patchesRejected) {
+      console.log(`Turn ${progress.turnNumber}: patches rejected (validation failed)`);
+    } else {
+      console.log(`Turn ${progress.turnNumber}: ${progress.patchesApplied} patches applied`);
+    }
   },
   onToolStart: ({ name }) => {
     spinner.message(`🔧 ${name}...`);
@@ -202,6 +206,19 @@ await fillForm({
 | `onToolEnd` | `{ name, output, durationMs, error? }` | Called after a tool completes |
 | `onLlmCallStart` | `{ model }` | Called before an LLM request |
 | `onLlmCallEnd` | `{ model, inputTokens, outputTokens }` | Called after an LLM response |
+
+**TurnProgress fields:**
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `turnNumber` | `number` | Current turn (1-indexed) |
+| `issuesShown` | `number` | Issues shown to agent this turn |
+| `patchesApplied` | `number` | Patches actually applied (0 if rejected) |
+| `patchesRejected` | `boolean` | True if patches failed validation |
+| `requiredIssuesRemaining` | `number` | Required fields still incomplete |
+| `isComplete` | `boolean` | True if form filling is done |
+| `issues` | `InspectIssue[]` | Issues shown this turn |
+| `patches` | `Patch[]` | Patches generated this turn |
 
 ### createHarness(form, config?): FormHarness
 
