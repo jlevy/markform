@@ -11,8 +11,12 @@
 | Vitest | 4.0.16 | Testing framework |
 | @vitest/coverage-v8 | 4.0.16 | V8-based coverage (recommended) |
 | TypeScript | 5.9.3 | Language version |
-| vitest-coverage-report-action | v2 | PR comments (GitHub Action) |
-| coverage-badges-action | latest | Badge generation (GitHub Action) |
+| vitest-coverage-report-action | v2 (v2.8.3) | PR comments (GitHub Action) |
+| coverage-badges-action | v1.4.6 | Badge generation (GitHub Action) |
+| actions/checkout | v6 | Repository checkout |
+| actions/setup-node | v6 | Node.js setup |
+| actions/upload-artifact | v4 | Artifact upload |
+| pnpm/action-setup | v4 | pnpm setup |
 
 ## Executive Summary
 
@@ -253,7 +257,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
 
