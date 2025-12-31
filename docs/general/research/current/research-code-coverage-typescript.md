@@ -90,6 +90,7 @@ Low branch coverage often indicates untested error paths and edge cases.
 | `text-summary` | Brief summary in terminal |
 | `html` | Detailed visual reports for local dev |
 | `json` | Machine-readable for CI/CD integration |
+| `json-summary` | Machine-readable summary (`coverage-summary.json`) for PR annotations |
 | `lcov` | Standard format for Codecov/Coveralls |
 
 ## Vitest Configuration
@@ -114,15 +115,17 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'text-summary', 'html', 'json', 'lcov'],
+      reporter: ['text', 'text-summary', 'html', 'json', 'json-summary', 'lcov'],
+      reportsDirectory: './coverage',
       exclude: [
         '**/_generated/**',
         '**/*.d.ts',
         '**/*.test.ts',
         '**/*.spec.ts',
         '**/__tests__/**',
+        '**/tests/**',
         '**/__mocks__/**',
-        '**/*.config.ts',
+        '**/*.config.*',
         '**/vitest.setup.ts',
         '**/dist/**',
         '**/node_modules/**',
@@ -150,7 +153,7 @@ export default defineConfig({
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:coverage:watch": "vitest --coverage",
-    "test:coverage:html": "vitest run --coverage --reporter=html"
+    "test:coverage:html": "vitest run --coverage && open coverage/index.html"
   }
 }
 ```

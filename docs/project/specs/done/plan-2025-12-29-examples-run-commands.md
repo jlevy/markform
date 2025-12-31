@@ -75,19 +75,23 @@ markform examples --name=foo   # Copy specific example only
 
    - Copy to `./forms/{filename}`
 
-   - Log: ` ✓ movie-research-deep.form.md - Movie Research (Deep)`
+   - Log: ` ✓ movie-deep-research.form.md - Movie Deep Research`
 
    - If file exists and no `--overwrite`: skip with warning
 
 4. Log summary: `Done! Copied 7 example forms to ./forms/`
 
-5. Prompt: `Do you want to try running a form? (Y/n)`
+5. Prompt: `Do you want to try running a form?
+   (Y/n)`
 
 6. If yes:
+
    - Show form selection menu (default: movie-research-demo)
+
    - If user selects a form, spawn `markform run <path>`
 
 7. If no (or cancelled):
+
    - Log: `Run 'markform run' to select and run a form later.`
 
 ### No Overwrite Confirmations
@@ -127,7 +131,7 @@ markform run --limit=50        # Override menu limit
 5. Display menu:
    ```
    ? Select a form to run:
-   ❯ movie-research-deep.form.md - Movie Research (Deep) [research]
+   ❯ movie-deep-research.form.md - Movie Deep Research [research]
        Comprehensive movie lookup with multiple sources
      earnings-analysis.form.md - Earnings Analysis [research]
        Quarterly earnings report analysis
@@ -222,7 +226,7 @@ markform status form.md --json # Machine-readable
 ### Output
 
 ```
-Form Status: movie-research-deep.form.md
+Form Status: movie-deep-research.form.md
 
 Overall: 12/25 fields filled (48%)
   ✓ Complete: 12
@@ -235,7 +239,7 @@ By Role:
   agent: 9/20 filled  (45%)
 
 Run Mode: research (explicit)
-Suggested: markform run movie-research-deep.form.md
+Suggested: markform run movie-deep-research.form.md
 ```
 
 ### Implementation
@@ -268,7 +272,7 @@ interface StatusReport {
 ## Frontmatter Schema: `run_mode`
 
 **Note:** `run_mode` has been added to `docs/markform-spec.md` as a *recommended* (not
-required) field. It's a hint for CLI tools, not enforced by the engine.
+required) field. It’s a hint for CLI tools, not enforced by the engine.
 
 ### Schema Addition
 

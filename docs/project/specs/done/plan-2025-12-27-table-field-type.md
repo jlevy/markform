@@ -1590,7 +1590,7 @@ function extractCellText(cell: Node): string {
 
 - [ ] Migrate `movie-research-basic.form.md` — 1 field (`notable_awards`)
 
-- [ ] Migrate `movie-research-deep.form.md` — 2 fields (`lead_cast`, `notable_awards`)
+- [ ] Migrate `movie-deep-research.form.md` — 2 fields (`lead_cast`, `notable_awards`)
 
 - [ ] Migrate `celebrity-deep-research.form.md` — ~20 fields (major migration)
 
@@ -1926,7 +1926,7 @@ should be migrated to `table-field`.
 
 1. **Phase 1 (smoke test):** `movie-research-basic.form.md` — 1 field
 
-2. **Phase 2 (small batch):** `movie-research-deep.form.md` — 2 fields
+2. **Phase 2 (small batch):** `movie-deep-research.form.md` — 2 fields
 
 3. **Phase 3 (medium):** `startup-deep-research.form.md`, `earnings-analysis.form.md`
 
@@ -1938,7 +1938,7 @@ should be migrated to `table-field`.
 | --- | --- | --- |
 | `notable_awards` | `Award \| Category \| Year` | `table-field` with `columnIds=["award", "category", "year"]` |
 
-### movie-research-deep.form.md
+### movie-deep-research.form.md
 
 | Current Field | Format | Migration |
 | --- | --- | --- |
