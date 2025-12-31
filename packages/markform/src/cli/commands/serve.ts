@@ -383,6 +383,18 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
         }
         break;
       }
+
+      case 'table': {
+        // Table fields are read-only in the web UI for now
+        // Table editing would require a more complex UI (add/remove rows, cell editing)
+        break;
+      }
+
+      default: {
+        // Exhaustiveness check - TypeScript will error if a case is missing
+        const _exhaustive: never = field;
+        throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+      }
     }
   }
 

@@ -161,6 +161,53 @@ async function runMockAgent(config: Config): Promise<void> {
             patches.push({ op: 'set_checkboxes', fieldId, values });
           }
           break;
+        case 'url':
+          patches.push({
+            op: 'set_url',
+            fieldId,
+            value: 'https://example.com/mock',
+          });
+          break;
+        case 'url_list':
+          patches.push({
+            op: 'set_url_list',
+            fieldId,
+            items: ['https://example.com/1', 'https://example.com/2'],
+          });
+          break;
+        case 'date':
+          patches.push({
+            op: 'set_date',
+            fieldId,
+            value: '2024-01-15',
+          });
+          break;
+        case 'year':
+          patches.push({
+            op: 'set_year',
+            fieldId,
+            value: 2024,
+          });
+          break;
+        case 'table':
+          // Tables require column information - generate mock rows based on schema
+          if (field.columns && field.columns.length > 0) {
+            const mockRow: Record<string, string | number | null> = {};
+            for (const col of field.columns) {
+              mockRow[col.id] = col.type === 'number' ? 42 : `Mock ${col.label}`;
+            }
+            patches.push({
+              op: 'set_table',
+              fieldId,
+              rows: [mockRow],
+            });
+          }
+          break;
+        default: {
+          // Exhaustiveness check - TypeScript will error if a case is missing
+          const _exhaustive: never = field;
+          throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+        }
       }
     }
 

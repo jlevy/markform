@@ -679,6 +679,11 @@ export function fieldToJsonSchema(
       return checkboxesFieldToJsonSchema(field, docs, opts, groupId);
     case 'table':
       return tableFieldToJsonSchema(field, docs, opts, groupId);
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 

@@ -943,6 +943,11 @@ function validateField(field: Field, responses: Record<Id, FieldResponse>): Vali
       return validateYearField(field, value as YearValue | undefined);
     case 'table':
       return validateTableField(field, value as TableValue | undefined);
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 
