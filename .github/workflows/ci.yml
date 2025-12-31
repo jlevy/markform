@@ -29,10 +29,10 @@ jobs:
       - run: pnpm publint
       - run: pnpm --filter markform test:coverage
 
-      # Post coverage report as PR comment
+      # Post coverage report as PR comment (always runs so devs see coverage even on failure)
       - name: Coverage Report
         uses: davelosert/vitest-coverage-report-action@v2
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         with:
           json-summary-path: packages/markform/coverage/coverage-summary.json
           json-final-path: packages/markform/coverage/coverage-final.json
