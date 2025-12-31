@@ -110,25 +110,37 @@ The tags define things like fields:
 ```
 
 Fields have types defined by the attributes.
-Values are written directly inside the tags:
-````jinja
+Values are filled in incrementally, just like any form.
+Once filled in, values appear directly inside the tags, in Markdown format:
+
+```jinja
 {% field kind="string" id="movie" label="Movie" role="user"
    required=true minLength=1 maxLength=300 %}
 The Shawshank Redemption
 {% /field %}
 
+{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
+- [ ] G {% #g %}
+- [ ] PG {% #pg %}
+- [ ] PG-13 {% #pg_13 %}
+- [X] R {% #r %}
+- [ ] NC-17 {% #nc_17 %}
+- [ ] NR/Unrated {% #nr %}
+{% /field %}
+```
+
 Note fields can have a `role="user"` to indicate they are filled interactively by the
 user, or a `role="agent"` to indicate an agent should fill them in.
 
-There are also tags for user or agent instructions per field or at form level
-and grouping of forms.
+There are also tags for user or agent instructions per field or at form level and
+grouping of forms.
 
 Checkboxes and tables as values are supported!
+Checkboxes can be single-select or multi-select.
 
 Here’s a full example:
 
-<details>
-<summary>Markform for Movie Research Demo (click to expand)</summary>
+<details> <summary>Markform for Movie Research Demo (click to expand)</summary>
 
 ```jinja
 ---
@@ -187,7 +199,7 @@ Fill in scores and vote counts from each source:
 
 {% /group %}
 {% /form %}
-````
+```
 </details>
 
 ### Form Report Output
@@ -205,26 +217,102 @@ A form can be exported
 
 - as a JSON schema (just the structure)
 
-The report output (using `gpt-5-mini`) looks like:
+The report output (using `gpt-5-mini` to fill it in) looks like:
 
 ```markdown
-**Movie:**
+Movie:
 The Shawshank Redemption
 
 ## About the Movie
 
-**MPAA Rating:**
+MPAA Rating:
 R
 
-**Ratings:**
+Ratings:
 | Source | Score | Votes |
 | --- | --- | --- |
-| IMDB | 9.3 | 2095000 |
-| RT Critics | 91 | 78 |
+| IMDB | 9.3 | 3100000 |
+| RT Critics | 89 | 146 |
 | RT Audience | 98 | 250000 |
 ```
 
 Here is the schema and YAML values for the form above.
+
+<details> <summary>Filled Markform (click to expand)</summary>
+````jinja
+{% form id="movie_research_demo" %}
+
+{% group id="movie_input" %}
+
+{% field kind="string" id="movie" role="user" label="Movie" maxLength=300 minLength=1 required=true %}
+```value
+The Shawshank Redemption
+```
+{% /field %}
+
+{% instructions ref="movie" %}
+Enter the movie title (add year or details for disambiguation).
+{% /instructions %}
+
+{% /group %}
+
+{% group id="about_the_movie" title="About the Movie" %}
+
+{% field kind="single_select" id="mpaa_rating" label="MPAA Rating" %}
+- [ ] G {% #g %}
+- [ ] PG {% #pg %}
+- [ ] PG-13 {% #pg_13 %}
+- [x] R {% #r %}
+- [ ] NC-17 {% #nc_17 %}
+- [ ] NR/Unrated {% #nr %}
+{% /field %}
+
+{% field kind="table" id="ratings_table"
+  columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"]
+  columnTypes=["string", "number", "number"]
+  label="Ratings" maxRows=3 minRows=0 required=true %}
+| Source | Score | Votes |
+| --- | --- | --- |
+| IMDB | 9.3 | 3100000 |
+| RT Critics | 89 | 146 |
+| RT Audience | 98 | 250000 |
+{% /field %}
+
+{% instructions ref="ratings_table" %}
+Fill in scores and vote counts from each source:IMDB: Rating (1.0-10.0 scale), vote countRT Critics: Tomatometer (0-100%), review countRT Audience: Audience Score (0-100%), rating count
+{% /instructions %}
+
+{% /group %}
+
+{% /form %}
+````
+</details>
+
+<details> <summary>YAML Export (click to expand)</summary>
+
+```yaml
+values:
+  movie:
+    state: answered
+    value: The Shawshank Redemption
+  mpaa_rating:
+    state: answered
+    value: r
+  ratings_table:
+    state: answered
+    value:
+      - source: IMDB
+        score: 9.3
+        votes: 3100000
+      - source: RT Critics
+        score: 89
+        votes: 146
+      - source: RT Audience
+        score: 98
+        votes: 250000
+```
+
+</details>
 
 <details> <summary>JSON Schema (click to expand)</summary>
 
@@ -262,32 +350,6 @@ Here is the schema and YAML values for the form above.
   },
   "required": ["movie", "ratings_table"]
 }
-```
-
-</details>
-
-<details> <summary>YAML Export (click to expand)</summary>
-
-```yaml
-values:
-  movie:
-    kind: string
-    value: The Shawshank Redemption
-  mpaa_rating:
-    kind: single_select
-    selected: r
-  ratings_table:
-    kind: table
-    rows:
-      - source: { value: IMDB }
-        score: { value: 9.3 }
-        votes: { value: 2095000 }
-      - source: { value: RT Critics }
-        score: { value: 91 }
-        votes: { value: 78 }
-      - source: { value: RT Audience }
-        score: { value: 98 }
-        votes: { value: 250000 }
 ```
 
 </details>
