@@ -53,9 +53,19 @@ import { validate } from './validate.js';
 // Patch Validation
 // =============================================================================
 
+/**
+ * Internal patch error type that matches PatchRejection interface.
+ * Includes field info for type mismatch errors to help LLM generate correct patches.
+ */
 interface PatchError {
   patchIndex: number;
   message: string;
+  /** Field ID if available (for type mismatch errors) */
+  fieldId?: string;
+  /** Field kind if available (for type mismatch errors) */
+  fieldKind?: string;
+  /** Column IDs if available (for table fields) */
+  columnIds?: string[];
 }
 
 /**
@@ -118,6 +128,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_string to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       break;
@@ -127,6 +140,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_number to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       break;
@@ -136,6 +152,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_string_list to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       break;
@@ -145,6 +164,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_single_select to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       const selectField = field;
@@ -165,6 +187,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_multi_select to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       const multiField = field;
@@ -185,6 +210,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_checkboxes to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       const checkboxField = field;
@@ -205,6 +233,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_url to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       break;
@@ -214,6 +245,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_url_list to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       break;
@@ -223,6 +257,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_date to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       break;
@@ -232,6 +269,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_year to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
       break;
@@ -241,6 +281,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         return {
           patchIndex: index,
           message: `Cannot apply set_table to ${field.kind} field "${field.id}"`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          // No columnIds since this is not a table field
         };
       }
       const tableField = field;

@@ -18,6 +18,7 @@ import type {
   InspectIssue,
   ParsedForm,
   Patch,
+  PatchRejection,
   SessionTurn,
   SessionTurnContext,
   SessionTurnStats,
@@ -201,8 +202,8 @@ export class FormHarness {
     stepResult.patchesApplied = patchesActuallyApplied;
     stepResult.rejectedPatches = applyResult.rejectedPatches;
 
-    // Record turn in session transcript
-    this.recordTurn(issues, patches, result, llmStats, context);
+    // Record turn in session transcript (include rejections)
+    this.recordTurn(issues, patches, result, llmStats, context, applyResult.rejectedPatches);
 
     // Transition state: complete if no more work OR max turns reached
     const noMoreWork = stepResult.issues.length === 0;
@@ -248,6 +249,7 @@ export class FormHarness {
     result: ReturnType<typeof inspect>,
     llmStats?: SessionTurnStats,
     context?: SessionTurnContext,
+    rejectedPatches?: PatchRejection[],
   ): void {
     const markdown = serialize(this.form);
     const hash = sha256(markdown);
@@ -257,7 +259,10 @@ export class FormHarness {
     const turn: SessionTurn = {
       turn: this.turnNumber,
       inspect: { issues },
-      apply: { patches },
+      apply: {
+        patches,
+        ...(rejectedPatches && rejectedPatches.length > 0 && { rejectedPatches }),
+      },
       after: {
         requiredIssueCount,
         markdownSha256: hash,

@@ -696,6 +696,12 @@ export interface InspectResult {
 export interface PatchRejection {
   patchIndex: number;
   message: string;
+  /** Field ID if available (for type mismatch errors) */
+  fieldId?: string;
+  /** Field kind if available (for type mismatch errors) */
+  fieldKind?: string;
+  /** Column IDs if available (for table fields) */
+  columnIds?: string[];
 }
 
 /** Result from apply operation */
@@ -923,6 +929,8 @@ export interface SessionTurn {
   context?: SessionTurnContext;
   apply: {
     patches: Patch[];
+    /** Patches that were rejected (type mismatch, invalid field, etc.) */
+    rejectedPatches?: PatchRejection[];
   };
   after: {
     requiredIssueCount: number;
@@ -1497,6 +1505,15 @@ export const ApplyResultSchema = z.object({
   formState: ProgressStateSchema,
 });
 
+// Patch rejection schema
+export const PatchRejectionSchema = z.object({
+  patchIndex: z.number().int().nonnegative(),
+  message: z.string(),
+  fieldId: z.string().optional(),
+  fieldKind: z.string().optional(),
+  columnIds: z.array(z.string()).optional(),
+});
+
 // Patch schemas
 export const SetStringPatchSchema = z.object({
   op: z.literal('set_string'),
@@ -1662,6 +1679,7 @@ export const SessionTurnSchema = z.object({
   context: SessionTurnContextSchema.optional(),
   apply: z.object({
     patches: z.array(PatchSchema),
+    rejectedPatches: z.array(PatchRejectionSchema).optional(),
   }),
   after: z.object({
     requiredIssueCount: z.number().int().nonnegative(),

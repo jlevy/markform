@@ -773,6 +773,50 @@ Enter your full legal name.
       expect(output).toContain('Please fill out this form carefully.');
       expect(output).toContain('Enter your full legal name.');
     });
+
+    it('outputs plain markdown for table field with full table content', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="ratings" label="Ratings"
+   columnIds=["source", "score"]
+   columnLabels=["Source", "Score"]
+   columnTypes=["string", "number"] %}
+\`\`\`value
+| Source | Score |
+|--------|-------|
+| IMDB | 85 |
+| Rotten Tomatoes | 92 |
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      // Should not contain markdoc directives
+      expect(output).not.toContain('{%');
+      expect(output).not.toContain('%}');
+      expect(output).not.toContain('```value');
+
+      // Should contain field label
+      expect(output).toContain('**Ratings:**');
+
+      // Should contain the full table, not just row count
+      expect(output).toContain('| Source | Score |');
+      expect(output).toContain('| IMDB | 85 |');
+      expect(output).toContain('| Rotten Tomatoes | 92 |');
+
+      // Should NOT contain the old placeholder format
+      expect(output).not.toContain('_(2 rows)_');
+    });
   });
 
   describe('unified response model - serialize state (markform-233)', () => {

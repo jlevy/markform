@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rejection_test",
+  "type": "object",
+  "properties": {
+    "ratings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "votes": {
+            "title": "Votes",
+            "type": "number"
+          }
+        }
+      },
+      "title": "Ratings",
+      "minItems": 1,
+      "maxItems": 5,
+      "x-markform": {
+        "role": "agent",
+        "group": "fields"
+      }
+    },
+    "title": {
+      "type": "string",
+      "title": "Title",
+      "x-markform": {
+        "role": "agent",
+        "group": "fields"
+      }
+    }
+  },
+  "title": "Rejection Test Form",
+  "description": "A form to test patch rejection scenarios - verifies that type mismatch\nerrors are properly recorded and recovery works.",
+  "required": ["ratings", "title"],
+  "x-markform": {
+    "spec": "MF/0.1",
+    "roles": ["user", "agent"],
+    "roleInstructions": {
+      "user": "Fill in the fields you have direct knowledge of.",
+      "agent": "Complete the remaining fields based on the provided context."
+    },
+    "groups": [
+      {
+        "id": "fields",
+        "title": "Test Fields"
+      }
+    ]
+  }
+}

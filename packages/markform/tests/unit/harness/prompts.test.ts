@@ -9,9 +9,14 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { PATCH_FORMAT_INSTRUCTIONS } from '../../../src/harness/prompts.js';
+import {
+  PATCH_FORMAT_INSTRUCTIONS,
+  getPatchFormatHint,
+  PATCH_FORMATS,
+} from '../../../src/harness/prompts.js';
 import { parseForm } from '../../../src/engine/parse.js';
 import { inspect } from '../../../src/engine/inspect.js';
+import { applyPatches } from '../../../src/engine/apply.js';
 
 // =============================================================================
 // PATCH_FORMAT_INSTRUCTIONS Tests
@@ -270,5 +275,158 @@ describe('Regression: All supported field kinds documented in prompts', () => {
     for (const op of expectedOps) {
       expect(PATCH_FORMAT_INSTRUCTIONS, `Missing patch operation: ${op}`).toContain(op);
     }
+  });
+});
+
+// =============================================================================
+// PATCH_FORMATS and getPatchFormatHint Tests
+// =============================================================================
+
+describe('PATCH_FORMATS', () => {
+  it('has an entry for all field types', () => {
+    const expectedKinds = [
+      'string',
+      'number',
+      'string_list',
+      'single_select',
+      'multi_select',
+      'checkboxes',
+      'url',
+      'url_list',
+      'date',
+      'year',
+      'table',
+    ];
+
+    for (const kind of expectedKinds) {
+      expect(PATCH_FORMATS[kind], `Missing PATCH_FORMATS entry for: ${kind}`).toBeDefined();
+    }
+  });
+});
+
+describe('getPatchFormatHint', () => {
+  it('returns format for known field kinds', () => {
+    expect(getPatchFormatHint('string')).toContain('set_string');
+    expect(getPatchFormatHint('number')).toContain('set_number');
+    expect(getPatchFormatHint('table')).toContain('set_table');
+  });
+
+  it('substitutes fieldId when provided', () => {
+    const hint = getPatchFormatHint('string', 'my_field');
+    expect(hint).toContain('fieldId: "my_field"');
+  });
+
+  it('substitutes column IDs for table fields', () => {
+    const hint = getPatchFormatHint('table', 'ratings_table', ['source', 'score', 'votes']);
+    expect(hint).toContain('set_table');
+    expect(hint).toContain('ratings_table');
+    expect(hint).toContain('"source"');
+    expect(hint).toContain('"score"');
+    expect(hint).toContain('"votes"');
+  });
+
+  it('returns generic message for unknown field kinds', () => {
+    const hint = getPatchFormatHint('unknown_kind');
+    expect(hint).toContain('correct');
+    expect(hint).toContain('set_unknown_kind');
+  });
+});
+
+// =============================================================================
+// Type Mismatch Rejection Feedback Tests
+// =============================================================================
+
+describe('Type mismatch rejections include field info', () => {
+  const TABLE_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="data" %}
+
+{% field kind="table" id="ratings_table" label="Ratings" required=true
+   columnIds=["source", "score", "votes"]
+   columnLabels=["Source", "Score", "Votes"]
+   columnTypes=["string", "number", "number"] %}
+| Source | Score | Votes |
+|--------|-------|-------|
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+  it('rejection includes fieldId and fieldKind when applying wrong patch type', () => {
+    const form = parseForm(TABLE_FORM);
+
+    // Try to apply set_string to a table field
+    const result = applyPatches(form, [
+      { op: 'set_string', fieldId: 'ratings_table', value: 'wrong patch type' },
+    ]);
+
+    expect(result.applyStatus).toBe('rejected');
+    expect(result.rejectedPatches).toHaveLength(1);
+
+    const rejection = result.rejectedPatches[0]!;
+    expect(rejection.message).toContain('set_string');
+    expect(rejection.message).toContain('table');
+    expect(rejection.fieldId).toBe('ratings_table');
+    expect(rejection.fieldKind).toBe('table');
+    expect(rejection.columnIds).toEqual(['source', 'score', 'votes']);
+  });
+
+  it('rejection for non-table fields does not include columnIds', () => {
+    const STRING_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="data" %}
+{% field kind="string" id="name" label="Name" required=true %}
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+    const form = parseForm(STRING_FORM);
+
+    // Try to apply set_table to a string field
+    const result = applyPatches(form, [
+      { op: 'set_table', fieldId: 'name', rows: [{ col1: 'value' }] },
+    ]);
+
+    expect(result.applyStatus).toBe('rejected');
+    expect(result.rejectedPatches).toHaveLength(1);
+
+    const rejection = result.rejectedPatches[0]!;
+    expect(rejection.message).toContain('set_table');
+    expect(rejection.message).toContain('string');
+    expect(rejection.fieldId).toBe('name');
+    expect(rejection.fieldKind).toBe('string');
+    expect(rejection.columnIds).toBeUndefined();
+  });
+
+  it('getPatchFormatHint generates correct hint for rejected table field', () => {
+    const form = parseForm(TABLE_FORM);
+
+    // Try to apply set_string to a table field
+    const result = applyPatches(form, [
+      { op: 'set_string', fieldId: 'ratings_table', value: 'wrong' },
+    ]);
+
+    const rejection = result.rejectedPatches[0]!;
+
+    // Generate hint from rejection info
+    const hint = getPatchFormatHint(rejection.fieldKind!, rejection.fieldId, rejection.columnIds);
+
+    // Verify hint includes all the right info
+    expect(hint).toContain('set_table');
+    expect(hint).toContain('ratings_table');
+    expect(hint).toContain('"source"');
+    expect(hint).toContain('"score"');
+    expect(hint).toContain('"votes"');
   });
 });
