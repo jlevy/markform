@@ -353,6 +353,19 @@ function buildContextPrompt(issues: InspectIssue[], form: ParsedForm, maxPatches
         if (field.kind === 'checkboxes' && 'checkboxMode' in field) {
           lines.push(`  Mode: ${field.checkboxMode ?? 'multi'}`);
         }
+        // For table fields, show column IDs so the model knows the expected row structure
+        if (field.kind === 'table' && 'columns' in field && field.columns) {
+          const columnInfo = field.columns
+            .map((c) => `${c.id}${c.required ? ' (required)' : ''}`)
+            .join(', ');
+          lines.push(`  Columns: ${columnInfo}`);
+          if (field.minRows !== undefined || field.maxRows !== undefined) {
+            const constraints = [];
+            if (field.minRows !== undefined) constraints.push(`min: ${field.minRows}`);
+            if (field.maxRows !== undefined) constraints.push(`max: ${field.maxRows}`);
+            lines.push(`  Rows: ${constraints.join(', ')}`);
+          }
+        }
       }
     }
     lines.push('');
