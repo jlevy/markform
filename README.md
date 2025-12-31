@@ -371,11 +371,8 @@ View them with `markform examples --list`, copy with `markform examples`, and ru
 - [`movie-research-demo.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-demo.form.md)
   \- The quick example above.
 
-- [`movie-research-basic.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-basic.form.md)
-  \- Standard movie research with IMDB, Rotten Tomatoes, Metacritic.
-
-- [`movie-research-deep.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-deep.form.md)
-  \- Comprehensive movie analysis with streaming, box office, analysis.
+- [`movie-deep-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-deep-research.form.md)
+  \- Comprehensive movie analysis with streaming, box office, technical specs.
 
 - [`earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
   \- Financial analysis form.
