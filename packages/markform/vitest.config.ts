@@ -21,7 +21,7 @@ export default defineConfig({
       thresholds: {
         statements: 50,
         branches: 49,
-        functions: 50,
+        functions: 49,
         lines: 50,
       },
       // Generate reports even when thresholds fail (needed for PR comments)

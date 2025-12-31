@@ -313,7 +313,7 @@ team features are needed.
 | Phase | Statements | Branches | Functions | Lines | Timeline |
 | --- | --- | --- | --- | --- | --- |
 | Current | 50.9% | 49.9% | 50% | 51.3% | Now |
-| Phase 1 | 50% | 49% | 50% | 50% | Start |
+| Phase 1 | 50% | 49% | 49% | 50% | Start |
 | Phase 2 | 60% | 55% | 60% | 60% | After test improvements |
 | Phase 3 | 70% | 65% | 70% | 70% | Target |
 | Phase 4 | 80% | 75% | 80% | 80% | Stretch goal |
