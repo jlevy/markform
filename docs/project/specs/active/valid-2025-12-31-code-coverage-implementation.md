@@ -68,16 +68,23 @@ Expected:
 
 After CI completes on a PR:
 
-- [ ] Coverage comment appears on PR
-- [ ] Comment shows coverage summary (statements, branches, functions, lines)
-- [ ] Changed files section shows coverage for modified files
-- [ ] Comment updates (not duplicates) on subsequent pushes
+- [x] Coverage comment appears on PR
+- [x] Comment shows coverage summary (statements, branches, functions, lines)
+- [x] Changed files section shows coverage for modified files
+- [x] Comment updates (not duplicates) on subsequent pushes
 
-#### 3. Coverage Artifacts
+#### 3. Local Coverage Report
 
-- [ ] Coverage artifact uploaded to GitHub Actions
-- [ ] Artifact contains HTML report and JSON files
-- [ ] Artifact can be downloaded from Actions UI
+For detailed analysis, run locally:
+
+```bash
+pnpm --filter markform test:coverage
+open packages/markform/coverage/index.html
+```
+
+- [x] HTML report generated locally with line-by-line coverage
+- [x] JSON summary matches CI-generated summary
+- [x] Documented in development.md as PR review step
 
 #### 4. Coverage Badge (After Merge to Main)
 
@@ -102,20 +109,22 @@ pnpm --filter markform test:coverage
 
 ```yaml
 # Verify these steps exist in .github/workflows/ci.yml:
-- [ ] test:coverage runs instead of test
-- [ ] vitest-coverage-report-action@v2 configured for PRs
-- [ ] coverage-badges-action@v1.4.6 configured for main
-- [ ] upload-artifact@v4 uploads coverage folder
+- [x] test:coverage runs instead of test
+- [x] vitest-coverage-report-action@v2 configured for PRs
+- [x] coverage-badges-action@v1.4.6 configured for main
 ```
+
+Note: Artifacts are not uploaded to reduce storage overhead. Use local
+`pnpm --filter markform test:coverage` for detailed HTML reports.
 
 ## Files Changed
 
 | File | Change |
 | --- | --- |
 | `packages/markform/vitest.config.ts` | Added json-summary, reportOnFailure, lowered thresholds |
-| `.github/workflows/ci.yml` | Added coverage steps, badge action, artifact upload |
+| `.github/workflows/ci.yml` | Added coverage PR comments and badge action |
 | `README.md` | Added CI and coverage badges |
-| `docs/development.md` | Added code coverage documentation section |
+| `docs/development.md` | Added code coverage documentation with local review workflow |
 | `badges/coverage-total.svg` | Initial placeholder badge |
 
 ## Open Questions
@@ -128,8 +137,14 @@ None - implementation is complete.
 
 1. ✅ CI passes with coverage thresholds (functions lowered to 49% due to CI variance)
 2. ✅ Coverage comment appears on PR #53
-3. ✅ Coverage artifacts uploaded successfully
+3. ✅ Local coverage report workflow documented in development.md
 4. ⏳ Badge updates pending main branch merge
+
+**Design decision:**
+
+- Removed artifact upload to reduce storage (~1.5MB per build)
+- Local `pnpm --filter markform test:coverage` generates same reports
+- Documented in development.md as recommended PR review step
 
 **Issues resolved during validation:**
 

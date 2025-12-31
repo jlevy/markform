@@ -298,22 +298,28 @@ To match CI behavior locally, run `pnpm precommit` which executes the same check
 Coverage is collected using Vitest with the v8 provider. Reports are generated in multiple
 formats for different use cases.
 
-**Run coverage locally:**
+**Before submitting a PR**, review coverage for your changes:
 
 ```bash
 # Run tests with coverage
 pnpm --filter markform test:coverage
 
-# View HTML report
+# View detailed HTML report (recommended for PR review)
 open packages/markform/coverage/index.html
 ```
 
-**Coverage reports:**
+The HTML report shows line-by-line coverage highlighting. Use it to:
+
+- Identify untested code paths in your changes
+- Verify edge cases are covered
+- Find dead code that can be removed
+
+**Coverage reports generated:**
 
 | Format | Location | Purpose |
 | --- | --- | --- |
 | `text` | Terminal | Quick summary during development |
-| `html` | `coverage/index.html` | Detailed visual report |
+| `html` | `coverage/index.html` | **PR review** - detailed visual report |
 | `json-summary` | `coverage/coverage-summary.json` | CI/PR comments |
 | `lcov` | `coverage/lcov.info` | External tools (Codecov, etc.) |
 
@@ -323,19 +329,17 @@ open packages/markform/coverage/index.html
 | --- | --- | --- |
 | Statements | 50% | 80% |
 | Branches | 49% | 75% |
-| Functions | 50% | 80% |
+| Functions | 49% | 80% |
 | Lines | 50% | 80% |
 
 Thresholds will be increased as coverage improves. CI will fail if coverage drops below
 thresholds.
 
-**PR coverage comments:**
+**CI coverage visibility:**
 
-Pull requests automatically receive coverage comments showing:
-
-- Overall coverage summary
-- Coverage for changed files only
-- Comparison against base branch
+- PRs automatically receive coverage comments with summary and changed-file coverage
+- Coverage badge in README updates after merges to main
+- Run `pnpm --filter markform test:coverage` locally to match CI behavior
 
 ## AI SDK Integration
 

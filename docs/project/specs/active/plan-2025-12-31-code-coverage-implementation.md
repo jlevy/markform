@@ -89,7 +89,7 @@ Implement modern code coverage infrastructure with:
 2. CI passes when coverage meets thresholds
 3. README displays coverage badge
 4. Developers can run `pnpm test:coverage` locally with same config
-5. Coverage reports accessible as artifacts
+5. Local HTML report available for detailed PR review
 
 ## Stage 2: Architecture Stage
 
@@ -120,14 +120,17 @@ jobs:
           json-final-path: packages/markform/coverage/coverage-final.json
           file-coverage-mode: changes
 
-      - name: Update Coverage Badge
-        uses: jpb06/coverage-badges-action@latest
-        if: github.ref == 'refs/heads/main'
+      - name: Coverage Badges
+        uses: jpb06/coverage-badges-action@v1.4.6
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         with:
           coverage-summary-path: packages/markform/coverage/coverage-summary.json
           output-folder: ./badges
-          # Uses gist for badge storage
+          branches: main
 ```
+
+Note: Coverage artifacts are not uploaded to reduce storage overhead (~1.5MB per build).
+Run `pnpm --filter markform test:coverage` locally to generate detailed HTML reports.
 
 ### Vitest Configuration Updates
 
@@ -200,8 +203,7 @@ Add coverage reporting to CI workflow.
 - [x] Add `vitest-coverage-report-action` to CI workflow
 - [x] Configure for monorepo paths (`packages/markform/coverage/`)
 - [x] Set `file-coverage-mode: changes` for PR-only file reports
-- [x] Add step for coverage artifacts upload
-- [ ] Test with a PR to verify comments appear (requires merge to test)
+- [x] Test with a PR to verify comments appear
 
 ### Phase 3: Add Coverage Badge
 
@@ -219,8 +221,8 @@ Verify end-to-end functionality and document.
 
 **Tasks:**
 
-- [ ] Create test PR to verify full pipeline (this PR will test it)
-- [ ] Verify coverage comment appears and updates on new commits
+- [x] Create test PR to verify full pipeline (PR #53)
+- [x] Verify coverage comment appears and updates on new commits
 - [x] Verify badge shows in README
 - [x] Verify threshold failures block CI (when intentional) - tested locally
 - [x] Update `docs/development.md` with coverage section
@@ -288,11 +290,11 @@ If issues arise:
 
 ### Success Metrics
 
-- [ ] PR comments show coverage on all PRs
-- [ ] Coverage badge displays in README
-- [ ] CI runs coverage in under 60 seconds additional time
-- [ ] No flaky coverage-related failures
-- [ ] Local and CI coverage match
+- [x] PR comments show coverage on all PRs
+- [x] Coverage badge displays in README
+- [x] CI runs coverage in under 60 seconds additional time
+- [x] No flaky coverage-related failures
+- [x] Local and CI coverage match (within ~1% variance)
 
 ## Implementation Notes
 

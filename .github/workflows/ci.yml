@@ -46,12 +46,3 @@ jobs:
           coverage-summary-path: packages/markform/coverage/coverage-summary.json
           output-folder: ./badges
           branches: main
-
-      # Upload coverage artifacts for debugging
-      - name: Upload Coverage
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-report
-          path: packages/markform/coverage/
-          retention-days: 14
