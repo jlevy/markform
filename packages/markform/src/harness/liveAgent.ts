@@ -13,7 +13,13 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 import { xai } from '@ai-sdk/xai';
 
-import type { DocumentationBlock, InspectIssue, ParsedForm, Patch } from '../engine/coreTypes.js';
+import type {
+  DocumentationBlock,
+  InspectIssue,
+  ParsedForm,
+  Patch,
+  PatchRejection,
+} from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 import { serialize } from '../engine/serialize.js';
 import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from '../settings.js';
@@ -93,14 +99,20 @@ export class LiveAgent implements Agent {
    * Each call is stateless - the full form context is provided fresh each turn.
    * The form itself carries all state (filled values, remaining issues).
    * Returns patches and per-turn stats for observability.
+   *
+   * @param issues - Current issues to address
+   * @param form - Current form state
+   * @param maxPatches - Maximum patches to generate
+   * @param previousRejections - Rejections from previous turn (helps LLM learn from mistakes)
    */
   async generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number,
+    previousRejections?: PatchRejection[],
   ): Promise<AgentResponse> {
-    // Build context prompt with issues and form schema
-    const contextPrompt = buildContextPrompt(issues, form, maxPatches);
+    // Build context prompt with issues and form schema (include previous rejections if any)
+    const contextPrompt = buildContextPrompt(issues, form, maxPatches, previousRejections);
 
     // Build composed system prompt from form instructions
     let systemPrompt = buildSystemPrompt(form, this.targetRole, issues);
@@ -316,9 +328,33 @@ function buildSystemPrompt(form: ParsedForm, targetRole: string, issues: Inspect
  *
  * The form markdown shows the agent exactly what's been filled so far,
  * making each turn stateless - all state is in the form itself.
+ *
+ * @param issues - Current issues to address
+ * @param form - Current form state
+ * @param maxPatches - Maximum patches to generate
+ * @param previousRejections - Rejections from previous turn (helps LLM learn from mistakes)
  */
-function buildContextPrompt(issues: InspectIssue[], form: ParsedForm, maxPatches: number): string {
+function buildContextPrompt(
+  issues: InspectIssue[],
+  form: ParsedForm,
+  maxPatches: number,
+  previousRejections?: PatchRejection[],
+): string {
   const lines: string[] = [];
+
+  // If there were rejections from previous turn, show them first so the model learns
+  if (previousRejections && previousRejections.length > 0) {
+    lines.push('# Previous Patch Errors');
+    lines.push('');
+    lines.push(
+      'Your previous patches were rejected due to the following errors. Please fix these issues:',
+    );
+    lines.push('');
+    for (const rejection of previousRejections) {
+      lines.push(`- **Error:** ${rejection.message}`);
+    }
+    lines.push('');
+  }
 
   // Include full form markdown so agent sees current state
   lines.push('# Current Form State');

@@ -14,6 +14,7 @@ import type {
   FieldValue,
   InspectIssue,
   ParsedForm,
+  PatchRejection,
   SessionTurnContext,
   SessionTurnStats,
 } from '../engine/coreTypes.js';
@@ -238,6 +239,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   // 5. Run harness loop
   let turnCount = 0;
   let stepResult = harness.step();
+  // Track rejections from previous turn to provide feedback to the LLM
+  let previousRejections: PatchRejection[] | undefined;
 
   while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
     // Check for cancellation
@@ -279,8 +282,13 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       }
     }
 
-    // Generate patches using agent
-    const response = await agent.generatePatches(turnIssues, form, maxPatchesPerTurn);
+    // Generate patches using agent (pass previous rejections so LLM can learn from mistakes)
+    const response = await agent.generatePatches(
+      turnIssues,
+      form,
+      maxPatchesPerTurn,
+      previousRejections,
+    );
     const { patches, stats } = response;
 
     // Call onPatchesGenerated callback (after agent, before applying)
@@ -332,6 +340,9 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     const actualPatchesApplied = stepResult.patchesApplied ?? patches.length;
     totalPatches += actualPatchesApplied;
     turnCount++;
+
+    // Store rejections to provide feedback to LLM in next turn
+    previousRejections = stepResult.rejectedPatches;
 
     // Call progress callback (errors don't abort fill)
     if (options.callbacks?.onTurnComplete) {

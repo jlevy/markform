@@ -81,12 +81,14 @@ export interface Agent {
    * @param issues - Prioritized issues from harness step
    * @param form - Current form state
    * @param maxPatches - Maximum number of patches to generate
+   * @param previousRejections - Optional rejections from previous turn (helps agent learn from mistakes)
    * @returns Promise resolving to patches and optional stats
    */
   generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number,
+    previousRejections?: PatchRejection[],
   ): Promise<AgentResponse>;
 }
 
