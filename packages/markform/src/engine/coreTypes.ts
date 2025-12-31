@@ -576,7 +576,7 @@ export type IssueReason =
   | 'required_missing'
   | 'checkbox_incomplete'
   | 'min_items_not_met'
-  | 'optional_empty';
+  | 'optional_unanswered';
 
 /** Issue scope - the level at which the issue applies */
 export type IssueScope = 'form' | 'group' | 'field' | 'option' | 'column' | 'cell';
@@ -1403,7 +1403,7 @@ export const IssueReasonSchema = z.enum([
   'required_missing',
   'checkbox_incomplete',
   'min_items_not_met',
-  'optional_empty',
+  'optional_unanswered',
 ]);
 
 export const IssueScopeSchema = z.enum(['form', 'group', 'field', 'option', 'column', 'cell']);

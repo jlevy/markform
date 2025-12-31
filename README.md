@@ -113,21 +113,23 @@ Fields have types defined by the attributes.
 Values are filled in incrementally, just like any form.
 Once filled in, values appear directly inside the tags, in Markdown format:
 
-```jinja
+````jinja
 {% field kind="string" id="movie" label="Movie" role="user"
    required=true minLength=1 maxLength=300 %}
+```value
 The Shawshank Redemption
+```
 {% /field %}
 
 {% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
 - [ ] PG-13 {% #pg_13 %}
-- [X] R {% #r %}
+- [x] R {% #r %}
 - [ ] NC-17 {% #nc_17 %}
 - [ ] NR/Unrated {% #nr %}
 {% /field %}
-```
+````
 
 Note fields can have a `role="user"` to indicate they are filled interactively by the
 user, or a `role="agent"` to indicate an agent should fill them in.
@@ -283,7 +285,10 @@ Enter the movie title (add year or details for disambiguation).
 {% /field %}
 
 {% instructions ref="ratings_table" %}
-Fill in scores and vote counts from each source:IMDB: Rating (1.0-10.0 scale), vote countRT Critics: Tomatometer (0-100%), review countRT Audience: Audience Score (0-100%), rating count
+Fill in scores and vote counts from each source:
+- IMDB: Rating (1.0-10.0 scale), vote count
+- RT Critics: Tomatometer (0-100%), review count
+- RT Audience: Audience Score (0-100%), rating count
 {% /instructions %}
 
 {% /group %}
@@ -591,17 +596,17 @@ applications.
 ### Basic Parsing
 
 ```typescript
-import { parseForm, serializeForm } from "markform";
+import { parseForm, serialize } from "markform";
 
 // Parse a .form.md file
 const form = parseForm(markdownContent);
 
 // Access schema and values
 console.log(form.schema.title);
-console.log(form.values);
+console.log(form.responsesByFieldId);
 
 // Serialize back to markdown
-const output = serializeForm(form);
+const output = serialize(form);
 ```
 
 ### AI SDK Integration

@@ -160,8 +160,11 @@ export class MockAgent implements Agent {
         return value.value !== null;
       case 'table':
         return value.rows.length > 0;
-      default:
-        return false;
+      default: {
+        // Exhaustiveness check - TypeScript will error if a case is missing
+        const _exhaustive: never = value;
+        throw new Error(`Unhandled field value kind: ${(_exhaustive as { kind: string }).kind}`);
+      }
     }
   }
 
@@ -279,8 +282,11 @@ export class MockAgent implements Agent {
         };
       }
 
-      default:
-        return null;
+      default: {
+        // Exhaustiveness check - TypeScript will error if a case is missing
+        const _exhaustive: never = field;
+        throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+      }
     }
   }
 }

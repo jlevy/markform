@@ -769,6 +769,157 @@ John
     });
   });
 
+  describe('empty vs answerState - orthogonal dimensions (markform-480)', () => {
+    it('multi_select answered with no selections: empty=true, answerState=answered', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="multi_select" id="streaming" label="Streaming" %}
+- [ ] Netflix {% #netflix %}
+- [ ] Hulu {% #hulu %}
+- [ ] Disney+ {% #disney %}
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Simulate agent answering with no selections (empty array)
+      parsed.responsesByFieldId.streaming = {
+        state: 'answered',
+        value: {
+          kind: 'multi_select',
+          selected: [], // Intentionally empty - "none of the above"
+        },
+      };
+      const progress = computeProgressSummary(
+        parsed.schema,
+        parsed.responsesByFieldId,
+        parsed.notes,
+        [],
+      );
+
+      // empty=true: field has no substantive value (selected.length === 0)
+      // answerState=answered: agent has addressed the field
+      // These are orthogonal dimensions per the spec
+      expect(progress.fields.streaming?.empty).toBe(true);
+      expect(progress.fields.streaming?.answerState).toBe('answered');
+      expect(progress.counts.answeredFields).toBe(1);
+      expect(progress.counts.emptyFields).toBe(1);
+      expect(progress.counts.filledFields).toBe(0);
+    });
+
+    it('string_list answered with no items: empty=true, answerState=answered', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Simulate agent answering with no items (empty array)
+      parsed.responsesByFieldId.tags = {
+        state: 'answered',
+        value: {
+          kind: 'string_list',
+          items: [], // Intentionally empty
+        },
+      };
+      const progress = computeProgressSummary(
+        parsed.schema,
+        parsed.responsesByFieldId,
+        parsed.notes,
+        [],
+      );
+
+      // empty=true (no items), but answerState=answered (agent addressed it)
+      expect(progress.fields.tags?.empty).toBe(true);
+      expect(progress.fields.tags?.answerState).toBe('answered');
+    });
+
+    it('table answered with no rows: empty=true, answerState=answered', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="awards" label="Awards" columnIds=["award", "year"] columnTypes=["string", "number"] %}
+| Award | Year |
+| --- | --- |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Simulate agent answering with no rows (empty table)
+      parsed.responsesByFieldId.awards = {
+        state: 'answered',
+        value: {
+          kind: 'table',
+          rows: [], // Intentionally empty
+        },
+      };
+      const progress = computeProgressSummary(
+        parsed.schema,
+        parsed.responsesByFieldId,
+        parsed.notes,
+        [],
+      );
+
+      // empty=true (no rows), but answerState=answered (agent addressed it)
+      expect(progress.fields.awards?.empty).toBe(true);
+      expect(progress.fields.awards?.answerState).toBe('answered');
+    });
+
+    it('unanswered multi_select: empty=true, answerState=unanswered', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="multi_select" id="streaming" label="Streaming" %}
+- [ ] Netflix {% #netflix %}
+- [ ] Hulu {% #hulu %}
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // No response set - field is unanswered
+      const progress = computeProgressSummary(
+        parsed.schema,
+        parsed.responsesByFieldId,
+        parsed.notes,
+        [],
+      );
+
+      // Both dimensions indicate "not addressed"
+      expect(progress.fields.streaming?.empty).toBe(true);
+      expect(progress.fields.streaming?.answerState).toBe('unanswered');
+      expect(progress.counts.emptyFields).toBe(1);
+    });
+  });
+
   describe('computeAllSummaries', () => {
     it('computes all summaries at once', () => {
       const markdown = `---

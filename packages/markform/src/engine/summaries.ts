@@ -197,6 +197,11 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
       const v = value as TableValue;
       return v.rows.length > 0;
     }
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
   }
 }
 
@@ -255,6 +260,9 @@ function computeFieldProgress(
   const fieldIssues = issues.filter((i) => i.ref === field.id);
   const issueCount = fieldIssues.length;
   const value = response.value;
+  // `empty` means "field has no substantive value" - this is about value presence,
+  // not workflow state. A multi_select with selected=[] is empty even if answered.
+  // The answerState dimension (unanswered/answered/skipped/aborted) tracks workflow.
   const empty = isFieldEmpty(field, value);
 
   // Determine validity:

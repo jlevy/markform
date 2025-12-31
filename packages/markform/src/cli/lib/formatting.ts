@@ -100,8 +100,8 @@ export function issueReasonToStatus(reason: IssueReason): string {
       return 'incomplete';
     case 'min_items_not_met':
       return 'too-few';
-    case 'optional_empty':
-      return 'empty';
+    case 'optional_unanswered':
+      return 'unanswered';
     default:
       return 'issue';
   }

@@ -139,50 +139,50 @@ turns:
           priority: 1
         - ref: notes
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
         - ref: optional_date
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
         - ref: optional_number
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
         - ref: optional_year
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
         - ref: project_tasks
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
         - ref: references
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
         - ref: related_url
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
         - ref: score
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
     apply:
@@ -237,8 +237,8 @@ turns:
       issues:
         - ref: team_members
           scope: field
-          reason: optional_empty
-          message: Optional field has no value
+          reason: optional_unanswered
+          message: Optional field not yet addressed
           severity: recommended
           priority: 3
     apply:

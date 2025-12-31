@@ -681,7 +681,7 @@ function convertToInspectIssues(form: ParsedForm): InspectIssue[] {
     issues.push({
       ref: vi.ref ?? '',
       scope: 'field', // Default to field scope; can be refined based on validator context
-      reason: vi.severity === 'error' ? 'validation_error' : 'optional_empty',
+      reason: vi.severity === 'error' ? 'validation_error' : 'optional_unanswered',
       message: vi.message,
       severity: vi.severity === 'error' ? 'required' : 'recommended',
       priority: priority++,

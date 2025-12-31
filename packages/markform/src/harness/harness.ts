@@ -194,7 +194,7 @@ export class FormHarness {
     const applyResult = applyPatches(this.form, patches);
     const patchesActuallyApplied = applyResult.applyStatus === 'applied' ? patches.length : 0;
 
-    // Re-inspect after applying patches to get full issue list including optional_empty
+    // Re-inspect after applying patches to get full issue list including optional_unanswered
     const result = inspect(this.form, { targetRoles: this.config.targetRoles });
     const stepResult = this.computeStepResult(result);
 
