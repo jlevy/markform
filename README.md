@@ -506,6 +506,28 @@ Forms define these pieces and are easy to edit.
 All other choices can be left to the agents themselves, with the structure and
 validations enforced by the form-filling tools the agents use.
 
+Another cool thing about forms: they get rid of the inefficiencies of conversation chat
+history. Often when an agentic loop sis built, it just saves the chat history for
+context. But a form is inherently more efficient: the harness itself can be stateless.
+It just shares the partly-filled form with the agent, and it has full context in one
+message. That’s what the agentic loop in this implementation does.
+
+Finally, the meta-loop of *creating and improving* the form defining a process way
+easier to automate:
+
+- To get started, you can convert any unstructured doc describing a process to a form,
+  use the CLI to validate it, and do a pretty good first job.
+
+- Any time you have a workflow problem, you can ask an LLM to diagnose it and if
+  possible, go back and fix up the form with an additional instruction or field or check
+  that would prevent it from happening again.
+
+In fact, I suspect use of dynamic form structure like this would make complex deep
+research tools more powerful.
+With a coding agent, you plan a spec before implementing it.
+With a research agent, you could can use a Markform doc to encode steps of a research
+plan before asking multiple agents to fill in the form(s).
+
 ### Is this mature?
 
 No! I just wrote it.

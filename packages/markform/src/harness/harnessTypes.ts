@@ -286,6 +286,7 @@ export interface FillOptions {
 export interface TurnProgress {
   turnNumber: number;
   issuesShown: number;
+  /** Actual number of patches applied (0 if rejected due to validation errors) */
   patchesApplied: number;
   requiredIssuesRemaining: number;
   isComplete: boolean;
@@ -293,8 +294,10 @@ export interface TurnProgress {
   stats?: TurnStats;
   /** Issues shown this turn (for detailed logging) */
   issues: InspectIssue[];
-  /** Patches applied this turn (for detailed logging) */
+  /** Patches generated this turn (may not all be applied if rejected) */
   patches: Patch[];
+  /** True if patches were rejected due to validation errors */
+  patchesRejected?: boolean;
 }
 
 /**

@@ -862,6 +862,10 @@ export interface StepResult {
   stepBudget: number;
   isComplete: boolean;
   turnNumber: number;
+  /** Number of patches actually applied (set by harness.apply, undefined for step-only results) */
+  patchesApplied?: number;
+  /** Whether patches were rejected due to validation errors */
+  patchesRejected?: boolean;
 }
 
 // =============================================================================

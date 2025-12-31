@@ -182,12 +182,17 @@ export class FormHarness {
       throw new Error(`Too many patches: ${patches.length} > ${this.config.maxPatchesPerTurn}`);
     }
 
-    // Apply patches
-    applyPatches(this.form, patches);
+    // Apply patches and check result - transaction semantics means all or none
+    const applyResult = applyPatches(this.form, patches);
+    const patchesActuallyApplied = applyResult.applyStatus === 'applied' ? patches.length : 0;
 
     // Re-inspect after applying patches to get full issue list including optional_empty
     const result = inspect(this.form, { targetRoles: this.config.targetRoles });
     const stepResult = this.computeStepResult(result);
+
+    // Add actual patch count to step result for accurate reporting
+    stepResult.patchesApplied = patchesActuallyApplied;
+    stepResult.patchesRejected = applyResult.applyStatus === 'rejected';
 
     // Record turn in session transcript
     this.recordTurn(issues, patches, result, llmStats);

@@ -319,7 +319,9 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
     // Apply patches
     stepResult = harness.apply(patches, turnIssues, llmStats);
-    totalPatches += patches.length;
+    // Use actual applied count from harness (0 if patches were rejected)
+    const actualPatchesApplied = stepResult.patchesApplied ?? patches.length;
+    totalPatches += actualPatchesApplied;
     turnCount++;
 
     // Call progress callback (errors don't abort fill)
@@ -329,12 +331,13 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         options.callbacks.onTurnComplete({
           turnNumber: turnCount,
           issuesShown: turnIssues.length,
-          patchesApplied: patches.length,
+          patchesApplied: actualPatchesApplied,
           requiredIssuesRemaining: requiredIssues.length,
           isComplete: stepResult.isComplete,
           stats,
           issues: turnIssues,
           patches,
+          patchesRejected: stepResult.patchesRejected,
         });
       } catch {
         // Ignore callback errors
