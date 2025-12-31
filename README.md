@@ -210,10 +210,37 @@ R
 **Ratings:**
 | Source | Score | Votes |
 | --- | --- | --- |
-| IMDB | 9.3 | 3000000 |
-| RT Critics | 89 | 22 |
+| IMDB | 9.3 | 2095000 |
+| RT Critics | 91 | 78 |
 | RT Audience | 98 | 250000 |
 ```
+
+<details>
+<summary>YAML Export (click to expand)</summary>
+
+```yaml
+values:
+  movie:
+    kind: string
+    value: The Shawshank Redemption
+  mpaa_rating:
+    kind: single_select
+    selected: r
+  ratings_table:
+    kind: table
+    rows:
+      - source: { value: IMDB }
+        score: { value: 9.3 }
+        votes: { value: 2095000 }
+      - source: { value: RT Critics }
+        score: { value: 91 }
+        votes: { value: 78 }
+      - source: { value: RT Audience }
+        score: { value: 98 }
+        votes: { value: 250000 }
+```
+
+</details>
 
 ### More Example Forms
 
