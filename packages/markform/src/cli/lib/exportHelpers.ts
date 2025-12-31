@@ -88,6 +88,27 @@ export function toStructuredValues(form: ParsedForm): Record<string, unknown> {
       case 'url_list':
         exportValue = value.items;
         break;
+      case 'date':
+        exportValue = value.value ?? null;
+        break;
+      case 'year':
+        exportValue = value.value ?? null;
+        break;
+      case 'table':
+        // Export table rows as array of objects with column IDs as keys
+        exportValue = value.rows.map((row) => {
+          const rowObj: Record<string, unknown> = {};
+          for (const [colId, cellResp] of Object.entries(row)) {
+            rowObj[colId] = cellResp.value ?? null;
+          }
+          return rowObj;
+        });
+        break;
+      default: {
+        // Exhaustiveness check - TypeScript will error if a case is missing
+        const _exhaustive: never = value;
+        throw new Error(`Unhandled field value kind: ${(_exhaustive as { kind: string }).kind}`);
+      }
     }
 
     result[fieldId] = { state: 'answered', value: exportValue };

@@ -1310,12 +1310,18 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
     }
     case 'table': {
       const tableValue = value as TableValue | undefined;
+      const tableField = field;
       if (tableValue?.rows && tableValue.rows.length > 0) {
-        lines.push(`_(${tableValue.rows.length} rows)_`);
+        lines.push(serializeMarkdownTable(tableValue, tableField.columns));
       } else {
         lines.push('_(empty)_');
       }
       break;
+    }
+    default: {
+      // Exhaustiveness check - TypeScript will error if a case is missing
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
     }
   }
 
