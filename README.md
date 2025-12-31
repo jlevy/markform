@@ -520,8 +520,8 @@ Finally, the meta-loop of *creating and improving* forms is easier to automate:
   The model can also use the CLI or tools to validate and test it.
 
 - Any time you have a workflow problem, you can ask an LLM to diagnose it and if
-  possible, go back and fix up the form with an additional instruction or field or check
-  that would prevent it from happening again.
+  possible, go back and fix up the form with additional instructions or fields or checks
+  that would prevent the problem from happening again.
 
 I suspect dynamic form structures like this could make complex deep research more
 powerful. Just as you plan a spec before implementing with a coding agent, you could use
@@ -611,10 +611,10 @@ The closest alternatives are:
 | Approach | Usable GUI editor | Human-readable source format | Agent-editable | APIs and validation rules |
 | --- | :---: | :---: | :---: | :---: |
 | Plain Markdown | ✅ IDEs/editors | ✅ | ⚠️ fragile | ❌ |
-| JSON with schema | ⚠️ rarely | ⚠️ JSON | ✅ | ✅ |
-| SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️ rarely | ⚠️ if they add it | ⚠️ if they add it |
+| JSON + JSON Schema | ✅ IDEs/editors | ⚠️ no free text | ✅ | ✅ |
+| SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️ rarely | ⚠️ sometimes | ⚠️ sometimes |
 | HTML/web Forms | ✅ IDEs/editors | ⚠️ HTML+code | ⚠️ coding agent | ✅ |
-| Excel/Google Sheets | ✅ | ❌ .csv/.xlsx | ⚠️ with tools | ✅ with some coding |
+| Excel/Google Sheets | ✅ app | ❌ .csv/.xlsx | ⚠️ with tools | ✅ with some coding |
 | **Markform** | ✅ IDEs/editors | ✅ | ✅ with this package | ✅ with this package |
 
 ### What are example use cases?
