@@ -91,7 +91,8 @@ function formatMarkdown(content: string): string {
     formattedLine = formattedLine.replace(
       /\{%\s*(\w+)\s*([^%]*)\s*%\}/g,
       (_match, tag: string, attrs: string) => {
-        return `${pc.dim('{% ')}${pc.green(tag)}${pc.dim(attrs)} ${pc.dim('%}')}`;
+        const attrsPart = attrs.trim() ? ` ${pc.dim(attrs.trim())}` : '';
+        return `${pc.dim('{% ')}${pc.green(tag)}${attrsPart} ${pc.dim('%}')}`;
       },
     );
 
