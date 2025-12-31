@@ -5,7 +5,7 @@ machines can parse, and agents can fill via tool calls.
 
 Define instructions, fields, and validation rules in a single `.form.md` file.
 Agents fill forms incrementally via patches.
-Fields are validatd, so errors are caught early and can be corrected.
+Fields are validated, so errors are caught early and can be corrected.
 Humans can review or intervene at any point.
 
 **Why forms?** For deep research or complex AI tasks, you need more than just prompts or
@@ -90,7 +90,45 @@ npm install markform
 ### Form Definition
 
 A `.form.md` file is simply a Markdoc file.
-It combines YAML frontmatter with Markdoc-tagged content:
+It combines YAML frontmatter with Markdoc-tagged content.
+
+The text can be any Markdown.
+The tags define things like fields:
+
+```jinja
+{% field kind="string" id="movie" label="Movie" role="user"
+   required=true minLength=1 maxLength=300 %}{% /field %}
+
+{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
+- [ ] G {% #g %}
+- [ ] PG {% #pg %}
+- [ ] PG-13 {% #pg_13 %}
+- [ ] R {% #r %}
+- [ ] NC-17 {% #nc_17 %}
+- [ ] NR/Unrated {% #nr %}
+{% /field %}
+```
+
+Fields have types defined by the attributes.
+Values are written directly inside the tags:
+````jinja
+{% field kind="string" id="movie" label="Movie" role="user"
+   required=true minLength=1 maxLength=300 %}
+The Shawshank Redemption
+{% /field %}
+
+Note fields can have a `role="user"` to indicate they are filled interactively by the
+user, or a `role="agent"` to indicate an agent should fill them in.
+
+There are also tags for user or agent instructions per field or at form level
+and grouping of forms.
+
+Checkboxes and tables as values are supported!
+
+Here’s a full example:
+
+<details>
+<summary>Markform for Movie Research Demo (click to expand)</summary>
 
 ```jinja
 ---
@@ -149,10 +187,46 @@ Fill in scores and vote counts from each source:
 
 {% /group %}
 {% /form %}
+````
+</details>
+
+### Form Report Output
+
+Run `npx markform examples` to copy examples, then `npx markform run` and select `Movie
+Research Demo` to fill it.
+
+A form can be exported
+
+- as the filled form (Markform format, just like the input)
+
+- as a report (plain Markdown)
+
+- as values (YAML or JSON)
+
+- as a JSON schema (just the structure)
+
+The report output (using `gpt-5-mini`) looks like:
+
+```markdown
+**Movie:**
+The Shawshank Redemption
+
+## About the Movie
+
+**MPAA Rating:**
+R
+
+**Ratings:**
+| Source | Score | Votes |
+| --- | --- | --- |
+| IMDB | 9.3 | 2095000 |
+| RT Critics | 91 | 78 |
+| RT Audience | 98 | 250000 |
 ```
 
-<details>
-<summary>JSON Schema (click to expand)</summary>
+Here is the schema and YAML values for the form above.
+
+<details> <summary>JSON Schema (click to expand)</summary>
 
 ```json
 {
@@ -192,31 +266,7 @@ Fill in scores and vote counts from each source:
 
 </details>
 
-### Form Report Output
-
-Run `npx markform examples` to copy examples, then `npx markform run` and select `Movie
-Research Demo` to fill it.
-The report output (using `gpt-5-mini`) looks like:
-
-```markdown
-**Movie:**
-The Shawshank Redemption
-
-## About the Movie
-
-**MPAA Rating:**
-R
-
-**Ratings:**
-| Source | Score | Votes |
-| --- | --- | --- |
-| IMDB | 9.3 | 2095000 |
-| RT Critics | 91 | 78 |
-| RT Audience | 98 | 250000 |
-```
-
-<details>
-<summary>YAML Export (click to expand)</summary>
+<details> <summary>YAML Export (click to expand)</summary>
 
 ```yaml
 values:
@@ -265,7 +315,7 @@ View them with `markform examples --list`, copy with `markform examples`, and ru
 ## Architecture
 
 This repo has a specification and an implementation.
-The implentation is a TypeScript API with Vercel AI SDK integraiton, and a CLI
+The implementation is a TypeScript API with Vercel AI SDK integration, and a CLI
 interface.
 
 ```mermaid
@@ -417,7 +467,7 @@ markform schema my-form.form.md --draft draft-07
 
 ```bash
 # Apply a JSON patch to update field values
-markform apply my-form.form.md --patch '[{"op":"set","fieldId":"name","value":"Alice"}]'
+markform apply my-form.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Alice"}]'
 ```
 
 ### Web Interface
