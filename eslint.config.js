@@ -46,7 +46,6 @@ export default [
       '**/examples/**/*.ts',
       // Scripts use optional dependencies (ai, @ai-sdk/anthropic) and console
       '**/scripts/**/*.ts',
-      '**/scripts/**/*.mjs',
     ],
   },
 
