@@ -1185,6 +1185,158 @@ Age cannot be determined.
     });
   });
 
+  describe('table field serialization (no value fence)', () => {
+    it('serializes table field without value fence', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="ratings" label="Ratings"
+   columnIds=["source", "score"]
+   columnLabels=["Source", "Score"]
+   columnTypes=["string", "number"] %}
+| Source | Score |
+|--------|-------|
+| IMDB | 85 |
+| RT | 92 |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Per spec, table values use markdown table syntax WITHOUT value fence
+      expect(output).not.toContain('```value');
+      expect(output).toContain('| Source | Score |');
+      expect(output).toContain('| IMDB | 85 |');
+      expect(output).toContain('| RT | 92 |');
+    });
+
+    it('round-trips table field without value fence', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="ratings" label="Ratings"
+   columnIds=["source", "score"]
+   columnLabels=["Source", "Score"]
+   columnTypes=["string", "number"] %}
+| Source | Score |
+|--------|-------|
+| IMDB | 85 |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+      const reparsed = parseForm(output);
+
+      const value = reparsed.responsesByFieldId.ratings?.value;
+      expect(value?.kind).toBe('table');
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(1);
+        expect(value.rows[0]?.source?.value).toBe('IMDB');
+        expect(value.rows[0]?.score?.value).toBe(85);
+      }
+    });
+  });
+
+  describe('frontmatter preservation', () => {
+    it('preserves role_instructions in frontmatter', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+roles:
+  - user
+  - agent
+role_instructions:
+  user: |
+    Please fill in the user fields.
+  agent: |
+    Research and fill in agent fields.
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Should preserve role_instructions in output
+      expect(output).toContain('role_instructions:');
+      expect(output).toContain('user:');
+      expect(output).toContain('Please fill in the user fields');
+      expect(output).toContain('agent:');
+      expect(output).toContain('Research and fill in agent fields');
+    });
+
+    it('preserves harness_config in frontmatter', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  harness:
+    max_turns: 10
+    max_patches_per_turn: 3
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Should preserve harness config in output
+      expect(output).toContain('harness:');
+      expect(output).toContain('max_turns:');
+      expect(output).toContain('max_patches_per_turn:');
+    });
+
+    it('preserves run_mode in frontmatter', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  run_mode: research
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serialize(parsed);
+
+      // Should preserve run_mode in output
+      expect(output).toContain('run_mode:');
+      expect(output).toContain('research');
+    });
+  });
+
   describe('report attribute round-trip', () => {
     it('preserves report=false on field through serialize/parse cycle', () => {
       const markdown = `---

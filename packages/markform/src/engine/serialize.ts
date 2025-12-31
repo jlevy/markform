@@ -5,6 +5,8 @@
  * The output is deterministic and suitable for round-trip testing.
  */
 
+import YAML from 'yaml';
+
 import type {
   CellResponse,
   CheckboxesField,
@@ -17,7 +19,9 @@ import type {
   Field,
   FieldGroup,
   FieldResponse,
+  FormMetadata,
   FormSchema,
+  FrontmatterHarnessConfig,
   Id,
   MultiSelectField,
   MultiSelectValue,
@@ -935,11 +939,12 @@ function serializeTableField(field: TableField, response: FieldResponse | undefi
   let content = '';
 
   // Extract value from response if state is "answered"
+  // Table values use markdown table syntax directly WITHOUT value fence (per spec)
   if (response?.state === 'answered' && response.value) {
     const value = response.value as TableValue;
     if (value.rows.length > 0) {
       const tableContent = serializeMarkdownTable(value, field.columns);
-      content = formatValueFence(tableContent);
+      content = '\n' + tableContent + '\n';
     }
   }
 
@@ -1157,6 +1162,80 @@ function serializeFormSchema(
 // =============================================================================
 
 /**
+ * Build harness config object for YAML output (camelCase to snake_case).
+ */
+function buildHarnessConfig(config: FrontmatterHarnessConfig): Record<string, number> {
+  const result: Record<string, number> = {};
+  if (config.maxTurns !== undefined) {
+    result.max_turns = config.maxTurns;
+  }
+  if (config.maxPatchesPerTurn !== undefined) {
+    result.max_patches_per_turn = config.maxPatchesPerTurn;
+  }
+  if (config.maxIssuesPerTurn !== undefined) {
+    result.max_issues_per_turn = config.maxIssuesPerTurn;
+  }
+  return result;
+}
+
+/**
+ * Build frontmatter YAML from form metadata.
+ * Preserves roles, role_instructions, harness config, and run_mode.
+ */
+function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: string): string {
+  // Build markform section
+  const markformSection: Record<string, unknown> = {
+    spec: specVersion,
+  };
+
+  if (metadata?.runMode) {
+    markformSection.run_mode = metadata.runMode;
+  }
+
+  if (metadata?.harnessConfig && Object.keys(metadata.harnessConfig).length > 0) {
+    markformSection.harness = buildHarnessConfig(metadata.harnessConfig);
+  }
+
+  // Build top-level frontmatter object
+  const frontmatterObj: Record<string, unknown> = {
+    markform: markformSection,
+  };
+
+  // Add roles if not default
+  const defaultRoles = ['user', 'agent'];
+  if (
+    metadata?.roles &&
+    (metadata.roles.length !== defaultRoles.length ||
+      !metadata.roles.every((r, i) => r === defaultRoles[i]))
+  ) {
+    frontmatterObj.roles = metadata.roles;
+  }
+
+  // Add role_instructions if not default/empty
+  const defaultInstructions = { user: '', agent: '' };
+  if (metadata?.roleInstructions) {
+    const hasCustomInstructions = Object.entries(metadata.roleInstructions).some(
+      ([role, instruction]) => {
+        const defaultVal = defaultInstructions[role as keyof typeof defaultInstructions] ?? '';
+        return instruction !== defaultVal && instruction.trim() !== '';
+      },
+    );
+    if (hasCustomInstructions) {
+      frontmatterObj.role_instructions = metadata.roleInstructions;
+    }
+  }
+
+  // Serialize to YAML with proper formatting for multiline strings
+  const yamlStr = YAML.stringify(frontmatterObj, {
+    lineWidth: 0, // Don't wrap lines
+    defaultStringType: 'QUOTE_DOUBLE',
+    defaultKeyType: 'PLAIN',
+  });
+
+  return `---\n${yamlStr}---`;
+}
+
+/**
  * Serialize a ParsedForm to canonical Markdoc markdown format.
  *
  * @param form - The parsed form to serialize
@@ -1166,11 +1245,8 @@ function serializeFormSchema(
 export function serialize(form: ParsedForm, opts?: SerializeOptions): string {
   const specVersion = opts?.specVersion ?? MF_SPEC_VERSION;
 
-  // Build frontmatter
-  const frontmatter = `---
-markform:
-  spec: "${specVersion}"
----`;
+  // Build frontmatter from metadata (preserves roles, instructions, harness config, run_mode)
+  const frontmatter = buildFrontmatter(form.metadata, specVersion);
 
   // Serialize form body
   const body = serializeFormSchema(form.schema, form.responsesByFieldId, form.docs, form.notes);

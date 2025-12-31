@@ -46,7 +46,7 @@ turns:
             - votes
     after:
       required_issue_count: 2
-      markdown_sha256: 3d152e9940e49ade3e889a6536c6d1635dcc2f3cd89ad63e44ccdb8d29458025
+      markdown_sha256: 4edc8e8f1e858aafa657f32e1c2e56c4bfbe93b37224e1010eb6883c111e1c86
       answered_field_count: 0
       skipped_field_count: 0
   - turn: 2
@@ -80,7 +80,7 @@ turns:
           value: Test Movie
     after:
       required_issue_count: 0
-      markdown_sha256: 6603727adb1ee0dd116038f600e58edb75e5354ebf69879d0d02c0008759ed91
+      markdown_sha256: f45e7cd87b036d57564e3340dec33c1dc5c2094d880e52b903f64da19b3b8ec0
       answered_field_count: 2
       skipped_field_count: 0
 final:
