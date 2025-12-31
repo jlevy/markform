@@ -270,15 +270,15 @@ interface WireFormat {
 
 ### Acceptance Criteria
 
-1. [ ] `WireFormat` type is defined and exported
-2. [ ] `TurnStats.wire` optional field captures complete request/response
-3. [ ] `SessionTurn.wire` optional field is serialized to YAML
-4. [ ] Wire format includes system prompt, context prompt, and tool schemas
-5. [ ] Wire format includes all steps with tool calls, results, and text
-6. [ ] Wire format is deterministically ordered (identical output for identical input)
-7. [ ] Existing session files without `wire` field remain valid
-8. [ ] Mock agent sessions produce stable wire format (no timestamp-like churn)
-9. [ ] Golden tests pass after regeneration with wire format
+1. [x] `WireFormat` type is defined and exported
+2. [x] `TurnStats.wire` optional field captures complete request/response
+3. [x] `SessionTurn.wire` optional field is serialized to YAML
+4. [x] Wire format includes system prompt, context prompt, and tool schemas
+5. [x] Wire format includes all steps with tool calls, results, and text
+6. [x] Wire format is deterministically ordered (identical output for identical input)
+7. [x] Existing session files without `wire` field remain valid
+8. [x] Mock agent sessions produce stable wire format (no timestamp-like churn)
+9. [x] Golden tests pass after regeneration with wire format
 
 ## Stage 2: Architecture Stage
 
@@ -401,49 +401,49 @@ This is applied to wire format data before adding to TurnStats.
 
 ### Implementation Phases
 
-**Phase 1: Define Types (TDD: Write Tests First)**
+**Phase 1: Define Types (TDD: Write Tests First)** ✅
 
-- [ ] Add `WireFormat` interface to `harnessTypes.ts`
-- [ ] Add `WireRequestFormat` and `WireResponseFormat` sub-interfaces
-- [ ] Add `wire?: WireFormat` to `TurnStats`
-- [ ] Write unit test: `WireFormat` interface matches expected structure
-- [ ] Run tests (expect fail), implement, run tests (expect pass)
+- [x] Add `WireFormat` interface to `harnessTypes.ts`
+- [x] Add `WireRequestFormat` and `WireResponseFormat` sub-interfaces
+- [x] Add `wire?: WireFormat` to `TurnStats`
+- [x] Write unit test: `WireFormat` interface matches expected structure
+- [x] Run tests (expect fail), implement, run tests (expect pass)
 
-**Phase 2: Update Session Types**
+**Phase 2: Update Session Types** ✅
 
-- [ ] Add `wire?: WireFormat` to `SessionTurn` in `coreTypes.ts`
-- [ ] Add `WireFormatSchema` Zod schema for validation
-- [ ] Update `SessionTurnSchema` to include optional `wire` field
-- [ ] Write unit test: Session with wire format parses correctly
-- [ ] Write unit test: Session without wire format still parses (backward compat)
-- [ ] Run tests, implement, verify
+- [x] Add `wire?: WireFormat` to `SessionTurn` in `coreTypes.ts`
+- [x] Add `WireFormatSchema` Zod schema for validation
+- [x] Update `SessionTurnSchema` to include optional `wire` field
+- [x] Write unit test: Session with wire format parses correctly
+- [x] Write unit test: Session without wire format still parses (backward compat)
+- [x] Run tests, implement, verify
 
-**Phase 3: Capture Wire Format in LiveAgent**
+**Phase 3: Capture Wire Format in LiveAgent** ✅
 
-- [ ] Add `extractToolSchemas()` helper function
-- [ ] Add `sortObjectKeys()` helper for deterministic ordering
-- [ ] Capture wire format after `generateText()` in `generatePatches()`
-- [ ] Add wire format to returned `TurnStats`
-- [ ] Write unit test: `generatePatches()` returns wire format in stats
-- [ ] Write integration test: Wire format contains expected request/response structure
-- [ ] Run tests, implement, verify
+- [x] Add `extractToolSchemas()` helper function
+- [x] Add `sortObjectKeys()` helper for deterministic ordering
+- [x] Capture wire format after `generateText()` in `generatePatches()`
+- [x] Add wire format to returned `TurnStats`
+- [x] Write unit test: `generatePatches()` returns wire format in stats
+- [x] Write integration test: Wire format contains expected request/response structure
+- [x] Run tests, implement, verify
 
-**Phase 4: Flow Through Harness and Serialize**
+**Phase 4: Flow Through Harness and Serialize** ✅
 
-- [ ] Update `Harness.recordTurn()` to include wire format in SessionTurn
-- [ ] Update `serializeSession()` to handle wire format serialization
-- [ ] Update `parseSession()` to handle wire format parsing
-- [ ] Write unit test: Session round-trips with wire format intact
-- [ ] Write unit test: Wire format YAML is deterministically ordered
-- [ ] Run tests, implement, verify
+- [x] Update `Harness.recordTurn()` to include wire format in SessionTurn
+- [x] Update `serializeSession()` to handle wire format serialization
+- [x] Update `parseSession()` to handle wire format parsing
+- [x] Write unit test: Session round-trips with wire format intact
+- [x] Write unit test: Wire format YAML is deterministically ordered
+- [x] Run tests, implement, verify
 
-**Phase 5: Regenerate Golden Tests and Validate**
+**Phase 5: Regenerate Golden Tests and Validate** ✅
 
-- [ ] Run `pnpm test:golden:regen` to regenerate session files with wire format
-- [ ] Review diffs to verify wire format content is correct and stable
-- [ ] Run `pnpm test:golden` twice to verify identical output (stability)
-- [ ] Commit regenerated session files
-- [ ] Document wire format in session file header comments
+- [x] Run `pnpm test:golden:regen` to regenerate session files with wire format
+- [x] Review diffs to verify wire format content is correct and stable
+- [x] Run `pnpm test:golden` twice to verify identical output (stability)
+- [x] Commit regenerated session files
+- [ ] Document wire format in session file header comments (not needed - wire format is self-documenting)
 
 ## Stage 4: Validation Stage
 
@@ -479,14 +479,14 @@ This is applied to wire format data before adding to TurnStats.
 
 ### Success Criteria
 
-- [ ] All unit tests pass
-- [ ] All integration tests pass
-- [ ] Wire format is deterministically ordered (no random key ordering)
-- [ ] Mock sessions produce identical wire format on repeated runs
-- [ ] Existing session files without wire format remain valid
-- [ ] Golden tests pass after regeneration
-- [ ] Error messages appear in wire format prompts as expected
-- [ ] Tool schemas are captured in wire format for diffing
+- [x] All unit tests pass (800 tests passing)
+- [x] All integration tests pass
+- [x] Wire format is deterministically ordered (no random key ordering)
+- [x] Mock sessions produce identical wire format on repeated runs
+- [x] Existing session files without wire format remain valid
+- [x] Golden tests pass after regeneration
+- [x] Error messages appear in wire format prompts as expected
+- [x] Tool schemas are captured in wire format for diffing
 
 ### Manual Testing
 
