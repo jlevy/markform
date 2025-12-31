@@ -249,4 +249,87 @@ describe('inspect', () => {
       expect(fieldIssues.length).toBeGreaterThan(0);
     });
   });
+
+  describe('optional_empty issues for answered fields (markform-480)', () => {
+    it('does NOT add optional_empty for multi_select answered with empty selection', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="multi_select" id="streaming" label="Streaming Services" %}
+- [ ] Netflix {% #netflix %}
+- [ ] Hulu {% #hulu %}
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      // Agent answered with no selections - intentional "none of the above"
+      form.responsesByFieldId.streaming = {
+        state: 'answered',
+        value: {
+          kind: 'multi_select',
+          selected: [],
+        },
+      };
+      const result = inspect(form);
+
+      // Should NOT have optional_empty issue - agent has addressed the field
+      const streamingIssue = result.issues.find((i) => i.ref === 'streaming');
+      expect(streamingIssue).toBeUndefined();
+    });
+
+    it('DOES add optional_empty for unanswered multi_select', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="multi_select" id="streaming" label="Streaming Services" %}
+- [ ] Netflix {% #netflix %}
+- [ ] Hulu {% #hulu %}
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      // No response set - field is unanswered
+      const result = inspect(form);
+
+      // Should have optional_empty issue - agent hasn't addressed the field
+      const streamingIssue = result.issues.find((i) => i.ref === 'streaming');
+      expect(streamingIssue).toBeDefined();
+      expect(streamingIssue?.reason).toBe('optional_empty');
+    });
+
+    it('does NOT add optional_empty for string_list answered with empty items', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      // Agent answered with no items
+      form.responsesByFieldId.tags = {
+        state: 'answered',
+        value: {
+          kind: 'string_list',
+          items: [],
+        },
+      };
+      const result = inspect(form);
+
+      // Should NOT have optional_empty issue
+      const tagsIssue = result.issues.find((i) => i.ref === 'tags');
+      expect(tagsIssue).toBeUndefined();
+    });
+  });
 });

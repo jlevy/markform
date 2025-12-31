@@ -106,8 +106,18 @@ function convertValidationIssues(
 }
 
 /**
- * Add issues for empty optional fields that don't already have issues.
- * Fields that have been explicitly skipped do not get optional_empty issues.
+ * Add issues for empty optional fields that haven't been addressed yet.
+ *
+ * An `optional_empty` issue is only added when:
+ * - The field is optional (not required)
+ * - The field has no value (empty=true)
+ * - The field is unanswered (answerState='unanswered')
+ *
+ * Fields that have been addressed (answered, skipped, or aborted) do NOT get
+ * optional_empty issues, even if their value is empty. For example:
+ * - A multi_select answered with no selections (selected=[])
+ * - A string_list answered with no items (items=[])
+ * These are intentional "none" answers, not missing data.
  */
 function addOptionalEmptyIssues(
   existingIssues: InspectIssue[],
@@ -118,8 +128,10 @@ function addOptionalEmptyIssues(
   const fieldsWithIssues = new Set(existingIssues.map((i) => i.ref));
 
   for (const [fieldId, progress] of Object.entries(fieldProgress)) {
-    // Skip if field is already addressed via skip_field or abort_field
-    if (progress.answerState === 'skipped' || progress.answerState === 'aborted') {
+    // Only add optional_empty for truly unanswered fields.
+    // Fields that have been addressed (answered/skipped/aborted) should not
+    // get this issue - the agent has made a decision about them.
+    if (progress.answerState !== 'unanswered') {
       continue;
     }
 
