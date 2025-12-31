@@ -249,68 +249,27 @@ Example: "Emma Thomas (producer)"
 
 ## Ratings
 
-{% group id="imdb_ratings" title="IMDB Ratings" %}
+{% group id="ratings" title="Ratings" %}
 
-{% field kind="number" id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /field %}
-
-{% instructions ref="imdb_rating" %}
-IMDB user rating (1.0-10.0 scale).
-{% /instructions %}
-
-{% field kind="number" id="imdb_votes" label="IMDB Vote Count" role="agent" min=0 %}{% /field %}
-
-{% instructions ref="imdb_votes" %}
-Number of IMDB user votes (e.g., 2800000 for a popular film).
-{% /instructions %}
-
-{% /group %}
-
-{% group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
-
-{% field kind="number" id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /field %}
-
-{% instructions ref="rt_critics_score" %}
-Tomatometer percentage (0-100).
-{% /instructions %}
-
-{% field kind="number" id="rt_critics_count" label="Critics Review Count" role="agent" min=0 %}{% /field %}
-
-{% field kind="number" id="rt_audience_score" label="Audience Score" role="agent" min=0 max=100 %}{% /field %}
-
-{% instructions ref="rt_audience_score" %}
-Audience Score percentage (0-100).
+{% field kind="table" id="ratings_table" label="Ratings" role="agent" required=true
+   columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"]
+   minRows=0 maxRows=6 %}
+| Source | Score | Votes |
+|--------|-------|-------|
+{% /field %}
+{% instructions ref="ratings_table" %}
+Fill in scores and vote/review counts from each source:
+- IMDB: Rating (1.0-10.0 scale), vote count
+- RT Critics: Tomatometer (0-100%), review count
+- RT Audience: Audience Score (0-100%), rating count
+- Metacritic: Metascore (0-100)
+- Letterboxd: Rating (0.5-5.0 scale)
+- CinemaScore: Grade (A+ to F), leave votes empty
 {% /instructions %}
 
 {% field kind="string" id="rt_consensus" label="Critics Consensus" role="agent" maxLength=500 %}{% /field %}
-
 {% instructions ref="rt_consensus" %}
 The official Rotten Tomatoes critics consensus statement, if available.
-{% /instructions %}
-
-{% /group %}
-
-{% group id="metacritic_ratings" title="Metacritic Ratings" %}
-
-{% field kind="number" id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 %}{% /field %}
-
-{% instructions ref="metacritic_score" %}
-Metascore (0-100 scale). Leave empty if not available.
-{% /instructions %}
-
-{% /group %}
-
-{% group id="additional_ratings" title="Additional Ratings" %}
-
-{% field kind="number" id="letterboxd_rating" label="Letterboxd Rating" role="agent" min=0.5 max=5.0 %}{% /field %}
-
-{% instructions ref="letterboxd_rating" %}
-Letterboxd average rating (0.5-5.0 scale, in 0.1 increments).
-{% /instructions %}
-
-{% field kind="string" id="cinemascore" label="CinemaScore Grade" role="agent" pattern="^[A-F][+-]?$" %}{% /field %}
-
-{% instructions ref="cinemascore" %}
-Opening weekend audience grade (A+ to F). Only available for theatrical releases.
 {% /instructions %}
 
 {% /group %}

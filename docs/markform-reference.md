@@ -56,7 +56,7 @@ They are Markdoc syntax, which is a superset of Markdown.
 ## Field Kinds
 
 Markform uses the term **field kind** to refer to the type of a field (e.g., `string`,
-`number`, `checkboxes`). The term **data type** refers to the underlying value
+`number`, `checkboxes`, `table`). The term **data type** refers to the underlying value
 representation. See the Type System section in SPEC.md for full details.
 
 ### String Field
@@ -263,19 +263,72 @@ Integer year with optional constraints.
 2015
 `````
 {% /field %}
-````
+`````
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `min` | number | Minimum year (inclusive) |
 | `max` | number | Maximum year (inclusive) |
 
+### Table Field
+
+Structured tabular data with typed columns. Uses standard markdown table syntax.
+
+````markdown
+{% field kind="table" id="team" label="Team Members" required=true
+   columnIds=["name", "title", "start_date"]
+   columnLabels=["Name", "Job Title", "Start Date"]
+   columnTypes=["string", "string", "date"]
+   minRows=1 maxRows=20 %}
+| Name | Job Title | Start Date |
+|------|-----------|------------|
+| Alice Smith | Engineer | 2023-01-15 |
+| Bob Jones | Designer | 2022-06-01 |
+{% /field %}
+`````
+
+**Basic table (columnLabels backfilled from header row):**
+
+```markdown
+{% field kind="table" id="items" label="Items"
+   columnIds=["name", "quantity", "price"] %}
+| Name | Quantity | Price |
+|------|----------|-------|
+{% /field %}
+```
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| `columnIds` | string[] | Yes | Array of snake_case column identifiers |
+| `columnLabels` | string[] | No | Display labels (defaults to header row) |
+| `columnTypes` | string[] | No | Column types (defaults to all `string`) |
+| `minRows` | number | No | Minimum row count (default: 0) |
+| `maxRows` | number | No | Maximum row count (default: unlimited) |
+
+**Column types:**
+
+| Type | Description | Validation |
+| --- | --- | --- |
+| `string` | Any text value | None |
+| `number` | Numeric value | Integer or float |
+| `url` | URL value | Valid URL format |
+| `date` | Date value | ISO 8601 (YYYY-MM-DD) |
+| `year` | Year value | Integer (1000-9999) |
+
+**Sentinel values in cells:** Use `%SKIP%` or `%ABORT%` with optional reasons:
+
+```markdown
+| 2017 | I, Tonya | 90 | %SKIP% (Not tracked) |
+```
+
+**Cell escaping:** Use `\|` for literal pipe characters in cell values.
+
 ## Common Attributes
 
 All fields support these attributes:
 
 | Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `id` | string | required | Unique snake_case identifier |
 | `label` | string | required | Human-readable label |
 | `required` | boolean | false | Must be filled for completion |
@@ -285,7 +338,7 @@ All fields support these attributes:
 **Text-entry fields only** (string, number, string-list, url, url-list):
 
 | Attribute | Type | Description |
-|-----------|------|-------------|
+| --- | --- | --- |
 | `placeholder` | string | Hint text shown in empty fields |
 | `examples` | string[] | Example values (helps LLMs understand expected format) |
 
@@ -294,7 +347,8 @@ All fields support these attributes:
 {% field kind="number" id="revenue" label="Revenue" placeholder="1000000" examples=["500000", "1000000"] %}{% /field %}
 ```
 
-Note: `placeholder` and `examples` are NOT valid on chooser fields (single-select, multi-select, checkboxes).
+Note: `placeholder` and `examples` are NOT valid on chooser fields (single-select,
+multi-select, checkboxes).
 
 ## Documentation Blocks
 
@@ -316,7 +370,7 @@ Additional context or caveats.
 {% examples ref="field_id" %}
 Example values: "AAPL", "GOOGL", "MSFT"
 {% /examples %}
-````
+```
 
 Place doc blocks after the element they reference.
 
