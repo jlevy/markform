@@ -173,7 +173,7 @@ describe('FormHarness', () => {
       expect(turns[0]?.apply.patches.length).toBe(1);
     });
 
-    it('reports patchesApplied count when patches succeed', () => {
+    it('reports patchesApplied count and empty rejectedPatches on success', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
@@ -187,10 +187,10 @@ describe('FormHarness', () => {
       );
 
       expect(result.patchesApplied).toBe(2);
-      expect(result.patchesRejected).toBe(false);
+      expect(result.rejectedPatches).toEqual([]);
     });
 
-    it('reports patchesApplied=0 and patchesRejected=true when patches fail validation', () => {
+    it('reports patchesApplied=0 and rejectedPatches with details when patches fail validation', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
@@ -202,10 +202,14 @@ describe('FormHarness', () => {
       );
 
       expect(result.patchesApplied).toBe(0);
-      expect(result.patchesRejected).toBe(true);
+      expect(result.rejectedPatches).toHaveLength(1);
+      expect(result.rejectedPatches![0]!.patchIndex).toBe(0);
+      expect(result.rejectedPatches![0]!.message).toContain(
+        'Cannot apply set_string to number field',
+      );
     });
 
-    it('reports patchesApplied=0 when all patches rejected due to nonexistent field', () => {
+    it('reports patchesApplied=0 and rejectedPatches when field does not exist', () => {
       const form = parseForm(SIMPLE_FORM);
       const harness = createHarness(form);
 
@@ -216,7 +220,8 @@ describe('FormHarness', () => {
       );
 
       expect(result.patchesApplied).toBe(0);
-      expect(result.patchesRejected).toBe(true);
+      expect(result.rejectedPatches).toHaveLength(1);
+      expect(result.rejectedPatches![0]!.message).toContain('nonexistent');
     });
   });
 

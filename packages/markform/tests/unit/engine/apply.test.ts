@@ -329,6 +329,87 @@ markform:
     });
   });
 
+  describe('rejection details', () => {
+    it('returns empty rejectedPatches on success', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_string', fieldId: 'name', value: 'John' }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.rejectedPatches).toEqual([]);
+    });
+
+    it('returns rejection details with patchIndex and message', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="number" id="age" label="Age" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_string', fieldId: 'age', value: '25' }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(1);
+      expect(result.rejectedPatches[0]).toMatchObject({
+        patchIndex: 0,
+        message: expect.stringContaining('Cannot apply set_string to number field'),
+      });
+    });
+
+    it('returns multiple rejection details for multiple invalid patches', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% field kind="number" id="age" label="Age" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: 'set_string', fieldId: 'nonexistent', value: 'test' },
+        { op: 'set_string', fieldId: 'age', value: '25' },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(2);
+      expect(result.rejectedPatches[0]?.patchIndex).toBe(0);
+      expect(result.rejectedPatches[1]?.patchIndex).toBe(1);
+    });
+  });
+
   describe('skip_field patch', () => {
     it('applies skip_field to optional field with reason stored in response', () => {
       const markdown = `---

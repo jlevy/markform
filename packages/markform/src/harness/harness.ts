@@ -190,9 +190,9 @@ export class FormHarness {
     const result = inspect(this.form, { targetRoles: this.config.targetRoles });
     const stepResult = this.computeStepResult(result);
 
-    // Add actual patch count to step result for accurate reporting
+    // Add actual patch count and rejection details to step result
     stepResult.patchesApplied = patchesActuallyApplied;
-    stepResult.patchesRejected = applyResult.applyStatus === 'rejected';
+    stepResult.rejectedPatches = applyResult.rejectedPatches;
 
     // Record turn in session transcript
     this.recordTurn(issues, patches, result, llmStats);

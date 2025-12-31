@@ -95,6 +95,7 @@ export type {
   // Results
   InspectResult,
   ApplyResult,
+  PatchRejection,
   // Patches
   SetStringPatch,
   SetNumberPatch,

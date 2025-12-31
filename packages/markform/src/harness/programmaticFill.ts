@@ -337,7 +337,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           stats,
           issues: turnIssues,
           patches,
-          patchesRejected: stepResult.patchesRejected ?? false,
+          rejectedPatches: stepResult.rejectedPatches ?? [],
         });
       } catch {
         // Ignore callback errors

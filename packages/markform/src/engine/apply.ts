@@ -676,6 +676,7 @@ export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
       issues,
       isComplete: summaries.isComplete,
       formState: summaries.formState,
+      rejectedPatches: errors,
     };
   }
 
@@ -706,5 +707,6 @@ export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
     issues,
     isComplete: isFormComplete(summaries.progressSummary),
     formState: computeFormState(summaries.progressSummary),
+    rejectedPatches: [],
   };
 }

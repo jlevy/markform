@@ -692,6 +692,12 @@ export interface InspectResult {
   formState: ProgressState;
 }
 
+/** Details about a rejected patch */
+export interface PatchRejection {
+  patchIndex: number;
+  message: string;
+}
+
 /** Result from apply operation */
 export interface ApplyResult {
   applyStatus: 'applied' | 'rejected';
@@ -700,6 +706,8 @@ export interface ApplyResult {
   issues: InspectIssue[];
   isComplete: boolean;
   formState: ProgressState;
+  /** Empty on success, contains rejection details on failure */
+  rejectedPatches: PatchRejection[];
 }
 
 // =============================================================================
@@ -864,8 +872,8 @@ export interface StepResult {
   turnNumber: number;
   /** Number of patches actually applied (set by harness.apply, undefined for step-only results) */
   patchesApplied?: number;
-  /** Whether patches were rejected due to validation errors */
-  patchesRejected?: boolean;
+  /** Rejection details if patches failed (set by harness.apply, undefined for step-only results) */
+  rejectedPatches?: PatchRejection[];
 }
 
 // =============================================================================

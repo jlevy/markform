@@ -10,7 +10,14 @@
 
 import type { LanguageModel, Tool } from 'ai';
 
-import type { FillMode, FieldValue, InspectIssue, ParsedForm, Patch } from '../engine/coreTypes.js';
+import type {
+  FillMode,
+  FieldValue,
+  InspectIssue,
+  ParsedForm,
+  Patch,
+  PatchRejection,
+} from '../engine/coreTypes.js';
 import type { InputContext } from '../engine/valueCoercion.js';
 
 // =============================================================================
@@ -296,8 +303,8 @@ export interface TurnProgress {
   issues: InspectIssue[];
   /** Patches generated this turn (may not all be applied if rejected) */
   patches: Patch[];
-  /** True if patches were rejected due to validation errors */
-  patchesRejected: boolean;
+  /** Empty if patches applied successfully, contains rejection details if failed */
+  rejectedPatches: PatchRejection[];
 }
 
 /**

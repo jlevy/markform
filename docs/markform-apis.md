@@ -170,8 +170,11 @@ const callbacks: FillCallbacks = {
     console.log(`Turn ${turnNumber}: ${issuesCount} issues`);
   },
   onTurnComplete: (progress) => {
-    if (progress.patchesRejected) {
-      console.log(`Turn ${progress.turnNumber}: patches rejected (validation failed)`);
+    if (progress.rejectedPatches.length > 0) {
+      console.log(`Turn ${progress.turnNumber}: ${progress.rejectedPatches.length} patches rejected`);
+      for (const r of progress.rejectedPatches) {
+        console.log(`  - Patch ${r.patchIndex}: ${r.message}`);
+      }
     } else {
       console.log(`Turn ${progress.turnNumber}: ${progress.patchesApplied} patches applied`);
     }
@@ -214,11 +217,20 @@ await fillForm({
 | `turnNumber` | `number` | Current turn (1-indexed) |
 | `issuesShown` | `number` | Issues shown to agent this turn |
 | `patchesApplied` | `number` | Patches actually applied (0 if rejected) |
-| `patchesRejected` | `boolean` | True if patches failed validation |
+| `rejectedPatches` | `PatchRejection[]` | Empty if success, contains rejection details if failed |
 | `requiredIssuesRemaining` | `number` | Required fields still incomplete |
 | `isComplete` | `boolean` | True if form filling is done |
 | `issues` | `InspectIssue[]` | Issues shown this turn |
 | `patches` | `Patch[]` | Patches generated this turn |
+
+**PatchRejection type:**
+
+```typescript
+interface PatchRejection {
+  patchIndex: number;  // Index of the rejected patch
+  message: string;     // Why the patch was rejected
+}
+```
 
 ### createHarness(form, config?): FormHarness
 
