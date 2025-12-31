@@ -19,6 +19,7 @@ import type {
   ParsedForm,
   Patch,
   SessionTurn,
+  SessionTurnContext,
   SessionTurnStats,
   StepResult,
 } from '../engine/coreTypes.js';
@@ -171,9 +172,15 @@ export class FormHarness {
    * @param patches - Patches to apply
    * @param issues - Issues that were shown to the agent (for recording)
    * @param llmStats - Optional LLM stats for session logging
+   * @param context - Optional context prompts sent to LLM (for session logging)
    * @returns StepResult after applying patches
    */
-  apply(patches: Patch[], issues: InspectIssue[], llmStats?: SessionTurnStats): StepResult {
+  apply(
+    patches: Patch[],
+    issues: InspectIssue[],
+    llmStats?: SessionTurnStats,
+    context?: SessionTurnContext,
+  ): StepResult {
     if (this.state !== 'wait') {
       throw new Error(`Cannot apply in state: ${this.state}`);
     }
@@ -195,7 +202,7 @@ export class FormHarness {
     stepResult.rejectedPatches = applyResult.rejectedPatches;
 
     // Record turn in session transcript
-    this.recordTurn(issues, patches, result, llmStats);
+    this.recordTurn(issues, patches, result, llmStats, context);
 
     // Transition state: complete if no more work OR max turns reached
     const noMoreWork = stepResult.issues.length === 0;
@@ -240,6 +247,7 @@ export class FormHarness {
     patches: Patch[],
     result: ReturnType<typeof inspect>,
     llmStats?: SessionTurnStats,
+    context?: SessionTurnContext,
   ): void {
     const markdown = serialize(this.form);
     const hash = sha256(markdown);
@@ -257,6 +265,10 @@ export class FormHarness {
         skippedFieldCount: result.progressSummary.counts.skippedFields,
       },
     };
+
+    if (context) {
+      turn.context = context;
+    }
 
     if (llmStats) {
       turn.llm = llmStats;

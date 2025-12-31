@@ -56,6 +56,55 @@ John Doe
 {% /form %}
 `;
 
+// Table field form fixtures for testing patch type mismatch
+const TABLE_FIELD_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="risks" %}
+
+{% field kind="table" id="company_risks" label="Company Risks" required=true
+   columnIds=["risk_description", "likelihood", "impact"]
+   columnLabels=["Risk", "Likelihood", "Impact"]
+   columnTypes=["string", "string", "string"]
+   minRows=1 maxRows=5 %}
+| Risk | Likelihood | Impact |
+|------|------------|--------|
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+const TABLE_FIELD_FORM_FILLED = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="risks" %}
+
+{% field kind="table" id="company_risks" label="Company Risks" required=true
+   columnIds=["risk_description", "likelihood", "impact"]
+   columnLabels=["Risk", "Likelihood", "Impact"]
+   columnTypes=["string", "string", "string"]
+   minRows=1 maxRows=5 %}
+| Risk | Likelihood | Impact |
+|------|------------|--------|
+| Market volatility | High | Significant |
+| Customer concentration | Medium | Moderate |
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
 // =============================================================================
 // Harness Tests
 // =============================================================================
@@ -705,6 +754,130 @@ User Value
       if (userResponse?.value?.kind === 'string') {
         expect(userResponse.value.value).toBe('User Value');
       }
+    });
+  });
+});
+
+// =============================================================================
+// Table Field Tests (patch type mismatch reproduction - markform issue)
+// =============================================================================
+
+describe('Table field patch handling', () => {
+  describe('patch type validation', () => {
+    it('rejects set_string patch on table field with clear error message', () => {
+      const form = parseForm(TABLE_FIELD_FORM);
+      const harness = createHarness(form);
+
+      const stepResult = harness.step();
+
+      // Simulate what an LLM might incorrectly generate - using set_string on a table field
+      // This reproduces the real-world issue where models generate wrong patch types
+      const result = harness.apply(
+        [
+          {
+            op: 'set_string',
+            fieldId: 'company_risks',
+            value: 'Market volatility | High | Significant',
+          },
+        ],
+        stepResult.issues,
+      );
+
+      expect(result.patchesApplied).toBe(0);
+      expect(result.rejectedPatches).toHaveLength(1);
+      expect(result.rejectedPatches![0]!.message).toContain(
+        'Cannot apply set_string to table field',
+      );
+      expect(result.rejectedPatches![0]!.message).toContain('company_risks');
+    });
+
+    it('accepts set_table patch on table field', () => {
+      const form = parseForm(TABLE_FIELD_FORM);
+      const harness = createHarness(form);
+
+      const stepResult = harness.step();
+
+      // Correct patch format for table fields
+      const result = harness.apply(
+        [
+          {
+            op: 'set_table',
+            fieldId: 'company_risks',
+            rows: [
+              {
+                risk_description: 'Market volatility',
+                likelihood: 'High',
+                impact: 'Significant',
+              },
+              {
+                risk_description: 'Customer concentration',
+                likelihood: 'Medium',
+                impact: 'Moderate',
+              },
+            ],
+          },
+        ],
+        stepResult.issues,
+      );
+
+      expect(result.patchesApplied).toBe(1);
+      expect(result.rejectedPatches).toEqual([]);
+      expect(result.isComplete).toBe(true);
+    });
+  });
+
+  describe('MockAgent generates correct table patches', () => {
+    it('generates set_table patch from filled table form', async () => {
+      const emptyForm = parseForm(TABLE_FIELD_FORM);
+      const filledForm = parseForm(TABLE_FIELD_FORM_FILLED);
+      const agent = createMockAgent(filledForm);
+
+      const issues = [
+        {
+          ref: 'company_risks',
+          scope: 'field' as const,
+          reason: 'required_missing' as const,
+          message: 'Required table field is empty',
+          severity: 'required' as const,
+          priority: 1,
+        },
+      ];
+
+      const response = await agent.generatePatches(issues, emptyForm, 10);
+
+      expect(response.patches.length).toBe(1);
+      expect(response.patches[0]!.op).toBe('set_table');
+      if (response.patches[0]!.op === 'set_table') {
+        expect(response.patches[0].rows).toHaveLength(2);
+        expect(response.patches[0].rows[0]).toMatchObject({
+          risk_description: 'Market volatility',
+          likelihood: 'High',
+          impact: 'Significant',
+        });
+      }
+    });
+  });
+
+  describe('Harness + MockAgent integration with table fields', () => {
+    it('fills table form to completion using mock agent', async () => {
+      const emptyForm = parseForm(TABLE_FIELD_FORM);
+      const filledForm = parseForm(TABLE_FIELD_FORM_FILLED);
+
+      const harness = createHarness(emptyForm);
+      const agent = createMockAgent(filledForm);
+
+      // First step
+      let result = harness.step();
+      expect(result.isComplete).toBe(false);
+
+      // Generate and apply patches
+      const response = await agent.generatePatches(result.issues, emptyForm, 10);
+      expect(response.patches[0]!.op).toBe('set_table');
+
+      result = harness.apply(response.patches, result.issues);
+
+      expect(result.isComplete).toBe(true);
+      expect(harness.getState()).toBe('complete');
     });
   });
 });
