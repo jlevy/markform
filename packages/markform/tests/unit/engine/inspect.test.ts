@@ -158,7 +158,7 @@ describe('inspect', () => {
       const ageIssue = result.issues.find((i) => i.ref === 'age');
       expect(ageIssue).toBeDefined();
       expect(ageIssue?.severity).toBe('recommended');
-      expect(ageIssue?.reason).toBe('optional_empty');
+      expect(ageIssue?.reason).toBe('optional_unanswered');
     });
   });
 
@@ -199,7 +199,7 @@ describe('inspect', () => {
 
       // With the tiered system, multiple issues can share the same priority tier
       // Required issues (required_missing) on medium priority fields get tier 1 (score 2+3=5)
-      // Optional issues (optional_empty) on medium priority fields get tier 3 (score 2+1=3)
+      // Optional issues (optional_unanswered) on medium priority fields get tier 3 (score 2+1=3)
     });
   });
 
@@ -250,8 +250,8 @@ describe('inspect', () => {
     });
   });
 
-  describe('optional_empty issues for answered fields (markform-480)', () => {
-    it('does NOT add optional_empty for multi_select answered with empty selection', () => {
+  describe('optional_unanswered issues for answered fields (markform-480)', () => {
+    it('does NOT add optional_unanswered for multi_select answered with empty selection', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -276,12 +276,12 @@ markform:
       };
       const result = inspect(form);
 
-      // Should NOT have optional_empty issue - agent has addressed the field
+      // Should NOT have optional_unanswered issue - agent has addressed the field
       const streamingIssue = result.issues.find((i) => i.ref === 'streaming');
       expect(streamingIssue).toBeUndefined();
     });
 
-    it('DOES add optional_empty for unanswered multi_select', () => {
+    it('DOES add optional_unanswered for unanswered multi_select', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -299,13 +299,13 @@ markform:
       // No response set - field is unanswered
       const result = inspect(form);
 
-      // Should have optional_empty issue - agent hasn't addressed the field
+      // Should have optional_unanswered issue - agent hasn't addressed the field
       const streamingIssue = result.issues.find((i) => i.ref === 'streaming');
       expect(streamingIssue).toBeDefined();
-      expect(streamingIssue?.reason).toBe('optional_empty');
+      expect(streamingIssue?.reason).toBe('optional_unanswered');
     });
 
-    it('does NOT add optional_empty for string_list answered with empty items', () => {
+    it('does NOT add optional_unanswered for string_list answered with empty items', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -327,7 +327,7 @@ markform:
       };
       const result = inspect(form);
 
-      // Should NOT have optional_empty issue
+      // Should NOT have optional_unanswered issue
       const tagsIssue = result.issues.find((i) => i.ref === 'tags');
       expect(tagsIssue).toBeUndefined();
     });
