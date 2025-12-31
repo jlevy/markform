@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.8
+
+### Patch Changes
+
+- b803791: Fix serialization of table values and frontmatter, improve rejection feedback handling in LLM prompts, and add comprehensive golden test coverage
+
 ## 0.1.7
 
 ### Patch Changes
