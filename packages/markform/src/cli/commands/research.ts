@@ -182,6 +182,7 @@ export function registerResearchCommand(program: Command): void {
           result = await runResearch(form, {
             model: modelId,
             enableWebSearch: true,
+            captureWireFormat: false,
             maxTurns,
             maxPatchesPerTurn,
             maxIssuesPerTurn,

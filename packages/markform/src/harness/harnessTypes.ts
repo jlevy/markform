@@ -321,11 +321,9 @@ export interface FillOptions {
    * - LLM regression testing
    *
    * **Warning**: Wire format significantly increases session file size (~2000+ lines
-   * per multi-turn session). Disable for production use unless debugging.
-   *
-   * @default false
+   * per multi-turn session). Set to false for production use.
    */
-  captureWireFormat?: boolean;
+  captureWireFormat: boolean;
 }
 
 /**

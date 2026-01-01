@@ -74,6 +74,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model', // ignored when _testAgent provided
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John Doe' }, // Pre-fill user field
         targetRoles: ['user', 'agent'], // Target both roles
         _testAgent: mockAgent,
@@ -92,6 +93,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -108,6 +110,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -126,6 +129,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -143,6 +147,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -161,6 +166,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'Pre-filled Name' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -178,6 +184,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { nonexistent: 'value' },
         _testAgent: mockAgent,
       });
@@ -197,6 +204,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: { complex: 'object' } },
         _testAgent: mockAgent,
       });
@@ -216,6 +224,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: {
           name: 123, // number will be coerced to string with warning
         },
@@ -241,6 +250,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -265,6 +275,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -288,6 +299,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -313,6 +325,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -337,6 +350,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -365,6 +379,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -387,6 +402,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         // No callbacks option at all
@@ -408,6 +424,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -430,6 +447,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'Pre-filled' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -460,6 +478,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         inputContext: { name: 'John' },
         _testAgent: cancellingAgent,
         signal: controller.signal,
@@ -495,6 +514,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         maxTurns: 2,
         _testAgent: emptyMockAgent,
       });
@@ -517,6 +537,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         maxTurns: 1,
         _testAgent: emptyMockAgent,
       });
@@ -533,6 +554,7 @@ describe('fillForm', () => {
         form: 'not a valid form',
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -549,6 +571,7 @@ describe('fillForm', () => {
         form: SIMPLE_FORM,
         model: 'invalid/model',
         enableWebSearch: false,
+        captureWireFormat: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -578,6 +601,7 @@ Original Name
         form: formWithName,
         model: 'mock/model',
         enableWebSearch: false,
+        captureWireFormat: false,
         fillMode: 'continue',
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
