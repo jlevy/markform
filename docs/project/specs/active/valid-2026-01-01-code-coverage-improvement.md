@@ -124,6 +124,154 @@ The following should be verified by the user:
      Redemption sample data
    - Verify the filled form parses correctly with all 42 fields
 
+## Phase 7-8: LLM Integration Testing Strategy
+
+### Research Findings
+
+#### AI SDK Mock Providers
+
+The [Vercel AI SDK provides official mock providers](https://ai-sdk.dev/docs/ai-sdk-core/testing)
+for testing:
+
+```typescript
+import { MockLanguageModelV3 } from 'ai/test';
+
+const mockModel = new MockLanguageModelV3({
+  doGenerate: async () => ({
+    finishReason: 'stop',
+    usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
+    content: [{ type: 'text', text: 'Hello, world!' }],
+    warnings: [],
+  }),
+});
+```
+
+Key utilities from `ai/test`:
+- **MockLanguageModelV3**: Full mock language model for `generateText`
+- **mockValues**: Iterator for cycling through predefined responses
+- **simulateReadableStream**: For testing streaming responses
+
+#### Record/Replay Pattern
+
+The existing session YAML format already captures both request and response:
+
+```yaml
+turns:
+  - turn: 1
+    wire:
+      request:
+        system: "..."   # System prompt sent to LLM
+        prompt: "..."   # User prompt
+        tools: {...}    # Tool definitions
+      response:
+        steps:          # LLM response (tool calls)
+          - tool_calls:
+              - tool_name: generatePatches
+                input: {...}
+        usage:
+          input_tokens: 0
+          output_tokens: 0
+```
+
+This enables **golden test replay** of full LiveAgent flows without actual LLM calls.
+
+### Proposed Architecture
+
+#### 1. Session-Based Mock Agent
+
+Create a mock agent that reads recorded session responses:
+
+```typescript
+import { MockLanguageModelV3 } from 'ai/test';
+
+function createSessionMockModel(sessionPath: string): MockLanguageModelV3 {
+  const session = loadSession(sessionPath);
+  let turnIndex = 0;
+
+  return new MockLanguageModelV3({
+    doGenerate: async () => {
+      const turn = session.turns[turnIndex++];
+      return {
+        finishReason: 'stop',
+        usage: turn.wire.response.usage,
+        toolCalls: turn.wire.response.steps[0].tool_calls.map(tc => ({
+          type: 'tool-call',
+          toolName: tc.tool_name,
+          args: tc.input,
+        })),
+      };
+    },
+  });
+}
+```
+
+#### 2. Full Integration Test Flow
+
+```typescript
+it('replays movie-research session with MockLanguageModelV3', async () => {
+  const sessionPath = 'examples/movie-research/movie-research.session.yaml';
+  const mockModel = createSessionMockModel(sessionPath);
+
+  const agent = createLiveAgent({
+    model: mockModel,
+    enableWebSearch: false,
+  });
+
+  const form = parseForm(loadFormContent('movie-research.form.md'));
+  const result = await runHarness(form, agent, { maxTurns: 3 });
+
+  expect(result.isComplete).toBe(true);
+  // Verify against expected filled form
+});
+```
+
+#### 3. Coverage Opportunities
+
+This approach enables testing of currently-uncovered modules:
+- **liveAgent.ts**: `generatePatches()` method (~7% → ~60%)
+- **runResearch.ts**: Full research flow (~0% → ~40%)
+- **harness.ts**: Real agent loop execution (~84% → ~95%)
+
+### Implementation Phases
+
+**Phase 7: Mock Infrastructure** (Estimated: 1-2 sessions)
+1. Add `ai/test` imports to test dependencies
+2. Create `tests/fixtures/sessionMock.ts` helper
+3. Implement `createSessionMockModel()` function
+4. Add test for basic LiveAgent.generatePatches with mock
+
+**Phase 8: Full Integration Tests** (Estimated: 2-3 sessions)
+1. Create movie-research integration test with recorded session
+2. Test multi-turn form completion
+3. Test web search tool integration (mock web_search tool)
+4. Add rejection/retry flow tests
+
+### Alternative: Eval-Style Testing
+
+For ongoing LLM quality assurance, consider [vitest-evals](https://github.com/getsentry/vitest-evals):
+
+```typescript
+import { describeEval, ToolCallScorer } from 'vitest-evals';
+
+describeEval('form-filling', {
+  data: [{ form: 'simple.form.md', expected: 'simple-filled.form.md' }],
+  task: async ({ form }) => runFormFill(form),
+  scorers: [new ToolCallScorer({ expected: ['generatePatches'] })],
+  threshold: 0.9,
+});
+```
+
+This enables:
+- Continuous LLM output evaluation
+- Regression detection for prompt changes
+- Scoring of tool call accuracy
+
 ## Open Questions
 
-None - all implementation follows the approved plan spec.
+1. **Session recording mode**: Should we add a `--record-session` flag to CLI that captures
+   real LLM responses for golden test creation?
+
+2. **Test isolation**: How to handle tests that require specific model capabilities (e.g.,
+   web search) without making them flaky?
+
+3. **Coverage target**: With LLM mocking, 70%+ coverage is achievable. Is this the new goal?
