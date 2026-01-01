@@ -154,12 +154,12 @@ This separates the semantic explanation from the syntax example.
 
 ### Acceptance Criteria
 
-1. [ ] Issue count in prompt matches actual number of issues shown
-2. [ ] Validation errors clearly state the incorrect operation and correct operation
-3. [ ] Checkbox instructions list all modes with their valid states
-4. [ ] All golden tests pass after regeneration
-5. [ ] Wire format captures show improved message formatting
-6. [ ] Validation workflow is documented in development.md
+1. [x] Issue count in prompt matches actual number of issues shown
+2. [x] Validation errors clearly state the incorrect operation and correct operation
+3. [x] Checkbox instructions list all modes with their valid states
+4. [x] All golden tests pass after regeneration
+5. [x] Wire format captures show improved message formatting
+6. [x] Validation workflow is documented in development.md
 
 ## Stage 2: Architecture Stage
 
@@ -282,33 +282,33 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
 
 ### Implementation Phases
 
-**Phase 1: Fix Issue Count Mismatch**
+**Phase 1: Fix Issue Count Mismatch** ✅
 
-- [ ] Update `getIssuesIntro()` parameter name from `maxPatches` to `issueCount`
-- [ ] Change message from "up to N" to just "N" (we're showing exactly that many)
-- [ ] Update call site in `buildContextPrompt()` to pass `issues.length`
-- [ ] Write unit test verifying correct count appears in prompt
+- [x] Update `getIssuesIntro()` parameter name from `maxPatches` to `issueCount`
+- [x] Change message from "up to N" to just "N" (we're showing exactly that many)
+- [x] Update call site in `buildContextPrompt()` to pass `issues.length`
+- [x] Write unit test verifying correct count appears in prompt
 
-**Phase 2: Improve Error Message Format**
+**Phase 2: Improve Error Message Format** ✅
 
-- [ ] Add "Correction" line explaining the type mismatch
-- [ ] Rename "Use instead" to "Correct format" for clarity
-- [ ] Update tests for rejection feedback format
-- [ ] Verify rejection-test.session.yaml shows improved format after regen
+- [x] Add "Correction" line explaining the type mismatch
+- [x] Rename "Use instead" to "Correct format" for clarity
+- [x] Update tests for rejection feedback format
+- [x] Verify rejection-test.session.yaml shows improved format after regen
 
-**Phase 3: Improve Checkbox Instructions**
+**Phase 3: Improve Checkbox Instructions** ✅
 
-- [ ] Update `DEFAULT_SYSTEM_PROMPT` with clearer checkbox mode documentation
-- [ ] Ensure all three modes (simple, multi, explicit) are explained
-- [ ] Verify system prompt shows updated text after regen
+- [x] Update `DEFAULT_SYSTEM_PROMPT` with clearer checkbox mode documentation
+- [x] Ensure all three modes (simple, multi, explicit) are explained
+- [x] Verify system prompt shows updated text after regen
 
-**Phase 4: Regenerate Golden Tests and Document**
+**Phase 4: Regenerate Golden Tests and Document** ✅
 
-- [ ] Run `pnpm test:golden:regen`
-- [ ] Review diffs to verify improvements appear in wire format
-- [ ] Run `pnpm test:golden` to verify tests pass
-- [ ] Add validation workflow section to `docs/development.md`
-- [ ] Commit all changes
+- [x] Run `pnpm test:golden:regen`
+- [x] Review diffs to verify improvements appear in wire format
+- [x] Run `pnpm test:golden` to verify tests pass
+- [x] Add validation workflow section to `docs/development.md`
+- [x] Commit all changes
 
 ## Stage 4: Validation Stage
 
@@ -334,12 +334,12 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
 
 ### Success Criteria
 
-- [ ] Issue count in prompts matches actual issues shown
-- [ ] Rejection errors include type explanation and correct operation name
-- [ ] Checkbox mode instructions list all three modes with valid states
-- [ ] All golden tests pass
-- [ ] Validation workflow documented in development.md
-- [ ] Wire format diffs show only expected changes
+- [x] Issue count in prompts matches actual issues shown
+- [x] Rejection errors include type explanation and correct operation name
+- [x] Checkbox mode instructions list all three modes with valid states
+- [x] All golden tests pass
+- [x] Validation workflow documented in development.md
+- [x] Wire format diffs show only expected changes
 
 ## References
 
