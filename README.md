@@ -384,6 +384,35 @@ View them with `markform examples --list`, copy with `markform examples`, and ru
 
 - [`earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
   \- Financial analysis form.
+
+### Why a New Format?
+
+The closest alternatives I’ve seen are:
+
+- Plain Markdown docs can be used as templates and filled in by agents.
+  These are more expressive, but it is hard to edit them programmatically or use LLMs to
+  update them reliably.
+
+- JSON + JSON Schema which are good for struture but terrible for additional
+  unstructured context like instructions Markdown.
+
+- Agent to-do lists are part of many chat or coding interfaces and are programmatically
+  edited by agents. But these are limited to simple checklists, not forms with other
+  fields.
+
+- Numerous tools like Typeform, Google Forms, PDF forms, and Docusign offer
+  human-friendly UI. But these do not have a human-friendly text format for use by
+  agents as well as humans.
+
+| Approach | Usable GUI editor | Human-readable source format | Agent-editable | APIs and validation rules |
+| --- | :---: | :---: | :---: | :---: |
+| Plain Markdown | ✅<br>IDEs/editors | ✅ | ⚠️<br>fragile | ❌ |
+| JSON + JSON Schema | ✅<br>IDEs/editors | ⚠️<br>no free text | ✅ | ✅ |
+| SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️<br>rarely | ⚠️<br>sometimes | ⚠️<br>sometimes |
+| HTML/web Forms | ✅<br>IDEs/editors | ⚠️<br>HTML+code | ⚠️<br>coding agent | ✅ |
+| Excel/Google Sheets | ✅<br>app | ❌<br>.csv/.xlsx | ⚠️<br>with tools | ✅<br>with some coding |
+| **Markform** | ✅<br>IDEs/editors | ✅ | ✅<br>with this package | ✅<br>with this package |
+
 ## Architecture
 
 This repo has a specification and an implementation.
@@ -751,32 +780,6 @@ This enables powerful AI workflows that assemble information in a defined struct
 
 - An **agent execution harness** for step-by-step form filling, enabling deep research
   agents that assemble validated output in a structured format.
-
-### Does anything like this already exist?
-
-Not that I have seen.
-The closest alternatives are:
-
-- Plain Markdown docs can be used as templates and filled in by agents.
-  These are more expressive, but it is hard to edit them programmatically or use LLMs to
-  update them reliably.
-
-- Agent to-do lists are part of many chat or coding interfaces and are programmatically
-  edited by agents. But these are limited to simple checklists, not forms with other
-  fields.
-
-- Numerous tools like Typeform, Google Forms, PDF forms, and Docusign offer
-  human-friendly UI. But these do not have a human-friendly text format for use by
-  agents as well as humans.
-
-| Approach | Usable GUI editor | Human-readable source format | Agent-editable | APIs and validation rules |
-| --- | :---: | :---: | :---: | :---: |
-| Plain Markdown | ✅<br>IDEs/editors | ✅ | ⚠️<br>fragile | ❌ |
-| JSON + JSON Schema | ✅<br>IDEs/editors | ⚠️<br>no free text | ✅ | ✅ |
-| SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️<br>rarely | ⚠️<br>sometimes | ⚠️<br>sometimes |
-| HTML/web Forms | ✅<br>IDEs/editors | ⚠️<br>HTML+code | ⚠️<br>coding agent | ✅ |
-| Excel/Google Sheets | ✅<br>app | ❌<br>.csv/.xlsx | ⚠️<br>with tools | ✅<br>with some coding |
-| **Markform** | ✅<br>IDEs/editors | ✅ | ✅<br>with this package | ✅<br>with this package |
 
 ### What are example use cases?
 
