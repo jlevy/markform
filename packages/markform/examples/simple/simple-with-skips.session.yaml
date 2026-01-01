@@ -136,7 +136,10 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+        9. For checkboxes: use the appropriate state for the checkbox mode:
+           - Mode "simple": done (checked) or todo (unchecked)
+           - Mode "multi": done, todo, or na (not applicable)
+           - Mode "explicit": yes or no (must explicitly answer)
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -336,7 +339,7 @@ turns:
 
         # Current Form Issues
 
-        You need to address up to 20 issues. Here are the current issues:
+        You need to address 10 issues. Here are the current issues:
 
         - **age** (field): Required field "Age" is empty
           Severity: required, Priority: P1
@@ -419,7 +422,10 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+          9. For checkboxes: use the appropriate state for the checkbox mode:
+             - Mode "simple": done (checked) or todo (unchecked)
+             - Mode "multi": done, todo, or na (not applicable)
+             - Mode "explicit": yes or no (must explicitly answer)
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -619,7 +625,7 @@ turns:
 
           # Current Form Issues
 
-          You need to address up to 20 issues. Here are the current issues:
+          You need to address 10 issues. Here are the current issues:
 
           - **age** (field): Required field "Age" is empty
             Severity: required, Priority: P1
@@ -878,7 +884,10 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+        9. For checkboxes: use the appropriate state for the checkbox mode:
+           - Mode "simple": done (checked) or todo (unchecked)
+           - Mode "multi": done, todo, or na (not applicable)
+           - Mode "explicit": yes or no (must explicitly answer)
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -1105,7 +1114,7 @@ turns:
 
         # Current Form Issues
 
-        You need to address up to 20 issues. Here are the current issues:
+        You need to address 10 issues. Here are the current issues:
 
         - **tasks_simple** (field): All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
           Severity: required, Priority: P1
@@ -1186,7 +1195,10 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+          9. For checkboxes: use the appropriate state for the checkbox mode:
+             - Mode "simple": done (checked) or todo (unchecked)
+             - Mode "multi": done, todo, or na (not applicable)
+             - Mode "explicit": yes or no (must explicitly answer)
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -1413,7 +1425,7 @@ turns:
 
           # Current Form Issues
 
-          You need to address up to 20 issues. Here are the current issues:
+          You need to address 10 issues. Here are the current issues:
 
           - **tasks_simple** (field): All items in "Agreements (Simple Mode)" must be checked (2 unchecked)
             Severity: required, Priority: P1
@@ -1580,7 +1592,10 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+        9. For checkboxes: use the appropriate state for the checkbox mode:
+           - Mode "simple": done (checked) or todo (unchecked)
+           - Mode "multi": done, todo, or na (not applicable)
+           - Mode "explicit": yes or no (must explicitly answer)
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -1836,7 +1851,7 @@ turns:
 
         # Current Form Issues
 
-        You need to address up to 20 issues. Here are the current issues:
+        You need to address 1 issue. Here are the current issues:
 
         - **team_members** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
@@ -1879,7 +1894,10 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+          9. For checkboxes: use the appropriate state for the checkbox mode:
+             - Mode "simple": done (checked) or todo (unchecked)
+             - Mode "multi": done, todo, or na (not applicable)
+             - Mode "explicit": yes or no (must explicitly answer)
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -2135,7 +2153,7 @@ turns:
 
           # Current Form Issues
 
-          You need to address up to 20 issues. Here are the current issues:
+          You need to address 1 issue. Here are the current issues:
 
           - **team_members** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3

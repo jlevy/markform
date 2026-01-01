@@ -268,6 +268,36 @@ The regeneration script updates two types of golden test files:
 Both types of golden files are stored in `examples/` directories alongside the source
 forms and can be reviewed/diffed like any other test artifact.
 
+### Validating Prompt Changes
+
+When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`:
+
+1. **Make your changes** to the prompt text or error message format
+
+2. **Regenerate golden tests** to capture the new message format:
+
+   ```bash
+   pnpm --filter markform test:golden:regen
+   ```
+
+3. **Review the wire format diffs** to verify changes are correct:
+
+   ```bash
+   git diff packages/markform/examples/**/*.session.yaml
+   ```
+
+   Look for changes in `wire.request.system` and `wire.request.prompt` sections.
+   The session files capture the complete LLM request/response format, making it easy
+   to verify exactly what agents see.
+
+4. **Run golden tests** to verify the form filling logic still works:
+
+   ```bash
+   pnpm test:golden
+   ```
+
+5. **Commit the updated session files** along with your prompt changes
+
 ### Watch Mode
 
 ```bash

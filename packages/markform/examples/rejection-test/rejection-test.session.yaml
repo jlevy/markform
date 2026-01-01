@@ -63,7 +63,10 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+        9. For checkboxes: use the appropriate state for the checkbox mode:
+           - Mode "simple": done (checked) or todo (unchecked)
+           - Mode "multi": done, todo, or na (not applicable)
+           - Mode "explicit": yes or no (must explicitly answer)
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -115,7 +118,7 @@ turns:
 
         # Current Form Issues
 
-        You need to address up to 20 issues. Here are the current issues:
+        You need to address 2 issues. Here are the current issues:
 
         - **ratings** (field): Required field "Ratings" is empty
           Severity: required, Priority: P1
@@ -162,7 +165,10 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+          9. For checkboxes: use the appropriate state for the checkbox mode:
+             - Mode "simple": done (checked) or todo (unchecked)
+             - Mode "multi": done, todo, or na (not applicable)
+             - Mode "explicit": yes or no (must explicitly answer)
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -214,7 +220,7 @@ turns:
 
           # Current Form Issues
 
-          You need to address up to 20 issues. Here are the current issues:
+          You need to address 2 issues. Here are the current issues:
 
           - **ratings** (field): Required field "Ratings" is empty
             Severity: required, Priority: P1
@@ -327,7 +333,10 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+        9. For checkboxes: use the appropriate state for the checkbox mode:
+           - Mode "simple": done (checked) or todo (unchecked)
+           - Mode "multi": done, todo, or na (not applicable)
+           - Mode "explicit": yes or no (must explicitly answer)
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -345,7 +354,8 @@ turns:
         Your previous patches were rejected due to the following errors. Please fix these issues:
 
         - **Error:** Cannot apply set_string to table field "ratings"
-          **Use instead:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          **Correction:** This field is type "table". Use set_table instead.
+          **Correct format:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
 
         # Current Form State
 
@@ -386,7 +396,7 @@ turns:
 
         # Current Form Issues
 
-        You need to address up to 20 issues. Here are the current issues:
+        You need to address 2 issues. Here are the current issues:
 
         - **ratings** (field): Required field "Ratings" is empty
           Severity: required, Priority: P1
@@ -433,7 +443,10 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+          9. For checkboxes: use the appropriate state for the checkbox mode:
+             - Mode "simple": done (checked) or todo (unchecked)
+             - Mode "multi": done, todo, or na (not applicable)
+             - Mode "explicit": yes or no (must explicitly answer)
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -451,7 +464,8 @@ turns:
           Your previous patches were rejected due to the following errors. Please fix these issues:
 
           - **Error:** Cannot apply set_string to table field "ratings"
-            **Use instead:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            **Correction:** This field is type "table". Use set_table instead.
+            **Correct format:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
 
           # Current Form State
 
@@ -492,7 +506,7 @@ turns:
 
           # Current Form Issues
 
-          You need to address up to 20 issues. Here are the current issues:
+          You need to address 2 issues. Here are the current issues:
 
           - **ratings** (field): Required field "Ratings" is empty
             Severity: required, Priority: P1
