@@ -33,7 +33,7 @@ Guidelines:
 
 CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
-Always use the generatePatches tool to submit your field values.
+Always use the fill_form tool to submit your field values.
 `;
 
 /**
@@ -52,19 +52,6 @@ Guidelines:
 4. If a search returns no results or uncertain information, use skip_field with a reason explaining what you searched for
 5. NEVER fill fields with guessed or assumed information
 `;
-
-// =============================================================================
-// Tool Descriptions
-// =============================================================================
-
-/**
- * Description for the generatePatches tool.
- *
- * This tells the model how to use the patch submission tool.
- */
-export const GENERATE_PATCHES_TOOL_DESCRIPTION =
-  'Generate patches to fill form fields. Each patch sets a field value. ' +
-  'Use the field IDs from the issues list. Return patches for all issues you can address.';
 
 // =============================================================================
 // Context Prompt Templates
@@ -144,7 +131,7 @@ export function getPatchFormatHint(
  */
 export const PATCH_FORMAT_INSTRUCTIONS = `# Instructions
 
-Use the generatePatches tool to submit patches for the fields above.
+Use the fill_form tool to submit patches for the fields above.
 Each patch should match the field kind:
 ${Object.entries(PATCH_FORMATS)
   .map(([kind, format]) => `- ${kind}: ${format}`)

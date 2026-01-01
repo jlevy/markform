@@ -460,7 +460,7 @@ export function registerFillCommand(program: Command): void {
             // Generate patches from agent
             let response;
             try {
-              response = await agent.generatePatches(
+              response = await agent.fillFormTool(
                 stepResult.issues,
                 harness.getForm(),
                 harnessConfig.maxPatchesPerTurn,
