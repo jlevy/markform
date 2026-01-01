@@ -46,12 +46,6 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     path: 'startup-deep-research/startup-deep-research.form.md',
     type: 'research',
   },
-  {
-    id: 'earnings-analysis',
-    filename: 'earnings-analysis.form.md',
-    path: 'earnings-analysis/earnings-analysis.form.md',
-    type: 'research',
-  },
 ];
 
 /** Default example ID for menus (movie-research-demo, index 0) */
