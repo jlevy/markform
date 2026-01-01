@@ -5,10 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { formatPath, createNoOpSpinner, OUTPUT_FORMATS } from '../../../src/cli/lib/shared.js';
-
-/** Strip ANSI codes from string for comparison */
-// eslint-disable-next-line no-control-regex
-const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+import { stripAnsi } from '../../utils/ansi.js';
 
 describe('shared utilities', () => {
   it('OUTPUT_FORMATS includes all expected formats', () => {
