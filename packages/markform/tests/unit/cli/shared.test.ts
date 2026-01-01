@@ -49,10 +49,18 @@ describe('shared utilities', () => {
 
     it('all methods are callable without throwing', () => {
       const spinner = createNoOpSpinner();
-      expect(() => { spinner.message('test'); }).not.toThrow();
-      expect(() => { spinner.update({ type: 'api', provider: 'test', model: 'test' }); }).not.toThrow();
-      expect(() => { spinner.stop('done'); }).not.toThrow();
-      expect(() => { spinner.error('error'); }).not.toThrow();
+      expect(() => {
+        spinner.message('test');
+      }).not.toThrow();
+      expect(() => {
+        spinner.update({ type: 'api', provider: 'test', model: 'test' });
+      }).not.toThrow();
+      expect(() => {
+        spinner.stop('done');
+      }).not.toThrow();
+      expect(() => {
+        spinner.error('error');
+      }).not.toThrow();
     });
 
     it('getElapsedMs tracks time', async () => {

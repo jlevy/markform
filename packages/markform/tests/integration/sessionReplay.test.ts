@@ -29,7 +29,6 @@ import type { SessionTranscript } from '../../src/engine/coreTypes.js';
 function createSessionMockModel(session: SessionTranscript): MockLanguageModelV3 {
   let turnIndex = 0;
 
-   
   const doGenerate = (): any => {
     const turn = session.turns[turnIndex];
     if (!turn?.wire?.response) {
