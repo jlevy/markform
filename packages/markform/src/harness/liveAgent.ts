@@ -451,14 +451,17 @@ function buildContextPrompt(
     lines.push('');
     for (const rejection of previousRejections) {
       lines.push(`- **Error:** ${rejection.message}`);
-      // If we have field info, show the correct patch format
+      // If we have field info, explain the type mismatch and show correct format
       if (rejection.fieldKind) {
+        lines.push(
+          `  **Correction:** This field is type "${rejection.fieldKind}". Use set_${rejection.fieldKind} instead.`,
+        );
         const hint = getPatchFormatHint(
           rejection.fieldKind,
           rejection.fieldId,
           rejection.columnIds,
         );
-        lines.push(`  **Use instead:** ${hint}`);
+        lines.push(`  **Correct format:** ${hint}`);
       }
     }
     lines.push('');
