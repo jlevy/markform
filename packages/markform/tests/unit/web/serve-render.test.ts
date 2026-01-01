@@ -37,6 +37,134 @@ import { renderFormHtml, escapeHtml } from '../../../src/cli/commands/serve.js';
 // }
 
 describe('serve HTML rendering', () => {
+  describe('tab bar rendering', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" title="Test Form" %}
+{% group id="group1" title="Group 1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}`;
+
+    it('should not render tab bar when no tabs provided', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form);
+
+      // Should not have the actual tab-bar div (CSS class definitions are always present)
+      expect(html).not.toContain('<div class="tab-bar">');
+      expect(html).not.toContain('data-tab=');
+    });
+
+    it('should not render tab bar with single tab', () => {
+      const form = parseForm(formContent);
+      const html = renderFormHtml(form, [{ id: 'form', label: 'Markform', path: '/test.form.md' }]);
+
+      // Should not have the actual tab-bar div (just the CSS class definition is fine)
+      expect(html).not.toContain('<div class="tab-bar">');
+    });
+
+    it('should render tab bar with multiple tabs', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'values' as const, label: 'Values', path: '/test.yml' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      expect(html).toContain('tab-bar');
+      expect(html).toContain('tab-btn');
+      expect(html).toContain('data-tab="form"');
+      expect(html).toContain('data-tab="values"');
+      expect(html).toContain('>Markform</button>');
+      expect(html).toContain('>Values</button>');
+    });
+
+    it('should mark first tab as active', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'report' as const, label: 'Report', path: '/test.report.md' },
+        { id: 'values' as const, label: 'Values', path: '/test.yml' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      // First button should have 'active' class
+      expect(html).toMatch(/tab-btn active[^"]*"[^>]*data-tab="form"/);
+    });
+
+    it('should include tab content containers', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'values' as const, label: 'Values', path: '/test.yml' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      expect(html).toContain('id="tab-form"');
+      expect(html).toContain('id="tab-other"');
+      expect(html).toContain('tab-content active');
+    });
+
+    it('should include tab switching JavaScript', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'values' as const, label: 'Values', path: '/test.yml' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      expect(html).toContain('tabButtons.forEach');
+      expect(html).toContain('tabCache');
+      expect(html).toContain('/tab/');
+    });
+  });
+
+  describe('syntax highlighting styles', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="group1" title="Group 1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}`;
+
+    it('should include CSS classes for syntax highlighting in tabbed forms', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'values' as const, label: 'Values', path: '/test.yml' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      expect(html).toContain('.syn-key');
+      expect(html).toContain('.syn-string');
+      expect(html).toContain('.syn-number');
+      expect(html).toContain('.syn-bool');
+      expect(html).toContain('.syn-null');
+      expect(html).toContain('.syn-comment');
+    });
+
+    it('should include markdown content styles in tabbed forms', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'report' as const, label: 'Report', path: '/test.report.md' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      expect(html).toContain('.markdown-content');
+      expect(html).toContain('.markdown-content h2');
+      expect(html).toContain('.markdown-content p');
+      expect(html).toContain('.markdown-content li');
+      expect(html).toContain('.markdown-content code');
+      expect(html).toContain('.markdown-content a');
+    });
+  });
+
   describe('escapeHtml', () => {
     it('should escape HTML special characters', () => {
       expect(escapeHtml("<script>alert('xss')</script>")).toBe(
