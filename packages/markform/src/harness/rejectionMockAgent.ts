@@ -60,7 +60,7 @@ export class RejectionMockAgent implements Agent {
    * intentionally generates wrong patch type. After seeing rejection feedback,
    * generates the correct patch.
    */
-  async fillFormTool(
+  async generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number,
@@ -102,7 +102,7 @@ export class RejectionMockAgent implements Agent {
       }
 
       // For all other cases (or after rejection), use correct agent
-      const correctResponse = await this.correctAgent.fillFormTool([issue], form, 1);
+      const correctResponse = await this.correctAgent.generatePatches([issue], form, 1);
       if (correctResponse.patches.length > 0) {
         patches.push(correctResponse.patches[0]!);
         addressedFields.add(fieldId);

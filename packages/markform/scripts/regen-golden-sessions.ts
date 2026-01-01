@@ -139,7 +139,7 @@ async function runMockFill(
     const step = harness.step();
     if (step.isComplete || step.issues.length === 0) break;
 
-    const response = await agent.fillFormTool(
+    const response = await agent.generatePatches(
       step.issues,
       harness.getForm(),
       config.maxPatchesPerTurn,

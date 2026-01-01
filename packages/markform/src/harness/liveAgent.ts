@@ -108,7 +108,7 @@ export class LiveAgent implements Agent {
    * @param maxPatches - Maximum patches to generate
    * @param previousRejections - Rejections from previous turn (helps LLM learn from mistakes)
    */
-  async fillFormTool(
+  async generatePatches(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number,
@@ -144,14 +144,14 @@ export class LiveAgent implements Agent {
     });
 
     // Create tool using zodSchema wrapper for AI SDK v6 compatibility
-    const fillFormToolDef: Tool = {
+    const generatePatchesDef: Tool = {
       description: FILL_FORM_TOOL_DESCRIPTION,
       inputSchema: zodSchema(patchesSchema),
     };
 
     // Combine all tools (custom tools win on name collision)
     const rawTools: Record<string, Tool> = {
-      [FILL_FORM_TOOL_NAME]: fillFormToolDef,
+      [FILL_FORM_TOOL_NAME]: generatePatchesDef,
       ...this.webSearchTools,
       ...this.additionalTools,
     };

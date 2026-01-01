@@ -14,7 +14,6 @@ import {
   getPatchFormatHint,
   getIssuesIntro,
   PATCH_FORMATS,
-  getIssuesIntro,
 } from '../../../src/harness/prompts.js';
 import { parseForm } from '../../../src/engine/parse.js';
 import { inspect } from '../../../src/engine/inspect.js';

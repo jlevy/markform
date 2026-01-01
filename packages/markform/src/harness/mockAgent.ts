@@ -65,14 +65,14 @@ export class MockAgent implements Agent {
   }
 
   /**
-   * Invoke the fill_form tool using the completed mock to address issues.
+   * Generate patches from the completed mock to address issues.
    *
    * Processes issues in priority order, generating patches for
    * fields that have values in the completed mock. For fields with no
    * value (empty optional fields), generates skip_field patches.
    * Returns AgentResponse with patches but no stats (mock doesn't track LLM usage).
    */
-  async fillFormTool(
+  async generatePatches(
     issues: InspectIssue[],
     _form: ParsedForm,
     maxPatches: number,

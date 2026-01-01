@@ -113,7 +113,7 @@ function formatSpinnerMessage(context: SpinnerContext, elapsedMs: number): strin
  * });
  *
  * // Do async work...
- * const result = await agent.fillFormTool(...);
+ * const result = await agent.generatePatches(...);
  *
  * spinner.stop('Done');
  * ```

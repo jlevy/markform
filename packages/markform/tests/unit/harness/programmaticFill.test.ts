@@ -460,12 +460,12 @@ describe('fillForm', () => {
 
     it('cancellation during agent call prevents patches from being applied', async () => {
       const controller = new AbortController();
-      let fillFormToolCalled = false;
+      let generatePatchesCalled = false;
 
-      // Create a mock agent that aborts during fillFormTool
+      // Create a mock agent that aborts during generatePatches
       const cancellingAgent = {
-        fillFormTool() {
-          fillFormToolCalled = true;
+        generatePatches() {
+          generatePatchesCalled = true;
           // Simulate abort happening during the LLM call
           controller.abort();
           return Promise.resolve({
@@ -485,7 +485,7 @@ describe('fillForm', () => {
       });
 
       // Agent was called
-      expect(fillFormToolCalled).toBe(true);
+      expect(generatePatchesCalled).toBe(true);
 
       // But result should be cancelled, not successful
       expect(result.status.ok).toBe(false);
@@ -505,7 +505,7 @@ describe('fillForm', () => {
     it('returns status.ok: false with reason max_turns when limit reached', async () => {
       // Create a mock agent that never completes
       const emptyMockAgent = {
-        fillFormTool() {
+        generatePatches() {
           return Promise.resolve({ patches: [] }); // Never generates patches
         },
       };
@@ -528,7 +528,7 @@ describe('fillForm', () => {
 
     it('remainingIssues populated when not complete', async () => {
       const emptyMockAgent = {
-        fillFormTool() {
+        generatePatches() {
           return Promise.resolve({ patches: [] });
         },
       };
