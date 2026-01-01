@@ -1,145 +1,66 @@
 /**
  * Unit tests for shared CLI utilities.
- *
  * Tests pure functions that don't require Commander or TTY infrastructure.
  */
 
 import { describe, it, expect } from 'vitest';
 import { formatPath, createNoOpSpinner, OUTPUT_FORMATS } from '../../../src/cli/lib/shared.js';
 
+/** Strip ANSI codes from string for comparison */
+// eslint-disable-next-line no-control-regex
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+
 describe('shared utilities', () => {
-  describe('OUTPUT_FORMATS', () => {
-    it('includes console format', () => {
-      expect(OUTPUT_FORMATS).toContain('console');
-    });
-
-    it('includes plaintext format', () => {
-      expect(OUTPUT_FORMATS).toContain('plaintext');
-    });
-
-    it('includes yaml format', () => {
-      expect(OUTPUT_FORMATS).toContain('yaml');
-    });
-
-    it('includes json format', () => {
-      expect(OUTPUT_FORMATS).toContain('json');
-    });
-
-    it('includes markform format', () => {
-      expect(OUTPUT_FORMATS).toContain('markform');
-    });
-
-    it('includes markdown format', () => {
-      expect(OUTPUT_FORMATS).toContain('markdown');
-    });
-
-    it('has exactly 6 formats', () => {
-      expect(OUTPUT_FORMATS).toHaveLength(6);
-    });
+  it('OUTPUT_FORMATS includes all expected formats', () => {
+    expect(OUTPUT_FORMATS).toEqual([
+      'console',
+      'plaintext',
+      'yaml',
+      'json',
+      'markform',
+      'markdown',
+    ]);
   });
 
-  describe('formatPath', () => {
-    it('formats path within cwd as relative with ./ prefix', () => {
-      const result = formatPath('/home/user/project/file.md', '/home/user/project');
-      // Strip ANSI codes for comparison
-      // eslint-disable-next-line no-control-regex
-      const stripped = result.replace(/\x1b\[[0-9;]*m/g, '');
-      expect(stripped).toBe('./file.md');
-    });
+  // formatPath: [absolutePath, cwd, expected]
+  const FORMAT_PATH_CASES: [string, string, string][] = [
+    ['/home/user/project/file.md', '/home/user/project', './file.md'],
+    ['/home/user/project/src/file.ts', '/home/user/project', './src/file.ts'],
+    ['/other/path/file.md', '/home/user/project', '/other/path/file.md'],
+    ['/home/user/file.md', '/home/user/project', '/home/user/file.md'],
+    ['/test/cwd/myfile.txt', '/test/cwd', './myfile.txt'],
+  ];
 
-    it('formats path in subdirectory with relative path', () => {
-      const result = formatPath('/home/user/project/src/file.ts', '/home/user/project');
-      // Strip ANSI codes for comparison
-      // eslint-disable-next-line no-control-regex
-      const stripped = result.replace(/\x1b\[[0-9;]*m/g, '');
-      expect(stripped).toBe('./src/file.ts');
-    });
-
-    it('formats path outside cwd as absolute path', () => {
-      const result = formatPath('/other/path/file.md', '/home/user/project');
-      // Strip ANSI codes for comparison
-      // eslint-disable-next-line no-control-regex
-      const stripped = result.replace(/\x1b\[[0-9;]*m/g, '');
-      expect(stripped).toBe('/other/path/file.md');
-    });
-
-    it('formats path in parent directory as absolute path', () => {
-      const result = formatPath('/home/user/file.md', '/home/user/project');
-      // Strip ANSI codes for comparison
-      // eslint-disable-next-line no-control-regex
-      const stripped = result.replace(/\x1b\[[0-9;]*m/g, '');
-      expect(stripped).toBe('/home/user/file.md');
-    });
-
-    it('returns string containing the path', () => {
-      const result = formatPath('/home/user/project/file.md', '/home/user/project');
-      // In non-TTY environments, picocolors may not add ANSI codes
-      // Just verify the path content is present
-      // eslint-disable-next-line no-control-regex
-      const stripped = result.replace(/\x1b\[[0-9;]*m/g, '');
-      expect(stripped).toContain('file.md');
-    });
-
-    it('formats current directory file correctly', () => {
-      const result = formatPath('/test/cwd/myfile.txt', '/test/cwd');
-      // Strip ANSI codes for comparison
-      // eslint-disable-next-line no-control-regex
-      const stripped = result.replace(/\x1b\[[0-9;]*m/g, '');
-      expect(stripped).toBe('./myfile.txt');
-    });
+  it.each(FORMAT_PATH_CASES)('formatPath(%s, %s) → %s', (path, cwd, expected) => {
+    expect(stripAnsi(formatPath(path, cwd))).toBe(expected);
   });
 
   describe('createNoOpSpinner', () => {
-    it('returns a SpinnerHandle object', () => {
+    it('returns SpinnerHandle with all required methods', () => {
       const spinner = createNoOpSpinner();
-      expect(spinner).toHaveProperty('message');
-      expect(spinner).toHaveProperty('update');
-      expect(spinner).toHaveProperty('stop');
-      expect(spinner).toHaveProperty('error');
-      expect(spinner).toHaveProperty('getElapsedMs');
+      expect(spinner).toMatchObject({
+        message: expect.any(Function),
+        update: expect.any(Function),
+        stop: expect.any(Function),
+        error: expect.any(Function),
+        getElapsedMs: expect.any(Function),
+      });
     });
 
-    it('has message function that is callable', () => {
+    it('all methods are callable without throwing', () => {
       const spinner = createNoOpSpinner();
-      expect(() => {
-        spinner.message('test');
-      }).not.toThrow();
+      expect(() => { spinner.message('test'); }).not.toThrow();
+      expect(() => { spinner.update({ type: 'api', provider: 'test', model: 'test' }); }).not.toThrow();
+      expect(() => { spinner.stop('done'); }).not.toThrow();
+      expect(() => { spinner.error('error'); }).not.toThrow();
     });
 
-    it('has update function that is callable', () => {
-      const spinner = createNoOpSpinner();
-      expect(() => {
-        spinner.update({ type: 'api', provider: 'test', model: 'test' });
-      }).not.toThrow();
-    });
-
-    it('has stop function that is callable', () => {
-      const spinner = createNoOpSpinner();
-      expect(() => {
-        spinner.stop('done');
-      }).not.toThrow();
-    });
-
-    it('has error function that is callable', () => {
-      const spinner = createNoOpSpinner();
-      expect(() => {
-        spinner.error('error occurred');
-      }).not.toThrow();
-    });
-
-    it('getElapsedMs returns a number', () => {
-      const spinner = createNoOpSpinner();
-      const elapsed = spinner.getElapsedMs();
-      expect(typeof elapsed).toBe('number');
-      expect(elapsed).toBeGreaterThanOrEqual(0);
-    });
-
-    it('getElapsedMs increases over time', async () => {
+    it('getElapsedMs tracks time', async () => {
       const spinner = createNoOpSpinner();
       const start = spinner.getElapsedMs();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      const end = spinner.getElapsedMs();
-      expect(end).toBeGreaterThan(start);
+      expect(start).toBeGreaterThanOrEqual(0);
+      await new Promise((r) => setTimeout(r, 50));
+      expect(spinner.getElapsedMs()).toBeGreaterThan(start);
     });
   });
 });

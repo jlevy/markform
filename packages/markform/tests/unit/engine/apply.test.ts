@@ -1371,118 +1371,53 @@ markform:
   });
 
   describe('patch type mismatch errors', () => {
-    it('rejects set_date on non-date field', () => {
-      const markdown = `---
+    // Shared form for type mismatch tests
+    const STRING_FIELD_FORM = `---
 markform:
   spec: MF/0.1
 ---
-
 {% form id="test" %}
-
 {% group id="g1" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
 {% /group %}
-
 {% /form %}
 `;
-      const form = parseForm(markdown);
-      const patches: Patch[] = [{ op: 'set_date', fieldId: 'name', value: '2024-01-15' }];
 
-      const result = applyPatches(form, patches);
-
-      expect(result.applyStatus).toBe('rejected');
-      expect(result.rejectedPatches).toHaveLength(1);
-      expect(result.rejectedPatches[0]).toMatchObject({
-        patchIndex: 0,
-        message: expect.stringContaining('Cannot apply set_date to string field'),
-      });
-    });
-
-    it('rejects set_url_list on non-url_list field', () => {
-      const markdown = `---
-markform:
-  spec: MF/0.1
----
-
-{% form id="test" %}
-
-{% group id="g1" %}
-{% field kind="string" id="name" label="Name" %}{% /field %}
-{% /group %}
-
-{% /form %}
-`;
-      const form = parseForm(markdown);
-      const patches: Patch[] = [
+    // Type mismatch cases: [patchOp, patch, expectedError]
+    const TYPE_MISMATCH_CASES: [string, Patch, string][] = [
+      ['set_date', { op: 'set_date', fieldId: 'name', value: '2024-01-15' }, 'set_date to string'],
+      [
+        'set_url_list',
         { op: 'set_url_list', fieldId: 'name', items: ['https://example.com'] },
-      ];
+        'set_url_list to string',
+      ],
+      ['set_year', { op: 'set_year', fieldId: 'name', value: 2024 }, 'set_year to string'],
+    ];
 
-      const result = applyPatches(form, patches);
-
+    it.each(TYPE_MISMATCH_CASES)('rejects %s on string field', (_, patch, expectedError) => {
+      const form = parseForm(STRING_FIELD_FORM);
+      const result = applyPatches(form, [patch]);
       expect(result.applyStatus).toBe('rejected');
-      expect(result.rejectedPatches).toHaveLength(1);
-      expect(result.rejectedPatches[0]).toMatchObject({
-        patchIndex: 0,
-        message: expect.stringContaining('Cannot apply set_url_list to string field'),
-      });
-    });
-
-    it('rejects set_year on non-year field', () => {
-      const markdown = `---
-markform:
-  spec: MF/0.1
----
-
-{% form id="test" %}
-
-{% group id="g1" %}
-{% field kind="string" id="name" label="Name" %}{% /field %}
-{% /group %}
-
-{% /form %}
-`;
-      const form = parseForm(markdown);
-      const patches: Patch[] = [{ op: 'set_year', fieldId: 'name', value: 2024 }];
-
-      const result = applyPatches(form, patches);
-
-      expect(result.applyStatus).toBe('rejected');
-      expect(result.rejectedPatches).toHaveLength(1);
-      expect(result.rejectedPatches[0]).toMatchObject({
-        patchIndex: 0,
-        message: expect.stringContaining('Cannot apply set_year to string field'),
-      });
+      expect(result.rejectedPatches[0]?.message).toContain(expectedError);
     });
 
     it('rejects set_table with invalid column', () => {
-      const markdown = `---
+      const form = parseForm(`---
 markform:
   spec: MF/0.1
 ---
-
 {% form id="test" %}
-
 {% group id="g1" %}
 {% field kind="table" id="data" label="Data" columnIds=["name"] %}
 {% column id="name" label="Name" type="string" required=true %}{% /column %}
 {% /field %}
 {% /group %}
-
 {% /form %}
-`;
-      const form = parseForm(markdown);
-      const patches: Patch[] = [
-        {
-          op: 'set_table',
-          fieldId: 'data',
-          rows: [{ name: 'valid', invalid_column: 'test' }],
-        },
-      ];
-
-      const result = applyPatches(form, patches);
-
+`);
+      const result = applyPatches(form, [
+        { op: 'set_table', fieldId: 'data', rows: [{ name: 'valid', invalid_column: 'test' }] },
+      ]);
       expect(result.applyStatus).toBe('rejected');
-      expect(result.rejectedPatches).toHaveLength(1);
       expect(result.rejectedPatches[0]?.message).toContain('Invalid column');
     });
   });

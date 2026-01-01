@@ -134,46 +134,27 @@ describe('examples registry', () => {
     });
   });
 
-  describe('DEFAULT_EXAMPLE_ID', () => {
-    it('is a valid example ID', () => {
-      expect(getExampleById(DEFAULT_EXAMPLE_ID)).toBeDefined();
-    });
-
-    it('is movie-research-demo', () => {
-      expect(DEFAULT_EXAMPLE_ID).toBe('movie-research-demo');
-    });
+  it('DEFAULT_EXAMPLE_ID is movie-research-demo and valid', () => {
+    expect(DEFAULT_EXAMPLE_ID).toBe('movie-research-demo');
+    expect(getExampleById(DEFAULT_EXAMPLE_ID)).toBeDefined();
   });
 
   describe('getExampleOrder', () => {
-    it('returns index for known example filename', () => {
-      expect(getExampleOrder('simple.form.md')).toBe(1); // Index of simple in definitions
-    });
-
-    it('returns 0 for movie-research-demo (first example)', () => {
-      expect(getExampleOrder('movie-research-demo.form.md')).toBe(0);
-    });
-
-    it('returns array length for unknown filename', () => {
-      const order = getExampleOrder('unknown.form.md');
-      expect(order).toBe(EXAMPLE_DEFINITIONS.length);
-    });
-
-    it('returns correct index for all known examples', () => {
+    it('returns correct index for all examples, array length for unknown', () => {
+      // All known examples should return their index
       for (let i = 0; i < EXAMPLE_DEFINITIONS.length; i++) {
-        const example = EXAMPLE_DEFINITIONS[i]!;
-        expect(getExampleOrder(example.filename)).toBe(i);
+        expect(getExampleOrder(EXAMPLE_DEFINITIONS[i]!.filename)).toBe(i);
       }
+      // Unknown returns array length (sorts to end)
+      expect(getExampleOrder('unknown.form.md')).toBe(EXAMPLE_DEFINITIONS.length);
     });
   });
 
   describe('getExamplePath', () => {
-    it('returns absolute path for valid example', () => {
+    it('returns path for valid ID, throws for unknown', () => {
       const path = getExamplePath('simple');
       expect(path).toContain('simple.form.md');
       expect(path).toContain('/examples/');
-    });
-
-    it('throws for unknown example ID', () => {
       expect(() => getExamplePath('nonexistent')).toThrow('Unknown example: nonexistent');
     });
   });

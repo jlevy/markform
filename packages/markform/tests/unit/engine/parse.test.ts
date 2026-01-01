@@ -2067,48 +2067,41 @@ markform:
   });
 
   describe('additional parse errors', () => {
-    it('throws error on multiple form tags', () => {
-      const markdown = `---
+    // Error cases: [description, markdown, expectedPattern]
+    const ERROR_CASES: [string, string, RegExp][] = [
+      [
+        'multiple form tags',
+        `---
 markform:
   spec: MF/0.1
 ---
-
 {% form id="first" %}
-{% group id="g1" %}
-{% field kind="string" id="name" label="Name" %}{% /field %}
-{% /group %}
+{% group id="g1" %}{% field kind="string" id="name" label="Name" %}{% /field %}{% /group %}
 {% /form %}
-
 {% form id="second" %}
-{% group id="g2" %}
-{% field kind="string" id="other" label="Other" %}{% /field %}
-{% /group %}
+{% group id="g2" %}{% field kind="string" id="other" label="Other" %}{% /field %}{% /group %}
 {% /form %}
-`;
-      expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/Multiple form tags/i);
-    });
-
-    it('throws error on note with unknown ref', () => {
-      const markdown = `---
+`,
+        /Multiple form tags/i,
+      ],
+      [
+        'note with unknown ref',
+        `---
 markform:
   spec: MF/0.1
 ---
-
 {% form id="test" %}
-
-{% group id="g1" %}
-{% field kind="string" id="name" label="Name" %}{% /field %}
-{% /group %}
-
-{% note id="note1" ref="unknown_field" role="agent" %}
-Note text for non-existent field.
-{% /note %}
-
+{% group id="g1" %}{% field kind="string" id="name" label="Name" %}{% /field %}{% /group %}
+{% note id="note1" ref="unknown_field" role="agent" %}Note text.{% /note %}
 {% /form %}
-`;
+`,
+        /references unknown ID/i,
+      ],
+    ];
+
+    it.each(ERROR_CASES)('throws on %s', (_, markdown, pattern) => {
       expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/references unknown ID/i);
+      expect(() => parseForm(markdown)).toThrow(pattern);
     });
   });
 });
