@@ -1421,4 +1421,163 @@ markform:
       expect(result.rejectedPatches[0]?.message).toContain('Invalid column');
     });
   });
+
+  // =============================================================================
+  // Patch Value Validation Matrix
+  // =============================================================================
+  // Tests that invalid patch VALUES (undefined, null, wrong types) are rejected
+  // with descriptive error messages instead of crashing with generic JS errors.
+  // These tests intentionally use `as any` to simulate malformed LLM outputs.
+
+  /* eslint-disable @typescript-eslint/no-unsafe-argument */
+  describe('patch value validation', () => {
+    // Form with all field types for testing
+    const ALL_FIELDS_FORM = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="str" label="String" %}{% /field %}
+{% field kind="number" id="num" label="Number" %}{% /field %}
+{% field kind="checkboxes" id="checks" label="Checkboxes" checkboxMode="simple" %}
+- [ ] Option A {% #a %}
+- [ ] Option B {% #b %}
+{% /field %}
+{% field kind="table" id="tbl" label="Table" columnIds=["col1"] %}
+{% column id="col1" label="Col1" type="string" %}{% /column %}
+{% /field %}
+{% field kind="url" id="url_field" label="URL" %}{% /field %}
+{% field kind="url_list" id="urls" label="URLs" %}{% /field %}
+{% field kind="string_list" id="strs" label="Strings" %}{% /field %}
+{% field kind="single_select" id="sel" label="Select" %}
+- Option 1 {% #opt1 %}
+- Option 2 {% #opt2 %}
+{% /field %}
+{% field kind="multi_select" id="multi" label="Multi" %}
+- Option 1 {% #opt1 %}
+- Option 2 {% #opt2 %}
+{% /field %}
+{% field kind="date" id="date_field" label="Date" %}{% /field %}
+{% field kind="year" id="year_field" label="Year" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    describe('set_checkboxes with invalid values', () => {
+      it('rejects undefined values', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+        expect(result.rejectedPatches[0]?.message).toContain('checks');
+      });
+
+      it('rejects null values', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+      });
+
+      it('rejects array instead of object', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: ['done'] } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+      });
+
+      it('rejects string instead of object', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: 'done' } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+      });
+    });
+
+    describe('set_table with invalid values', () => {
+      it('rejects undefined rows', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_table', fieldId: 'tbl', rows: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_table');
+      });
+
+      it('rejects null rows', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_table', fieldId: 'tbl', rows: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_table');
+      });
+
+      it('rejects object instead of array', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_table', fieldId: 'tbl', rows: { col1: 'value' } } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_table');
+      });
+    });
+
+    describe('set_url_list with invalid values', () => {
+      it('rejects undefined items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_url_list', fieldId: 'urls', items: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_url_list');
+      });
+
+      it('rejects null items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_url_list', fieldId: 'urls', items: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_url_list');
+      });
+    });
+
+    describe('set_string_list with invalid values', () => {
+      it('rejects undefined items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_string_list', fieldId: 'strs', items: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_string_list');
+      });
+
+      it('rejects null items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_string_list', fieldId: 'strs', items: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_string_list');
+      });
+    });
+
+    describe('set_multi_select with invalid values', () => {
+      it('rejects undefined selected', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_multi_select', fieldId: 'multi', selected: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_multi_select');
+      });
+
+      it('rejects null selected', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_multi_select', fieldId: 'multi', selected: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_multi_select');
+      });
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-unsafe-argument */
 });

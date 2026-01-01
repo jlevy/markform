@@ -157,6 +157,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
           columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
+      // Validate items is a non-null array
+      if (!Array.isArray(patch.items)) {
+        return {
+          patchIndex: index,
+          message: `Invalid set_string_list patch for field "${field.id}": items must be an array of strings`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+        };
+      }
       break;
 
     case 'set_single_select': {
@@ -192,6 +201,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
           columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
+      // Validate selected is a non-null array
+      if (!Array.isArray(patch.selected)) {
+        return {
+          patchIndex: index,
+          message: `Invalid set_multi_select patch for field "${field.id}": selected must be an array of option IDs`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+        };
+      }
       const multiField = field;
       const validOptions = new Set(multiField.options.map((o) => o.id));
       for (const optId of patch.selected) {
@@ -213,6 +231,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
           fieldId: field.id,
           fieldKind: field.kind,
           columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
+        };
+      }
+      // Validate values is a non-null object (not array, string, undefined, null)
+      if (patch.values == null || typeof patch.values !== 'object' || Array.isArray(patch.values)) {
+        return {
+          patchIndex: index,
+          message: `Invalid set_checkboxes patch for field "${field.id}": values must be an object mapping option IDs to booleans`,
+          fieldId: field.id,
+          fieldKind: field.kind,
         };
       }
       const checkboxField = field;
@@ -250,6 +277,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
           columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
         };
       }
+      // Validate items is a non-null array
+      if (!Array.isArray(patch.items)) {
+        return {
+          patchIndex: index,
+          message: `Invalid set_url_list patch for field "${field.id}": items must be an array of URLs`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+        };
+      }
       break;
 
     case 'set_date':
@@ -284,6 +320,16 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
           fieldId: field.id,
           fieldKind: field.kind,
           // No columnIds since this is not a table field
+        };
+      }
+      // Validate rows is a non-null array
+      if (!Array.isArray(patch.rows)) {
+        return {
+          patchIndex: index,
+          message: `Invalid set_table patch for field "${field.id}": rows must be an array of row objects`,
+          fieldId: field.id,
+          fieldKind: field.kind,
+          columnIds: field.columns.map((c) => c.id),
         };
       }
       const tableField = field;
