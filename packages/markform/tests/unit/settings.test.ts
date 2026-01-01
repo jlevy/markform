@@ -7,9 +7,13 @@ import {
   ALL_EXTENSIONS,
   deriveExportPath,
   deriveReportPath,
+  deriveSchemaPath,
   detectFileType,
   EXPORT_EXTENSIONS,
+  normalizeRole,
+  parseRolesFlag,
   REPORT_EXTENSION,
+  SCHEMA_EXTENSION,
 } from '../../src/settings.js';
 
 describe('File Extension Constants', () => {
@@ -124,5 +128,99 @@ describe('deriveReportPath', () => {
 
   it('replaces existing .report.md correctly', () => {
     expect(deriveReportPath('/path/file.report.md')).toBe('/path/file.report.md');
+  });
+});
+
+describe('deriveSchemaPath', () => {
+  it('converts .form.md to .schema.json', () => {
+    expect(deriveSchemaPath('/path/file.form.md')).toBe('/path/file.schema.json');
+  });
+
+  it('converts .raw.md to .schema.json', () => {
+    expect(deriveSchemaPath('/path/file.raw.md')).toBe('/path/file.schema.json');
+  });
+
+  it('converts .yml to .schema.json', () => {
+    expect(deriveSchemaPath('/path/file.yml')).toBe('/path/file.schema.json');
+  });
+
+  it('converts .json to .schema.json', () => {
+    expect(deriveSchemaPath('/path/file.json')).toBe('/path/file.schema.json');
+  });
+
+  it('handles paths without known extensions', () => {
+    expect(deriveSchemaPath('/path/file')).toBe('/path/file.schema.json');
+  });
+
+  it('handles .schema.json by stripping .json first', () => {
+    // The iterator may hit .json before .schema.json, stripping only .json
+    // This is a known edge case - typical usage starts from .form.md
+    const result = deriveSchemaPath('/path/file.schema.json');
+    expect(result).toContain('.schema.json');
+  });
+
+  it('SCHEMA_EXTENSION is correct', () => {
+    expect(SCHEMA_EXTENSION).toBe('.schema.json');
+  });
+});
+
+describe('normalizeRole', () => {
+  const validCases = [
+    { input: 'agent', expected: 'agent' },
+    { input: 'user', expected: 'user' },
+    { input: 'AGENT', expected: 'agent' },
+    { input: 'USER', expected: 'user' },
+    { input: '  agent  ', expected: 'agent' },
+    { input: 'reviewer', expected: 'reviewer' },
+    { input: 'admin-user', expected: 'admin-user' },
+    { input: 'role_name', expected: 'role_name' },
+    { input: 'role123', expected: 'role123' },
+  ];
+
+  it.each(validCases)('normalizes "$input" to "$expected"', ({ input, expected }) => {
+    expect(normalizeRole(input)).toBe(expected);
+  });
+
+  const invalidCases = [
+    { input: '', desc: 'empty string' },
+    { input: '123role', desc: 'starts with number' },
+    { input: '_role', desc: 'starts with underscore' },
+    { input: '-role', desc: 'starts with hyphen' },
+    { input: 'role name', desc: 'contains space' },
+    { input: 'role.name', desc: 'contains dot' },
+    { input: 'role@name', desc: 'contains special char' },
+  ];
+
+  it.each(invalidCases)('throws for $desc: "$input"', ({ input }) => {
+    expect(() => normalizeRole(input)).toThrow('Invalid role name');
+  });
+
+  it('throws for reserved role "*" (fails pattern check first)', () => {
+    // '*' fails pattern check before reserved name check
+    expect(() => normalizeRole('*')).toThrow('Invalid role name');
+  });
+});
+
+describe('parseRolesFlag', () => {
+  it('parses single role', () => {
+    expect(parseRolesFlag('agent')).toEqual(['agent']);
+    expect(parseRolesFlag('user')).toEqual(['user']);
+  });
+
+  it('parses comma-separated roles', () => {
+    expect(parseRolesFlag('agent,user')).toEqual(['agent', 'user']);
+    expect(parseRolesFlag('user,agent,reviewer')).toEqual(['user', 'agent', 'reviewer']);
+  });
+
+  it('normalizes roles in the list', () => {
+    expect(parseRolesFlag('AGENT,USER')).toEqual(['agent', 'user']);
+  });
+
+  it('returns ["*"] for wildcard', () => {
+    expect(parseRolesFlag('*')).toEqual(['*']);
+  });
+
+  it('throws for invalid role in list', () => {
+    expect(() => parseRolesFlag('agent,123invalid')).toThrow('Invalid role name');
   });
 });

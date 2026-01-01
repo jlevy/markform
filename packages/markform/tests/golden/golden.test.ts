@@ -95,6 +95,133 @@ describe('Simple Form Golden Test', () => {
 });
 
 // =============================================================================
+// Complex Form Parse Tests
+// =============================================================================
+
+describe('Complex Form Parse Tests', () => {
+  it('parses movie-deep-research-mock-filled form with all field types', () => {
+    const formPath = join(EXAMPLES_DIR, 'movie-research/movie-deep-research-mock-filled.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: movie-deep-research-mock-filled.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+
+    // Verify form structure
+    expect(form.schema.id).toBe('movie_research_deep');
+    expect(form.schema.title).toBe('Movie Deep Research');
+
+    // Count fields
+    const fieldCount = Object.keys(form.responsesByFieldId).length;
+    expect(fieldCount).toBe(42);
+
+    // Verify most fields are answered (only official_site_url is intentionally empty)
+    const answered = Object.values(form.responsesByFieldId).filter(
+      (r) => r.state === 'answered',
+    ).length;
+    expect(answered).toBeGreaterThanOrEqual(40);
+
+    // Verify specific field types parsed correctly
+    // String field (value is { kind: 'string', value: '...' })
+    const movie = form.responsesByFieldId.movie;
+    expect(movie?.state).toBe('answered');
+    const movieValue = movie?.value as { kind: string; value: string };
+    expect(movieValue.kind).toBe('string');
+    expect(movieValue.value).toBe('The Shawshank Redemption');
+
+    // Number field (value is { kind: 'number', value: ... })
+    const year = form.responsesByFieldId.year;
+    expect(year?.state).toBe('answered');
+    const yearValue = year?.value as { kind: string; value: number };
+    expect(yearValue.kind).toBe('number');
+    expect(yearValue.value).toBe(1994);
+
+    // URL field (value is { kind: 'url', value: '...' })
+    const imdbUrl = form.responsesByFieldId.imdb_url;
+    expect(imdbUrl?.state).toBe('answered');
+    const imdbValue = imdbUrl?.value as { kind: string; value: string };
+    expect(imdbValue.kind).toBe('url');
+    expect(imdbValue.value).toContain('imdb.com');
+
+    // String list field (value is { kind: 'string_list', items: [...] })
+    const directors = form.responsesByFieldId.directors;
+    expect(directors?.state).toBe('answered');
+    const directorsValue = directors?.value as { kind: string; items: string[] };
+    expect(directorsValue.kind).toBe('string_list');
+    expect(Array.isArray(directorsValue.items)).toBe(true);
+    expect(directorsValue.items).toContain('Frank Darabont');
+
+    // Table field - ratings (value is { kind: 'table', rows: [...] })
+    const ratings = form.responsesByFieldId.ratings_table;
+    expect(ratings?.state).toBe('answered');
+    const ratingsValue = ratings?.value as { kind: string; rows: Record<string, unknown>[] };
+    expect(ratingsValue.kind).toBe('table');
+    expect(ratingsValue.rows.length).toBeGreaterThanOrEqual(4);
+    expect(ratingsValue.rows[0]).toHaveProperty('source');
+    expect(ratingsValue.rows[0]).toHaveProperty('score');
+
+    // Table field - cast
+    const cast = form.responsesByFieldId.lead_cast;
+    expect(cast?.state).toBe('answered');
+    const castValue = cast?.value as { kind: string; rows: Record<string, unknown>[] };
+    expect(castValue.kind).toBe('table');
+    expect(castValue.rows.length).toBeGreaterThanOrEqual(3);
+    expect(castValue.rows[0]).toHaveProperty('actor_name');
+    expect(castValue.rows[0]).toHaveProperty('character_name');
+
+    // Single select field (value is { kind: 'single_select', selected: '...' })
+    const mpaaRating = form.responsesByFieldId.mpaa_rating;
+    expect(mpaaRating?.state).toBe('answered');
+    const mpaaValue = mpaaRating?.value as { kind: string; selected: string };
+    expect(mpaaValue.kind).toBe('single_select');
+    expect(mpaaValue.selected).toBe('r');
+
+    // Multi select field (value is { kind: 'multi_select', selected: [...] })
+    const genres = form.responsesByFieldId.genres;
+    expect(genres?.state).toBe('answered');
+    const genresValue = genres?.value as { kind: string; selected: string[] };
+    expect(genresValue.kind).toBe('multi_select');
+    expect(Array.isArray(genresValue.selected)).toBe(true);
+    expect(genresValue.selected).toContain('drama');
+
+    // Checkboxes field (value is { kind: 'checkboxes', values: {...} })
+    const availability = form.responsesByFieldId.availability_flags;
+    expect(availability?.state).toBe('answered');
+    const availValue = availability?.value as { kind: string; values: Record<string, string> };
+    expect(availValue.kind).toBe('checkboxes');
+    expect(typeof availValue.values).toBe('object');
+  });
+
+  it('generates valid JSON schema for complex form', () => {
+    const formPath = join(EXAMPLES_DIR, 'movie-research/movie-deep-research-mock-filled.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: movie-deep-research-mock-filled.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+    const result = formToJsonSchema(form);
+
+    // Verify schema structure
+    expect(result.schema.$schema).toBeDefined();
+    expect(result.schema.type).toBe('object');
+    expect(result.schema.properties).toBeDefined();
+
+    // Check required fields are marked
+    expect(result.schema.required).toContain('movie');
+    expect(result.schema.required).toContain('full_title');
+    expect(result.schema.required).toContain('year');
+    expect(result.schema.required).toContain('imdb_url');
+    expect(result.schema.required).toContain('directors');
+  });
+});
+
+// =============================================================================
 // Export Files Golden Tests
 // =============================================================================
 

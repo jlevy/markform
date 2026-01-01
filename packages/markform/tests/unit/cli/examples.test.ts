@@ -13,6 +13,9 @@ import {
   getAllExamplesWithMetadata,
   getExampleWithMetadata,
   loadExampleMetadata,
+  getExampleOrder,
+  getExamplePath,
+  DEFAULT_EXAMPLE_ID,
 } from '../../../src/cli/examples/exampleRegistry.js';
 
 describe('examples registry', () => {
@@ -116,6 +119,31 @@ describe('examples registry', () => {
 
     it('throws for unknown example', () => {
       expect(() => loadExampleContent('nonexistent')).toThrow('Unknown example: nonexistent');
+    });
+  });
+
+  it('DEFAULT_EXAMPLE_ID is movie-research-demo and valid', () => {
+    expect(DEFAULT_EXAMPLE_ID).toBe('movie-research-demo');
+    expect(getExampleById(DEFAULT_EXAMPLE_ID)).toBeDefined();
+  });
+
+  describe('getExampleOrder', () => {
+    it('returns correct index for all examples, array length for unknown', () => {
+      // All known examples should return their index
+      for (let i = 0; i < EXAMPLE_DEFINITIONS.length; i++) {
+        expect(getExampleOrder(EXAMPLE_DEFINITIONS[i]!.filename)).toBe(i);
+      }
+      // Unknown returns array length (sorts to end)
+      expect(getExampleOrder('unknown.form.md')).toBe(EXAMPLE_DEFINITIONS.length);
+    });
+  });
+
+  describe('getExamplePath', () => {
+    it('returns path for valid ID, throws for unknown', () => {
+      const path = getExamplePath('simple');
+      expect(path).toContain('simple.form.md');
+      expect(path).toContain('/examples/');
+      expect(() => getExamplePath('nonexistent')).toThrow('Unknown example: nonexistent');
     });
   });
 

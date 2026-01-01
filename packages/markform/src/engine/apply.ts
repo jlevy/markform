@@ -116,8 +116,18 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     return typeMismatchError(index, patch.op, field);
   }
 
-  // Additional validation for select/checkbox options and table columns
-  if (patch.op === 'set_single_select' && field.kind === 'single_select') {
+  // Additional validation for container types, select/checkbox options, and table columns
+  if (patch.op === 'set_string_list' && field.kind === 'string_list') {
+    // Validate items is a non-null array
+    if (!Array.isArray(patch.items)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_string_list patch for field "${field.id}": items must be an array of strings`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
+    }
+  } else if (patch.op === 'set_single_select' && field.kind === 'single_select') {
     if (patch.selected !== null) {
       const validOptions = new Set(field.options.map((o) => o.id));
       if (!validOptions.has(patch.selected)) {
@@ -128,6 +138,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
       }
     }
   } else if (patch.op === 'set_multi_select' && field.kind === 'multi_select') {
+    // Validate selected is a non-null array
+    if (!Array.isArray(patch.selected)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_multi_select patch for field "${field.id}": selected must be an array of option IDs`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
+    }
     const validOptions = new Set(field.options.map((o) => o.id));
     for (const optId of patch.selected) {
       if (!validOptions.has(optId)) {
@@ -135,21 +154,52 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
       }
     }
   } else if (patch.op === 'set_checkboxes' && field.kind === 'checkboxes') {
+    // Validate values is a non-null object (not array, string, undefined, null)
+    if (patch.values == null || typeof patch.values !== 'object' || Array.isArray(patch.values)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_checkboxes patch for field "${field.id}": values must be an object mapping option IDs to booleans`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
+    }
     const validOptions = new Set(field.options.map((o) => o.id));
     for (const optId of Object.keys(patch.values)) {
       if (!validOptions.has(optId)) {
         return { patchIndex: index, message: `Invalid option "${optId}" for field "${field.id}"` };
       }
     }
+  } else if (patch.op === 'set_url_list' && field.kind === 'url_list') {
+    // Validate items is a non-null array
+    if (!Array.isArray(patch.items)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_url_list patch for field "${field.id}": items must be an array of URLs`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
+    }
   } else if (patch.op === 'set_table' && field.kind === 'table') {
+    // Validate rows is a non-null array
+    if (!Array.isArray(patch.rows)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_table patch for field "${field.id}": rows must be an array of row objects`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+        columnIds: field.columns.map((c) => c.id),
+      };
+    }
     const validColumns = new Set(field.columns.map((c) => c.id));
-    for (const row of patch.rows ?? []) {
-      for (const colId of Object.keys(row)) {
-        if (!validColumns.has(colId)) {
-          return {
-            patchIndex: index,
-            message: `Invalid column "${colId}" for table field "${field.id}"`,
-          };
+    for (const row of patch.rows) {
+      if (row != null) {
+        for (const colId of Object.keys(row)) {
+          if (!validColumns.has(colId)) {
+            return {
+              patchIndex: index,
+              message: `Invalid column "${colId}" for table field "${field.id}"`,
+            };
+          }
         }
       }
     }
@@ -325,8 +375,10 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
     case 'set_table': {
       const rows: TableRowResponse[] = (patch.rows ?? []).map((patchRow) => {
         const row: TableRowResponse = {};
-        for (const [colId, value] of Object.entries(patchRow)) {
-          row[colId] = patchValueToCell(value);
+        if (patchRow != null) {
+          for (const [colId, value] of Object.entries(patchRow)) {
+            row[colId] = patchValueToCell(value);
+          }
         }
         return row;
       });

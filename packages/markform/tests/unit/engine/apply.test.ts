@@ -926,4 +926,658 @@ Abort reason note.
       expect(form.notes).toHaveLength(1);
     });
   });
+
+  describe('set_date patch', () => {
+    it('applies set_date to date field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="birthday" label="Birthday" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_date', fieldId: 'birthday', value: '1990-05-15' }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.birthday?.value).toEqual({
+        kind: 'date',
+        value: '1990-05-15',
+      });
+    });
+
+    it('rejects set_date on non-date field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_date', fieldId: 'name', value: '1990-05-15' }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+    });
+  });
+
+  describe('set_year patch', () => {
+    it('applies set_year to year field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="year" id="grad_year" label="Graduation Year" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_year', fieldId: 'grad_year', value: 2020 }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.grad_year?.value).toEqual({
+        kind: 'year',
+        value: 2020,
+      });
+    });
+
+    it('rejects set_year on non-year field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="number" id="count" label="Count" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_year', fieldId: 'count', value: 2020 }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+    });
+  });
+
+  describe('set_url patch', () => {
+    it('applies set_url to url field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url" id="website" label="Website" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: 'set_url', fieldId: 'website', value: 'https://example.com' },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.website?.value).toEqual({
+        kind: 'url',
+        value: 'https://example.com',
+      });
+    });
+  });
+
+  describe('set_url_list patch', () => {
+    it('applies set_url_list to url_list field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url_list" id="sources" label="Sources" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: 'set_url_list', fieldId: 'sources', items: ['https://a.com', 'https://b.com'] },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.sources?.value).toEqual({
+        kind: 'url_list',
+        items: ['https://a.com', 'https://b.com'],
+      });
+    });
+  });
+
+  describe('set_table patch', () => {
+    it('applies set_table to table field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] %}
+| Name | Email |
+|------|-------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'contacts',
+          rows: [
+            { name: 'John', email: 'john@test.com' },
+            { name: 'Jane', email: 'jane@test.com' },
+          ],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.contacts?.value;
+      expect(value?.kind).toBe('table');
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(2);
+        expect(value.rows[0]?.name).toEqual({ state: 'answered', value: 'John' });
+        expect(value.rows[0]?.email).toEqual({ state: 'answered', value: 'john@test.com' });
+      }
+    });
+
+    it('handles null cell values as skipped', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: null }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b).toEqual({ state: 'skipped' });
+      }
+    });
+
+    it('handles %SKIP% sentinel in cell values', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%SKIP%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('skipped');
+      }
+    });
+
+    it('handles %SKIP:reason% sentinel with reason', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%SKIP:not available%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('skipped');
+        expect(value.rows[0]?.b?.reason).toBe('not available');
+      }
+    });
+
+    it('handles %ABORT% sentinel in cell values', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%ABORT%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('aborted');
+      }
+    });
+
+    it('handles %ABORT:reason% sentinel with reason', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%ABORT:data error%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('aborted');
+        expect(value.rows[0]?.b?.reason).toBe('data error');
+      }
+    });
+
+    it('handles number cell values', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "count"] %}
+| Name | Count |
+|------|-------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ name: 'item', count: 42 }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.count).toEqual({ state: 'answered', value: 42 });
+      }
+    });
+
+    it('rejects set_table on non-table field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'name',
+          rows: [{ a: 'test' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+    });
+  });
+
+  describe('patch type mismatch errors', () => {
+    // Shared form for type mismatch tests
+    const STRING_FIELD_FORM = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    // Type mismatch cases: [patchOp, patch, expectedError]
+    const TYPE_MISMATCH_CASES: [string, Patch, string][] = [
+      ['set_date', { op: 'set_date', fieldId: 'name', value: '2024-01-15' }, 'set_date to string'],
+      [
+        'set_url_list',
+        { op: 'set_url_list', fieldId: 'name', items: ['https://example.com'] },
+        'set_url_list to string',
+      ],
+      ['set_year', { op: 'set_year', fieldId: 'name', value: 2024 }, 'set_year to string'],
+    ];
+
+    it.each(TYPE_MISMATCH_CASES)('rejects %s on string field', (_, patch, expectedError) => {
+      const form = parseForm(STRING_FIELD_FORM);
+      const result = applyPatches(form, [patch]);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain(expectedError);
+    });
+
+    it('rejects set_table with invalid column', () => {
+      const form = parseForm(`---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name"] %}
+{% column id="name" label="Name" type="string" required=true %}{% /column %}
+{% /field %}
+{% /group %}
+{% /form %}
+`);
+      const result = applyPatches(form, [
+        { op: 'set_table', fieldId: 'data', rows: [{ name: 'valid', invalid_column: 'test' }] },
+      ]);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('Invalid column');
+    });
+  });
+
+  // =============================================================================
+  // Patch Value Validation Matrix
+  // =============================================================================
+  // Tests that invalid patch VALUES (undefined, null, wrong types) are rejected
+  // with descriptive error messages instead of crashing with generic JS errors.
+  // These tests intentionally use `as any` to simulate malformed LLM outputs.
+
+  /* eslint-disable @typescript-eslint/no-unsafe-argument */
+  describe('patch value validation', () => {
+    // Form with all field types for testing
+    const ALL_FIELDS_FORM = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="str" label="String" %}{% /field %}
+{% field kind="number" id="num" label="Number" %}{% /field %}
+{% field kind="checkboxes" id="checks" label="Checkboxes" checkboxMode="simple" %}
+- [ ] Option A {% #a %}
+- [ ] Option B {% #b %}
+{% /field %}
+{% field kind="table" id="tbl" label="Table" columnIds=["col1"] %}
+{% column id="col1" label="Col1" type="string" %}{% /column %}
+{% /field %}
+{% field kind="url" id="url_field" label="URL" %}{% /field %}
+{% field kind="url_list" id="urls" label="URLs" %}{% /field %}
+{% field kind="string_list" id="strs" label="Strings" %}{% /field %}
+{% field kind="single_select" id="sel" label="Select" %}
+- Option 1 {% #opt1 %}
+- Option 2 {% #opt2 %}
+{% /field %}
+{% field kind="multi_select" id="multi" label="Multi" %}
+- Option 1 {% #opt1 %}
+- Option 2 {% #opt2 %}
+{% /field %}
+{% field kind="date" id="date_field" label="Date" %}{% /field %}
+{% field kind="year" id="year_field" label="Year" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    describe('set_checkboxes with invalid values', () => {
+      it('rejects undefined values', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+        expect(result.rejectedPatches[0]?.message).toContain('checks');
+      });
+
+      it('rejects null values', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+      });
+
+      it('rejects array instead of object', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: ['done'] } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+      });
+
+      it('rejects string instead of object', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: 'done' } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+      });
+    });
+
+    describe('set_table with invalid values', () => {
+      it('rejects undefined rows', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_table', fieldId: 'tbl', rows: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_table');
+      });
+
+      it('rejects null rows', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_table', fieldId: 'tbl', rows: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_table');
+      });
+
+      it('rejects object instead of array', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_table', fieldId: 'tbl', rows: { col1: 'value' } } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_table');
+      });
+    });
+
+    describe('set_url_list with invalid values', () => {
+      it('rejects undefined items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_url_list', fieldId: 'urls', items: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_url_list');
+      });
+
+      it('rejects null items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_url_list', fieldId: 'urls', items: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_url_list');
+      });
+    });
+
+    describe('set_string_list with invalid values', () => {
+      it('rejects undefined items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_string_list', fieldId: 'strs', items: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_string_list');
+      });
+
+      it('rejects null items', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_string_list', fieldId: 'strs', items: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_string_list');
+      });
+    });
+
+    describe('set_multi_select with invalid values', () => {
+      it('rejects undefined selected', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_multi_select', fieldId: 'multi', selected: undefined } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_multi_select');
+      });
+
+      it('rejects null selected', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_multi_select', fieldId: 'multi', selected: null } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('set_multi_select');
+      });
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-unsafe-argument */
 });
