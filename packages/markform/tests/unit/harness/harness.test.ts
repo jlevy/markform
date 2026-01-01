@@ -426,6 +426,65 @@ markform:
       expect(result.issues.length).toBeLessThanOrEqual(2);
     });
   });
+
+  describe('option-level issue handling', () => {
+    // Form with checkbox options for testing option-scoped issues
+    const CHECKBOX_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="tasks" %}
+
+{% field kind="checkboxes" id="review_items" label="Review Items" checkboxMode="simple" %}
+- [ ] Code review {% #code_review %}
+- [ ] Documentation {% #docs %}
+- [ ] Testing {% #testing %}
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    it('handles option-scoped issues (checkbox options)', () => {
+      const form = parseForm(CHECKBOX_FORM);
+      const harness = createHarness(form);
+
+      // Step to get initial issues
+      const result = harness.step();
+
+      // Should have checkbox-related issues with option scope
+      // The issues will have refs like "review_items.code_review"
+      expect(result.issues.length).toBeGreaterThan(0);
+    });
+
+    it('processes option refs in the format fieldId.optionId', () => {
+      const form = parseForm(CHECKBOX_FORM);
+      const harness = createHarness(form, { maxFieldsPerTurn: 1 });
+
+      const result = harness.step();
+
+      // When issues are filtered by field, option refs should be handled correctly
+      // The fieldId is extracted from refs like "review_items.code_review"
+      const fieldIds = new Set<string>();
+      for (const issue of result.issues) {
+        if (issue.scope === 'option') {
+          // Option refs are "fieldId.optionId"
+          const dotIndex = issue.ref.indexOf('.');
+          if (dotIndex > 0) {
+            fieldIds.add(issue.ref.slice(0, dotIndex));
+          }
+        } else if (issue.scope === 'field') {
+          fieldIds.add(issue.ref);
+        }
+      }
+      // Should respect maxFieldsPerTurn
+      expect(fieldIds.size).toBeLessThanOrEqual(1);
+    });
+  });
 });
 
 // =============================================================================
@@ -604,6 +663,239 @@ https://github.com/example
       op: 'set_url_list',
       fieldId: 'sources',
       items: ['https://docs.example.com', 'https://github.com/example'],
+    });
+  });
+
+  it('generates patches for date and year fields', async () => {
+    const DATE_FORM_EMPTY = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="dates" %}
+
+{% field kind="date" id="start_date" label="Start Date" required=true %}{% /field %}
+
+{% field kind="year" id="founded_year" label="Founded Year" required=true %}{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    const DATE_FORM_FILLED = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="dates" %}
+
+{% field kind="date" id="start_date" label="Start Date" required=true %}
+\`\`\`value
+2024-06-15
+\`\`\`
+{% /field %}
+
+{% field kind="year" id="founded_year" label="Founded Year" required=true %}
+\`\`\`value
+2020
+\`\`\`
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    const emptyForm = parseForm(DATE_FORM_EMPTY);
+    const filledForm = parseForm(DATE_FORM_FILLED);
+    const agent = createMockAgent(filledForm);
+
+    const issues = [
+      {
+        ref: 'start_date',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
+        priority: 1,
+      },
+      {
+        ref: 'founded_year',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
+        priority: 2,
+      },
+    ];
+
+    const response = await agent.generatePatches(issues, emptyForm, 10);
+
+    expect(response.patches.length).toBe(2);
+    expect(response.patches[0]).toEqual({
+      op: 'set_date',
+      fieldId: 'start_date',
+      value: '2024-06-15',
+    });
+    expect(response.patches[1]).toEqual({
+      op: 'set_year',
+      fieldId: 'founded_year',
+      value: 2020,
+    });
+  });
+
+  it('generates patches for single_select fields', async () => {
+    const SELECT_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="choices" %}
+
+{% field kind="single_select" id="priority" label="Priority" required=true %}
+- ( ) High {% #high %}
+- ( ) Medium {% #medium %}
+- ( ) Low {% #low %}
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    const emptyForm = parseForm(SELECT_FORM);
+    const filledForm = parseForm(SELECT_FORM);
+    // Set the response programmatically like the mockAgent.test.ts does
+    filledForm.responsesByFieldId.priority = {
+      state: 'answered',
+      value: { kind: 'single_select', selected: 'high' },
+    };
+    const agent = createMockAgent(filledForm);
+
+    const issues = [
+      {
+        ref: 'priority',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
+        priority: 1,
+      },
+    ];
+
+    const response = await agent.generatePatches(issues, emptyForm, 10);
+
+    expect(response.patches.length).toBe(1);
+    expect(response.patches[0]).toEqual({
+      op: 'set_single_select',
+      fieldId: 'priority',
+      selected: 'high',
+    });
+  });
+
+  it('generates patches for checkboxes fields', async () => {
+    const CHECKBOX_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="tasks" %}
+
+{% field kind="checkboxes" id="items" label="Review Items" checkboxMode="simple" %}
+- [ ] Task A {% #task_a %}
+- [ ] Task B {% #task_b %}
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    const emptyForm = parseForm(CHECKBOX_FORM);
+    const filledForm = parseForm(CHECKBOX_FORM);
+    // Set the response programmatically
+    filledForm.responsesByFieldId.items = {
+      state: 'answered',
+      value: { kind: 'checkboxes', values: { task_a: 'done', task_b: 'done' } },
+    };
+    const agent = createMockAgent(filledForm);
+
+    const issues = [
+      {
+        ref: 'items',
+        scope: 'field' as const,
+        reason: 'checkbox_incomplete' as const,
+        message: 'Checkboxes incomplete',
+        severity: 'recommended' as const,
+        priority: 3,
+      },
+    ];
+
+    const response = await agent.generatePatches(issues, emptyForm, 10);
+
+    expect(response.patches.length).toBe(1);
+    expect(response.patches[0]?.op).toBe('set_checkboxes');
+    if (response.patches[0]?.op === 'set_checkboxes') {
+      expect(response.patches[0].values).toEqual({
+        task_a: 'done',
+        task_b: 'done',
+      });
+    }
+  });
+
+  it('generates patches for string_list fields', async () => {
+    const LIST_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="data" %}
+
+{% field kind="string_list" id="tags" label="Tags" required=true %}{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    const emptyForm = parseForm(LIST_FORM);
+    const filledForm = parseForm(LIST_FORM);
+    // Set the response programmatically
+    filledForm.responsesByFieldId.tags = {
+      state: 'answered',
+      value: { kind: 'string_list', items: ['feature', 'enhancement', 'priority'] },
+    };
+    const agent = createMockAgent(filledForm);
+
+    const issues = [
+      {
+        ref: 'tags',
+        scope: 'field' as const,
+        reason: 'required_missing' as const,
+        message: 'Required field is empty',
+        severity: 'required' as const,
+        priority: 1,
+      },
+    ];
+
+    const response = await agent.generatePatches(issues, emptyForm, 10);
+
+    expect(response.patches.length).toBe(1);
+    expect(response.patches[0]).toEqual({
+      op: 'set_string_list',
+      fieldId: 'tags',
+      items: ['feature', 'enhancement', 'priority'],
     });
   });
 });

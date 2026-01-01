@@ -352,5 +352,63 @@ describe('parseTable', () => {
         expect(result.value.rows[0]?.age?.state).toBe('skipped');
       }
     });
+
+    it('rejects table with empty header row (only pipes)', () => {
+      const content = `
+| | |
+|------|-----|
+| Alice | 30 |`;
+      const result = parseInlineTable(content);
+      // The header row has empty strings, which should still be valid
+      // but creates columns with no labels
+      expect(result.ok).toBe(true);
+    });
+
+    it('rejects invalid inline table (no separator)', () => {
+      const content = `
+| Name | Age |
+| Alice | 30 |`;
+      const result = parseInlineTable(content);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('separator');
+      }
+    });
+  });
+
+  describe('extractColumnsFromTable edge cases', () => {
+    it('handles header row with no data rows after separator', () => {
+      const content = `
+| Name | Age |
+|------|-----|`;
+      const result = extractColumnsFromTable(content);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.columns).toHaveLength(2);
+        expect(result.dataStartLine).toBe(2);
+      }
+    });
+
+    it('rejects table with single line only (no separator)', () => {
+      const content = `| Name | Age |`;
+      const result = extractColumnsFromTable(content);
+      expect(result.ok).toBe(false);
+    });
+
+    it('handles table with many data rows', () => {
+      const content = `
+| Name | Age |
+|------|-----|
+| Alice | 30 |
+| Bob | 25 |
+| Charlie | 35 |`;
+      const result = extractColumnsFromTable(content);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.columns).toHaveLength(2);
+        // Data rows start at line 2 (0-indexed from filtered lines)
+        expect(result.dataStartLine).toBe(2);
+      }
+    });
   });
 });

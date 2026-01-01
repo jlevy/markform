@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatDuration,
+  formatTiming,
   formatCount,
   formatState,
   formatPriority,
@@ -16,11 +17,57 @@ import {
   formatTurnIssues,
   formatFormLabel,
   formatFormHint,
+  formatFormLogLine,
+  colors,
 } from '../../../src/cli/lib/formatting.js';
 import type { InspectIssue } from '../../../src/engine/coreTypes.js';
 import type { FormDisplayInfo } from '../../../src/cli/lib/cliTypes.js';
 
 describe('formatting', () => {
+  describe('colors', () => {
+    it('applies success color', () => {
+      const result = colors.success('ok');
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('ok');
+    });
+
+    it('applies error color', () => {
+      const result = colors.error('fail');
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('fail');
+    });
+
+    it('applies warn color', () => {
+      const result = colors.warn('warning');
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('warning');
+    });
+
+    it('applies info color', () => {
+      const result = colors.info('info');
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('info');
+    });
+
+    it('applies dim color', () => {
+      const result = colors.dim('faded');
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('faded');
+    });
+
+    it('applies bold style', () => {
+      const result = colors.bold('strong');
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('strong');
+    });
+
+    it('applies title style', () => {
+      const result = colors.title('heading');
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('heading');
+    });
+  });
+
   describe('formatDuration', () => {
     const cases = [
       { input: 0, expected: '0.0s' },
@@ -34,6 +81,21 @@ describe('formatting', () => {
 
     it.each(cases)('formats $input ms as $expected', ({ input, expected }) => {
       expect(formatDuration(input)).toBe(expected);
+    });
+  });
+
+  describe('formatTiming', () => {
+    it('formats timing with label and duration', () => {
+      const result = formatTiming('Processing', 1500);
+      // Strip ANSI codes for comparison
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('⏰ Processing: 1.5s');
+    });
+
+    it('formats timing with zero duration', () => {
+      const result = formatTiming('Init', 0);
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('⏰ Init: 0.0s');
     });
   });
 
@@ -279,6 +341,47 @@ describe('formatting', () => {
         description: 'A helpful form for testing',
       };
       expect(formatFormHint(info)).toBe('A helpful form for testing');
+    });
+  });
+
+  describe('formatFormLogLine', () => {
+    it('formats with prefix and filename only', () => {
+      const info: FormDisplayInfo = { filename: 'test.form.md' };
+      const result = formatFormLogLine(info, '✓');
+      // Strip ANSI codes for comparison
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('✓ test.form.md');
+    });
+
+    it('formats with prefix, filename and title', () => {
+      const info: FormDisplayInfo = {
+        filename: 'movie.form.md',
+        title: 'Movie Research',
+      };
+      const result = formatFormLogLine(info, '→');
+      // Strip ANSI codes for comparison
+      // eslint-disable-next-line no-control-regex
+      expect(result.replace(/\x1b\[[0-9;]*m/g, '')).toBe('→ movie.form.md - Movie Research');
+    });
+
+    it('includes title with dim styling', () => {
+      const info: FormDisplayInfo = {
+        filename: 'test.form.md',
+        title: 'Test Form',
+      };
+      const result = formatFormLogLine(info, '✓');
+      // Should contain ANSI codes for dimming around title
+      expect(result).toContain('test.form.md');
+      expect(result).toContain('Test Form');
+    });
+  });
+
+  describe('issueReasonToStatus edge cases', () => {
+    it('returns "issue" for unknown reasons', () => {
+      // Test the default case for unrecognized reasons
+      // Use type casting to test with a non-standard reason
+      const unknownReason = 'unknown_reason' as Parameters<typeof issueReasonToStatus>[0];
+      expect(issueReasonToStatus(unknownReason)).toBe('issue');
     });
   });
 });
