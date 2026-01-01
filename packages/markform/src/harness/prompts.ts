@@ -77,10 +77,10 @@ export const ISSUES_HEADER = '# Current Form Issues';
 
 /**
  * Template for the issues intro text.
- * @param maxPatches - Maximum number of patches to generate
+ * @param issueCount - Actual number of issues shown
  */
-export function getIssuesIntro(maxPatches: number): string {
-  return `You need to address up to ${maxPatches} issues. Here are the current issues:`;
+export function getIssuesIntro(issueCount: number): string {
+  return `You need to address ${issueCount} issue${issueCount === 1 ? '' : 's'}. Here are the current issues:`;
 }
 
 /**

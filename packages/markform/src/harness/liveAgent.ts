@@ -478,7 +478,7 @@ function buildContextPrompt(
   // List remaining issues
   lines.push(ISSUES_HEADER);
   lines.push('');
-  lines.push(getIssuesIntro(maxPatches));
+  lines.push(getIssuesIntro(issues.length));
   lines.push('');
 
   for (const issue of issues) {
