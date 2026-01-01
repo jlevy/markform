@@ -70,7 +70,7 @@ turns:
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
-        Always use the generatePatches tool to submit your field values.
+        Always use the fill_form tool to submit your field values.
 
 
         # Instructions for agent role
@@ -136,7 +136,7 @@ turns:
 
         # General Instructions
 
-        Use the generatePatches tool to submit patches for the fields above.
+        Use the fill_form tool to submit patches for the fields above.
         For table fields, each row is an object with column ID keys.
     wire:
       request:
@@ -160,7 +160,7 @@ turns:
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
-          Always use the generatePatches tool to submit your field values.
+          Always use the fill_form tool to submit your field values.
 
 
           # Instructions for agent role
@@ -226,11 +226,11 @@ turns:
 
           # General Instructions
 
-          Use the generatePatches tool to submit patches for the fields above.
+          Use the fill_form tool to submit patches for the fields above.
           For table fields, each row is an object with column ID keys.
         tools:
-          generatePatches:
-            description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
+          fill_form:
+            description: Fill form fields by submitting patches. Each patch sets a value for one field. Use the field IDs from the issues list. Return patches for all issues you can address.
             input_schema:
               $defs:
                 patch:
@@ -247,7 +247,7 @@ turns:
       response:
         steps:
           - tool_calls:
-              - tool_name: generatePatches
+              - tool_name: fill_form
                 input:
                   patches:
                     - field_id: ratings
@@ -316,7 +316,7 @@ turns:
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
-        Always use the generatePatches tool to submit your field values.
+        Always use the fill_form tool to submit your field values.
 
 
         # Instructions for agent role
@@ -390,7 +390,7 @@ turns:
 
         # General Instructions
 
-        Use the generatePatches tool to submit patches for the fields above.
+        Use the fill_form tool to submit patches for the fields above.
         For table fields, each row is an object with column ID keys.
     wire:
       request:
@@ -414,7 +414,7 @@ turns:
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
-          Always use the generatePatches tool to submit your field values.
+          Always use the fill_form tool to submit your field values.
 
 
           # Instructions for agent role
@@ -488,11 +488,11 @@ turns:
 
           # General Instructions
 
-          Use the generatePatches tool to submit patches for the fields above.
+          Use the fill_form tool to submit patches for the fields above.
           For table fields, each row is an object with column ID keys.
         tools:
-          generatePatches:
-            description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
+          fill_form:
+            description: Fill form fields by submitting patches. Each patch sets a value for one field. Use the field IDs from the issues list. Return patches for all issues you can address.
             input_schema:
               $defs:
                 patch:
@@ -509,7 +509,7 @@ turns:
       response:
         steps:
           - tool_calls:
-              - tool_name: generatePatches
+              - tool_name: fill_form
                 input:
                   patches:
                     - field_id: ratings

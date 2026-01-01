@@ -36,13 +36,13 @@ import type {
 import {
   DEFAULT_SYSTEM_PROMPT,
   WEB_SEARCH_INSTRUCTIONS,
-  GENERATE_PATCHES_TOOL_DESCRIPTION,
   ISSUES_HEADER,
   getIssuesIntro,
   GENERAL_INSTRUCTIONS,
   SECTION_HEADERS,
   getPatchFormatHint,
 } from './prompts.js';
+import { FILL_FORM_TOOL_NAME, FILL_FORM_TOOL_DESCRIPTION } from './toolApi.js';
 
 // Re-export types for backwards compatibility
 export type { LiveAgentConfig } from './harnessTypes.js';
@@ -86,7 +86,7 @@ export class LiveAgent implements Agent {
    * Useful for logging what capabilities the agent has.
    */
   getAvailableToolNames(): string[] {
-    const tools = ['generatePatches'];
+    const tools = [FILL_FORM_TOOL_NAME];
     if (this.webSearchTools) {
       tools.push(...Object.keys(this.webSearchTools));
     }
@@ -97,7 +97,7 @@ export class LiveAgent implements Agent {
   }
 
   /**
-   * Generate patches using the LLM.
+   * Invoke the fill_form tool using the LLM.
    *
    * Each call is stateless - the full form context is provided fresh each turn.
    * The form itself carries all state (filled values, remaining issues).
@@ -108,7 +108,7 @@ export class LiveAgent implements Agent {
    * @param maxPatches - Maximum patches to generate
    * @param previousRejections - Rejections from previous turn (helps LLM learn from mistakes)
    */
-  async generatePatches(
+  async fillFormTool(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number,
@@ -144,14 +144,14 @@ export class LiveAgent implements Agent {
     });
 
     // Create tool using zodSchema wrapper for AI SDK v6 compatibility
-    const generatePatchesTool: Tool = {
-      description: GENERATE_PATCHES_TOOL_DESCRIPTION,
+    const fillFormToolDef: Tool = {
+      description: FILL_FORM_TOOL_DESCRIPTION,
       inputSchema: zodSchema(patchesSchema),
     };
 
     // Combine all tools (custom tools win on name collision)
     const rawTools: Record<string, Tool> = {
-      generatePatches: generatePatchesTool,
+      [FILL_FORM_TOOL_NAME]: fillFormToolDef,
       ...this.webSearchTools,
       ...this.additionalTools,
     };
@@ -203,8 +203,8 @@ export class LiveAgent implements Agent {
         const count = toolCallCounts.get(toolCall.toolName) ?? 0;
         toolCallCounts.set(toolCall.toolName, count + 1);
 
-        // Extract patches from generatePatches calls
-        if (toolCall.toolName === 'generatePatches' && 'input' in toolCall) {
+        // Extract patches from fill_form calls
+        if (toolCall.toolName === FILL_FORM_TOOL_NAME && 'input' in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
           patches.push(...input.patches);
         }
@@ -724,12 +724,12 @@ export function buildMockWireFormat(
   const systemPrompt = buildSystemPrompt(form, targetRole, issues);
   const contextPrompt = buildContextPrompt(issues, form, maxPatches, previousRejections);
 
-  // Build tool schema for generatePatches
+  // Build tool schema for fill_form
   // Note: Using lowercase 'patch' in $defs to avoid case conversion issues in YAML serialization
   // (uppercase 'Patch' would become '_patch' in snake_case, breaking the $ref)
   const tools: Record<string, { description: string; inputSchema: unknown }> = {
-    generatePatches: {
-      description: GENERATE_PATCHES_TOOL_DESCRIPTION,
+    [FILL_FORM_TOOL_NAME]: {
+      description: FILL_FORM_TOOL_DESCRIPTION,
       inputSchema: sortObjectKeys({
         type: 'object',
         properties: {
@@ -752,7 +752,7 @@ export function buildMockWireFormat(
     {
       toolCalls: [
         {
-          toolName: 'generatePatches',
+          toolName: FILL_FORM_TOOL_NAME,
           input: sortObjectKeys({ patches }),
         },
       ],

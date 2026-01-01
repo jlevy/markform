@@ -184,37 +184,37 @@ In `prompts.ts`, update:
 
 ### Phase 1: Create toolApi.ts and Update Core
 
-- [ ] Create `src/harness/toolApi.ts` with constants
+- [x] Create `src/harness/toolApi.ts` with constants
 
-- [ ] Update `harnessTypes.ts`: rename `generatePatches` → `fillFormTool` in Agent
+- [x] Update `harnessTypes.ts`: rename `generatePatches` → `fillFormTool` in Agent
   interface
 
-- [ ] Update `prompts.ts`: import from toolApi, update prompt text
+- [x] Update `prompts.ts`: import from toolApi, update prompt text
 
-- [ ] Update `liveAgent.ts`: import from toolApi, rename method to `fillFormTool`,
+- [x] Update `liveAgent.ts`: import from toolApi, rename method to `fillFormTool`,
   register tool as `fill_form`
 
-- [ ] Update `mockAgent.ts` and `rejectionMockAgent.ts`: rename methods to
+- [x] Update `mockAgent.ts` and `rejectionMockAgent.ts`: rename methods to
   `fillFormTool`
 
-- [ ] Run `npm test` — expect failures in tests (not updated yet)
+- [x] Run `npm test` — expect failures in tests (not updated yet)
 
 ### Phase 2: Update Consumers and Tests
 
-- [ ] Update `programmaticFill.ts`, `runResearch.ts`, `fill.ts`, `shared.ts` to call
+- [x] Update `programmaticFill.ts`, `runResearch.ts`, `fill.ts`, `shared.ts` to call
   `agent.fillFormTool()`
 
-- [ ] Update `regen-golden-sessions.ts`
+- [x] Update `regen-golden-sessions.ts`
 
-- [ ] Update all test files
+- [x] Update all test files
 
-- [ ] Run `npm test` — should pass
+- [x] Run `npm test` — should pass
 
 ### Phase 3: Update Documentation
 
-- [ ] Update `arch-markform-design.md` diagrams and text
+- [x] Update `arch-markform-design.md` diagrams and text
 
-- [ ] Verify no stray references: `grep -r "generatePatches" packages/markform/`
+- [x] Verify no stray references: `grep -r "generatePatches" packages/markform/`
 
 ## Stage 4: Validation Stage
 

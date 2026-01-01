@@ -571,12 +571,12 @@ Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 
 - No conversation history is accumulated between turns
 
-- Define a `generatePatches` tool using AI SDK `tool({ inputSchema: zod })`
+- Define a `fill_form` tool using AI SDK `tool({ inputSchema: zod })`
 
-- Control multi-step behavior with `stopWhen: stepCountIs(k)` for “1–3 tool calls per
-  turn” (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
+- Control multi-step behavior with `stopWhen: stepCountIs(k)` for "1–3 tool calls per
+  turn" (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
 
-- Agent analyzes form state and issues, then calls `generatePatches` with patches
+- Agent analyzes form state and issues, then calls `fill_form` with patches
 
 - Harness applies patches, revalidates, serializes updated form
 
@@ -600,7 +600,7 @@ sequenceDiagram
         H->>L: 2. Provide context prompt<br/>(form markdown + remaining issues)
 
         L->>L: 3. Analyze context
-        L->>H: Call generatePatches tool<br/>(array of Patch objects)
+        L->>H: Call fill_form tool<br/>(array of Patch objects)
 
         H->>F: 4. Apply patches to form
         F-->>H: Updated values, revalidated, new progress
@@ -626,7 +626,7 @@ sequenceDiagram
 │   2. Harness provides context prompt                                       |
 │      └─► Form markdown + remaining issues (like `inspect` output)          |
 │                                                                            |
-│   3. LLM analyzes context, calls generatePatches tool                      |
+│   3. LLM analyzes context, calls fill_form tool                            |
 │      └─► Returns array of Patch objects                                    |
 │                                                                            |
 │   4. Harness applies patches to form                                       |

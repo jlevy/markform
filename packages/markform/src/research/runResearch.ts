@@ -93,7 +93,7 @@ export async function runResearch(
 
   while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
     // Generate patches from agent
-    const response = await agent.generatePatches(
+    const response = await agent.fillFormTool(
       stepResult.issues,
       harness.getForm(),
       config.maxPatchesPerTurn,

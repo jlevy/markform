@@ -219,7 +219,7 @@ if (options.callbacks?.onIssuesIdentified) {
   } catch { /* ignore */ }
 }
 
-// ... agent.generatePatches() ...
+// ... agent.fillFormTool() ...
 
 // Call onPatchesGenerated (new)
 if (options.callbacks?.onPatchesGenerated) {

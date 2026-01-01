@@ -46,7 +46,7 @@ const mockCustomTool = {
 
 describe('LiveAgent', () => {
   describe('getAvailableToolNames', () => {
-    it('returns generatePatches as base tool', () => {
+    it('returns fill_form as base tool', () => {
       const config: LiveAgentConfig = {
         model: mockModel as any,
         enableWebSearch: false,
@@ -55,7 +55,7 @@ describe('LiveAgent', () => {
 
       const toolNames = agent.getAvailableToolNames();
 
-      expect(toolNames).toContain('generatePatches');
+      expect(toolNames).toContain('fill_form');
     });
 
     it('includes custom tools from additionalTools', () => {
@@ -71,7 +71,7 @@ describe('LiveAgent', () => {
 
       const toolNames = agent.getAvailableToolNames();
 
-      expect(toolNames).toContain('generatePatches');
+      expect(toolNames).toContain('fill_form');
       expect(toolNames).toContain('custom_search');
       expect(toolNames).toContain('lookup_data');
     });
@@ -118,7 +118,7 @@ describe('LiveAgent', () => {
 
       const toolNames = agent.getAvailableToolNames();
 
-      expect(toolNames).toEqual(['generatePatches']);
+      expect(toolNames).toEqual(['fill_form']);
     });
 
     it('handles undefined additionalTools gracefully', () => {
@@ -130,7 +130,7 @@ describe('LiveAgent', () => {
 
       const toolNames = agent.getAvailableToolNames();
 
-      expect(toolNames).toEqual(['generatePatches']);
+      expect(toolNames).toEqual(['fill_form']);
     });
   });
 });
