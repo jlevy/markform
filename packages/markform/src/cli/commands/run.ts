@@ -360,6 +360,7 @@ async function runAgentFillWorkflow(
     targetRoles: [AGENT_ROLE],
     fillMode: overwrite ? 'overwrite' : 'continue',
     enableWebSearch: isResearch,
+    captureWireFormat: false,
     callbacks,
   });
 

@@ -1070,4 +1070,507 @@ John
       expect(result.issues).toHaveLength(0);
     });
   });
+
+  describe('date field validation', () => {
+    it('validates required date field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="birthday" label="Birthday" required=true %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.ref).toBe('birthday');
+      expect(result.issues[0]?.message).toContain('empty');
+    });
+
+    it('passes when required date field has valid value', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="birthday" label="Birthday" required=true %}
+\`\`\`value
+1990-05-15
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it('rejects invalid date format', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="birthday" label="Birthday" %}
+\`\`\`value
+15/05/1990
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain('not a valid date');
+    });
+
+    it('rejects invalid date like Feb 30', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="date" label="Date" %}
+\`\`\`value
+2024-02-30
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain('not a valid date');
+    });
+
+    it('validates min date constraint', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="start" label="Start Date" min="2024-01-01" %}
+\`\`\`value
+2023-12-31
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain('on or after 2024-01-01');
+    });
+
+    it('validates max date constraint', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="end" label="End Date" max="2024-12-31" %}
+\`\`\`value
+2025-01-01
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain('on or before 2024-12-31');
+    });
+
+    it('passes when date is within min/max range', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="date" label="Date" min="2024-01-01" max="2024-12-31" %}
+\`\`\`value
+2024-06-15
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('year field validation', () => {
+    it('validates required year field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="year" id="grad_year" label="Graduation Year" required=true %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.ref).toBe('grad_year');
+    });
+
+    it('validates min year constraint', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="year" id="year" label="Year" min=2000 %}
+\`\`\`value
+1999
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain('at least 2000');
+    });
+
+    it('validates max year constraint', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="year" id="year" label="Year" max=2030 %}
+\`\`\`value
+2031
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain('at most 2030');
+    });
+
+    it('passes when year is within min/max range', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="year" id="year" label="Year" min=2000 max=2030 %}
+\`\`\`value
+2020
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('table field validation', () => {
+    it('validates required table field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] required=true %}
+| Name | Email |
+|------|-------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.ref).toBe('contacts');
+      // Required table with no rows shows "is empty" message
+      expect(result.issues[0]?.message).toContain('empty');
+    });
+
+    it('validates minRows constraint', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] minRows=2 %}
+| Name | Email |
+|------|-------|
+| John | john@test.com |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      // Message uses "(s)" for plural
+      expect(result.issues[0]?.message).toContain('at least 2 row');
+    });
+
+    it('validates maxRows constraint', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] maxRows=1 %}
+| Name | Email |
+|------|-------|
+| John | john@test.com |
+| Jane | jane@test.com |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      // Message uses "(s)" for plural
+      expect(result.issues[0]?.message).toContain('at most 1 row');
+    });
+
+    it('passes validation for valid table data', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] %}
+| Name | Email |
+|------|-------|
+| John | john@test.com |
+| Jane | jane@test.com |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  describe('group validators', () => {
+    it('runs group-level validators from registry', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" validate="groupCheck" %}
+{% field kind="number" id="min" label="Min" %}
+\`\`\`value
+10
+\`\`\`
+{% /field %}
+{% field kind="number" id="max" label="Max" %}
+\`\`\`value
+5
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const registry: ValidatorRegistry = {
+        groupCheck: (ctx) => {
+          const min = ctx.values.min as { kind: 'number'; value: number } | undefined;
+          const max = ctx.values.max as { kind: 'number'; value: number } | undefined;
+          if (min && max && min.value > max.value) {
+            return [
+              {
+                severity: 'error',
+                message: 'Min must be less than max',
+                ref: ctx.targetId,
+                source: 'code',
+              },
+            ];
+          }
+          return [];
+        },
+      };
+
+      const result = validate(form, { validatorRegistry: registry });
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some((i) => i.message === 'Min must be less than max')).toBe(true);
+    });
+
+    it('reports missing group validators', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" validate="missingGroupValidator" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form, { validatorRegistry: {} });
+
+      expect(result.issues.some((i) => i.message.includes('not found'))).toBe(true);
+      expect(result.issues.some((i) => i.message.includes('missingGroupValidator'))).toBe(true);
+    });
+
+    it('handles validator that throws error', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" validate="throwingValidator" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const registry: ValidatorRegistry = {
+        throwingValidator: () => {
+          throw new Error('Validator crashed');
+        },
+      };
+
+      const result = validate(form, { validatorRegistry: registry });
+
+      expect(result.issues.some((i) => i.message.includes('threw an error'))).toBe(true);
+      expect(result.issues.some((i) => i.message.includes('Validator crashed'))).toBe(true);
+    });
+
+    it('supports multiple validators on a group', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" validate=["validator1", "validator2"] %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const registry: ValidatorRegistry = {
+        validator1: () => [
+          { severity: 'warning', message: 'From validator1', ref: 'g1', source: 'code' },
+        ],
+        validator2: () => [
+          { severity: 'warning', message: 'From validator2', ref: 'g1', source: 'code' },
+        ],
+      };
+
+      const result = validate(form, { validatorRegistry: registry });
+
+      expect(result.issues.some((i) => i.message === 'From validator1')).toBe(true);
+      expect(result.issues.some((i) => i.message === 'From validator2')).toBe(true);
+    });
+  });
 });

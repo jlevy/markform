@@ -310,6 +310,20 @@ export interface FillOptions {
    * When provided, model is ignored and this agent is used instead.
    */
   _testAgent?: Agent;
+
+  /**
+   * Capture wire format (full LLM request/response) in session logs.
+   *
+   * Wire format includes complete system prompts, context prompts, tool schemas,
+   * and LLM responses. This is useful for:
+   * - Golden tests requiring exact prompt matching
+   * - Debugging prompt issues
+   * - LLM regression testing
+   *
+   * **Warning**: Wire format significantly increases session file size (~2000+ lines
+   * per multi-turn session). Set to false for production use.
+   */
+  captureWireFormat: boolean;
 }
 
 /**
