@@ -458,10 +458,8 @@ flowchart LR
 ```bash
 # Copy all bundled examples to ./forms/
 markform examples
-
 # List available examples
 markform examples --list
-
 # Copy a specific example
 markform examples --name movie-research-demo
 ```
@@ -471,7 +469,6 @@ markform examples --name movie-research-demo
 ```bash
 # Browse forms in ./forms/ and run one interactively
 markform run
-
 # Run a specific form directly
 markform run forms/movie-research-demo.form.md
 ```
@@ -488,7 +485,6 @@ markform status my-form.form.md
 ```bash
 # View form structure, progress, and validation issues
 markform inspect my-form.form.md
-
 # Output as JSON
 markform inspect my-form.form.md --format=json
 ```
@@ -498,10 +494,8 @@ markform inspect my-form.form.md --format=json
 ```bash
 # Interactive mode: fill user-role fields via prompts
 markform fill my-form.form.md --interactive
-
 # Agent mode: use an LLM to fill agent-role fields
 markform fill my-form.form.md --model=anthropic/claude-sonnet-4-5
-
 # Mock agent for testing (uses pre-filled form as source)
 markform fill my-form.form.md --mock --mock-source filled.form.md
 ```
@@ -511,13 +505,10 @@ markform fill my-form.form.md --mock --mock-source filled.form.md
 ```bash
 # Export as readable markdown (strips Markdoc tags)
 markform export my-form.form.md --format=markdown
-
 # Export values as JSON
 markform export my-form.form.md --format=json
-
 # Export values as YAML
 markform export my-form.form.md --format=yaml
-
 # Dump just the current values
 markform dump my-form.form.md
 ```
@@ -527,10 +518,8 @@ markform dump my-form.form.md
 ```bash
 # Export form structure as JSON Schema (for validation, code generation, etc.)
 markform schema my-form.form.md
-
 # Pure JSON Schema without Markform extensions
 markform schema my-form.form.md --pure
-
 # Specify JSON Schema draft version
 markform schema my-form.form.md --draft draft-07
 ```
@@ -554,19 +543,14 @@ markform serve my-form.form.md
 ```bash
 # Quick reference for writing forms (agent-friendly)
 markform docs
-
 # Full specification
 markform spec
-
 # TypeScript and AI SDK API documentation
 markform apis
-
 # This README
 markform readme
-
 # See supported AI providers and example models
 markform models
-
 # See all commands
 markform --help
 ```
@@ -787,12 +771,12 @@ The closest alternatives are:
 
 | Approach | Usable GUI editor | Human-readable source format | Agent-editable | APIs and validation rules |
 | --- | :---: | :---: | :---: | :---: |
-| Plain Markdown | ✅ IDEs/editors | ✅ | ⚠️ fragile | ❌ |
-| JSON + JSON Schema | ✅ IDEs/editors | ⚠️ no free text | ✅ | ✅ |
-| SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️ rarely | ⚠️ sometimes | ⚠️ sometimes |
-| HTML/web Forms | ✅ IDEs/editors | ⚠️ HTML+code | ⚠️ coding agent | ✅ |
-| Excel/Google Sheets | ✅ app | ❌ .csv/.xlsx | ⚠️ with tools | ✅ with some coding |
-| **Markform** | ✅ IDEs/editors | ✅ | ✅ with this package | ✅ with this package |
+| Plain Markdown | ✅<br>IDEs/editors | ✅ | ⚠️<br>fragile | ❌ |
+| JSON + JSON Schema | ✅<br>IDEs/editors | ⚠️<br>no free text | ✅ | ✅ |
+| SaaS tools (Typeform, Docusign, PDF forms) | ✅ | ⚠️<br>rarely | ⚠️<br>sometimes | ⚠️<br>sometimes |
+| HTML/web Forms | ✅<br>IDEs/editors | ⚠️<br>HTML+code | ⚠️<br>coding agent | ✅ |
+| Excel/Google Sheets | ✅<br>app | ❌<br>.csv/.xlsx | ⚠️<br>with tools | ✅<br>with some coding |
+| **Markform** | ✅<br>IDEs/editors | ✅ | ✅<br>with this package | ✅<br>with this package |
 
 ### What are example use cases?
 
