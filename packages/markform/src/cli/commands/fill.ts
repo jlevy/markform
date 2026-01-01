@@ -19,13 +19,16 @@ import type {
   FillMode,
   HarnessConfig,
   MockMode,
+  PatchRejection,
   SessionFinal,
   SessionTranscript,
+  SessionTurnContext,
   SessionTurnStats,
+  WireFormat,
 } from '../../engine/coreTypes.js';
 import { createHarness } from '../../harness/harness.js';
 import { resolveHarnessConfig } from '../../harness/harnessConfigResolver.js';
-import { createLiveAgent } from '../../harness/liveAgent.js';
+import { createLiveAgent, buildMockWireFormat } from '../../harness/liveAgent.js';
 import { createMockAgent } from '../../harness/mockAgent.js';
 import {
   DEFAULT_MAX_ISSUES_PER_TURN,
@@ -351,6 +354,7 @@ export function registerFillCommand(program: Command): void {
           let mockPath: string | undefined;
           let agentProvider: string | undefined;
           let agentModelName: string | undefined;
+          let targetRole: string = AGENT_ROLE; // Track for mock wire format
 
           // Mutable spinner reference for tool callbacks (updated each turn)
           // Using explicit type to avoid narrowing issues in closures
@@ -399,12 +403,12 @@ export function registerFillCommand(program: Command): void {
             );
 
             // Pass first target role to agent (for instruction lookup)
-            const primaryRole = targetRoles[0] === '*' ? AGENT_ROLE : targetRoles[0];
+            targetRole = targetRoles[0] === '*' ? AGENT_ROLE : (targetRoles[0] ?? AGENT_ROLE);
             const liveAgent = createLiveAgent({
               model,
               provider,
               systemPromptAddition: systemPrompt,
-              targetRole: primaryRole,
+              targetRole,
               enableWebSearch: true,
               callbacks,
             });
@@ -432,6 +436,8 @@ export function registerFillCommand(program: Command): void {
 
           // Run harness loop
           let stepResult = harness.step();
+          // Track rejections for wire format context (helps LLM learn from mistakes)
+          let previousRejections: PatchRejection[] | undefined;
           logInfo(
             ctx,
             `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
@@ -524,16 +530,46 @@ export function registerFillCommand(program: Command): void {
 
             // Convert TurnStats to SessionTurnStats for session logging
             let llmStats: SessionTurnStats | undefined;
+            let context: SessionTurnContext | undefined;
+            let wire: WireFormat | undefined;
+
             if (stats) {
+              // Live agent - use stats from LLM call
               llmStats = {
                 inputTokens: stats.inputTokens,
                 outputTokens: stats.outputTokens,
                 toolCalls: stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
               };
+              // Get context and wire from live agent stats
+              if (stats.prompts) {
+                context = {
+                  systemPrompt: stats.prompts.system,
+                  contextPrompt: stats.prompts.context,
+                };
+              }
+              wire = stats.wire;
+            } else if (options.mock) {
+              // Mock agent - build wire format for session logging
+              wire = buildMockWireFormat(
+                harness.getForm(),
+                stepResult.issues,
+                patches,
+                harnessConfig.maxPatchesPerTurn,
+                targetRole,
+                previousRejections,
+              );
+              // Extract context from wire for convenience
+              context = {
+                systemPrompt: wire.request.system,
+                contextPrompt: wire.request.prompt,
+              };
             }
 
-            // Apply patches
-            stepResult = harness.apply(patches, stepResult.issues, llmStats);
+            // Apply patches (with wire format for comprehensive session logging)
+            stepResult = harness.apply(patches, stepResult.issues, llmStats, context, wire);
+
+            // Track rejections for next turn's wire format context
+            previousRejections = stepResult.rejectedPatches;
 
             if (stepResult.isComplete) {
               logInfo(ctx, pc.green(`  ✓ Complete`));

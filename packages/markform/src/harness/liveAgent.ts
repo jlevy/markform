@@ -19,6 +19,8 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  WireFormat,
+  WireResponseStep,
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 import { serialize } from '../engine/serialize.js';
@@ -37,7 +39,7 @@ import {
   GENERATE_PATCHES_TOOL_DESCRIPTION,
   ISSUES_HEADER,
   getIssuesIntro,
-  PATCH_FORMAT_INSTRUCTIONS,
+  GENERAL_INSTRUCTIONS,
   SECTION_HEADERS,
   getPatchFormatHint,
 } from './prompts.js';
@@ -219,6 +221,9 @@ export class LiveAgent implements Agent {
     const requiredRemaining = issues.filter((i) => i.severity === 'required').length;
     const optionalRemaining = issues.filter((i) => i.severity === 'recommended').length;
 
+    // Build wire format for session logging (captures complete request/response)
+    const wire = buildWireFormat(systemPrompt, contextPrompt, rawTools, result);
+
     // Build stats
     const stats: TurnStats = {
       inputTokens: result.usage?.inputTokens,
@@ -240,6 +245,7 @@ export class LiveAgent implements Agent {
         system: systemPrompt,
         context: contextPrompt,
       },
+      wire,
     };
 
     // Limit to maxPatches and return with stats
@@ -248,6 +254,98 @@ export class LiveAgent implements Agent {
       stats,
     };
   }
+}
+
+// =============================================================================
+// Wire Format Capture Helpers
+// =============================================================================
+
+/**
+ * Extract tool schemas from tools object for wire format logging.
+ * Captures description and inputSchema for each tool.
+ */
+function extractToolSchemas(
+  tools: Record<string, Tool>,
+): Record<string, { description: string; inputSchema: unknown }> {
+  const schemas: Record<string, { description: string; inputSchema: unknown }> = {};
+
+  // Sort tool names for deterministic ordering
+  const sortedNames = Object.keys(tools).sort();
+  for (const name of sortedNames) {
+    const tool = tools[name];
+    if (tool) {
+      schemas[name] = {
+        description: tool.description ?? '',
+        // Extract the JSON schema from the tool's inputSchema
+        // The AI SDK Tool type has inputSchema as a JsonSchema object
+        inputSchema: sortObjectKeys(tool.inputSchema ?? {}),
+      };
+    }
+  }
+  return schemas;
+}
+
+/**
+ * Sort object keys recursively for deterministic serialization.
+ * This ensures wire format is stable across runs for diffing.
+ */
+function sortObjectKeys(obj: unknown): unknown {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sortObjectKeys);
+
+  const sorted: Record<string, unknown> = {};
+  for (const key of Object.keys(obj as Record<string, unknown>).sort()) {
+    sorted[key] = sortObjectKeys((obj as Record<string, unknown>)[key]);
+  }
+  return sorted;
+}
+
+/**
+ * Build wire format from generateText result.
+ * Captures complete request/response for session logging.
+ *
+ * Uses loose typing to handle AI SDK's complex result structure.
+ */
+function buildWireFormat(
+  systemPrompt: string,
+  contextPrompt: string,
+  tools: Record<string, Tool>,
+  result: {
+    steps: {
+      toolCalls: { toolName: string; input?: unknown }[];
+      toolResults?: { toolName: string; result?: unknown }[];
+      text?: string | null;
+    }[];
+    usage?: { inputTokens?: number; outputTokens?: number };
+  },
+): WireFormat {
+  // Build response steps (omit toolCallId for stability)
+  const steps: WireResponseStep[] = result.steps.map((step) => ({
+    toolCalls: step.toolCalls.map((tc) => ({
+      toolName: tc.toolName,
+      input: sortObjectKeys(tc.input),
+    })),
+    toolResults: (step.toolResults ?? []).map((tr) => ({
+      toolName: tr.toolName,
+      result: sortObjectKeys(tr.result),
+    })),
+    text: step.text ?? null,
+  }));
+
+  return {
+    request: {
+      system: systemPrompt,
+      prompt: contextPrompt,
+      tools: extractToolSchemas(tools),
+    },
+    response: {
+      steps,
+      usage: {
+        inputTokens: result.usage?.inputTokens ?? 0,
+        outputTokens: result.usage?.outputTokens ?? 0,
+      },
+    },
+  };
 }
 
 // =============================================================================
@@ -353,14 +451,17 @@ function buildContextPrompt(
     lines.push('');
     for (const rejection of previousRejections) {
       lines.push(`- **Error:** ${rejection.message}`);
-      // If we have field info, show the correct patch format
+      // If we have field info, explain the type mismatch and show correct format
       if (rejection.fieldKind) {
+        lines.push(
+          `  **Correction:** This field is type "${rejection.fieldKind}". Use set_${rejection.fieldKind} instead.`,
+        );
         const hint = getPatchFormatHint(
           rejection.fieldKind,
           rejection.fieldId,
           rejection.columnIds,
         );
-        lines.push(`  **Use instead:** ${hint}`);
+        lines.push(`  **Correct format:** ${hint}`);
       }
     }
     lines.push('');
@@ -380,14 +481,14 @@ function buildContextPrompt(
   // List remaining issues
   lines.push(ISSUES_HEADER);
   lines.push('');
-  lines.push(getIssuesIntro(maxPatches));
+  lines.push(getIssuesIntro(issues.length));
   lines.push('');
 
   for (const issue of issues) {
     lines.push(`- **${issue.ref}** (${issue.scope}): ${issue.message}`);
     lines.push(`  Severity: ${issue.severity}, Priority: P${issue.priority}`);
 
-    // If it's a field issue, include field schema info
+    // If it's a field issue, include field schema info and inline instructions
     if (issue.scope === 'field') {
       const field = findField(form, issue.ref);
       if (field) {
@@ -399,8 +500,11 @@ function buildContextPrompt(
         if (field.kind === 'checkboxes' && 'checkboxMode' in field) {
           lines.push(`  Mode: ${field.checkboxMode ?? 'multi'}`);
         }
+
         // For table fields, show column IDs so the model knows the expected row structure
+        let columnIds: string[] | undefined;
         if (field.kind === 'table' && 'columns' in field && field.columns) {
+          columnIds = field.columns.map((c) => c.id);
           const columnInfo = field.columns
             .map((c) => `${c.id}${c.required ? ' (required)' : ''}`)
             .join(', ');
@@ -412,12 +516,23 @@ function buildContextPrompt(
             lines.push(`  Rows: ${constraints.join(', ')}`);
           }
         }
+
+        // Add inline instructions for this field
+        const patchHint = getPatchFormatHint(field.kind, field.id, columnIds);
+        lines.push(`  Set: ${patchHint}`);
+
+        // Show skip instruction for optional fields, or required notice
+        if (issue.severity === 'required') {
+          lines.push(`  This field is required.`);
+        } else {
+          lines.push(`  Skip: { op: "skip_field", fieldId: "${field.id}", reason: "..." }`);
+        }
       }
     }
     lines.push('');
   }
 
-  lines.push(PATCH_FORMAT_INSTRUCTIONS);
+  lines.push(GENERAL_INSTRUCTIONS);
 
   return lines.join('\n');
 }
@@ -578,4 +693,86 @@ function loadWebSearchTools(provider: string): Record<string, Tool> {
  */
 export function createLiveAgent(config: LiveAgentConfig): LiveAgent {
   return new LiveAgent(config);
+}
+
+// =============================================================================
+// Mock Wire Format Support
+// =============================================================================
+
+/**
+ * Build wire format for mock sessions.
+ *
+ * This captures what WOULD be sent to the LLM in a mock session,
+ * enabling git-based testing where prompt changes are visible in diffs.
+ *
+ * @param form - Current form state
+ * @param issues - Issues being addressed
+ * @param patches - Patches generated by mock agent
+ * @param maxPatches - Max patches per turn
+ * @param targetRole - Target role for instructions
+ * @param previousRejections - Rejections from previous turn
+ */
+export function buildMockWireFormat(
+  form: ParsedForm,
+  issues: InspectIssue[],
+  patches: Patch[],
+  maxPatches: number,
+  targetRole: string = AGENT_ROLE,
+  previousRejections?: PatchRejection[],
+): WireFormat {
+  // Build prompts exactly as LiveAgent would
+  const systemPrompt = buildSystemPrompt(form, targetRole, issues);
+  const contextPrompt = buildContextPrompt(issues, form, maxPatches, previousRejections);
+
+  // Build tool schema for generatePatches
+  // Note: Using lowercase 'patch' in $defs to avoid case conversion issues in YAML serialization
+  // (uppercase 'Patch' would become '_patch' in snake_case, breaking the $ref)
+  const tools: Record<string, { description: string; inputSchema: unknown }> = {
+    generatePatches: {
+      description: GENERATE_PATCHES_TOOL_DESCRIPTION,
+      inputSchema: sortObjectKeys({
+        type: 'object',
+        properties: {
+          patches: {
+            type: 'array',
+            items: { $ref: '#/$defs/patch' },
+            description: 'Array of patches to apply to the form',
+          },
+        },
+        required: ['patches'],
+        $defs: {
+          patch: { description: 'A patch operation (see tool description for full schema)' },
+        },
+      }),
+    },
+  };
+
+  // Build simulated response from mock patches
+  const steps: WireResponseStep[] = [
+    {
+      toolCalls: [
+        {
+          toolName: 'generatePatches',
+          input: sortObjectKeys({ patches }),
+        },
+      ],
+      toolResults: [],
+      text: null,
+    },
+  ];
+
+  return {
+    request: {
+      system: systemPrompt,
+      prompt: contextPrompt,
+      tools,
+    },
+    response: {
+      steps,
+      usage: {
+        inputTokens: 0, // Mock doesn't use LLM
+        outputTokens: 0,
+      },
+    },
+  };
 }

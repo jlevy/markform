@@ -23,6 +23,7 @@ import type {
   SessionTurnContext,
   SessionTurnStats,
   StepResult,
+  WireFormat,
 } from '../engine/coreTypes.js';
 import {
   DEFAULT_MAX_ISSUES_PER_TURN,
@@ -174,6 +175,7 @@ export class FormHarness {
    * @param issues - Issues that were shown to the agent (for recording)
    * @param llmStats - Optional LLM stats for session logging
    * @param context - Optional context prompts sent to LLM (for session logging)
+   * @param wire - Optional wire format for comprehensive session logging
    * @returns StepResult after applying patches
    */
   apply(
@@ -181,6 +183,7 @@ export class FormHarness {
     issues: InspectIssue[],
     llmStats?: SessionTurnStats,
     context?: SessionTurnContext,
+    wire?: WireFormat,
   ): StepResult {
     if (this.state !== 'wait') {
       throw new Error(`Cannot apply in state: ${this.state}`);
@@ -202,8 +205,8 @@ export class FormHarness {
     stepResult.patchesApplied = patchesActuallyApplied;
     stepResult.rejectedPatches = applyResult.rejectedPatches;
 
-    // Record turn in session transcript (include rejections)
-    this.recordTurn(issues, patches, result, llmStats, context, applyResult.rejectedPatches);
+    // Record turn in session transcript (include rejections and wire format)
+    this.recordTurn(issues, patches, result, llmStats, context, applyResult.rejectedPatches, wire);
 
     // Transition state: complete if no more work OR max turns reached
     const noMoreWork = stepResult.issues.length === 0;
@@ -250,6 +253,7 @@ export class FormHarness {
     llmStats?: SessionTurnStats,
     context?: SessionTurnContext,
     rejectedPatches?: PatchRejection[],
+    wire?: WireFormat,
   ): void {
     const markdown = serialize(this.form);
     const hash = sha256(markdown);
@@ -277,6 +281,10 @@ export class FormHarness {
 
     if (llmStats) {
       turn.llm = llmStats;
+    }
+
+    if (wire) {
+      turn.wire = wire;
     }
 
     this.turns.push(turn);

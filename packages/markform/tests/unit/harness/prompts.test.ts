@@ -13,6 +13,7 @@ import {
   PATCH_FORMAT_INSTRUCTIONS,
   getPatchFormatHint,
   PATCH_FORMATS,
+  getIssuesIntro,
 } from '../../../src/harness/prompts.js';
 import { parseForm } from '../../../src/engine/parse.js';
 import { inspect } from '../../../src/engine/inspect.js';
@@ -55,6 +56,29 @@ describe('PATCH_FORMAT_INSTRUCTIONS', () => {
     // This is critical - LLMs need to know about column IDs for tables
     expect(PATCH_FORMAT_INSTRUCTIONS).toContain('column');
     expect(PATCH_FORMAT_INSTRUCTIONS).toContain('rows');
+  });
+});
+
+// =============================================================================
+// getIssuesIntro Tests
+// =============================================================================
+
+describe('getIssuesIntro', () => {
+  it('returns correct count for multiple issues', () => {
+    const intro = getIssuesIntro(5);
+    expect(intro).toBe('You need to address 5 issues. Here are the current issues:');
+  });
+
+  it('returns singular form for one issue', () => {
+    const intro = getIssuesIntro(1);
+    expect(intro).toBe('You need to address 1 issue. Here are the current issues:');
+  });
+
+  it('returns correct count for 10 issues', () => {
+    const intro = getIssuesIntro(10);
+    expect(intro).toContain('10 issues');
+    // Should NOT say "up to 20" when only 10 issues are shown
+    expect(intro).not.toContain('up to');
   });
 });
 

@@ -113,7 +113,11 @@ function toCamelCaseDeep(obj: unknown, preserveKeys = false): unknown {
       // The "rows" array contains objects with column IDs as keys which should be preserved
       const isTableRows = key === 'rows' && record.op === 'set_table';
 
-      result[resultKey] = toCamelCaseDeep(value, isCheckboxValues || isTableRows);
+      // Check if this is a "tools" key in a wire format request
+      // Tool names are identifiers that should be preserved
+      const isWireTools = key === 'tools';
+
+      result[resultKey] = toCamelCaseDeep(value, isCheckboxValues || isTableRows || isWireTools);
     }
     return result;
   }
@@ -156,7 +160,11 @@ function toSnakeCaseDeep(obj: unknown, preserveKeys = false): unknown {
       // The "rows" array contains objects with column IDs as keys which should be preserved
       const isTableRows = key === 'rows' && record.op === 'set_table';
 
-      result[resultKey] = toSnakeCaseDeep(value, isCheckboxValues || isTableRows);
+      // Check if this is a "tools" key in a wire format request
+      // Tool names are identifiers that should be preserved
+      const isWireTools = key === 'tools';
+
+      result[resultKey] = toSnakeCaseDeep(value, isCheckboxValues || isTableRows || isWireTools);
     }
     return result;
   }
