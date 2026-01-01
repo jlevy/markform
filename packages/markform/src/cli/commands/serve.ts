@@ -8,6 +8,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Command } from 'commander';
 
 import { exec } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readFile as readFileAsync } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { basename, resolve } from 'node:path';
@@ -17,7 +18,7 @@ import pc from 'picocolors';
 import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
 import { serialize } from '../../engine/serialize.js';
-import { DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
+import { ALL_EXTENSIONS, DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -74,6 +75,81 @@ function openBrowser(url: string): void {
   });
 }
 
+// =============================================================================
+// Related Files Discovery
+// =============================================================================
+
+/** Represents a tab for navigation between related files */
+interface Tab {
+  id: 'form' | 'report' | 'values' | 'schema';
+  label: string;
+  path: string | null; // null if file doesn't exist
+}
+
+/** Collection of related files for a form */
+interface RelatedFiles {
+  form: string;
+  report: string | null;
+  values: string | null;
+  schema: string | null;
+}
+
+/**
+ * Get the base path by stripping any known markform extension.
+ */
+function getBasePath(filePath: string): string {
+  for (const ext of Object.values(ALL_EXTENSIONS)) {
+    if (filePath.endsWith(ext)) {
+      return filePath.slice(0, -ext.length);
+    }
+  }
+  // Also handle plain .md files
+  if (filePath.endsWith('.md')) {
+    return filePath.slice(0, -3);
+  }
+  return filePath;
+}
+
+/**
+ * Find related files for a form file.
+ * Checks for .report.md, .yml, and .schema.json files with the same base name.
+ */
+function findRelatedFiles(formPath: string): RelatedFiles {
+  const base = getBasePath(formPath);
+
+  const reportPath = base + ALL_EXTENSIONS.report;
+  const valuesPath = base + ALL_EXTENSIONS.yaml;
+  const schemaPath = base + ALL_EXTENSIONS.schema;
+
+  return {
+    form: formPath,
+    report: existsSync(reportPath) ? reportPath : null,
+    values: existsSync(valuesPath) ? valuesPath : null,
+    schema: existsSync(schemaPath) ? schemaPath : null,
+  };
+}
+
+/**
+ * Build tabs for tabbed navigation.
+ */
+function buildTabs(relatedFiles: RelatedFiles): Tab[] {
+  const tabs: Tab[] = [];
+
+  tabs.push({ id: 'form', label: 'Markform', path: relatedFiles.form });
+
+  if (relatedFiles.report) {
+    tabs.push({ id: 'report', label: 'Report', path: relatedFiles.report });
+  }
+  if (relatedFiles.values) {
+    tabs.push({ id: 'values', label: 'Values', path: relatedFiles.values });
+  }
+  if (relatedFiles.schema) {
+    tabs.push({ id: 'schema', label: 'Schema', path: relatedFiles.schema });
+  }
+
+  return tabs;
+}
+
 /**
  * Register the serve command.
  */
@@ -99,9 +175,13 @@ export function registerServeCommand(program: Command): void {
           form = parseForm(content);
         }
 
+        // Discover related files for form files
+        const relatedFiles = fileType === 'form' ? findRelatedFiles(filePath) : null;
+        const tabs = relatedFiles ? buildTabs(relatedFiles) : null;
+
         // Start the server
         const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-          handleRequest(req, res, filePath, fileType, form, ctx, (updatedForm) => {
+          handleRequest(req, res, filePath, fileType, form, ctx, tabs, (updatedForm) => {
             form = updatedForm;
           }).catch((err) => {
             console.error('Request error:', err);
@@ -148,14 +228,41 @@ async function handleRequest(
   fileType: FileType,
   form: ParsedForm | null,
   ctx: CommandContext,
+  tabs: Tab[] | null,
   updateForm: (form: ParsedForm) => void,
 ): Promise<void> {
   const url = req.url ?? '/';
 
+  // Handle tab content requests for form files with tabs
+  if (req.method === 'GET' && url.startsWith('/tab/') && tabs && tabs.length > 1) {
+    const tabId = url.slice(5) as Tab['id'];
+    const tab = tabs.find((t) => t.id === tabId);
+    if (tab?.path) {
+      const content = await readFileAsync(tab.path, 'utf-8');
+      const tabFileType = detectFileType(tab.path);
+      let html: string;
+      if (tabFileType === 'report' || tabFileType === 'raw') {
+        html = renderMarkdownContent(content);
+      } else if (tabFileType === 'yaml') {
+        html = renderYamlContent(content);
+      } else if (tabFileType === 'json' || tabFileType === 'schema') {
+        html = renderJsonContent(content);
+      } else {
+        html = `<pre>${escapeHtml(content)}</pre>`;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+    res.writeHead(404);
+    res.end('Tab not found');
+    return;
+  }
+
   if (req.method === 'GET' && url === '/') {
     // Dispatch to appropriate renderer based on file type
     if (fileType === 'form' && form) {
-      const html = renderFormHtml(form);
+      const html = renderFormHtml(form, tabs);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
     } else if (fileType === 'raw' || fileType === 'report') {
@@ -168,7 +275,7 @@ async function handleRequest(
       const html = renderYamlHtml(content, basename(filePath));
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
-    } else if (fileType === 'json') {
+    } else if (fileType === 'json' || fileType === 'schema') {
       const content = await readFileAsync(filePath, 'utf-8');
       const html = renderJsonHtml(content, basename(filePath));
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -462,13 +569,26 @@ async function handleSave(
  * Render the form as HTML.
  * @public Exported for testing.
  */
-export function renderFormHtml(form: ParsedForm): string {
+export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
   const { schema, responsesByFieldId } = form;
   const formTitle = schema.title ?? schema.id;
 
   const groupsHtml = schema.groups
     .map((group) => renderGroup(group, responsesByFieldId))
     .join('\n');
+
+  // Build tab bar HTML if we have multiple tabs
+  const showTabs = tabs && tabs.length > 1;
+  const tabBarHtml = showTabs
+    ? `<div class="tab-bar">
+        ${tabs
+          .map(
+            (tab, i) =>
+              `<button class="tab-btn${i === 0 ? ' active' : ''}" data-tab="${tab.id}">${escapeHtml(tab.label)}</button>`,
+          )
+          .join('\n        ')}
+      </div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -487,7 +607,74 @@ export function renderFormHtml(form: ParsedForm): string {
       background: #f8f9fa;
       color: #212529;
     }
-    h1 { color: #495057; border-bottom: 2px solid #dee2e6; padding-bottom: 0.5rem; }
+    h1 { color: #495057; border-bottom: none; padding-bottom: 0.5rem; }
+    /* Tab bar styles */
+    .tab-bar {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid #dee2e6;
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      background: transparent;
+      color: #6c757d;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover {
+      color: #495057;
+    }
+    .tab-btn.active {
+      color: #0d6efd;
+      border-bottom-color: #0d6efd;
+      font-weight: 500;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* Light theme syntax highlighting for tab content */
+    .tab-content pre {
+      background: #f8f9fa;
+      color: #24292e;
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid #e1e4e8;
+      overflow-x: auto;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .syn-key { color: #005cc5; }
+    .syn-string { color: #22863a; }
+    .syn-number { color: #005cc5; }
+    .syn-bool { color: #d73a49; }
+    .syn-null { color: #d73a49; }
+    .syn-comment { color: #6a737d; font-style: italic; }
+    /* Markdown content styles */
+    .markdown-content { padding: 0.5rem 0; }
+    .markdown-content h2 { font-size: 1.4rem; color: #24292e; margin: 1.5rem 0 0.75rem; }
+    .markdown-content h3 { font-size: 1.2rem; color: #24292e; margin: 1.25rem 0 0.5rem; }
+    .markdown-content h4 { font-size: 1.1rem; color: #24292e; margin: 1rem 0 0.5rem; }
+    .markdown-content h5 { font-size: 1rem; color: #24292e; margin: 0.75rem 0 0.5rem; }
+    .markdown-content p { margin: 0.75rem 0; line-height: 1.6; }
+    .markdown-content li { margin: 0.25rem 0; margin-left: 1.5rem; line-height: 1.6; }
+    .markdown-content code { background: #f1f3f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
+    .markdown-content pre { background: #f8f9fa; padding: 1rem; border-radius: 6px; border: 1px solid #e1e4e8; overflow-x: auto; }
+    .markdown-content pre code { background: none; padding: 0; }
+    .markdown-content a { color: #0366d6; text-decoration: none; }
+    .markdown-content a:hover { text-decoration: underline; }
+    .markdown-content strong { font-weight: 600; }
+    .loading { text-align: center; padding: 2rem; color: #6c757d; }
+    .error { text-align: center; padding: 2rem; color: #dc3545; }
     h2 { color: #6c757d; font-size: 1.25rem; }
     .group {
       background: white;
@@ -660,12 +847,16 @@ export function renderFormHtml(form: ParsedForm): string {
 </head>
 <body>
   <h1>${escapeHtml(formTitle)}</h1>
-  <form method="POST" action="/save" id="markform">
-    ${groupsHtml}
-    <div class="toolbar">
-      <button type="submit" class="btn btn-primary">Save</button>
-    </div>
-  </form>
+  ${tabBarHtml}
+  <div id="tab-form" class="tab-content active">
+    <form method="POST" action="/save" id="markform">
+      ${groupsHtml}
+      <div class="toolbar">
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+  ${showTabs ? '<div id="tab-other" class="tab-content"><div class="loading">Loading...</div></div>' : ''}
   <script>
     // Track fields marked for skip
     const skippedFields = new Set();
@@ -730,6 +921,50 @@ export function renderFormHtml(form: ParsedForm): string {
       } catch (err) {
         alert('Save failed: ' + err.message);
       }
+    });
+
+    // Tab switching logic
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabFormContent = document.getElementById('tab-form');
+    const tabOtherContent = document.getElementById('tab-other');
+    const tabCache = {};
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const tabId = btn.dataset.tab;
+
+        // Update active button
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        if (tabId === 'form') {
+          // Show form tab
+          if (tabFormContent) tabFormContent.classList.add('active');
+          if (tabOtherContent) tabOtherContent.classList.remove('active');
+        } else {
+          // Show other tab content
+          if (tabFormContent) tabFormContent.classList.remove('active');
+          if (tabOtherContent) {
+            tabOtherContent.classList.add('active');
+
+            // Fetch content if not cached
+            if (!tabCache[tabId]) {
+              tabOtherContent.innerHTML = '<div class="loading">Loading...</div>';
+              try {
+                const response = await fetch('/tab/' + tabId);
+                if (response.ok) {
+                  tabCache[tabId] = await response.text();
+                } else {
+                  tabCache[tabId] = '<div class="error">Failed to load content</div>';
+                }
+              } catch (err) {
+                tabCache[tabId] = '<div class="error">Failed to load content</div>';
+              }
+            }
+            tabOtherContent.innerHTML = tabCache[tabId];
+          }
+        }
+      });
     });
   </script>
 </body>
@@ -1188,15 +1423,23 @@ const READ_ONLY_STYLES = `
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     pre {
-      background: #1e1e1e;
-      color: #d4d4d4;
+      background: #f8f9fa;
+      color: #24292e;
       padding: 1rem;
       border-radius: 6px;
+      border: 1px solid #e1e4e8;
       overflow-x: auto;
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
       font-size: 0.9rem;
       line-height: 1.5;
     }
+    /* Light theme syntax highlighting */
+    .syn-key { color: #005cc5; }
+    .syn-string { color: #22863a; }
+    .syn-number { color: #005cc5; }
+    .syn-bool { color: #d73a49; }
+    .syn-null { color: #d73a49; }
+    .syn-comment { color: #6a737d; font-style: italic; }
     .badge {
       font-size: 0.75rem;
       padding: 0.2rem 0.5rem;
@@ -1285,20 +1528,38 @@ function renderMarkdownHtml(content: string, filename: string): string {
  * Render YAML content with syntax highlighting.
  */
 function renderYamlHtml(content: string, filename: string): string {
-  // Basic YAML syntax highlighting
+  // YAML syntax highlighting using CSS classes
   const highlighted = content
     .split('\n')
     .map((line) => {
-      // Highlight keys (before colon)
-      const colonIndex = line.indexOf(':');
-      if (colonIndex > 0 && !line.trim().startsWith('#') && !line.trim().startsWith('-')) {
-        const key = escapeHtml(line.slice(0, colonIndex));
-        const rest = escapeHtml(line.slice(colonIndex));
-        return `<span style="color:#9cdcfe">${key}</span>${rest}`;
-      }
       // Highlight comments
       if (line.trim().startsWith('#')) {
-        return `<span style="color:#6a9955">${escapeHtml(line)}</span>`;
+        return `<span class="syn-comment">${escapeHtml(line)}</span>`;
+      }
+      // Highlight keys (before colon)
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0 && !line.trim().startsWith('-')) {
+        const key = escapeHtml(line.slice(0, colonIndex));
+        const afterColon = line.slice(colonIndex + 1).trim();
+        const colonAndSpace = escapeHtml(line.slice(colonIndex, colonIndex + 1));
+        // Highlight the value based on type
+        if (afterColon === '') {
+          return `<span class="syn-key">${key}</span>${colonAndSpace}`;
+        }
+        const valueStart = line.indexOf(afterColon, colonIndex);
+        const beforeValue = escapeHtml(line.slice(colonIndex, valueStart));
+        const value = highlightYamlValue(afterColon);
+        return `<span class="syn-key">${key}</span>${beforeValue}${value}`;
+      }
+      // List items
+      if (line.trim().startsWith('-')) {
+        const dashIndex = line.indexOf('-');
+        const beforeDash = escapeHtml(line.slice(0, dashIndex));
+        const afterDash = line.slice(dashIndex + 1).trim();
+        if (afterDash === '') {
+          return `${beforeDash}-`;
+        }
+        return `${beforeDash}- ${highlightYamlValue(afterDash)}`;
       }
       return escapeHtml(line);
     })
@@ -1322,6 +1583,34 @@ function renderYamlHtml(content: string, filename: string): string {
 }
 
 /**
+ * Highlight a YAML value based on its type.
+ */
+function highlightYamlValue(value: string): string {
+  const trimmed = value.trim();
+  // Booleans
+  if (trimmed === 'true' || trimmed === 'false') {
+    return `<span class="syn-bool">${escapeHtml(value)}</span>`;
+  }
+  // Null
+  if (trimmed === 'null' || trimmed === '~') {
+    return `<span class="syn-null">${escapeHtml(value)}</span>`;
+  }
+  // Numbers
+  if (/^-?\d+\.?\d*$/.test(trimmed)) {
+    return `<span class="syn-number">${escapeHtml(value)}</span>`;
+  }
+  // Quoted strings
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return `<span class="syn-string">${escapeHtml(value)}</span>`;
+  }
+  // Unquoted strings (treat as string)
+  return `<span class="syn-string">${escapeHtml(value)}</span>`;
+}
+
+/**
  * Render JSON content with syntax highlighting and formatting.
  */
 function renderJsonHtml(content: string, filename: string): string {
@@ -1334,12 +1623,13 @@ function renderJsonHtml(content: string, filename: string): string {
     formatted = content;
   }
 
-  // Basic JSON syntax highlighting
+  // JSON syntax highlighting using CSS classes
   const highlighted = formatted
-    .replace(/"([^"]+)":/g, '<span style="color:#9cdcfe">"$1"</span>:')
-    .replace(/: "([^"]+)"/g, ': <span style="color:#ce9178">"$1"</span>')
-    .replace(/: (\d+\.?\d*)/g, ': <span style="color:#b5cea8">$1</span>')
-    .replace(/: (true|false|null)/g, ': <span style="color:#569cd6">$1</span>');
+    .replace(/"([^"]+)":/g, '<span class="syn-key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="syn-string">"$1"</span>')
+    .replace(/: (-?\d+\.?\d*)/g, ': <span class="syn-number">$1</span>')
+    .replace(/: (true|false)/g, ': <span class="syn-bool">$1</span>')
+    .replace(/: (null)/g, ': <span class="syn-null">$1</span>');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1377,4 +1667,192 @@ function renderPlainTextHtml(content: string, filename: string): string {
   </div>
 </body>
 </html>`;
+}
+
+// =============================================================================
+// Content-only Renderers (for tab content)
+// =============================================================================
+
+/**
+ * Render markdown content (content only, no page wrapper).
+ * Used for tab content.
+ */
+function renderMarkdownContent(content: string): string {
+  const lines = content.split('\n');
+  let html = '<div class="markdown-content">';
+  let inParagraph = false;
+  let inCodeBlock = false;
+  let codeBlockContent = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Handle fenced code blocks
+    if (trimmed.startsWith('```')) {
+      if (inCodeBlock) {
+        // End code block
+        html += `<pre><code>${escapeHtml(codeBlockContent.trim())}</code></pre>`;
+        codeBlockContent = '';
+        inCodeBlock = false;
+      } else {
+        // Start code block
+        if (inParagraph) {
+          html += '</p>';
+          inParagraph = false;
+        }
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlockContent += line + '\n';
+      continue;
+    }
+
+    // Handle headers
+    if (trimmed.startsWith('# ')) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<h2>${escapeHtml(trimmed.slice(2))}</h2>`;
+    } else if (trimmed.startsWith('## ')) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<h3>${escapeHtml(trimmed.slice(3))}</h3>`;
+    } else if (trimmed.startsWith('### ')) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<h4>${escapeHtml(trimmed.slice(4))}</h4>`;
+    } else if (trimmed.startsWith('#### ')) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<h5>${escapeHtml(trimmed.slice(5))}</h5>`;
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      // Unordered list item
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      html += `<li>${formatInlineMarkdown(trimmed.slice(2))}</li>`;
+    } else if (/^\d+\.\s/.test(trimmed)) {
+      // Ordered list item
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      const text = trimmed.replace(/^\d+\.\s/, '');
+      html += `<li>${formatInlineMarkdown(text)}</li>`;
+    } else if (trimmed === '') {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+    } else {
+      if (!inParagraph) {
+        html += '<p>';
+        inParagraph = true;
+      } else {
+        html += '<br>';
+      }
+      html += formatInlineMarkdown(trimmed);
+    }
+  }
+
+  if (inParagraph) {
+    html += '</p>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+/**
+ * Format inline markdown (bold, italic, code, links).
+ */
+function formatInlineMarkdown(text: string): string {
+  let result = escapeHtml(text);
+  // Inline code
+  result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Bold
+  result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  result = result.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Links - need to unescape the URL first
+  result = result.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (_: string, linkText: string, url: string) =>
+      `<a href="${url.replace(/&amp;/g, '&')}" target="_blank">${linkText}</a>`,
+  );
+  return result;
+}
+
+/**
+ * Render YAML content (content only, no page wrapper).
+ * Used for tab content.
+ */
+function renderYamlContent(content: string): string {
+  const highlighted = content
+    .split('\n')
+    .map((line) => {
+      if (line.trim().startsWith('#')) {
+        return `<span class="syn-comment">${escapeHtml(line)}</span>`;
+      }
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0 && !line.trim().startsWith('-')) {
+        const key = escapeHtml(line.slice(0, colonIndex));
+        const afterColon = line.slice(colonIndex + 1).trim();
+        const colonAndSpace = escapeHtml(line.slice(colonIndex, colonIndex + 1));
+        if (afterColon === '') {
+          return `<span class="syn-key">${key}</span>${colonAndSpace}`;
+        }
+        const valueStart = line.indexOf(afterColon, colonIndex);
+        const beforeValue = escapeHtml(line.slice(colonIndex, valueStart));
+        const value = highlightYamlValue(afterColon);
+        return `<span class="syn-key">${key}</span>${beforeValue}${value}`;
+      }
+      if (line.trim().startsWith('-')) {
+        const dashIndex = line.indexOf('-');
+        const beforeDash = escapeHtml(line.slice(0, dashIndex));
+        const afterDash = line.slice(dashIndex + 1).trim();
+        if (afterDash === '') {
+          return `${beforeDash}-`;
+        }
+        return `${beforeDash}- ${highlightYamlValue(afterDash)}`;
+      }
+      return escapeHtml(line);
+    })
+    .join('\n');
+
+  return `<pre>${highlighted}</pre>`;
+}
+
+/**
+ * Render JSON content (content only, no page wrapper).
+ * Used for tab content.
+ */
+function renderJsonContent(content: string): string {
+  let formatted: string;
+  try {
+    const parsed = JSON.parse(content) as unknown;
+    formatted = JSON.stringify(parsed, null, 2);
+  } catch {
+    formatted = content;
+  }
+
+  const highlighted = formatted
+    .replace(/"([^"]+)":/g, '<span class="syn-key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="syn-string">"$1"</span>')
+    .replace(/: (-?\d+\.?\d*)/g, ': <span class="syn-number">$1</span>')
+    .replace(/: (true|false)/g, ': <span class="syn-bool">$1</span>')
+    .replace(/: (null)/g, ': <span class="syn-null">$1</span>');
+
+  return `<pre>${highlighted}</pre>`;
 }
