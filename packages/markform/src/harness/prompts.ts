@@ -29,7 +29,10 @@ Guidelines:
 6. For number fields: use appropriate numeric values from verified sources
 7. For single_select: choose one valid option ID
 8. For multi_select: choose one or more valid option IDs
-9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+9. For checkboxes: use the appropriate state for the checkbox mode:
+   - Mode "simple": done (checked) or todo (unchecked)
+   - Mode "multi": done, todo, or na (not applicable)
+   - Mode "explicit": yes or no (must explicitly answer)
 
 CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
