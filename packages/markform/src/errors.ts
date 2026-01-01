@@ -263,3 +263,13 @@ export function isAbortError(error: unknown): error is MarkformAbortError {
 export function isRetryableError(error: unknown): boolean {
   return isLlmError(error) && error.retryable;
 }
+
+// =============================================================================
+// Backward Compatibility Aliases
+// =============================================================================
+
+/**
+ * Alias for MarkformParseError.
+ * @deprecated Use MarkformParseError instead. ParseError will be removed in a future version.
+ */
+export const ParseError = MarkformParseError;

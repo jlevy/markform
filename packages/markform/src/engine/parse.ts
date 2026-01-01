@@ -25,16 +25,11 @@ import type {
 import { RunModeSchema } from './coreTypes.js';
 import { DEFAULT_ROLES, DEFAULT_ROLE_INSTRUCTIONS } from '../settings.js';
 import { parseField } from './parseFields.js';
-import {
-  getBooleanAttr,
-  getStringAttr,
-  getValidateAttr,
-  isTagNode,
-  ParseError,
-} from './parseHelpers.js';
+import { getBooleanAttr, getStringAttr, getValidateAttr, isTagNode } from './parseHelpers.js';
+import { MarkformParseError } from '../errors.js';
 
 // Re-export ParseError for backward compatibility
-export { ParseError } from './parseHelpers.js';
+export { ParseError } from '../errors.js';
 
 /**
  * Valid tag names inside a form.
@@ -121,7 +116,7 @@ function extractFrontmatter(ast: Node): FrontmatterResult {
     if (rawRunMode !== undefined) {
       const parsed = RunModeSchema.safeParse(rawRunMode);
       if (!parsed.success) {
-        throw new ParseError(
+        throw new MarkformParseError(
           `Invalid run_mode: '${typeof rawRunMode === 'string' ? rawRunMode : JSON.stringify(rawRunMode)}'. Must be one of: interactive, fill, research`,
         );
       }
@@ -145,10 +140,10 @@ function extractFrontmatter(ast: Node): FrontmatterResult {
     return { frontmatter, metadata, description };
   } catch (error) {
     // Re-throw ParseError as-is, wrap other errors
-    if (error instanceof ParseError) {
+    if (error instanceof MarkformParseError) {
       throw error;
     }
-    throw new ParseError('Failed to parse frontmatter YAML');
+    throw new MarkformParseError('Failed to parse frontmatter YAML');
   }
 }
 
@@ -170,17 +165,17 @@ function parseFieldGroup(
   const title = getStringAttr(node, 'title');
 
   if (!id) {
-    throw new ParseError("group missing required 'id' attribute");
+    throw new MarkformParseError("group missing required 'id' attribute");
   }
 
   if (idIndex.has(id)) {
-    throw new ParseError(`Duplicate ID '${id}'`);
+    throw new MarkformParseError(`Duplicate ID '${id}'`);
   }
 
   // Validate that state attribute is not on group
   const stateAttr = getStringAttr(node, 'state');
   if (stateAttr !== undefined) {
-    throw new ParseError(
+    throw new MarkformParseError(
       `Field-group '${id}' has state attribute. state attribute is not allowed on groups.`,
     );
   }
@@ -198,7 +193,7 @@ function parseFieldGroup(
     const result = parseField(child);
     if (result) {
       if (idIndex.has(result.field.id)) {
-        throw new ParseError(`Duplicate ID '${result.field.id}'`);
+        throw new MarkformParseError(`Duplicate ID '${result.field.id}'`);
       }
 
       idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
@@ -211,7 +206,7 @@ function parseFieldGroup(
         for (const opt of result.field.options) {
           const qualifiedRef = `${result.field.id}.${opt.id}`;
           if (idIndex.has(qualifiedRef)) {
-            throw new ParseError(`Duplicate option ref '${qualifiedRef}'`);
+            throw new MarkformParseError(`Duplicate option ref '${qualifiedRef}'`);
           }
           idIndex.set(qualifiedRef, {
             nodeType: 'option',
@@ -258,11 +253,11 @@ function parseFormTag(
   const title = getStringAttr(node, 'title');
 
   if (!id) {
-    throw new ParseError("form missing required 'id' attribute");
+    throw new MarkformParseError("form missing required 'id' attribute");
   }
 
   if (idIndex.has(id)) {
-    throw new ParseError(`Duplicate ID '${id}'`);
+    throw new MarkformParseError(`Duplicate ID '${id}'`);
   }
 
   idIndex.set(id, { nodeType: 'form' });
@@ -278,7 +273,7 @@ function parseFormTag(
 
     // Check for unknown tags inside form
     if (isTagNode(child) && !VALID_FORM_TAGS.has((child as { tag: string }).tag)) {
-      throw new ParseError(`Unknown tag '${(child as { tag: string }).tag}' inside form`);
+      throw new MarkformParseError(`Unknown tag '${(child as { tag: string }).tag}' inside form`);
     }
 
     if (isTagNode(child, 'group')) {
@@ -291,7 +286,7 @@ function parseFormTag(
     const result = parseField(child);
     if (result) {
       if (idIndex.has(result.field.id)) {
-        throw new ParseError(`Duplicate ID '${result.field.id}'`);
+        throw new MarkformParseError(`Duplicate ID '${result.field.id}'`);
       }
 
       idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
@@ -304,7 +299,7 @@ function parseFormTag(
         for (const opt of result.field.options) {
           const qualifiedRef = `${result.field.id}.${opt.id}`;
           if (idIndex.has(qualifiedRef)) {
-            throw new ParseError(`Duplicate option ref '${qualifiedRef}'`);
+            throw new MarkformParseError(`Duplicate option ref '${qualifiedRef}'`);
           }
           idIndex.set(qualifiedRef, {
             nodeType: 'option',
@@ -334,7 +329,7 @@ function parseFormTag(
   if (ungroupedFields.length > 0) {
     const implicitGroupId = `_default`;
     if (idIndex.has(implicitGroupId)) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `ID '${implicitGroupId}' is reserved for implicit field groups. ` +
           `Please use a different ID for your field or group.`,
       );
@@ -376,30 +371,30 @@ function extractNotes(ast: Node, idIndex: Map<Id, IdIndexEntry>): Note[] {
 
       // Validate required attributes
       if (!id) {
-        throw new ParseError("note missing required 'id' attribute");
+        throw new MarkformParseError("note missing required 'id' attribute");
       }
       if (!ref) {
-        throw new ParseError(`note '${id}' missing required 'ref' attribute`);
+        throw new MarkformParseError(`note '${id}' missing required 'ref' attribute`);
       }
       if (!role) {
-        throw new ParseError(`note '${id}' missing required 'role' attribute`);
+        throw new MarkformParseError(`note '${id}' missing required 'role' attribute`);
       }
 
       // Reject state attribute on notes (markform-254: notes are general-purpose only)
       if (stateAttr !== undefined) {
-        throw new ParseError(
+        throw new MarkformParseError(
           `note '${id}' has 'state' attribute. Notes no longer support state linking; use FieldResponse.reason for skip/abort reasons.`,
         );
       }
 
       // Validate ref exists in idIndex
       if (!idIndex.has(ref)) {
-        throw new ParseError(`note '${id}' references unknown ID '${ref}'`);
+        throw new MarkformParseError(`note '${id}' references unknown ID '${ref}'`);
       }
 
       // Validate duplicate note IDs
       if (seenIds.has(id)) {
-        throw new ParseError(`Duplicate note ID '${id}'`);
+        throw new MarkformParseError(`Duplicate note ID '${id}'`);
       }
       seenIds.add(id);
 
@@ -468,18 +463,18 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
       const ref = getStringAttr(node, 'ref');
 
       if (!ref) {
-        throw new ParseError(`${tag} block missing required 'ref' attribute`);
+        throw new MarkformParseError(`${tag} block missing required 'ref' attribute`);
       }
 
       // Validate ref exists
       if (!idIndex.has(ref)) {
-        throw new ParseError(`${tag} block references unknown ID '${ref}'`);
+        throw new MarkformParseError(`${tag} block references unknown ID '${ref}'`);
       }
 
       const uniqueKey = `${ref}:${tag}`;
 
       if (seenRefs.has(uniqueKey)) {
-        throw new ParseError(`Duplicate ${tag} block for ref='${ref}'`);
+        throw new MarkformParseError(`Duplicate ${tag} block for ref='${ref}'`);
       }
       seenRefs.add(uniqueKey);
 
@@ -556,7 +551,7 @@ export function parseForm(markdown: string): ParsedForm {
 
     if (isTagNode(node, 'form')) {
       if (formSchema) {
-        throw new ParseError('Multiple form tags found - only one allowed');
+        throw new MarkformParseError('Multiple form tags found - only one allowed');
       }
       formSchema = parseFormTag(node, responsesByFieldId, orderIndex, idIndex);
       return;
@@ -572,7 +567,7 @@ export function parseForm(markdown: string): ParsedForm {
   findFormTag(ast);
 
   if (!formSchema) {
-    throw new ParseError('No form tag found in document');
+    throw new MarkformParseError('No form tag found in document');
   }
 
   // Build final schema with description from frontmatter

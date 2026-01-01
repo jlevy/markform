@@ -56,9 +56,9 @@ import {
   getStringAttr,
   getValidateAttr,
   isTagNode,
-  ParseError,
   parseOptionText,
 } from './parseHelpers.js';
+import { MarkformParseError } from '../errors.js';
 import { tryParseSentinelResponse } from './parseSentinels.js';
 import { parseMarkdownTable, extractTableHeaderLabels } from './table/parseTable.js';
 
@@ -132,7 +132,7 @@ export function parseFieldResponse(
       stateAttr !== 'skipped' &&
       stateAttr !== 'aborted'
     ) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Invalid state attribute '${stateAttr}' on field '${fieldId}'. Must be empty, answered, skipped, or aborted`,
       );
     }
@@ -140,7 +140,7 @@ export function parseFieldResponse(
     // Validate state vs filled consistency
     if (stateAttr === 'skipped' || stateAttr === 'aborted') {
       if (isFilled) {
-        throw new ParseError(
+        throw new MarkformParseError(
           `Field '${fieldId}' has state='${stateAttr}' but contains a value. ${stateAttr} fields cannot have values.`,
         );
       }
@@ -148,7 +148,7 @@ export function parseFieldResponse(
 
     // Validate skipped on required fields
     if (stateAttr === 'skipped' && required) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Field '${fieldId}' is required but has state='skipped'. Cannot skip required fields.`,
       );
     }
@@ -165,7 +165,7 @@ export function parseFieldResponse(
     }
     if (stateAttr === 'answered') {
       if (!isFilled) {
-        throw new ParseError(`Field '${fieldId}' has state='answered' but has no value`);
+        throw new MarkformParseError(`Field '${fieldId}' has state='answered' but has no value`);
       }
       return { state: 'answered', value };
     }
@@ -205,10 +205,10 @@ function parseBaseFieldAttrs(node: Node, kind: FieldKind): BaseFieldAttrs {
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError(`field kind="${kind}" missing required 'id' attribute`);
+    throw new MarkformParseError(`field kind="${kind}" missing required 'id' attribute`);
   }
   if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
+    throw new MarkformParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   const required = getBooleanAttr(node, 'required') ?? false;
@@ -247,12 +247,12 @@ function validateNoPlaceholderExamples(node: Node, fieldType: string, fieldId: s
   const examples = getStringArrayAttr(node, 'examples');
 
   if (placeholder !== undefined) {
-    throw new ParseError(
+    throw new MarkformParseError(
       `${fieldType} '${fieldId}' has 'placeholder' attribute, but placeholder is only valid on text-entry fields (string, number, string-list, url, url-list)`,
     );
   }
   if (examples !== undefined) {
-    throw new ParseError(
+    throw new MarkformParseError(
       `${fieldType} '${fieldId}' has 'examples' attribute, but examples is only valid on text-entry fields (string, number, string-list, url, url-list)`,
     );
   }
@@ -278,7 +278,7 @@ function validateNumberExamples(examples: string[] | undefined, fieldId: string)
   for (const example of examples) {
     const parsed = Number(example);
     if (Number.isNaN(parsed)) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `number-field '${fieldId}' has invalid example '${example}' - must be a valid number`,
       );
     }
@@ -292,7 +292,7 @@ function validateUrlExamples(examples: string[] | undefined, fieldId: string): v
   if (!examples) return;
   for (const example of examples) {
     if (!isValidUrl(example)) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `url-field '${fieldId}' has invalid example '${example}' - must be a valid URL`,
       );
     }
@@ -503,13 +503,13 @@ function parseOptions(
     }
 
     if (!item.id) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Option in field '${fieldId}' missing ID annotation. Use {% #option_id %}`,
       );
     }
 
     if (seenIds.has(item.id)) {
-      throw new ParseError(`Duplicate option ID '${item.id}' in field '${fieldId}'`);
+      throw new MarkformParseError(`Duplicate option ID '${item.id}' in field '${fieldId}'`);
     }
     seenIds.add(item.id);
 
@@ -631,10 +631,10 @@ export function parseCheckboxesField(node: Node): {
   const label = getStringAttr(node, 'label');
 
   if (!id) {
-    throw new ParseError('field kind="checkboxes" missing required \'id\' attribute');
+    throw new MarkformParseError('field kind="checkboxes" missing required \'id\' attribute');
   }
   if (!label) {
-    throw new ParseError(`field '${id}' missing required 'label' attribute`);
+    throw new MarkformParseError(`field '${id}' missing required 'label' attribute`);
   }
 
   // Validate that placeholder/examples are not used on chooser fields
@@ -665,7 +665,7 @@ export function parseCheckboxesField(node: Node): {
   let required: boolean;
   if (checkboxMode === 'explicit') {
     if (explicitRequired === false) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Checkbox field "${label}" has checkboxMode="explicit" which is inherently required. ` +
           `Cannot set required=false. Remove required attribute or change checkboxMode.`,
       );
@@ -932,7 +932,7 @@ function parseColumnsFromAttributes(
   const columnTypesRaw = node.attributes?.columnTypes as ColumnTypeSpec[] | undefined;
 
   if (!columnIds || columnIds.length === 0) {
-    throw new ParseError(
+    throw new MarkformParseError(
       `table-field '${fieldId}' requires 'columnIds' attribute. ` +
         `Example: columnIds=["name", "title", "department"]`,
     );
@@ -942,7 +942,7 @@ function parseColumnsFromAttributes(
   const seenIds = new Set<string>();
   for (const id of columnIds) {
     if (seenIds.has(id)) {
-      throw new ParseError(`table-field '${fieldId}' has duplicate column ID '${id}'`);
+      throw new MarkformParseError(`table-field '${fieldId}' has duplicate column ID '${id}'`);
     }
     seenIds.add(id);
   }
@@ -961,7 +961,7 @@ function parseColumnsFromAttributes(
     if (typeSpec !== undefined) {
       if (typeof typeSpec === 'string') {
         if (!isValidColumnType(typeSpec)) {
-          throw new ParseError(
+          throw new MarkformParseError(
             `table-field '${fieldId}' has invalid column type '${String(typeSpec)}' for column '${id}'. ` +
               `Valid types: string, number, url, date, year`,
           );
@@ -970,7 +970,7 @@ function parseColumnsFromAttributes(
       } else if (typeof typeSpec === 'object' && typeSpec !== null) {
         const typeObj = typeSpec as { type?: unknown; required?: boolean };
         if (!isValidColumnType(typeObj.type)) {
-          throw new ParseError(
+          throw new MarkformParseError(
             `table-field '${fieldId}' has invalid column type '${String(typeObj.type)}' for column '${id}'. ` +
               `Valid types: string, number, url, date, year`,
           );
@@ -1038,7 +1038,7 @@ export function parseTableField(node: Node): { field: TableField; response: Fiel
   // dataStartLine = 2 to skip header + separator rows
   const parseResult = parseMarkdownTable(tableContent, columns, dataStartLine);
   if (!parseResult.ok) {
-    throw new ParseError(`table-field '${id}': ${parseResult.error}`);
+    throw new MarkformParseError(`table-field '${id}': ${parseResult.error}`);
   }
 
   const response = parseFieldResponse(node, parseResult.value, id, required);
@@ -1073,12 +1073,12 @@ function parseUnifiedField(node: Node): { field: Field; response: FieldResponse 
   const kind = getStringAttr(node, 'kind');
 
   if (!kind) {
-    throw new ParseError("field tag missing required 'kind' attribute");
+    throw new MarkformParseError("field tag missing required 'kind' attribute");
   }
 
   // Validate kind is a known field kind
   if (!FIELD_KINDS.includes(kind as FieldKind)) {
-    throw new ParseError(
+    throw new MarkformParseError(
       `field tag has invalid kind '${kind}'. Valid kinds: ${FIELD_KINDS.join(', ')}`,
     );
   }
@@ -1132,7 +1132,7 @@ export function parseField(node: Node): { field: Field; response: FieldResponse 
   if (node.tag) {
     const kind = LEGACY_TAG_TO_KIND[node.tag];
     if (kind !== undefined) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Legacy field tag '${node.tag}' is no longer supported. Use {% field kind="${kind}" %} instead`,
       );
     }

@@ -7,6 +7,7 @@
 
 import type { LanguageModel } from 'ai';
 
+import { MarkformConfigError } from '../errors.js';
 import type { ParsedModelId, ProviderInfo, ProviderName, ResolvedModel } from './harnessTypes.js';
 
 // Re-export types for backwards compatibility
@@ -57,8 +58,9 @@ const PROVIDERS: Record<ProviderName, { package: string; envVar: string; createF
 export function parseModelId(modelIdString: string): ParsedModelId {
   const slashIndex = modelIdString.indexOf('/');
   if (slashIndex === -1) {
-    throw new Error(
+    throw new MarkformConfigError(
       `Invalid model ID format: "${modelIdString}". Expected format: provider/model-id (e.g., anthropic/claude-sonnet-4-5)`,
+      { option: 'model', expectedType: 'provider/model-id format', receivedValue: modelIdString },
     );
   }
 
@@ -66,15 +68,25 @@ export function parseModelId(modelIdString: string): ParsedModelId {
   const modelId = modelIdString.slice(slashIndex + 1);
 
   if (!provider || !modelId) {
-    throw new Error(
+    throw new MarkformConfigError(
       `Invalid model ID format: "${modelIdString}". Both provider and model ID are required.`,
+      {
+        option: 'model',
+        expectedType: 'non-empty provider and model-id',
+        receivedValue: modelIdString,
+      },
     );
   }
 
   const supportedProviders = Object.keys(PROVIDERS);
   if (!supportedProviders.includes(provider)) {
-    throw new Error(
+    throw new MarkformConfigError(
       `Unknown provider: "${provider}". Supported providers: ${supportedProviders.join(', ')}`,
+      {
+        option: 'model',
+        expectedType: `one of: ${supportedProviders.join(', ')}`,
+        receivedValue: provider,
+      },
     );
   }
 
@@ -100,9 +112,10 @@ export async function resolveModel(modelIdString: string): Promise<ResolvedModel
   // Check for API key
   const apiKey = process.env[providerConfig.envVar];
   if (!apiKey) {
-    throw new Error(
+    throw new MarkformConfigError(
       `Missing API key for "${provider}" provider (model: ${modelIdString}).\n` +
         `Set the ${providerConfig.envVar} environment variable or add it to your .env file.`,
+      { option: providerConfig.envVar, expectedType: 'API key string', receivedValue: undefined },
     );
   }
 
@@ -114,9 +127,14 @@ export async function resolveModel(modelIdString: string): Promise<ResolvedModel
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('Cannot find module') || message.includes('ERR_MODULE_NOT_FOUND')) {
-      throw new Error(
+      throw new MarkformConfigError(
         `Provider package not installed for model "${modelIdString}".\n` +
           `Install with: pnpm add ${providerConfig.package}`,
+        {
+          option: 'model',
+          expectedType: 'installed provider package',
+          receivedValue: providerConfig.package,
+        },
       );
     }
     throw error;
@@ -138,8 +156,13 @@ export async function resolveModel(modelIdString: string): Promise<ResolvedModel
     // Fallback: try the simple provider function (for backwards compatibility)
     const providerFn = providerModule[provider] as ((modelId: string) => LanguageModel) | undefined;
     if (typeof providerFn !== 'function') {
-      throw new Error(
+      throw new MarkformConfigError(
         `Provider package "${providerConfig.package}" does not export expected function "${provider}" or "${providerConfig.createFn}"`,
+        {
+          option: 'model',
+          expectedType: 'valid provider export',
+          receivedValue: Object.keys(providerModule).join(', '),
+        },
       );
     }
     model = providerFn(modelId);

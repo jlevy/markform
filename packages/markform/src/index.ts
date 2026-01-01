@@ -250,7 +250,7 @@ export {
 // Engine Exports
 // =============================================================================
 
-export { parseForm, ParseError } from './engine/parse.js';
+export { parseForm } from './engine/parse.js';
 export { serialize } from './engine/serialize.js';
 export type { SerializeOptions } from './engine/serialize.js';
 export {
@@ -360,6 +360,8 @@ export {
   MarkformLlmError,
   MarkformConfigError,
   MarkformAbortError,
+  // Backward compatibility alias (deprecated - use MarkformParseError)
+  ParseError,
   // Type guards
   isMarkformError,
   isParseError,
