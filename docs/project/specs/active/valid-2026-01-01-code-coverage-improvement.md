@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Validation spec for the code coverage improvement implementation, covering Phases 1-3 of
-the plan spec.
+Validation spec for the code coverage improvement implementation, covering all phases
+of the plan spec. **Coverage target of 60%+ achieved!**
 
 **Feature Plan:** [plan-2026-01-01-code-coverage-improvement.md]
 
@@ -11,13 +11,16 @@ the plan spec.
 
 ## Validation Planning
 
-This PR implements Phases 1-3 of the coverage improvement plan, plus additional
-improvements:
+This PR implements all phases of the coverage improvement plan:
 
 1. **Phase 1**: Pure function tests (naming, initialValues)
 2. **Phase 2**: Engine module tests (scopeRef, scopeRefValidation, parseTable)
 3. **Phase 3**: Harness tests (rejectionMockAgent, harnessConfigResolver)
-4. **Additional**: Wire format capture flag, movie research golden test
+4. **Phase 4**: CLI utility tests (shared, formatting, versioning)
+5. **Phase 5**: Engine edge cases (apply, parse)
+6. **Phase 6**: Research validation, runMode, examples
+7. **Phase 7**: Consolidated table-driven test refactoring
+8. **Phase 8**: LLM mocking with session replay integration tests
 
 ## Automated Validation (Testing Performed)
 
@@ -76,7 +79,44 @@ All new tests follow the table-driven pattern as specified in the plan.
   - Partial options merging
   - Metadata edge cases
 
-#### Additional: Golden Tests
+#### Phase 4-5: CLI Utilities and Engine Edge Cases
+
+- **`tests/unit/cli/shared.test.ts`** (9 tests)
+  - `formatPath`: relative path formatting with ANSI color output
+  - `createNoOpSpinner`: spinner interface validation
+  - `OUTPUT_FORMATS`: format constant validation
+
+- **`tests/unit/engine/parseSentinels.test.ts`** (25 tests)
+  - `parseSentinel`: %SKIP%, %ABORT% with optional reasons
+  - Error handling for invalid sentinel syntax
+  - Table-driven tests for all sentinel variants
+
+- **`tests/unit/engine/apply.test.ts`** additions
+  - Patch type mismatch scenarios
+  - Table vs scalar field validation
+
+- **`tests/unit/engine/parse.test.ts`** additions
+  - Edge case error handling
+
+#### Phase 6: Research and Run Mode
+
+- **`tests/unit/cli/runMode.test.ts`** (16 tests)
+  - Run mode detection and configuration
+
+- **`tests/unit/research/researchFormValidation.test.ts`** (7 tests)
+  - Research form validation logic
+
+- **`tests/unit/cli/examples.test.ts`** additions
+  - `getExampleOrder`, `getExamplePath` utilities
+
+#### Phase 7-8: Session Replay Integration
+
+- **`tests/integration/sessionReplay.test.ts`** (2 tests)
+  - `createSessionMockModel`: Converts session wire format to MockLanguageModelV3
+  - Full form fill integration with session replay
+  - Validates LLM mocking approach for golden tests
+
+#### Golden Tests
 
 - **`tests/golden/golden.test.ts`** additions:
   - Complex Form Parse Tests for movie-deep-research form (42 fields)
@@ -84,20 +124,23 @@ All new tests follow the table-driven pattern as specified in the plan.
 
 ### Integration and End-to-End Testing
 
-- All 960 tests pass (including 158 new tests added in this PR)
+- All 1318 tests pass (358+ new tests added in this PR)
 - Pre-commit hooks run full test suite on each commit
 - Pre-push hooks run full test suite before push
+- Session replay integration test validates LLM mocking approach
 
 ### Coverage Results
 
 | Metric | Before | After | Target | Status |
 | --- | --- | --- | --- | --- |
-| Lines | 50.81% | 54.69% | 60% | In Progress |
-| Statements | 50.41% | ~54% | 60% | In Progress |
-| Branches | 49.27% | ~52% | 55% | In Progress |
-| Functions | 49.35% | ~53% | 60% | In Progress |
+| Lines | 50.81% | 60.73% | 60% | ✅ Achieved |
+| Statements | 50.41% | 60.56% | 60% | ✅ Achieved |
+| Branches | 49.27% | 59.30% | 55% | ✅ Achieved |
+| Functions | 49.35% | 62.42% | 60% | ✅ Achieved |
 
-**Coverage improved by ~4% in this PR.**
+**Coverage improved by ~10% in this PR (50.81% → 60.73%).**
+
+**Total tests: 1318 (added 358+ new tests from baseline ~960)**
 
 ### Manual Testing Needed
 
@@ -266,12 +309,17 @@ This enables:
 - Regression detection for prompt changes
 - Scoring of tool call accuracy
 
-## Open Questions
+## Open Questions (Resolved)
 
-1. **Session recording mode**: Should we add a `--record-session` flag to CLI that captures
-   real LLM responses for golden test creation?
+1. **Session recording mode**: Existing `captureWireFormat` flag captures LLM requests/responses.
+   The session replay integration test demonstrates this works for golden testing.
 
-2. **Test isolation**: How to handle tests that require specific model capabilities (e.g.,
-   web search) without making them flaky?
+2. **Test isolation**: MockLanguageModelV3 from `ai/test` provides proper isolation.
+   Session replay pattern allows deterministic replay without external dependencies.
 
-3. **Coverage target**: With LLM mocking, 70%+ coverage is achievable. Is this the new goal?
+3. **Coverage target**: 60% target achieved (60.73% lines). Future work could pursue 70%+
+   by expanding LLM mocking to cover more flows (research, multi-turn, web search).
+
+## Status: Complete ✅
+
+All coverage targets met. Ready for PR review.

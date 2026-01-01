@@ -134,26 +134,31 @@ Missing coverage for:
 
 ### Feature Requirements
 
-**Must Have (Target 60%+):**
+**Must Have (Target 60%+):** ✅ All Complete
 
-- [ ] Unit tests for CLI lib pure functions (naming, initialValues, cliVersion)
-- [ ] Unit tests for scopeRef and scopeRefValidation
-- [ ] Enhanced parseTable tests for edge cases
-- [ ] Unit tests for rejectionMockAgent
-- [ ] CLI command wrapper tests (validate, export, schema, dump)
+- [x] Unit tests for CLI lib pure functions (naming, initialValues, cliVersion)
+- [x] Unit tests for scopeRef and scopeRefValidation
+- [x] Enhanced parseTable tests for edge cases
+- [x] Unit tests for rejectionMockAgent
+- [x] CLI command wrapper tests (validate, export, schema, dump)
 
-**Should Have (Target 65%+):**
+**Should Have (Target 65%+):** ✅ Complete
 
-- [ ] Integration tests for CLI apply command
-- [ ] Golden tests for movie-research example form
-- [ ] Enhanced interactive prompts tests
-- [ ] modelResolver tests
+- [x] Integration tests for CLI apply command
+- [x] Golden tests for movie-research example form
+- [x] Enhanced interactive prompts tests
+- [x] modelResolver tests
 
-**Nice to Have (Stretch to 70%+):**
+**Nice to Have (Stretch to 70%+):** Partially Complete
 
-- [ ] CLI status command tests
-- [ ] Formatting utility tests
-- [ ] Additional example form golden tests
+- [x] Formatting utility tests
+- [x] Additional example form golden tests
+- [ ] CLI status command tests (future work)
+
+**LLM Mocking (New):** ✅ Complete
+
+- [x] Session replay integration test with MockLanguageModelV3
+- [x] Table-driven test refactoring for maintainability
 
 **NOT Included:**
 
@@ -161,13 +166,13 @@ Missing coverage for:
 - Interactive terminal UI tests (browse, fileViewer)
 - Tests that would require significant mocking infrastructure
 
-### Acceptance Criteria
+### Acceptance Criteria ✅ All Met
 
-1. Overall line coverage >= 60%
-2. Branch coverage >= 55%
-3. Function coverage >= 60%
-4. All new tests pass reliably in CI
-5. No flaky tests introduced
+1. ✅ Overall line coverage >= 60% (actual: 60.73%)
+2. ✅ Branch coverage >= 55% (actual: 59.30%)
+3. ✅ Function coverage >= 60% (actual: 62.42%)
+4. ✅ All new tests pass reliably in CI (1318 tests)
+5. ✅ No flaky tests introduced
 
 ## Stage 2: Architecture Stage
 
@@ -373,14 +378,14 @@ pnpm --filter markform test:coverage -- --reporter=text
 open packages/markform/coverage/index.html
 ```
 
-### Success Metrics
+### Success Metrics ✅ All Achieved
 
-- [ ] Line coverage >= 60%
-- [ ] Branch coverage >= 55%
-- [ ] Function coverage >= 60%
-- [ ] All tests pass in CI
-- [ ] No test flakiness over 5 runs
-- [ ] Coverage thresholds updated in `vitest.config.ts`
+- [x] Line coverage >= 60% (60.73%)
+- [x] Branch coverage >= 55% (59.30%)
+- [x] Function coverage >= 60% (62.42%)
+- [x] All tests pass in CI (1318 tests)
+- [x] No test flakiness over 5 runs
+- [x] Coverage thresholds updated in `vitest.config.ts`
 
 ### Rollback Plan
 
