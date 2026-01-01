@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import Markdoc from '@markdoc/markdoc';
 import YAML from 'yaml';
 
 import type { ExampleDefinition } from '../lib/cliTypes.js';
@@ -100,7 +101,9 @@ export function loadExampleContent(exampleId: string): string {
   try {
     return readFileSync(filePath, 'utf-8');
   } catch (error) {
-    throw new Error(`Failed to load example '${exampleId}' from ${filePath}: ${error}`);
+    throw new Error(
+      `Failed to load example '${exampleId}' from ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -133,17 +136,18 @@ export function getExamplePath(exampleId: string): string {
 }
 
 /**
- * Extract YAML frontmatter from a markdown file content.
+ * Extract YAML frontmatter from markdown content using Markdoc's native support.
  * @param content - The markdown file content
  * @returns The parsed frontmatter object or null if no frontmatter found
  */
 function extractFrontmatter(content: string): Record<string, unknown> | null {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!frontmatterMatch || !frontmatterMatch[1]) {
+  const ast = Markdoc.parse(content);
+  const rawFrontmatter = ast.attributes.frontmatter as string | undefined;
+  if (!rawFrontmatter) {
     return null;
   }
   try {
-    return YAML.parse(frontmatterMatch[1]) as Record<string, unknown>;
+    return YAML.parse(rawFrontmatter) as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -158,7 +162,7 @@ export function loadExampleMetadata(exampleId: string): { title?: string; descri
   const content = loadExampleContent(exampleId);
   const frontmatter = extractFrontmatter(content);
 
-  if (!frontmatter || !frontmatter.markform) {
+  if (!frontmatter?.markform) {
     return {};
   }
 

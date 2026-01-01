@@ -7,6 +7,7 @@
  */
 
 import type { FieldPriorityLevel } from './engine/coreTypes.js';
+import { MarkformConfigError } from './errors.js';
 
 // =============================================================================
 // Spec Version Constants
@@ -60,12 +61,17 @@ export const RESERVED_ROLE_NAMES = ['*'] as const;
 export function normalizeRole(role: string): string {
   const normalized = role.trim().toLowerCase();
   if (!ROLE_NAME_PATTERN.test(normalized)) {
-    throw new Error(
+    throw new MarkformConfigError(
       `Invalid role name: "${role}" (must match pattern: start with letter, alphanumeric with underscores/hyphens)`,
+      { option: 'role', expectedType: 'valid role name pattern', receivedValue: role },
     );
   }
   if ((RESERVED_ROLE_NAMES as readonly string[]).includes(normalized)) {
-    throw new Error(`Reserved role name: "${role}"`);
+    throw new MarkformConfigError(`Reserved role name: "${role}"`, {
+      option: 'role',
+      expectedType: 'non-reserved role name',
+      receivedValue: role,
+    });
   }
   return normalized;
 }

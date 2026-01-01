@@ -1,5 +1,5 @@
 #!/usr/bin/env -S npx tsx
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/consistent-type-imports, no-restricted-syntax, @typescript-eslint/prefer-nullish-coalescing */
+/* eslint-disable @typescript-eslint/consistent-type-imports, no-restricted-syntax */
 /**
  * Live Agent Test Script
  *

@@ -1,5 +1,5 @@
 #!/usr/bin/env npx tsx
-/* eslint-disable @typescript-eslint/consistent-type-imports */
+
 /**
  * Regenerate golden test files (sessions and schemas).
  *

@@ -2296,9 +2296,33 @@ interface ValidationIssue {
 
 #### Error Taxonomy
 
-Markform distinguishes between two fundamental error types:
+Markform provides a structured error hierarchy for different error scenarios.
+All errors extend from `MarkformError` and include context-rich information for debugging.
 
-**1. ParseError** — Syntax and structural errors
+**Error Hierarchy:**
+
+```
+MarkformError (base)
+├── MarkformParseError      — Form syntax/structure errors
+├── MarkformPatchError      — Single patch validation error
+├── MarkformValidationError — Multiple patch errors
+├── MarkformLlmError        — LLM/API errors
+├── MarkformConfigError     — Configuration errors
+└── MarkformAbortError      — Form abort errors
+```
+
+**1. MarkformError** — Base error class
+
+Base class for all markform errors. Consumers can catch this to handle any markform error.
+
+```ts
+class MarkformError extends Error {
+  readonly name: string;      // Error class name
+  readonly version: string;   // Markform version for debugging
+}
+```
+
+**2. MarkformParseError** — Syntax and structural errors
 
 Parse errors occur when the markdown/Markdoc syntax is malformed or the form structure
 is invalid. These are detected during parsing and prevent the form from being loaded.
@@ -2306,88 +2330,115 @@ is invalid. These are detected during parsing and prevent the form from being lo
 Examples:
 
 - Invalid Markdoc syntax (unclosed tags, malformed attributes)
-
 - Missing required attributes (e.g., field without `id` or `label`)
-
 - Duplicate IDs within the form
-
-- Invalid field state attribute value (not ‘skipped’ or ‘aborted’)
-
+- Invalid field state attribute value (not 'skipped' or 'aborted')
 - Malformed sentinel values in value fences
 
-**Type definition:**
 ```ts
-interface ParseError {
-  type: 'parse';
-  message: string;
-  location?: {
-    line?: number;
-    column?: number;
-    fieldId?: Id;
-    noteId?: NoteId;
-  };
+class MarkformParseError extends MarkformError {
+  readonly source?: string;   // File path or form identifier
+  readonly line?: number;     // Line number (1-indexed)
+  readonly column?: number;   // Column number (1-indexed)
 }
 ```
 
 **Behavior:**
 
 - Parse errors prevent form loading
-
-- Returned from `parseForm()` as thrown exceptions or error results
-
+- Thrown from `parseForm()` as exceptions
 - Must be fixed before the form can be used
 
-**2. MarkformValidationError** — Model consistency errors
+**3. MarkformPatchError** — Single patch validation error
 
-Validation errors occur when the parsed form model is inconsistent with Markform rules,
-even if the syntax is valid.
-These are semantic errors in the data model.
+Thrown when an LLM generates an invalid patch value.
 
-Examples:
-
-- Option ID referenced in value doesn’t exist in field schema
-
-- Field value type doesn’t match field kind
-
-- Response state inconsistency (e.g., `state='answered'` but no value present)
-
-- Invalid checkbox state for the field’s checkbox mode
-
-**Type definition:**
 ```ts
-interface MarkformValidationError {
-  type: 'validation';
-  message: string;
-  location?: {
-    line?: number;
-    column?: number;
-    fieldId?: Id;
-    noteId?: NoteId;
-  };
+class MarkformPatchError extends MarkformError {
+  readonly fieldId: string;       // Target field ID
+  readonly patchOperation: string; // e.g., 'set_string', 'set_checkboxes'
+  readonly expectedType: string;   // Expected type description
+  readonly receivedValue: unknown; // Actual value received
+  readonly receivedType: string;   // Type of received value
+  readonly patchIndex?: number;    // Index in batch (if applicable)
 }
 ```
 
-**Behavior:**
+**4. MarkformValidationError** — Multiple validation errors
 
-- Validation errors prevent form operations
+Aggregates multiple patch errors from a single operation.
 
-- Returned from `parseForm()` or `applyPatches()` as errors
-
-- Must be fixed before the form is in a valid state
+```ts
+class MarkformValidationError extends MarkformError {
+  readonly issues: MarkformPatchError[];  // Individual errors
+  readonly fieldIds: string[];            // All affected field IDs
+}
+```
 
 **Distinction from ValidationIssue:**
 
 `ValidationIssue` represents content validation (required fields, constraints, hook
 validators) and is part of normal form filling workflow.
-These issues don’t prevent form operations—they guide what needs to be filled next.
+These issues don't prevent form operations—they guide what needs to be filled next.
 
-`ParseError` and `MarkformValidationError` represent structural problems that prevent
-the form from being used at all.
+`MarkformParseError` and `MarkformValidationError` represent structural problems that
+prevent the form from being used at all.
 
-**Union type:**
+**5. MarkformLlmError** — LLM/API errors
+
+Thrown for rate limits, timeouts, invalid responses, etc.
+
 ```ts
-type MarkformError = ParseError | MarkformValidationError;
+class MarkformLlmError extends MarkformError {
+  readonly provider?: string;    // e.g., 'anthropic', 'openai'
+  readonly model?: string;       // Model identifier
+  readonly statusCode?: number;  // HTTP status code
+  readonly retryable: boolean;   // Whether error is retryable
+}
 ```
+
+**6. MarkformConfigError** — Configuration errors
+
+Thrown when invalid options are passed to `fillForm`, model resolver, etc.
+
+```ts
+class MarkformConfigError extends MarkformError {
+  readonly option: string;        // Config option name
+  readonly expectedType: string;  // Expected type/value
+  readonly receivedValue: unknown; // Actual value
+}
+```
+
+**7. MarkformAbortError** — Form abort errors
+
+Thrown when a form is explicitly aborted via `abort_form` patch.
+
+```ts
+class MarkformAbortError extends MarkformError {
+  readonly reason: string;     // Abort reason
+  readonly fieldId?: string;   // Field that triggered abort
+}
+```
+
+**Type Guards:**
+
+For reliable error detection in bundled environments:
+
+```ts
+isMarkformError(error)     // Any markform error
+isParseError(error)        // MarkformParseError
+isPatchError(error)        // MarkformPatchError
+isValidationError(error)   // MarkformValidationError
+isLlmError(error)          // MarkformLlmError
+isConfigError(error)       // MarkformConfigError
+isAbortError(error)        // MarkformAbortError
+isRetryableError(error)    // LLM error with retryable=true
+```
+
+**Backward Compatibility:**
+
+`ParseError` is exported as an alias for `MarkformParseError` for backward compatibility.
+Use `MarkformParseError` in new code.
 
 * * *
 

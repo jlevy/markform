@@ -10,22 +10,6 @@ import type { Node } from '@markdoc/markdoc';
 import type { CheckboxValue, ValidatorRef } from './coreTypes.js';
 
 // =============================================================================
-// Error Types
-// =============================================================================
-
-/** Parse error with source location info */
-export class ParseError extends Error {
-  constructor(
-    message: string,
-    public readonly line?: number,
-    public readonly col?: number,
-  ) {
-    super(message);
-    this.name = 'ParseError';
-  }
-}
-
-// =============================================================================
 // Checkbox Marker Parsing
 // =============================================================================
 

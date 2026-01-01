@@ -250,7 +250,7 @@ export {
 // Engine Exports
 // =============================================================================
 
-export { parseForm, ParseError } from './engine/parse.js';
+export { parseForm } from './engine/parse.js';
 export { serialize } from './engine/serialize.js';
 export type { SerializeOptions } from './engine/serialize.js';
 export {
@@ -346,3 +346,29 @@ export { runResearch } from './research/runResearch.js';
 export type { ResearchOptions } from './research/runResearch.js';
 export { isResearchForm, validateResearchForm } from './research/researchFormValidation.js';
 export type { ResearchResult, ResearchStatus } from './research/researchTypes.js';
+
+// =============================================================================
+// Error Exports
+// =============================================================================
+
+export {
+  // Error classes
+  MarkformError,
+  MarkformParseError,
+  MarkformPatchError,
+  MarkformValidationError,
+  MarkformLlmError,
+  MarkformConfigError,
+  MarkformAbortError,
+  // Backward compatibility alias (deprecated - use MarkformParseError)
+  ParseError,
+  // Type guards
+  isMarkformError,
+  isParseError,
+  isPatchError,
+  isValidationError,
+  isLlmError,
+  isConfigError,
+  isAbortError,
+  isRetryableError,
+} from './errors.js';

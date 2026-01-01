@@ -8,7 +8,8 @@
 import type { Node } from '@markdoc/markdoc';
 
 import type { FieldResponse } from './coreTypes.js';
-import { extractFenceValue, getStringAttr, ParseError } from './parseHelpers.js';
+import { extractFenceValue, getStringAttr } from './parseHelpers.js';
+import { MarkformParseError } from '../errors.js';
 
 // =============================================================================
 // Sentinel Constants
@@ -100,12 +101,12 @@ export function tryParseSentinelResponse(
 
   if (sentinel.type === 'skip') {
     if (stateAttr !== undefined && stateAttr !== 'skipped') {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Field '${fieldId}' has conflicting state='${stateAttr}' with %SKIP% sentinel`,
       );
     }
     if (required) {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Field '${fieldId}' is required but has %SKIP% sentinel. Cannot skip required fields.`,
       );
     }
@@ -114,7 +115,7 @@ export function tryParseSentinelResponse(
 
   if (sentinel.type === 'abort') {
     if (stateAttr !== undefined && stateAttr !== 'aborted') {
-      throw new ParseError(
+      throw new MarkformParseError(
         `Field '${fieldId}' has conflicting state='${stateAttr}' with %ABORT% sentinel`,
       );
     }
