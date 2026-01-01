@@ -2065,4 +2065,50 @@ markform:
       expect(() => parseForm(markdown)).toThrow(/Use {% field kind="table" %} instead/);
     });
   });
+
+  describe('additional parse errors', () => {
+    it('throws error on multiple form tags', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="first" %}
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}
+
+{% form id="second" %}
+{% group id="g2" %}
+{% field kind="string" id="other" label="Other" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/Multiple form tags/i);
+    });
+
+    it('throws error on note with unknown ref', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% note id="note1" ref="unknown_field" role="agent" %}
+Note text for non-existent field.
+{% /note %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/references unknown ID/i);
+    });
+  });
 });
