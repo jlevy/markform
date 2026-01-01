@@ -118,6 +118,13 @@ export type {
   SessionTurnStats,
   SessionFinal,
   SessionTranscript,
+  // Wire format (for session logging)
+  WireFormat,
+  WireRequestFormat,
+  WireResponseFormat,
+  WireResponseStep,
+  WireToolCall,
+  WireToolResult,
   // Frontmatter
   MarkformFrontmatter,
   FrontmatterHarnessConfig,
@@ -226,6 +233,13 @@ export {
   SessionTurnSchema,
   SessionFinalSchema,
   SessionTranscriptSchema,
+  // Wire format schemas
+  WireFormatSchema,
+  WireRequestFormatSchema,
+  WireResponseFormatSchema,
+  WireResponseStepSchema,
+  WireToolCallSchema,
+  WireToolResultSchema,
   // Frontmatter schema
   MarkformFrontmatterSchema,
   // Run mode schema

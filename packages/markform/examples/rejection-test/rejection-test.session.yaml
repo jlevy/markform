@@ -49,6 +49,236 @@ turns:
       markdown_sha256: 4edc8e8f1e858aafa657f32e1c2e56c4bfbe93b37224e1010eb6883c111e1c86
       answered_field_count: 0
       skipped_field_count: 0
+    context:
+      system_prompt: |-
+        # Form Instructions
+        Carefully research answers to all questions in the form, using all available tools you have.
+
+        Guidelines:
+        1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+        2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+        3. NEVER fabricate or guess information - only use data you can verify
+        4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+        5. For string fields: use appropriate text from verified sources
+        6. For number fields: use appropriate numeric values from verified sources
+        7. For single_select: choose one valid option ID
+        8. For multi_select: choose one or more valid option IDs
+        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+        CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+        Always use the generatePatches tool to submit your field values.
+
+
+        # Instructions for agent role
+        Complete the remaining fields based on the provided context.
+
+        # Field-specific instructions
+        **ratings:** Enter rating data with source name, score (0-100), and vote count.
+      context_prompt: |-
+        # Current Form State
+
+        Below is the complete form with all currently filled values.
+        Fields marked with `[ ]` or empty values still need to be filled.
+
+        ```markdown
+        ---
+        markform:
+          spec: "MF/0.1"
+        role_instructions:
+          user: "Fill in the fields you have direct knowledge of."
+          agent: "Complete the remaining fields based on the provided context."
+        ---
+
+        {% form id="rejection_test" title="Rejection Test Form" %}
+
+        {% description ref="rejection_test" %}
+        A form to test patch rejection scenarios - verifies that type mismatch
+        errors are properly recorded and recovery works.
+        {% /description %}
+
+        {% group id="fields" title="Test Fields" %}
+
+        {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+
+        {% instructions ref="ratings" %}
+        Enter rating data with source name, score (0-100), and vote count.
+        {% /instructions %}
+
+        {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+
+        {% /group %}
+
+        {% /form %}
+
+        ```
+
+        # Current Form Issues
+
+        You need to address up to 20 issues. Here are the current issues:
+
+        - **ratings** (field): Required field "Ratings" is empty
+          Severity: required, Priority: P1
+          Type: table
+          Columns: source, score, votes
+          Rows: min: 1, max: 5
+
+        - **title** (field): Required field "Title" is empty
+          Severity: required, Priority: P1
+          Type: string
+
+        # Instructions
+
+        Use the generatePatches tool to submit patches for the fields above.
+        Each patch should match the field kind:
+        - string: { op: "set_string", fieldId: "...", value: "..." }
+        - number: { op: "set_number", fieldId: "...", value: 123 }
+        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+        - url: { op: "set_url", fieldId: "...", value: "https://..." }
+        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+        - year: { op: "set_year", fieldId: "...", value: 2024 }
+        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+        If you cannot find verifiable information for a field, skip it:
+        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+    wire:
+      request:
+        system: |-
+          # Form Instructions
+          Carefully research answers to all questions in the form, using all available tools you have.
+
+          Guidelines:
+          1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+          2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+          3. NEVER fabricate or guess information - only use data you can verify
+          4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+          5. For string fields: use appropriate text from verified sources
+          6. For number fields: use appropriate numeric values from verified sources
+          7. For single_select: choose one valid option ID
+          8. For multi_select: choose one or more valid option IDs
+          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+          CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+          Always use the generatePatches tool to submit your field values.
+
+
+          # Instructions for agent role
+          Complete the remaining fields based on the provided context.
+
+          # Field-specific instructions
+          **ratings:** Enter rating data with source name, score (0-100), and vote count.
+        prompt: |-
+          # Current Form State
+
+          Below is the complete form with all currently filled values.
+          Fields marked with `[ ]` or empty values still need to be filled.
+
+          ```markdown
+          ---
+          markform:
+            spec: "MF/0.1"
+          role_instructions:
+            user: "Fill in the fields you have direct knowledge of."
+            agent: "Complete the remaining fields based on the provided context."
+          ---
+
+          {% form id="rejection_test" title="Rejection Test Form" %}
+
+          {% description ref="rejection_test" %}
+          A form to test patch rejection scenarios - verifies that type mismatch
+          errors are properly recorded and recovery works.
+          {% /description %}
+
+          {% group id="fields" title="Test Fields" %}
+
+          {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+
+          {% instructions ref="ratings" %}
+          Enter rating data with source name, score (0-100), and vote count.
+          {% /instructions %}
+
+          {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+
+          {% /group %}
+
+          {% /form %}
+
+          ```
+
+          # Current Form Issues
+
+          You need to address up to 20 issues. Here are the current issues:
+
+          - **ratings** (field): Required field "Ratings" is empty
+            Severity: required, Priority: P1
+            Type: table
+            Columns: source, score, votes
+            Rows: min: 1, max: 5
+
+          - **title** (field): Required field "Title" is empty
+            Severity: required, Priority: P1
+            Type: string
+
+          # Instructions
+
+          Use the generatePatches tool to submit patches for the fields above.
+          Each patch should match the field kind:
+          - string: { op: "set_string", fieldId: "...", value: "..." }
+          - number: { op: "set_number", fieldId: "...", value: 123 }
+          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+          - url: { op: "set_url", fieldId: "...", value: "https://..." }
+          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+          - year: { op: "set_year", fieldId: "...", value: 2024 }
+          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+          If you cannot find verifiable information for a field, skip it:
+          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        tools:
+          generatePatches:
+            description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
+            input_schema:
+              $defs:
+                patch:
+                  description: A patch operation (see tool description for full schema)
+              properties:
+                patches:
+                  description: Array of patches to apply to the form
+                  items:
+                    $ref: '#/$defs/patch'
+                  type: array
+              required:
+                - patches
+              type: object
+      response:
+        steps:
+          - tool_calls:
+              - tool_name: generatePatches
+                input:
+                  patches:
+                    - field_id: ratings
+                      op: set_string
+                      value: Intentional type mismatch - testing rejection feedback
+                    - field_id: title
+                      op: set_string
+                      value: Test Movie
+            tool_results: []
+            text: null
+        usage:
+          input_tokens: 0
+          output_tokens: 0
   - turn: 2
     inspect:
       issues:
@@ -83,6 +313,256 @@ turns:
       markdown_sha256: f45e7cd87b036d57564e3340dec33c1dc5c2094d880e52b903f64da19b3b8ec0
       answered_field_count: 2
       skipped_field_count: 0
+    context:
+      system_prompt: |-
+        # Form Instructions
+        Carefully research answers to all questions in the form, using all available tools you have.
+
+        Guidelines:
+        1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+        2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+        3. NEVER fabricate or guess information - only use data you can verify
+        4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+        5. For string fields: use appropriate text from verified sources
+        6. For number fields: use appropriate numeric values from verified sources
+        7. For single_select: choose one valid option ID
+        8. For multi_select: choose one or more valid option IDs
+        9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+        CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+        Always use the generatePatches tool to submit your field values.
+
+
+        # Instructions for agent role
+        Complete the remaining fields based on the provided context.
+
+        # Field-specific instructions
+        **ratings:** Enter rating data with source name, score (0-100), and vote count.
+      context_prompt: |-
+        # Previous Patch Errors
+
+        Your previous patches were rejected due to the following errors. Please fix these issues:
+
+        - **Error:** Cannot apply set_string to table field "ratings"
+          **Use instead:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+
+        # Current Form State
+
+        Below is the complete form with all currently filled values.
+        Fields marked with `[ ]` or empty values still need to be filled.
+
+        ```markdown
+        ---
+        markform:
+          spec: "MF/0.1"
+        role_instructions:
+          user: "Fill in the fields you have direct knowledge of."
+          agent: "Complete the remaining fields based on the provided context."
+        ---
+
+        {% form id="rejection_test" title="Rejection Test Form" %}
+
+        {% description ref="rejection_test" %}
+        A form to test patch rejection scenarios - verifies that type mismatch
+        errors are properly recorded and recovery works.
+        {% /description %}
+
+        {% group id="fields" title="Test Fields" %}
+
+        {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+
+        {% instructions ref="ratings" %}
+        Enter rating data with source name, score (0-100), and vote count.
+        {% /instructions %}
+
+        {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+
+        {% /group %}
+
+        {% /form %}
+
+        ```
+
+        # Current Form Issues
+
+        You need to address up to 20 issues. Here are the current issues:
+
+        - **ratings** (field): Required field "Ratings" is empty
+          Severity: required, Priority: P1
+          Type: table
+          Columns: source, score, votes
+          Rows: min: 1, max: 5
+
+        - **title** (field): Required field "Title" is empty
+          Severity: required, Priority: P1
+          Type: string
+
+        # Instructions
+
+        Use the generatePatches tool to submit patches for the fields above.
+        Each patch should match the field kind:
+        - string: { op: "set_string", fieldId: "...", value: "..." }
+        - number: { op: "set_number", fieldId: "...", value: 123 }
+        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+        - url: { op: "set_url", fieldId: "...", value: "https://..." }
+        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+        - year: { op: "set_year", fieldId: "...", value: 2024 }
+        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+        If you cannot find verifiable information for a field, skip it:
+        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+    wire:
+      request:
+        system: |-
+          # Form Instructions
+          Carefully research answers to all questions in the form, using all available tools you have.
+
+          Guidelines:
+          1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
+          2. You MUST address ALL issues shown to you - both required AND recommended (optional)
+          3. NEVER fabricate or guess information - only use data you can verify
+          4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
+          5. For string fields: use appropriate text from verified sources
+          6. For number fields: use appropriate numeric values from verified sources
+          7. For single_select: choose one valid option ID
+          8. For multi_select: choose one or more valid option IDs
+          9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+
+          CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+
+          Always use the generatePatches tool to submit your field values.
+
+
+          # Instructions for agent role
+          Complete the remaining fields based on the provided context.
+
+          # Field-specific instructions
+          **ratings:** Enter rating data with source name, score (0-100), and vote count.
+        prompt: |-
+          # Previous Patch Errors
+
+          Your previous patches were rejected due to the following errors. Please fix these issues:
+
+          - **Error:** Cannot apply set_string to table field "ratings"
+            **Use instead:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+
+          # Current Form State
+
+          Below is the complete form with all currently filled values.
+          Fields marked with `[ ]` or empty values still need to be filled.
+
+          ```markdown
+          ---
+          markform:
+            spec: "MF/0.1"
+          role_instructions:
+            user: "Fill in the fields you have direct knowledge of."
+            agent: "Complete the remaining fields based on the provided context."
+          ---
+
+          {% form id="rejection_test" title="Rejection Test Form" %}
+
+          {% description ref="rejection_test" %}
+          A form to test patch rejection scenarios - verifies that type mismatch
+          errors are properly recorded and recovery works.
+          {% /description %}
+
+          {% group id="fields" title="Test Fields" %}
+
+          {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+
+          {% instructions ref="ratings" %}
+          Enter rating data with source name, score (0-100), and vote count.
+          {% /instructions %}
+
+          {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+
+          {% /group %}
+
+          {% /form %}
+
+          ```
+
+          # Current Form Issues
+
+          You need to address up to 20 issues. Here are the current issues:
+
+          - **ratings** (field): Required field "Ratings" is empty
+            Severity: required, Priority: P1
+            Type: table
+            Columns: source, score, votes
+            Rows: min: 1, max: 5
+
+          - **title** (field): Required field "Title" is empty
+            Severity: required, Priority: P1
+            Type: string
+
+          # Instructions
+
+          Use the generatePatches tool to submit patches for the fields above.
+          Each patch should match the field kind:
+          - string: { op: "set_string", fieldId: "...", value: "..." }
+          - number: { op: "set_number", fieldId: "...", value: 123 }
+          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
+          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
+          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
+          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
+          - url: { op: "set_url", fieldId: "...", value: "https://..." }
+          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
+          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
+          - year: { op: "set_year", fieldId: "...", value: 2024 }
+          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
+
+          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
+
+          If you cannot find verifiable information for a field, skip it:
+          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        tools:
+          generatePatches:
+            description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
+            input_schema:
+              $defs:
+                patch:
+                  description: A patch operation (see tool description for full schema)
+              properties:
+                patches:
+                  description: Array of patches to apply to the form
+                  items:
+                    $ref: '#/$defs/patch'
+                  type: array
+              required:
+                - patches
+              type: object
+      response:
+        steps:
+          - tool_calls:
+              - tool_name: generatePatches
+                input:
+                  patches:
+                    - field_id: ratings
+                      op: set_table
+                      rows:
+                        - score: 85
+                          source: IMDB
+                          votes: 12500
+                        - score: 92
+                          source: Rotten Tomatoes
+                          votes: 450
+                    - field_id: title
+                      op: set_string
+                      value: Test Movie
+            tool_results: []
+            text: null
+        usage:
+          input_tokens: 0
+          output_tokens: 0
 final:
   expect_complete: true
   expected_completed_form: rejection-test-mock-filled.form.md
