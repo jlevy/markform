@@ -346,3 +346,27 @@ export { runResearch } from './research/runResearch.js';
 export type { ResearchOptions } from './research/runResearch.js';
 export { isResearchForm, validateResearchForm } from './research/researchFormValidation.js';
 export type { ResearchResult, ResearchStatus } from './research/researchTypes.js';
+
+// =============================================================================
+// Error Exports
+// =============================================================================
+
+export {
+  // Error classes
+  MarkformError,
+  MarkformParseError,
+  MarkformPatchError,
+  MarkformValidationError,
+  MarkformLlmError,
+  MarkformConfigError,
+  MarkformAbortError,
+  // Type guards
+  isMarkformError,
+  isParseError,
+  isPatchError,
+  isValidationError,
+  isLlmError,
+  isConfigError,
+  isAbortError,
+  isRetryableError,
+} from './errors.js';
