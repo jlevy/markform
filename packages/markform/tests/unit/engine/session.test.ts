@@ -265,5 +265,107 @@ describe('session module', () => {
       );
       expect(reparsed.turns[0]!.apply.patches.length).toBe(original.turns[0]!.apply.patches.length);
     });
+
+    it('preserves wire format through round-trip', () => {
+      const session: SessionTranscript = {
+        sessionVersion: '0.1.0',
+        mode: 'live',
+        form: { path: 'test.form.md' },
+        harness: {
+          maxIssuesPerTurn: 5,
+          maxPatchesPerTurn: 3,
+          maxTurns: 10,
+        },
+        turns: [
+          {
+            turn: 1,
+            inspect: {
+              issues: [
+                {
+                  ref: 'field1',
+                  scope: 'field',
+                  reason: 'required_missing',
+                  message: 'Field is empty',
+                  severity: 'required',
+                  priority: 1,
+                },
+              ],
+            },
+            apply: {
+              patches: [{ op: 'set_string', fieldId: 'field1', value: 'test' }],
+            },
+            after: {
+              requiredIssueCount: 0,
+              markdownSha256: 'abc123',
+              answeredFieldCount: 1,
+              skippedFieldCount: 0,
+            },
+            wire: {
+              request: {
+                system: 'You are a form-filling agent.',
+                prompt: 'Fill the form fields.',
+                tools: {
+                  fill_form: {
+                    description: 'Fill form fields with values',
+                    inputSchema: { type: 'object', properties: { patches: { type: 'array' } } },
+                  },
+                },
+              },
+              response: {
+                steps: [
+                  {
+                    toolCalls: [
+                      {
+                        toolName: 'fill_form',
+                        input: {
+                          patches: [{ op: 'set_string', fieldId: 'field1', value: 'test' }],
+                        },
+                      },
+                    ],
+                    toolResults: [
+                      {
+                        toolName: 'fill_form',
+                        result: { success: true },
+                      },
+                    ],
+                    text: null,
+                  },
+                ],
+                usage: {
+                  inputTokens: 1000,
+                  outputTokens: 200,
+                },
+              },
+            },
+          },
+        ],
+        final: {
+          expectComplete: true,
+          expectedCompletedForm: 'test.filled.form.md',
+        },
+      };
+
+      const serialized = serializeSession(session);
+      const reparsed = parseSession(serialized);
+
+      // Verify wire format is preserved
+      expect(reparsed.turns[0]!.wire).toBeDefined();
+      expect(reparsed.turns[0]!.wire!.request.system).toBe('You are a form-filling agent.');
+      expect(reparsed.turns[0]!.wire!.request.prompt).toBe('Fill the form fields.');
+      expect(reparsed.turns[0]!.wire!.request.tools.fill_form).toBeDefined();
+      expect(reparsed.turns[0]!.wire!.response.steps.length).toBe(1);
+      expect(reparsed.turns[0]!.wire!.response.steps[0]!.toolCalls[0]!.toolName).toBe('fill_form');
+      expect(reparsed.turns[0]!.wire!.response.usage.inputTokens).toBe(1000);
+      expect(reparsed.turns[0]!.wire!.response.usage.outputTokens).toBe(200);
+
+      // Verify YAML output uses snake_case for wire format keys
+      expect(serialized).toContain('wire:');
+      expect(serialized).toContain('input_tokens: 1000');
+      expect(serialized).toContain('output_tokens: 200');
+      expect(serialized).toContain('tool_calls:');
+      expect(serialized).toContain('tool_results:');
+      expect(serialized).toContain('tool_name: fill_form');
+      expect(serialized).toContain('input_schema:');
+    });
   });
 });

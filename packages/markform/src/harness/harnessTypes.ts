@@ -17,8 +17,25 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  // Wire format types (defined in coreTypes for session logging)
+  WireFormat,
+  WireRequestFormat,
+  WireResponseFormat,
+  WireResponseStep,
+  WireToolCall,
+  WireToolResult,
 } from '../engine/coreTypes.js';
 import type { InputContext } from '../engine/valueCoercion.js';
+
+// Re-export wire format types for convenience
+export type {
+  WireFormat,
+  WireRequestFormat,
+  WireResponseFormat,
+  WireResponseStep,
+  WireToolCall,
+  WireToolResult,
+};
 
 // =============================================================================
 // Agent Interface
@@ -59,6 +76,12 @@ export interface TurnStats {
     /** Context prompt with form state and issues */
     context: string;
   };
+  /**
+   * Complete wire format for session logging.
+   * Captures exact LLM request/response for regression testing.
+   * Only populated when captureWireFormat is enabled (e.g., in golden tests).
+   */
+  wire?: WireFormat;
 }
 
 /**

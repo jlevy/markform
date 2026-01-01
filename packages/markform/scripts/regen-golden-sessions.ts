@@ -15,7 +15,7 @@ import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
-import type { HarnessConfig, SessionTranscript } from '../src/engine/coreTypes.js';
+import type { HarnessConfig, PatchRejection, SessionTranscript } from '../src/engine/coreTypes.js';
 import { parseForm } from '../src/engine/parse.js';
 import { formToJsonSchema } from '../src/engine/jsonSchema.js';
 import { serializeSession } from '../src/engine/session.js';
@@ -24,7 +24,9 @@ import { toStructuredValues, toNotesArray } from '../src/cli/lib/exportHelpers.j
 import { FormHarness } from '../src/harness/harness.js';
 import { createMockAgent } from '../src/harness/mockAgent.js';
 import { createRejectionMockAgent } from '../src/harness/rejectionMockAgent.js';
+import { buildMockWireFormat } from '../src/harness/liveAgent.js';
 import type { Agent } from '../src/harness/harnessTypes.js';
+import { AGENT_ROLE } from '../src/settings.js';
 
 // =============================================================================
 // Configuration
@@ -131,15 +133,7 @@ async function runMockFill(
   const harness = new FormHarness(form, config);
 
   // Track rejections between turns (like programmaticFill does)
-  let previousRejections:
-    | Array<{
-        patchIndex: number;
-        message: string;
-        fieldId?: string;
-        fieldKind?: string;
-        columnIds?: string[];
-      }>
-    | undefined;
+  let previousRejections: PatchRejection[] | undefined;
 
   while (harness.getState() !== 'complete') {
     const step = harness.step();
@@ -152,7 +146,24 @@ async function runMockFill(
       previousRejections,
     );
 
-    const applyResult = harness.apply(response.patches, step.issues);
+    // Build wire format for session logging (like CLI does)
+    const wire = buildMockWireFormat(
+      harness.getForm(),
+      step.issues,
+      response.patches,
+      config.maxPatchesPerTurn,
+      AGENT_ROLE,
+      previousRejections,
+    );
+
+    // Extract context from wire for session logging
+    const context = {
+      systemPrompt: wire.request.system,
+      contextPrompt: wire.request.prompt,
+    };
+
+    // Apply patches with wire format
+    const applyResult = harness.apply(response.patches, step.issues, undefined, context, wire);
 
     // Track rejections for next turn
     previousRejections = applyResult.rejectedPatches;

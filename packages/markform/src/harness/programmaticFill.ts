@@ -334,8 +334,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       }
     }
 
-    // Apply patches
-    stepResult = harness.apply(patches, turnIssues, llmStats, context);
+    // Apply patches (pass wire format for comprehensive session logging)
+    stepResult = harness.apply(patches, turnIssues, llmStats, context, stats?.wire);
     // Use actual applied count from harness (0 if patches were rejected)
     const actualPatchesApplied = stepResult.patchesApplied ?? patches.length;
     totalPatches += actualPatchesApplied;

@@ -29,7 +29,10 @@ Guidelines:
 6. For number fields: use appropriate numeric values from verified sources
 7. For single_select: choose one valid option ID
 8. For multi_select: choose one or more valid option IDs
-9. For checkboxes: set appropriate states (done/todo for simple, yes/no for explicit)
+9. For checkboxes: use the appropriate state for the checkbox mode:
+   - Mode "simple": done (checked) or todo (unchecked)
+   - Mode "multi": done, todo, or na (not applicable)
+   - Mode "explicit": yes or no (must explicitly answer)
 
 CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -64,10 +67,10 @@ export const ISSUES_HEADER = '# Current Form Issues';
 
 /**
  * Template for the issues intro text.
- * @param maxPatches - Maximum number of patches to generate
+ * @param issueCount - Actual number of issues shown
  */
-export function getIssuesIntro(maxPatches: number): string {
-  return `You need to address up to ${maxPatches} issues. Here are the current issues:`;
+export function getIssuesIntro(issueCount: number): string {
+  return `You need to address ${issueCount} issue${issueCount === 1 ? '' : 's'}. Here are the current issues:`;
 }
 
 /**
@@ -141,6 +144,17 @@ For table fields, use the column IDs shown in the field schema. Each row is an o
 
 If you cannot find verifiable information for a field, skip it:
 - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }`;
+
+/**
+ * Simplified general instructions for use with inline field instructions.
+ *
+ * When inline field instructions are shown after each issue, we only need
+ * general guidance about using the fill_form tool.
+ */
+export const GENERAL_INSTRUCTIONS = `# General Instructions
+
+Use the fill_form tool to submit patches for the fields above.
+For table fields, each row is an object with column ID keys.`;
 
 // =============================================================================
 // Section Headers
