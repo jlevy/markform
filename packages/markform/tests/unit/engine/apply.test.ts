@@ -1423,11 +1423,34 @@ markform:
   });
 
   // =============================================================================
-  // Patch Value Validation Matrix
+  // Patch Validation Coverage Matrix
   // =============================================================================
-  // Tests that invalid patch VALUES (undefined, null, wrong types) are rejected
-  // with descriptive error messages instead of crashing with generic JS errors.
-  // These tests intentionally use `as any` to simulate malformed LLM outputs.
+  //
+  // This section tests runtime validation for all 15 patch types. Validation layers:
+  //
+  // Layer 1: Field Existence - All patches validate field/ref exists (tested above)
+  // Layer 2: Field Kind Match - set_* patches match expected field kind (tested above)
+  // Layer 3: Container Type Validation - Arrays/objects validated at runtime (below)
+  // Layer 4: Value Domain Validation - Option IDs, column IDs checked (tested above)
+  //
+  // Container Type Validation Matrix:
+  // ┌─────────────────────┬────────────┬─────────────────────────────────────────┐
+  // │ Patch Op            │ Property   │ Runtime Validation                      │
+  // ├─────────────────────┼────────────┼─────────────────────────────────────────┤
+  // │ set_string          │ value      │ None (scalar, TypeScript-only)          │
+  // │ set_number          │ value      │ None (scalar, TypeScript-only)          │
+  // │ set_url             │ value      │ None (scalar, TypeScript-only)          │
+  // │ set_date            │ value      │ None (scalar, TypeScript-only)          │
+  // │ set_year            │ value      │ None (scalar, TypeScript-only)          │
+  // │ set_single_select   │ selected   │ None (nullable scalar)                  │
+  // │ set_string_list     │ items      │ Array.isArray() ✓                       │
+  // │ set_url_list        │ items      │ Array.isArray() ✓                       │
+  // │ set_multi_select    │ selected   │ Array.isArray() ✓                       │
+  // │ set_checkboxes      │ values     │ != null && typeof 'object' && !Array ✓  │
+  // │ set_table           │ rows       │ Array.isArray() + null-safe iteration ✓ │
+  // └─────────────────────┴────────────┴─────────────────────────────────────────┘
+  //
+  // Tests below use `as any` to simulate malformed LLM outputs that bypass TypeScript.
 
   /* eslint-disable @typescript-eslint/no-unsafe-argument */
   describe('patch value validation', () => {

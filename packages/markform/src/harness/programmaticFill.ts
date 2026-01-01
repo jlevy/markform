@@ -323,7 +323,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       llmStats = {
         inputTokens: stats.inputTokens,
         outputTokens: stats.outputTokens,
-        toolCalls: stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
+        toolCalls: stats.toolCalls && stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
       };
       // Capture prompts sent to LLM for session logging (helps debug prompt issues)
       if (stats.prompts) {

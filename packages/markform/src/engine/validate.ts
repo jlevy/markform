@@ -868,8 +868,9 @@ function validateTableRow(
 function validateTableField(field: TableField, value: TableValue | undefined): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  // Check required
-  const isEmpty = !value || value.rows.length === 0;
+  // Check required (guard against malformed values without rows)
+  const rows = value?.rows ?? [];
+  const isEmpty = !value || rows.length === 0;
   if (field.required && isEmpty) {
     issues.push({
       severity: 'error',
@@ -886,28 +887,28 @@ function validateTableField(field: TableField, value: TableValue | undefined): V
   }
 
   // Check minRows
-  if (field.minRows !== undefined && value.rows.length < field.minRows) {
+  if (field.minRows !== undefined && rows.length < field.minRows) {
     issues.push({
       severity: 'error',
-      message: `"${field.label}" must have at least ${field.minRows} row(s) (has ${value.rows.length})`,
+      message: `"${field.label}" must have at least ${field.minRows} row(s) (has ${rows.length})`,
       ref: field.id,
       source: 'builtin',
     });
   }
 
   // Check maxRows
-  if (field.maxRows !== undefined && value.rows.length > field.maxRows) {
+  if (field.maxRows !== undefined && rows.length > field.maxRows) {
     issues.push({
       severity: 'error',
-      message: `"${field.label}" must have at most ${field.maxRows} row(s) (has ${value.rows.length})`,
+      message: `"${field.label}" must have at most ${field.maxRows} row(s) (has ${rows.length})`,
       ref: field.id,
       source: 'builtin',
     });
   }
 
   // Validate each row
-  for (let i = 0; i < value.rows.length; i++) {
-    issues.push(...validateTableRow(value.rows[i]!, field.columns, field.id, i));
+  for (let i = 0; i < rows.length; i++) {
+    issues.push(...validateTableRow(rows[i]!, field.columns, field.id, i));
   }
 
   return issues;

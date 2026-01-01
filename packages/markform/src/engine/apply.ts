@@ -5,46 +5,20 @@
  */
 
 import type {
-  AbortFieldPatch,
-  AddNotePatch,
   ApplyResult,
   CellResponse,
   CheckboxesValue,
-  CheckboxValue,
-  ClearFieldPatch,
-  DateValue,
   Field,
   FieldResponse,
+  FieldValue,
   Id,
   InspectIssue,
-  MultiSelectValue,
   Note,
   NoteId,
-  NumberValue,
-  OptionId,
   ParsedForm,
   Patch,
-  RemoveNotePatch,
-  SetCheckboxesPatch,
-  SetDatePatch,
-  SetMultiSelectPatch,
-  SetNumberPatch,
-  SetSingleSelectPatch,
-  SetStringListPatch,
-  SetStringPatch,
-  SetTablePatch,
-  SetUrlListPatch,
-  SetUrlPatch,
-  SetYearPatch,
-  SingleSelectValue,
-  SkipFieldPatch,
-  StringListValue,
-  StringValue,
   TableRowResponse,
   TableValue,
-  UrlListValue,
-  UrlValue,
-  YearValue,
 } from './coreTypes.js';
 import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
 import { validate } from './validate.js';
@@ -68,6 +42,21 @@ interface PatchError {
   columnIds?: string[];
 }
 
+/** Mapping from patch op to required field kind for simple type checks. */
+const PATCH_OP_TO_FIELD_KIND: Record<string, string> = {
+  set_string: 'string',
+  set_number: 'number',
+  set_string_list: 'string_list',
+  set_single_select: 'single_select',
+  set_multi_select: 'multi_select',
+  set_checkboxes: 'checkboxes',
+  set_url: 'url',
+  set_url_list: 'url_list',
+  set_date: 'date',
+  set_year: 'year',
+  set_table: 'table',
+};
+
 /**
  * Find a field by ID in the form schema.
  */
@@ -83,259 +72,127 @@ function findField(form: ParsedForm, fieldId: Id): Field | undefined {
 }
 
 /**
+ * Create a type mismatch error with field metadata for LLM guidance.
+ */
+function typeMismatchError(index: number, op: string, field: Field): PatchError {
+  return {
+    patchIndex: index,
+    message: `Cannot apply ${op} to ${field.kind} field "${field.id}"`,
+    fieldId: field.id,
+    fieldKind: field.kind,
+    columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
+  };
+}
+
+/**
  * Validate a single patch against the form schema.
  */
 function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchError | null {
   // Handle patches without fieldId
   if (patch.op === 'add_note') {
-    // Validate that ref exists in idIndex
     if (!form.idIndex.has(patch.ref)) {
-      return {
-        patchIndex: index,
-        message: `Reference "${patch.ref}" not found in form`,
-      };
+      return { patchIndex: index, message: `Reference "${patch.ref}" not found in form` };
     }
     return null;
   }
 
   if (patch.op === 'remove_note') {
-    // This patch uses 'noteId' instead of 'fieldId'
-    // Validate that the note exists
     const noteExists = form.notes.some((n) => n.id === patch.noteId);
     if (!noteExists) {
-      return {
-        patchIndex: index,
-        message: `Note with id '${patch.noteId}' not found`,
-      };
+      return { patchIndex: index, message: `Note with id '${patch.noteId}' not found` };
     }
     return null;
   }
 
   // All other patches have fieldId
-  const fieldId = patch.fieldId;
-  const field = findField(form, fieldId);
-
+  const field = findField(form, patch.fieldId);
   if (!field) {
-    return {
-      patchIndex: index,
-      message: `Field "${fieldId}" not found`,
-    };
+    return { patchIndex: index, message: `Field "${patch.fieldId}" not found` };
   }
 
-  switch (patch.op) {
-    case 'set_string':
-      if (field.kind !== 'string') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_string to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
-      }
-      break;
+  // Check field kind match for set_* patches
+  const expectedKind = PATCH_OP_TO_FIELD_KIND[patch.op];
+  if (expectedKind && field.kind !== expectedKind) {
+    return typeMismatchError(index, patch.op, field);
+  }
 
-    case 'set_number':
-      if (field.kind !== 'number') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_number to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
-      }
-      break;
-
-    case 'set_string_list':
-      if (field.kind !== 'string_list') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_string_list to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
-      }
-      // Validate items is a non-null array
-      if (!Array.isArray(patch.items)) {
-        return {
-          patchIndex: index,
-          message: `Invalid set_string_list patch for field "${field.id}": items must be an array of strings`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-        };
-      }
-      break;
-
-    case 'set_single_select': {
-      if (field.kind !== 'single_select') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_single_select to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
-      }
-      const selectField = field;
-      if (patch.selected !== null) {
-        const validOptions = new Set(selectField.options.map((o) => o.id));
-        if (!validOptions.has(patch.selected)) {
-          return {
-            patchIndex: index,
-            message: `Invalid option "${patch.selected}" for field "${field.id}"`,
-          };
-        }
-      }
-      break;
+  // Additional validation for container types, select/checkbox options, and table columns
+  if (patch.op === 'set_string_list' && field.kind === 'string_list') {
+    // Validate items is a non-null array
+    if (!Array.isArray(patch.items)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_string_list patch for field "${field.id}": items must be an array of strings`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
     }
-
-    case 'set_multi_select': {
-      if (field.kind !== 'multi_select') {
+  } else if (patch.op === 'set_single_select' && field.kind === 'single_select') {
+    if (patch.selected !== null) {
+      const validOptions = new Set(field.options.map((o) => o.id));
+      if (!validOptions.has(patch.selected)) {
         return {
           patchIndex: index,
-          message: `Cannot apply set_multi_select to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
+          message: `Invalid option "${patch.selected}" for field "${field.id}"`,
         };
       }
-      // Validate selected is a non-null array
-      if (!Array.isArray(patch.selected)) {
-        return {
-          patchIndex: index,
-          message: `Invalid set_multi_select patch for field "${field.id}": selected must be an array of option IDs`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-        };
-      }
-      const multiField = field;
-      const validOptions = new Set(multiField.options.map((o) => o.id));
-      for (const optId of patch.selected) {
-        if (!validOptions.has(optId)) {
-          return {
-            patchIndex: index,
-            message: `Invalid option "${optId}" for field "${field.id}"`,
-          };
-        }
-      }
-      break;
     }
-
-    case 'set_checkboxes': {
-      if (field.kind !== 'checkboxes') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_checkboxes to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
-      }
-      // Validate values is a non-null object (not array, string, undefined, null)
-      if (patch.values == null || typeof patch.values !== 'object' || Array.isArray(patch.values)) {
-        return {
-          patchIndex: index,
-          message: `Invalid set_checkboxes patch for field "${field.id}": values must be an object mapping option IDs to booleans`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-        };
-      }
-      const checkboxField = field;
-      const validOptions = new Set(checkboxField.options.map((o) => o.id));
-      for (const optId of Object.keys(patch.values)) {
-        if (!validOptions.has(optId)) {
-          return {
-            patchIndex: index,
-            message: `Invalid option "${optId}" for field "${field.id}"`,
-          };
-        }
-      }
-      break;
+  } else if (patch.op === 'set_multi_select' && field.kind === 'multi_select') {
+    // Validate selected is a non-null array
+    if (!Array.isArray(patch.selected)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_multi_select patch for field "${field.id}": selected must be an array of option IDs`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
     }
-
-    case 'set_url':
-      if (field.kind !== 'url') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_url to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
+    const validOptions = new Set(field.options.map((o) => o.id));
+    for (const optId of patch.selected) {
+      if (!validOptions.has(optId)) {
+        return { patchIndex: index, message: `Invalid option "${optId}" for field "${field.id}"` };
       }
-      break;
-
-    case 'set_url_list':
-      if (field.kind !== 'url_list') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_url_list to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
+    }
+  } else if (patch.op === 'set_checkboxes' && field.kind === 'checkboxes') {
+    // Validate values is a non-null object (not array, string, undefined, null)
+    if (patch.values == null || typeof patch.values !== 'object' || Array.isArray(patch.values)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_checkboxes patch for field "${field.id}": values must be an object mapping option IDs to booleans`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
+    }
+    const validOptions = new Set(field.options.map((o) => o.id));
+    for (const optId of Object.keys(patch.values)) {
+      if (!validOptions.has(optId)) {
+        return { patchIndex: index, message: `Invalid option "${optId}" for field "${field.id}"` };
       }
-      // Validate items is a non-null array
-      if (!Array.isArray(patch.items)) {
-        return {
-          patchIndex: index,
-          message: `Invalid set_url_list patch for field "${field.id}": items must be an array of URLs`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-        };
-      }
-      break;
-
-    case 'set_date':
-      if (field.kind !== 'date') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_date to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
-      }
-      break;
-
-    case 'set_year':
-      if (field.kind !== 'year') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_year to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.kind === 'table' ? field.columns.map((c) => c.id) : undefined,
-        };
-      }
-      break;
-
-    case 'set_table': {
-      if (field.kind !== 'table') {
-        return {
-          patchIndex: index,
-          message: `Cannot apply set_table to ${field.kind} field "${field.id}"`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          // No columnIds since this is not a table field
-        };
-      }
-      // Validate rows is a non-null array
-      if (!Array.isArray(patch.rows)) {
-        return {
-          patchIndex: index,
-          message: `Invalid set_table patch for field "${field.id}": rows must be an array of row objects`,
-          fieldId: field.id,
-          fieldKind: field.kind,
-          columnIds: field.columns.map((c) => c.id),
-        };
-      }
-      const tableField = field;
-      // Validate column IDs in the patch rows
-      const validColumns = new Set(tableField.columns.map((c) => c.id));
-      for (const row of patch.rows) {
+    }
+  } else if (patch.op === 'set_url_list' && field.kind === 'url_list') {
+    // Validate items is a non-null array
+    if (!Array.isArray(patch.items)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_url_list patch for field "${field.id}": items must be an array of URLs`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
+    }
+  } else if (patch.op === 'set_table' && field.kind === 'table') {
+    // Validate rows is a non-null array
+    if (!Array.isArray(patch.rows)) {
+      return {
+        patchIndex: index,
+        message: `Invalid set_table patch for field "${field.id}": rows must be an array of row objects`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+        columnIds: field.columns.map((c) => c.id),
+      };
+    }
+    const validColumns = new Set(field.columns.map((c) => c.id));
+    for (const row of patch.rows) {
+      if (row != null) {
         for (const colId of Object.keys(row)) {
           if (!validColumns.has(colId)) {
             return {
@@ -345,26 +202,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
           }
         }
       }
-      break;
     }
-
-    case 'clear_field':
-      // Any field can be cleared
-      break;
-
-    case 'skip_field':
-      // Can only skip optional fields
-      if (field.required) {
-        return {
-          patchIndex: index,
-          message: `Cannot skip required field "${field.id}"`,
-        };
-      }
-      break;
-
-    case 'abort_field':
-      // Any field can be aborted
-      break;
+  } else if (patch.op === 'skip_field' && field.required) {
+    return { patchIndex: index, message: `Cannot skip required field "${field.id}"` };
   }
 
   return null;
@@ -404,148 +244,54 @@ function generateNoteId(form: ParsedForm): NoteId {
 }
 
 /**
- * Apply a set_string patch.
+ * Set a simple value response (string, number, url, date, year).
  */
-function applySetString(responses: Record<Id, FieldResponse>, patch: SetStringPatch): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'string',
-      value: patch.value,
-    } as StringValue,
-  };
-}
-
-/**
- * Apply a set_number patch.
- */
-function applySetNumber(responses: Record<Id, FieldResponse>, patch: SetNumberPatch): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'number',
-      value: patch.value,
-    } as NumberValue,
-  };
-}
-
-/**
- * Apply a set_string_list patch.
- */
-function applySetStringList(responses: Record<Id, FieldResponse>, patch: SetStringListPatch): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'string_list',
-      items: patch.items,
-    } as StringListValue,
-  };
-}
-
-/**
- * Apply a set_single_select patch.
- */
-function applySetSingleSelect(
+function setSimpleValue(
   responses: Record<Id, FieldResponse>,
-  patch: SetSingleSelectPatch,
+  fieldId: Id,
+  kind: string,
+  value: string | number | null,
 ): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'single_select',
-      selected: patch.selected,
-    } as SingleSelectValue,
-  };
+  responses[fieldId] = { state: 'answered', value: { kind, value } as FieldValue };
 }
 
 /**
- * Apply a set_multi_select patch.
+ * Set a list value response (string_list, url_list).
  */
-function applySetMultiSelect(
+function setListValue(
   responses: Record<Id, FieldResponse>,
-  patch: SetMultiSelectPatch,
+  fieldId: Id,
+  kind: string,
+  items: string[],
 ): void {
-  responses[patch.fieldId] = {
+  responses[fieldId] = { state: 'answered', value: { kind, items } as FieldValue };
+}
+
+/**
+ * Set a single select value response.
+ */
+function setSingleSelectValue(
+  responses: Record<Id, FieldResponse>,
+  fieldId: Id,
+  selected: string | null,
+): void {
+  responses[fieldId] = {
     state: 'answered',
-    value: {
-      kind: 'multi_select',
-      selected: patch.selected,
-    } as MultiSelectValue,
+    value: { kind: 'single_select', selected } as FieldValue,
   };
 }
 
 /**
- * Apply a set_checkboxes patch (merges with existing values).
+ * Set a multi select value response.
  */
-function applySetCheckboxes(responses: Record<Id, FieldResponse>, patch: SetCheckboxesPatch): void {
-  const existingResponse = responses[patch.fieldId];
-  const existingValue = existingResponse?.value as CheckboxesValue | undefined;
-  const existingValues = existingValue?.values ?? {};
-
-  // Merge patch values with existing
-  const merged: Record<OptionId, CheckboxValue> = {
-    ...existingValues,
-    ...patch.values,
-  };
-
-  responses[patch.fieldId] = {
+function setMultiSelectValue(
+  responses: Record<Id, FieldResponse>,
+  fieldId: Id,
+  selected: string[],
+): void {
+  responses[fieldId] = {
     state: 'answered',
-    value: {
-      kind: 'checkboxes',
-      values: merged,
-    } as CheckboxesValue,
-  };
-}
-
-/**
- * Apply a set_url patch.
- */
-function applySetUrl(responses: Record<Id, FieldResponse>, patch: SetUrlPatch): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'url',
-      value: patch.value,
-    } as UrlValue,
-  };
-}
-
-/**
- * Apply a set_url_list patch.
- */
-function applySetUrlList(responses: Record<Id, FieldResponse>, patch: SetUrlListPatch): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'url_list',
-      items: patch.items,
-    } as UrlListValue,
-  };
-}
-
-/**
- * Apply a set_date patch.
- */
-function applySetDate(responses: Record<Id, FieldResponse>, patch: SetDatePatch): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'date',
-      value: patch.value,
-    } as DateValue,
-  };
-}
-
-/**
- * Apply a set_year patch.
- */
-function applySetYear(responses: Record<Id, FieldResponse>, patch: SetYearPatch): void {
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'year',
-      value: patch.value,
-    } as YearValue,
+    value: { kind: 'multi_select', selected } as FieldValue,
   };
 }
 
@@ -553,12 +299,10 @@ function applySetYear(responses: Record<Id, FieldResponse>, patch: SetYearPatch)
  * Convert a patch row value to a cell response.
  */
 function patchValueToCell(value: string | number | null | undefined): CellResponse {
-  // null or undefined => skipped
   if (value === null || value === undefined) {
     return { state: 'skipped' };
   }
 
-  // Handle sentinel strings
   if (typeof value === 'string') {
     const trimmed = value.trim();
     const skipMatch = /^%SKIP(?:[:(](.*))?[)]?%$/i.exec(trimmed);
@@ -569,90 +313,10 @@ function patchValueToCell(value: string | number | null | undefined): CellRespon
     if (abortMatch) {
       return { state: 'aborted', reason: abortMatch[1] };
     }
-    // Regular string value
     return { state: 'answered', value: trimmed };
   }
 
-  // Number value
   return { state: 'answered', value };
-}
-
-/**
- * Apply a set_table patch.
- */
-function applySetTable(responses: Record<Id, FieldResponse>, patch: SetTablePatch): void {
-  const rows: TableRowResponse[] = patch.rows.map((patchRow) => {
-    const row: TableRowResponse = {};
-    for (const [colId, value] of Object.entries(patchRow)) {
-      row[colId] = patchValueToCell(value);
-    }
-    return row;
-  });
-
-  responses[patch.fieldId] = {
-    state: 'answered',
-    value: {
-      kind: 'table',
-      rows,
-    } as TableValue,
-  };
-}
-
-/**
- * Apply a clear_field patch.
- */
-function applyClearField(responses: Record<Id, FieldResponse>, patch: ClearFieldPatch): void {
-  responses[patch.fieldId] = {
-    state: 'unanswered',
-  };
-}
-
-/**
- * Apply a skip_field patch.
- * Marks the field as skipped and stores reason in FieldResponse.reason.
- */
-function applySkipField(responses: Record<Id, FieldResponse>, patch: SkipFieldPatch): void {
-  responses[patch.fieldId] = {
-    state: 'skipped',
-    ...(patch.reason && { reason: patch.reason }),
-  };
-}
-
-/**
- * Apply an abort_field patch.
- * Marks the field as aborted and stores reason in FieldResponse.reason.
- */
-function applyAbortField(responses: Record<Id, FieldResponse>, patch: AbortFieldPatch): void {
-  responses[patch.fieldId] = {
-    state: 'aborted',
-    ...(patch.reason && { reason: patch.reason }),
-  };
-}
-
-/**
- * Apply an add_note patch.
- * Adds a note to the form.
- */
-function applyAddNote(form: ParsedForm, patch: AddNotePatch): void {
-  const noteId = generateNoteId(form);
-  form.notes.push({
-    id: noteId,
-    ref: patch.ref,
-    role: patch.role,
-    text: patch.text,
-  });
-}
-
-/**
- * Apply a remove_note patch.
- * Removes a specific note by ID.
- */
-function applyRemoveNote(form: ParsedForm, patch: RemoveNotePatch): void {
-  const index = form.notes.findIndex((n) => n.id === patch.noteId);
-  if (index >= 0) {
-    form.notes.splice(index, 1);
-  }
-  // If index < 0, note not found - validation should have caught this
 }
 
 /**
@@ -660,54 +324,102 @@ function applyRemoveNote(form: ParsedForm, patch: RemoveNotePatch): void {
  */
 function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patch: Patch): void {
   switch (patch.op) {
+    // Simple string value types
     case 'set_string':
-      applySetString(responses, patch);
-      break;
-    case 'set_number':
-      applySetNumber(responses, patch);
-      break;
-    case 'set_string_list':
-      applySetStringList(responses, patch);
-      break;
-    case 'set_single_select':
-      applySetSingleSelect(responses, patch);
-      break;
-    case 'set_multi_select':
-      applySetMultiSelect(responses, patch);
-      break;
-    case 'set_checkboxes':
-      applySetCheckboxes(responses, patch);
+      setSimpleValue(responses, patch.fieldId, 'string', patch.value);
       break;
     case 'set_url':
-      applySetUrl(responses, patch);
-      break;
-    case 'set_url_list':
-      applySetUrlList(responses, patch);
+      setSimpleValue(responses, patch.fieldId, 'url', patch.value);
       break;
     case 'set_date':
-      applySetDate(responses, patch);
+      setSimpleValue(responses, patch.fieldId, 'date', patch.value);
+      break;
+
+    // Simple number value types
+    case 'set_number':
+      setSimpleValue(responses, patch.fieldId, 'number', patch.value);
       break;
     case 'set_year':
-      applySetYear(responses, patch);
+      setSimpleValue(responses, patch.fieldId, 'year', patch.value);
       break;
-    case 'set_table':
-      applySetTable(responses, patch);
+
+    // List types
+    case 'set_string_list':
+      setListValue(responses, patch.fieldId, 'string_list', patch.items);
       break;
+    case 'set_url_list':
+      setListValue(responses, patch.fieldId, 'url_list', patch.items);
+      break;
+
+    // Select types
+    case 'set_single_select':
+      setSingleSelectValue(responses, patch.fieldId, patch.selected);
+      break;
+
+    case 'set_multi_select':
+      setMultiSelectValue(responses, patch.fieldId, patch.selected);
+      break;
+
+    // Checkboxes (merge with existing)
+    case 'set_checkboxes': {
+      const existing =
+        (responses[patch.fieldId]?.value as CheckboxesValue | undefined)?.values ?? {};
+      responses[patch.fieldId] = {
+        state: 'answered',
+        value: { kind: 'checkboxes', values: { ...existing, ...patch.values } } as CheckboxesValue,
+      };
+      break;
+    }
+
+    // Table
+    case 'set_table': {
+      const rows: TableRowResponse[] = (patch.rows ?? []).map((patchRow) => {
+        const row: TableRowResponse = {};
+        if (patchRow != null) {
+          for (const [colId, value] of Object.entries(patchRow)) {
+            row[colId] = patchValueToCell(value);
+          }
+        }
+        return row;
+      });
+      responses[patch.fieldId] = {
+        state: 'answered',
+        value: { kind: 'table', rows } as TableValue,
+      };
+      break;
+    }
+
+    // State changes
     case 'clear_field':
-      applyClearField(responses, patch);
+      responses[patch.fieldId] = { state: 'unanswered' };
       break;
+
     case 'skip_field':
-      applySkipField(responses, patch);
+      responses[patch.fieldId] = {
+        state: 'skipped',
+        ...(patch.reason && { reason: patch.reason }),
+      };
       break;
+
     case 'abort_field':
-      applyAbortField(responses, patch);
+      responses[patch.fieldId] = {
+        state: 'aborted',
+        ...(patch.reason && { reason: patch.reason }),
+      };
       break;
-    case 'add_note':
-      applyAddNote(form, patch);
+
+    // Notes
+    case 'add_note': {
+      const noteId = generateNoteId(form);
+      form.notes.push({ id: noteId, ref: patch.ref, role: patch.role, text: patch.text });
       break;
-    case 'remove_note':
-      applyRemoveNote(form, patch);
+    }
+
+    case 'remove_note': {
+      const idx = form.notes.findIndex((n) => n.id === patch.noteId);
+      if (idx >= 0) form.notes.splice(idx, 1);
       break;
+    }
   }
 }
 
