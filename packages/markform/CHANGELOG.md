@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.9
+
+### Patch Changes
+
+- a9079b4: Improve serve command with syntax highlighting and tabs, add inline field instructions to prompts, rename generatePatches to fill_form, add wire format to session logs, fix table/date/year support in CLI, fix multi_select infinite loop
+
 ## 0.1.8
 
 ### Patch Changes
