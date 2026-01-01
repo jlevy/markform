@@ -390,6 +390,62 @@ If tests cause issues:
 2. Keep coverage thresholds at current levels
 3. Document issues for future resolution
 
+## Test Writing Guidelines
+
+**IMPORTANT**: Prefer concise, data-driven tests over long mechanistic tests.
+
+### Anti-patterns to Avoid
+
+```typescript
+// BAD: Long, repetitive explicit tests
+it('converts fieldCount', () => {
+  expect(toSnakeCase('fieldCount')).toBe('field_count');
+});
+it('converts parentFieldId', () => {
+  expect(toSnakeCase('parentFieldId')).toBe('parent_field_id');
+});
+// ... 10 more identical tests
+```
+
+### Preferred Patterns
+
+```typescript
+// GOOD: Table-driven tests
+const CASES: [string, string][] = [
+  ['fieldCount', 'field_count'],
+  ['parentFieldId', 'parent_field_id'],
+  ['maxItems', 'max_items'],
+];
+
+for (const [input, expected] of CASES) {
+  it(`converts ${input} to ${expected}`, () => {
+    expect(toSnakeCase(input)).toBe(expected);
+  });
+}
+
+// GOOD: Session-based golden tests
+it('round-trips session with all field types', () => {
+  const session = parseSession(sessionYaml);
+  const serialized = serializeSession(session);
+  expect(serialized).toBe(sessionYaml);
+});
+
+// GOOD: Assertion loops over data structures
+it('validates all field types', () => {
+  for (const field of form.schema.fields) {
+    expect(field.id).toBeDefined();
+    expect(field.kind).toMatch(/^(string|number|url)$/);
+  }
+});
+```
+
+### Benefits
+
+- Less code = easier to maintain
+- Data-driven tests make adding cases trivial
+- Session-based tests catch regressions holistically
+- Loop assertions cover edge cases systematically
+
 ## Implementation Notes
 
 ### Why Exclude Certain Files?
