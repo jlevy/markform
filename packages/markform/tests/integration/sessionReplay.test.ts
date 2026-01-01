@@ -150,7 +150,7 @@ describe('Session Replay Integration', () => {
               response: {
                 steps: [
                   {
-                    toolCalls: [{ toolName: 'generatePatches', input: { patches: [] } }],
+                    toolCalls: [{ toolName: 'fill_form', input: { patches: [] } }],
                     toolResults: [],
                     text: null,
                   },

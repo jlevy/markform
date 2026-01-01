@@ -517,7 +517,7 @@ describe('MockAgent', () => {
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.fillFormTool(issues, emptyForm, 10);
 
     expect(response.patches.length).toBe(2);
     expect(response.patches[0]).toEqual({
@@ -556,7 +556,7 @@ describe('MockAgent', () => {
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 1);
+    const response = await agent.fillFormTool(issues, emptyForm, 1);
 
     expect(response.patches.length).toBe(1);
   });
@@ -577,7 +577,7 @@ describe('MockAgent', () => {
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.fillFormTool(issues, emptyForm, 10);
 
     expect(response.patches.length).toBe(0);
   });
@@ -651,7 +651,7 @@ https://github.com/example
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.fillFormTool(issues, emptyForm, 10);
 
     expect(response.patches.length).toBe(2);
     expect(response.patches[0]).toEqual({
@@ -734,7 +734,7 @@ markform:
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.fillFormTool(issues, emptyForm, 10);
 
     expect(response.patches.length).toBe(2);
     expect(response.patches[0]).toEqual({
@@ -790,7 +790,7 @@ markform:
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.fillFormTool(issues, emptyForm, 10);
 
     expect(response.patches.length).toBe(1);
     expect(response.patches[0]).toEqual({
@@ -840,7 +840,7 @@ markform:
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.fillFormTool(issues, emptyForm, 10);
 
     expect(response.patches.length).toBe(1);
     expect(response.patches[0]?.op).toBe('set_checkboxes');
@@ -889,7 +889,7 @@ markform:
       },
     ];
 
-    const response = await agent.generatePatches(issues, emptyForm, 10);
+    const response = await agent.fillFormTool(issues, emptyForm, 10);
 
     expect(response.patches.length).toBe(1);
     expect(response.patches[0]).toEqual({
@@ -917,7 +917,7 @@ describe('Harness + MockAgent Integration', () => {
     expect(result.isComplete).toBe(false);
 
     // Generate and apply patches
-    const response = await agent.generatePatches(result.issues, emptyForm, 10);
+    const response = await agent.fillFormTool(result.issues, emptyForm, 10);
     result = harness.apply(response.patches, result.issues);
 
     expect(result.isComplete).toBe(true);
@@ -985,7 +985,7 @@ describe('fillMode', () => {
       expect(result.isComplete).toBe(false);
 
       // Generate and apply patches to re-fill
-      const response = await agent.generatePatches(result.issues, emptyForm, 10);
+      const response = await agent.fillFormTool(result.issues, emptyForm, 10);
       result = harness.apply(response.patches, result.issues);
 
       // Form should be complete again
@@ -1135,7 +1135,7 @@ describe('Table field patch handling', () => {
         },
       ];
 
-      const response = await agent.generatePatches(issues, emptyForm, 10);
+      const response = await agent.fillFormTool(issues, emptyForm, 10);
 
       expect(response.patches.length).toBe(1);
       expect(response.patches[0]!.op).toBe('set_table');
@@ -1163,7 +1163,7 @@ describe('Table field patch handling', () => {
       expect(result.isComplete).toBe(false);
 
       // Generate and apply patches
-      const response = await agent.generatePatches(result.issues, emptyForm, 10);
+      const response = await agent.fillFormTool(result.issues, emptyForm, 10);
       expect(response.patches[0]!.op).toBe('set_table');
 
       result = harness.apply(response.patches, result.issues);

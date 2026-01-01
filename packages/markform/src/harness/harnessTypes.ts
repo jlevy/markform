@@ -85,7 +85,7 @@ export interface TurnStats {
 }
 
 /**
- * Response from agent's generatePatches call.
+ * Response from agent's fillFormTool call.
  */
 export interface AgentResponse {
   /** Patches to apply */
@@ -99,7 +99,7 @@ export interface AgentResponse {
  */
 export interface Agent {
   /**
-   * Generate patches to address the given issues.
+   * Invoke the fill_form tool to address the given issues.
    *
    * @param issues - Prioritized issues from harness step
    * @param form - Current form state
@@ -107,7 +107,7 @@ export interface Agent {
    * @param previousRejections - Optional rejections from previous turn (helps agent learn from mistakes)
    * @returns Promise resolving to patches and optional stats
    */
-  generatePatches(
+  fillFormTool(
     issues: InspectIssue[],
     form: ParsedForm,
     maxPatches: number,

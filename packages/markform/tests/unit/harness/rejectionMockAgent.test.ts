@@ -107,10 +107,10 @@ describe('RejectionMockAgent', () => {
     });
   });
 
-  describe('generatePatches', () => {
+  describe('fillFormTool', () => {
     it('generates wrong patch type for table field on first attempt', async () => {
       const agent = createRejectionMockAgent(completedForm);
-      const response = await agent.generatePatches([fieldIssue('data')], emptyForm, 10);
+      const response = await agent.fillFormTool([fieldIssue('data')], emptyForm, 10);
 
       expect(response.patches).toHaveLength(1);
       // First attempt should be set_string (wrong) for table field
@@ -126,7 +126,7 @@ describe('RejectionMockAgent', () => {
       const agent = createRejectionMockAgent(completedForm);
 
       // First call - gets wrong patch
-      await agent.generatePatches([fieldIssue('data')], emptyForm, 10);
+      await agent.fillFormTool([fieldIssue('data')], emptyForm, 10);
 
       // Second call with rejection feedback
       const rejections: PatchRejection[] = [
@@ -139,7 +139,7 @@ describe('RejectionMockAgent', () => {
         },
       ];
 
-      const response = await agent.generatePatches([fieldIssue('data')], emptyForm, 10, rejections);
+      const response = await agent.fillFormTool([fieldIssue('data')], emptyForm, 10, rejections);
 
       expect(response.patches).toHaveLength(1);
       // After rejection, should generate correct set_table patch
@@ -152,7 +152,7 @@ describe('RejectionMockAgent', () => {
 
     it('generates correct patch for non-table fields immediately', async () => {
       const agent = createRejectionMockAgent(completedForm);
-      const response = await agent.generatePatches([fieldIssue('name')], emptyForm, 10);
+      const response = await agent.fillFormTool([fieldIssue('name')], emptyForm, 10);
 
       expect(response.patches).toHaveLength(1);
       // Non-table fields should get correct patch immediately
@@ -166,7 +166,7 @@ describe('RejectionMockAgent', () => {
 
     it('skips non-field issues', async () => {
       const agent = createRejectionMockAgent(completedForm);
-      const response = await agent.generatePatches([formIssue()], emptyForm, 10);
+      const response = await agent.fillFormTool([formIssue()], emptyForm, 10);
 
       expect(response.patches).toHaveLength(0);
     });
@@ -175,7 +175,7 @@ describe('RejectionMockAgent', () => {
       const agent = createRejectionMockAgent(completedForm);
       const issues: InspectIssue[] = [fieldIssue('name'), fieldIssue('data')];
 
-      const response = await agent.generatePatches(issues, emptyForm, 1);
+      const response = await agent.fillFormTool(issues, emptyForm, 1);
 
       expect(response.patches).toHaveLength(1);
     });

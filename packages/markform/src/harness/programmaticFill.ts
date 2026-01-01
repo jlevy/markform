@@ -283,7 +283,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
 
     // Generate patches using agent (pass previous rejections so LLM can learn from mistakes)
-    const response = await agent.generatePatches(
+    const response = await agent.fillFormTool(
       turnIssues,
       form,
       maxPatchesPerTurn,

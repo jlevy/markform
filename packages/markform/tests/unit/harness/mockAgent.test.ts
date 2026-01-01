@@ -97,7 +97,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(DATE_YEAR_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(DATE_YEAR_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]).toEqual({
@@ -126,7 +126,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(DATE_YEAR_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(DATE_YEAR_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]).toEqual({
@@ -155,7 +155,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(DATE_YEAR_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(DATE_YEAR_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]?.op).toBe('skip_field');
@@ -194,7 +194,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(TABLE_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(TABLE_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]?.op).toBe('set_table');
@@ -223,7 +223,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(TABLE_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(TABLE_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]?.op).toBe('skip_field');
@@ -250,7 +250,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(URL_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(URL_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]).toEqual({
@@ -279,7 +279,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(URL_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(URL_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]).toEqual({
@@ -370,7 +370,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(MIXED_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(MIXED_FORM), 10);
 
       expect(result.patches).toHaveLength(6);
       expect(result.patches.map((p) => p.op)).toEqual([
@@ -426,7 +426,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(MIXED_FORM), 2);
+      const result = await agent.fillFormTool(issues, parseForm(MIXED_FORM), 2);
 
       expect(result.patches).toHaveLength(2);
     });
@@ -458,7 +458,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(MIXED_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(MIXED_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]?.op).toBe('set_string');
@@ -491,7 +491,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(MIXED_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(MIXED_FORM), 10);
 
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]?.op).toBe('set_string');
@@ -524,7 +524,7 @@ describe('MockAgent', () => {
         },
       ];
 
-      const result = await agent.generatePatches(issues, parseForm(MIXED_FORM), 10);
+      const result = await agent.fillFormTool(issues, parseForm(MIXED_FORM), 10);
 
       // Should only generate one patch for 'name', not two
       expect(result.patches).toHaveLength(1);
