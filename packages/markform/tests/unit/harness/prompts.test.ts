@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PATCH_FORMAT_INSTRUCTIONS,
   getPatchFormatHint,
+  getIssuesIntro,
   PATCH_FORMATS,
   getIssuesIntro,
 } from '../../../src/harness/prompts.js';
@@ -452,5 +453,23 @@ markform:
     expect(hint).toContain('"source"');
     expect(hint).toContain('"score"');
     expect(hint).toContain('"votes"');
+  });
+});
+
+// =============================================================================
+// getIssuesIntro Tests
+// =============================================================================
+
+describe('getIssuesIntro', () => {
+  it('returns intro text with maxPatches value', () => {
+    const intro = getIssuesIntro(10);
+    expect(intro).toContain('10');
+    expect(intro).toContain('issues');
+  });
+
+  it('uses different maxPatches values correctly', () => {
+    expect(getIssuesIntro(5)).toContain('5');
+    expect(getIssuesIntro(20)).toContain('20');
+    expect(getIssuesIntro(1)).toContain('1');
   });
 });

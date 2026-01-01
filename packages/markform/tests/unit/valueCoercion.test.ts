@@ -66,6 +66,42 @@ markform:
 {% /form %}
 `;
 
+// Additional form with URL, date, year, table fields
+const EXTENDED_FORM_MD = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="extended" title="Extended Test" %}
+
+{% group id="links" title="Links" %}
+
+{% field kind="url" id="website" label="Website" %}{% /field %}
+
+{% field kind="url_list" id="references" label="References" %}{% /field %}
+
+{% /group %}
+
+{% group id="dates" title="Dates" %}
+
+{% field kind="date" id="birthday" label="Birthday" %}{% /field %}
+
+{% field kind="year" id="graduation_year" label="Graduation Year" %}{% /field %}
+
+{% /group %}
+
+{% group id="data" title="Data" %}
+
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] %}
+| Name | Email |
+|------|-------|
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
 describe('values', () => {
   describe('findFieldById', () => {
     it('returns field when found via idIndex', () => {
@@ -632,6 +668,359 @@ describe('values', () => {
       expect(result.errors).toHaveLength(0);
       expect(result.warnings).toHaveLength(0);
       expect(result.patches).toHaveLength(0);
+    });
+  });
+
+  describe('coerceToFieldPatch - url field', () => {
+    it('accepts string URL', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'website', 'https://example.com');
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_url',
+          fieldId: 'website',
+          value: 'https://example.com',
+        });
+      }
+    });
+
+    it('accepts null (clears field)', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'website', null);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_url',
+          fieldId: 'website',
+          value: null,
+        });
+      }
+    });
+
+    it('rejects non-string values', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'website', 12345);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('Cannot coerce');
+      }
+    });
+  });
+
+  describe('coerceToFieldPatch - url_list field', () => {
+    it('accepts string array', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'references', [
+        'https://example.com',
+        'https://test.com',
+      ]);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_url_list',
+          fieldId: 'references',
+          items: ['https://example.com', 'https://test.com'],
+        });
+      }
+    });
+
+    it('coerces single string to array with warning', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'references', 'https://single.com');
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_url_list',
+          fieldId: 'references',
+          items: ['https://single.com'],
+        });
+        expect('warning' in result && result.warning).toContain('Coerced single string');
+      }
+    });
+
+    it('accepts null (empty array)', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'references', null);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_url_list',
+          fieldId: 'references',
+          items: [],
+        });
+      }
+    });
+
+    it('rejects array with non-string items', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      // Cast to unknown to test runtime coercion of invalid types
+      const result = coerceToFieldPatch(form, 'references', [
+        'https://valid.com',
+        12345,
+      ] as unknown as string[]);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('non-string items');
+      }
+    });
+
+    it('rejects non-array non-string', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'references', 12345);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('Cannot coerce');
+      }
+    });
+  });
+
+  describe('coerceToFieldPatch - date field', () => {
+    it('accepts string date', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'birthday', '1990-05-15');
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_date',
+          fieldId: 'birthday',
+          value: '1990-05-15',
+        });
+      }
+    });
+
+    it('accepts null (clears field)', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'birthday', null);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_date',
+          fieldId: 'birthday',
+          value: null,
+        });
+      }
+    });
+
+    it('rejects non-string values', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'birthday', 20230515);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('Cannot coerce');
+      }
+    });
+  });
+
+  describe('coerceToFieldPatch - year field', () => {
+    it('accepts number year', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'graduation_year', 2020);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_year',
+          fieldId: 'graduation_year',
+          value: 2020,
+        });
+      }
+    });
+
+    it('coerces numeric string to year with warning', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'graduation_year', '2020');
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_year',
+          fieldId: 'graduation_year',
+          value: 2020,
+        });
+        expect('warning' in result && result.warning).toContain('Coerced string');
+      }
+    });
+
+    it('accepts null (clears field)', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'graduation_year', null);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_year',
+          fieldId: 'graduation_year',
+          value: null,
+        });
+      }
+    });
+
+    it('rejects non-integer number', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'graduation_year', 2020.5);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('must be an integer');
+      }
+    });
+
+    it('rejects non-numeric string', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'graduation_year', 'not-a-year');
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('non-numeric string');
+      }
+    });
+
+    it('rejects array value', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      // Cast to unknown to test runtime coercion of invalid types
+      const result = coerceToFieldPatch(form, 'graduation_year', [2020] as unknown as number);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('Cannot coerce');
+      }
+    });
+  });
+
+  describe('coerceToFieldPatch - table field', () => {
+    it('accepts array of row objects', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      // Tables expect Record<string, unknown>[] at runtime
+      const rows = [
+        { Name: 'John', Email: 'john@example.com' },
+        { Name: 'Jane', Email: 'jane@example.com' },
+      ];
+      const result = coerceToFieldPatch(form, 'contacts', rows as unknown as string[]);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_table',
+          fieldId: 'contacts',
+          rows: [
+            { Name: 'John', Email: 'john@example.com' },
+            { Name: 'Jane', Email: 'jane@example.com' },
+          ],
+        });
+      }
+    });
+
+    it('accepts empty array', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'contacts', []);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_table',
+          fieldId: 'contacts',
+          rows: [],
+        });
+      }
+    });
+
+    it('accepts null (empty rows)', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'contacts', null);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_table',
+          fieldId: 'contacts',
+          rows: [],
+        });
+      }
+    });
+
+    it('rejects non-array value', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'contacts', { Name: 'John' });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('must be an array');
+      }
+    });
+
+    it('rejects array with non-object rows', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      const result = coerceToFieldPatch(form, 'contacts', ['John', 'Jane']);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('must be an object');
+      }
+    });
+
+    it('rejects array with null row', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      // Cast to unknown to test runtime coercion of invalid types
+      const result = coerceToFieldPatch(form, 'contacts', [null] as unknown as string[]);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('must be an object');
+      }
+    });
+
+    it('rejects array with nested array row', () => {
+      const form = parseForm(EXTENDED_FORM_MD);
+      // Cast to unknown to test runtime coercion of invalid types
+      const result = coerceToFieldPatch(form, 'contacts', [
+        ['John', 'john@example.com'],
+      ] as unknown as string[]);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('must be an object');
+      }
+    });
+  });
+
+  describe('coerceToFieldPatch - string_list with mixed array items', () => {
+    it('coerces array with numbers and booleans to strings with warning', () => {
+      const form = parseForm(TEST_FORM_MD);
+      // Cast to unknown to test runtime coercion of mixed types
+      const result = coerceToFieldPatch(form, 'tags', ['tag1', 123, true] as unknown as string[]);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_string_list',
+          fieldId: 'tags',
+          items: ['tag1', '123', 'true'],
+        });
+        expect('warning' in result && result.warning).toContain('Coerced array items');
+      }
+    });
+
+    it('rejects array with object items', () => {
+      const form = parseForm(TEST_FORM_MD);
+      // Cast to unknown to test runtime coercion of invalid types
+      const result = coerceToFieldPatch(form, 'tags', [{ key: 'value' }] as unknown as string[]);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('non-string items');
+      }
     });
   });
 });
