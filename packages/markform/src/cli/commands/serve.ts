@@ -1676,8 +1676,9 @@ function renderPlainTextHtml(content: string, filename: string): string {
 /**
  * Render markdown content (content only, no page wrapper).
  * Used for tab content.
+ * @public Exported for testing.
  */
-function renderMarkdownContent(content: string): string {
+export function renderMarkdownContent(content: string): string {
   const lines = content.split('\n');
   let html = '<div class="markdown-content">';
   let inParagraph = false;
@@ -1797,8 +1798,9 @@ function formatInlineMarkdown(text: string): string {
 /**
  * Render YAML content (content only, no page wrapper).
  * Used for tab content.
+ * @public Exported for testing.
  */
-function renderYamlContent(content: string): string {
+export function renderYamlContent(content: string): string {
   const highlighted = content
     .split('\n')
     .map((line) => {
@@ -1837,8 +1839,9 @@ function renderYamlContent(content: string): string {
 /**
  * Render JSON content (content only, no page wrapper).
  * Used for tab content.
+ * @public Exported for testing.
  */
-function renderJsonContent(content: string): string {
+export function renderJsonContent(content: string): string {
   let formatted: string;
   try {
     const parsed = JSON.parse(content) as unknown;

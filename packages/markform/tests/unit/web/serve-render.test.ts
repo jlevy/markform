@@ -8,7 +8,13 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseForm } from '../../../src/engine/parse.js';
-import { renderFormHtml, escapeHtml } from '../../../src/cli/commands/serve.js';
+import {
+  renderFormHtml,
+  escapeHtml,
+  renderMarkdownContent,
+  renderYamlContent,
+  renderJsonContent,
+} from '../../../src/cli/commands/serve.js';
 
 // Helper to check if HTML contains an element with attributes (unused but kept for future use)
 // function hasElement(
@@ -966,6 +972,152 @@ markform:
 
       // url_list -> textarea
       expect(html).toMatch(/<textarea[^>]*name="f_url_list"/);
+    });
+  });
+
+  describe('renderMarkdownContent', () => {
+    it('should wrap content in markdown-content div', () => {
+      const html = renderMarkdownContent('Hello world');
+      expect(html).toContain('<div class="markdown-content">');
+      expect(html).toContain('</div>');
+    });
+
+    it('should render headers correctly', () => {
+      const html = renderMarkdownContent('# Header 1\n## Header 2\n### Header 3');
+      expect(html).toContain('<h2>Header 1</h2>');
+      expect(html).toContain('<h3>Header 2</h3>');
+      expect(html).toContain('<h4>Header 3</h4>');
+    });
+
+    it('should render paragraphs', () => {
+      const html = renderMarkdownContent('First paragraph\n\nSecond paragraph');
+      expect(html).toContain('<p>First paragraph</p>');
+      expect(html).toContain('<p>Second paragraph</p>');
+    });
+
+    it('should render unordered lists', () => {
+      const html = renderMarkdownContent('- Item 1\n- Item 2\n* Item 3');
+      expect(html).toContain('<li>Item 1</li>');
+      expect(html).toContain('<li>Item 2</li>');
+      expect(html).toContain('<li>Item 3</li>');
+    });
+
+    it('should render ordered lists', () => {
+      const html = renderMarkdownContent('1. First\n2. Second\n3. Third');
+      expect(html).toContain('<li>First</li>');
+      expect(html).toContain('<li>Second</li>');
+      expect(html).toContain('<li>Third</li>');
+    });
+
+    it('should render fenced code blocks', () => {
+      const html = renderMarkdownContent('```\nconst x = 1;\n```');
+      expect(html).toContain('<pre><code>');
+      expect(html).toContain('const x = 1;');
+      expect(html).toContain('</code></pre>');
+    });
+
+    it('should render inline formatting', () => {
+      const html = renderMarkdownContent('This is **bold** and *italic* and `code`');
+      expect(html).toContain('<strong>bold</strong>');
+      expect(html).toContain('<em>italic</em>');
+      expect(html).toContain('<code>code</code>');
+    });
+
+    it('should render links', () => {
+      const html = renderMarkdownContent('Check out [example](https://example.com)');
+      expect(html).toContain('<a href="https://example.com" target="_blank">example</a>');
+    });
+  });
+
+  describe('renderYamlContent', () => {
+    it('should wrap content in pre tag', () => {
+      const html = renderYamlContent('key: value');
+      expect(html).toContain('<pre>');
+      expect(html).toContain('</pre>');
+    });
+
+    it('should highlight keys', () => {
+      const html = renderYamlContent('name: John');
+      expect(html).toContain('class="syn-key"');
+      expect(html).toContain('>name</span>');
+    });
+
+    it('should highlight string values', () => {
+      const html = renderYamlContent('name: John');
+      expect(html).toContain('class="syn-string"');
+    });
+
+    it('should highlight boolean values', () => {
+      const html = renderYamlContent('enabled: true\ndisabled: false');
+      expect(html).toContain('class="syn-bool"');
+    });
+
+    it('should highlight number values', () => {
+      const html = renderYamlContent('count: 42\nprice: 19.99');
+      expect(html).toContain('class="syn-number"');
+    });
+
+    it('should highlight null values', () => {
+      const html = renderYamlContent('value: null');
+      expect(html).toContain('class="syn-null"');
+    });
+
+    it('should highlight comments', () => {
+      const html = renderYamlContent('# This is a comment');
+      expect(html).toContain('class="syn-comment"');
+    });
+
+    it('should handle list items', () => {
+      const html = renderYamlContent('items:\n  - item1\n  - item2');
+      expect(html).toContain('- ');
+      expect(html).toContain('class="syn-string"');
+    });
+  });
+
+  describe('renderJsonContent', () => {
+    it('should wrap content in pre tag', () => {
+      const html = renderJsonContent('{"key": "value"}');
+      expect(html).toContain('<pre>');
+      expect(html).toContain('</pre>');
+    });
+
+    it('should highlight keys', () => {
+      const html = renderJsonContent('{"name": "John"}');
+      expect(html).toContain('class="syn-key"');
+      expect(html).toContain('"name"</span>');
+    });
+
+    it('should highlight string values', () => {
+      const html = renderJsonContent('{"name": "John"}');
+      expect(html).toContain('class="syn-string"');
+      expect(html).toContain('"John"</span>');
+    });
+
+    it('should highlight number values', () => {
+      const html = renderJsonContent('{"count": 42}');
+      expect(html).toContain('class="syn-number"');
+      expect(html).toContain('>42</span>');
+    });
+
+    it('should highlight boolean values', () => {
+      const html = renderJsonContent('{"enabled": true, "disabled": false}');
+      expect(html).toContain('class="syn-bool"');
+    });
+
+    it('should highlight null values', () => {
+      const html = renderJsonContent('{"value": null}');
+      expect(html).toContain('class="syn-null"');
+    });
+
+    it('should pretty-print JSON', () => {
+      const html = renderJsonContent('{"a":1,"b":2}');
+      // Should contain newlines from pretty printing
+      expect(html).toContain('\n');
+    });
+
+    it('should handle invalid JSON gracefully', () => {
+      const html = renderJsonContent('not valid json');
+      expect(html).toContain('not valid json');
     });
   });
 });
