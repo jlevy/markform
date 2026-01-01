@@ -39,7 +39,7 @@ import {
   GENERATE_PATCHES_TOOL_DESCRIPTION,
   ISSUES_HEADER,
   getIssuesIntro,
-  PATCH_FORMAT_INSTRUCTIONS,
+  GENERAL_INSTRUCTIONS,
   SECTION_HEADERS,
   getPatchFormatHint,
 } from './prompts.js';
@@ -488,7 +488,7 @@ function buildContextPrompt(
     lines.push(`- **${issue.ref}** (${issue.scope}): ${issue.message}`);
     lines.push(`  Severity: ${issue.severity}, Priority: P${issue.priority}`);
 
-    // If it's a field issue, include field schema info
+    // If it's a field issue, include field schema info and inline instructions
     if (issue.scope === 'field') {
       const field = findField(form, issue.ref);
       if (field) {
@@ -500,8 +500,11 @@ function buildContextPrompt(
         if (field.kind === 'checkboxes' && 'checkboxMode' in field) {
           lines.push(`  Mode: ${field.checkboxMode ?? 'multi'}`);
         }
+
         // For table fields, show column IDs so the model knows the expected row structure
+        let columnIds: string[] | undefined;
         if (field.kind === 'table' && 'columns' in field && field.columns) {
+          columnIds = field.columns.map((c) => c.id);
           const columnInfo = field.columns
             .map((c) => `${c.id}${c.required ? ' (required)' : ''}`)
             .join(', ');
@@ -513,12 +516,23 @@ function buildContextPrompt(
             lines.push(`  Rows: ${constraints.join(', ')}`);
           }
         }
+
+        // Add inline instructions for this field
+        const patchHint = getPatchFormatHint(field.kind, field.id, columnIds);
+        lines.push(`  Set: ${patchHint}`);
+
+        // Show skip instruction for optional fields, or required notice
+        if (issue.severity === 'required') {
+          lines.push(`  This field is required.`);
+        } else {
+          lines.push(`  Skip: { op: "skip_field", fieldId: "${field.id}", reason: "..." }`);
+        }
       }
     }
     lines.push('');
   }
 
-  lines.push(PATCH_FORMAT_INSTRUCTIONS);
+  lines.push(GENERAL_INSTRUCTIONS);
 
   return lines.join('\n');
 }

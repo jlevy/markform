@@ -158,6 +158,17 @@ For table fields, use the column IDs shown in the field schema. Each row is an o
 If you cannot find verifiable information for a field, skip it:
 - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }`;
 
+/**
+ * Simplified general instructions for use with inline field instructions.
+ *
+ * When inline field instructions are shown after each issue, we only need
+ * general guidance about using the generatePatches tool.
+ */
+export const GENERAL_INSTRUCTIONS = `# General Instructions
+
+Use the generatePatches tool to submit patches for the fields above.
+For table fields, each row is an object with column ID keys.`;
+
 // =============================================================================
 // Section Headers
 // =============================================================================

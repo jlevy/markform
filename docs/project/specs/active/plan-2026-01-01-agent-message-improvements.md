@@ -341,6 +341,70 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
 - [x] Validation workflow documented in development.md
 - [x] Wire format diffs show only expected changes
 
+## Phase 5: Inline Field Instructions
+
+### Problem
+
+Currently, field-specific patch format instructions are listed at the bottom of the context
+prompt in a generic format. Agents must cross-reference between the issue listing and the
+instructions section to determine the correct operation for each field.
+
+### Solution
+
+Add inline instructions immediately after each issue, showing:
+1. The exact patch operation for that specific field (with fieldId pre-filled)
+2. Whether the field is required or can be skipped
+3. For optional fields, the skip syntax
+
+**Before:**
+```
+- **ratings** (field): Required field "Ratings" is empty
+  Severity: required, Priority: P1
+  Type: table
+  Columns: source, score, votes
+
+- **title** (field): Recommended field "Title" is empty
+  Severity: recommended, Priority: P2
+  Type: string
+
+# Instructions
+[generic list of all patch formats at bottom]
+```
+
+**After:**
+```
+- **ratings** (field): Required field "Ratings" is empty
+  Severity: required, Priority: P1
+  Type: table
+  Columns: source, score, votes
+  Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+  This field is required.
+
+- **title** (field): Recommended field "Title" is empty
+  Severity: recommended, Priority: P2
+  Type: string
+  Set: { op: "set_string", fieldId: "title", value: "..." }
+  Skip: { op: "skip_field", fieldId: "title", reason: "..." }
+
+# General Instructions
+Use the generatePatches tool to submit patches for the fields above.
+For table fields, each row is an object with column ID keys.
+```
+
+### Implementation Tasks
+
+**Phase 5: Add Inline Field Instructions** ✅
+
+- [x] Update `buildContextPrompt()` in `liveAgent.ts`:
+  - Add `Set:` line after each field issue with `getPatchFormatHint(field.kind, field.id, columnIds)`
+  - Add `This field is required.` for required fields
+  - Add `Skip:` line for optional fields showing skip_field syntax
+- [x] Create simplified `GENERAL_INSTRUCTIONS` constant in `prompts.ts`
+  - Remove field-specific patch formats (now inline)
+  - Keep only general guidance about generatePatches tool and table column usage
+- [x] Regenerate golden tests to capture new format
+- [x] Verify wire format shows inline instructions
+
 ## References
 
 - Wire format implementation: `packages/markform/src/harness/liveAgent.ts`

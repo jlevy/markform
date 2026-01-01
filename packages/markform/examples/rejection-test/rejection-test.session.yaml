@@ -125,31 +125,19 @@ turns:
           Type: table
           Columns: source, score, votes
           Rows: min: 1, max: 5
+          Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          This field is required.
 
         - **title** (field): Required field "Title" is empty
           Severity: required, Priority: P1
           Type: string
+          Set: { op: "set_string", fieldId: "title", value: "..." }
+          This field is required.
 
-        # Instructions
+        # General Instructions
 
         Use the generatePatches tool to submit patches for the fields above.
-        Each patch should match the field kind:
-        - string: { op: "set_string", fieldId: "...", value: "..." }
-        - number: { op: "set_number", fieldId: "...", value: 123 }
-        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-        - url: { op: "set_url", fieldId: "...", value: "https://..." }
-        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-        - year: { op: "set_year", fieldId: "...", value: 2024 }
-        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-        If you cannot find verifiable information for a field, skip it:
-        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        For table fields, each row is an object with column ID keys.
     wire:
       request:
         system: |-
@@ -227,31 +215,19 @@ turns:
             Type: table
             Columns: source, score, votes
             Rows: min: 1, max: 5
+            Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            This field is required.
 
           - **title** (field): Required field "Title" is empty
             Severity: required, Priority: P1
             Type: string
+            Set: { op: "set_string", fieldId: "title", value: "..." }
+            This field is required.
 
-          # Instructions
+          # General Instructions
 
           Use the generatePatches tool to submit patches for the fields above.
-          Each patch should match the field kind:
-          - string: { op: "set_string", fieldId: "...", value: "..." }
-          - number: { op: "set_number", fieldId: "...", value: 123 }
-          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-          - url: { op: "set_url", fieldId: "...", value: "https://..." }
-          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-          - year: { op: "set_year", fieldId: "...", value: 2024 }
-          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-          If you cannot find verifiable information for a field, skip it:
-          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+          For table fields, each row is an object with column ID keys.
         tools:
           generatePatches:
             description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
@@ -403,31 +379,19 @@ turns:
           Type: table
           Columns: source, score, votes
           Rows: min: 1, max: 5
+          Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          This field is required.
 
         - **title** (field): Required field "Title" is empty
           Severity: required, Priority: P1
           Type: string
+          Set: { op: "set_string", fieldId: "title", value: "..." }
+          This field is required.
 
-        # Instructions
+        # General Instructions
 
         Use the generatePatches tool to submit patches for the fields above.
-        Each patch should match the field kind:
-        - string: { op: "set_string", fieldId: "...", value: "..." }
-        - number: { op: "set_number", fieldId: "...", value: 123 }
-        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-        - url: { op: "set_url", fieldId: "...", value: "https://..." }
-        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-        - year: { op: "set_year", fieldId: "...", value: 2024 }
-        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-        If you cannot find verifiable information for a field, skip it:
-        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        For table fields, each row is an object with column ID keys.
     wire:
       request:
         system: |-
@@ -513,31 +477,19 @@ turns:
             Type: table
             Columns: source, score, votes
             Rows: min: 1, max: 5
+            Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            This field is required.
 
           - **title** (field): Required field "Title" is empty
             Severity: required, Priority: P1
             Type: string
+            Set: { op: "set_string", fieldId: "title", value: "..." }
+            This field is required.
 
-          # Instructions
+          # General Instructions
 
           Use the generatePatches tool to submit patches for the fields above.
-          Each patch should match the field kind:
-          - string: { op: "set_string", fieldId: "...", value: "..." }
-          - number: { op: "set_number", fieldId: "...", value: 123 }
-          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-          - url: { op: "set_url", fieldId: "...", value: "https://..." }
-          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-          - year: { op: "set_year", fieldId: "...", value: 2024 }
-          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-          If you cannot find verifiable information for a field, skip it:
-          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+          For table fields, each row is an object with column ID keys.
         tools:
           generatePatches:
             description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.

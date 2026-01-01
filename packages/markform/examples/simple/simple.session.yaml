@@ -345,69 +345,73 @@ turns:
         - **age** (field): Required field "Age" is empty
           Severity: required, Priority: P1
           Type: number
+          Set: { op: "set_number", fieldId: "age", value: 123 }
+          This field is required.
 
         - **categories** (field): Required field "Categories" has no selections
           Severity: required, Priority: P1
           Type: multi_select
           Options: frontend, backend, database, devops
+          Set: { op: "set_multi_select", fieldId: "categories", selected: ["opt1", "opt2"] }
+          This field is required.
 
         - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
           Severity: required, Priority: P1
           Type: checkboxes
           Options: backed_up, notified
           Mode: explicit
+          Set: { op: "set_checkboxes", fieldId: "confirmations", values: { "opt1": "done", "opt2": "todo" } }
+          This field is required.
 
         - **email** (field): Required field "Email" is empty
           Severity: required, Priority: P1
           Type: string
+          Set: { op: "set_string", fieldId: "email", value: "..." }
+          This field is required.
 
         - **event_date** (field): Required field "Event Date" is empty
           Severity: required, Priority: P1
           Type: date
+          Set: { op: "set_date", fieldId: "event_date", value: "2024-01-15" }
+          This field is required.
 
         - **founded_year** (field): Required field "Founded Year" is empty
           Severity: required, Priority: P1
           Type: year
+          Set: { op: "set_year", fieldId: "founded_year", value: 2024 }
+          This field is required.
 
         - **name** (field): Required field "Name" is empty
           Severity: required, Priority: P1
           Type: string
+          Set: { op: "set_string", fieldId: "name", value: "..." }
+          This field is required.
 
         - **priority** (field): Required field "Priority" has no selection
           Severity: required, Priority: P1
           Type: single_select
           Options: low, medium, high
+          Set: { op: "set_single_select", fieldId: "priority", selected: "option_id" }
+          This field is required.
 
         - **tags** (field): Required field "Tags" is empty
           Severity: required, Priority: P1
           Type: string_list
+          Set: { op: "set_string_list", fieldId: "tags", items: ["...", "..."] }
+          This field is required.
 
         - **tasks_multi** (field): All items in "Tasks (Multi Mode)" must be completed
           Severity: required, Priority: P1
           Type: checkboxes
           Options: research, design, implement, test
           Mode: multi
+          Set: { op: "set_checkboxes", fieldId: "tasks_multi", values: { "opt1": "done", "opt2": "todo" } }
+          This field is required.
 
-        # Instructions
+        # General Instructions
 
         Use the generatePatches tool to submit patches for the fields above.
-        Each patch should match the field kind:
-        - string: { op: "set_string", fieldId: "...", value: "..." }
-        - number: { op: "set_number", fieldId: "...", value: 123 }
-        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-        - url: { op: "set_url", fieldId: "...", value: "https://..." }
-        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-        - year: { op: "set_year", fieldId: "...", value: 2024 }
-        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-        If you cannot find verifiable information for a field, skip it:
-        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        For table fields, each row is an object with column ID keys.
     wire:
       request:
         system: |-
@@ -631,69 +635,73 @@ turns:
           - **age** (field): Required field "Age" is empty
             Severity: required, Priority: P1
             Type: number
+            Set: { op: "set_number", fieldId: "age", value: 123 }
+            This field is required.
 
           - **categories** (field): Required field "Categories" has no selections
             Severity: required, Priority: P1
             Type: multi_select
             Options: frontend, backend, database, devops
+            Set: { op: "set_multi_select", fieldId: "categories", selected: ["opt1", "opt2"] }
+            This field is required.
 
           - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
             Severity: required, Priority: P1
             Type: checkboxes
             Options: backed_up, notified
             Mode: explicit
+            Set: { op: "set_checkboxes", fieldId: "confirmations", values: { "opt1": "done", "opt2": "todo" } }
+            This field is required.
 
           - **email** (field): Required field "Email" is empty
             Severity: required, Priority: P1
             Type: string
+            Set: { op: "set_string", fieldId: "email", value: "..." }
+            This field is required.
 
           - **event_date** (field): Required field "Event Date" is empty
             Severity: required, Priority: P1
             Type: date
+            Set: { op: "set_date", fieldId: "event_date", value: "2024-01-15" }
+            This field is required.
 
           - **founded_year** (field): Required field "Founded Year" is empty
             Severity: required, Priority: P1
             Type: year
+            Set: { op: "set_year", fieldId: "founded_year", value: 2024 }
+            This field is required.
 
           - **name** (field): Required field "Name" is empty
             Severity: required, Priority: P1
             Type: string
+            Set: { op: "set_string", fieldId: "name", value: "..." }
+            This field is required.
 
           - **priority** (field): Required field "Priority" has no selection
             Severity: required, Priority: P1
             Type: single_select
             Options: low, medium, high
+            Set: { op: "set_single_select", fieldId: "priority", selected: "option_id" }
+            This field is required.
 
           - **tags** (field): Required field "Tags" is empty
             Severity: required, Priority: P1
             Type: string_list
+            Set: { op: "set_string_list", fieldId: "tags", items: ["...", "..."] }
+            This field is required.
 
           - **tasks_multi** (field): All items in "Tasks (Multi Mode)" must be completed
             Severity: required, Priority: P1
             Type: checkboxes
             Options: research, design, implement, test
             Mode: multi
+            Set: { op: "set_checkboxes", fieldId: "tasks_multi", values: { "opt1": "done", "opt2": "todo" } }
+            This field is required.
 
-          # Instructions
+          # General Instructions
 
           Use the generatePatches tool to submit patches for the fields above.
-          Each patch should match the field kind:
-          - string: { op: "set_string", fieldId: "...", value: "..." }
-          - number: { op: "set_number", fieldId: "...", value: 123 }
-          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-          - url: { op: "set_url", fieldId: "...", value: "https://..." }
-          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-          - year: { op: "set_year", fieldId: "...", value: 2024 }
-          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-          If you cannot find verifiable information for a field, skip it:
-          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+          For table fields, each row is an object with column ID keys.
         tools:
           generatePatches:
             description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
@@ -1123,65 +1131,69 @@ turns:
           Type: checkboxes
           Options: read_guidelines, agree_terms
           Mode: simple
+          Set: { op: "set_checkboxes", fieldId: "tasks_simple", values: { "opt1": "done", "opt2": "todo" } }
+          This field is required.
 
         - **website** (field): Required field "Website" is empty
           Severity: required, Priority: P1
           Type: url
+          Set: { op: "set_url", fieldId: "website", value: "https://..." }
+          This field is required.
 
         - **notes** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: string
+          Set: { op: "set_string", fieldId: "notes", value: "..." }
+          Skip: { op: "skip_field", fieldId: "notes", reason: "..." }
 
         - **optional_date** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: date
+          Set: { op: "set_date", fieldId: "optional_date", value: "2024-01-15" }
+          Skip: { op: "skip_field", fieldId: "optional_date", reason: "..." }
 
         - **optional_number** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: number
+          Set: { op: "set_number", fieldId: "optional_number", value: 123 }
+          Skip: { op: "skip_field", fieldId: "optional_number", reason: "..." }
 
         - **optional_year** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: year
+          Set: { op: "set_year", fieldId: "optional_year", value: 2024 }
+          Skip: { op: "skip_field", fieldId: "optional_year", reason: "..." }
 
         - **project_tasks** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: table
           Columns: task (required), estimate_hrs, link
           Rows: min: 0, max: 10
+          Set: { op: "set_table", fieldId: "project_tasks", rows: [{ "task": "...", "estimate_hrs": "...", "link": "..." }, ...] }
+          Skip: { op: "skip_field", fieldId: "project_tasks", reason: "..." }
 
         - **references** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: url_list
+          Set: { op: "set_url_list", fieldId: "references", items: ["https://...", "https://..."] }
+          Skip: { op: "skip_field", fieldId: "references", reason: "..." }
 
         - **related_url** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: url
+          Set: { op: "set_url", fieldId: "related_url", value: "https://..." }
+          Skip: { op: "skip_field", fieldId: "related_url", reason: "..." }
 
         - **score** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: number
+          Set: { op: "set_number", fieldId: "score", value: 123 }
+          Skip: { op: "skip_field", fieldId: "score", reason: "..." }
 
-        # Instructions
+        # General Instructions
 
         Use the generatePatches tool to submit patches for the fields above.
-        Each patch should match the field kind:
-        - string: { op: "set_string", fieldId: "...", value: "..." }
-        - number: { op: "set_number", fieldId: "...", value: 123 }
-        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-        - url: { op: "set_url", fieldId: "...", value: "https://..." }
-        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-        - year: { op: "set_year", fieldId: "...", value: 2024 }
-        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-        If you cannot find verifiable information for a field, skip it:
-        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        For table fields, each row is an object with column ID keys.
     wire:
       request:
         system: |-
@@ -1435,65 +1447,69 @@ turns:
             Type: checkboxes
             Options: read_guidelines, agree_terms
             Mode: simple
+            Set: { op: "set_checkboxes", fieldId: "tasks_simple", values: { "opt1": "done", "opt2": "todo" } }
+            This field is required.
 
           - **website** (field): Required field "Website" is empty
             Severity: required, Priority: P1
             Type: url
+            Set: { op: "set_url", fieldId: "website", value: "https://..." }
+            This field is required.
 
           - **notes** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: string
+            Set: { op: "set_string", fieldId: "notes", value: "..." }
+            Skip: { op: "skip_field", fieldId: "notes", reason: "..." }
 
           - **optional_date** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: date
+            Set: { op: "set_date", fieldId: "optional_date", value: "2024-01-15" }
+            Skip: { op: "skip_field", fieldId: "optional_date", reason: "..." }
 
           - **optional_number** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: number
+            Set: { op: "set_number", fieldId: "optional_number", value: 123 }
+            Skip: { op: "skip_field", fieldId: "optional_number", reason: "..." }
 
           - **optional_year** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: year
+            Set: { op: "set_year", fieldId: "optional_year", value: 2024 }
+            Skip: { op: "skip_field", fieldId: "optional_year", reason: "..." }
 
           - **project_tasks** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: table
             Columns: task (required), estimate_hrs, link
             Rows: min: 0, max: 10
+            Set: { op: "set_table", fieldId: "project_tasks", rows: [{ "task": "...", "estimate_hrs": "...", "link": "..." }, ...] }
+            Skip: { op: "skip_field", fieldId: "project_tasks", reason: "..." }
 
           - **references** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: url_list
+            Set: { op: "set_url_list", fieldId: "references", items: ["https://...", "https://..."] }
+            Skip: { op: "skip_field", fieldId: "references", reason: "..." }
 
           - **related_url** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: url
+            Set: { op: "set_url", fieldId: "related_url", value: "https://..." }
+            Skip: { op: "skip_field", fieldId: "related_url", reason: "..." }
 
           - **score** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: number
+            Set: { op: "set_number", fieldId: "score", value: 123 }
+            Skip: { op: "skip_field", fieldId: "score", reason: "..." }
 
-          # Instructions
+          # General Instructions
 
           Use the generatePatches tool to submit patches for the fields above.
-          Each patch should match the field kind:
-          - string: { op: "set_string", fieldId: "...", value: "..." }
-          - number: { op: "set_number", fieldId: "...", value: 123 }
-          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-          - url: { op: "set_url", fieldId: "...", value: "https://..." }
-          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-          - year: { op: "set_year", fieldId: "...", value: 2024 }
-          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-          If you cannot find verifiable information for a field, skip it:
-          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+          For table fields, each row is an object with column ID keys.
         tools:
           generatePatches:
             description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
@@ -1868,27 +1884,13 @@ turns:
           Type: table
           Columns: name (required), role, start_date
           Rows: min: 0, max: 5
+          Set: { op: "set_table", fieldId: "team_members", rows: [{ "name": "...", "role": "...", "start_date": "..." }, ...] }
+          Skip: { op: "skip_field", fieldId: "team_members", reason: "..." }
 
-        # Instructions
+        # General Instructions
 
         Use the generatePatches tool to submit patches for the fields above.
-        Each patch should match the field kind:
-        - string: { op: "set_string", fieldId: "...", value: "..." }
-        - number: { op: "set_number", fieldId: "...", value: 123 }
-        - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-        - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-        - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-        - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-        - url: { op: "set_url", fieldId: "...", value: "https://..." }
-        - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-        - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-        - year: { op: "set_year", fieldId: "...", value: 2024 }
-        - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-        For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-        If you cannot find verifiable information for a field, skip it:
-        - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+        For table fields, each row is an object with column ID keys.
     wire:
       request:
         system: |-
@@ -2173,27 +2175,13 @@ turns:
             Type: table
             Columns: name (required), role, start_date
             Rows: min: 0, max: 5
+            Set: { op: "set_table", fieldId: "team_members", rows: [{ "name": "...", "role": "...", "start_date": "..." }, ...] }
+            Skip: { op: "skip_field", fieldId: "team_members", reason: "..." }
 
-          # Instructions
+          # General Instructions
 
           Use the generatePatches tool to submit patches for the fields above.
-          Each patch should match the field kind:
-          - string: { op: "set_string", fieldId: "...", value: "..." }
-          - number: { op: "set_number", fieldId: "...", value: 123 }
-          - string_list: { op: "set_string_list", fieldId: "...", items: ["...", "..."] }
-          - single_select: { op: "set_single_select", fieldId: "...", selected: "option_id" }
-          - multi_select: { op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }
-          - checkboxes: { op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }
-          - url: { op: "set_url", fieldId: "...", value: "https://..." }
-          - url_list: { op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }
-          - date: { op: "set_date", fieldId: "...", value: "2024-01-15" }
-          - year: { op: "set_year", fieldId: "...", value: 2024 }
-          - table: { op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }
-
-          For table fields, use the column IDs shown in the field schema. Each row is an object with column ID keys.
-
-          If you cannot find verifiable information for a field, skip it:
-          - skip: { op: "skip_field", fieldId: "...", reason: "Information not available" }
+          For table fields, each row is an object with column ID keys.
         tools:
           generatePatches:
             description: Generate patches to fill form fields. Each patch sets a field value. Use the field IDs from the issues list. Return patches for all issues you can address.
