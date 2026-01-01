@@ -53,11 +53,8 @@ const VALID_FORM_TAGS = new Set([
 // Frontmatter Parsing
 // =============================================================================
 
-const FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
-
 interface FrontmatterResult {
   frontmatter: Record<string, unknown>;
-  body: string;
   metadata?: FormMetadata;
   /** Description from markform.description in frontmatter */
   description?: string;
@@ -96,26 +93,23 @@ function parseHarnessConfig(raw: unknown): FrontmatterHarnessConfig | undefined 
 }
 
 /**
- * Extract YAML frontmatter from markdown content.
- * Uses full YAML parsing to support nested structures.
+ * Extract YAML frontmatter from Markdoc AST.
+ * Uses Markdoc's native frontmatter extraction and parses the YAML.
  */
-function extractFrontmatter(content: string): FrontmatterResult {
-  const match = FRONTMATTER_REGEX.exec(content);
-  if (!match) {
-    return { frontmatter: {}, body: content };
+function extractFrontmatter(ast: Node): FrontmatterResult {
+  const rawFrontmatter = ast.attributes.frontmatter as string | undefined;
+  if (!rawFrontmatter) {
+    return { frontmatter: {} };
   }
 
-  const yamlContent = match[1];
-  const body = content.slice(match[0].length);
-
   try {
-    const parsed = YAML.parse(yamlContent ?? '') as Record<string, unknown> | null;
+    const parsed = YAML.parse(rawFrontmatter) as Record<string, unknown> | null;
     const frontmatter = parsed ?? {};
 
     // Extract metadata from markform section
     const markformSection = frontmatter.markform as Record<string, unknown> | undefined;
     if (!markformSection) {
-      return { frontmatter, body };
+      return { frontmatter };
     }
 
     // Parse harness config from markform.harness
@@ -148,7 +142,7 @@ function extractFrontmatter(content: string): FrontmatterResult {
       ...(runMode && { runMode }),
     };
 
-    return { frontmatter, body, metadata, description };
+    return { frontmatter, metadata, description };
   } catch (error) {
     // Re-throw ParseError as-is, wrap other errors
     if (error instanceof ParseError) {
@@ -542,11 +536,12 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
  * @throws ParseError if the document is invalid
  */
 export function parseForm(markdown: string): ParsedForm {
-  // Step 1: Extract frontmatter and metadata
-  const { body, metadata, description } = extractFrontmatter(markdown);
+  // Step 1: Parse Markdoc AST (raw AST, not transformed)
+  // Markdoc natively handles frontmatter extraction and stores it in ast.attributes.frontmatter
+  const ast = Markdoc.parse(markdown);
 
-  // Step 2: Parse Markdoc AST (raw AST, not transformed)
-  const ast = Markdoc.parse(body);
+  // Step 2: Extract frontmatter and metadata from AST
+  const { metadata, description } = extractFrontmatter(ast);
 
   // Step 3: Find the form tag in the raw AST
   let formSchema: FormSchema | null = null;

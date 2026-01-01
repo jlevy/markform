@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import Markdoc from '@markdoc/markdoc';
 import YAML from 'yaml';
 
 import type { ExampleDefinition } from '../lib/cliTypes.js';
@@ -135,17 +136,18 @@ export function getExamplePath(exampleId: string): string {
 }
 
 /**
- * Extract YAML frontmatter from a markdown file content.
+ * Extract YAML frontmatter from markdown content using Markdoc's native support.
  * @param content - The markdown file content
  * @returns The parsed frontmatter object or null if no frontmatter found
  */
 function extractFrontmatter(content: string): Record<string, unknown> | null {
-  const frontmatterMatch = /^---\n([\s\S]*?)\n---/.exec(content);
-  if (!frontmatterMatch?.[1]) {
+  const ast = Markdoc.parse(content);
+  const rawFrontmatter = ast.attributes.frontmatter as string | undefined;
+  if (!rawFrontmatter) {
     return null;
   }
   try {
-    return YAML.parse(frontmatterMatch[1]) as Record<string, unknown>;
+    return YAML.parse(rawFrontmatter) as Record<string, unknown>;
   } catch {
     return null;
   }
