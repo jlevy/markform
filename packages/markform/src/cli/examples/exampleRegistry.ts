@@ -100,7 +100,9 @@ export function loadExampleContent(exampleId: string): string {
   try {
     return readFileSync(filePath, 'utf-8');
   } catch (error) {
-    throw new Error(`Failed to load example '${exampleId}' from ${filePath}: ${error}`);
+    throw new Error(
+      `Failed to load example '${exampleId}' from ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
@@ -138,8 +140,8 @@ export function getExamplePath(exampleId: string): string {
  * @returns The parsed frontmatter object or null if no frontmatter found
  */
 function extractFrontmatter(content: string): Record<string, unknown> | null {
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!frontmatterMatch || !frontmatterMatch[1]) {
+  const frontmatterMatch = /^---\n([\s\S]*?)\n---/.exec(content);
+  if (!frontmatterMatch?.[1]) {
     return null;
   }
   try {
@@ -158,7 +160,7 @@ export function loadExampleMetadata(exampleId: string): { title?: string; descri
   const content = loadExampleContent(exampleId);
   const frontmatter = extractFrontmatter(content);
 
-  if (!frontmatter || !frontmatter.markform) {
+  if (!frontmatter?.markform) {
     return {};
   }
 
