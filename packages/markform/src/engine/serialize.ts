@@ -942,7 +942,7 @@ function serializeTableField(field: TableField, response: FieldResponse | undefi
   // Table values use markdown table syntax directly WITHOUT value fence (per spec)
   if (response?.state === 'answered' && response.value) {
     const value = response.value as TableValue;
-    if (value.rows.length > 0) {
+    if ((value.rows?.length ?? 0) > 0) {
       const tableContent = serializeMarkdownTable(value, field.columns);
       content = '\n' + tableContent + '\n';
     }

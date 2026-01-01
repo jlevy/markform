@@ -91,7 +91,7 @@ export function isValueEmpty(value: FieldValue): boolean {
       return values.every((v) => v === 'todo' || v === 'unfilled');
     }
     case 'table':
-      return value.rows.length === 0;
+      return (value.rows?.length ?? 0) === 0;
     default: {
       // Exhaustiveness check - TypeScript will error if a case is missing
       const _exhaustive: never = value;

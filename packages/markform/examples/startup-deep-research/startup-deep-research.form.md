@@ -58,7 +58,7 @@ The more context you provide, the more accurate and relevant the research will b
 
 {% group id="basic_info" title="Company Overview" %}
 
-{% field kind="string" id="website" label="Website URL" %}{% /field %}
+{% field kind="url" id="website" label="Website URL" %}{% /field %}
 
 {% instructions ref="website" %}
 Primary company website.
@@ -107,7 +107,7 @@ Source: linkedin.com/company page, crunchbase.com, or company website.
 Source: Company website About page, crunchbase.com, Wikipedia if notable.
 {% /instructions %}
 
-{% field kind="string_list" id="basic_info_sources" label="Company Overview Sources" %}{% /field %}
+{% field kind="url_list" id="basic_info_sources" label="Company Overview Sources" %}{% /field %}
 
 {% instructions ref="basic_info_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -117,36 +117,21 @@ URLs used as sources for this section. One URL per line.
 
 {% group id="founders_section" title="Founders & Key People" %}
 
-{% description ref="founders_section" %}
-List up to 4 founders/co-founders. Leave unused slots empty.
+{% field kind="table" id="founders" label="Founders"
+   columnIds=["name", "title", "linkedin", "background"]
+   columnLabels=["Name", "Title", "LinkedIn URL", "Background"]
+   columnTypes=["string", "string", "url", "string"]
+   minRows=1 maxRows=6 %}
+| Name | Title | LinkedIn URL | Background |
+|------|-------|--------------|------------|
+{% /field %}
+
+{% instructions ref="founders" %}
+List founders and co-founders. Include name, current title, LinkedIn profile URL, and brief background (prior companies, notable roles, education).
 Sources: Company website Team/About page, linkedin.com profiles, crunchbase.com people section.
-{% /description %}
-
-{% field kind="string" id="founder_1_name" label="Founder 1 Name" %}{% /field %}
-{% field kind="string" id="founder_1_title" label="Founder 1 Title" %}{% /field %}
-{% field kind="string" id="founder_1_linkedin" label="Founder 1 LinkedIn URL" %}{% /field %}
-{% field kind="string" id="founder_1_background" label="Founder 1 Background" maxLength=500 %}{% /field %}
-
-{% instructions ref="founder_1_background" %}
-Brief background: prior companies, notable roles, education.
 {% /instructions %}
 
-{% field kind="string" id="founder_2_name" label="Founder 2 Name" %}{% /field %}
-{% field kind="string" id="founder_2_title" label="Founder 2 Title" %}{% /field %}
-{% field kind="string" id="founder_2_linkedin" label="Founder 2 LinkedIn URL" %}{% /field %}
-{% field kind="string" id="founder_2_background" label="Founder 2 Background" maxLength=500 %}{% /field %}
-
-{% field kind="string" id="founder_3_name" label="Founder 3 Name" %}{% /field %}
-{% field kind="string" id="founder_3_title" label="Founder 3 Title" %}{% /field %}
-{% field kind="string" id="founder_3_linkedin" label="Founder 3 LinkedIn URL" %}{% /field %}
-{% field kind="string" id="founder_3_background" label="Founder 3 Background" maxLength=500 %}{% /field %}
-
-{% field kind="string" id="founder_4_name" label="Founder 4 Name" %}{% /field %}
-{% field kind="string" id="founder_4_title" label="Founder 4 Title" %}{% /field %}
-{% field kind="string" id="founder_4_linkedin" label="Founder 4 LinkedIn URL" %}{% /field %}
-{% field kind="string" id="founder_4_background" label="Founder 4 Background" maxLength=500 %}{% /field %}
-
-{% field kind="string_list" id="founders_sources" label="Founders Sources" %}{% /field %}
+{% field kind="url_list" id="founders_sources" label="Founders Sources" %}{% /field %}
 
 {% instructions ref="founders_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -183,7 +168,7 @@ Example: Series B | 2023-06 | $50M | Sequoia Capital | https://techcrunch.com/..
 Source: crunchbase.com funding rounds, pitchbook.com, techcrunch.com, company press releases.
 {% /instructions %}
 
-{% field kind="string_list" id="funding_sources" label="Funding Sources" %}{% /field %}
+{% field kind="url_list" id="funding_sources" label="Funding Sources" %}{% /field %}
 
 {% instructions ref="funding_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -220,7 +205,7 @@ How does this company differentiate? Key advantages/disadvantages vs competitors
 Source: Company website, product pages, press interviews, g2.com reviews.
 {% /instructions %}
 
-{% field kind="string_list" id="competitors_sources" label="Competitors Sources" %}{% /field %}
+{% field kind="url_list" id="competitors_sources" label="Competitors Sources" %}{% /field %}
 
 {% instructions ref="competitors_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -294,7 +279,7 @@ Also note if there are significant discussions in related subreddits.
 Source: Search reddit.com for company name, check for official subreddit.
 {% /instructions %}
 
-{% field kind="string_list" id="social_media_sources" label="Social Media Sources" %}{% /field %}
+{% field kind="url_list" id="social_media_sources" label="Social Media Sources" %}{% /field %}
 
 {% instructions ref="social_media_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -317,7 +302,7 @@ Include: Show HN launches, funding announcements, major discussions about the co
 Source: Search hn.algolia.com for company name, product name, and founder names.
 {% /instructions %}
 
-{% field kind="string_list" id="hacker_news_sources" label="Hacker News Sources" %}{% /field %}
+{% field kind="url_list" id="hacker_news_sources" label="Hacker News Sources" %}{% /field %}
 
 {% instructions ref="hacker_news_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -339,7 +324,7 @@ Note any badges: Product of the Day/Week/Month, Golden Kitty, etc.
 Source: Search producthunt.com for company name and product names.
 {% /instructions %}
 
-{% field kind="string_list" id="product_hunt_sources" label="Product Hunt Sources" %}{% /field %}
+{% field kind="url_list" id="product_hunt_sources" label="Product Hunt Sources" %}{% /field %}
 
 {% instructions ref="product_hunt_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -434,7 +419,7 @@ Example: "2019: Originally 'PaymentsAPI' focused on SMB; 2021: Rebranded, pivote
 Source: web.archive.org - search for company domain, review snapshots from different years.
 {% /instructions %}
 
-{% field kind="string_list" id="deep_intel_sources" label="Deep Intel Sources" %}{% /field %}
+{% field kind="url_list" id="deep_intel_sources" label="Deep Intel Sources" %}{% /field %}
 
 {% instructions ref="deep_intel_sources" %}
 URLs used as sources for this section. One URL per line.
@@ -457,7 +442,7 @@ Focus on: funding announcements, major product launches, company profiles, notab
 Source: techcrunch.com, theinformation.com, bloomberg.com, forbes.com, wired.com, venturebeat.com, company Press page.
 {% /instructions %}
 
-{% field kind="string_list" id="press_sources" label="Press Coverage Sources" %}{% /field %}
+{% field kind="url_list" id="press_sources" label="Press Coverage Sources" %}{% /field %}
 
 {% instructions ref="press_sources" %}
 URLs used as sources for this section. One URL per line.

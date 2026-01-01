@@ -507,7 +507,7 @@ export function registerFillCommand(program: Command): void {
                 ctx,
                 `  Stats: tokens ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0}`,
               );
-              if (stats.toolCalls.length > 0) {
+              if (stats.toolCalls && stats.toolCalls.length > 0) {
                 const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(', ');
                 logVerbose(ctx, `  Tools: ${toolSummary}`);
               }
@@ -538,7 +538,8 @@ export function registerFillCommand(program: Command): void {
               llmStats = {
                 inputTokens: stats.inputTokens,
                 outputTokens: stats.outputTokens,
-                toolCalls: stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
+                toolCalls:
+                  stats.toolCalls && stats.toolCalls.length > 0 ? stats.toolCalls : undefined,
               };
               // Get context and wire from live agent stats
               if (stats.prompts) {

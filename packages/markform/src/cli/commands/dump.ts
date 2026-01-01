@@ -76,8 +76,10 @@ function formatFieldResponse(response: FieldResponse, useColors: boolean): strin
       return value.value ? green(value.value) : dim('(empty)');
     case 'year':
       return value.value !== null ? green(String(value.value)) : dim('(empty)');
-    case 'table':
-      return value.rows.length > 0 ? green(`(${value.rows.length} rows)`) : dim('(empty)');
+    case 'table': {
+      const rowCount = value.rows?.length ?? 0;
+      return rowCount > 0 ? green(`(${rowCount} rows)`) : dim('(empty)');
+    }
     default: {
       // Exhaustiveness check - TypeScript will error if a case is missing
       const _exhaustive: never = value;

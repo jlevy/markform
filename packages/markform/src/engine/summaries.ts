@@ -195,7 +195,7 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
     }
     case 'table': {
       const v = value as TableValue;
-      return v.rows.length > 0;
+      return (v.rows?.length ?? 0) > 0;
     }
     default: {
       // Exhaustiveness check - TypeScript will error if a case is missing
