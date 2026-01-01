@@ -53,10 +53,6 @@ describe('examples registry', () => {
     it('includes simple example', () => {
       expect(EXAMPLE_DEFINITIONS.some((e) => e.id === 'simple')).toBe(true);
     });
-
-    it('includes earnings-analysis example', () => {
-      expect(EXAMPLE_DEFINITIONS.some((e) => e.id === 'earnings-analysis')).toBe(true);
-    });
   });
 
   describe('getExampleIds', () => {
@@ -64,7 +60,6 @@ describe('examples registry', () => {
       const ids = getExampleIds();
       expect(Array.isArray(ids)).toBe(true);
       expect(ids).toContain('simple');
-      expect(ids).toContain('earnings-analysis');
     });
   });
 
@@ -119,13 +114,6 @@ describe('examples registry', () => {
       expect(content).toContain('{% form');
     });
 
-    it('loads earnings-analysis example content', () => {
-      const content = loadExampleContent('earnings-analysis');
-      expect(content).toBeTruthy();
-      expect(content).toContain('markform:');
-      expect(content).toContain('earnings_analysis');
-    });
-
     it('throws for unknown example', () => {
       expect(() => loadExampleContent('nonexistent')).toThrow('Unknown example: nonexistent');
     });
@@ -151,14 +139,6 @@ describe('examples registry', () => {
       expect(form.schema.groups.length).toBeGreaterThan(0);
     });
 
-    it('earnings-analysis example parses as valid form', () => {
-      const content = loadExampleContent('earnings-analysis');
-      const form = parseForm(content);
-
-      expect(form.schema.id).toBe('earnings_analysis');
-      expect(form.schema.groups.length).toBeGreaterThan(0);
-    });
-
     it('all examples contain roles in frontmatter content', () => {
       for (const example of EXAMPLE_DEFINITIONS) {
         const content = loadExampleContent(example.id);
@@ -167,7 +147,6 @@ describe('examples registry', () => {
         expect(content).toContain('roles:');
         expect(content).toContain('- user');
         // Note: simple form only has user role for testing interactive fill
-        // Political and earnings examples have both user and agent roles
         if (example.id !== 'simple') {
           expect(content).toContain('- agent');
         }

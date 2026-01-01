@@ -382,9 +382,6 @@ View them with `markform examples --list`, copy with `markform examples`, and ru
 - [`movie-deep-research.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-deep-research.form.md)
   \- Comprehensive movie analysis with streaming, box office, technical specs.
 
-- [`earnings-analysis.form.md`](https://github.com/jlevy/markform/blob/main/packages/markform/examples/earnings-analysis/earnings-analysis.form.md)
-  \- Financial analysis form.
-
 ### Why a New Format?
 
 The closest alternatives I’ve seen are:
