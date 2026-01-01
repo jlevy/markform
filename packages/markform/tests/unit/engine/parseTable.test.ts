@@ -55,6 +55,13 @@ describe('parseTable', () => {
       ['%ABORT%', 'string', 'aborted'],
       ['%abort%', 'string', 'aborted'],
       ['%ABORT:reason%', 'string', 'aborted'],
+
+      // Sentinel with parentheses syntax
+      ['%SKIP(detailed reason)%', 'string', 'skipped'],
+      ['%ABORT(error details)%', 'string', 'aborted'],
+
+      // Year type edge cases - parseInt parses integer portion of floats
+      ['2024.5', 'year', 'answered', 2024], // parseInt("2024.5") returns 2024
     ];
 
     for (const [raw, type, expectedState, expectedValue] of CASES) {
@@ -262,6 +269,42 @@ describe('parseTable', () => {
 | string |
 |------|-----|`;
       const result = extractColumnsFromTable(content);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('same number of columns');
+      }
+    });
+
+    it('rejects table with type row but no separator', () => {
+      const content = `
+| Name | Age |
+| string | number |`;
+      const result = extractColumnsFromTable(content);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('separator');
+      }
+    });
+
+    it('rejects table with invalid separator after type row', () => {
+      const content = `
+| Name | Age |
+| string | number |
+| not a | separator |`;
+      const result = extractColumnsFromTable(content);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('separator');
+      }
+    });
+
+    it('rejects empty table content', () => {
+      const result = extractColumnsFromTable('');
+      expect(result.ok).toBe(false);
+    });
+
+    it('handles table with only whitespace', () => {
+      const result = extractColumnsFromTable('   \n   \n   ');
       expect(result.ok).toBe(false);
     });
   });

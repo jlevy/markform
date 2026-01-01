@@ -926,4 +926,447 @@ Abort reason note.
       expect(form.notes).toHaveLength(1);
     });
   });
+
+  describe('set_date patch', () => {
+    it('applies set_date to date field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="birthday" label="Birthday" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_date', fieldId: 'birthday', value: '1990-05-15' }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.birthday?.value).toEqual({
+        kind: 'date',
+        value: '1990-05-15',
+      });
+    });
+
+    it('rejects set_date on non-date field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_date', fieldId: 'name', value: '1990-05-15' }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+    });
+  });
+
+  describe('set_year patch', () => {
+    it('applies set_year to year field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="year" id="grad_year" label="Graduation Year" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_year', fieldId: 'grad_year', value: 2020 }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.grad_year?.value).toEqual({
+        kind: 'year',
+        value: 2020,
+      });
+    });
+
+    it('rejects set_year on non-year field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="number" id="count" label="Count" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_year', fieldId: 'count', value: 2020 }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+    });
+  });
+
+  describe('set_url patch', () => {
+    it('applies set_url to url field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url" id="website" label="Website" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: 'set_url', fieldId: 'website', value: 'https://example.com' },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.website?.value).toEqual({
+        kind: 'url',
+        value: 'https://example.com',
+      });
+    });
+  });
+
+  describe('set_url_list patch', () => {
+    it('applies set_url_list to url_list field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url_list" id="sources" label="Sources" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: 'set_url_list', fieldId: 'sources', items: ['https://a.com', 'https://b.com'] },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.sources?.value).toEqual({
+        kind: 'url_list',
+        items: ['https://a.com', 'https://b.com'],
+      });
+    });
+  });
+
+  describe('set_table patch', () => {
+    it('applies set_table to table field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] %}
+| Name | Email |
+|------|-------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'contacts',
+          rows: [
+            { name: 'John', email: 'john@test.com' },
+            { name: 'Jane', email: 'jane@test.com' },
+          ],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.contacts?.value;
+      expect(value?.kind).toBe('table');
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(2);
+        expect(value.rows[0]?.name).toEqual({ state: 'answered', value: 'John' });
+        expect(value.rows[0]?.email).toEqual({ state: 'answered', value: 'john@test.com' });
+      }
+    });
+
+    it('handles null cell values as skipped', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: null }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b).toEqual({ state: 'skipped' });
+      }
+    });
+
+    it('handles %SKIP% sentinel in cell values', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%SKIP%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('skipped');
+      }
+    });
+
+    it('handles %SKIP:reason% sentinel with reason', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%SKIP:not available%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('skipped');
+        expect(value.rows[0]?.b?.reason).toBe('not available');
+      }
+    });
+
+    it('handles %ABORT% sentinel in cell values', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%ABORT%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('aborted');
+      }
+    });
+
+    it('handles %ABORT:reason% sentinel with reason', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["a", "b"] %}
+| A | B |
+|---|---|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ a: 'value', b: '%ABORT:data error%' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.b?.state).toBe('aborted');
+        expect(value.rows[0]?.b?.reason).toBe('data error');
+      }
+    });
+
+    it('handles number cell values', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "count"] %}
+| Name | Count |
+|------|-------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          rows: [{ name: 'item', count: 42 }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows[0]?.count).toEqual({ state: 'answered', value: 42 });
+      }
+    });
+
+    it('rejects set_table on non-table field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'name',
+          rows: [{ a: 'test' }],
+        },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+    });
+  });
 });

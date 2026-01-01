@@ -51,6 +51,11 @@ spec: MF/0.1
 - [ ] Task A {% #task_a %}
 - [ ] Task B {% #task_b %}
 {% /field %}
+{% field kind="checkboxes" id="multi_mindone_cb" label="Multi with MinDone" checkboxMode="multi" minDone=2 %}
+- [ ] Task 1 {% #t1 %}
+- [ ] Task 2 {% #t2 %}
+- [ ] Task 3 {% #t3 %}
+{% /field %}
 {% /group %}
 {% /form %}
 `;
@@ -286,6 +291,48 @@ describe('isCheckboxComplete', () => {
       };
 
       expect(isCheckboxComplete(form, 'multi_cb')).toBe(true);
+    });
+
+    it('returns false when minDone not met', () => {
+      const form = parseForm(CHECKBOX_FORM);
+      form.responsesByFieldId.multi_mindone_cb = {
+        state: 'answered',
+        value: {
+          kind: 'checkboxes',
+          values: { t1: 'done', t2: 'todo', t3: 'todo' },
+        },
+      };
+
+      // minDone=2 requires at least 2 done, but only 1 is done
+      expect(isCheckboxComplete(form, 'multi_mindone_cb')).toBe(false);
+    });
+
+    it('returns true when minDone is met', () => {
+      const form = parseForm(CHECKBOX_FORM);
+      form.responsesByFieldId.multi_mindone_cb = {
+        state: 'answered',
+        value: {
+          kind: 'checkboxes',
+          values: { t1: 'done', t2: 'done', t3: 'todo' },
+        },
+      };
+
+      // minDone=2 requires at least 2 done, and 2 are done
+      expect(isCheckboxComplete(form, 'multi_mindone_cb')).toBe(true);
+    });
+
+    it('returns true when more than minDone are done', () => {
+      const form = parseForm(CHECKBOX_FORM);
+      form.responsesByFieldId.multi_mindone_cb = {
+        state: 'answered',
+        value: {
+          kind: 'checkboxes',
+          values: { t1: 'done', t2: 'done', t3: 'done' },
+        },
+      };
+
+      // minDone=2 requires at least 2 done, and 3 are done
+      expect(isCheckboxComplete(form, 'multi_mindone_cb')).toBe(true);
     });
   });
 
