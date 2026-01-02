@@ -309,6 +309,7 @@ function coerceToCheckboxes(field: Field, rawValue: RawFieldValue): CoercionResu
   const validOptions = new Set(field.options.map((o) => o.id));
   const checkboxMode = field.checkboxMode;
   const values: Record<OptionId, CheckboxValue> = {};
+  let hadBooleanCoercion = false;
 
   // Valid checkbox values based on mode
   const validValues = new Set<string>(
@@ -327,20 +328,36 @@ function coerceToCheckboxes(field: Field, rawValue: RawFieldValue): CoercionResu
       };
     }
 
+    // Coerce boolean values to appropriate checkbox strings
+    if (typeof value === 'boolean') {
+      hadBooleanCoercion = true;
+      if (checkboxMode === 'explicit') {
+        values[optId] = value ? 'yes' : 'no';
+      } else {
+        values[optId] = value ? 'done' : 'todo';
+      }
+      continue;
+    }
+
     if (typeof value !== 'string' || !validValues.has(value)) {
       return {
         ok: false,
-        error: `Invalid checkbox value '${String(value)}' for option '${optId}' in field '${field.id}'. Valid values for ${checkboxMode} mode: ${Array.from(validValues).join(', ')}`,
+        error: `Invalid checkbox value '${String(value)}' for option '${optId}' in field '${field.id}'. Valid values for ${checkboxMode} mode: ${Array.from(validValues).join(', ')} (or use true/false)`,
       };
     }
 
     values[optId] = value as CheckboxValue;
   }
 
-  return {
-    ok: true,
-    patch: { op: 'set_checkboxes', fieldId: field.id, values },
-  };
+  const patch: Patch = { op: 'set_checkboxes', fieldId: field.id, values };
+  if (hadBooleanCoercion) {
+    return {
+      ok: true,
+      patch,
+      warning: `Coerced boolean values to checkbox strings for field '${field.id}'`,
+    };
+  }
+  return { ok: true, patch };
 }
 
 function coerceToUrl(fieldId: string, rawValue: RawFieldValue): CoercionResult {

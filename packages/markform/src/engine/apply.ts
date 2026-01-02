@@ -158,7 +158,7 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     if (patch.values == null || typeof patch.values !== 'object' || Array.isArray(patch.values)) {
       return {
         patchIndex: index,
-        message: `Invalid set_checkboxes patch for field "${field.id}": values must be an object mapping option IDs to booleans`,
+        message: `Invalid set_checkboxes patch for field "${field.id}": values must be an object mapping option IDs to checkbox state strings (e.g. "todo", "done", "yes", "no")`,
         fieldId: field.id,
         fieldKind: field.kind,
       };
@@ -181,16 +181,17 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     }
   } else if (patch.op === 'set_table' && field.kind === 'table') {
     // Validate rows is a non-null array
+    const columnIds = field.columns.map((c) => c.id);
     if (!Array.isArray(patch.rows)) {
       return {
         patchIndex: index,
-        message: `Invalid set_table patch for field "${field.id}": rows must be an array of row objects`,
+        message: `Invalid set_table patch for field "${field.id}": rows must be an array of row objects. Each row should map column IDs to values. Columns: [${columnIds.join(', ')}]`,
         fieldId: field.id,
         fieldKind: field.kind,
-        columnIds: field.columns.map((c) => c.id),
+        columnIds,
       };
     }
-    const validColumns = new Set(field.columns.map((c) => c.id));
+    const validColumns = new Set(columnIds);
     for (const row of patch.rows) {
       if (row != null) {
         for (const colId of Object.keys(row)) {

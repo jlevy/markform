@@ -567,6 +567,79 @@ describe('values', () => {
     });
   });
 
+  describe('coerceToFieldPatch - checkboxes boolean coercion', () => {
+    it('coerces true/false to done/todo in multi mode', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const result = coerceToFieldPatch(form, 'tasks_multi', {
+        research: true,
+        design: false,
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'tasks_multi',
+          values: { research: 'done', design: 'todo' },
+        });
+        expect('warning' in result && result.warning).toContain('Coerced boolean');
+      }
+    });
+
+    it('coerces true/false to done/todo in simple mode', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const result = coerceToFieldPatch(form, 'tasks_simple', {
+        read: true,
+        agree: false,
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'tasks_simple',
+          values: { read: 'done', agree: 'todo' },
+        });
+        expect('warning' in result && result.warning).toContain('Coerced boolean');
+      }
+    });
+
+    it('coerces true/false to yes/no in explicit mode', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const result = coerceToFieldPatch(form, 'confirmations', {
+        backup: true,
+        notify: false,
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'confirmations',
+          values: { backup: 'yes', notify: 'no' },
+        });
+        expect('warning' in result && result.warning).toContain('Coerced boolean');
+      }
+    });
+
+    it('accepts mixed boolean and string values', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const result = coerceToFieldPatch(form, 'tasks_multi', {
+        research: true,
+        design: 'done',
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'tasks_multi',
+          values: { research: 'done', design: 'done' },
+        });
+      }
+    });
+  });
+
   describe('coerceToFieldPatch - field not found', () => {
     it('returns error for non-existent field', () => {
       const form = parseForm(TEST_FORM_MD);
