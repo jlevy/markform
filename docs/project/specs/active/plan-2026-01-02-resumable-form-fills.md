@@ -231,37 +231,102 @@ while (totalTurns < overallLimit) {
 
 ### Testing Plan
 
+Testing should be focused and minimal, covering the critical paths without excessive test
+proliferation.
+
 #### 1. Unit Tests (`tests/unit/harness/programmaticFill.test.ts`)
 
-**maxTurnsThisCall:**
+Add a new `describe('resumable fills')` block with focused tests:
 
-- [ ] Stops after exactly N turns when `maxTurnsThisCall: N`
-- [ ] Returns `reason: 'batch_limit'` (not `'max_turns'`)
-- [ ] Partial form state is preserved
-- [ ] `FillResult.turns` equals turns executed
+**Core functionality (3-4 tests):**
 
-**startingTurnNumber:**
+- [ ] `maxTurnsThisCall` stops after exactly N turns, returns `reason: 'batch_limit'`
+- [ ] `startingTurnNumber` adjusts `FillResult.turns` and callback turn numbers correctly
+- [ ] Resume flow: first call checkpoint → second call completes
+- [ ] `maxTurns` still returns `'max_turns'` when hit (not confused with batch_limit)
 
-- [ ] `FillResult.turns` = `startingTurnNumber` + turns executed this call
-- [ ] Callbacks receive adjusted turn numbers
-- [ ] Works correctly when combined with `maxTurnsThisCall`
+**Edge case (1 test):**
 
-**Interaction with maxTurns:**
+- [ ] Form already complete returns immediately with `ok: true` (0 turns executed)
 
-- [ ] `maxTurns` still enforced (returns `'max_turns'` if hit first)
-- [ ] `maxTurnsThisCall` takes precedence when lower than remaining `maxTurns`
+#### 2. Golden Session Test (`examples/resume-test/`)
 
-**Resume flow:**
+Create a minimal golden test that validates the resume flow with MockAgent. This provides
+regression protection for the checkpoint/resume mechanism.
 
-- [ ] Result markdown can be parsed and used as input
-- [ ] Resumed fill continues from saved state
-- [ ] Multi-resume scenario works (3+ consecutive calls)
+**Files to create:**
 
-#### 2. Integration Tests (`tests/integration/programmaticFill.test.ts`)
+```
+examples/resume-test/
+├── resume-test.form.md           # Simple 2-field form
+├── resume-test-filled.form.md    # Completed version (mock source)
+└── resume-test.session.yaml      # Golden session with resume
+```
 
-- [ ] End-to-end: checkpoint at turn 2, resume, complete
-- [ ] Values from first call preserved in second call
-- [ ] Total patches accumulated correctly across calls
+**Form design** (`resume-test.form.md`):
+- 2 required fields: `field_a` and `field_b`
+- MockAgent fills 1 field per turn (controlled by maxIssuesPerTurn: 1)
+
+**Session structure** (`resume-test.session.yaml`):
+```yaml
+session_version: 0.1.0
+mode: mock
+form:
+  path: resume-test.form.md
+mock:
+  completed_mock: resume-test-filled.form.md
+harness:
+  max_turns: 100
+  max_turns_this_call: 1    # Stop after 1 turn
+  max_issues_per_turn: 1    # Show only 1 issue per turn
+  target_roles: ['*']
+turns:
+  - turn: 1
+    inspect:
+      issues:
+        - ref: field_a
+          # ...
+    apply:
+      patches:
+        - op: set_string
+          field_id: field_a
+          value: "value_a"
+    after:
+      required_issue_count: 1  # field_b still needs filling
+# Resume section (new session YAML feature)
+resume:
+  starting_turn_number: 1
+  turns:
+    - turn: 2
+      inspect:
+        issues:
+          - ref: field_b
+            # ...
+      apply:
+        patches:
+          - op: set_string
+            field_id: field_b
+            value: "value_b"
+      after:
+        required_issue_count: 0
+final:
+  expect_complete: true
+```
+
+**Note:** The golden test framework may need minor updates to support the `resume` section.
+This is a small addition to `tests/golden/golden.test.ts`.
+
+#### 3. Why This Testing Approach
+
+**What we test:**
+- Critical path: checkpoint → resume → complete
+- State preservation: values survive serialization round-trip
+- Status distinction: `batch_limit` vs `max_turns` vs `ok`
+
+**What we don't test separately:**
+- Callback timing (trivial turn number adjustment)
+- Multiple batch sizes (if N=1 works, N=5 works)
+- Negative/invalid inputs (TypeScript prevents most, runtime is best-effort)
 
 ## Stage 2: Architecture Stage
 
@@ -412,6 +477,148 @@ Not in scope but worth noting:
 2. **Session logs are per-call** - Each `fillForm()` call creates a new harness with fresh
    `turns` array. This is acceptable for MVP; session log continuity can be added later.
 
+## Stage 4: Senior Engineer Design Review
+
+### Design Quality Assessment
+
+**API Surface Minimalism** ✅
+
+| Criterion | Assessment |
+| --- | --- |
+| New parameters | 2 (minimal) |
+| New types | 0 (reuses FillStatus with new reason) |
+| Breaking changes | 0 |
+| New dependencies | 0 |
+
+The design adds exactly what's needed for the use case, nothing more.
+
+**Naming Review** ✅
+
+| Name | Assessment |
+| --- | --- |
+| `maxTurnsThisCall` | Clear, distinguishes from `maxTurns`. Considered `turnLimit` but that's ambiguous with overall limit. |
+| `startingTurnNumber` | Explicit about its purpose. Considered `resumeFromTurn` but that implies automatic behavior. |
+| `'batch_limit'` | Distinct from `'max_turns'`. Considered `'checkpoint'` but that implies persistence. |
+
+**Predictable Behavior** ✅
+
+| Scenario | Behavior | Notes |
+| --- | --- | --- |
+| No new params | Unchanged | Backward compatible |
+| `maxTurnsThisCall` only | Stops, returns `batch_limit` | Expected |
+| `startingTurnNumber` only | Adjusts callbacks/turns | Cosmetic only |
+| Both params | Combined effect | Typical resume use case |
+| Form already complete | Returns `ok: true`, 0 turns | No wasted work |
+| `maxTurnsThisCall: 0` | Returns immediately with `batch_limit` | Edge case, but consistent |
+
+### Corner Cases Analysis
+
+**1. Form Already Complete on Entry**
+
+```typescript
+const result = await fillForm({
+  form: alreadyCompletedForm,
+  maxTurnsThisCall: 5,
+  // ...
+});
+// result.status.ok === true, result.turns === 0
+```
+
+Current implementation handles this correctly - the loop condition checks `isComplete` first.
+
+**2. maxTurnsThisCall: 0**
+
+```typescript
+const result = await fillForm({
+  form: incompleteForm,
+  maxTurnsThisCall: 0,  // Should return immediately
+  // ...
+});
+// result.status = { ok: false, reason: 'batch_limit' }
+// result.turns = startingTurnNumber (0 by default)
+```
+
+The per-call check `turnsThisCall >= options.maxTurnsThisCall` triggers immediately (0 >= 0).
+This is consistent and allows "dry run" to get remaining issues without execution.
+
+**3. startingTurnNumber > maxTurns**
+
+```typescript
+const result = await fillForm({
+  form,
+  maxTurns: 10,
+  startingTurnNumber: 15,  // Already "exceeded" maxTurns
+  // ...
+});
+```
+
+The harness's `hasReachedMaxTurns()` uses its internal counter (0), not `startingTurnNumber`.
+So this still allows turns. Document that `startingTurnNumber` is cosmetic - for accurate
+progress reporting only.
+
+**4. Resume with Different Model/Options**
+
+```typescript
+// First call with Claude
+const r1 = await fillForm({ form, model: 'anthropic/claude-sonnet-4-5', ... });
+
+// Resume with GPT-4 (is this valid?)
+const r2 = await fillForm({ form: r1.markdown, model: 'openai/gpt-4o', ... });
+```
+
+This works because the form state is model-agnostic. The new model sees the form with
+filled values and continues. Document this as a feature, not a bug.
+
+**5. Resume with fillMode: 'overwrite'**
+
+```typescript
+const r1 = await fillForm({ form, maxTurnsThisCall: 1, fillMode: 'continue', ... });
+const r2 = await fillForm({ form: r1.markdown, fillMode: 'overwrite', ... });
+```
+
+The second call with `overwrite` will clear all target role fields before starting.
+This destroys the checkpoint. Document that `fillMode: 'overwrite'` should NOT be used
+with resume patterns.
+
+**6. Negative or Invalid startingTurnNumber**
+
+```typescript
+const result = await fillForm({
+  form,
+  startingTurnNumber: -5,  // or NaN, or Infinity
+  // ...
+});
+```
+
+No explicit validation. The arithmetic works (callbacks show "Turn -4", etc.).
+Best-effort: TypeScript types prevent most issues; runtime doesn't crash.
+
+### Framework Flexibility Checklist
+
+For use in CLI, AWS Step Functions, Convex, etc:
+
+| Use Case | Supported | Notes |
+| --- | --- | --- |
+| CLI with Ctrl+C resume | ✅ | Save checkpoint on SIGINT, resume with flag |
+| Convex action timeout | ✅ | Set `maxTurnsThisCall` based on remaining time budget |
+| Step Functions state | ✅ | Checkpoint = markdown string (serializable) |
+| Lambda cold start | ✅ | Stateless - each invocation is independent |
+| Progress UI | ✅ | Callbacks receive accurate turn numbers via `startingTurnNumber` |
+| Cost control | ✅ | Limit turns per call, review before continuing |
+| Multi-model pipeline | ✅ | Can change model on resume (form is model-agnostic) |
+
+### Final Design Verdict
+
+**APPROVED** - The design is:
+
+1. **Minimal** - Only 2 new optional parameters
+2. **Backward compatible** - Existing code unchanged
+3. **Predictable** - Clear semantics for all combinations
+4. **Flexible** - Works across all target orchestration environments
+5. **Testable** - Simple unit tests + one golden test cover critical paths
+
+**No changes recommended.** Proceed to implementation.
+
 ## Revision History
 
 | Date | Author | Changes |
@@ -420,3 +627,5 @@ Not in scope but worth noting:
 | 2026-01-02 | Claude | Decision: Use 'batch_limit' reason instead of reusing 'max_turns' |
 | 2026-01-02 | Claude | Decision: turns includes startingTurnNumber for accurate tracking |
 | 2026-01-02 | Claude | Added acceptance criteria and testing plan |
+| 2026-01-02 | Claude | Enhanced testing plan with golden session test |
+| 2026-01-02 | Claude | Added senior engineer design review with corner cases |
