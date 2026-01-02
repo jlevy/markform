@@ -106,38 +106,35 @@ Format: $X.XB, $XXM, or $XXK (e.g., "$10B")
 - [ ] Public {% #public %}
 {% /field %}
 
-{% field kind="string_list" id="key_investors" label="Key Investors" maxItems=10 %}{% /field %}
+{% field kind="table" id="funding_rounds" label="Funding Rounds"
+   columnIds=["round_type", "date", "amount", "lead_investors", "source_url"]
+   columnLabels=["Round Type", "Date", "Amount", "Lead Investor(s)", "Source URL"]
+   columnTypes=["string", "string", "string", "string", "url"]
+   minRows=0 maxRows=10 %}
+| Round Type | Date | Amount | Lead Investor(s) | Source URL |
+|------------|------|--------|------------------|------------|
+{% /field %}
 
-{% instructions ref="key_investors" %}
-List notable investors (VCs, angels), one per line.
-{% /instructions %}
-
-{% field kind="url_list" id="funding_announcements" label="Funding Announcement URLs" maxItems=5 uniqueItems=true %}{% /field %}
-
-{% instructions ref="funding_announcements" %}
-URLs to press releases or articles about funding rounds.
+{% instructions ref="funding_rounds" %}
+List funding rounds, most recent first. Date format: YYYY-MM.
+Example: Series B | 2023-06 | $50M | Sequoia Capital | https://techcrunch.com/...
 {% /instructions %}
 
 {% /group %}
 
 {% group id="people" title="Key People" %}
 
-{% field kind="string" id="ceo" label="CEO / Founder" %}{% /field %}
-
-{% instructions ref="ceo" %}
-Name of CEO or primary founder.
-{% /instructions %}
-
-{% field kind="url" id="ceo_linkedin" label="CEO LinkedIn" %}{% /field %}
-
-{% instructions ref="ceo_linkedin" %}
-LinkedIn profile URL of the CEO/founder.
-{% /instructions %}
-
-{% field kind="string_list" id="founders" label="Founders" maxItems=5 %}{% /field %}
+{% field kind="table" id="founders" label="Founders"
+   columnIds=["name", "title", "linkedin"]
+   columnLabels=["Name", "Title", "LinkedIn URL"]
+   columnTypes=["string", "string", "url"]
+   minRows=1 maxRows=5 %}
+| Name | Title | LinkedIn URL |
+|------|-------|--------------|
+{% /field %}
 
 {% instructions ref="founders" %}
-List all founders, one per line.
+List founders and co-founders. Include name, current title, and LinkedIn profile URL.
 {% /instructions %}
 
 {% field kind="number" id="employee_count" label="Employee Count" min=1 integer=true %}{% /field %}
@@ -163,26 +160,34 @@ Approximate number of employees.
 - [ ] Other {% #other %}
 {% /field %}
 
-{% field kind="string_list" id="competitors" label="Competitors" maxItems=5 %}{% /field %}
+{% field kind="table" id="competitors" label="Key Competitors"
+   columnIds=["company_name", "website", "one_liner"]
+   columnLabels=["Company Name", "Website", "One-liner"]
+   columnTypes=["string", "url", "string"]
+   minRows=0 maxRows=5 %}
+| Company Name | Website | One-liner |
+|--------------|---------|-----------|
+{% /field %}
 
 {% instructions ref="competitors" %}
-List main competitors, one per line.
-{% /instructions %}
-
-{% field kind="url_list" id="competitor_urls" label="Competitor Website URLs" maxItems=5 uniqueItems=true %}{% /field %}
-
-{% instructions ref="competitor_urls" %}
-Website URLs of main competitors.
+List main competitors with their website and a brief description.
 {% /instructions %}
 
 {% /group %}
 
 {% group id="press_coverage" title="Press & Coverage" %}
 
-{% field kind="url_list" id="press_articles" label="Press Coverage URLs" minItems=1 maxItems=10 uniqueItems=true %}{% /field %}
+{% field kind="table" id="press_articles" label="Press Coverage"
+   columnIds=["title", "publication", "date", "url"]
+   columnLabels=["Title", "Publication", "Date", "URL"]
+   columnTypes=["string", "string", "date", "url"]
+   minRows=1 maxRows=10 %}
+| Title | Publication | Date | URL |
+|-------|-------------|------|-----|
+{% /field %}
 
 {% instructions ref="press_articles" %}
-URLs to major press articles, reviews, or coverage about the company.
+Notable press articles, reviews, or coverage about the company.
 {% /instructions %}
 
 {% field kind="url" id="crunchbase_url" label="Crunchbase Profile" %}{% /field %}
