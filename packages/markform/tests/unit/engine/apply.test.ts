@@ -99,7 +99,7 @@ markform:
 {% /form %}
 `;
       const form = parseForm(markdown);
-      const patches: Patch[] = [{ op: 'set_string_list', fieldId: 'tags', items: ['a', 'b', 'c'] }];
+      const patches: Patch[] = [{ op: 'set_string_list', fieldId: 'tags', value: ['a', 'b', 'c'] }];
 
       const result = applyPatches(form, patches);
 
@@ -130,7 +130,7 @@ markform:
 {% /form %}
 `;
       const form = parseForm(markdown);
-      const patches: Patch[] = [{ op: 'set_single_select', fieldId: 'priority', selected: 'high' }];
+      const patches: Patch[] = [{ op: 'set_single_select', fieldId: 'priority', value: 'high' }];
 
       const result = applyPatches(form, patches);
 
@@ -159,9 +159,7 @@ markform:
 {% /form %}
 `;
       const form = parseForm(markdown);
-      const patches: Patch[] = [
-        { op: 'set_single_select', fieldId: 'priority', selected: 'invalid' },
-      ];
+      const patches: Patch[] = [{ op: 'set_single_select', fieldId: 'priority', value: 'invalid' }];
 
       const result = applyPatches(form, patches);
 
@@ -190,7 +188,7 @@ markform:
 `;
       const form = parseForm(markdown);
       const patches: Patch[] = [
-        { op: 'set_multi_select', fieldId: 'categories', selected: ['tech', 'health'] },
+        { op: 'set_multi_select', fieldId: 'categories', value: ['tech', 'health'] },
       ];
 
       const result = applyPatches(form, patches);
@@ -228,7 +226,7 @@ markform:
         {
           op: 'set_checkboxes',
           fieldId: 'tasks',
-          values: { second: 'done' },
+          value: { second: 'done' },
         },
       ];
 
@@ -1074,7 +1072,7 @@ markform:
 `;
       const form = parseForm(markdown);
       const patches: Patch[] = [
-        { op: 'set_url_list', fieldId: 'sources', items: ['https://a.com', 'https://b.com'] },
+        { op: 'set_url_list', fieldId: 'sources', value: ['https://a.com', 'https://b.com'] },
       ];
 
       const result = applyPatches(form, patches);
@@ -1110,7 +1108,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'contacts',
-          rows: [
+          value: [
             { name: 'John', email: 'john@test.com' },
             { name: 'Jane', email: 'jane@test.com' },
           ],
@@ -1151,7 +1149,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'data',
-          rows: [{ a: 'value', b: null }],
+          value: [{ a: 'value', b: null }],
         },
       ];
 
@@ -1186,7 +1184,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'data',
-          rows: [{ a: 'value', b: '%SKIP%' }],
+          value: [{ a: 'value', b: '%SKIP%' }],
         },
       ];
 
@@ -1221,7 +1219,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'data',
-          rows: [{ a: 'value', b: '%SKIP:not available%' }],
+          value: [{ a: 'value', b: '%SKIP:not available%' }],
         },
       ];
 
@@ -1257,7 +1255,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'data',
-          rows: [{ a: 'value', b: '%ABORT%' }],
+          value: [{ a: 'value', b: '%ABORT%' }],
         },
       ];
 
@@ -1292,7 +1290,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'data',
-          rows: [{ a: 'value', b: '%ABORT:data error%' }],
+          value: [{ a: 'value', b: '%ABORT:data error%' }],
         },
       ];
 
@@ -1328,7 +1326,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'data',
-          rows: [{ name: 'item', count: 42 }],
+          value: [{ name: 'item', count: 42 }],
         },
       ];
 
@@ -1360,7 +1358,7 @@ markform:
         {
           op: 'set_table',
           fieldId: 'name',
-          rows: [{ a: 'test' }],
+          value: [{ a: 'test' }],
         },
       ];
 
@@ -1388,7 +1386,7 @@ markform:
       ['set_date', { op: 'set_date', fieldId: 'name', value: '2024-01-15' }, 'set_date to string'],
       [
         'set_url_list',
-        { op: 'set_url_list', fieldId: 'name', items: ['https://example.com'] },
+        { op: 'set_url_list', fieldId: 'name', value: ['https://example.com'] },
         'set_url_list to string',
       ],
       ['set_year', { op: 'set_year', fieldId: 'name', value: 2024 }, 'set_year to string'],
@@ -1415,7 +1413,7 @@ markform:
 {% /form %}
 `);
       const result = applyPatches(form, [
-        { op: 'set_table', fieldId: 'data', rows: [{ name: 'valid', invalid_column: 'test' }] },
+        { op: 'set_table', fieldId: 'data', value: [{ name: 'valid', invalid_column: 'test' }] },
       ]);
       expect(result.applyStatus).toBe('rejected');
       expect(result.rejectedPatches[0]?.message).toContain('Invalid column');

@@ -363,7 +363,7 @@ describe('engine/coreTypes', () => {
       const patch = {
         op: 'set_checkboxes',
         fieldId: 'tasks',
-        values: { task_a: 'done' },
+        value: { task_a: 'done' },
       };
       const result = PatchSchema.parse(patch);
       expect(result.op).toBe('set_checkboxes');

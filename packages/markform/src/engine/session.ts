@@ -105,13 +105,13 @@ function toCamelCaseDeep(obj: unknown, preserveKeys = false): unknown {
       // Determine the key to use
       const resultKey = preserveKeys ? key : snakeToCamel(key);
 
-      // Check if this is a "values" key in a set_checkboxes patch
-      // The "values" object contains option IDs as keys which should be preserved
-      const isCheckboxValues = key === 'values' && record.op === 'set_checkboxes';
+      // Check if this is a "value" key in a set_checkboxes patch
+      // The "value" object contains option IDs as keys which should be preserved
+      const isCheckboxValues = key === 'value' && record.op === 'set_checkboxes';
 
-      // Check if this is a "rows" key in a set_table patch
-      // The "rows" array contains objects with column IDs as keys which should be preserved
-      const isTableRows = key === 'rows' && record.op === 'set_table';
+      // Check if this is a "value" key in a set_table patch
+      // The "value" array contains objects with column IDs as keys which should be preserved
+      const isTableRows = key === 'value' && record.op === 'set_table';
 
       // Check if this is a "tools" key in a wire format request
       // Tool names are identifiers that should be preserved
@@ -152,13 +152,13 @@ function toSnakeCaseDeep(obj: unknown, preserveKeys = false): unknown {
       // Determine the key to use
       const resultKey = preserveKeys ? key : camelToSnake(key);
 
-      // Check if this is a "values" key in a set_checkboxes patch
-      // The "values" object contains option IDs as keys which should be preserved
-      const isCheckboxValues = key === 'values' && record.op === 'set_checkboxes';
+      // Check if this is a "value" key in a set_checkboxes patch
+      // The "value" object contains option IDs as keys which should be preserved
+      const isCheckboxValues = key === 'value' && record.op === 'set_checkboxes';
 
-      // Check if this is a "rows" key in a set_table patch
-      // The "rows" array contains objects with column IDs as keys which should be preserved
-      const isTableRows = key === 'rows' && record.op === 'set_table';
+      // Check if this is a "value" key in a set_table patch
+      // The "value" array contains objects with column IDs as keys which should be preserved
+      const isTableRows = key === 'value' && record.op === 'set_table';
 
       // Check if this is a "tools" key in a wire format request
       // Tool names are identifiers that should be preserved

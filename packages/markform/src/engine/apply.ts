@@ -8,6 +8,8 @@ import type {
   ApplyResult,
   CellResponse,
   CheckboxesValue,
+  CheckboxMode,
+  CheckboxValue,
   Field,
   FieldResponse,
   FieldValue,
@@ -17,6 +19,7 @@ import type {
   NoteId,
   ParsedForm,
   Patch,
+  SetCheckboxesPatch,
   TableRowResponse,
   TableValue,
 } from './coreTypes.js';
@@ -72,6 +75,61 @@ function findField(form: ParsedForm, fieldId: Id): Field | undefined {
 }
 
 /**
+ * Coerce a boolean value to the appropriate checkbox string based on mode.
+ */
+function coerceBooleanToCheckboxValue(value: boolean, mode: CheckboxMode): CheckboxValue {
+  if (mode === 'explicit') {
+    return value ? 'yes' : 'no';
+  }
+  return value ? 'done' : 'todo';
+}
+
+/**
+ * Normalize a patch, coercing boolean checkbox values to strings.
+ * Returns a new patch with normalized values, or the original if no normalization needed.
+ */
+function normalizePatch(form: ParsedForm, patch: Patch): Patch {
+  if (patch.op !== 'set_checkboxes') {
+    return patch;
+  }
+
+  const field = findField(form, patch.fieldId);
+  if (field?.kind !== 'checkboxes') {
+    return patch; // Let validation handle the error
+  }
+
+  // Handle null/undefined values - let validation handle the error
+  if (!patch.value) {
+    return patch;
+  }
+
+  // Check if any values are booleans
+  let needsNormalization = false;
+  for (const value of Object.values(patch.value)) {
+    if (typeof value === 'boolean') {
+      needsNormalization = true;
+      break;
+    }
+  }
+
+  if (!needsNormalization) {
+    return patch;
+  }
+
+  // Coerce boolean values to strings
+  const normalizedValues: Record<string, CheckboxValue> = {};
+  for (const [optId, value] of Object.entries(patch.value)) {
+    if (typeof value === 'boolean') {
+      normalizedValues[optId] = coerceBooleanToCheckboxValue(value, field.checkboxMode);
+    } else {
+      normalizedValues[optId] = value;
+    }
+  }
+
+  return { ...patch, value: normalizedValues } as SetCheckboxesPatch;
+}
+
+/**
  * Create a type mismatch error with field metadata for LLM guidance.
  */
 function typeMismatchError(index: number, op: string, field: Field): PatchError {
@@ -118,81 +176,81 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
 
   // Additional validation for container types, select/checkbox options, and table columns
   if (patch.op === 'set_string_list' && field.kind === 'string_list') {
-    // Validate items is a non-null array
-    if (!Array.isArray(patch.items)) {
+    // Validate value is a non-null array
+    if (!Array.isArray(patch.value)) {
       return {
         patchIndex: index,
-        message: `Invalid set_string_list patch for field "${field.id}": items must be an array of strings`,
+        message: `Invalid set_string_list patch for field "${field.id}": value must be an array of strings`,
         fieldId: field.id,
         fieldKind: field.kind,
       };
     }
   } else if (patch.op === 'set_single_select' && field.kind === 'single_select') {
-    if (patch.selected !== null) {
+    if (patch.value !== null) {
       const validOptions = new Set(field.options.map((o) => o.id));
-      if (!validOptions.has(patch.selected)) {
+      if (!validOptions.has(patch.value)) {
         return {
           patchIndex: index,
-          message: `Invalid option "${patch.selected}" for field "${field.id}"`,
+          message: `Invalid option "${patch.value}" for field "${field.id}"`,
         };
       }
     }
   } else if (patch.op === 'set_multi_select' && field.kind === 'multi_select') {
-    // Validate selected is a non-null array
-    if (!Array.isArray(patch.selected)) {
+    // Validate value is a non-null array
+    if (!Array.isArray(patch.value)) {
       return {
         patchIndex: index,
-        message: `Invalid set_multi_select patch for field "${field.id}": selected must be an array of option IDs`,
+        message: `Invalid set_multi_select patch for field "${field.id}": value must be an array of option IDs`,
         fieldId: field.id,
         fieldKind: field.kind,
       };
     }
     const validOptions = new Set(field.options.map((o) => o.id));
-    for (const optId of patch.selected) {
+    for (const optId of patch.value) {
       if (!validOptions.has(optId)) {
         return { patchIndex: index, message: `Invalid option "${optId}" for field "${field.id}"` };
       }
     }
   } else if (patch.op === 'set_checkboxes' && field.kind === 'checkboxes') {
-    // Validate values is a non-null object (not array, string, undefined, null)
-    if (patch.values == null || typeof patch.values !== 'object' || Array.isArray(patch.values)) {
+    // Validate value is a non-null object (not array, string, undefined, null)
+    if (patch.value == null || typeof patch.value !== 'object' || Array.isArray(patch.value)) {
       return {
         patchIndex: index,
-        message: `Invalid set_checkboxes patch for field "${field.id}": values must be an object mapping option IDs to checkbox state strings (e.g. "todo", "done", "yes", "no")`,
+        message: `Invalid set_checkboxes patch for field "${field.id}": value must be an object mapping option IDs to checkbox state strings (e.g. "todo", "done", "yes", "no")`,
         fieldId: field.id,
         fieldKind: field.kind,
       };
     }
     const validOptions = new Set(field.options.map((o) => o.id));
-    for (const optId of Object.keys(patch.values)) {
+    for (const optId of Object.keys(patch.value)) {
       if (!validOptions.has(optId)) {
         return { patchIndex: index, message: `Invalid option "${optId}" for field "${field.id}"` };
       }
     }
   } else if (patch.op === 'set_url_list' && field.kind === 'url_list') {
-    // Validate items is a non-null array
-    if (!Array.isArray(patch.items)) {
+    // Validate value is a non-null array
+    if (!Array.isArray(patch.value)) {
       return {
         patchIndex: index,
-        message: `Invalid set_url_list patch for field "${field.id}": items must be an array of URLs`,
+        message: `Invalid set_url_list patch for field "${field.id}": value must be an array of URLs`,
         fieldId: field.id,
         fieldKind: field.kind,
       };
     }
   } else if (patch.op === 'set_table' && field.kind === 'table') {
-    // Validate rows is a non-null array
+    // Validate value is a non-null array
     const columnIds = field.columns.map((c) => c.id);
-    if (!Array.isArray(patch.rows)) {
+    if (!Array.isArray(patch.value)) {
       return {
         patchIndex: index,
-        message: `Invalid set_table patch for field "${field.id}": rows must be an array of row objects. Each row should map column IDs to values. Columns: [${columnIds.join(', ')}]`,
+        message: `Invalid set_table patch for field "${field.id}": value must be an array of row objects. Each row should map column IDs to values. Columns: [${columnIds.join(', ')}]`,
         fieldId: field.id,
         fieldKind: field.kind,
         columnIds,
       };
     }
     const validColumns = new Set(columnIds);
-    for (const row of patch.rows) {
+    for (const row of patch.value) {
       if (row != null) {
         for (const colId of Object.keys(row)) {
           if (!validColumns.has(colId)) {
@@ -346,19 +404,19 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
 
     // List types
     case 'set_string_list':
-      setListValue(responses, patch.fieldId, 'string_list', patch.items);
+      setListValue(responses, patch.fieldId, 'string_list', patch.value);
       break;
     case 'set_url_list':
-      setListValue(responses, patch.fieldId, 'url_list', patch.items);
+      setListValue(responses, patch.fieldId, 'url_list', patch.value);
       break;
 
     // Select types
     case 'set_single_select':
-      setSingleSelectValue(responses, patch.fieldId, patch.selected);
+      setSingleSelectValue(responses, patch.fieldId, patch.value);
       break;
 
     case 'set_multi_select':
-      setMultiSelectValue(responses, patch.fieldId, patch.selected);
+      setMultiSelectValue(responses, patch.fieldId, patch.value);
       break;
 
     // Checkboxes (merge with existing)
@@ -367,18 +425,18 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
         (responses[patch.fieldId]?.value as CheckboxesValue | undefined)?.values ?? {};
       responses[patch.fieldId] = {
         state: 'answered',
-        value: { kind: 'checkboxes', values: { ...existing, ...patch.values } } as CheckboxesValue,
+        value: { kind: 'checkboxes', values: { ...existing, ...patch.value } } as CheckboxesValue,
       };
       break;
     }
 
     // Table
     case 'set_table': {
-      const rows: TableRowResponse[] = (patch.rows ?? []).map((patchRow) => {
+      const rows: TableRowResponse[] = (patch.value ?? []).map((patchRow) => {
         const row: TableRowResponse = {};
         if (patchRow != null) {
-          for (const [colId, value] of Object.entries(patchRow)) {
-            row[colId] = patchValueToCell(value);
+          for (const [colId, cellValue] of Object.entries(patchRow)) {
+            row[colId] = patchValueToCell(cellValue);
           }
         }
         return row;
@@ -464,8 +522,11 @@ function convertToInspectIssues(form: ParsedForm): InspectIssue[] {
  * @returns Apply result with new summaries and status
  */
 export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
+  // Normalize patches (coerce boolean checkbox values to strings)
+  const normalizedPatches = patches.map((p) => normalizePatch(form, p));
+
   // Validate all patches first (transaction semantics)
-  const errors = validatePatches(form, patches);
+  const errors = validatePatches(form, normalizedPatches);
   if (errors.length > 0) {
     // Reject - compute summaries from current state
     const issues = convertToInspectIssues(form);
@@ -490,8 +551,8 @@ export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
   const _originalNotes = form.notes;
   form.notes = newNotes;
 
-  // Apply all patches
-  for (const patch of patches) {
+  // Apply all patches (use normalized patches with coerced values)
+  for (const patch of normalizedPatches) {
     applyPatch(form, newResponses, patch);
   }
 

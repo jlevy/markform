@@ -53,7 +53,7 @@ export function parseInitialValues(inputs: string[]): Patch[] {
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
-      patches.push({ op: 'set_string_list', fieldId, items });
+      patches.push({ op: 'set_string_list', fieldId, value: items });
     } else {
       // Default to string
       patches.push({ op: 'set_string', fieldId, value });

@@ -82,12 +82,12 @@ turns:
           value: 32
         - op: set_multi_select
           field_id: categories
-          selected:
+          value:
             - frontend
             - backend
         - op: set_checkboxes
           field_id: confirmations
-          values:
+          value:
             backed_up: yes
             notified: no
         - op: set_string
@@ -104,16 +104,16 @@ turns:
           value: Alice Johnson
         - op: set_single_select
           field_id: priority
-          selected: medium
+          value: medium
         - op: set_string_list
           field_id: tags
-          items:
+          value:
             - typescript
             - testing
             - forms
         - op: set_checkboxes
           field_id: tasks_multi
-          values:
+          value:
             research: done
             design: done
             implement: done
@@ -712,7 +712,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  items:
+                  value:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -729,12 +729,12 @@ turns:
                       value: 32
                     - field_id: categories
                       op: set_multi_select
-                      selected:
+                      value:
                         - frontend
                         - backend
                     - field_id: confirmations
                       op: set_checkboxes
-                      values:
+                      value:
                         backed_up: yes
                         notified: no
                     - field_id: email
@@ -751,16 +751,16 @@ turns:
                       value: Alice Johnson
                     - field_id: priority
                       op: set_single_select
-                      selected: medium
+                      value: medium
                     - field_id: tags
-                      items:
+                      value:
                         - typescript
                         - testing
                         - forms
                       op: set_string_list
                     - field_id: tasks_multi
                       op: set_checkboxes
-                      values:
+                      value:
                         design: done
                         implement: done
                         research: done
@@ -837,7 +837,7 @@ turns:
       patches:
         - op: set_checkboxes
           field_id: tasks_simple
-          values:
+          value:
             read_guidelines: done
             agree_terms: done
         - op: set_url
@@ -864,7 +864,7 @@ turns:
           reason: No value in mock form
         - op: set_url_list
           field_id: references
-          items:
+          value:
             - https://docs.example.com/guide
             - https://github.com/example/project
             - https://medium.com/article-about-forms
@@ -1520,7 +1520,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  items:
+                  value:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -1534,7 +1534,7 @@ turns:
                   patches:
                     - field_id: tasks_simple
                       op: set_checkboxes
-                      values:
+                      value:
                         agree_terms: done
                         read_guidelines: done
                     - field_id: website
@@ -1560,7 +1560,7 @@ turns:
                       reason: No value in mock form
                       role: agent
                     - field_id: references
-                      items:
+                      value:
                         - https://docs.example.com/guide
                         - https://github.com/example/project
                         - https://medium.com/article-about-forms
@@ -1589,7 +1589,7 @@ turns:
       patches:
         - op: set_table
           field_id: team_members
-          rows:
+          value:
             - name: Alice
               role: Engineer
               start_date: 2024-01-15
@@ -2192,7 +2192,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  items:
+                  value:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -2206,7 +2206,7 @@ turns:
                   patches:
                     - field_id: team_members
                       op: set_table
-                      rows:
+                      value:
                         - name: Alice
                           role: Engineer
                           start_date: 2024-01-15

@@ -238,7 +238,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  items:
+                  value:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -280,7 +280,7 @@ turns:
       patches:
         - op: set_table
           field_id: ratings
-          rows:
+          value:
             - source: IMDB
               score: 85
               votes: 12500
@@ -500,7 +500,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  items:
+                  value:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -514,7 +514,7 @@ turns:
                   patches:
                     - field_id: ratings
                       op: set_table
-                      rows:
+                      value:
                         - score: 85
                           source: IMDB
                           votes: 12500

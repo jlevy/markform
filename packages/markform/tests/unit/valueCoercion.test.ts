@@ -291,7 +291,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_string_list',
           fieldId: 'tags',
-          items: ['tag1', 'tag2'],
+          value: ['tag1', 'tag2'],
         });
       }
     });
@@ -305,7 +305,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_string_list',
           fieldId: 'tags',
-          items: ['single'],
+          value: ['single'],
         });
         expect('warning' in result && result.warning).toContain('Coerced single string');
       }
@@ -327,7 +327,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_string_list',
           fieldId: 'tags',
-          items: [],
+          value: [],
         });
       }
     });
@@ -343,7 +343,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_single_select',
           fieldId: 'priority',
-          selected: 'high',
+          value: 'high',
         });
       }
     });
@@ -368,7 +368,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_single_select',
           fieldId: 'priority',
-          selected: null,
+          value: null,
         });
       }
     });
@@ -394,7 +394,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_multi_select',
           fieldId: 'categories',
-          selected: ['frontend', 'backend'],
+          value: ['frontend', 'backend'],
         });
       }
     });
@@ -408,7 +408,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_multi_select',
           fieldId: 'categories',
-          selected: ['frontend'],
+          value: ['frontend'],
         });
         expect('warning' in result && result.warning).toContain('Coerced single string');
       }
@@ -433,7 +433,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_multi_select',
           fieldId: 'categories',
-          selected: [],
+          value: [],
         });
       }
     });
@@ -452,7 +452,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_checkboxes',
           fieldId: 'tasks_multi',
-          values: { research: 'done', design: 'todo' },
+          value: { research: 'done', design: 'todo' },
         });
       }
     });
@@ -516,7 +516,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_checkboxes',
           fieldId: 'tasks_simple',
-          values: { read: 'done', agree: 'todo' },
+          value: { read: 'done', agree: 'todo' },
         });
       }
     });
@@ -548,7 +548,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_checkboxes',
           fieldId: 'confirmations',
-          values: { backup: 'yes', notify: 'no' },
+          value: { backup: 'yes', notify: 'no' },
         });
       }
     });
@@ -580,7 +580,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_checkboxes',
           fieldId: 'tasks_multi',
-          values: { research: 'done', design: 'todo' },
+          value: { research: 'done', design: 'todo' },
         });
         expect('warning' in result && result.warning).toContain('Coerced boolean');
       }
@@ -598,7 +598,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_checkboxes',
           fieldId: 'tasks_simple',
-          values: { read: 'done', agree: 'todo' },
+          value: { read: 'done', agree: 'todo' },
         });
         expect('warning' in result && result.warning).toContain('Coerced boolean');
       }
@@ -616,7 +616,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_checkboxes',
           fieldId: 'confirmations',
-          values: { backup: 'yes', notify: 'no' },
+          value: { backup: 'yes', notify: 'no' },
         });
         expect('warning' in result && result.warning).toContain('Coerced boolean');
       }
@@ -634,7 +634,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_checkboxes',
           fieldId: 'tasks_multi',
-          values: { research: 'done', design: 'done' },
+          value: { research: 'done', design: 'done' },
         });
       }
     });
@@ -676,7 +676,7 @@ describe('values', () => {
       expect(result.patches).toContainEqual({
         op: 'set_single_select',
         fieldId: 'priority',
-        selected: 'high',
+        value: 'high',
       });
     });
 
@@ -797,7 +797,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_url_list',
           fieldId: 'references',
-          items: ['https://example.com', 'https://test.com'],
+          value: ['https://example.com', 'https://test.com'],
         });
       }
     });
@@ -811,7 +811,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_url_list',
           fieldId: 'references',
-          items: ['https://single.com'],
+          value: ['https://single.com'],
         });
         expect('warning' in result && result.warning).toContain('Coerced single string');
       }
@@ -826,7 +826,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_url_list',
           fieldId: 'references',
-          items: [],
+          value: [],
         });
       }
     });
@@ -987,7 +987,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_table',
           fieldId: 'contacts',
-          rows: [
+          value: [
             { Name: 'John', Email: 'john@example.com' },
             { Name: 'Jane', Email: 'jane@example.com' },
           ],
@@ -1004,7 +1004,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_table',
           fieldId: 'contacts',
-          rows: [],
+          value: [],
         });
       }
     });
@@ -1018,7 +1018,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_table',
           fieldId: 'contacts',
-          rows: [],
+          value: [],
         });
       }
     });
@@ -1079,7 +1079,7 @@ describe('values', () => {
         expect(result.patch).toEqual({
           op: 'set_string_list',
           fieldId: 'tags',
-          items: ['tag1', '123', 'true'],
+          value: ['tag1', '123', 'true'],
         });
         expect('warning' in result && result.warning).toContain('Coerced array items');
       }

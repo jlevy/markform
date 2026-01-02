@@ -24,13 +24,13 @@ describe('initialValues utilities', () => {
       [['score:NUMBER=0'], [{ op: 'set_number', fieldId: 'score', value: 0 }]],
 
       // List values
-      [['tags:list=a,b,c'], [{ op: 'set_string_list', fieldId: 'tags', items: ['a', 'b', 'c'] }]],
+      [['tags:list=a,b,c'], [{ op: 'set_string_list', fieldId: 'tags', value: ['a', 'b', 'c'] }]],
       [
         ['tags:list=a , b , c'],
-        [{ op: 'set_string_list', fieldId: 'tags', items: ['a', 'b', 'c'] }],
+        [{ op: 'set_string_list', fieldId: 'tags', value: ['a', 'b', 'c'] }],
       ],
-      [['tags:list=a,,b'], [{ op: 'set_string_list', fieldId: 'tags', items: ['a', 'b'] }]],
-      [['tags:list='], [{ op: 'set_string_list', fieldId: 'tags', items: [] }]],
+      [['tags:list=a,,b'], [{ op: 'set_string_list', fieldId: 'tags', value: ['a', 'b'] }]],
+      [['tags:list='], [{ op: 'set_string_list', fieldId: 'tags', value: [] }]],
 
       // Empty input
       [[], []],
@@ -41,7 +41,7 @@ describe('initialValues utilities', () => {
         [
           { op: 'set_string', fieldId: 'name', value: 'John' },
           { op: 'set_number', fieldId: 'age', value: 30 },
-          { op: 'set_string_list', fieldId: 'tags', items: ['dev', 'test'] },
+          { op: 'set_string_list', fieldId: 'tags', value: ['dev', 'test'] },
         ],
       ],
     ];

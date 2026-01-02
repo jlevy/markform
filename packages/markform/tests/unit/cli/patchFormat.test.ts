@@ -46,24 +46,24 @@ describe('patchFormat', () => {
 
     describe('set_string_list', () => {
       it('formats string array', () => {
-        const patch: Patch = { op: 'set_string_list', fieldId: 'tags', items: ['a', 'b', 'c'] };
+        const patch: Patch = { op: 'set_string_list', fieldId: 'tags', value: ['a', 'b', 'c'] };
         expect(formatPatchValue(patch)).toBe('[a, b, c]');
       });
 
       it('formats empty array as (empty)', () => {
-        const patch: Patch = { op: 'set_string_list', fieldId: 'tags', items: [] };
+        const patch: Patch = { op: 'set_string_list', fieldId: 'tags', value: [] };
         expect(formatPatchValue(patch)).toBe('(empty)');
       });
     });
 
     describe('set_single_select', () => {
       it('formats selected option', () => {
-        const patch: Patch = { op: 'set_single_select', fieldId: 'priority', selected: 'high' };
+        const patch: Patch = { op: 'set_single_select', fieldId: 'priority', value: 'high' };
         expect(formatPatchValue(patch)).toBe('high');
       });
 
       it('formats null as (none)', () => {
-        const patch: Patch = { op: 'set_single_select', fieldId: 'priority', selected: null };
+        const patch: Patch = { op: 'set_single_select', fieldId: 'priority', value: null };
         expect(formatPatchValue(patch)).toBe('(none)');
       });
     });
@@ -73,13 +73,13 @@ describe('patchFormat', () => {
         const patch: Patch = {
           op: 'set_multi_select',
           fieldId: 'categories',
-          selected: ['a', 'b'],
+          value: ['a', 'b'],
         };
         expect(formatPatchValue(patch)).toBe('[a, b]');
       });
 
       it('formats empty selection as (none)', () => {
-        const patch: Patch = { op: 'set_multi_select', fieldId: 'categories', selected: [] };
+        const patch: Patch = { op: 'set_multi_select', fieldId: 'categories', value: [] };
         expect(formatPatchValue(patch)).toBe('(none)');
       });
     });
@@ -89,13 +89,13 @@ describe('patchFormat', () => {
         const patch: Patch = {
           op: 'set_checkboxes',
           fieldId: 'tasks',
-          values: { task1: 'done', task2: 'todo' },
+          value: { task1: 'done', task2: 'todo' },
         };
         expect(formatPatchValue(patch)).toBe('task1:done, task2:todo');
       });
 
       it('formats empty checkboxes', () => {
-        const patch: Patch = { op: 'set_checkboxes', fieldId: 'tasks', values: {} };
+        const patch: Patch = { op: 'set_checkboxes', fieldId: 'tasks', value: {} };
         expect(formatPatchValue(patch)).toBe('');
       });
     });
@@ -158,13 +158,13 @@ describe('patchFormat', () => {
         const patch: Patch = {
           op: 'set_url_list',
           fieldId: 'refs',
-          items: ['https://a.com', 'https://b.com'],
+          value: ['https://a.com', 'https://b.com'],
         };
         expect(formatPatchValue(patch)).toBe('[https://a.com, https://b.com]');
       });
 
       it('formats empty array as (empty)', () => {
-        const patch: Patch = { op: 'set_url_list', fieldId: 'refs', items: [] };
+        const patch: Patch = { op: 'set_url_list', fieldId: 'refs', value: [] };
         expect(formatPatchValue(patch)).toBe('(empty)');
       });
     });
@@ -198,13 +198,13 @@ describe('patchFormat', () => {
         const patch: Patch = {
           op: 'set_table',
           fieldId: 'contacts',
-          rows: [{ name: 'John' }, { name: 'Jane' }],
+          value: [{ name: 'John' }, { name: 'Jane' }],
         };
         expect(formatPatchValue(patch)).toBe('[2 rows]');
       });
 
       it('formats empty rows as (empty)', () => {
-        const patch: Patch = { op: 'set_table', fieldId: 'contacts', rows: [] };
+        const patch: Patch = { op: 'set_table', fieldId: 'contacts', value: [] };
         expect(formatPatchValue(patch)).toBe('(empty)');
       });
     });
@@ -238,18 +238,18 @@ describe('patchFormat', () => {
     const cases: { patch: Patch; expected: string }[] = [
       { patch: { op: 'set_string', fieldId: 'x', value: 'v' }, expected: 'string' },
       { patch: { op: 'set_number', fieldId: 'x', value: 1 }, expected: 'number' },
-      { patch: { op: 'set_string_list', fieldId: 'x', items: [] }, expected: 'string_list' },
-      { patch: { op: 'set_single_select', fieldId: 'x', selected: null }, expected: 'select' },
-      { patch: { op: 'set_multi_select', fieldId: 'x', selected: [] }, expected: 'multi_select' },
-      { patch: { op: 'set_checkboxes', fieldId: 'x', values: {} }, expected: 'checkboxes' },
+      { patch: { op: 'set_string_list', fieldId: 'x', value: [] }, expected: 'string_list' },
+      { patch: { op: 'set_single_select', fieldId: 'x', value: null }, expected: 'select' },
+      { patch: { op: 'set_multi_select', fieldId: 'x', value: [] }, expected: 'multi_select' },
+      { patch: { op: 'set_checkboxes', fieldId: 'x', value: {} }, expected: 'checkboxes' },
       { patch: { op: 'clear_field', fieldId: 'x' }, expected: 'clear' },
       { patch: { op: 'skip_field', fieldId: 'x', role: 'agent' }, expected: 'skip' },
       { patch: { op: 'abort_field', fieldId: 'x', role: 'agent' }, expected: 'abort' },
       { patch: { op: 'set_url', fieldId: 'x', value: null }, expected: 'url' },
-      { patch: { op: 'set_url_list', fieldId: 'x', items: [] }, expected: 'url_list' },
+      { patch: { op: 'set_url_list', fieldId: 'x', value: [] }, expected: 'url_list' },
       { patch: { op: 'set_date', fieldId: 'x', value: null }, expected: 'date' },
       { patch: { op: 'set_year', fieldId: 'x', value: null }, expected: 'year' },
-      { patch: { op: 'set_table', fieldId: 'x', rows: [] }, expected: 'table' },
+      { patch: { op: 'set_table', fieldId: 'x', value: [] }, expected: 'table' },
       { patch: { op: 'add_note', ref: 'x', role: 'agent', text: 't' }, expected: 'note' },
       { patch: { op: 'remove_note', noteId: 'n' }, expected: 'remove_note' },
     ];

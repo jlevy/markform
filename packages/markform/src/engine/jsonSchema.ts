@@ -59,6 +59,9 @@ interface JsonSchemaProperty {
   maxItems?: number;
   uniqueItems?: boolean;
   additionalProperties?: boolean | JsonSchemaProperty;
+  // Composition keywords
+  anyOf?: JsonSchemaProperty[];
+  oneOf?: JsonSchemaProperty[];
   'x-markform'?: MarkformFieldExtension;
 }
 
@@ -452,13 +455,13 @@ function checkboxesFieldToJsonSchema(
 ): JsonSchemaProperty {
   // Checkboxes are represented as an object with each option as a property
   // The value for each property depends on the checkbox mode
+  // Boolean values are also accepted and coerced: true→done/yes, false→todo/no
   const validStates = getValidCheckboxStates(field.checkboxMode);
 
   const properties: Record<string, JsonSchemaProperty> = {};
   for (const opt of field.options) {
     properties[opt.id] = {
-      type: 'string',
-      enum: validStates,
+      anyOf: [{ type: 'string', enum: validStates }, { type: 'boolean' }],
       title: opt.label,
     };
   }

@@ -192,7 +192,7 @@ describe('interactivePrompts', () => {
         expect(patch).toEqual({
           op: 'set_string_list',
           fieldId: 'tags',
-          items: ['tag1', 'tag2', 'tag3'],
+          value: ['tag1', 'tag2', 'tag3'],
         });
       });
 
@@ -205,7 +205,7 @@ describe('interactivePrompts', () => {
         expect(patch).toEqual({
           op: 'set_string_list',
           fieldId: 'tags',
-          items: ['tag1', 'tag2', 'tag3'],
+          value: ['tag1', 'tag2', 'tag3'],
         });
       });
 
@@ -247,7 +247,7 @@ describe('interactivePrompts', () => {
         expect(patch).toEqual({
           op: 'set_single_select',
           fieldId: 'color',
-          selected: 'blue',
+          value: 'blue',
         });
       });
     });
@@ -276,7 +276,7 @@ describe('interactivePrompts', () => {
         expect(patch).toEqual({
           op: 'set_multi_select',
           fieldId: 'colors',
-          selected: ['red', 'green'],
+          value: ['red', 'green'],
         });
       });
     });
@@ -308,7 +308,7 @@ describe('interactivePrompts', () => {
           expect(patch).toEqual({
             op: 'set_checkboxes',
             fieldId: 'tasks',
-            values: {
+            value: {
               task1: 'done',
               task2: 'todo',
               task3: 'done',
@@ -342,7 +342,7 @@ describe('interactivePrompts', () => {
           expect(patch).toEqual({
             op: 'set_checkboxes',
             fieldId: 'confirmations',
-            values: {
+            value: {
               agree: 'yes',
               confirm: 'no',
             },
@@ -378,7 +378,7 @@ describe('interactivePrompts', () => {
           expect(patch).toEqual({
             op: 'set_checkboxes',
             fieldId: 'checklist',
-            values: {
+            value: {
               item1: 'done',
               item2: 'active',
             },
@@ -440,7 +440,7 @@ describe('interactivePrompts', () => {
         expect(patch).toEqual({
           op: 'set_url_list',
           fieldId: 'references',
-          items: ['https://example1.com', 'https://example2.com'],
+          value: ['https://example1.com', 'https://example2.com'],
         });
       });
 
@@ -453,7 +453,7 @@ describe('interactivePrompts', () => {
         expect(patch).toEqual({
           op: 'set_url_list',
           fieldId: 'references',
-          items: ['https://example1.com', 'https://example2.com'],
+          value: ['https://example1.com', 'https://example2.com'],
         });
       });
 

@@ -196,7 +196,7 @@ export class MockAgent implements Agent {
         return {
           op: 'set_string_list',
           fieldId,
-          items: v.items,
+          value: v.items,
         };
       }
 
@@ -205,7 +205,7 @@ export class MockAgent implements Agent {
         return {
           op: 'set_single_select',
           fieldId,
-          selected: v.selected,
+          value: v.selected,
         };
       }
 
@@ -214,7 +214,7 @@ export class MockAgent implements Agent {
         return {
           op: 'set_multi_select',
           fieldId,
-          selected: v.selected,
+          value: v.selected,
         };
       }
 
@@ -223,7 +223,7 @@ export class MockAgent implements Agent {
         return {
           op: 'set_checkboxes',
           fieldId,
-          values: v.values,
+          value: v.values,
         };
       }
 
@@ -241,7 +241,7 @@ export class MockAgent implements Agent {
         return {
           op: 'set_url_list',
           fieldId,
-          items: v.items,
+          value: v.items,
         };
       }
 
@@ -278,7 +278,7 @@ export class MockAgent implements Agent {
         return {
           op: 'set_table',
           fieldId,
-          rows: patchRows,
+          value: patchRows,
         };
       }
 

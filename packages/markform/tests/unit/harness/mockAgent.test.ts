@@ -199,8 +199,8 @@ describe('MockAgent', () => {
       expect(result.patches).toHaveLength(1);
       expect(result.patches[0]?.op).toBe('set_table');
       if (result.patches[0]?.op === 'set_table') {
-        expect(result.patches[0].rows).toHaveLength(2);
-        expect(result.patches[0].rows[0]).toEqual({ name: 'John', email: 'john@test.com' });
+        expect(result.patches[0].value).toHaveLength(2);
+        expect(result.patches[0].value[0]).toEqual({ name: 'John', email: 'john@test.com' });
       }
     });
 
@@ -285,7 +285,7 @@ describe('MockAgent', () => {
       expect(result.patches[0]).toEqual({
         op: 'set_url_list',
         fieldId: 'references',
-        items: ['https://a.com', 'https://b.com'],
+        value: ['https://a.com', 'https://b.com'],
       });
     });
   });

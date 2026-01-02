@@ -131,7 +131,7 @@ async function runMockAgent(config: Config): Promise<void> {
           patches.push({
             op: 'set_string_list',
             fieldId,
-            items: ['item1', 'item2'],
+            value: ['item1', 'item2'],
           });
           break;
         case 'single_select':
@@ -139,7 +139,7 @@ async function runMockAgent(config: Config): Promise<void> {
             patches.push({
               op: 'set_single_select',
               fieldId,
-              selected: field.options[0]?.id ?? null,
+              value: field.options[0]?.id ?? null,
             });
           }
           break;
@@ -148,17 +148,17 @@ async function runMockAgent(config: Config): Promise<void> {
             patches.push({
               op: 'set_multi_select',
               fieldId,
-              selected: [field.options[0]?.id ?? ''],
+              value: [field.options[0]?.id ?? ''],
             });
           }
           break;
         case 'checkboxes':
           if (field.options.length > 0) {
-            const values: Record<string, 'done' | 'yes'> = {};
+            const checkboxValues: Record<string, 'done' | 'yes'> = {};
             for (const opt of field.options) {
-              values[opt.id] = field.checkboxMode === 'explicit' ? 'yes' : 'done';
+              checkboxValues[opt.id] = field.checkboxMode === 'explicit' ? 'yes' : 'done';
             }
-            patches.push({ op: 'set_checkboxes', fieldId, values });
+            patches.push({ op: 'set_checkboxes', fieldId, value: checkboxValues });
           }
           break;
         case 'url':
@@ -172,7 +172,7 @@ async function runMockAgent(config: Config): Promise<void> {
           patches.push({
             op: 'set_url_list',
             fieldId,
-            items: ['https://example.com/1', 'https://example.com/2'],
+            value: ['https://example.com/1', 'https://example.com/2'],
           });
           break;
         case 'date':
@@ -199,7 +199,7 @@ async function runMockAgent(config: Config): Promise<void> {
             patches.push({
               op: 'set_table',
               fieldId,
-              rows: [mockRow],
+              value: [mockRow],
             });
           }
           break;

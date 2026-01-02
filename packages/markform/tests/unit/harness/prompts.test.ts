@@ -419,7 +419,7 @@ markform:
 
     // Try to apply set_table to a string field
     const result = applyPatches(form, [
-      { op: 'set_table', fieldId: 'name', rows: [{ col1: 'value' }] },
+      { op: 'set_table', fieldId: 'name', value: [{ col1: 'value' }] },
     ]);
 
     expect(result.applyStatus).toBe('rejected');

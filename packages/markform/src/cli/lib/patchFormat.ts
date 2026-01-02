@@ -29,14 +29,14 @@ export function formatPatchValue(patch: Patch): string {
     case 'set_number':
       return patch.value !== null ? String(patch.value) : '(empty)';
     case 'set_string_list':
-      return patch.items.length > 0 ? truncate(`[${patch.items.join(', ')}]`) : '(empty)';
+      return patch.value.length > 0 ? truncate(`[${patch.value.join(', ')}]`) : '(empty)';
     case 'set_single_select':
-      return patch.selected ?? '(none)';
+      return patch.value ?? '(none)';
     case 'set_multi_select':
-      return patch.selected.length > 0 ? truncate(`[${patch.selected.join(', ')}]`) : '(none)';
+      return patch.value.length > 0 ? truncate(`[${patch.value.join(', ')}]`) : '(none)';
     case 'set_checkboxes':
       return truncate(
-        Object.entries(patch.values)
+        Object.entries(patch.value)
           .map(([k, v]) => `${k}:${v}`)
           .join(', '),
       );
@@ -49,13 +49,13 @@ export function formatPatchValue(patch: Patch): string {
     case 'set_url':
       return patch.value ? truncate(`"${patch.value}"`) : '(empty)';
     case 'set_url_list':
-      return patch.items.length > 0 ? truncate(`[${patch.items.join(', ')}]`) : '(empty)';
+      return patch.value.length > 0 ? truncate(`[${patch.value.join(', ')}]`) : '(empty)';
     case 'set_date':
       return patch.value ? truncate(`"${patch.value}"`) : '(empty)';
     case 'set_year':
       return patch.value !== null ? String(patch.value) : '(empty)';
     case 'set_table': {
-      const rowCount = patch.rows?.length ?? 0;
+      const rowCount = patch.value?.length ?? 0;
       return rowCount > 0 ? truncate(`[${rowCount} rows]`) : '(empty)';
     }
     case 'add_note':

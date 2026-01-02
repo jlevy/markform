@@ -662,7 +662,7 @@ https://github.com/example
     expect(response.patches[1]).toEqual({
       op: 'set_url_list',
       fieldId: 'sources',
-      items: ['https://docs.example.com', 'https://github.com/example'],
+      value: ['https://docs.example.com', 'https://github.com/example'],
     });
   });
 
@@ -796,7 +796,7 @@ markform:
     expect(response.patches[0]).toEqual({
       op: 'set_single_select',
       fieldId: 'priority',
-      selected: 'high',
+      value: 'high',
     });
   });
 
@@ -845,7 +845,7 @@ markform:
     expect(response.patches.length).toBe(1);
     expect(response.patches[0]?.op).toBe('set_checkboxes');
     if (response.patches[0]?.op === 'set_checkboxes') {
-      expect(response.patches[0].values).toEqual({
+      expect(response.patches[0].value).toEqual({
         task_a: 'done',
         task_b: 'done',
       });
@@ -895,7 +895,7 @@ markform:
     expect(response.patches[0]).toEqual({
       op: 'set_string_list',
       fieldId: 'tags',
-      items: ['feature', 'enhancement', 'priority'],
+      value: ['feature', 'enhancement', 'priority'],
     });
   });
 });
@@ -1095,7 +1095,7 @@ describe('Table field patch handling', () => {
           {
             op: 'set_table',
             fieldId: 'company_risks',
-            rows: [
+            value: [
               {
                 risk_description: 'Market volatility',
                 likelihood: 'High',
@@ -1140,8 +1140,8 @@ describe('Table field patch handling', () => {
       expect(response.patches.length).toBe(1);
       expect(response.patches[0]!.op).toBe('set_table');
       if (response.patches[0]!.op === 'set_table') {
-        expect(response.patches[0].rows).toHaveLength(2);
-        expect(response.patches[0].rows[0]).toMatchObject({
+        expect(response.patches[0].value).toHaveLength(2);
+        expect(response.patches[0].value[0]).toMatchObject({
           risk_description: 'Market volatility',
           likelihood: 'High',
           impact: 'Significant',

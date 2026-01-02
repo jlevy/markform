@@ -738,28 +738,28 @@ export interface SetNumberPatch {
 export interface SetStringListPatch {
   op: 'set_string_list';
   fieldId: Id;
-  items: string[];
+  value: string[];
 }
 
 /** Set checkboxes field value (merges with existing) */
 export interface SetCheckboxesPatch {
   op: 'set_checkboxes';
   fieldId: Id;
-  values: Record<OptionId, CheckboxValue>;
+  value: Record<OptionId, CheckboxValue>;
 }
 
 /** Set single-select field value */
 export interface SetSingleSelectPatch {
   op: 'set_single_select';
   fieldId: Id;
-  selected: OptionId | null;
+  value: OptionId | null;
 }
 
 /** Set multi-select field value */
 export interface SetMultiSelectPatch {
   op: 'set_multi_select';
   fieldId: Id;
-  selected: OptionId[];
+  value: OptionId[];
 }
 
 /** Set URL field value */
@@ -773,7 +773,7 @@ export interface SetUrlPatch {
 export interface SetUrlListPatch {
   op: 'set_url_list';
   fieldId: Id;
-  items: string[];
+  value: string[];
 }
 
 /** Set date field value */
@@ -806,7 +806,7 @@ export type TableRowPatch = Record<Id, CellValue | null | string>;
 export interface SetTablePatch {
   op: 'set_table';
   fieldId: Id;
-  rows: TableRowPatch[];
+  value: TableRowPatch[];
 }
 
 /** Clear field value */
@@ -1624,25 +1624,25 @@ export const SetNumberPatchSchema = z.object({
 export const SetStringListPatchSchema = z.object({
   op: z.literal('set_string_list'),
   fieldId: IdSchema,
-  items: z.array(z.string()),
+  value: z.array(z.string()),
 });
 
 export const SetCheckboxesPatchSchema = z.object({
   op: z.literal('set_checkboxes'),
   fieldId: IdSchema,
-  values: z.record(OptionIdSchema, CheckboxValueSchema),
+  value: z.record(OptionIdSchema, CheckboxValueSchema),
 });
 
 export const SetSingleSelectPatchSchema = z.object({
   op: z.literal('set_single_select'),
   fieldId: IdSchema,
-  selected: OptionIdSchema.nullable(),
+  value: OptionIdSchema.nullable(),
 });
 
 export const SetMultiSelectPatchSchema = z.object({
   op: z.literal('set_multi_select'),
   fieldId: IdSchema,
-  selected: z.array(OptionIdSchema),
+  value: z.array(OptionIdSchema),
 });
 
 export const SetUrlPatchSchema = z.object({
@@ -1654,7 +1654,7 @@ export const SetUrlPatchSchema = z.object({
 export const SetUrlListPatchSchema = z.object({
   op: z.literal('set_url_list'),
   fieldId: IdSchema,
-  items: z.array(z.string()),
+  value: z.array(z.string()),
 });
 
 export const SetDatePatchSchema = z.object({
@@ -1673,7 +1673,7 @@ export const SetYearPatchSchema = z.object({
 export const SetTablePatchSchema = z.object({
   op: z.literal('set_table'),
   fieldId: IdSchema,
-  rows: z.array(TableRowPatchSchema),
+  value: z.array(TableRowPatchSchema),
 });
 
 export const ClearFieldPatchSchema = z.object({

@@ -372,7 +372,7 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
             .map((s) => s.trim())
             .filter((s) => s !== '');
           if (items.length > 0) {
-            patches.push({ op: 'set_string_list', fieldId, items });
+            patches.push({ op: 'set_string_list', fieldId, value: items });
           } else {
             patches.push({ op: 'clear_field', fieldId });
           }
@@ -385,7 +385,7 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
       case 'single_select': {
         const value = formData[fieldId];
         if (typeof value === 'string' && value !== '') {
-          patches.push({ op: 'set_single_select', fieldId, selected: value });
+          patches.push({ op: 'set_single_select', fieldId, value });
         } else {
           patches.push({ op: 'clear_field', fieldId });
         }
@@ -396,7 +396,7 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
         const value = formData[fieldId];
         const selected = Array.isArray(value) ? value : value ? [value] : [];
         if (selected.length > 0 && selected[0] !== '') {
-          patches.push({ op: 'set_multi_select', fieldId, selected });
+          patches.push({ op: 'set_multi_select', fieldId, value: selected });
         } else {
           patches.push({ op: 'clear_field', fieldId });
         }
@@ -411,11 +411,11 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
           const value = formData[fieldId];
           const checked = Array.isArray(value) ? value : value ? [value] : [];
 
-          const values: Record<string, 'done' | 'todo'> = {};
+          const checkboxValues: Record<string, 'done' | 'todo'> = {};
           for (const opt of field.options) {
-            values[opt.id] = checked.includes(opt.id) ? 'done' : 'todo';
+            checkboxValues[opt.id] = checked.includes(opt.id) ? 'done' : 'todo';
           }
-          patches.push({ op: 'set_checkboxes', fieldId, values });
+          patches.push({ op: 'set_checkboxes', fieldId, value: checkboxValues });
         } else {
           // Multi or explicit mode: each option has its own select
           const values: Record<string, string> = {};
@@ -430,7 +430,7 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
             patches.push({
               op: 'set_checkboxes',
               fieldId,
-              values: values as Record<
+              value: values as Record<
                 string,
                 'todo' | 'done' | 'active' | 'incomplete' | 'na' | 'yes' | 'no' | 'unfilled'
               >,
@@ -458,7 +458,7 @@ function formDataToPatches(formData: Record<string, string | string[]>, form: Pa
             .map((s) => s.trim())
             .filter((s) => s !== '');
           if (items.length > 0) {
-            patches.push({ op: 'set_url_list', fieldId, items });
+            patches.push({ op: 'set_url_list', fieldId, value: items });
           } else {
             patches.push({ op: 'clear_field', fieldId });
           }

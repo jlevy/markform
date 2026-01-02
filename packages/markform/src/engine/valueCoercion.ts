@@ -165,21 +165,21 @@ function coerceToStringList(fieldId: string, rawValue: RawFieldValue): CoercionR
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: 'set_string_list', fieldId, items: [] },
+      patch: { op: 'set_string_list', fieldId, value: [] },
     };
   }
 
   if (isStringArray(rawValue)) {
     return {
       ok: true,
-      patch: { op: 'set_string_list', fieldId, items: rawValue },
+      patch: { op: 'set_string_list', fieldId, value: rawValue },
     };
   }
 
   if (typeof rawValue === 'string') {
     return {
       ok: true,
-      patch: { op: 'set_string_list', fieldId, items: [rawValue] },
+      patch: { op: 'set_string_list', fieldId, value: [rawValue] },
       warning: `Coerced single string to array for field '${fieldId}'`,
     };
   }
@@ -201,7 +201,7 @@ function coerceToStringList(fieldId: string, rawValue: RawFieldValue): CoercionR
     }
     return {
       ok: true,
-      patch: { op: 'set_string_list', fieldId, items },
+      patch: { op: 'set_string_list', fieldId, value: items },
       warning: `Coerced array items to strings for field '${fieldId}'`,
     };
   }
@@ -220,7 +220,7 @@ function coerceToSingleSelect(field: Field, rawValue: RawFieldValue): CoercionRe
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: 'set_single_select', fieldId: field.id, selected: null },
+      patch: { op: 'set_single_select', fieldId: field.id, value: null },
     };
   }
 
@@ -241,7 +241,7 @@ function coerceToSingleSelect(field: Field, rawValue: RawFieldValue): CoercionRe
 
   return {
     ok: true,
-    patch: { op: 'set_single_select', fieldId: field.id, selected: rawValue },
+    patch: { op: 'set_single_select', fieldId: field.id, value: rawValue },
   };
 }
 
@@ -253,7 +253,7 @@ function coerceToMultiSelect(field: Field, rawValue: RawFieldValue): CoercionRes
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: 'set_multi_select', fieldId: field.id, selected: [] },
+      patch: { op: 'set_multi_select', fieldId: field.id, value: [] },
     };
   }
 
@@ -283,7 +283,7 @@ function coerceToMultiSelect(field: Field, rawValue: RawFieldValue): CoercionRes
     }
   }
 
-  const patch: Patch = { op: 'set_multi_select', fieldId: field.id, selected };
+  const patch: Patch = { op: 'set_multi_select', fieldId: field.id, value: selected };
   return warning ? { ok: true, patch, warning } : { ok: true, patch };
 }
 
@@ -295,7 +295,7 @@ function coerceToCheckboxes(field: Field, rawValue: RawFieldValue): CoercionResu
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: 'set_checkboxes', fieldId: field.id, values: {} },
+      patch: { op: 'set_checkboxes', fieldId: field.id, value: {} },
     };
   }
 
@@ -349,7 +349,7 @@ function coerceToCheckboxes(field: Field, rawValue: RawFieldValue): CoercionResu
     values[optId] = value as CheckboxValue;
   }
 
-  const patch: Patch = { op: 'set_checkboxes', fieldId: field.id, values };
+  const patch: Patch = { op: 'set_checkboxes', fieldId: field.id, value: values };
   if (hadBooleanCoercion) {
     return {
       ok: true,
@@ -385,21 +385,21 @@ function coerceToUrlList(fieldId: string, rawValue: RawFieldValue): CoercionResu
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: 'set_url_list', fieldId, items: [] },
+      patch: { op: 'set_url_list', fieldId, value: [] },
     };
   }
 
   if (isStringArray(rawValue)) {
     return {
       ok: true,
-      patch: { op: 'set_url_list', fieldId, items: rawValue },
+      patch: { op: 'set_url_list', fieldId, value: rawValue },
     };
   }
 
   if (typeof rawValue === 'string') {
     return {
       ok: true,
-      patch: { op: 'set_url_list', fieldId, items: [rawValue] },
+      patch: { op: 'set_url_list', fieldId, value: [rawValue] },
       warning: `Coerced single string to array for field '${fieldId}'`,
     };
   }
@@ -419,7 +419,7 @@ function coerceToUrlList(fieldId: string, rawValue: RawFieldValue): CoercionResu
     }
     return {
       ok: true,
-      patch: { op: 'set_url_list', fieldId, items },
+      patch: { op: 'set_url_list', fieldId, value: items },
     };
   }
 
@@ -503,7 +503,7 @@ function coerceToTable(fieldId: string, rawValue: RawFieldValue): CoercionResult
   if (rawValue === null) {
     return {
       ok: true,
-      patch: { op: 'set_table', fieldId, rows: [] },
+      patch: { op: 'set_table', fieldId, value: [] },
     };
   }
 
@@ -519,7 +519,7 @@ function coerceToTable(fieldId: string, rawValue: RawFieldValue): CoercionResult
   if (rawValue.length === 0) {
     return {
       ok: true,
-      patch: { op: 'set_table', fieldId, rows: [] },
+      patch: { op: 'set_table', fieldId, value: [] },
     };
   }
 
@@ -538,7 +538,7 @@ function coerceToTable(fieldId: string, rawValue: RawFieldValue): CoercionResult
 
   return {
     ok: true,
-    patch: { op: 'set_table', fieldId, rows },
+    patch: { op: 'set_table', fieldId, value: rows },
   };
 }
 

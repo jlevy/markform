@@ -273,7 +273,7 @@ async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | nul
   return {
     op: 'set_string_list',
     fieldId: field.id,
-    items,
+    value: items,
   };
 }
 
@@ -303,7 +303,7 @@ async function promptForSingleSelect(ctx: FieldPromptContext): Promise<Patch | n
   return {
     op: 'set_single_select',
     fieldId: field.id,
-    selected: result,
+    value: result,
   };
 }
 
@@ -334,7 +334,7 @@ async function promptForMultiSelect(ctx: FieldPromptContext): Promise<Patch | nu
   return {
     op: 'set_multi_select',
     fieldId: field.id,
-    selected: result,
+    value: result,
   };
 }
 
@@ -381,7 +381,7 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
     return {
       op: 'set_checkboxes',
       fieldId: field.id,
-      values,
+      value: values,
     };
   }
 
@@ -411,7 +411,7 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
     return {
       op: 'set_checkboxes',
       fieldId: field.id,
-      values,
+      value: values,
     };
   }
 
@@ -448,7 +448,7 @@ async function promptForCheckboxes(ctx: FieldPromptContext): Promise<Patch | nul
   return {
     op: 'set_checkboxes',
     fieldId: field.id,
-    values,
+    value: values,
   };
 }
 
@@ -695,7 +695,7 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
   return {
     op: 'set_url_list',
     fieldId: field.id,
-    items,
+    value: items,
   };
 }
 

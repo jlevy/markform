@@ -399,12 +399,10 @@ describe('jsonSchema', () => {
       expect(schema.type).toBe('object');
       expect(schema.properties?.research).toBeDefined();
       expect(schema.properties?.design).toBeDefined();
-      expect(schema.properties?.research?.enum).toEqual([
-        'todo',
-        'done',
-        'incomplete',
-        'active',
-        'na',
+      // Checkbox values use anyOf to accept both string enums and booleans
+      expect(schema.properties?.research?.anyOf).toEqual([
+        { type: 'string', enum: ['todo', 'done', 'incomplete', 'active', 'na'] },
+        { type: 'boolean' },
       ]);
     });
 
@@ -413,8 +411,15 @@ describe('jsonSchema', () => {
       const agreementsField = getFieldById(form, 'tasks_simple');
       const schema = fieldToJsonSchema(agreementsField, form.docs);
 
-      expect(schema.properties?.read_guidelines?.enum).toEqual(['todo', 'done']);
-      expect(schema.properties?.agree_terms?.enum).toEqual(['todo', 'done']);
+      // Checkbox values use anyOf to accept both string enums and booleans
+      expect(schema.properties?.read_guidelines?.anyOf).toEqual([
+        { type: 'string', enum: ['todo', 'done'] },
+        { type: 'boolean' },
+      ]);
+      expect(schema.properties?.agree_terms?.anyOf).toEqual([
+        { type: 'string', enum: ['todo', 'done'] },
+        { type: 'boolean' },
+      ]);
     });
 
     it('generates correct enum for explicit mode checkboxes', () => {
@@ -422,8 +427,15 @@ describe('jsonSchema', () => {
       const confirmField = getFieldById(form, 'confirmations');
       const schema = fieldToJsonSchema(confirmField, form.docs);
 
-      expect(schema.properties?.backed_up?.enum).toEqual(['unfilled', 'yes', 'no']);
-      expect(schema.properties?.notified?.enum).toEqual(['unfilled', 'yes', 'no']);
+      // Checkbox values use anyOf to accept both string enums and booleans
+      expect(schema.properties?.backed_up?.anyOf).toEqual([
+        { type: 'string', enum: ['unfilled', 'yes', 'no'] },
+        { type: 'boolean' },
+      ]);
+      expect(schema.properties?.notified?.anyOf).toEqual([
+        { type: 'string', enum: ['unfilled', 'yes', 'no'] },
+        { type: 'boolean' },
+      ]);
     });
 
     it('includes checkboxMode in x-markform', () => {
