@@ -136,6 +136,15 @@ For `set_checkboxes`, values depend on the checkbox mode:
 
 - **explicit**: `unfilled`, `yes`, `no`
 
+**Boolean coercion:** Boolean values `true`/`false` are automatically coerced to
+checkbox strings:
+
+- **multi/simple modes**: `true` → `"done"`, `false` → `"todo"`
+
+- **explicit mode**: `true` → `"yes"`, `false` → `"no"`
+
+This allows simpler API usage while maintaining the canonical string representation.
+
 ## Form Harness API
 
 The harness manages step-by-step form filling sessions.
