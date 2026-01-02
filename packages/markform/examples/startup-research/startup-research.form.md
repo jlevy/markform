@@ -108,7 +108,6 @@ Format: $X.XB, $XXM, or $XXK (e.g., "$10B")
 
 {% field kind="table" id="funding_rounds" label="Funding Rounds"
    columnIds=["round_type", "date", "amount", "lead_investors", "source_url"]
-   columnLabels=["Round Type", "Date", "Amount", "Lead Investor(s)", "Source URL"]
    columnTypes=["string", "string", "string", "string", "url"]
    minRows=0 maxRows=10 %}
 | Round Type | Date | Amount | Lead Investor(s) | Source URL |
@@ -126,7 +125,6 @@ Example: Series B | 2023-06 | $50M | Sequoia Capital | https://techcrunch.com/..
 
 {% field kind="table" id="founders" label="Founders"
    columnIds=["name", "title", "linkedin"]
-   columnLabels=["Name", "Title", "LinkedIn URL"]
    columnTypes=["string", "string", "url"]
    minRows=1 maxRows=5 %}
 | Name | Title | LinkedIn URL |
@@ -162,7 +160,6 @@ Approximate number of employees.
 
 {% field kind="table" id="competitors" label="Key Competitors"
    columnIds=["company_name", "website", "one_liner"]
-   columnLabels=["Company Name", "Website", "One-liner"]
    columnTypes=["string", "url", "string"]
    minRows=0 maxRows=5 %}
 | Company Name | Website | One-liner |
@@ -179,7 +176,6 @@ List main competitors with their website and a brief description.
 
 {% field kind="table" id="press_articles" label="Press Coverage"
    columnIds=["title", "publication", "date", "url"]
-   columnLabels=["Title", "Publication", "Date", "URL"]
    columnTypes=["string", "string", "date", "url"]
    minRows=1 maxRows=10 %}
 | Title | Publication | Date | URL |
