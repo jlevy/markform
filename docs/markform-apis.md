@@ -32,6 +32,7 @@ Import from the main package:
 import {
   parseForm,
   serialize,
+  serializeReportMarkdown,
   validate,
   inspect,
   applyPatches,
@@ -45,6 +46,18 @@ Parse a `.form.md` file into a structured form object.
 ### serialize(form: ParsedForm, options?: SerializeOptions): string
 
 Convert a parsed form back to Markdown.
+
+### serializeReportMarkdown(form: ParsedForm): string
+
+Generate a filtered markdown report suitable for sharing.
+Produces clean, readable markdown with:
+
+- Fields and groups with `report=false` excluded
+- Documentation blocks with `report=false` excluded
+- Instructions blocks excluded by default (unless `report=true`)
+
+This is useful for generating shareable reports from completed forms without
+internal instructions or agent-only content.
 
 ### validate(form: ParsedForm, options?: ValidateOptions): ValidateResult
 
