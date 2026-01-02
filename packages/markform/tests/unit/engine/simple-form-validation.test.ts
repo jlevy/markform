@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseForm } from '../../../src/engine/parse';
-import { serialize } from '../../../src/engine/serialize';
+import { serializeForm } from '../../../src/engine/serialize';
 import { validate } from '../../../src/engine/validate';
 import { inspect } from '../../../src/engine/inspect';
 import { applyPatches } from '../../../src/engine/apply';
@@ -131,7 +131,7 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
   describe('Round-trip Serialization', () => {
     it('parse → serialize → parse produces identical structure', async () => {
       const original = await loadSimpleForm();
-      const serialized = serialize(original);
+      const serialized = serializeForm(original);
       const reparsed = parseForm(serialized);
 
       // Schema should be identical
@@ -148,7 +148,7 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
 
     it('round-trip preserves field values', async () => {
       const original = await loadFilledForm();
-      const serialized = serialize(original);
+      const serialized = serializeForm(original);
       const reparsed = parseForm(serialized);
 
       // Values should be preserved
@@ -164,9 +164,9 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
 
     it('round-trip produces identical serialization', async () => {
       const original = await loadFilledForm();
-      const serialized1 = serialize(original);
+      const serialized1 = serializeForm(original);
       const reparsed = parseForm(serialized1);
-      const serialized2 = serialize(reparsed);
+      const serialized2 = serializeForm(reparsed);
 
       // Second serialization should match first (deterministic)
       expect(serialized2).toBe(serialized1);

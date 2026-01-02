@@ -14,7 +14,7 @@ import type { Command } from 'commander';
 import YAML from 'yaml';
 
 import { parseForm } from '../../engine/parse.js';
-import { serialize, serializeRawMarkdown } from '../../engine/serialize.js';
+import { serializeForm, serializeRawMarkdown } from '../../engine/serialize.js';
 import type { FieldValue, Id, Note } from '../../engine/coreTypes.js';
 import { getCommandContext, logError, logVerbose, readFile } from '../lib/shared.js';
 
@@ -87,7 +87,7 @@ export function registerExportCommand(program: Command): void {
 
         // For markform format, output canonical markdoc markdown
         if (format === 'markform') {
-          console.log(serialize(form));
+          console.log(serializeForm(form));
           return;
         }
 
@@ -137,7 +137,7 @@ export function registerExportCommand(program: Command): void {
           schema,
           values,
           notes: form.notes,
-          markdown: serialize(form),
+          markdown: serializeForm(form),
         };
 
         // Output in JSON or YAML format

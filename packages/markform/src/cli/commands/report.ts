@@ -10,7 +10,7 @@
 import type { Command } from 'commander';
 
 import { parseForm } from '../../engine/parse.js';
-import { serializeReportMarkdown } from '../../engine/serialize.js';
+import { serializeReport } from '../../engine/serialize.js';
 import { REPORT_EXTENSION } from '../../settings.js';
 import { getCommandContext, logError, logVerbose, readFile, writeFile } from '../lib/shared.js';
 
@@ -33,7 +33,7 @@ export function registerReportCommand(program: Command): void {
         const form = parseForm(content);
 
         logVerbose(ctx, 'Generating report...');
-        const reportContent = serializeReportMarkdown(form);
+        const reportContent = serializeReport(form);
 
         if (options.output) {
           // Write to specified output file

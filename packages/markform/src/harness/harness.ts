@@ -11,7 +11,7 @@ import { sha256 } from 'js-sha256';
 
 import { applyPatches } from '../engine/apply.js';
 import { inspect, getFieldsForRoles } from '../engine/inspect.js';
-import { serialize } from '../engine/serialize.js';
+import { serializeForm } from '../engine/serialize.js';
 import type {
   ClearFieldPatch,
   HarnessConfig,
@@ -255,7 +255,7 @@ export class FormHarness {
     rejectedPatches?: PatchRejection[],
     wire?: WireFormat,
   ): void {
-    const markdown = serialize(this.form);
+    const markdown = serializeForm(this.form);
     const hash = sha256(markdown);
 
     const requiredIssueCount = result.issues.filter((i) => i.severity === 'required').length;
@@ -302,14 +302,14 @@ export class FormHarness {
    * Get the current markdown content of the form.
    */
   getMarkdown(): string {
-    return serialize(this.form);
+    return serializeForm(this.form);
   }
 
   /**
    * Get the SHA256 hash of the current form markdown.
    */
   getMarkdownHash(): string {
-    const markdown = serialize(this.form);
+    const markdown = serializeForm(this.form);
     return sha256(markdown);
   }
 

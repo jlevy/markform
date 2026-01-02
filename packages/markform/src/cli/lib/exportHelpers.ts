@@ -10,7 +10,7 @@
 
 import YAML from 'yaml';
 
-import { serialize, serializeReportMarkdown } from '../../engine/serialize.js';
+import { serializeForm, serializeReport } from '../../engine/serialize.js';
 import { formToJsonSchema } from '../../engine/jsonSchema.js';
 import type { ParsedForm } from '../../engine/coreTypes.js';
 import { deriveExportPath, deriveReportPath, deriveSchemaPath } from '../../settings.js';
@@ -168,7 +168,7 @@ export async function exportMultiFormat(form: ParsedForm, basePath: string): Pro
   const paths = deriveExportPaths(basePath);
 
   // Export report markdown (filtered, no instructions, excludes report=false)
-  const reportContent = serializeReportMarkdown(form);
+  const reportContent = serializeReport(form);
   await writeFile(paths.reportPath, reportContent);
 
   // Export YAML values with structured format (markform-218, markform-219)
@@ -182,7 +182,7 @@ export async function exportMultiFormat(form: ParsedForm, basePath: string): Pro
   await writeFile(paths.yamlPath, yamlContent);
 
   // Export form markdown
-  const formContent = serialize(form);
+  const formContent = serializeForm(form);
   await writeFile(paths.formPath, formContent);
 
   // Export JSON Schema
@@ -205,6 +205,6 @@ export async function exportMultiFormat(form: ParsedForm, basePath: string): Pro
  * @param outputPath - Path to write the .form.md file
  */
 export async function exportFormOnly(form: ParsedForm, outputPath: string): Promise<void> {
-  const formContent = serialize(form);
+  const formContent = serializeForm(form);
   await writeFile(outputPath, formContent);
 }

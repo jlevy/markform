@@ -23,7 +23,7 @@ import type {
   WireResponseStep,
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
-import { serialize } from '../engine/serialize.js';
+import { serializeForm } from '../engine/serialize.js';
 import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from '../settings.js';
 import { getWebSearchConfig } from '../llms.js';
 import type {
@@ -474,7 +474,7 @@ function buildContextPrompt(
   lines.push('Fields marked with `[ ]` or empty values still need to be filled.');
   lines.push('');
   lines.push('```markdown');
-  lines.push(serialize(form));
+  lines.push(serializeForm(form));
   lines.push('```');
   lines.push('');
 

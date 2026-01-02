@@ -19,7 +19,7 @@ import type { HarnessConfig, PatchRejection, SessionTranscript } from '../src/en
 import { parseForm } from '../src/engine/parse.js';
 import { formToJsonSchema } from '../src/engine/jsonSchema.js';
 import { serializeSession } from '../src/engine/session.js';
-import { serializeReportMarkdown } from '../src/engine/serialize.js';
+import { serializeReport } from '../src/engine/serialize.js';
 import { toStructuredValues, toNotesArray } from '../src/cli/lib/exportHelpers.js';
 import { FormHarness } from '../src/harness/harness.js';
 import { createMockAgent } from '../src/harness/mockAgent.js';
@@ -236,7 +236,7 @@ async function regenExports(config: ExportConfig): Promise<void> {
   const form = parseForm(formContent);
 
   // Generate report markdown
-  const reportContent = serializeReportMarkdown(form);
+  const reportContent = serializeReport(form);
   const reportPath = resolve(EXAMPLES_DIR, config.reportFile);
   await writeFile(reportPath, reportContent);
   console.log(`  ✓ Written: ${reportPath}`);

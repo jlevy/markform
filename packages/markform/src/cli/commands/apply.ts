@@ -11,7 +11,7 @@ import pc from 'picocolors';
 
 import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
-import { serialize } from '../../engine/serialize.js';
+import { serializeForm } from '../../engine/serialize.js';
 import type { ApplyResult, InspectIssue, ProgressState } from '../../engine/coreTypes.js';
 import { PatchSchema } from '../../engine/coreTypes.js';
 import {
@@ -202,7 +202,7 @@ export function registerApplyCommand(program: Command): void {
             }
           } else {
             // Output modified form (always markdown)
-            const output = serialize(form);
+            const output = serializeForm(form);
             if (options.output) {
               await writeFile(options.output, output);
               logSuccess(ctx, `Modified form written to ${options.output}`);

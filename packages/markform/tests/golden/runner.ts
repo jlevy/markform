@@ -16,7 +16,7 @@ import { sha256 } from 'js-sha256';
 import { applyPatches } from '../../src/engine/apply.js';
 import { inspect } from '../../src/engine/inspect.js';
 import { parseForm } from '../../src/engine/parse.js';
-import { serialize } from '../../src/engine/serialize.js';
+import { serializeForm } from '../../src/engine/serialize.js';
 import { parseSession } from '../../src/engine/session.js';
 import type {
   InspectIssue,
@@ -207,7 +207,7 @@ function replayTurn(form: ParsedForm, turn: SessionTurn): TurnResult {
 
   // Apply patches and compute hash
   const applyResult = applyPatches(form, turn.apply.patches);
-  const markdown = serialize(form);
+  const markdown = serializeForm(form);
   const actualHash = sha256(markdown);
 
   const expectedHash = turn.after.markdownSha256;

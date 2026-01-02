@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseForm } from '../../../src/engine/parse.js';
-import { maxRunAtLineStart, pickFence, serialize } from '../../../src/engine/serialize.js';
+import { maxRunAtLineStart, pickFence, serializeForm } from '../../../src/engine/serialize.js';
 
 describe('engine/serialize - smart fence selection', () => {
   describe('maxRunAtLineStart', () => {
@@ -137,7 +137,7 @@ Plain text content
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).toContain('```value');
       expect(output).toContain('Plain text content');
@@ -166,7 +166,7 @@ print("hello")
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Content has backticks but no tildes, so tildes win (shorter max-run)
       expect(output).toContain('~~~value');
@@ -192,7 +192,7 @@ Use the {% callout %} tag for emphasis.
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).toContain('{% process=false %}');
       expect(output).toContain('{% callout %}');
@@ -220,7 +220,7 @@ nested
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Should use tildes since backticks have a longer run
       expect(output).toMatch(/~~~+value/);
@@ -257,7 +257,7 @@ ${codeContent}
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.example?.value;
@@ -294,7 +294,7 @@ ${codeContent}
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.shell?.value;
@@ -327,7 +327,7 @@ ${docContent}
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.docs?.value;
@@ -368,7 +368,7 @@ ${mixedContent}
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.mixed?.value;
@@ -409,7 +409,7 @@ ${pathologicalContent}
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.extreme?.value;
@@ -434,7 +434,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       expect(reparsed.responsesByFieldId.empty?.state).toBe('unanswered');
@@ -459,7 +459,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       expect(reparsed.responsesByFieldId.notes?.state).toBe('skipped');

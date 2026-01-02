@@ -9,7 +9,7 @@ import type { LanguageModel } from 'ai';
 
 import { applyPatches } from '../engine/apply.js';
 import { parseForm } from '../engine/parse.js';
-import { serialize } from '../engine/serialize.js';
+import { serializeForm } from '../engine/serialize.js';
 import type {
   FieldValue,
   InspectIssue,
@@ -52,7 +52,7 @@ function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]
       reason: 'error',
       message: errors.join('; '),
     },
-    markdown: serialize(form),
+    markdown: serializeForm(form),
     values,
     form,
     turns: 0,
@@ -79,7 +79,7 @@ function buildResult(
 
   const result: FillResult = {
     status,
-    markdown: serialize(form),
+    markdown: serializeForm(form),
     values,
     form,
     turns,

@@ -24,7 +24,7 @@ import { z } from 'zod';
 import type { ParsedForm, Patch, ValidatorRegistry } from '../engine/coreTypes.js';
 import { inspect } from '../engine/inspect.js';
 import { applyPatches } from '../engine/apply.js';
-import { serialize } from '../engine/serialize.js';
+import { serializeForm } from '../engine/serialize.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 
 // =============================================================================
@@ -289,7 +289,7 @@ export function createMarkformTools(options: CreateMarkformToolsOptions): Markfo
       inputSchema: GetMarkdownInputSchema,
       execute: () => {
         const form = sessionStore.getForm();
-        const markdown = serialize(form);
+        const markdown = serializeForm(form);
 
         return Promise.resolve({
           success: true,

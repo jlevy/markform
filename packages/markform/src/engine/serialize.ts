@@ -1247,7 +1247,7 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
  * @param opts - Serialization options
  * @returns The canonical markdown string
  */
-export function serialize(form: ParsedForm, opts?: SerializeOptions): string {
+export function serializeForm(form: ParsedForm, opts?: SerializeOptions): string {
   const specVersion = opts?.specVersion ?? MF_SPEC_VERSION;
 
   // Build frontmatter from metadata (preserves roles, instructions, harness config, run_mode)
@@ -1504,7 +1504,7 @@ function shouldIncludeDoc(doc: DocumentationBlock): boolean {
  * @param form - The parsed form to serialize
  * @returns Filtered plain markdown string suitable for sharing
  */
-export function serializeReportMarkdown(form: ParsedForm): string {
+export function serializeReport(form: ParsedForm): string {
   const lines: string[] = [];
 
   // Group doc blocks by ref, filtering out excluded docs

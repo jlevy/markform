@@ -31,8 +31,8 @@ Import from the main package:
 ```typescript
 import {
   parseForm,
-  serialize,
-  serializeReportMarkdown,
+  serializeForm,
+  serializeReport,
   validate,
   inspect,
   applyPatches,
@@ -43,11 +43,11 @@ import {
 
 Parse a `.form.md` file into a structured form object.
 
-### serialize(form: ParsedForm, options?: SerializeOptions): string
+### serializeForm(form: ParsedForm, options?: SerializeOptions): string
 
 Convert a parsed form back to Markdown.
 
-### serializeReportMarkdown(form: ParsedForm): string
+### serializeReport(form: ParsedForm): string
 
 Generate a filtered markdown report suitable for sharing.
 Produces clean, readable markdown with:

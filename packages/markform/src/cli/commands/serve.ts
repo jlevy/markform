@@ -17,7 +17,7 @@ import pc from 'picocolors';
 
 import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
-import { serialize } from '../../engine/serialize.js';
+import { serializeForm } from '../../engine/serialize.js';
 import { ALL_EXTENSIONS, DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
   CheckboxesField,
@@ -543,7 +543,7 @@ async function handleSave(
     const newPath = generateVersionedPath(filePath);
 
     // Serialize the form
-    const content = serialize(form);
+    const content = serializeForm(form);
 
     if (ctx.dryRun) {
       logInfo(ctx, `[DRY RUN] Would save to: ${newPath}`);

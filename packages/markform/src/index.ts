@@ -251,7 +251,7 @@ export {
 // =============================================================================
 
 export { parseForm } from './engine/parse.js';
-export { serialize, serializeReportMarkdown } from './engine/serialize.js';
+export { serializeForm, serializeReport } from './engine/serialize.js';
 export type { SerializeOptions } from './engine/serialize.js';
 export {
   computeStructureSummary,

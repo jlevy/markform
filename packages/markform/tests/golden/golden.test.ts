@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 import YAML from 'yaml';
 
 import { parseForm } from '../../src/engine/parse.js';
-import { serializeReportMarkdown } from '../../src/engine/serialize.js';
+import { serializeReport } from '../../src/engine/serialize.js';
 import { formToJsonSchema } from '../../src/engine/jsonSchema.js';
 import { toStructuredValues, toNotesArray } from '../../src/cli/lib/exportHelpers.js';
 import { findSessionFiles, runGoldenTest } from './runner.js';
@@ -269,7 +269,7 @@ describe('Export Files Golden Tests', () => {
 
         const formContent = readFileSync(formFullPath, 'utf-8');
         const form = parseForm(formContent);
-        const actualReport = serializeReportMarkdown(form);
+        const actualReport = serializeReport(form);
 
         const expectedReport = readFileSync(reportFullPath, 'utf-8');
 

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { parseForm } from '../../../src/engine/parse.js';
-import { serialize, serializeRawMarkdown } from '../../../src/engine/serialize.js';
+import { serializeForm, serializeRawMarkdown } from '../../../src/engine/serialize.js';
 
 describe('engine/serialize', () => {
   describe('serialize', () => {
@@ -22,7 +22,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Parse the output to verify it's valid
       const reparsed = parseForm(output);
@@ -50,7 +50,7 @@ ACME Corp
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.company?.value;
@@ -79,7 +79,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.revenue?.value;
@@ -110,7 +110,7 @@ Tag Three
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.tags?.value;
@@ -139,7 +139,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       // Check field schema
@@ -177,7 +177,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.categories?.value;
@@ -210,7 +210,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.tasks?.value;
@@ -243,7 +243,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.confirms?.value;
@@ -271,7 +271,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const group = reparsed.schema.groups[0];
@@ -311,8 +311,8 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output1 = serialize(parsed);
-      const output2 = serialize(parsed);
+      const output1 = serializeForm(parsed);
+      const output2 = serializeForm(parsed);
       expect(output1).toBe(output2);
     });
 
@@ -334,7 +334,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Must not contain [object Object] - this was the bug
       expect(output).not.toContain('[object Object]');
@@ -381,7 +381,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).not.toContain('[object Object]');
       expect(output).toContain('config: {threshold: 10, enabled: true}');
@@ -418,7 +418,7 @@ Example: "Oscar | Best Picture | 1995"
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Bug: serialization was missing space between tag name and ref attribute
       // Output was: {% instructionsref="notable_awards" %} instead of {% instructions ref="notable_awards" %}
@@ -435,7 +435,7 @@ Example: "Oscar | Best Picture | 1995"
       const formPath = join(import.meta.dirname, '../../../examples/simple/simple.form.md');
       const content = await readFile(formPath, 'utf-8');
       const parsed = parseForm(content);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       // Compare structure
@@ -476,7 +476,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Should not have group wrapper for implicit group
       expect(output).not.toContain('{% group');
@@ -503,7 +503,7 @@ Please enter your favorite movie.
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       // Verify structure
@@ -531,7 +531,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Should have explicit group wrapper
       expect(output).toContain('{% group id="g1"');
@@ -835,7 +835,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).toContain('state="skipped"');
       expect(output).not.toContain('```value');
@@ -856,7 +856,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).toContain('state="aborted"');
       expect(output).not.toContain('```value');
@@ -881,7 +881,7 @@ Alice
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).not.toContain('state=');
       expect(output).toContain('```value');
@@ -903,7 +903,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).not.toContain('state=');
       expect(output).not.toContain('```value');
@@ -924,7 +924,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       expect(reparsed.responsesByFieldId.notes?.state).toBe('skipped');
@@ -946,7 +946,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       expect(reparsed.responsesByFieldId.count?.state).toBe('aborted');
@@ -974,7 +974,7 @@ Not applicable for this analysis.
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).toContain('{% note id="n1"');
       expect(output).toContain('ref="notes"');
@@ -1011,7 +1011,7 @@ Note 1.
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Check that notes appear in numerical order n1, n2, n10
       const n1Pos = output.indexOf('id="n1"');
@@ -1042,7 +1042,7 @@ General comment.
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       expect(output).toContain('{% note id="n1"');
       expect(output).toContain('ref="name"');
@@ -1070,7 +1070,7 @@ Not applicable.
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       expect(reparsed.notes).toHaveLength(1);
@@ -1102,7 +1102,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       // After serialization, %SKIP% becomes state="skipped" attribute
@@ -1130,7 +1130,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       // After serialization, %ABORT% becomes state="aborted" attribute
@@ -1169,7 +1169,7 @@ Age cannot be determined.
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       // Check responses
@@ -1209,7 +1209,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Per spec, table values use markdown table syntax WITHOUT value fence
       expect(output).not.toContain('```value');
@@ -1240,7 +1240,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       const reparsed = parseForm(output);
 
       const value = reparsed.responsesByFieldId.ratings?.value;
@@ -1277,7 +1277,7 @@ role_instructions:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Should preserve role_instructions in output
       expect(output).toContain('role_instructions:');
@@ -1305,7 +1305,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Should preserve harness config in output
       expect(output).toContain('harness:');
@@ -1329,7 +1329,7 @@ markform:
 {% /form %}
 `;
       const parsed = parseForm(markdown);
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
 
       // Should preserve run_mode in output
       expect(output).toContain('run_mode:');
@@ -1356,7 +1356,7 @@ markform:
       const parsed = parseForm(markdown);
       expect(parsed.schema.groups[0]?.children[1]?.report).toBe(false);
 
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       expect(output).toContain('report=false');
 
       const reparsed = parseForm(output);
@@ -1384,7 +1384,7 @@ markform:
       const parsed = parseForm(markdown);
       expect(parsed.schema.groups[1]?.report).toBe(false);
 
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       expect(output).toContain('report=false');
 
       const reparsed = parseForm(output);
@@ -1419,7 +1419,7 @@ This description should NOT appear in report.
       expect(instructionsDoc?.report).toBe(true);
       expect(descriptionDoc?.report).toBe(false);
 
-      const output = serialize(parsed);
+      const output = serializeForm(parsed);
       // Check that report attributes are preserved in output
       expect(output).toMatch(/instructions.*report=true/s);
       expect(output).toMatch(/description.*report=false/s);

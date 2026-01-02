@@ -13,7 +13,7 @@ import * as p from '@clack/prompts';
 import pc from 'picocolors';
 
 import { parseForm } from '../../engine/parse.js';
-import { serialize } from '../../engine/serialize.js';
+import { serializeForm } from '../../engine/serialize.js';
 import { serializeSession } from '../../engine/session.js';
 import type {
   FillMode,
@@ -605,7 +605,7 @@ export function registerFillCommand(program: Command): void {
             await ensureFormsDir(formsDir);
             outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
           }
-          const formMarkdown = serialize(harness.getForm());
+          const formMarkdown = serializeForm(harness.getForm());
 
           if (ctx.dryRun) {
             logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
