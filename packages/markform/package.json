@@ -93,6 +93,7 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "publint": "^0.3.16",
+    "tryscript": "^0.0.1",
     "tsdown": "^0.18.3",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
