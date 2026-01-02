@@ -454,6 +454,16 @@ $ markform report examples/simple/simple-mock-filled.form.md | head -20
 ? 0
 \`\`\`
 
+### render generates HTML output
+
+\`\`\`console
+$ markform render examples/simple/simple.form.md | head -10
+<!DOCTYPE html>
+<html>
+...
+? 0
+\`\`\`
+
 ---
 
 ## Utility Commands
@@ -576,6 +586,14 @@ md ok
 - [ ] Document test update process in development.md
 - [ ] Consider c8 coverage integration
 
+### Phase 5: Structured Output Validation (Optional)
+
+- [ ] Add Vitest wrapper for programmatic assertions
+- [ ] Validate JSON output parses correctly
+- [ ] Validate YAML output parses correctly
+- [ ] Validate JSON Schema output is valid schema
+- [ ] Add render command HTML validation (well-formed)
+
 ---
 
 ## Outstanding Questions
@@ -590,9 +608,111 @@ md ok
 
 ---
 
+## Golden Testing Best Practices
+
+Based on [Golden Testing Guidelines](https://github.com/jlevy/speculate/blob/main/docs/general/agent-guidelines/golden-testing-guidelines.md), this implementation should follow these principles:
+
+### Stable vs Unstable Field Classification
+
+Every output field must be classified:
+
+| Category | Examples | Handling |
+|----------|----------|----------|
+| **Stable** | Field counts, command names, option flags, form titles, field IDs | Exact match |
+| **Unstable** | Version numbers, absolute paths, timestamps, timing values, hashes | Use elision patterns |
+
+Tryscript patterns handle unstable fields at comparison time:
+
+```typescript
+patterns: {
+  VERSION: '\\d+\\.\\d+\\.\\d+(?:-[a-z]+\\.\\d+)?',  // Unstable
+  PATH: '/[^\\s]+',                                   // Unstable
+  HASH: '[a-f0-9]{64}',                              // Unstable
+  DATE: '\\d{4}-\\d{2}-\\d{2}',                      // Unstable
+  TIME: '\\d+(?:\\.\\d+)?(?:ms|s)',                  // Unstable
+}
+```
+
+### What to Capture for CLI Tools
+
+Per the guidelines, CLI golden tests should capture:
+
+- ✅ Full commands with arguments
+- ✅ Environment variables (`NO_COLOR=1`)
+- ✅ Complete stdout (with elision for dynamic parts)
+- ✅ Exit codes
+- ⚠️ stderr (when relevant for error cases)
+- ⚠️ File contents/checksums (for apply/export workflows)
+
+### Speed-Optimized CI
+
+Target: **<100ms per test block** for fast CI feedback.
+
+Strategies:
+- Use `head -N` to limit output size for large commands
+- Avoid expensive operations in tests (live LLM, network)
+- Parallelize independent test files
+- Cache expensive setup (form parsing) via tryscript's temp directories
+
+### Layered Assertions
+
+Combine tryscript's diff-based comparison with optional programmatic checks:
+
+1. **Primary**: Tryscript raw diff on stdout/exit code
+2. **Secondary**: Vitest wrapper for critical invariants (optional):
+   - JSON/YAML parse validity for export commands
+   - Schema validation for schema command
+   - Line count sanity checks
+
+### Developer Workflow
+
+Formal workflow for golden file updates:
+
+```bash
+# 1. Make code changes
+# 2. Run tests to see failures
+pnpm test:tryscript
+
+# 3. Review diffs to understand behavioral changes
+pnpm test:tryscript 2>&1 | less
+
+# 4. Update golden files if changes are intentional
+pnpm test:tryscript:update
+
+# 5. Review updated files
+git diff tests/cli/
+
+# 6. Commit alongside code changes
+git add tests/cli/ src/
+git commit -m "feat: update CLI output format"
+```
+
+### Common Pitfalls to Avoid
+
+| Pitfall | Prevention |
+|---------|------------|
+| Missing unstable field classification | Audit all dynamic output before writing tests |
+| Flaky tests from timing variations | Use `[..]` for any numeric timing output |
+| Platform-specific path failures | Use `[PATH]` or `[CWD]` patterns |
+| Unbounded output growth | Use `head -N` or specific line limits |
+| Approving changes without review | Always `git diff tests/cli/` before committing |
+
+### Relationship to Existing Golden Tests
+
+The tryscript tests complement (not replace) existing golden session tests:
+
+| Test Type | Coverage | When to Use |
+|-----------|----------|-------------|
+| **Tryscript** | CLI command execution, output format, exit codes | All non-interactive commands |
+| **Session Golden** | LLM-driven form filling, tool calls, patch application | fill/research with mock agents |
+| **Unit Tests** | Pure functions, formatting utilities, parsers | Isolated component logic |
+
+---
+
 ## References
 
 - [Tryscript README](https://github.com/jlevy/tryscript)
 - [trycmd (Rust original)](https://github.com/assert-rs/trycmd)
+- [Golden Testing Guidelines](https://github.com/jlevy/speculate/blob/main/docs/general/agent-guidelines/golden-testing-guidelines.md)
 - Current CLI tests: `packages/markform/tests/unit/cli/`
 - Golden tests: `packages/markform/tests/golden/`
