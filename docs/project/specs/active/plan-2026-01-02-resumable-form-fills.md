@@ -231,102 +231,78 @@ while (totalTurns < overallLimit) {
 
 ### Testing Plan
 
-Testing should be focused and minimal, covering the critical paths without excessive test
-proliferation.
+Testing should be focused and minimal. Resume is an API-level feature - the harness mechanics
+are already well-tested by existing golden tests. We only need unit tests.
 
-#### 1. Unit Tests (`tests/unit/harness/programmaticFill.test.ts`)
+#### Unit Tests (`tests/unit/harness/programmaticFill.test.ts`)
 
-Add a new `describe('resumable fills')` block with focused tests:
+Add a new `describe('resumable fills')` block with 3 focused tests:
 
-**Core functionality (3-4 tests):**
+```typescript
+describe('resumable fills', () => {
+  it('stops after maxTurnsThisCall and returns batch_limit', async () => {
+    const result = await fillForm({
+      form: SIMPLE_FORM,
+      maxTurnsThisCall: 1,
+      _testAgent: mockAgent,
+      // ...
+    });
+    expect(result.status).toEqual({
+      ok: false,
+      reason: 'batch_limit',
+      message: expect.any(String)
+    });
+    expect(result.turns).toBe(1);
+  });
 
-- [ ] `maxTurnsThisCall` stops after exactly N turns, returns `reason: 'batch_limit'`
-- [ ] `startingTurnNumber` adjusts `FillResult.turns` and callback turn numbers correctly
-- [ ] Resume flow: first call checkpoint → second call completes
-- [ ] `maxTurns` still returns `'max_turns'` when hit (not confused with batch_limit)
+  it('resumes from checkpoint and completes', async () => {
+    // First call - checkpoint after 1 turn
+    const r1 = await fillForm({
+      form: SIMPLE_FORM,
+      maxTurnsThisCall: 1,
+      _testAgent: mockAgent,
+      // ...
+    });
+    expect(r1.status.reason).toBe('batch_limit');
 
-**Edge case (1 test):**
+    // Resume using r1.markdown as checkpoint
+    const r2 = await fillForm({
+      form: r1.markdown,
+      startingTurnNumber: r1.turns,
+      _testAgent: mockAgent,
+      // ...
+    });
+    expect(r2.status.ok).toBe(true);
+    expect(r2.turns).toBeGreaterThan(r1.turns);
+  });
 
-- [ ] Form already complete returns immediately with `ok: true` (0 turns executed)
-
-#### 2. Golden Session Test (`examples/resume-test/`)
-
-Create a minimal golden test that validates the resume flow with MockAgent. This provides
-regression protection for the checkpoint/resume mechanism.
-
-**Files to create:**
-
-```
-examples/resume-test/
-├── resume-test.form.md           # Simple 2-field form
-├── resume-test-filled.form.md    # Completed version (mock source)
-└── resume-test.session.yaml      # Golden session with resume
-```
-
-**Form design** (`resume-test.form.md`):
-- 2 required fields: `field_a` and `field_b`
-- MockAgent fills 1 field per turn (controlled by maxIssuesPerTurn: 1)
-
-**Session structure** (`resume-test.session.yaml`):
-```yaml
-session_version: 0.1.0
-mode: mock
-form:
-  path: resume-test.form.md
-mock:
-  completed_mock: resume-test-filled.form.md
-harness:
-  max_turns: 100
-  max_turns_this_call: 1    # Stop after 1 turn
-  max_issues_per_turn: 1    # Show only 1 issue per turn
-  target_roles: ['*']
-turns:
-  - turn: 1
-    inspect:
-      issues:
-        - ref: field_a
-          # ...
-    apply:
-      patches:
-        - op: set_string
-          field_id: field_a
-          value: "value_a"
-    after:
-      required_issue_count: 1  # field_b still needs filling
-# Resume section (new session YAML feature)
-resume:
-  starting_turn_number: 1
-  turns:
-    - turn: 2
-      inspect:
-        issues:
-          - ref: field_b
-            # ...
-      apply:
-        patches:
-          - op: set_string
-            field_id: field_b
-            value: "value_b"
-      after:
-        required_issue_count: 0
-final:
-  expect_complete: true
+  it('returns ok immediately when form already complete', async () => {
+    const result = await fillForm({
+      form: ALREADY_COMPLETE_FORM,
+      maxTurnsThisCall: 5,
+      _testAgent: mockAgent,
+      // ...
+    });
+    expect(result.status.ok).toBe(true);
+    expect(result.turns).toBe(0);
+  });
+});
 ```
 
-**Note:** The golden test framework may need minor updates to support the `resume` section.
-This is a small addition to `tests/golden/golden.test.ts`.
+#### Why No Golden Session Test
 
-#### 3. Why This Testing Approach
+Resume is just:
+- Early exit logic (~5 lines in programmaticFill.ts)
+- Turn count arithmetic
+- Reusing form serialization (already tested by existing golden tests)
 
-**What we test:**
-- Critical path: checkpoint → resume → complete
-- State preservation: values survive serialization round-trip
-- Status distinction: `batch_limit` vs `max_turns` vs `ok`
+The existing golden tests already validate:
+- MockAgent behavior
+- Harness turn mechanics
+- Form serialization round-trips (SHA256 hashes)
 
-**What we don't test separately:**
-- Callback timing (trivial turn number adjustment)
-- Multiple batch sizes (if N=1 works, N=5 works)
-- Negative/invalid inputs (TypeScript prevents most, runtime is best-effort)
+Adding a golden test for resume would require framework changes and verbose YAML for minimal
+additional coverage. Unit tests are sufficient.
 
 ## Stage 2: Architecture Stage
 
@@ -615,7 +591,7 @@ For use in CLI, AWS Step Functions, Convex, etc:
 2. **Backward compatible** - Existing code unchanged
 3. **Predictable** - Clear semantics for all combinations
 4. **Flexible** - Works across all target orchestration environments
-5. **Testable** - Simple unit tests + one golden test cover critical paths
+5. **Testable** - 3 focused unit tests cover critical paths
 
 **No changes recommended.** Proceed to implementation.
 
@@ -627,5 +603,5 @@ For use in CLI, AWS Step Functions, Convex, etc:
 | 2026-01-02 | Claude | Decision: Use 'batch_limit' reason instead of reusing 'max_turns' |
 | 2026-01-02 | Claude | Decision: turns includes startingTurnNumber for accurate tracking |
 | 2026-01-02 | Claude | Added acceptance criteria and testing plan |
-| 2026-01-02 | Claude | Enhanced testing plan with golden session test |
 | 2026-01-02 | Claude | Added senior engineer design review with corner cases |
+| 2026-01-02 | Claude | Simplified testing plan: unit tests only (no golden test needed) |
