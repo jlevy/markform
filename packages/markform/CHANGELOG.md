@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.11
+
+### Patch Changes
+
+- 8d72787: Support boolean checkbox values, standardize patch property names, and improve error messages
+
 ## 0.1.10
 
 ### Patch Changes
