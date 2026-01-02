@@ -67,6 +67,8 @@
     "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
     "test:coverage": "vitest run --coverage",
     "test:coverage:html": "vitest run --coverage && open coverage/index.html",
+    "test:tryscript": "tryscript 'tests/cli/**/*.tryscript.md'",
+    "test:tryscript:update": "tryscript --update 'tests/cli/**/*.tryscript.md'",
     "publint": "publint"
   },
   "dependencies": {
