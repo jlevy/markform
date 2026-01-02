@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.10
+
+### Patch Changes
+
+- 576e19b: Add structured error handling with typed error hierarchy, improve frontmatter parsing using Markdoc native support, add defensive null checks for table rows and patch validation, and significantly improve test coverage to 60%
+
 ## 0.1.9
 
 ### Patch Changes
