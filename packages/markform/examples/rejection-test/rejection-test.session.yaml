@@ -281,9 +281,6 @@ turns:
             - source: Rotten Tomatoes
               score: 92
               votes: 450
-        - op: set_string
-          field_id: title
-          value: Test Movie
     after:
       required_issue_count: 0
       markdown_sha256: f45e7cd87b036d57564e3340dec33c1dc5c2094d880e52b903f64da19b3b8ec0
@@ -356,7 +353,11 @@ turns:
         Enter rating data with source name, score (0-100), and vote count.
         {% /instructions %}
 
-        {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+        {% field kind="string" id="title" label="Title" required=true %}
+        ```value
+        Test Movie
+        ```
+        {% /field %}
 
         {% /group %}
 
@@ -366,7 +367,7 @@ turns:
 
         # Current Form Issues
 
-        You need to address 2 issues. Here are the current issues:
+        You need to address 1 issue. Here are the current issues:
 
         - **ratings** (field): Required field "Ratings" is empty
           Severity: required, Priority: P1
@@ -374,12 +375,6 @@ turns:
           Columns: source, score, votes
           Rows: min: 1, max: 5
           Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
-          This field is required.
-
-        - **title** (field): Required field "Title" is empty
-          Severity: required, Priority: P1
-          Type: string
-          Set: { op: "set_string", fieldId: "title", value: "..." }
           This field is required.
 
         # General Instructions
@@ -454,7 +449,11 @@ turns:
           Enter rating data with source name, score (0-100), and vote count.
           {% /instructions %}
 
-          {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+          {% field kind="string" id="title" label="Title" required=true %}
+          ```value
+          Test Movie
+          ```
+          {% /field %}
 
           {% /group %}
 
@@ -464,7 +463,7 @@ turns:
 
           # Current Form Issues
 
-          You need to address 2 issues. Here are the current issues:
+          You need to address 1 issue. Here are the current issues:
 
           - **ratings** (field): Required field "Ratings" is empty
             Severity: required, Priority: P1
@@ -472,12 +471,6 @@ turns:
             Columns: source, score, votes
             Rows: min: 1, max: 5
             Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
-            This field is required.
-
-          - **title** (field): Required field "Title" is empty
-            Severity: required, Priority: P1
-            Type: string
-            Set: { op: "set_string", fieldId: "title", value: "..." }
             This field is required.
 
           # General Instructions
@@ -515,9 +508,6 @@ turns:
                         - score: 92
                           source: Rotten Tomatoes
                           votes: 450
-                    - field_id: title
-                      op: set_string
-                      value: Test Movie
             tool_results: []
             text: null
         usage:
