@@ -78,9 +78,12 @@ cd packages/markform
 
 ### 4. Verify CI Integration
 
-After PR is created, check that:
-1. GitHub Actions runs the tryscript tests
-2. Tests pass in CI environment
+**Note:** Tryscript tests are currently skipped in CI due to tryscript bugs (hardcoded
+paths don't work across environments). The tests run successfully locally.
+
+After tryscript fixes are implemented:
+1. Uncomment the tryscript step in `.github/workflows/ci.yml`
+2. Verify tests pass in CI environment
 
 ### 5. Review Documentation
 
