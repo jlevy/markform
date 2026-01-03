@@ -595,6 +595,35 @@ For use in CLI, AWS Step Functions, Convex, etc:
 
 **No changes recommended.** Proceed to implementation.
 
+## Implementation Status
+
+**Status: ✅ COMPLETE**
+
+### Files Changed
+
+| File | Changes |
+| --- | --- |
+| `packages/markform/src/harness/harnessTypes.ts` | Added `maxTurnsThisCall`, `startingTurnNumber` to FillOptions; added `'batch_limit'` to FillStatus |
+| `packages/markform/src/harness/programmaticFill.ts` | Added per-call limit check in main loop, tracks `turnsThisCall` separately |
+| `packages/markform/tests/unit/harness/programmaticFill.test.ts` | Added 4 unit tests for resumable fills |
+
+### Tests Added
+
+1. `stops after maxTurnsThisCall and returns batch_limit` ✅
+2. `resumes from checkpoint and completes` ✅
+3. `returns ok immediately when form already complete` ✅
+4. `startingTurnNumber adjusts callback turn numbers` ✅
+
+### Acceptance Criteria Status
+
+1. ✅ `fillForm()` with `maxTurnsThisCall: N` stops after N turns
+2. ✅ Returns `status: { ok: false, reason: 'batch_limit' }` when per-call limit hit
+3. ✅ `FillResult.turns` includes `startingTurnNumber`
+4. ✅ Callbacks receive adjusted turn numbers
+5. ✅ Default behavior unchanged when params omitted
+6. ✅ Existing tests pass (1407 tests)
+7. ✅ Round-trip works: result.markdown can be re-parsed and resumed
+
 ## Revision History
 
 | Date | Author | Changes |
@@ -605,3 +634,4 @@ For use in CLI, AWS Step Functions, Convex, etc:
 | 2026-01-02 | Claude | Added acceptance criteria and testing plan |
 | 2026-01-02 | Claude | Added senior engineer design review with corner cases |
 | 2026-01-02 | Claude | Simplified testing plan: unit tests only (no golden test needed) |
+| 2026-01-03 | Claude | Implementation complete - all tests pass |
