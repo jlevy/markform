@@ -612,4 +612,121 @@ Original Name
       expect(result.values.name).toEqual({ kind: 'string', value: 'Original Name' });
     });
   });
+
+  describe('resumable fills', () => {
+    it('stops after maxTurnsThisCall and returns batch_limit', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      // Use maxIssuesPerTurn: 1 to force one field per turn, ensuring we need multiple turns
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        inputContext: { name: 'John Doe' },
+        targetRoles: ['user', 'agent'],
+        maxTurnsThisCall: 1,
+        maxIssuesPerTurn: 1, // Force one field per turn
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('batch_limit');
+        expect(result.status.message).toContain('1');
+      }
+      expect(result.turns).toBe(1);
+      // Should have partial progress - markdown should be parseable
+      expect(result.markdown).toContain('{% form');
+    });
+
+    it('resumes from checkpoint and completes', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      // First call - checkpoint after 1 turn
+      // Use maxIssuesPerTurn: 1 to force one field per turn
+      const r1 = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        inputContext: { name: 'John Doe' },
+        targetRoles: ['user', 'agent'],
+        maxTurnsThisCall: 1,
+        maxIssuesPerTurn: 1, // Force one field per turn
+        _testAgent: mockAgent,
+      });
+
+      expect(r1.status.ok).toBe(false);
+      if (!r1.status.ok) {
+        expect(r1.status.reason).toBe('batch_limit');
+      }
+
+      // Resume using r1.markdown as checkpoint
+      const r2 = await fillForm({
+        form: r1.markdown,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        targetRoles: ['user', 'agent'],
+        startingTurnNumber: r1.turns,
+        _testAgent: mockAgent,
+      });
+
+      expect(r2.status.ok).toBe(true);
+      // Total turns should include the starting turn number
+      expect(r2.turns).toBeGreaterThan(r1.turns);
+      // Values should be complete
+      expect(r2.values.name).toBeDefined();
+      expect(r2.values.age).toBeDefined();
+    });
+
+    it('returns ok immediately when form already complete', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      // Use a completed form as input
+      const result = await fillForm({
+        form: COMPLETED_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        targetRoles: ['user', 'agent'],
+        maxTurnsThisCall: 5,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      // No turns should be executed since form is already complete
+      expect(result.turns).toBe(0);
+    });
+
+    it('startingTurnNumber adjusts callback turn numbers', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const turnNumbers: number[] = [];
+
+      await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        inputContext: { name: 'John Doe' },
+        targetRoles: ['user', 'agent'],
+        startingTurnNumber: 10, // Simulating resume from turn 10
+        _testAgent: mockAgent,
+        callbacks: {
+          onTurnStart: ({ turnNumber }) => {
+            turnNumbers.push(turnNumber);
+          },
+        },
+      });
+
+      // Turn numbers should start from 11 (startingTurnNumber + 1)
+      expect(turnNumbers[0]).toBe(11);
+    });
+  });
 });

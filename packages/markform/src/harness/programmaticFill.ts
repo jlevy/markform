@@ -237,12 +237,29 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     });
 
   // 5. Run harness loop
-  let turnCount = 0;
+  const startingTurnNumber = options.startingTurnNumber ?? 0;
+  let turnCount = startingTurnNumber;
+  let turnsThisCall = 0;
   let stepResult = harness.step();
   // Track rejections from previous turn to provide feedback to the LLM
   let previousRejections: PatchRejection[] | undefined;
 
   while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
+    // Check per-call limit (before executing any work this turn)
+    if (options.maxTurnsThisCall !== undefined && turnsThisCall >= options.maxTurnsThisCall) {
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        {
+          ok: false,
+          reason: 'batch_limit',
+          message: `Reached per-call limit (${options.maxTurnsThisCall} turns)`,
+        },
+        inputContextWarnings,
+        stepResult.issues,
+      );
+    }
     // Check for cancellation
     if (options.signal?.aborted) {
       return buildResult(
@@ -341,6 +358,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     const actualPatchesApplied = stepResult.patchesApplied ?? patches.length;
     totalPatches += actualPatchesApplied;
     turnCount++;
+    turnsThisCall++;
 
     // Store rejections to provide feedback to LLM in next turn
     previousRejections = stepResult.rejectedPatches;

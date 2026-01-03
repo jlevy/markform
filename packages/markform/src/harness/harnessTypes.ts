@@ -277,6 +277,23 @@ export interface FillOptions {
   systemPromptAddition?: string;
   /** Maximum harness turns (default: 100) */
   maxTurns?: number;
+  /**
+   * Maximum turns to execute in THIS call.
+   * When reached, returns with status `{ ok: false, reason: 'batch_limit' }`.
+   * Caller can resume by passing the returned form markdown back.
+   *
+   * Use for orchestrated environments with timeout constraints (e.g., Convex, Step Functions).
+   *
+   * @default undefined (no per-call limit - runs until complete or maxTurns)
+   */
+  maxTurnsThisCall?: number;
+  /**
+   * Starting turn number for progress tracking when resuming.
+   * Affects callback turn numbers and FillResult.turns calculation.
+   *
+   * @default 0
+   */
+  startingTurnNumber?: number;
   /** Maximum patches per turn (default: 20) */
   maxPatchesPerTurn?: number;
   /** Maximum issues to show per turn (default: 10) */
@@ -348,10 +365,16 @@ export interface TurnProgress {
 
 /**
  * Fill status indicating success or failure reason.
+ *
+ * - `ok: true` - Form completed successfully
+ * - `max_turns` - Hit overall maxTurns safety limit
+ * - `batch_limit` - Hit maxTurnsThisCall per-call limit (resume by calling again)
+ * - `cancelled` - Aborted via signal
+ * - `error` - Unexpected error
  */
 export type FillStatus =
   | { ok: true }
-  | { ok: false; reason: 'max_turns' | 'cancelled' | 'error'; message?: string };
+  | { ok: false; reason: 'max_turns' | 'batch_limit' | 'cancelled' | 'error'; message?: string };
 
 /**
  * Result of the fillForm operation.
