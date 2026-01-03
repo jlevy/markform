@@ -125,7 +125,7 @@ export interface Agent {
 export interface LiveAgentConfig {
   /** The language model to use */
   model: LanguageModel;
-  /** Maximum tool call steps per turn (default: 3) */
+  /** Maximum AI SDK steps (tool call rounds) per turn (default: 20) */
   maxStepsPerTurn?: number;
   /** Additional context to append to the composed system prompt (never overrides) */
   systemPromptAddition?: string;
@@ -305,6 +305,8 @@ export interface FillOptions {
   maxPatchesPerTurn?: number;
   /** Maximum issues to show per turn (default: 10) */
   maxIssuesPerTurn?: number;
+  /** Maximum AI SDK steps (tool call rounds) per turn (default: 20) */
+  maxStepsPerTurn?: number;
   /** Target roles to fill (default: ['agent']) */
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */

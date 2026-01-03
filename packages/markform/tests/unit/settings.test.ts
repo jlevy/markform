@@ -5,6 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_EXTENSIONS,
+  DEFAULT_MAX_ISSUES_PER_TURN,
+  DEFAULT_MAX_PATCHES_PER_TURN,
+  DEFAULT_MAX_STEPS_PER_TURN,
+  DEFAULT_MAX_TURNS,
   deriveExportPath,
   deriveReportPath,
   deriveSchemaPath,
@@ -222,5 +226,23 @@ describe('parseRolesFlag', () => {
 
   it('throws for invalid role in list', () => {
     expect(() => parseRolesFlag('agent,123invalid')).toThrow('Invalid role name');
+  });
+});
+
+describe('Harness Default Constants', () => {
+  it('DEFAULT_MAX_TURNS is 100', () => {
+    expect(DEFAULT_MAX_TURNS).toBe(100);
+  });
+
+  it('DEFAULT_MAX_PATCHES_PER_TURN is 20', () => {
+    expect(DEFAULT_MAX_PATCHES_PER_TURN).toBe(20);
+  });
+
+  it('DEFAULT_MAX_ISSUES_PER_TURN is 10', () => {
+    expect(DEFAULT_MAX_ISSUES_PER_TURN).toBe(10);
+  });
+
+  it('DEFAULT_MAX_STEPS_PER_TURN is 20 (matches AI SDK ToolLoopAgent default)', () => {
+    expect(DEFAULT_MAX_STEPS_PER_TURN).toBe(20);
   });
 });

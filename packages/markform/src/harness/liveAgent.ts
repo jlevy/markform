@@ -24,7 +24,7 @@ import type {
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 import { serializeForm } from '../engine/serialize.js';
-import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE } from '../settings.js';
+import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, DEFAULT_MAX_STEPS_PER_TURN } from '../settings.js';
 import { getWebSearchConfig } from '../llms.js';
 import type {
   Agent,
@@ -67,7 +67,7 @@ export class LiveAgent implements Agent {
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
-    this.maxStepsPerTurn = config.maxStepsPerTurn ?? 3;
+    this.maxStepsPerTurn = config.maxStepsPerTurn ?? DEFAULT_MAX_STEPS_PER_TURN;
     this.systemPromptAddition = config.systemPromptAddition;
     this.targetRole = config.targetRole ?? AGENT_ROLE;
     this.provider = config.provider;
