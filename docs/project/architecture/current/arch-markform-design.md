@@ -573,8 +573,8 @@ Uses [AI SDK tool calling][ai-sdk-tool-calling] with agentic loop control from
 
 - Define a `fill_form` tool using AI SDK `tool({ inputSchema: zod })`
 
-- Control multi-step behavior with `stopWhen: stepCountIs(k)` for "1–3 tool calls per
-  turn" (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
+- Control multi-step behavior with `stopWhen: stepCountIs(k)` for “1–3 tool calls per
+  turn” (see [AI SDK 5][ai-sdk-5] for `stepCountIs`)
 
 - Agent analyzes form state and issues, then calls `fill_form` with patches
 
@@ -897,15 +897,22 @@ if (result.status.ok) {
 ```
 
 **FillStatus values:**
+
 - `{ ok: true }` — Form completed successfully
+
 - `{ ok: false, reason: 'max_turns' }` — Hit `maxTurnsTotal` safety limit
-- `{ ok: false, reason: 'batch_limit' }` — Hit `maxTurnsThisCall` per-call limit (resumable)
+
+- `{ ok: false, reason: 'batch_limit' }` — Hit `maxTurnsThisCall` per-call limit
+  (resumable)
+
 - `{ ok: false, reason: 'cancelled' }` — Aborted via signal
+
 - `{ ok: false, reason: 'error' }` — Unexpected error
 
 **Resumable fills:** For orchestrated environments with timeout constraints (Convex, AWS
 Step Functions), use `maxTurnsThisCall` to limit turns per call and `startingTurnNumber`
-to resume from checkpoints. The `maxTurnsTotal` limit is enforced across all calls.
+to resume from checkpoints.
+The `maxTurnsTotal` limit is enforced across all calls.
 See [markform-apis.md](../../../markform-apis.md) for details.
 
 #### runResearch()
@@ -1771,8 +1778,8 @@ interface MultiSelectField extends FieldBase {
 **Patch operation changes:**
 
 ```ts
-| { op: 'set_single_select'; fieldId: Id; selected: OptionId | null; otherValue?: string }
-| { op: 'set_multi_select'; fieldId: Id; selected: OptionId[]; otherValue?: string }
+| { op: 'set_single_select'; fieldId: Id; value: OptionId | null; otherValue?: string }
+| { op: 'set_multi_select'; fieldId: Id; value: OptionId[]; otherValue?: string }
 ```
 
 **Serialization:** When `allowOther=true`, an “Other” option is implicitly available.

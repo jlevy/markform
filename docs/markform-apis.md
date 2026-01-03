@@ -53,11 +53,13 @@ Generate a filtered markdown report suitable for sharing.
 Produces clean, readable markdown with:
 
 - Fields and groups with `report=false` excluded
+
 - Documentation blocks with `report=false` excluded
+
 - Instructions blocks excluded by default (unless `report=true`)
 
-This is useful for generating shareable reports from completed forms without
-internal instructions or agent-only content.
+This is useful for generating shareable reports from completed forms without internal
+instructions or agent-only content.
 
 ### validate(form: ParsedForm, options?: ValidateOptions): ValidateResult
 
@@ -127,14 +129,15 @@ Each patch has an `op` and `fieldId`.
 | --- | --- | --- |
 | `set_string` | string | `{ "op": "set_string", "fieldId": "name", "value": "Alice" }` |
 | `set_number` | number | `{ "op": "set_number", "fieldId": "age", "value": 25 }` |
-| `set_string_list` | string_list | `{ "op": "set_string_list", "fieldId": "tags", "items": ["a", "b"] }` |
-| `set_single_select` | single_select | `{ "op": "set_single_select", "fieldId": "rating", "selected": "high" }` |
-| `set_multi_select` | multi_select | `{ "op": "set_multi_select", "fieldId": "cats", "selected": ["a", "b"] }` |
-| `set_checkboxes` | checkboxes | `{ "op": "set_checkboxes", "fieldId": "tasks", "values": {"item1": "done"} }` |
+| `set_string_list` | string_list | `{ "op": "set_string_list", "fieldId": "tags", "value": ["a", "b"] }` |
+| `set_single_select` | single_select | `{ "op": "set_single_select", "fieldId": "rating", "value": "high" }` |
+| `set_multi_select` | multi_select | `{ "op": "set_multi_select", "fieldId": "cats", "value": ["a", "b"] }` |
+| `set_checkboxes` | checkboxes | `{ "op": "set_checkboxes", "fieldId": "tasks", "value": {"item1": "done"} }` |
 | `set_url` | url | `{ "op": "set_url", "fieldId": "website", "value": "https://..." }` |
-| `set_url_list` | url_list | `{ "op": "set_url_list", "fieldId": "sources", "items": ["https://..."] }` |
+| `set_url_list` | url_list | `{ "op": "set_url_list", "fieldId": "sources", "value": ["https://..."] }` |
 | `set_date` | date | `{ "op": "set_date", "fieldId": "deadline", "value": "2024-06-15" }` |
 | `set_year` | year | `{ "op": "set_year", "fieldId": "founded", "value": 2015 }` |
+| `set_table` | table | `{ "op": "set_table", "fieldId": "data", "value": [{"col1": "v1"}] }` |
 | `clear_field` | any | `{ "op": "clear_field", "fieldId": "name" }` |
 | `skip_field` | optional | `{ "op": "skip_field", "fieldId": "notes", "reason": "Not applicable" }` |
 | `abort_field` | any | `{ "op": "abort_field", "fieldId": "data", "reason": "Unable to find" }` |
@@ -216,8 +219,8 @@ The `status` field in `FillResult` indicates success or failure:
 
 ### Resumable Form Fills
 
-For orchestrated environments with timeout constraints (e.g., Convex, AWS Step Functions),
-use `maxTurnsThisCall` to limit turns per call and resume from checkpoints.
+For orchestrated environments with timeout constraints (e.g., Convex, AWS Step
+Functions), use `maxTurnsThisCall` to limit turns per call and resume from checkpoints.
 
 ```typescript
 import { fillForm } from 'markform';
@@ -247,15 +250,19 @@ if (!r1.status.ok && r1.status.reason === 'batch_limit') {
 ```
 
 **Key points:**
+
 - `maxTurnsThisCall` limits turns in a single call, returns `batch_limit` when reached
+
 - `result.markdown` contains the form checkpoint (serialized state)
+
 - `startingTurnNumber` ensures accurate progress tracking across calls
+
 - The form itself is the state—no session storage needed
 
 ### FillCallbacks
 
 Optional callbacks for observing form-filling execution in real-time.
-All callbacks are optional and errors in callbacks don't abort filling.
+All callbacks are optional and errors in callbacks don’t abort filling.
 
 ```typescript
 import type { FillCallbacks } from 'markform';

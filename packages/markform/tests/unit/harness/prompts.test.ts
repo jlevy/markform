@@ -55,7 +55,8 @@ describe('PATCH_FORMAT_INSTRUCTIONS', () => {
   it('includes table-specific guidance about column IDs', () => {
     // This is critical - LLMs need to know about column IDs for tables
     expect(PATCH_FORMAT_INSTRUCTIONS).toContain('column');
-    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('rows');
+    // The guidance mentions "Each row is an object with column ID keys"
+    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('row');
   });
 });
 

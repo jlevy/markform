@@ -82,16 +82,15 @@ export function getIssuesIntro(issueCount: number): string {
 export const PATCH_FORMATS: Record<string, string> = {
   string: '{ op: "set_string", fieldId: "...", value: "..." }',
   number: '{ op: "set_number", fieldId: "...", value: 123 }',
-  string_list: '{ op: "set_string_list", fieldId: "...", items: ["...", "..."] }',
-  single_select: '{ op: "set_single_select", fieldId: "...", selected: "option_id" }',
-  multi_select: '{ op: "set_multi_select", fieldId: "...", selected: ["opt1", "opt2"] }',
-  checkboxes:
-    '{ op: "set_checkboxes", fieldId: "...", values: { "opt1": "done", "opt2": "todo" } }',
+  string_list: '{ op: "set_string_list", fieldId: "...", value: ["...", "..."] }',
+  single_select: '{ op: "set_single_select", fieldId: "...", value: "option_id" }',
+  multi_select: '{ op: "set_multi_select", fieldId: "...", value: ["opt1", "opt2"] }',
+  checkboxes: '{ op: "set_checkboxes", fieldId: "...", value: { "opt1": "done", "opt2": "todo" } }',
   url: '{ op: "set_url", fieldId: "...", value: "https://..." }',
-  url_list: '{ op: "set_url_list", fieldId: "...", items: ["https://...", "https://..."] }',
+  url_list: '{ op: "set_url_list", fieldId: "...", value: ["https://...", "https://..."] }',
   date: '{ op: "set_date", fieldId: "...", value: "2024-01-15" }',
   year: '{ op: "set_year", fieldId: "...", value: 2024 }',
-  table: '{ op: "set_table", fieldId: "...", rows: [{ col1: "value1", col2: "value2" }, ...] }',
+  table: '{ op: "set_table", fieldId: "...", value: [{ col1: "value1", col2: "value2" }, ...] }',
 };
 
 /**
