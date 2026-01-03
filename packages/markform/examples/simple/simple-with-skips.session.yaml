@@ -351,7 +351,7 @@ turns:
           Severity: required, Priority: P1
           Type: multi_select
           Options: frontend, backend, database, devops
-          Set: { op: "set_multi_select", fieldId: "categories", selected: ["opt1", "opt2"] }
+          Set: { op: "set_multi_select", fieldId: "categories", value: ["opt1", "opt2"] }
           This field is required.
 
         - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
@@ -359,7 +359,7 @@ turns:
           Type: checkboxes
           Options: backed_up, notified
           Mode: explicit
-          Set: { op: "set_checkboxes", fieldId: "confirmations", values: { "opt1": "done", "opt2": "todo" } }
+          Set: { op: "set_checkboxes", fieldId: "confirmations", value: { "opt1": "done", "opt2": "todo" } }
           This field is required.
 
         - **email** (field): Required field "Email" is empty
@@ -390,13 +390,13 @@ turns:
           Severity: required, Priority: P1
           Type: single_select
           Options: low, medium, high
-          Set: { op: "set_single_select", fieldId: "priority", selected: "option_id" }
+          Set: { op: "set_single_select", fieldId: "priority", value: "option_id" }
           This field is required.
 
         - **tags** (field): Required field "Tags" is empty
           Severity: required, Priority: P1
           Type: string_list
-          Set: { op: "set_string_list", fieldId: "tags", items: ["...", "..."] }
+          Set: { op: "set_string_list", fieldId: "tags", value: ["...", "..."] }
           This field is required.
 
         - **tasks_multi** (field): All items in "Tasks (Multi Mode)" must be completed
@@ -404,7 +404,7 @@ turns:
           Type: checkboxes
           Options: research, design, implement, test
           Mode: multi
-          Set: { op: "set_checkboxes", fieldId: "tasks_multi", values: { "opt1": "done", "opt2": "todo" } }
+          Set: { op: "set_checkboxes", fieldId: "tasks_multi", value: { "opt1": "done", "opt2": "todo" } }
           This field is required.
 
         # General Instructions
@@ -641,7 +641,7 @@ turns:
             Severity: required, Priority: P1
             Type: multi_select
             Options: frontend, backend, database, devops
-            Set: { op: "set_multi_select", fieldId: "categories", selected: ["opt1", "opt2"] }
+            Set: { op: "set_multi_select", fieldId: "categories", value: ["opt1", "opt2"] }
             This field is required.
 
           - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
@@ -649,7 +649,7 @@ turns:
             Type: checkboxes
             Options: backed_up, notified
             Mode: explicit
-            Set: { op: "set_checkboxes", fieldId: "confirmations", values: { "opt1": "done", "opt2": "todo" } }
+            Set: { op: "set_checkboxes", fieldId: "confirmations", value: { "opt1": "done", "opt2": "todo" } }
             This field is required.
 
           - **email** (field): Required field "Email" is empty
@@ -680,13 +680,13 @@ turns:
             Severity: required, Priority: P1
             Type: single_select
             Options: low, medium, high
-            Set: { op: "set_single_select", fieldId: "priority", selected: "option_id" }
+            Set: { op: "set_single_select", fieldId: "priority", value: "option_id" }
             This field is required.
 
           - **tags** (field): Required field "Tags" is empty
             Severity: required, Priority: P1
             Type: string_list
-            Set: { op: "set_string_list", fieldId: "tags", items: ["...", "..."] }
+            Set: { op: "set_string_list", fieldId: "tags", value: ["...", "..."] }
             This field is required.
 
           - **tasks_multi** (field): All items in "Tasks (Multi Mode)" must be completed
@@ -694,7 +694,7 @@ turns:
             Type: checkboxes
             Options: research, design, implement, test
             Mode: multi
-            Set: { op: "set_checkboxes", fieldId: "tasks_multi", values: { "opt1": "done", "opt2": "todo" } }
+            Set: { op: "set_checkboxes", fieldId: "tasks_multi", value: { "opt1": "done", "opt2": "todo" } }
             This field is required.
 
           # General Instructions
@@ -711,7 +711,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  value:
+                  items:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -752,10 +752,10 @@ turns:
                       op: set_single_select
                       value: high
                     - field_id: tags
+                      op: set_string_list
                       value:
                         - typescript
                         - testing
-                      op: set_string_list
                     - field_id: tasks_multi
                       op: set_checkboxes
                       value:
@@ -1129,7 +1129,7 @@ turns:
           Type: checkboxes
           Options: read_guidelines, agree_terms
           Mode: simple
-          Set: { op: "set_checkboxes", fieldId: "tasks_simple", values: { "opt1": "done", "opt2": "todo" } }
+          Set: { op: "set_checkboxes", fieldId: "tasks_simple", value: { "opt1": "done", "opt2": "todo" } }
           This field is required.
 
         - **website** (field): Required field "Website" is empty
@@ -1167,13 +1167,13 @@ turns:
           Type: table
           Columns: task (required), estimate_hrs, link
           Rows: min: 0, max: 10
-          Set: { op: "set_table", fieldId: "project_tasks", rows: [{ "task": "...", "estimate_hrs": "...", "link": "..." }, ...] }
+          Set: { op: "set_table", fieldId: "project_tasks", value: [{ "task": "...", "estimate_hrs": "...", "link": "..." }, ...] }
           Skip: { op: "skip_field", fieldId: "project_tasks", reason: "..." }
 
         - **references** (field): Optional field not yet addressed
           Severity: recommended, Priority: P3
           Type: url_list
-          Set: { op: "set_url_list", fieldId: "references", items: ["https://...", "https://..."] }
+          Set: { op: "set_url_list", fieldId: "references", value: ["https://...", "https://..."] }
           Skip: { op: "skip_field", fieldId: "references", reason: "..." }
 
         - **related_url** (field): Optional field not yet addressed
@@ -1444,7 +1444,7 @@ turns:
             Type: checkboxes
             Options: read_guidelines, agree_terms
             Mode: simple
-            Set: { op: "set_checkboxes", fieldId: "tasks_simple", values: { "opt1": "done", "opt2": "todo" } }
+            Set: { op: "set_checkboxes", fieldId: "tasks_simple", value: { "opt1": "done", "opt2": "todo" } }
             This field is required.
 
           - **website** (field): Required field "Website" is empty
@@ -1482,13 +1482,13 @@ turns:
             Type: table
             Columns: task (required), estimate_hrs, link
             Rows: min: 0, max: 10
-            Set: { op: "set_table", fieldId: "project_tasks", rows: [{ "task": "...", "estimate_hrs": "...", "link": "..." }, ...] }
+            Set: { op: "set_table", fieldId: "project_tasks", value: [{ "task": "...", "estimate_hrs": "...", "link": "..." }, ...] }
             Skip: { op: "skip_field", fieldId: "project_tasks", reason: "..." }
 
           - **references** (field): Optional field not yet addressed
             Severity: recommended, Priority: P3
             Type: url_list
-            Set: { op: "set_url_list", fieldId: "references", items: ["https://...", "https://..."] }
+            Set: { op: "set_url_list", fieldId: "references", value: ["https://...", "https://..."] }
             Skip: { op: "skip_field", fieldId: "references", reason: "..." }
 
           - **related_url** (field): Optional field not yet addressed
@@ -1517,7 +1517,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  value:
+                  items:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -1558,9 +1558,9 @@ turns:
                       reason: No value in mock form
                       role: agent
                     - field_id: references
+                      op: set_url_list
                       value:
                         - https://docs.example.com
-                      op: set_url_list
                     - field_id: related_url
                       op: skip_field
                       reason: No value in mock form
@@ -1874,7 +1874,7 @@ turns:
           Type: table
           Columns: name (required), role, start_date
           Rows: min: 0, max: 5
-          Set: { op: "set_table", fieldId: "team_members", rows: [{ "name": "...", "role": "...", "start_date": "..." }, ...] }
+          Set: { op: "set_table", fieldId: "team_members", value: [{ "name": "...", "role": "...", "start_date": "..." }, ...] }
           Skip: { op: "skip_field", fieldId: "team_members", reason: "..." }
 
         # General Instructions
@@ -2162,7 +2162,7 @@ turns:
             Type: table
             Columns: name (required), role, start_date
             Rows: min: 0, max: 5
-            Set: { op: "set_table", fieldId: "team_members", rows: [{ "name": "...", "role": "...", "start_date": "..." }, ...] }
+            Set: { op: "set_table", fieldId: "team_members", value: [{ "name": "...", "role": "...", "start_date": "..." }, ...] }
             Skip: { op: "skip_field", fieldId: "team_members", reason: "..." }
 
           # General Instructions
@@ -2179,7 +2179,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  value:
+                  items:
                     $ref: '#/$defs/patch'
                   type: array
               required:

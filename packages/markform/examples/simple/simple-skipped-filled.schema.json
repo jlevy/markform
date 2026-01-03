@@ -93,29 +93,49 @@
       "properties": {
         "research": {
           "anyOf": [
-            { "type": "string", "enum": ["todo", "done", "incomplete", "active", "na"] },
-            { "type": "boolean" }
+            {
+              "type": "string",
+              "enum": ["todo", "done", "incomplete", "active", "na"]
+            },
+            {
+              "type": "boolean"
+            }
           ],
           "title": "Research"
         },
         "design": {
           "anyOf": [
-            { "type": "string", "enum": ["todo", "done", "incomplete", "active", "na"] },
-            { "type": "boolean" }
+            {
+              "type": "string",
+              "enum": ["todo", "done", "incomplete", "active", "na"]
+            },
+            {
+              "type": "boolean"
+            }
           ],
           "title": "Design"
         },
         "implement": {
           "anyOf": [
-            { "type": "string", "enum": ["todo", "done", "incomplete", "active", "na"] },
-            { "type": "boolean" }
+            {
+              "type": "string",
+              "enum": ["todo", "done", "incomplete", "active", "na"]
+            },
+            {
+              "type": "boolean"
+            }
           ],
           "title": "Implement"
         },
         "test": {
           "anyOf": [
-            { "type": "string", "enum": ["todo", "done", "incomplete", "active", "na"] },
-            { "type": "boolean" }
+            {
+              "type": "string",
+              "enum": ["todo", "done", "incomplete", "active", "na"]
+            },
+            {
+              "type": "boolean"
+            }
           ],
           "title": "Test"
         }
@@ -131,11 +151,27 @@
       "type": "object",
       "properties": {
         "read_guidelines": {
-          "anyOf": [{ "type": "string", "enum": ["todo", "done"] }, { "type": "boolean" }],
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": ["todo", "done"]
+            },
+            {
+              "type": "boolean"
+            }
+          ],
           "title": "I have read the guidelines"
         },
         "agree_terms": {
-          "anyOf": [{ "type": "string", "enum": ["todo", "done"] }, { "type": "boolean" }],
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": ["todo", "done"]
+            },
+            {
+              "type": "boolean"
+            }
+          ],
           "title": "I agree to the terms"
         }
       },
@@ -150,11 +186,27 @@
       "type": "object",
       "properties": {
         "backed_up": {
-          "anyOf": [{ "type": "string", "enum": ["unfilled", "yes", "no"] }, { "type": "boolean" }],
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": ["unfilled", "yes", "no"]
+            },
+            {
+              "type": "boolean"
+            }
+          ],
           "title": "Data has been backed up"
         },
         "notified": {
-          "anyOf": [{ "type": "string", "enum": ["unfilled", "yes", "no"] }, { "type": "boolean" }],
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": ["unfilled", "yes", "no"]
+            },
+            {
+              "type": "boolean"
+            }
+          ],
           "title": "Stakeholders notified"
         }
       },

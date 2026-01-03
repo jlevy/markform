@@ -125,7 +125,7 @@ turns:
           Type: table
           Columns: source, score, votes
           Rows: min: 1, max: 5
-          Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
           This field is required.
 
         - **title** (field): Required field "Title" is empty
@@ -215,7 +215,7 @@ turns:
             Type: table
             Columns: source, score, votes
             Rows: min: 1, max: 5
-            Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
             This field is required.
 
           - **title** (field): Required field "Title" is empty
@@ -238,7 +238,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  value:
+                  items:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -331,7 +331,7 @@ turns:
 
         - **Error:** Cannot apply set_string to table field "ratings"
           **Correction:** This field is type "table". Use set_table instead.
-          **Correct format:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          **Correct format:** { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
 
         # Current Form State
 
@@ -379,7 +379,7 @@ turns:
           Type: table
           Columns: source, score, votes
           Rows: min: 1, max: 5
-          Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
           This field is required.
 
         - **title** (field): Required field "Title" is empty
@@ -429,7 +429,7 @@ turns:
 
           - **Error:** Cannot apply set_string to table field "ratings"
             **Correction:** This field is type "table". Use set_table instead.
-            **Correct format:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            **Correct format:** { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
 
           # Current Form State
 
@@ -477,7 +477,7 @@ turns:
             Type: table
             Columns: source, score, votes
             Rows: min: 1, max: 5
-            Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
             This field is required.
 
           - **title** (field): Required field "Title" is empty
@@ -500,7 +500,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  value:
+                  items:
                     $ref: '#/$defs/patch'
                   type: array
               required:
