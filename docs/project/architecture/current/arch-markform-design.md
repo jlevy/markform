@@ -882,8 +882,12 @@ import { fillForm } from 'markform';
 const result = await fillForm({
   form: formMarkdown,                        // string or ParsedForm
   model: 'anthropic/claude-sonnet-4-5',      // model identifier
+  enableWebSearch: true,                     // enable web search tools
+  captureWireFormat: false,                  // capture LLM request/response
   inputContext: { company_name: 'Acme' },    // pre-fill values
-  onTurnComplete: (progress) => { ... },     // progress callback
+  callbacks: {
+    onTurnComplete: (progress) => { ... },   // progress callback
+  },
 });
 
 if (result.status.ok) {
@@ -891,6 +895,17 @@ if (result.status.ok) {
   console.log(result.markdown); // completed form
 }
 ```
+
+**FillStatus values:**
+- `{ ok: true }` — Form completed successfully
+- `{ ok: false, reason: 'max_turns' }` — Hit safety limit
+- `{ ok: false, reason: 'batch_limit' }` — Hit per-call limit (resumable)
+- `{ ok: false, reason: 'cancelled' }` — Aborted via signal
+- `{ ok: false, reason: 'error' }` — Unexpected error
+
+**Resumable fills:** For orchestrated environments with timeout constraints (Convex, AWS
+Step Functions), use `maxTurnsThisCall` to limit turns per call and `startingTurnNumber`
+to resume from checkpoints. See [markform-apis.md](../../../markform-apis.md) for details.
 
 #### runResearch()
 

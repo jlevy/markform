@@ -176,9 +176,81 @@ const result = await fillForm({
   form: parsedForm,
   model: 'anthropic/claude-sonnet-4-5',
   enableWebSearch: true,
+  captureWireFormat: false,
   targetRoles: ['agent'],
 });
 ```
+
+**FillOptions fields:**
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `form` | `string \| ParsedForm` | (required) | Form markdown or parsed form |
+| `model` | `string \| LanguageModel` | (required) | Model identifier or instance |
+| `enableWebSearch` | `boolean` | (required) | Enable provider web search tools |
+| `captureWireFormat` | `boolean` | (required) | Capture full LLM request/response |
+| `inputContext` | `InputContext` | `undefined` | Pre-fill fields by ID |
+| `systemPromptAddition` | `string` | `undefined` | Additional system prompt context |
+| `maxTurns` | `number` | `100` | Maximum harness turns (safety limit) |
+| `maxTurnsThisCall` | `number` | `undefined` | Per-call turn limit for resumable fills |
+| `startingTurnNumber` | `number` | `0` | Starting turn for progress tracking |
+| `maxPatchesPerTurn` | `number` | `20` | Maximum patches per turn |
+| `maxIssuesPerTurn` | `number` | `10` | Maximum issues shown per turn |
+| `targetRoles` | `string[]` | `['agent']` | Roles to fill |
+| `fillMode` | `FillMode` | `'continue'` | `'continue'` or `'overwrite'` |
+| `callbacks` | `FillCallbacks` | `undefined` | Progress callbacks |
+| `signal` | `AbortSignal` | `undefined` | Cancellation signal |
+| `additionalTools` | `Record<string, Tool>` | `undefined` | Custom tools for agent |
+
+### FillStatus
+
+The `status` field in `FillResult` indicates success or failure:
+
+| Status | Description |
+| --- | --- |
+| `{ ok: true }` | Form completed successfully |
+| `{ ok: false, reason: 'max_turns' }` | Hit overall `maxTurns` safety limit |
+| `{ ok: false, reason: 'batch_limit' }` | Hit `maxTurnsThisCall` per-call limit |
+| `{ ok: false, reason: 'cancelled' }` | Aborted via signal |
+| `{ ok: false, reason: 'error' }` | Unexpected error |
+
+### Resumable Form Fills
+
+For orchestrated environments with timeout constraints (e.g., Convex, AWS Step Functions),
+use `maxTurnsThisCall` to limit turns per call and resume from checkpoints.
+
+```typescript
+import { fillForm } from 'markform';
+
+// First call - limit to 2 turns
+const r1 = await fillForm({
+  form: formMarkdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: false,
+  captureWireFormat: false,
+  maxTurnsThisCall: 2, // Stop after 2 turns
+});
+
+if (!r1.status.ok && r1.status.reason === 'batch_limit') {
+  // Resume from checkpoint using r1.markdown
+  const r2 = await fillForm({
+    form: r1.markdown,           // Use checkpoint as input
+    model: 'anthropic/claude-sonnet-4-5',
+    enableWebSearch: false,
+    captureWireFormat: false,
+    startingTurnNumber: r1.turns, // Continue turn count
+  });
+
+  console.log('Total turns:', r2.turns);
+  console.log('Status:', r2.status);
+}
+```
+
+**Key points:**
+- `maxTurnsThisCall` limits turns in a single call, returns `batch_limit` when reached
+- `result.markdown` contains the form checkpoint (serialized state)
+- `startingTurnNumber` ensures accurate progress tracking across calls
+- The form itself is the state—no session storage needed
 
 ### FillCallbacks
 
