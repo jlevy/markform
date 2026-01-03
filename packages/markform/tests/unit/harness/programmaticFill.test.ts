@@ -515,7 +515,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
-        maxTurns: 2,
+        maxTurnsTotal: 2,
         _testAgent: emptyMockAgent,
       });
 
@@ -538,7 +538,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
-        maxTurns: 1,
+        maxTurnsTotal: 1,
         _testAgent: emptyMockAgent,
       });
 

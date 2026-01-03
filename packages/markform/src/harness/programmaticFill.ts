@@ -210,13 +210,16 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   }
 
   // 4. Create harness + agent
-  const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
+  const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
+  const startingTurnNumber = options.startingTurnNumber ?? 0;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
   const maxIssuesPerTurn = options.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN;
   const targetRoles = options.targetRoles ?? [AGENT_ROLE];
 
+  // Pass remaining turns to harness (accounts for turns already executed in previous calls)
+  const remainingTurns = Math.max(0, maxTurnsTotal - startingTurnNumber);
   const harness = createHarness(form, {
-    maxTurns,
+    maxTurns: remainingTurns,
     maxPatchesPerTurn,
     maxIssuesPerTurn,
     targetRoles,
@@ -237,7 +240,6 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     });
 
   // 5. Run harness loop
-  const startingTurnNumber = options.startingTurnNumber ?? 0;
   let turnCount = startingTurnNumber;
   let turnsThisCall = 0;
   let stepResult = harness.step();
@@ -399,7 +401,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     form,
     turnCount,
     totalPatches,
-    { ok: false, reason: 'max_turns', message: `Reached maximum turns (${maxTurns})` },
+    { ok: false, reason: 'max_turns', message: `Reached maximum total turns (${maxTurnsTotal})` },
     inputContextWarnings,
     stepResult.issues,
   );

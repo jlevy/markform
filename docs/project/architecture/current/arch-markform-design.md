@@ -898,14 +898,15 @@ if (result.status.ok) {
 
 **FillStatus values:**
 - `{ ok: true }` — Form completed successfully
-- `{ ok: false, reason: 'max_turns' }` — Hit safety limit
-- `{ ok: false, reason: 'batch_limit' }` — Hit per-call limit (resumable)
+- `{ ok: false, reason: 'max_turns' }` — Hit `maxTurnsTotal` safety limit
+- `{ ok: false, reason: 'batch_limit' }` — Hit `maxTurnsThisCall` per-call limit (resumable)
 - `{ ok: false, reason: 'cancelled' }` — Aborted via signal
 - `{ ok: false, reason: 'error' }` — Unexpected error
 
 **Resumable fills:** For orchestrated environments with timeout constraints (Convex, AWS
 Step Functions), use `maxTurnsThisCall` to limit turns per call and `startingTurnNumber`
-to resume from checkpoints. See [markform-apis.md](../../../markform-apis.md) for details.
+to resume from checkpoints. The `maxTurnsTotal` limit is enforced across all calls.
+See [markform-apis.md](../../../markform-apis.md) for details.
 
 #### runResearch()
 

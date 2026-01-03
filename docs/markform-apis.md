@@ -191,7 +191,7 @@ const result = await fillForm({
 | `captureWireFormat` | `boolean` | (required) | Capture full LLM request/response |
 | `inputContext` | `InputContext` | `undefined` | Pre-fill fields by ID |
 | `systemPromptAddition` | `string` | `undefined` | Additional system prompt context |
-| `maxTurns` | `number` | `100` | Maximum harness turns (safety limit) |
+| `maxTurnsTotal` | `number` | `100` | Maximum TOTAL turns across all calls (safety limit) |
 | `maxTurnsThisCall` | `number` | `undefined` | Per-call turn limit for resumable fills |
 | `startingTurnNumber` | `number` | `0` | Starting turn for progress tracking |
 | `maxPatchesPerTurn` | `number` | `20` | Maximum patches per turn |
@@ -209,7 +209,7 @@ The `status` field in `FillResult` indicates success or failure:
 | Status | Description |
 | --- | --- |
 | `{ ok: true }` | Form completed successfully |
-| `{ ok: false, reason: 'max_turns' }` | Hit overall `maxTurns` safety limit |
+| `{ ok: false, reason: 'max_turns' }` | Hit overall `maxTurnsTotal` safety limit |
 | `{ ok: false, reason: 'batch_limit' }` | Hit `maxTurnsThisCall` per-call limit |
 | `{ ok: false, reason: 'cancelled' }` | Aborted via signal |
 | `{ ok: false, reason: 'error' }` | Unexpected error |

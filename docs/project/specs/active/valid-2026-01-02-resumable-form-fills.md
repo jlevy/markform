@@ -81,7 +81,7 @@ const result = await fillForm({
   enableWebSearch: true,
   captureWireFormat: false,
 });
-// Should complete or hit maxTurns, never batch_limit
+// Should complete or hit maxTurnsTotal, never batch_limit
 ```
 
 ### 3. TypeScript Types

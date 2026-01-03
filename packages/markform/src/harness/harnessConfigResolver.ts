@@ -36,7 +36,7 @@ export function resolveHarnessConfig(
 
   // Merge with precedence: options > frontmatter > defaults
   return {
-    maxTurns: options?.maxTurns ?? frontmatterConfig?.maxTurns ?? DEFAULT_MAX_TURNS,
+    maxTurns: options?.maxTurnsTotal ?? frontmatterConfig?.maxTurns ?? DEFAULT_MAX_TURNS,
     maxPatchesPerTurn:
       options?.maxPatchesPerTurn ??
       frontmatterConfig?.maxPatchesPerTurn ??

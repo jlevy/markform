@@ -275,16 +275,23 @@ export interface FillOptions {
   inputContext?: InputContext;
   /** Additional context to append to the composed system prompt (never overrides) */
   systemPromptAddition?: string;
-  /** Maximum harness turns (default: 100) */
-  maxTurns?: number;
   /**
-   * Maximum turns to execute in THIS call.
+   * Maximum TOTAL turns across all calls combined.
+   * This is a safety limit to prevent runaway sessions.
+   * When resuming, pass the same value—the limit is enforced by comparing
+   * against `startingTurnNumber + turnsExecutedThisCall`.
+   *
+   * @default 100
+   */
+  maxTurnsTotal?: number;
+  /**
+   * Maximum turns to execute in THIS call only.
    * When reached, returns with status `{ ok: false, reason: 'batch_limit' }`.
    * Caller can resume by passing the returned form markdown back.
    *
    * Use for orchestrated environments with timeout constraints (e.g., Convex, Step Functions).
    *
-   * @default undefined (no per-call limit - runs until complete or maxTurns)
+   * @default undefined (no per-call limit - runs until complete or maxTurnsTotal)
    */
   maxTurnsThisCall?: number;
   /**
@@ -367,7 +374,7 @@ export interface TurnProgress {
  * Fill status indicating success or failure reason.
  *
  * - `ok: true` - Form completed successfully
- * - `max_turns` - Hit overall maxTurns safety limit
+ * - `max_turns` - Hit overall maxTurnsTotal safety limit
  * - `batch_limit` - Hit maxTurnsThisCall per-call limit (resume by calling again)
  * - `cancelled` - Aborted via signal
  * - `error` - Unexpected error

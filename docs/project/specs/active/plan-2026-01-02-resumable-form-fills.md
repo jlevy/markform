@@ -101,7 +101,7 @@ if (!result1.status.ok && result1.status.reason === 'batch_limit') {
 
 | Parameter | Default | Behavior |
 | --- | --- | --- |
-| `maxTurnsThisCall` | `undefined` | No per-call limit; runs until complete or `maxTurns` |
+| `maxTurnsThisCall` | `undefined` | No per-call limit; runs until complete or `maxTurnsTotal` |
 | `startingTurnNumber` | `0` | Turn counting starts at 1 |
 
 ## Stage 1: Planning Stage
@@ -170,36 +170,37 @@ Implementation: `turns = startingTurnNumber + turnsThisCall`
 
 Rationale:
 - Accurate progress tracking across sessions
-- Consistent with how `maxTurns` is meant to work (overall limit)
+- Consistent with how `maxTurnsTotal` is meant to work (overall limit)
 
-**Decision 3: Interaction with maxTurns**
+**Decision 3: Interaction with maxTurnsTotal**
 
 Both limits apply independently:
 
 | Scenario | Result |
 | --- | --- |
 | `maxTurnsThisCall` hit first | `reason: 'batch_limit'` |
-| `maxTurns` hit first | `reason: 'max_turns'` |
+| `maxTurnsTotal` hit first | `reason: 'max_turns'` |
 
-The overall `maxTurns` limit is checked by the harness, which creates a fresh counter each
-call. To enforce overall limits across calls, callers must track total turns externally:
+The overall `maxTurnsTotal` limit is automatically enforced across calls. When you pass
+`startingTurnNumber`, the harness receives `maxTurnsTotal - startingTurnNumber` as its
+internal limit, so the total is enforced without manual tracking:
 
 ```typescript
-const overallLimit = 100;
-let totalTurns = 0;
+// maxTurnsTotal is automatically enforced across calls
+const result1 = await fillForm({
+  form: formMarkdown,
+  maxTurnsTotal: 100,    // Overall limit
+  maxTurnsThisCall: 5,   // Per-call limit
+});
 
-while (totalTurns < overallLimit) {
-  const result = await fillForm({
-    form: checkpoint,
-    maxTurns: overallLimit - totalTurns, // Remaining budget
-    maxTurnsThisCall: 5,
-    startingTurnNumber: totalTurns,
-  });
-  totalTurns = result.turns;
-  if (result.status.ok) break;
-  if (result.status.reason !== 'batch_limit') break;
-  checkpoint = result.markdown;
-}
+// Resume - total turns limit is still 100
+const result2 = await fillForm({
+  form: result1.markdown,
+  maxTurnsTotal: 100,           // Same overall limit
+  maxTurnsThisCall: 5,          // Per-call limit
+  startingTurnNumber: result1.turns, // Continue from where we left off
+});
+// Harness receives maxTurns = 100 - result1.turns (remaining budget)
 ```
 
 ### Feature Scope
