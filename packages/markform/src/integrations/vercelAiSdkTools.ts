@@ -217,9 +217,9 @@ export function createMarkformTools(options: CreateMarkformToolsOptions): Markfo
   // markform_apply - Apply patches to update form values
   const markform_apply: MarkformTool<{ patches: Patch[] }, ApplyToolResult> = {
     description:
-      'Apply patches to update form field values. Use this after inspecting the form to set values for ' +
-      'fields that need to be filled. Patches are applied as a transaction - all succeed or all fail. ' +
-      'Returns the updated form state and any remaining issues. ' +
+      'Apply patches to update form field values. Valid patches are applied even if some fail. ' +
+      'Single values are automatically coerced to arrays for list fields. ' +
+      'Returns applied patches, warnings for coerced values, and rejected patches separately. ' +
       'Patch operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, ' +
       'set_checkboxes, set_url, set_url_list, set_date, set_year, set_table, clear_field, skip_field, abort_field.',
     inputSchema: ApplyInputSchema,
@@ -230,17 +230,23 @@ export function createMarkformTools(options: CreateMarkformToolsOptions): Markfo
       // Update the store with the modified form
       sessionStore.updateForm(form);
 
+      const warningNote = result.warnings.length > 0 ? ` (${result.warnings.length} coerced)` : '';
+      const remaining = result.issues.filter((i) => i.severity === 'required').length;
+
       const message =
         result.applyStatus === 'applied'
-          ? `Applied ${patches.length} patch(es). ${
+          ? `Applied ${patches.length} patch(es)${warningNote}. ${
               result.isComplete
                 ? 'Form is now complete!'
-                : `${result.issues.filter((i) => i.severity === 'required').length} required issue(s) remaining.`
+                : `${remaining} required issue(s) remaining.`
             }`
-          : `Patches rejected. Check field IDs and value types.`;
+          : result.applyStatus === 'partial'
+            ? `Applied ${result.appliedPatches.length}/${patches.length} patches${warningNote}. ` +
+              `${result.rejectedPatches.length} rejected.`
+            : `All patches rejected. Check field IDs and value types.`;
 
       return Promise.resolve({
-        success: result.applyStatus === 'applied',
+        success: result.applyStatus !== 'rejected',
         data: result,
         message,
       });

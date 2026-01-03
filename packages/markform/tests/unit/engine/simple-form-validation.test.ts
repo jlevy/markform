@@ -251,11 +251,8 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
       expect(result.applyStatus).toBe('rejected');
     });
 
-    it('rejects batch if any patch is invalid (transaction semantics)', async () => {
+    it('applies valid patches even when some are invalid (best-effort semantics)', async () => {
       const form = await loadSimpleForm();
-
-      // Get initial state of name field (may be null or undefined)
-      const initialNameValue = form.responsesByFieldId.name?.value;
 
       const patches: Patch[] = [
         { op: 'set_string', fieldId: 'name', value: 'John Doe' }, // valid
@@ -264,14 +261,13 @@ describe('Simple Form Validation (Phase 1 Checkpoint)', () => {
 
       const result = applyPatches(form, patches);
 
-      expect(result.applyStatus).toBe('rejected');
-      // Form should remain unchanged - name should still have original value
-      // (could be null/undefined or the parsed initial value)
-      if (initialNameValue === undefined) {
-        expect(form.responsesByFieldId.name?.value).toBeUndefined();
-      } else {
-        expect(form.responsesByFieldId.name?.value).toEqual(initialNameValue);
-      }
+      expect(result.applyStatus).toBe('partial');
+      // Valid patch should be applied
+      expect(form.responsesByFieldId.name?.state).toBe('answered');
+      expect((form.responsesByFieldId.name?.value as { value: string })?.value).toBe('John Doe');
+      // Check applied/rejected counts
+      expect(result.appliedPatches.length).toBe(1);
+      expect(result.rejectedPatches.length).toBe(1);
     });
   });
 });

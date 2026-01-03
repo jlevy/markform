@@ -274,8 +274,8 @@ John
     });
   });
 
-  describe('transaction semantics', () => {
-    it('rejects all patches if any is invalid', () => {
+  describe('best-effort semantics', () => {
+    it('applies valid patches even when some are invalid', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -298,10 +298,17 @@ markform:
 
       const result = applyPatches(form, patches);
 
-      expect(result.applyStatus).toBe('rejected');
-      // Name should NOT be updated due to transaction rollback
+      expect(result.applyStatus).toBe('partial');
+      // Name SHOULD be updated (valid patch applied)
       const nameResponse = form.responsesByFieldId.name;
-      expect(nameResponse?.state === 'unanswered' || nameResponse === undefined).toBe(true);
+      expect(nameResponse?.state).toBe('answered');
+      expect((nameResponse?.value as { value: string })?.value).toBe('John');
+      // Age should NOT be updated (invalid patch rejected)
+      const ageResponse = form.responsesByFieldId.age;
+      expect(ageResponse?.state === 'unanswered' || ageResponse === undefined).toBe(true);
+      // Check applied/rejected patch counts
+      expect(result.appliedPatches.length).toBe(1);
+      expect(result.rejectedPatches.length).toBe(1);
     });
 
     it('rejects if field does not exist', () => {
@@ -1601,4 +1608,179 @@ markform:
     });
   });
   /* eslint-enable @typescript-eslint/no-unsafe-argument */
+
+  /* eslint-disable @typescript-eslint/no-unsafe-argument */
+  describe('value coercion', () => {
+    const COERCION_TEST_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string_list" id="items" label="Items" %}{% /field %}
+{% field kind="url_list" id="urls" label="URLs" %}{% /field %}
+{% field kind="multi_select" id="tags" label="Tags" %}
+- [ ] Option 1 {% #opt1 %}
+- [ ] Option 2 {% #opt2 %}
+{% /field %}
+{% field kind="checkboxes" id="checks" label="Checks" %}
+- [ ] Check A {% #a %}
+- [ ] Check B {% #b %}
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('coerces single string to string_list with warning', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      // Use 'as any' to send intentionally wrong type for coercion
+      const patch = { op: 'set_string_list', fieldId: 'items', value: 'single item' } as any;
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.appliedPatches.length).toBe(1);
+      expect(result.warnings.length).toBe(1);
+      expect(result.warnings[0]?.coercion).toBe('string_to_list');
+      expect(result.warnings[0]?.fieldId).toBe('items');
+
+      // Verify the value was coerced to an array
+      const value = form.responsesByFieldId.items?.value as { items: string[] };
+      expect(value.items).toEqual(['single item']);
+    });
+
+    it('coerces single URL to url_list with warning', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      const patch = { op: 'set_url_list', fieldId: 'urls', value: 'https://example.com' } as any;
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.appliedPatches.length).toBe(1);
+      expect(result.warnings.length).toBe(1);
+      expect(result.warnings[0]?.coercion).toBe('url_to_list');
+      expect(result.warnings[0]?.fieldId).toBe('urls');
+
+      const value = form.responsesByFieldId.urls?.value as { items: string[] };
+      expect(value.items).toEqual(['https://example.com']);
+    });
+
+    it('coerces single option to multi_select array with warning', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      const patch = { op: 'set_multi_select', fieldId: 'tags', value: 'opt1' } as any;
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.appliedPatches.length).toBe(1);
+      expect(result.warnings.length).toBe(1);
+      expect(result.warnings[0]?.coercion).toBe('option_to_array');
+      expect(result.warnings[0]?.fieldId).toBe('tags');
+
+      const value = form.responsesByFieldId.tags?.value as { selected: string[] };
+      expect(value.selected).toEqual(['opt1']);
+    });
+
+    it('coerces boolean to checkbox string with warning', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      const patch = {
+        op: 'set_checkboxes',
+        fieldId: 'checks',
+        value: { a: true, b: false },
+      } as any;
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.appliedPatches.length).toBe(1);
+      expect(result.warnings.length).toBe(1);
+      expect(result.warnings[0]?.coercion).toBe('boolean_to_checkbox');
+      expect(result.warnings[0]?.fieldId).toBe('checks');
+
+      const value = form.responsesByFieldId.checks?.value as { values: Record<string, string> };
+      expect(value.values.a).toBe('done');
+      expect(value.values.b).toBe('todo');
+    });
+
+    it('does not produce warning when value is already correct type', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      const patch: Patch = { op: 'set_string_list', fieldId: 'items', value: ['item1', 'item2'] };
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.appliedPatches.length).toBe(1);
+      expect(result.warnings.length).toBe(0);
+
+      const value = form.responsesByFieldId.items?.value as { items: string[] };
+      expect(value.items).toEqual(['item1', 'item2']);
+    });
+
+    it('coerced values are in appliedPatches (not original)', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      const patch = { op: 'set_string_list', fieldId: 'items', value: 'coerced' } as any;
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      // The applied patch should have the coerced array value
+      const appliedPatch = result.appliedPatches[0] as { value: string[] };
+      expect(appliedPatch.value).toEqual(['coerced']);
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-unsafe-argument */
+
+  describe('all patches rejected', () => {
+    it('returns rejected status when all patches fail', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [{ op: 'set_string', fieldId: 'nonexistent', value: 'value' }];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.appliedPatches.length).toBe(0);
+      expect(result.rejectedPatches.length).toBe(1);
+      expect(result.warnings.length).toBe(0);
+    });
+  });
+
+  describe('all patches succeed', () => {
+    it('returns applied status when all patches succeed', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% field kind="number" id="age" label="Age" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const patches: Patch[] = [
+        { op: 'set_string', fieldId: 'name', value: 'Alice' },
+        { op: 'set_number', fieldId: 'age', value: 30 },
+      ];
+
+      const result = applyPatches(form, patches);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.appliedPatches.length).toBe(2);
+      expect(result.rejectedPatches.length).toBe(0);
+    });
+  });
 });
