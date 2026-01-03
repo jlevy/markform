@@ -704,16 +704,38 @@ export interface PatchRejection {
   columnIds?: string[];
 }
 
+/** Coercion type for patch warnings */
+export type PatchCoercionType =
+  | 'string_to_list'
+  | 'url_to_list'
+  | 'option_to_array'
+  | 'boolean_to_checkbox';
+
+/** Warning for coerced patches */
+export interface PatchWarning {
+  patchIndex: number;
+  fieldId: string;
+  message: string;
+  coercion: PatchCoercionType;
+}
+
+/** Status of patch application */
+export type ApplyStatus = 'applied' | 'partial' | 'rejected';
+
 /** Result from apply operation */
 export interface ApplyResult {
-  applyStatus: 'applied' | 'rejected';
+  applyStatus: ApplyStatus;
   structureSummary: StructureSummary;
   progressSummary: ProgressSummary;
   issues: InspectIssue[];
   isComplete: boolean;
   formState: ProgressState;
+  /** Patches that were successfully applied (normalized/coerced) */
+  appliedPatches: Patch[];
   /** Empty on success, contains rejection details on failure */
   rejectedPatches: PatchRejection[];
+  /** Warnings for patches that were coerced */
+  warnings: PatchWarning[];
 }
 
 // =============================================================================
@@ -1590,15 +1612,6 @@ export const InspectResultSchema = z.object({
   formState: ProgressStateSchema,
 });
 
-export const ApplyResultSchema = z.object({
-  applyStatus: z.enum(['applied', 'rejected']),
-  structureSummary: StructureSummarySchema,
-  progressSummary: ProgressSummarySchema,
-  issues: z.array(InspectIssueSchema),
-  isComplete: z.boolean(),
-  formState: ProgressStateSchema,
-});
-
 // Patch rejection schema
 export const PatchRejectionSchema = z.object({
   patchIndex: z.number().int().nonnegative(),
@@ -1606,6 +1619,35 @@ export const PatchRejectionSchema = z.object({
   fieldId: z.string().optional(),
   fieldKind: z.string().optional(),
   columnIds: z.array(z.string()).optional(),
+});
+
+// Patch warning schemas
+export const PatchCoercionTypeSchema = z.enum([
+  'string_to_list',
+  'url_to_list',
+  'option_to_array',
+  'boolean_to_checkbox',
+]);
+
+export const PatchWarningSchema = z.object({
+  patchIndex: z.number().int().nonnegative(),
+  fieldId: z.string(),
+  message: z.string(),
+  coercion: PatchCoercionTypeSchema,
+});
+
+export const ApplyStatusSchema = z.enum(['applied', 'partial', 'rejected']);
+
+export const ApplyResultSchema = z.object({
+  applyStatus: ApplyStatusSchema,
+  structureSummary: StructureSummarySchema,
+  progressSummary: ProgressSummarySchema,
+  issues: z.array(InspectIssueSchema),
+  isComplete: z.boolean(),
+  formState: ProgressStateSchema,
+  appliedPatches: z.array(z.lazy(() => PatchSchema)),
+  rejectedPatches: z.array(PatchRejectionSchema),
+  warnings: z.array(PatchWarningSchema),
 });
 
 // Patch schemas

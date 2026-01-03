@@ -45,9 +45,9 @@ turns:
             - score
             - votes
     after:
-      required_issue_count: 2
-      markdown_sha256: 4edc8e8f1e858aafa657f32e1c2e56c4bfbe93b37224e1010eb6883c111e1c86
-      answered_field_count: 0
+      required_issue_count: 1
+      markdown_sha256: 6dea4cae87738069d3c212e817ac7a59a77fcd3c78d7fac506adf4f5b36caf27
+      answered_field_count: 1
       skipped_field_count: 0
     context:
       system_prompt: |-
@@ -268,12 +268,6 @@ turns:
           scope: field
           reason: required_missing
           message: Required field "Ratings" is empty
-          severity: required
-          priority: 1
-        - ref: title
-          scope: field
-          reason: required_missing
-          message: Required field "Title" is empty
           severity: required
           priority: 1
     apply:
