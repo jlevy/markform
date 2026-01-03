@@ -58,7 +58,7 @@ export async function runResearch(
   const config = {
     ...baseConfig,
     // Apply research-specific defaults if not overridden
-    maxTurns: options.maxTurns ?? form.metadata?.harnessConfig?.maxTurns ?? DEFAULT_MAX_TURNS,
+    maxTurns: options.maxTurnsTotal ?? form.metadata?.harnessConfig?.maxTurns ?? DEFAULT_MAX_TURNS,
     maxIssuesPerTurn:
       options.maxIssuesPerTurn ??
       form.metadata?.harnessConfig?.maxIssuesPerTurn ??

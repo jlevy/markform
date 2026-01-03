@@ -354,7 +354,7 @@ async function runAgentFillWorkflow(
   const result = await fillForm({
     form,
     model: modelId,
-    maxTurns,
+    maxTurnsTotal: maxTurns,
     maxPatchesPerTurn,
     maxIssuesPerTurn,
     targetRoles: [AGENT_ROLE],

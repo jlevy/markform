@@ -210,13 +210,16 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   }
 
   // 4. Create harness + agent
-  const maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS;
+  const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
+  const startingTurnNumber = options.startingTurnNumber ?? 0;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
   const maxIssuesPerTurn = options.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN;
   const targetRoles = options.targetRoles ?? [AGENT_ROLE];
 
+  // Pass remaining turns to harness (accounts for turns already executed in previous calls)
+  const remainingTurns = Math.max(0, maxTurnsTotal - startingTurnNumber);
   const harness = createHarness(form, {
-    maxTurns,
+    maxTurns: remainingTurns,
     maxPatchesPerTurn,
     maxIssuesPerTurn,
     targetRoles,
@@ -237,12 +240,28 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     });
 
   // 5. Run harness loop
-  let turnCount = 0;
+  let turnCount = startingTurnNumber;
+  let turnsThisCall = 0;
   let stepResult = harness.step();
   // Track rejections from previous turn to provide feedback to the LLM
   let previousRejections: PatchRejection[] | undefined;
 
   while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
+    // Check per-call limit (before executing any work this turn)
+    if (options.maxTurnsThisCall !== undefined && turnsThisCall >= options.maxTurnsThisCall) {
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        {
+          ok: false,
+          reason: 'batch_limit',
+          message: `Reached per-call limit (${options.maxTurnsThisCall} turns)`,
+        },
+        inputContextWarnings,
+        stepResult.issues,
+      );
+    }
     // Check for cancellation
     if (options.signal?.aborted) {
       return buildResult(
@@ -341,6 +360,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     const actualPatchesApplied = stepResult.patchesApplied ?? patches.length;
     totalPatches += actualPatchesApplied;
     turnCount++;
+    turnsThisCall++;
 
     // Store rejections to provide feedback to LLM in next turn
     previousRejections = stepResult.rejectedPatches;
@@ -381,7 +401,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     form,
     turnCount,
     totalPatches,
-    { ok: false, reason: 'max_turns', message: `Reached maximum turns (${maxTurns})` },
+    { ok: false, reason: 'max_turns', message: `Reached maximum total turns (${maxTurnsTotal})` },
     inputContextWarnings,
     stepResult.issues,
   );
