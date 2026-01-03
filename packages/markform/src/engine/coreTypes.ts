@@ -1041,6 +1041,8 @@ export interface SessionTurn {
     patches: Patch[];
     /** Patches that were rejected (type mismatch, invalid field, etc.) */
     rejectedPatches?: PatchRejection[];
+    /** Warnings for patches that were coerced (e.g., string → array) */
+    warnings?: PatchWarning[];
   };
   after: {
     requiredIssueCount: number;
@@ -1858,6 +1860,7 @@ export const SessionTurnSchema = z.object({
   apply: z.object({
     patches: z.array(PatchSchema),
     rejectedPatches: z.array(PatchRejectionSchema).optional(),
+    warnings: z.array(PatchWarningSchema).optional(),
   }),
   after: z.object({
     requiredIssueCount: z.number().int().nonnegative(),

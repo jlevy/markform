@@ -81,19 +81,17 @@ git add -p              # Stage intentional changes only
 
 - **End-to-end session flow**: Form → inspect → apply → serialize
 - **Patch rejection**: Type mismatches are recorded in `rejectedPatches`
+- **Coercion warnings**: Soft type conversions are recorded in `warnings`
 - **Context prompts**: System/context hints sent to LLM
 - **Wire format**: Complete request/response logging
 - **Form state**: SHA256 hashes verify deterministic form state
 
 ### What's Tested Elsewhere
 
-- **Value coercion** (e.g., string → array, boolean → checkbox): Unit tests in
+- **Value coercion logic** (e.g., string → array, boolean → checkbox): Unit tests in
   `tests/unit/valueCoercion.test.ts` and `tests/unit/engine/apply.test.ts`
 - **Best-effort patch application**: Unit tests verify that valid patches apply
   even when some fail
-
-Note: Coercion warnings are generated at the apply layer but not yet captured
-in session files. This is a potential future enhancement.
 
 ## Validation Tests
 
