@@ -1510,12 +1510,29 @@ markform:
         expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
       });
 
-      it('rejects array instead of object', () => {
+      it('coerces array of option IDs to checkboxes object with warning', () => {
         const form = parseForm(ALL_FIELDS_FORM);
-        const patch = { op: 'set_checkboxes', fieldId: 'checks', values: ['done'] } as any;
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', value: ['a', 'b'] } as any;
+        const result = applyPatches(form, [patch]);
+        expect(result.applyStatus).toBe('applied');
+        // Check that the coerced patch was applied
+        expect(result.appliedPatches.length).toBe(1);
+        expect(result.appliedPatches[0]).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'checks',
+          value: { a: 'done', b: 'done' },
+        });
+        // Check that a warning was generated
+        expect(result.warnings.length).toBe(1);
+        expect(result.warnings[0]?.coercion).toBe('array_to_checkboxes');
+      });
+
+      it('rejects array with invalid option IDs', () => {
+        const form = parseForm(ALL_FIELDS_FORM);
+        const patch = { op: 'set_checkboxes', fieldId: 'checks', value: ['invalid'] } as any;
         const result = applyPatches(form, [patch]);
         expect(result.applyStatus).toBe('rejected');
-        expect(result.rejectedPatches[0]?.message).toContain('set_checkboxes');
+        expect(result.rejectedPatches[0]?.message).toContain('Invalid option');
       });
 
       it('rejects string instead of object', () => {

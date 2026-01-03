@@ -29,10 +29,11 @@ Guidelines:
 6. For number fields: use appropriate numeric values from verified sources
 7. For single_select: choose one valid option ID
 8. For multi_select: choose one or more valid option IDs
-9. For checkboxes: use the appropriate state for the checkbox mode:
-   - Mode "simple": done (checked) or todo (unchecked)
-   - Mode "multi": done, todo, or na (not applicable)
-   - Mode "explicit": yes or no (must explicitly answer)
+9. For checkboxes: use an OBJECT mapping option IDs to states (NOT an array like multi_select):
+   - Mode "simple": { "option_id": "done" } or { "option_id": "todo" }
+   - Mode "multi": { "option_id": "done" | "todo" | "na" }
+   - Mode "explicit": { "option_id": "yes" } or { "option_id": "no" }
+   IMPORTANT: checkboxes use { key: "state" } objects, NOT ["key1", "key2"] arrays!
 
 CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -84,8 +85,10 @@ export const PATCH_FORMATS: Record<string, string> = {
   number: '{ op: "set_number", fieldId: "...", value: 123 }',
   string_list: '{ op: "set_string_list", fieldId: "...", value: ["...", "..."] }',
   single_select: '{ op: "set_single_select", fieldId: "...", value: "option_id" }',
-  multi_select: '{ op: "set_multi_select", fieldId: "...", value: ["opt1", "opt2"] }',
-  checkboxes: '{ op: "set_checkboxes", fieldId: "...", value: { "opt1": "done", "opt2": "todo" } }',
+  multi_select:
+    '{ op: "set_multi_select", fieldId: "...", value: ["opt1", "opt2"] }  // Array of option IDs',
+  checkboxes:
+    '{ op: "set_checkboxes", fieldId: "...", value: { "opt1": "done", "opt2": "todo" } }  // Object mapping IDs to states (NOT an array!)',
   url: '{ op: "set_url", fieldId: "...", value: "https://..." }',
   url_list: '{ op: "set_url_list", fieldId: "...", value: ["https://...", "https://..."] }',
   date: '{ op: "set_date", fieldId: "...", value: "2024-01-15" }',

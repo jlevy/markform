@@ -136,10 +136,11 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: use the appropriate state for the checkbox mode:
-           - Mode "simple": done (checked) or todo (unchecked)
-           - Mode "multi": done, todo, or na (not applicable)
-           - Mode "explicit": yes or no (must explicitly answer)
+        9. For checkboxes: use an OBJECT mapping option IDs to states (NOT an array like multi_select):
+           - Mode "simple": { "option_id": "done" } or { "option_id": "todo" }
+           - Mode "multi": { "option_id": "done" | "todo" | "na" }
+           - Mode "explicit": { "option_id": "yes" } or { "option_id": "no" }
+           IMPORTANT: checkboxes use { key: "state" } objects, NOT ["key1", "key2"] arrays!
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -351,7 +352,7 @@ turns:
           Severity: required, Priority: P1
           Type: multi_select
           Options: frontend, backend, database, devops
-          Set: { op: "set_multi_select", fieldId: "categories", value: ["opt1", "opt2"] }
+          Set: { op: "set_multi_select", fieldId: "categories", value: ["opt1", "opt2"] }  // Array of option IDs
           This field is required.
 
         - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
@@ -359,7 +360,7 @@ turns:
           Type: checkboxes
           Options: backed_up, notified
           Mode: explicit
-          Set: { op: "set_checkboxes", fieldId: "confirmations", value: { "opt1": "done", "opt2": "todo" } }
+          Set: { op: "set_checkboxes", fieldId: "confirmations", value: { "opt1": "done", "opt2": "todo" } }  // Object mapping IDs to states (NOT an array!)
           This field is required.
 
         - **email** (field): Required field "Email" is empty
@@ -404,7 +405,7 @@ turns:
           Type: checkboxes
           Options: research, design, implement, test
           Mode: multi
-          Set: { op: "set_checkboxes", fieldId: "tasks_multi", value: { "opt1": "done", "opt2": "todo" } }
+          Set: { op: "set_checkboxes", fieldId: "tasks_multi", value: { "opt1": "done", "opt2": "todo" } }  // Object mapping IDs to states (NOT an array!)
           This field is required.
 
         # General Instructions
@@ -426,10 +427,11 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: use the appropriate state for the checkbox mode:
-             - Mode "simple": done (checked) or todo (unchecked)
-             - Mode "multi": done, todo, or na (not applicable)
-             - Mode "explicit": yes or no (must explicitly answer)
+          9. For checkboxes: use an OBJECT mapping option IDs to states (NOT an array like multi_select):
+             - Mode "simple": { "option_id": "done" } or { "option_id": "todo" }
+             - Mode "multi": { "option_id": "done" | "todo" | "na" }
+             - Mode "explicit": { "option_id": "yes" } or { "option_id": "no" }
+             IMPORTANT: checkboxes use { key: "state" } objects, NOT ["key1", "key2"] arrays!
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -641,7 +643,7 @@ turns:
             Severity: required, Priority: P1
             Type: multi_select
             Options: frontend, backend, database, devops
-            Set: { op: "set_multi_select", fieldId: "categories", value: ["opt1", "opt2"] }
+            Set: { op: "set_multi_select", fieldId: "categories", value: ["opt1", "opt2"] }  // Array of option IDs
             This field is required.
 
           - **confirmations** (field): All items in "Confirmations (Explicit Mode)" must be answered (2 unfilled)
@@ -649,7 +651,7 @@ turns:
             Type: checkboxes
             Options: backed_up, notified
             Mode: explicit
-            Set: { op: "set_checkboxes", fieldId: "confirmations", value: { "opt1": "done", "opt2": "todo" } }
+            Set: { op: "set_checkboxes", fieldId: "confirmations", value: { "opt1": "done", "opt2": "todo" } }  // Object mapping IDs to states (NOT an array!)
             This field is required.
 
           - **email** (field): Required field "Email" is empty
@@ -694,7 +696,7 @@ turns:
             Type: checkboxes
             Options: research, design, implement, test
             Mode: multi
-            Set: { op: "set_checkboxes", fieldId: "tasks_multi", value: { "opt1": "done", "opt2": "todo" } }
+            Set: { op: "set_checkboxes", fieldId: "tasks_multi", value: { "opt1": "done", "opt2": "todo" } }  // Object mapping IDs to states (NOT an array!)
             This field is required.
 
           # General Instructions
@@ -892,10 +894,11 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: use the appropriate state for the checkbox mode:
-           - Mode "simple": done (checked) or todo (unchecked)
-           - Mode "multi": done, todo, or na (not applicable)
-           - Mode "explicit": yes or no (must explicitly answer)
+        9. For checkboxes: use an OBJECT mapping option IDs to states (NOT an array like multi_select):
+           - Mode "simple": { "option_id": "done" } or { "option_id": "todo" }
+           - Mode "multi": { "option_id": "done" | "todo" | "na" }
+           - Mode "explicit": { "option_id": "yes" } or { "option_id": "no" }
+           IMPORTANT: checkboxes use { key: "state" } objects, NOT ["key1", "key2"] arrays!
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -1129,7 +1132,7 @@ turns:
           Type: checkboxes
           Options: read_guidelines, agree_terms
           Mode: simple
-          Set: { op: "set_checkboxes", fieldId: "tasks_simple", value: { "opt1": "done", "opt2": "todo" } }
+          Set: { op: "set_checkboxes", fieldId: "tasks_simple", value: { "opt1": "done", "opt2": "todo" } }  // Object mapping IDs to states (NOT an array!)
           This field is required.
 
         - **website** (field): Required field "Website" is empty
@@ -1207,10 +1210,11 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: use the appropriate state for the checkbox mode:
-             - Mode "simple": done (checked) or todo (unchecked)
-             - Mode "multi": done, todo, or na (not applicable)
-             - Mode "explicit": yes or no (must explicitly answer)
+          9. For checkboxes: use an OBJECT mapping option IDs to states (NOT an array like multi_select):
+             - Mode "simple": { "option_id": "done" } or { "option_id": "todo" }
+             - Mode "multi": { "option_id": "done" | "todo" | "na" }
+             - Mode "explicit": { "option_id": "yes" } or { "option_id": "no" }
+             IMPORTANT: checkboxes use { key: "state" } objects, NOT ["key1", "key2"] arrays!
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -1444,7 +1448,7 @@ turns:
             Type: checkboxes
             Options: read_guidelines, agree_terms
             Mode: simple
-            Set: { op: "set_checkboxes", fieldId: "tasks_simple", value: { "opt1": "done", "opt2": "todo" } }
+            Set: { op: "set_checkboxes", fieldId: "tasks_simple", value: { "opt1": "done", "opt2": "todo" } }  // Object mapping IDs to states (NOT an array!)
             This field is required.
 
           - **website** (field): Required field "Website" is empty
@@ -1608,10 +1612,11 @@ turns:
         6. For number fields: use appropriate numeric values from verified sources
         7. For single_select: choose one valid option ID
         8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: use the appropriate state for the checkbox mode:
-           - Mode "simple": done (checked) or todo (unchecked)
-           - Mode "multi": done, todo, or na (not applicable)
-           - Mode "explicit": yes or no (must explicitly answer)
+        9. For checkboxes: use an OBJECT mapping option IDs to states (NOT an array like multi_select):
+           - Mode "simple": { "option_id": "done" } or { "option_id": "todo" }
+           - Mode "multi": { "option_id": "done" | "todo" | "na" }
+           - Mode "explicit": { "option_id": "yes" } or { "option_id": "no" }
+           IMPORTANT: checkboxes use { key: "state" } objects, NOT ["key1", "key2"] arrays!
 
         CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
@@ -1896,10 +1901,11 @@ turns:
           6. For number fields: use appropriate numeric values from verified sources
           7. For single_select: choose one valid option ID
           8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: use the appropriate state for the checkbox mode:
-             - Mode "simple": done (checked) or todo (unchecked)
-             - Mode "multi": done, todo, or na (not applicable)
-             - Mode "explicit": yes or no (must explicitly answer)
+          9. For checkboxes: use an OBJECT mapping option IDs to states (NOT an array like multi_select):
+             - Mode "simple": { "option_id": "done" } or { "option_id": "todo" }
+             - Mode "multi": { "option_id": "done" | "todo" | "na" }
+             - Mode "explicit": { "option_id": "yes" } or { "option_id": "no" }
+             IMPORTANT: checkboxes use { key: "state" } objects, NOT ["key1", "key2"] arrays!
 
           CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
 
