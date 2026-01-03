@@ -1,11 +1,12 @@
 /**
  * Golden Session Tests
  *
- * These tests replay recorded session transcripts and verify:
- * - Issues match at each turn
- * - Form state (SHA256 hash) matches after each turn
- * - Final form matches the expected completed form
- * - Export files (report, yaml, schema) match expected output
+ * Uses direct file comparison for byte-for-byte matching.
+ * Any diff = test failure, ensuring all changes are visible in reviews.
+ *
+ * Workflow:
+ * - `pnpm test:golden` - Regenerate + compare, fail on any diff
+ * - `pnpm test:golden:regen` - Update golden files after intentional changes
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -18,7 +19,7 @@ import { parseForm } from '../../src/engine/parse.js';
 import { serializeReport } from '../../src/engine/serialize.js';
 import { formToJsonSchema } from '../../src/engine/jsonSchema.js';
 import { toStructuredValues, toNotesArray } from '../../src/cli/lib/exportHelpers.js';
-import { findSessionFiles, runGoldenTest } from './runner.js';
+import { findSessionFiles, normalizeSession, regenerateSession } from './helpers.js';
 
 // =============================================================================
 // Configuration
@@ -27,11 +28,10 @@ import { findSessionFiles, runGoldenTest } from './runner.js';
 const EXAMPLES_DIR = join(__dirname, '../../examples');
 
 // =============================================================================
-// Golden Session Tests
+// Golden Session Tests (Direct Comparison)
 // =============================================================================
 
 describe('Golden Session Tests', () => {
-  // Find all session files
   const sessionFiles = findSessionFiles(EXAMPLES_DIR);
 
   if (sessionFiles.length === 0) {
@@ -39,59 +39,22 @@ describe('Golden Session Tests', () => {
       // Skip if no session files exist yet
     });
   } else {
-    // Create a test for each session file
     for (const sessionPath of sessionFiles) {
       const relativePath = sessionPath.replace(EXAMPLES_DIR + '/', '');
 
-      it(`replays ${relativePath}`, () => {
-        const result = runGoldenTest(sessionPath);
+      it(`matches golden: ${relativePath}`, async () => {
+        // Regenerate session from form + mock
+        const actual = await regenerateSession(sessionPath);
 
-        // Log details on failure
-        if (!result.success) {
-          console.log('Golden test failed:', relativePath);
-          console.log('Errors:', result.errors);
-          console.log('Final result:', result.finalResult);
-          for (const turn of result.turns) {
-            console.log(`Turn ${turn.turn}:`, {
-              issuesMatch: turn.issuesMatch,
-              hashMatch: turn.hashMatch,
-              expectedHash: turn.expectedHash.slice(0, 16) + '...',
-              actualHash: turn.actualHash.slice(0, 16) + '...',
-              issuesDiff: turn.issuesDiff,
-            });
-          }
-        }
+        // Load golden file
+        const expected = readFileSync(sessionPath, 'utf-8');
 
-        expect(result.success).toBe(true);
-        expect(result.errors).toHaveLength(0);
-        expect(result.finalResult.formMatches).toBe(true);
+        // Direct comparison - any diff fails
+        // Only normalize token counts (truly unstable fields)
+        expect(normalizeSession(actual)).toBe(normalizeSession(expected));
       });
     }
   }
-});
-
-// =============================================================================
-// Individual Form Tests
-// =============================================================================
-
-describe('Simple Form Golden Test', () => {
-  const sessionPath = join(EXAMPLES_DIR, 'simple/simple.session.yaml');
-
-  it('replays simple form session', () => {
-    // Check if session file exists
-    if (!existsSync(sessionPath)) {
-      // Skip if session file doesn't exist yet
-      console.log('Skipping: simple.session.yaml not found');
-      return;
-    }
-
-    const result = runGoldenTest(sessionPath);
-
-    expect(result.success).toBe(true);
-    // Check that completion matches expectations from session
-    // Note: This session leaves optional_number empty, so isComplete is false
-    expect(result.finalResult.formMatches).toBe(true);
-  });
 });
 
 // =============================================================================
