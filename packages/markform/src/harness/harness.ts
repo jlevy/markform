@@ -19,6 +19,7 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  PatchWarning,
   SessionTurn,
   SessionTurnContext,
   SessionTurnStats,
@@ -205,8 +206,17 @@ export class FormHarness {
     stepResult.patchesApplied = patchesActuallyApplied;
     stepResult.rejectedPatches = applyResult.rejectedPatches;
 
-    // Record turn in session transcript (include rejections and wire format)
-    this.recordTurn(issues, patches, result, llmStats, context, applyResult.rejectedPatches, wire);
+    // Record turn in session transcript (include rejections, warnings, and wire format)
+    this.recordTurn(
+      issues,
+      patches,
+      result,
+      llmStats,
+      context,
+      applyResult.rejectedPatches,
+      applyResult.warnings,
+      wire,
+    );
 
     // Transition state: complete if no more work OR max turns reached
     const noMoreWork = stepResult.issues.length === 0;
@@ -253,6 +263,7 @@ export class FormHarness {
     llmStats?: SessionTurnStats,
     context?: SessionTurnContext,
     rejectedPatches?: PatchRejection[],
+    warnings?: PatchWarning[],
     wire?: WireFormat,
   ): void {
     const markdown = serializeForm(this.form);
@@ -266,6 +277,7 @@ export class FormHarness {
       apply: {
         patches,
         ...(rejectedPatches && rejectedPatches.length > 0 && { rejectedPatches }),
+        ...(warnings && warnings.length > 0 && { warnings }),
       },
       after: {
         requiredIssueCount,
