@@ -61,12 +61,12 @@ describe('harnessConfigResolver', () => {
         maxPatchesPerTurn: 3,
       });
       const options = {
-        maxTurns: 10,
+        maxTurnsTotal: 10,
         maxPatchesPerTurn: 8,
       };
       const config = resolveHarnessConfig(form, options);
 
-      expect(config.maxTurns).toBe(10);
+      expect(config.maxTurns).toBe(10); // From options.maxTurnsTotal
       expect(config.maxPatchesPerTurn).toBe(8);
     });
 
@@ -77,11 +77,11 @@ describe('harnessConfigResolver', () => {
         maxIssuesPerTurn: 2,
       });
       const options = {
-        maxTurns: 10, // Override only this
+        maxTurnsTotal: 10, // Override only this
       };
       const config = resolveHarnessConfig(form, options);
 
-      expect(config.maxTurns).toBe(10); // From options
+      expect(config.maxTurns).toBe(10); // From options (maxTurnsTotal)
       expect(config.maxPatchesPerTurn).toBe(3); // From frontmatter
       expect(config.maxIssuesPerTurn).toBe(2); // From frontmatter
     });
