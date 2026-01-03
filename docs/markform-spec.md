@@ -127,10 +127,11 @@ markform:
 
 **Optional metadata fields:**
 
-- `run_mode` (*recommended*): Suggests how CLI tools should execute this form. Values:
-  `interactive` (user fills via prompts), `fill` (agent fills), or `research` (agent
-  fills with web search). When omitted, tools may infer from field roles or require
-  explicit selection. This is a hint for tooling, not enforced by the engine.
+- `run_mode` (*recommended*): Suggests how CLI tools should execute this form.
+  Values: `interactive` (user fills via prompts), `fill` (agent fills), or `research`
+  (agent fills with web search).
+  When omitted, tools may infer from field roles or require explicit selection.
+  This is a hint for tooling, not enforced by the engine.
 
 **Behavioral rules (*required*):**
 
@@ -211,8 +212,8 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 Custom tags are defined following [Markdoc tag conventions][markdoc-tags]. See
 [Markdoc Config][markdoc-config] for how to register custom tags.
 
-All fields use the unified `{% field kind="..." %}` syntax. The `kind` attribute
-identifies what type of field a `Field` or `FieldValue` represents.
+All fields use the unified `{% field kind="..." %}` syntax.
+The `kind` attribute identifies what type of field a `Field` or `FieldValue` represents.
 (In TypeScript, the type is `FieldKind`.)
 
 | Kind | Description |
@@ -254,8 +255,9 @@ to different actors.
 | `placeholder` | string | Hint text shown in empty fields (displayed in UI) |
 | `examples` | string[] | Example values for the field (helps LLMs, shown in prompts) |
 
-These attributes are only valid on text-entry field kinds. Using them on chooser fields
-(single-select, multi-select, checkboxes) will result in a parse error.
+These attributes are only valid on text-entry field kinds.
+Using them on chooser fields (single-select, multi-select, checkboxes) will result in a
+parse error.
 
 **Example with placeholder and examples:**
 ```md
@@ -299,7 +301,8 @@ compatibility:
 | `multi_select` | `[x]` | Selected | `- [x] Option {% #opt_id %}` |
 
 **Note:** `single_select` enforces that exactly one option has `[x]`. The distinction
-between `single_select` and `multi_select` is in the `kind` attribute, not the marker syntax.
+between `single_select` and `multi_select` is in the `kind` attribute, not the marker
+syntax.
 
 The `{% #id %}` annotation **is** native Markdoc syntax (see
 [Attributes][markdoc-attributes]).
@@ -464,8 +467,8 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
 {% /field %}
 ```
 
-**Sentinel values in table cells:**
-Cells can use `%SKIP%` and `%ABORT%` sentinels with optional reasons:
+**Sentinel values in table cells:** Cells can use `%SKIP%` and `%ABORT%` sentinels with
+optional reasons:
 ```md
 | 2017 | I, Tonya | 90 | %SKIP% (Box office not tracked) |
 ```
@@ -906,8 +909,8 @@ ACME
 {% /field %} {% field kind="string" id="fiscal_period" label="Fiscal period"
 required=true %}{% /field %} {% /group %}
 
-{% group id="source_docs" title="Source Documents" %} {% checkboxes
-id="docs_reviewed" label="Documents reviewed" required=true %}
+{% group id="source_docs" title="Source Documents" %} {% checkboxes id="docs_reviewed"
+label="Documents reviewed" required=true %}
 
 - [x] 10-K {% #ten_k %}
 
@@ -915,8 +918,7 @@ id="docs_reviewed" label="Documents reviewed" required=true %}
 
 - [/] Earnings release {% #earnings_release %}
 
-- [ ] Earnings call transcript {% #call_transcript %} {% /field %} {% /group
-  %}
+- [ ] Earnings call transcript {% #call_transcript %} {% /field %} {% /group %}
 ````
 
 Notes:
@@ -1859,7 +1861,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | TypeScript kind | `'string_list'` |
 | Attributes | `id`, `label`, `required`, `minItems`, `maxItems`, `itemMinLength`, `itemMaxLength`, `uniqueItems` |
 | FieldValue | `{ kind: 'string_list'; items: string[] }` |
-| Patch operation | `{ op: 'set_string_list'; fieldId: Id; items: string[] }` |
+| Patch operation | `{ op: 'set_string_list'; fieldId: Id; value: string[] }` |
 | Zod | `z.array(z.string().min(itemMin).max(itemMax)).min(n).max(m)` |
 | JSON Schema | `{ type: "array", items: { type: "string" }, minItems, maxItems, uniqueItems }` |
 
@@ -1872,7 +1874,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | TypeScript kind | `'single_select'` |
 | Attributes | `id`, `label`, `required` + inline `options` via list syntax |
 | FieldValue | `{ kind: 'single_select'; selected: OptionId \| null }` |
-| Patch operation | `{ op: 'set_single_select'; fieldId: Id; selected: OptionId \| null }` |
+| Patch operation | `{ op: 'set_single_select'; fieldId: Id; value: OptionId \| null }` |
 | Zod | `z.enum([...optionIds])` |
 | JSON Schema | `{ type: "string", enum: [...optionIds] }` |
 
@@ -1885,7 +1887,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | TypeScript kind | `'multi_select'` |
 | Attributes | `id`, `label`, `required`, `minSelections`, `maxSelections` + inline `options` |
 | FieldValue | `{ kind: 'multi_select'; selected: OptionId[] }` |
-| Patch operation | `{ op: 'set_multi_select'; fieldId: Id; selected: OptionId[] }` |
+| Patch operation | `{ op: 'set_multi_select'; fieldId: Id; value: OptionId[] }` |
 | Zod | `z.array(z.enum([...optionIds])).min(n).max(m)` |
 | JSON Schema | `{ type: "array", items: { enum: [...optionIds] }, minItems, maxItems }` |
 
@@ -1898,7 +1900,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | TypeScript kind | `'checkboxes'` |
 | Attributes | `id`, `label`, `required`, `checkboxMode` (`multi`/`simple`/`explicit`), `minDone` (simple only) + inline `options` |
 | FieldValue | `{ kind: 'checkboxes'; values: Record<OptionId, CheckboxValue> }` |
-| Patch operation | `{ op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }` |
+| Patch operation | `{ op: 'set_checkboxes'; fieldId: Id; value: Record<OptionId, CheckboxValue> }` |
 | Zod | `z.record(z.enum([...states]))` |
 | JSON Schema | `{ type: "object", additionalProperties: { enum: [...states] } }` |
 
@@ -1924,7 +1926,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | TypeScript kind | `'url_list'` |
 | Attributes | `id`, `label`, `required`, `minItems`, `maxItems`, `uniqueItems` |
 | FieldValue | `{ kind: 'url_list'; items: string[] }` |
-| Patch operation | `{ op: 'set_url_list'; fieldId: Id; items: string[] }` |
+| Patch operation | `{ op: 'set_url_list'; fieldId: Id; value: string[] }` |
 | Zod | `z.array(z.url()).min(n).max(m)` |
 | JSON Schema | `{ type: "array", items: { type: "string", format: "uri" }, minItems, maxItems, uniqueItems }` |
 
@@ -1963,7 +1965,7 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | TypeScript kind | `'table'` |
 | Attributes | `id`, `label`, `required`, `columnIds`, `columnLabels`, `columnTypes`, `minRows`, `maxRows` |
 | FieldValue | `{ kind: 'table'; rows: TableRowResponse[] }` |
-| Patch operation | `{ op: 'set_table'; fieldId: Id; rows: PatchTableRow[] }` |
+| Patch operation | `{ op: 'set_table'; fieldId: Id; value: PatchTableRow[] }` |
 | Zod | `z.object({ kind: z.literal('table'), rows: z.array(TableRowResponseSchema) })` |
 | JSON Schema | `{ type: "object", properties: { kind: { const: "table" }, rows: { type: "array" } } }` |
 
@@ -2541,12 +2543,15 @@ This formula ensures:
 type Patch =
   | { op: 'set_string'; fieldId: Id; value: string | null }
   | { op: 'set_number'; fieldId: Id; value: number | null }
-  | { op: 'set_string_list'; fieldId: Id; items: string[] }
-  | { op: 'set_checkboxes'; fieldId: Id; values: Record<OptionId, CheckboxValue> }
-  | { op: 'set_single_select'; fieldId: Id; selected: OptionId | null }
-  | { op: 'set_multi_select'; fieldId: Id; selected: OptionId[] }
+  | { op: 'set_string_list'; fieldId: Id; value: string[] }
+  | { op: 'set_checkboxes'; fieldId: Id; value: Record<OptionId, CheckboxValue> }
+  | { op: 'set_single_select'; fieldId: Id; value: OptionId | null }
+  | { op: 'set_multi_select'; fieldId: Id; value: OptionId[] }
   | { op: 'set_url'; fieldId: Id; value: string | null }
-  | { op: 'set_url_list'; fieldId: Id; items: string[] }
+  | { op: 'set_url_list'; fieldId: Id; value: string[] }
+  | { op: 'set_table'; fieldId: Id; value: PatchTableRow[] }
+  | { op: 'set_date'; fieldId: Id; value: string | null }
+  | { op: 'set_year'; fieldId: Id; value: number | null }
   | { op: 'clear_field'; fieldId: Id }
   | { op: 'skip_field'; fieldId: Id; role: string; reason?: string }
   | { op: 'abort_field'; fieldId: Id; role: string; reason?: string }
@@ -2564,10 +2569,10 @@ Option IDs in patches are **local to the field** specified by `fieldId`. You do 
 the qualified `{fieldId}.{optionId}` form in patches—the `fieldId` already provides the
 scope. For example:
 
-- `{ op: 'set_checkboxes', fieldId: 'docs_reviewed', values: { ten_k: 'done', ten_q:
+- `{ op: 'set_checkboxes', fieldId: 'docs_reviewed', value: { ten_k: 'done', ten_q:
   'done' } }`
 
-- `{ op: 'set_single_select', fieldId: 'rating', selected: 'bullish' }`
+- `{ op: 'set_single_select', fieldId: 'rating', value: 'bullish' }`
 
 **Patch semantics:**
 
