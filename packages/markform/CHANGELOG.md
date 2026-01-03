@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.13
+
+### Patch Changes
+
+- 08634fd: Add best-effort patch application with value coercion, coercion warnings in session files, and increase maxStepsPerTurn default to 20
+
 ## 0.1.12
 
 ### Patch Changes
