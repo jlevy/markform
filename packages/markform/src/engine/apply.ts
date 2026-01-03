@@ -6,6 +6,7 @@
 
 import type {
   ApplyResult,
+  ApplyStatus,
   CellResponse,
   CheckboxesValue,
   CheckboxMode,
@@ -19,6 +20,8 @@ import type {
   NoteId,
   ParsedForm,
   Patch,
+  PatchCoercionType,
+  PatchWarning,
   SetCheckboxesPatch,
   TableRowResponse,
   TableValue,
@@ -75,6 +78,14 @@ function findField(form: ParsedForm, fieldId: Id): Field | undefined {
 }
 
 /**
+ * Result of normalizing a patch, including optional coercion warning.
+ */
+interface NormalizationResult {
+  patch: Patch;
+  warning?: PatchWarning;
+}
+
+/**
  * Coerce a boolean value to the appropriate checkbox string based on mode.
  */
 function coerceBooleanToCheckboxValue(value: boolean, mode: CheckboxMode): CheckboxValue {
@@ -85,48 +96,121 @@ function coerceBooleanToCheckboxValue(value: boolean, mode: CheckboxMode): Check
 }
 
 /**
- * Normalize a patch, coercing boolean checkbox values to strings.
- * Returns a new patch with normalized values, or the original if no normalization needed.
+ * Create a patch warning for coercion.
  */
-function normalizePatch(form: ParsedForm, patch: Patch): Patch {
-  if (patch.op !== 'set_checkboxes') {
-    return patch;
+function createWarning(
+  index: number,
+  fieldId: string,
+  coercion: PatchCoercionType,
+  message: string,
+): PatchWarning {
+  return { patchIndex: index, fieldId, message, coercion };
+}
+
+/**
+ * Normalize a patch, coercing common type mismatches with warnings.
+ *
+ * Coercions performed:
+ * - Single string → string_list array
+ * - Single URL string → url_list array
+ * - Single option ID → multi_select array
+ * - Boolean → checkbox string
+ *
+ * Returns the normalized patch and any coercion warning.
+ */
+function normalizePatch(form: ParsedForm, patch: Patch, index: number): NormalizationResult {
+  // Handle patches without fieldId (add_note, remove_note)
+  if (patch.op === 'add_note' || patch.op === 'remove_note') {
+    return { patch };
   }
 
   const field = findField(form, patch.fieldId);
-  if (field?.kind !== 'checkboxes') {
-    return patch; // Let validation handle the error
+  if (!field) {
+    return { patch }; // Let validation handle missing field
   }
 
-  // Handle null/undefined values - let validation handle the error
-  if (!patch.value) {
-    return patch;
-  }
-
-  // Check if any values are booleans
-  let needsNormalization = false;
-  for (const value of Object.values(patch.value)) {
-    if (typeof value === 'boolean') {
-      needsNormalization = true;
-      break;
+  // Coerce single string → string_list
+  if (patch.op === 'set_string_list' && field.kind === 'string_list') {
+    if (typeof patch.value === 'string') {
+      return {
+        patch: { ...patch, value: [patch.value] },
+        warning: createWarning(
+          index,
+          field.id,
+          'string_to_list',
+          `Coerced single string to string_list`,
+        ),
+      };
     }
   }
 
-  if (!needsNormalization) {
-    return patch;
-  }
-
-  // Coerce boolean values to strings
-  const normalizedValues: Record<string, CheckboxValue> = {};
-  for (const [optId, value] of Object.entries(patch.value)) {
-    if (typeof value === 'boolean') {
-      normalizedValues[optId] = coerceBooleanToCheckboxValue(value, field.checkboxMode);
-    } else {
-      normalizedValues[optId] = value;
+  // Coerce single URL → url_list
+  if (patch.op === 'set_url_list' && field.kind === 'url_list') {
+    if (typeof patch.value === 'string') {
+      return {
+        patch: { ...patch, value: [patch.value] },
+        warning: createWarning(index, field.id, 'url_to_list', `Coerced single URL to url_list`),
+      };
     }
   }
 
-  return { ...patch, value: normalizedValues } as SetCheckboxesPatch;
+  // Coerce single option → multi_select
+  if (patch.op === 'set_multi_select' && field.kind === 'multi_select') {
+    if (typeof patch.value === 'string') {
+      return {
+        patch: { ...patch, value: [patch.value] },
+        warning: createWarning(
+          index,
+          field.id,
+          'option_to_array',
+          `Coerced single option ID to multi_select array`,
+        ),
+      };
+    }
+  }
+
+  // Coerce boolean → checkbox string
+  if (patch.op === 'set_checkboxes' && field.kind === 'checkboxes') {
+    // Handle null/undefined values - let validation handle the error
+    if (!patch.value) {
+      return { patch };
+    }
+
+    // Check if any values are booleans
+    let needsNormalization = false;
+    for (const value of Object.values(patch.value)) {
+      if (typeof value === 'boolean') {
+        needsNormalization = true;
+        break;
+      }
+    }
+
+    if (!needsNormalization) {
+      return { patch };
+    }
+
+    // Coerce boolean values to strings
+    const normalizedValues: Record<string, CheckboxValue> = {};
+    for (const [optId, value] of Object.entries(patch.value)) {
+      if (typeof value === 'boolean') {
+        normalizedValues[optId] = coerceBooleanToCheckboxValue(value, field.checkboxMode);
+      } else {
+        normalizedValues[optId] = value;
+      }
+    }
+
+    return {
+      patch: { ...patch, value: normalizedValues } as SetCheckboxesPatch,
+      warning: createWarning(
+        index,
+        field.id,
+        'boolean_to_checkbox',
+        `Coerced boolean values to checkbox state strings`,
+      ),
+    };
+  }
+
+  return { patch };
 }
 
 /**
@@ -267,23 +351,6 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
   }
 
   return null;
-}
-
-/**
- * Validate all patches against the form schema.
- */
-function validatePatches(form: ParsedForm, patches: Patch[]): PatchError[] {
-  const errors: PatchError[] = [];
-  for (let i = 0; i < patches.length; i++) {
-    const patch = patches[i];
-    if (patch) {
-      const error = validatePatch(form, patch, i);
-      if (error) {
-        errors.push(error);
-      }
-    }
-  }
-  return errors;
 }
 
 // =============================================================================
@@ -515,20 +582,37 @@ function convertToInspectIssues(form: ParsedForm): InspectIssue[] {
 /**
  * Apply patches to a parsed form.
  *
- * Uses transaction semantics - all patches succeed or none are applied.
+ * Uses best-effort semantics: valid patches are applied even when some fail.
+ * Invalid patches are rejected with detailed error messages.
  *
  * @param form - The parsed form to update
  * @param patches - Array of patches to apply
- * @returns Apply result with new summaries and status
+ * @returns Apply result with new summaries, status, and detailed feedback
  */
 export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
-  // Normalize patches (coerce boolean checkbox values to strings)
-  const normalizedPatches = patches.map((p) => normalizePatch(form, p));
+  // Normalize patches and collect coercion warnings
+  const normalized: NormalizationResult[] = patches.map((p, i) => normalizePatch(form, p, i));
+  const warnings: PatchWarning[] = normalized.filter((r) => r.warning).map((r) => r.warning!);
+  const normalizedPatches = normalized.map((r) => r.patch);
 
-  // Validate all patches first (transaction semantics)
-  const errors = validatePatches(form, normalizedPatches);
-  if (errors.length > 0) {
-    // Reject - compute summaries from current state
+  // Validate each patch independently (best-effort semantics)
+  const validPatches: Patch[] = [];
+  const errors: PatchError[] = [];
+
+  for (let i = 0; i < normalizedPatches.length; i++) {
+    const patch = normalizedPatches[i];
+    if (patch) {
+      const error = validatePatch(form, patch, i);
+      if (error) {
+        errors.push(error);
+      } else {
+        validPatches.push(patch);
+      }
+    }
+  }
+
+  // If all patches failed, return rejected (no changes to form)
+  if (validPatches.length === 0 && errors.length > 0) {
     const issues = convertToInspectIssues(form);
     const summaries = computeAllSummaries(form.schema, form.responsesByFieldId, form.notes, issues);
 
@@ -539,20 +623,19 @@ export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
       issues,
       isComplete: summaries.isComplete,
       formState: summaries.formState,
+      appliedPatches: [],
       rejectedPatches: errors,
+      warnings: [], // No warnings if nothing applied
     };
   }
 
   // Create new responses and notes (don't mutate original)
   const newResponses: Record<Id, FieldResponse> = { ...form.responsesByFieldId };
   const newNotes: Note[] = [...form.notes];
-
-  // Save original notes to restore on failure (currently unused in transaction logic)
-  const _originalNotes = form.notes;
   form.notes = newNotes;
 
-  // Apply all patches (use normalized patches with coerced values)
-  for (const patch of normalizedPatches) {
+  // Apply only valid patches
+  for (const patch of validPatches) {
     applyPatch(form, newResponses, patch);
   }
 
@@ -563,13 +646,18 @@ export function applyPatches(form: ParsedForm, patches: Patch[]): ApplyResult {
   const issues = convertToInspectIssues(form);
   const summaries = computeAllSummaries(form.schema, newResponses, newNotes, issues);
 
+  // Determine status: 'applied' if all succeeded, 'partial' if some failed
+  const applyStatus: ApplyStatus = errors.length > 0 ? 'partial' : 'applied';
+
   return {
-    applyStatus: 'applied',
+    applyStatus,
     structureSummary: summaries.structureSummary,
     progressSummary: summaries.progressSummary,
     issues,
     isComplete: isFormComplete(summaries.progressSummary),
     formState: computeFormState(summaries.progressSummary),
-    rejectedPatches: [],
+    appliedPatches: validPatches,
+    rejectedPatches: errors,
+    warnings,
   };
 }

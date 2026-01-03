@@ -193,9 +193,9 @@ export class FormHarness {
       throw new Error(`Too many patches: ${patches.length} > ${this.config.maxPatchesPerTurn}`);
     }
 
-    // Apply patches and check result - transaction semantics means all or none
+    // Apply patches with best-effort semantics - valid patches are applied even when some fail
     const applyResult = applyPatches(this.form, patches);
-    const patchesActuallyApplied = applyResult.applyStatus === 'applied' ? patches.length : 0;
+    const patchesActuallyApplied = applyResult.appliedPatches.length;
 
     // Re-inspect after applying patches to get full issue list including optional_unanswered
     const result = inspect(this.form, { targetRoles: this.config.targetRoles });

@@ -26,7 +26,7 @@ import {
 } from '../lib/shared.js';
 
 interface ApplyReport {
-  apply_status: 'applied' | 'rejected';
+  apply_status: 'applied' | 'partial' | 'rejected';
   form_state: ProgressState;
   is_complete: boolean;
   structure: ApplyResult['structureSummary'];
