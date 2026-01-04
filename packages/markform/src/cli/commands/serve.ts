@@ -17,7 +17,7 @@ import pc from 'picocolors';
 
 import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
-import { serializeForm } from '../../engine/serialize.js';
+import { serializeForm, serializeReport } from '../../engine/serialize.js';
 import { ALL_EXTENSIONS, DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
   CheckboxesField,
@@ -262,7 +262,16 @@ async function handleRequest(
       return;
     }
 
-    // Handle other tabs (report, values, schema)
+    // Report tab - generate dynamically from form to ensure consistency with View tab
+    if (tabId === 'report' && form) {
+      const reportContent = serializeReport(form);
+      const html = renderMarkdownContent(reportContent);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
+    // Handle other tabs (values, schema)
     if (tab?.path) {
       const content = await readFileAsync(tab.path, 'utf-8');
       const tabFileType = detectFileType(tab.path);
