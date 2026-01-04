@@ -199,6 +199,7 @@ const result = await fillForm({
 | `startingTurnNumber` | `number` | `0` | Starting turn for progress tracking |
 | `maxPatchesPerTurn` | `number` | `20` | Maximum patches per turn |
 | `maxIssuesPerTurn` | `number` | `10` | Maximum issues shown per turn |
+| `maxStepsPerTurn` | `number` | `20` | Maximum AI SDK steps (tool call rounds) per turn |
 | `targetRoles` | `string[]` | `['agent']` | Roles to fill |
 | `fillMode` | `FillMode` | `'continue'` | `'continue'` or `'overwrite'` |
 | `callbacks` | `FillCallbacks` | `undefined` | Progress callbacks |

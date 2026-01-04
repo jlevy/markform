@@ -18,25 +18,51 @@
  * fabrication of data.
  */
 export const DEFAULT_SYSTEM_PROMPT = `# Form Instructions
-Carefully research answers to all questions in the form, using all available tools you have.
 
-Guidelines:
-1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
-2. You MUST address ALL issues shown to you - both required AND recommended (optional)
-3. NEVER fabricate or guess information - only use data you can verify
-4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
-5. For string fields: use appropriate text from verified sources
-6. For number fields: use appropriate numeric values from verified sources
-7. For single_select: choose one valid option ID
-8. For multi_select: choose one or more valid option IDs
-9. For checkboxes: use the appropriate state for the checkbox mode:
-   - Mode "simple": done (checked) or todo (unchecked)
-   - Mode "multi": done, todo, or na (not applicable)
-   - Mode "explicit": yes or no (must explicitly answer)
+Research and fill the form fields using all available tools. Focus on accuracy over completeness.
 
-CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+## Guidelines
+1. Address required fields first (severity: "required"), then optional fields (severity: "recommended")
+2. NEVER fabricate or guess information - only use data you can verify
+3. If you cannot find verifiable information, use skip_field with a reason
 
-Always use the fill_form tool to submit your field values.
+## Patch Format Examples
+
+Use the fill_form tool with patches in these formats:
+
+| Type | Example |
+|------|---------|
+| string | \`{ op: "set_string", fieldId: "name", value: "Acme Corp" }\` |
+| number | \`{ op: "set_number", fieldId: "age", value: 32 }\` |
+| string_list | \`{ op: "set_string_list", fieldId: "tags", value: ["ai", "ml"] }\` |
+| url | \`{ op: "set_url", fieldId: "website", value: "https://example.com" }\` |
+| url_list | \`{ op: "set_url_list", fieldId: "sources", value: ["https://a.com", "https://b.com"] }\` |
+| date | \`{ op: "set_date", fieldId: "event_date", value: "2024-06-15" }\` |
+| year | \`{ op: "set_year", fieldId: "founded", value: 2024 }\` |
+| single_select | \`{ op: "set_single_select", fieldId: "priority", value: "high" }\` |
+| multi_select | \`{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }\` |
+| checkboxes | \`{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }\` |
+| table | \`{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }\` |
+
+## Important: checkboxes vs multi_select
+
+These two types look similar but have DIFFERENT value formats:
+
+- **multi_select** → array of option IDs: \`["opt1", "opt2"]\`
+- **checkboxes** → object mapping IDs to states: \`{ "opt1": "done", "opt2": "todo" }\`
+
+**Checkbox states by mode:**
+- Mode "simple": \`"done"\` or \`"todo"\`
+- Mode "multi": \`"done"\`, \`"todo"\`, \`"incomplete"\`, \`"active"\`, or \`"na"\`
+- Mode "explicit": \`"yes"\` or \`"no"\` (if unknown, use abort_field)
+
+**WRONG:** \`{ op: "set_checkboxes", value: ["task1", "task2"] }\`
+**RIGHT:** \`{ op: "set_checkboxes", value: { "task1": "done", "task2": "done" } }\`
+
+## Skipping Fields
+
+If you cannot find verifiable information:
+\`{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }\`
 `;
 
 /**
@@ -80,46 +106,96 @@ export function getIssuesIntro(issueCount: number): string {
  * Used in PATCH_FORMAT_INSTRUCTIONS and rejection feedback hints.
  */
 export const PATCH_FORMATS: Record<string, string> = {
-  string: '{ op: "set_string", fieldId: "...", value: "..." }',
-  number: '{ op: "set_number", fieldId: "...", value: 123 }',
-  string_list: '{ op: "set_string_list", fieldId: "...", value: ["...", "..."] }',
+  string: '{ op: "set_string", fieldId: "...", value: "text here" }',
+  number: '{ op: "set_number", fieldId: "...", value: 42 }',
+  string_list: '{ op: "set_string_list", fieldId: "...", value: ["item1", "item2"] }',
   single_select: '{ op: "set_single_select", fieldId: "...", value: "option_id" }',
   multi_select: '{ op: "set_multi_select", fieldId: "...", value: ["opt1", "opt2"] }',
   checkboxes: '{ op: "set_checkboxes", fieldId: "...", value: { "opt1": "done", "opt2": "todo" } }',
-  url: '{ op: "set_url", fieldId: "...", value: "https://..." }',
-  url_list: '{ op: "set_url_list", fieldId: "...", value: ["https://...", "https://..."] }',
-  date: '{ op: "set_date", fieldId: "...", value: "2024-01-15" }',
+  url: '{ op: "set_url", fieldId: "...", value: "https://example.com" }',
+  url_list: '{ op: "set_url_list", fieldId: "...", value: ["https://a.com", "https://b.com"] }',
+  date: '{ op: "set_date", fieldId: "...", value: "2024-06-15" }',
   year: '{ op: "set_year", fieldId: "...", value: 2024 }',
-  table: '{ op: "set_table", fieldId: "...", value: [{ col1: "value1", col2: "value2" }, ...] }',
+  table: '{ op: "set_table", fieldId: "...", value: [{ col1: "val1", col2: "val2" }] }',
 };
+
+/**
+ * Checkbox-mode-specific format hints.
+ * Used to provide clearer examples based on the checkbox mode.
+ */
+export const CHECKBOX_MODE_HINTS: Record<string, string> = {
+  simple: '{ "opt1": "done", "opt2": "todo" }  // states: done, todo',
+  multi:
+    '{ "opt1": "todo", "opt2": "todo", "opt3": "done", "opt4": "incomplete", "opt5": "active", "opt6": "na" }  // states: done, todo, incomplete, active, na',
+  explicit: '{ "opt1": "yes", "opt2": "no" }  // states: yes, no',
+};
+
+/**
+ * Options for generating patch format hints.
+ */
+export interface PatchFormatHintOptions {
+  fieldId?: string;
+  columnIds?: string[];
+  checkboxMode?: 'simple' | 'multi' | 'explicit';
+  optionIds?: string[];
+}
 
 /**
  * Get the correct patch format for a field kind.
  *
  * @param fieldKind - The field kind (e.g., "table", "string")
- * @param fieldId - Optional field ID to substitute in the example
- * @param columnIds - Optional column IDs for table fields
+ * @param options - Optional configuration for the hint
  * @returns The patch format example string
  */
 export function getPatchFormatHint(
   fieldKind: string,
-  fieldId?: string,
+  fieldIdOrOptions?: string | PatchFormatHintOptions,
   columnIds?: string[],
 ): string {
+  // Handle legacy call signature: getPatchFormatHint(kind, fieldId, columnIds)
+  let options: PatchFormatHintOptions = {};
+  if (typeof fieldIdOrOptions === 'string') {
+    options = { fieldId: fieldIdOrOptions, columnIds };
+  } else if (fieldIdOrOptions) {
+    options = fieldIdOrOptions;
+  }
+
   let format = PATCH_FORMATS[fieldKind];
   if (!format) {
     return `Use the correct set_${fieldKind} operation for this field type.`;
   }
 
   // Substitute field ID if provided
-  if (fieldId) {
-    format = format.replace('fieldId: "..."', `fieldId: "${fieldId}"`);
+  if (options.fieldId) {
+    format = format.replace('fieldId: "..."', `fieldId: "${options.fieldId}"`);
+  }
+
+  // For checkboxes, use mode-specific hints with actual option IDs if available
+  if (fieldKind === 'checkboxes') {
+    const mode = options.checkboxMode ?? 'multi';
+    const optIds = options.optionIds ?? ['opt1', 'opt2'];
+    const stateMap: Record<string, [string, string]> = {
+      simple: ['done', 'todo'],
+      multi: ['done', 'todo'],
+      explicit: ['yes', 'no'],
+    };
+    const [state1, state2] = stateMap[mode] ?? ['done', 'todo'];
+
+    // Build concrete example with actual option IDs
+    const valueExample =
+      optIds.length >= 2
+        ? `{ "${optIds[0]}": "${state1}", "${optIds[1]}": "${state2}" }`
+        : optIds.length === 1
+          ? `{ "${optIds[0]}": "${state1}" }`
+          : `{ "opt1": "${state1}", "opt2": "${state2}" }`;
+
+    format = format.replace('{ "opt1": "done", "opt2": "todo" }', valueExample);
   }
 
   // For table fields, show actual column IDs if available
-  if (fieldKind === 'table' && columnIds && columnIds.length > 0) {
-    const colExample = columnIds.map((id) => `"${id}": "..."`).join(', ');
-    format = format.replace('{ col1: "value1", col2: "value2" }', `{ ${colExample} }`);
+  if (fieldKind === 'table' && options.columnIds && options.columnIds.length > 0) {
+    const colExample = options.columnIds.map((id) => `"${id}": "..."`).join(', ');
+    format = format.replace('{ col1: "val1", col2: "val2" }', `{ ${colExample} }`);
   }
 
   return format;

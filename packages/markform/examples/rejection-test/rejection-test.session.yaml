@@ -45,32 +45,58 @@ turns:
             - score
             - votes
     after:
-      required_issue_count: 2
-      markdown_sha256: 4edc8e8f1e858aafa657f32e1c2e56c4bfbe93b37224e1010eb6883c111e1c86
-      answered_field_count: 0
+      required_issue_count: 1
+      markdown_sha256: 6dea4cae87738069d3c212e817ac7a59a77fcd3c78d7fac506adf4f5b36caf27
+      answered_field_count: 1
       skipped_field_count: 0
     context:
       system_prompt: |-
         # Form Instructions
-        Carefully research answers to all questions in the form, using all available tools you have.
 
-        Guidelines:
-        1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
-        2. You MUST address ALL issues shown to you - both required AND recommended (optional)
-        3. NEVER fabricate or guess information - only use data you can verify
-        4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
-        5. For string fields: use appropriate text from verified sources
-        6. For number fields: use appropriate numeric values from verified sources
-        7. For single_select: choose one valid option ID
-        8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: use the appropriate state for the checkbox mode:
-           - Mode "simple": done (checked) or todo (unchecked)
-           - Mode "multi": done, todo, or na (not applicable)
-           - Mode "explicit": yes or no (must explicitly answer)
+        Research and fill the form fields using all available tools. Focus on accuracy over completeness.
 
-        CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+        ## Guidelines
+        1. Address required fields first (severity: "required"), then optional fields (severity: "recommended")
+        2. NEVER fabricate or guess information - only use data you can verify
+        3. If you cannot find verifiable information, use skip_field with a reason
 
-        Always use the fill_form tool to submit your field values.
+        ## Patch Format Examples
+
+        Use the fill_form tool with patches in these formats:
+
+        | Type | Example |
+        |------|---------|
+        | string | `{ op: "set_string", fieldId: "name", value: "Acme Corp" }` |
+        | number | `{ op: "set_number", fieldId: "age", value: 32 }` |
+        | string_list | `{ op: "set_string_list", fieldId: "tags", value: ["ai", "ml"] }` |
+        | url | `{ op: "set_url", fieldId: "website", value: "https://example.com" }` |
+        | url_list | `{ op: "set_url_list", fieldId: "sources", value: ["https://a.com", "https://b.com"] }` |
+        | date | `{ op: "set_date", fieldId: "event_date", value: "2024-06-15" }` |
+        | year | `{ op: "set_year", fieldId: "founded", value: 2024 }` |
+        | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
+        | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
+        | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+        | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
+
+        ## Important: checkboxes vs multi_select
+
+        These two types look similar but have DIFFERENT value formats:
+
+        - **multi_select** → array of option IDs: `["opt1", "opt2"]`
+        - **checkboxes** → object mapping IDs to states: `{ "opt1": "done", "opt2": "todo" }`
+
+        **Checkbox states by mode:**
+        - Mode "simple": `"done"` or `"todo"`
+        - Mode "multi": `"done"`, `"todo"`, `"incomplete"`, `"active"`, or `"na"`
+        - Mode "explicit": `"yes"` or `"no"` (if unknown, use abort_field)
+
+        **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
+        **RIGHT:** `{ op: "set_checkboxes", value: { "task1": "done", "task2": "done" } }`
+
+        ## Skipping Fields
+
+        If you cannot find verifiable information:
+        `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
         # Instructions for agent role
@@ -125,13 +151,13 @@ turns:
           Type: table
           Columns: source, score, votes
           Rows: min: 1, max: 5
-          Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }] }
           This field is required.
 
         - **title** (field): Required field "Title" is empty
           Severity: required, Priority: P1
           Type: string
-          Set: { op: "set_string", fieldId: "title", value: "..." }
+          Set: { op: "set_string", fieldId: "title", value: "text here" }
           This field is required.
 
         # General Instructions
@@ -142,25 +168,51 @@ turns:
       request:
         system: |-
           # Form Instructions
-          Carefully research answers to all questions in the form, using all available tools you have.
 
-          Guidelines:
-          1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
-          2. You MUST address ALL issues shown to you - both required AND recommended (optional)
-          3. NEVER fabricate or guess information - only use data you can verify
-          4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
-          5. For string fields: use appropriate text from verified sources
-          6. For number fields: use appropriate numeric values from verified sources
-          7. For single_select: choose one valid option ID
-          8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: use the appropriate state for the checkbox mode:
-             - Mode "simple": done (checked) or todo (unchecked)
-             - Mode "multi": done, todo, or na (not applicable)
-             - Mode "explicit": yes or no (must explicitly answer)
+          Research and fill the form fields using all available tools. Focus on accuracy over completeness.
 
-          CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+          ## Guidelines
+          1. Address required fields first (severity: "required"), then optional fields (severity: "recommended")
+          2. NEVER fabricate or guess information - only use data you can verify
+          3. If you cannot find verifiable information, use skip_field with a reason
 
-          Always use the fill_form tool to submit your field values.
+          ## Patch Format Examples
+
+          Use the fill_form tool with patches in these formats:
+
+          | Type | Example |
+          |------|---------|
+          | string | `{ op: "set_string", fieldId: "name", value: "Acme Corp" }` |
+          | number | `{ op: "set_number", fieldId: "age", value: 32 }` |
+          | string_list | `{ op: "set_string_list", fieldId: "tags", value: ["ai", "ml"] }` |
+          | url | `{ op: "set_url", fieldId: "website", value: "https://example.com" }` |
+          | url_list | `{ op: "set_url_list", fieldId: "sources", value: ["https://a.com", "https://b.com"] }` |
+          | date | `{ op: "set_date", fieldId: "event_date", value: "2024-06-15" }` |
+          | year | `{ op: "set_year", fieldId: "founded", value: 2024 }` |
+          | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
+          | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
+          | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+          | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
+
+          ## Important: checkboxes vs multi_select
+
+          These two types look similar but have DIFFERENT value formats:
+
+          - **multi_select** → array of option IDs: `["opt1", "opt2"]`
+          - **checkboxes** → object mapping IDs to states: `{ "opt1": "done", "opt2": "todo" }`
+
+          **Checkbox states by mode:**
+          - Mode "simple": `"done"` or `"todo"`
+          - Mode "multi": `"done"`, `"todo"`, `"incomplete"`, `"active"`, or `"na"`
+          - Mode "explicit": `"yes"` or `"no"` (if unknown, use abort_field)
+
+          **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
+          **RIGHT:** `{ op: "set_checkboxes", value: { "task1": "done", "task2": "done" } }`
+
+          ## Skipping Fields
+
+          If you cannot find verifiable information:
+          `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
           # Instructions for agent role
@@ -215,13 +267,13 @@ turns:
             Type: table
             Columns: source, score, votes
             Rows: min: 1, max: 5
-            Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }] }
             This field is required.
 
           - **title** (field): Required field "Title" is empty
             Severity: required, Priority: P1
             Type: string
-            Set: { op: "set_string", fieldId: "title", value: "..." }
+            Set: { op: "set_string", fieldId: "title", value: "text here" }
             This field is required.
 
           # General Instructions
@@ -238,7 +290,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  value:
+                  items:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -270,12 +322,6 @@ turns:
           message: Required field "Ratings" is empty
           severity: required
           priority: 1
-        - ref: title
-          scope: field
-          reason: required_missing
-          message: Required field "Title" is empty
-          severity: required
-          priority: 1
     apply:
       patches:
         - op: set_table
@@ -287,9 +333,6 @@ turns:
             - source: Rotten Tomatoes
               score: 92
               votes: 450
-        - op: set_string
-          field_id: title
-          value: Test Movie
     after:
       required_issue_count: 0
       markdown_sha256: f45e7cd87b036d57564e3340dec33c1dc5c2094d880e52b903f64da19b3b8ec0
@@ -298,25 +341,51 @@ turns:
     context:
       system_prompt: |-
         # Form Instructions
-        Carefully research answers to all questions in the form, using all available tools you have.
 
-        Guidelines:
-        1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
-        2. You MUST address ALL issues shown to you - both required AND recommended (optional)
-        3. NEVER fabricate or guess information - only use data you can verify
-        4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
-        5. For string fields: use appropriate text from verified sources
-        6. For number fields: use appropriate numeric values from verified sources
-        7. For single_select: choose one valid option ID
-        8. For multi_select: choose one or more valid option IDs
-        9. For checkboxes: use the appropriate state for the checkbox mode:
-           - Mode "simple": done (checked) or todo (unchecked)
-           - Mode "multi": done, todo, or na (not applicable)
-           - Mode "explicit": yes or no (must explicitly answer)
+        Research and fill the form fields using all available tools. Focus on accuracy over completeness.
 
-        CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+        ## Guidelines
+        1. Address required fields first (severity: "required"), then optional fields (severity: "recommended")
+        2. NEVER fabricate or guess information - only use data you can verify
+        3. If you cannot find verifiable information, use skip_field with a reason
 
-        Always use the fill_form tool to submit your field values.
+        ## Patch Format Examples
+
+        Use the fill_form tool with patches in these formats:
+
+        | Type | Example |
+        |------|---------|
+        | string | `{ op: "set_string", fieldId: "name", value: "Acme Corp" }` |
+        | number | `{ op: "set_number", fieldId: "age", value: 32 }` |
+        | string_list | `{ op: "set_string_list", fieldId: "tags", value: ["ai", "ml"] }` |
+        | url | `{ op: "set_url", fieldId: "website", value: "https://example.com" }` |
+        | url_list | `{ op: "set_url_list", fieldId: "sources", value: ["https://a.com", "https://b.com"] }` |
+        | date | `{ op: "set_date", fieldId: "event_date", value: "2024-06-15" }` |
+        | year | `{ op: "set_year", fieldId: "founded", value: 2024 }` |
+        | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
+        | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
+        | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+        | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
+
+        ## Important: checkboxes vs multi_select
+
+        These two types look similar but have DIFFERENT value formats:
+
+        - **multi_select** → array of option IDs: `["opt1", "opt2"]`
+        - **checkboxes** → object mapping IDs to states: `{ "opt1": "done", "opt2": "todo" }`
+
+        **Checkbox states by mode:**
+        - Mode "simple": `"done"` or `"todo"`
+        - Mode "multi": `"done"`, `"todo"`, `"incomplete"`, `"active"`, or `"na"`
+        - Mode "explicit": `"yes"` or `"no"` (if unknown, use abort_field)
+
+        **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
+        **RIGHT:** `{ op: "set_checkboxes", value: { "task1": "done", "task2": "done" } }`
+
+        ## Skipping Fields
+
+        If you cannot find verifiable information:
+        `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
         # Instructions for agent role
@@ -331,7 +400,7 @@ turns:
 
         - **Error:** Cannot apply set_string to table field "ratings"
           **Correction:** This field is type "table". Use set_table instead.
-          **Correct format:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+          **Correct format:** { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }] }
 
         # Current Form State
 
@@ -362,7 +431,11 @@ turns:
         Enter rating data with source name, score (0-100), and vote count.
         {% /instructions %}
 
-        {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+        {% field kind="string" id="title" label="Title" required=true %}
+        ```value
+        Test Movie
+        ```
+        {% /field %}
 
         {% /group %}
 
@@ -372,20 +445,14 @@ turns:
 
         # Current Form Issues
 
-        You need to address 2 issues. Here are the current issues:
+        You need to address 1 issue. Here are the current issues:
 
         - **ratings** (field): Required field "Ratings" is empty
           Severity: required, Priority: P1
           Type: table
           Columns: source, score, votes
           Rows: min: 1, max: 5
-          Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
-          This field is required.
-
-        - **title** (field): Required field "Title" is empty
-          Severity: required, Priority: P1
-          Type: string
-          Set: { op: "set_string", fieldId: "title", value: "..." }
+          Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }] }
           This field is required.
 
         # General Instructions
@@ -396,25 +463,51 @@ turns:
       request:
         system: |-
           # Form Instructions
-          Carefully research answers to all questions in the form, using all available tools you have.
 
-          Guidelines:
-          1. Focus on required fields first (severity: "required"), then address optional fields (severity: "recommended")
-          2. You MUST address ALL issues shown to you - both required AND recommended (optional)
-          3. NEVER fabricate or guess information - only use data you can verify
-          4. If you cannot find verifiable information for a field, use skip_field to mark it as skipped with a reason
-          5. For string fields: use appropriate text from verified sources
-          6. For number fields: use appropriate numeric values from verified sources
-          7. For single_select: choose one valid option ID
-          8. For multi_select: choose one or more valid option IDs
-          9. For checkboxes: use the appropriate state for the checkbox mode:
-             - Mode "simple": done (checked) or todo (unchecked)
-             - Mode "multi": done, todo, or na (not applicable)
-             - Mode "explicit": yes or no (must explicitly answer)
+          Research and fill the form fields using all available tools. Focus on accuracy over completeness.
 
-          CRITICAL: Accuracy is more important than completeness. Use skip_field when information cannot be verified.
+          ## Guidelines
+          1. Address required fields first (severity: "required"), then optional fields (severity: "recommended")
+          2. NEVER fabricate or guess information - only use data you can verify
+          3. If you cannot find verifiable information, use skip_field with a reason
 
-          Always use the fill_form tool to submit your field values.
+          ## Patch Format Examples
+
+          Use the fill_form tool with patches in these formats:
+
+          | Type | Example |
+          |------|---------|
+          | string | `{ op: "set_string", fieldId: "name", value: "Acme Corp" }` |
+          | number | `{ op: "set_number", fieldId: "age", value: 32 }` |
+          | string_list | `{ op: "set_string_list", fieldId: "tags", value: ["ai", "ml"] }` |
+          | url | `{ op: "set_url", fieldId: "website", value: "https://example.com" }` |
+          | url_list | `{ op: "set_url_list", fieldId: "sources", value: ["https://a.com", "https://b.com"] }` |
+          | date | `{ op: "set_date", fieldId: "event_date", value: "2024-06-15" }` |
+          | year | `{ op: "set_year", fieldId: "founded", value: 2024 }` |
+          | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
+          | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
+          | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+          | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
+
+          ## Important: checkboxes vs multi_select
+
+          These two types look similar but have DIFFERENT value formats:
+
+          - **multi_select** → array of option IDs: `["opt1", "opt2"]`
+          - **checkboxes** → object mapping IDs to states: `{ "opt1": "done", "opt2": "todo" }`
+
+          **Checkbox states by mode:**
+          - Mode "simple": `"done"` or `"todo"`
+          - Mode "multi": `"done"`, `"todo"`, `"incomplete"`, `"active"`, or `"na"`
+          - Mode "explicit": `"yes"` or `"no"` (if unknown, use abort_field)
+
+          **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
+          **RIGHT:** `{ op: "set_checkboxes", value: { "task1": "done", "task2": "done" } }`
+
+          ## Skipping Fields
+
+          If you cannot find verifiable information:
+          `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
           # Instructions for agent role
@@ -429,7 +522,7 @@ turns:
 
           - **Error:** Cannot apply set_string to table field "ratings"
             **Correction:** This field is type "table". Use set_table instead.
-            **Correct format:** { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
+            **Correct format:** { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }] }
 
           # Current Form State
 
@@ -460,7 +553,11 @@ turns:
           Enter rating data with source name, score (0-100), and vote count.
           {% /instructions %}
 
-          {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+          {% field kind="string" id="title" label="Title" required=true %}
+          ```value
+          Test Movie
+          ```
+          {% /field %}
 
           {% /group %}
 
@@ -470,20 +567,14 @@ turns:
 
           # Current Form Issues
 
-          You need to address 2 issues. Here are the current issues:
+          You need to address 1 issue. Here are the current issues:
 
           - **ratings** (field): Required field "Ratings" is empty
             Severity: required, Priority: P1
             Type: table
             Columns: source, score, votes
             Rows: min: 1, max: 5
-            Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
-            This field is required.
-
-          - **title** (field): Required field "Title" is empty
-            Severity: required, Priority: P1
-            Type: string
-            Set: { op: "set_string", fieldId: "title", value: "..." }
+            Set: { op: "set_table", fieldId: "ratings", value: [{ "source": "...", "score": "...", "votes": "..." }] }
             This field is required.
 
           # General Instructions
@@ -500,7 +591,7 @@ turns:
               properties:
                 patches:
                   description: Array of patches to apply to the form
-                  value:
+                  items:
                     $ref: '#/$defs/patch'
                   type: array
               required:
@@ -521,9 +612,6 @@ turns:
                         - score: 92
                           source: Rotten Tomatoes
                           votes: 450
-                    - field_id: title
-                      op: set_string
-                      value: Test Movie
             tool_results: []
             text: null
         usage:
