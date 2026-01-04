@@ -8,17 +8,19 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Command } from 'commander';
 
 import { exec } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { readFile as readFileAsync } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { basename, resolve } from 'node:path';
 
 import pc from 'picocolors';
+import YAML from 'yaml';
 
 import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
+import { formToJsonSchema } from '../../engine/jsonSchema.js';
 import { serializeForm, serializeReport } from '../../engine/serialize.js';
-import { ALL_EXTENSIONS, DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
+import { toNotesArray, toStructuredValues } from '../lib/exportHelpers.js';
+import { DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -76,86 +78,30 @@ function openBrowser(url: string): void {
 }
 
 // =============================================================================
-// Related Files Discovery
+// Tab Configuration
 // =============================================================================
 
-/** Represents a tab for navigation between related files */
+/** Represents a tab for navigation */
 interface Tab {
   id: 'view' | 'form' | 'source' | 'report' | 'values' | 'schema';
   label: string;
-  path: string | null; // null if file doesn't exist
-}
-
-/** Collection of related files for a form */
-interface RelatedFiles {
-  form: string;
-  report: string | null;
-  values: string | null;
-  schema: string | null;
+  path: string | null; // Source file path (for source tab) or null for dynamically generated
 }
 
 /**
- * Get the base path by stripping any known markform extension.
- */
-function getBasePath(filePath: string): string {
-  for (const ext of Object.values(ALL_EXTENSIONS)) {
-    if (filePath.endsWith(ext)) {
-      return filePath.slice(0, -ext.length);
-    }
-  }
-  // Also handle plain .md files
-  if (filePath.endsWith('.md')) {
-    return filePath.slice(0, -3);
-  }
-  return filePath;
-}
-
-/**
- * Find related files for a form file.
- * Checks for .report.md, .yml, and .schema.json files with the same base name.
- */
-function findRelatedFiles(formPath: string): RelatedFiles {
-  const base = getBasePath(formPath);
-
-  const reportPath = base + ALL_EXTENSIONS.report;
-  const valuesPath = base + ALL_EXTENSIONS.yaml;
-  const schemaPath = base + ALL_EXTENSIONS.schema;
-
-  return {
-    form: formPath,
-    report: existsSync(reportPath) ? reportPath : null,
-    values: existsSync(valuesPath) ? valuesPath : null,
-    schema: existsSync(schemaPath) ? schemaPath : null,
-  };
-}
-
-/**
- * Build tabs for tabbed navigation.
+ * Build tabs for a form file.
+ * All tabs are always present - content is generated dynamically from the form.
  * Tab order: View, Edit, Source, Report, Values, Schema
  */
-function buildTabs(relatedFiles: RelatedFiles): Tab[] {
-  const tabs: Tab[] = [];
-
-  // View tab - read-only display of form (always present for form files)
-  tabs.push({ id: 'view', label: 'View', path: relatedFiles.form });
-
-  // Edit tab - interactive form editor (renamed from "Markform")
-  tabs.push({ id: 'form', label: 'Edit', path: relatedFiles.form });
-
-  // Source tab - syntax-highlighted source code (always present for form files)
-  tabs.push({ id: 'source', label: 'Source', path: relatedFiles.form });
-
-  if (relatedFiles.report) {
-    tabs.push({ id: 'report', label: 'Report', path: relatedFiles.report });
-  }
-  if (relatedFiles.values) {
-    tabs.push({ id: 'values', label: 'Values', path: relatedFiles.values });
-  }
-  if (relatedFiles.schema) {
-    tabs.push({ id: 'schema', label: 'Schema', path: relatedFiles.schema });
-  }
-
-  return tabs;
+function buildFormTabs(formPath: string): Tab[] {
+  return [
+    { id: 'view', label: 'View', path: null }, // Generated from form
+    { id: 'form', label: 'Edit', path: formPath }, // Interactive editor
+    { id: 'source', label: 'Source', path: formPath }, // Form source
+    { id: 'report', label: 'Report', path: null }, // Generated from form
+    { id: 'values', label: 'Values', path: null }, // Generated from form
+    { id: 'schema', label: 'Schema', path: null }, // Generated from form
+  ];
 }
 
 /**
@@ -183,9 +129,8 @@ export function registerServeCommand(program: Command): void {
           form = parseForm(content);
         }
 
-        // Discover related files for form files
-        const relatedFiles = fileType === 'form' ? findRelatedFiles(filePath) : null;
-        const tabs = relatedFiles ? buildTabs(relatedFiles) : null;
+        // Build tabs for form files (all tabs are generated dynamically)
+        const tabs = fileType === 'form' ? buildFormTabs(filePath) : null;
 
         // Start the server
         const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -262,7 +207,7 @@ async function handleRequest(
       return;
     }
 
-    // Report tab - generate dynamically from form to ensure consistency with View tab
+    // Report tab - generate dynamically from form
     if (tabId === 'report' && form) {
       const reportContent = serializeReport(form);
       const html = renderMarkdownContent(reportContent);
@@ -271,24 +216,31 @@ async function handleRequest(
       return;
     }
 
-    // Handle other tabs (values, schema)
-    if (tab?.path) {
-      const content = await readFileAsync(tab.path, 'utf-8');
-      const tabFileType = detectFileType(tab.path);
-      let html: string;
-      if (tabFileType === 'report' || tabFileType === 'raw') {
-        html = renderMarkdownContent(content);
-      } else if (tabFileType === 'yaml') {
-        html = renderYamlContent(content);
-      } else if (tabFileType === 'json' || tabFileType === 'schema') {
-        html = renderJsonContent(content);
-      } else {
-        html = `<pre>${escapeHtml(content)}</pre>`;
-      }
+    // Values tab - generate dynamically from form
+    if (tabId === 'values' && form) {
+      const values = toStructuredValues(form);
+      const notes = toNotesArray(form);
+      const exportData = {
+        values,
+        ...(notes.length > 0 && { notes }),
+      };
+      const yamlContent = YAML.stringify(exportData);
+      const html = renderYamlContent(yamlContent);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       return;
     }
+
+    // Schema tab - generate dynamically from form
+    if (tabId === 'schema' && form) {
+      const result = formToJsonSchema(form);
+      const jsonContent = JSON.stringify(result.schema, null, 2);
+      const html = renderJsonContent(jsonContent);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
     res.writeHead(404);
     res.end('Tab not found');
     return;
