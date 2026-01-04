@@ -30,11 +30,20 @@ jobs:
       # Run all tests with unified coverage (vitest + tryscript CLI tests)
       - run: pnpm --filter markform test:coverage
 
+      # Post coverage report as PR comment
+      - name: Coverage Report
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: always() && github.event_name == 'pull_request'
+        with:
+          json-summary-path: packages/markform/coverage/coverage-summary.json
+          json-final-path: packages/markform/coverage/coverage-final.json
+          file-coverage-mode: changes
+
       # Generate and commit coverage badges (main branch only)
-      - name: Generate Coverage Badges
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Coverage Badges
         uses: jpb06/coverage-badges-action@v1.4.6
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         with:
           coverage-summary-path: packages/markform/coverage/coverage-summary.json
-          output-folder: ./badges/packages/markform
+          output-folder: ./badges
           branches: main
