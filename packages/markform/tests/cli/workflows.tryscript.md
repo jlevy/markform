@@ -1,7 +1,9 @@
 ---
+cwd: ../..
 env:
   NO_COLOR: "1"
   FORCE_COLOR: "0"
+  CLI: ./dist/bin.mjs
 timeout: 30000
 ---
 
@@ -13,26 +15,26 @@ Tests for multi-step CLI workflows and error handling.
 
 ## Error Handling
 
-### missing file returns error
+# Test: missing file returns error
 
 ```console
-$ /home/user/markform/packages/markform/dist/bin.mjs inspect /nonexistent/file.form.md
+$ $CLI inspect /nonexistent/file.form.md
 Error: ENOENT: no such file or directory, open '/nonexistent/file.form.md'
 ? 1
 ```
 
-### validate missing file returns error
+# Test: validate missing file returns error
 
 ```console
-$ /home/user/markform/packages/markform/dist/bin.mjs validate /nonexistent/file.form.md
+$ $CLI validate /nonexistent/file.form.md
 Error: ENOENT: no such file or directory, open '/nonexistent/file.form.md'
 ? 1
 ```
 
-### status missing file returns error
+# Test: status missing file returns error
 
 ```console
-$ /home/user/markform/packages/markform/dist/bin.mjs status /nonexistent/file.form.md
+$ $CLI status /nonexistent/file.form.md
 Error: ENOENT: no such file or directory, open '/nonexistent/file.form.md'
 ? 1
 ```
@@ -41,10 +43,10 @@ Error: ENOENT: no such file or directory, open '/nonexistent/file.form.md'
 
 ## Apply Command
 
-### apply patches a form field
+# Test: apply patches a form field
 
 ```console
-$ cp /home/user/markform/packages/markform/examples/simple/simple.form.md /tmp/test-apply.form.md && /home/user/markform/packages/markform/dist/bin.mjs apply /tmp/test-apply.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | head -19
+$ cp examples/simple/simple.form.md /tmp/test-apply.form.md && $CLI apply /tmp/test-apply.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | head -19
 ---
 markform:
   spec: "MF/0.1"
@@ -71,10 +73,10 @@ Fill all fields using interactive prompts - no LLM API key needed.
 
 ## Command Help
 
-### inspect --help shows command options
+# Test: inspect --help shows command options
 
 ```console
-$ /home/user/markform/packages/markform/dist/bin.mjs inspect --help
+$ $CLI inspect --help
 Usage: markform inspect [options] <file>
 
 Inspect a form and display its structure, progress, and issues
@@ -82,10 +84,10 @@ Inspect a form and display its structure, progress, and issues
 ? 0
 ```
 
-### fill --help shows command options
+# Test: fill --help shows command options
 
 ```console
-$ /home/user/markform/packages/markform/dist/bin.mjs fill --help
+$ $CLI fill --help
 Usage: markform fill [options] <file>
 
 Run an agent to autonomously fill a form

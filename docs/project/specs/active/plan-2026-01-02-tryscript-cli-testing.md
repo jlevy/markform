@@ -1,6 +1,6 @@
 # Plan: Tryscript CLI End-to-End Testing
 
-**Status: IMPLEMENTED** - Phase 1-4 complete. 18 tests passing.
+**Status: IN PROGRESS** - Phase 1-4 complete. Phase 5 (tryscript v0.1.0 upgrade) pending.
 
 ## Summary
 
@@ -8,12 +8,16 @@ This plan covers implementing end-to-end CLI testing for markform using tryscrip
 During implementation, several bugs and limitations in tryscript were discovered
 and documented in `tryscript-bug-report.md`.
 
+**Update (2026-01-04):** Tryscript v0.1.0 released with fixes for all critical issues.
+Now upgrading markform tests to use the cleaner format.
+
 ## Implementation Status
 
 - [x] Phase 1: Setup - tryscript.config.ts, test directory, npm scripts
 - [x] Phase 2: Core Commands - 12 tests for primary CLI commands
 - [x] Phase 3: Workflows - 6 tests for error handling and help commands
-- [x] Phase 4: CI Integration - Added to GitHub Actions workflow
+- [x] Phase 4: CI Integration - Added to GitHub Actions workflow (skipped due to bugs)
+- [ ] Phase 5: Tryscript v0.1.0 upgrade - Clean format, enable CI
 
 ## Discovered Issues
 
@@ -292,14 +296,146 @@ Issues (0):
 
 ### For tryscript (priority order)
 
-1. [ ] Add `cwd` config option
-2. [ ] Add `binName` config option
-3. [ ] Fix `bin` path resolution (relative to test file)
-4. [ ] Add `[PKG]` pattern support
+1. [x] Add `cwd` config option - **DONE in v0.1.0**
+2. [x] Add env variable expansion in commands - **DONE in v0.1.0**
+3. [x] Add `sandbox: false` to run in cwd - **DONE in v0.1.0**
+4. [x] Add `[CWD]` and `[ROOT]` patterns - **DONE in v0.1.0**
+5. [x] Add `before`/`after` hooks - **DONE in v0.1.0**
 
-### For markform (after tryscript changes)
+### For markform (Phase 5)
 
-1. [ ] Update tests to use `cwd: .`
-2. [ ] Simplify paths to relative
-3. [ ] Apply more aggressive elision
-4. [ ] Evaluate which unit tests to migrate
+1. [ ] Update tryscript.config.mjs with new options
+2. [ ] Rewrite commands.tryscript.md with clean format
+3. [ ] Rewrite workflows.tryscript.md with clean format
+4. [ ] Enable tryscript in CI (uncomment in ci.yml)
+5. [ ] Verify all tests pass locally and in CI
+6. [ ] Update documentation
+
+---
+
+## Phase 5: Tryscript v0.1.0 Upgrade
+
+### Overview
+
+Tryscript v0.1.0 has been released with all the features we needed. This phase
+upgrades our tests to use the cleaner format and enables CI.
+
+### Key Changes
+
+**Before (v0.0.1 workaround):**
+```yaml
+---
+env:
+  NO_COLOR: "1"
+---
+```
+```console
+$ /home/user/markform/packages/markform/dist/bin.mjs --help
+```
+
+**After (v0.1.0 clean format):**
+```yaml
+---
+cwd: ../..
+env:
+  NO_COLOR: "1"
+  CLI: ./dist/bin.mjs
+---
+```
+```console
+$ $CLI --help
+```
+
+### New Features Used
+
+| Feature | Usage | Benefit |
+|---------|-------|---------|
+| `cwd: ../..` | Run from package dir | Relative paths work |
+| `env.CLI` | Define CLI path | Shell expands `$CLI` |
+| `sandbox: false` | Don't use temp dir | Default, explicit for clarity |
+| `[CWD]` | Built-in pattern | Match current directory |
+| `before` | Setup command | Build before tests if needed |
+
+### Tasks
+
+#### 5.1. Update tryscript.config.mjs
+
+Remove unused `bin` config, keep patterns and env:
+
+```javascript
+import { defineConfig } from 'tryscript';
+
+export default defineConfig({
+  env: {
+    NO_COLOR: '1',
+    FORCE_COLOR: '0',
+  },
+  timeout: 30000,
+  patterns: {
+    VERSION: '\\d+\\.\\d+\\.\\d+(?:-[a-z]+\\.\\d+)?',
+    PATH: '/[^\\s]+',
+  },
+});
+```
+
+#### 5.2. Rewrite commands.tryscript.md
+
+Convert all 12 tests to use:
+- `cwd: ../..` to run from package directory
+- `env.CLI: ./dist/bin.mjs` for the CLI
+- `$CLI` in commands
+- Relative paths for example files
+
+Example transformation:
+
+```yaml
+# Before
+$ /home/user/markform/packages/markform/dist/bin.mjs status /home/user/markform/packages/markform/examples/simple/simple.form.md
+
+# After
+$ $CLI status examples/simple/simple.form.md
+```
+
+#### 5.3. Rewrite workflows.tryscript.md
+
+Convert all 6 tests similarly. For the apply test, use sandbox:
+
+```yaml
+---
+cwd: ../..
+sandbox: true
+fixtures:
+  - examples/simple/simple.form.md
+env:
+  CLI: ../../dist/bin.mjs
+---
+```
+
+#### 5.4. Enable CI
+
+Uncomment the tryscript step in `.github/workflows/ci.yml`:
+
+```yaml
+- run: pnpm --filter markform test:tryscript
+```
+
+#### 5.5. Verify Tests
+
+```bash
+pnpm --filter markform test:tryscript
+```
+
+All 18 tests should pass with the new format.
+
+#### 5.6. Update Documentation
+
+- Update docs/development.md tryscript section
+- Update validation plan if needed
+- Close related beads issues
+
+### Expected Outcome
+
+- All 18 tests pass with clean, portable format
+- Tests work in CI (no machine-specific paths)
+- Commands readable as documentation
+- ~50% reduction in test file size
