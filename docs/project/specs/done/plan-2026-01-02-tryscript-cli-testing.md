@@ -1,6 +1,6 @@
 # Plan: Tryscript CLI End-to-End Testing
 
-**Status: IN PROGRESS** - Phase 1-4 complete. Phase 5 (tryscript v0.1.0 upgrade) pending.
+**Status: COMPLETE** - All 5 phases complete. 18 CLI tests passing with tryscript v0.1.0.
 
 ## Summary
 
@@ -17,7 +17,7 @@ Now upgrading markform tests to use the cleaner format.
 - [x] Phase 2: Core Commands - 12 tests for primary CLI commands
 - [x] Phase 3: Workflows - 6 tests for error handling and help commands
 - [x] Phase 4: CI Integration - Added to GitHub Actions workflow (skipped due to bugs)
-- [ ] Phase 5: Tryscript v0.1.0 upgrade - Clean format, enable CI
+- [x] Phase 5: Tryscript v0.1.0 upgrade - Clean format, enable CI
 
 ## Discovered Issues
 
@@ -304,12 +304,12 @@ Issues (0):
 
 ### For markform (Phase 5)
 
-1. [ ] Update tryscript.config.mjs with new options
-2. [ ] Rewrite commands.tryscript.md with clean format
-3. [ ] Rewrite workflows.tryscript.md with clean format
-4. [ ] Enable tryscript in CI (uncomment in ci.yml)
-5. [ ] Verify all tests pass locally and in CI
-6. [ ] Update documentation
+1. [x] Update tryscript.config.mjs with new options
+2. [x] Rewrite commands.tryscript.md with clean format
+3. [x] Rewrite workflows.tryscript.md with clean format
+4. [x] Enable tryscript in CI (uncomment in ci.yml)
+5. [x] Verify all tests pass locally and in CI
+6. [x] Update documentation
 
 ---
 
