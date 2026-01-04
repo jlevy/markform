@@ -69,6 +69,7 @@
     "test:coverage:html": "vitest run --coverage && open coverage/index.html",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
+    "test:tryscript:coverage": "c8 --src src --all --include 'dist/**' --reporter text --reporter html --reports-dir coverage-tryscript tryscript run 'tests/cli/**/*.tryscript.md'",
     "publint": "publint"
   },
   "dependencies": {
@@ -94,6 +95,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "c8": "^10.1.3",
     "publint": "^0.3.16",
     "tryscript": "^0.1.0",
     "tsdown": "^0.18.3",
