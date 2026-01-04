@@ -732,9 +732,242 @@ This requires updating `ResearchOptions` to accept callbacks.
 
 ## Stage 5: Validation Stage
 
-_(To be filled after implementation)_
+This section defines comprehensive end-to-end validation for the CLI logging improvements.
 
-- [ ] All acceptance criteria verified
-- [ ] No regressions in existing behavior
-- [ ] Wire log format documented
-- [ ] CLI help updated
+### Automated Test Coverage
+
+#### 1. Unit Tests for New Utilities
+
+**File: `tests/unit/cli/loggingUtils.test.ts`**
+
+- [ ] `logDebug()` respects log level (only outputs at debug level)
+- [ ] `getCommandContext()` computes correct `logLevel` from flags:
+  - `--quiet` → `'quiet'`
+  - No flags → `'default'`
+  - `--verbose` → `'verbose'`
+  - `--debug` → `'debug'`
+- [ ] `LOG_LEVEL=debug` environment variable is equivalent to `--debug`
+- [ ] `DEBUG_OUTPUT_TRUNCATION_LIMIT` truncates long outputs at 500 chars with `...[truncated]`
+
+**File: `tests/unit/cli/webSearchParsing.test.ts`**
+
+- [ ] `extractWebSearchResults()` correctly parses OpenAI web search output
+- [ ] `extractWebSearchResults()` correctly parses Anthropic web search output
+- [ ] `extractWebSearchResults()` correctly parses Google/XAI web search output
+- [ ] Extracts result count from all provider formats
+- [ ] Extracts source domains correctly (e.g., "imdb.com" from full URLs)
+- [ ] Extracts first 5-8 titles with "..." for additional results
+- [ ] Handles empty/missing results gracefully
+
+**File: `tests/unit/cli/fillLogging.test.ts`** (extend existing)
+
+- [ ] `createFillLoggingCallbacks()` respects quiet mode (no output)
+- [ ] `createFillLoggingCallbacks()` default mode shows tool calls, results, tokens
+- [ ] `createFillLoggingCallbacks()` verbose mode adds harness config, full listings
+- [ ] `createFillLoggingCallbacks()` debug mode adds prompts, raw inputs/outputs
+- [ ] Emoji usage follows CLI best practices (✓ ❌ ⚠️ ⏰)
+
+#### 2. Callback Interface Tests
+
+**File: `tests/unit/harness/callbacks.test.ts`**
+
+- [ ] `onToolStart` receives `toolType` and `query` for web search tools
+- [ ] `onToolEnd` receives `toolType`, `resultCount`, `sources`, `topResults`, `fullResults`
+- [ ] `onLlmCallEnd` receives `reasoningTokens` when available
+- [ ] `onReasoningGenerated` receives reasoning content for models that support it
+- [ ] All callbacks are optional (don't break when not provided)
+
+#### 3. Wire Format Tests
+
+**File: `tests/unit/harness/wireFormat.test.ts`**
+
+- [ ] `buildWireFormat()` captures `response.id` from AI SDK response
+- [ ] `buildWireFormat()` captures `response.modelId` from AI SDK response
+- [ ] `buildWireFormat()` captures `reasoning` array when available
+- [ ] `buildWireFormat()` captures `reasoningTokens` in usage
+- [ ] `buildWireFormat()` omits `providerMetadata`, `isContinued`, per-step `finishReason`
+- [ ] Wire format YAML serialization matches schema
+- [ ] Wire format is diffable (deterministic key ordering)
+
+#### 4. Integration Tests
+
+**File: `tests/integration/cliLogging.test.ts`**
+
+- [ ] Default mode output includes model/provider info at start
+- [ ] Default mode output includes tool call names and queries
+- [ ] Default mode output includes result counts and timing
+- [ ] Default mode output includes token counts per turn
+- [ ] Default mode output includes patch validation warnings
+- [ ] Verbose mode includes harness configuration
+- [ ] Verbose mode includes full result listings
+- [ ] Verbose mode includes patch accept/reject details
+- [ ] Debug mode includes full prompts (system + context)
+- [ ] Debug mode includes raw tool inputs/outputs (truncated)
+- [ ] `--wire-log <path>` creates valid YAML file
+- [ ] `--wire-log` output matches expected schema
+
+#### 5. Cross-Command Consistency Tests
+
+**File: `tests/integration/commandConsistency.test.ts`**
+
+- [ ] `fill` command logging matches expected output format
+- [ ] `research` command logging matches expected output format
+- [ ] `run` command logging matches expected output format
+- [ ] Same form produces identical logging format across commands
+- [ ] All commands respect `--quiet`, `--verbose`, `--debug` flags identically
+
+#### 6. Golden Tests
+
+- [ ] Update existing golden tests to verify logging output format
+- [ ] Add golden test for wire format YAML output
+- [ ] Add golden test for verbose mode output
+- [ ] Add golden test for debug mode output (with truncation)
+
+### Manual Validation Checklist
+
+#### 1. Visual Console Output Review
+
+Run with a real form and LLM to verify output is readable and correct:
+
+```bash
+# Default mode - verify rich output
+markform research examples/movie-info.md --model openai/gpt-4o-mini
+
+# Verbose mode - verify additional details
+markform research examples/movie-info.md --model openai/gpt-4o-mini --verbose
+
+# Debug mode - verify full prompts (truncated)
+markform research examples/movie-info.md --model openai/gpt-4o-mini --debug
+
+# Wire log capture
+markform research examples/movie-info.md --model openai/gpt-4o-mini --wire-log session.yaml
+```
+
+- [ ] **Default mode visually correct**: Model info, tool calls with queries, result summaries, token counts, patch warnings visible
+- [ ] **Verbose mode adds value**: Harness config, full result listings, accept/reject details, validator info visible
+- [ ] **Debug mode adds diagnostics**: Full prompts visible, raw inputs/outputs truncated correctly at 500 chars
+- [ ] **Output is not noisy**: Each level adds meaningful info, not redundant spam
+- [ ] **Emoji usage is minimal**: Only ✓ ❌ ⚠️ ⏰, no excessive decoration
+
+#### 2. TTY vs Non-TTY Behavior
+
+```bash
+# TTY mode - should see colors and spinner
+markform research examples/movie-info.md --model openai/gpt-4o-mini
+
+# Non-TTY mode - should see plain text, no spinner
+markform research examples/movie-info.md --model openai/gpt-4o-mini | cat
+
+# NO_COLOR mode
+NO_COLOR=1 markform research examples/movie-info.md --model openai/gpt-4o-mini
+```
+
+- [ ] **TTY output has colors** via picocolors
+- [ ] **Spinner appears** in TTY mode during tool calls
+- [ ] **Non-TTY output is plain text** (no escape codes)
+- [ ] **NO_COLOR is respected** (no colors when set)
+
+#### 3. Wire Log YAML Review
+
+After running with `--wire-log session.yaml`:
+
+- [ ] **File exists** and is valid YAML
+- [ ] **Session structure** matches expected format (session_version, mode, turns)
+- [ ] **Request data** includes system prompt, context prompt, tools
+- [ ] **Response data** includes steps with toolCalls, toolResults, text
+- [ ] **Reasoning captured** when model provides it
+- [ ] **Usage includes** inputTokens, outputTokens, reasoningTokens (if applicable)
+- [ ] **File is diffable** - deterministic output for same run
+
+#### 4. Environment Variable Behavior
+
+```bash
+# LOG_LEVEL=debug should equal --debug
+LOG_LEVEL=debug markform research examples/movie-info.md --model openai/gpt-4o-mini
+
+# MARKFORM_WIRE_LOG should equal --wire-log
+MARKFORM_WIRE_LOG=session.yaml markform research examples/movie-info.md --model openai/gpt-4o-mini
+```
+
+- [ ] **LOG_LEVEL=debug** shows debug output without --debug flag
+- [ ] **MARKFORM_WIRE_LOG** creates wire log without --wire-log flag
+- [ ] **Flag overrides env var** when both specified
+
+#### 5. Error Handling
+
+- [ ] **Tool failure** shows ❌ with error message and timing
+- [ ] **LLM failure** is reported clearly with error context
+- [ ] **Invalid wire log path** shows helpful error message
+- [ ] **Missing permissions** for wire log path shows clear error
+
+#### 6. Library API Validation
+
+Create a simple TypeScript program to verify callbacks work:
+
+```typescript
+import { fillForm } from 'markform';
+
+const result = await fillForm({
+  form: markdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: true,
+  callbacks: {
+    onToolStart: ({ name, query, toolType }) => {
+      console.log(`Tool: ${name}, Type: ${toolType}, Query: ${query}`);
+    },
+    onToolEnd: ({ name, resultCount, sources, topResults, durationMs }) => {
+      console.log(`Result: ${resultCount} items, Sources: ${sources}`);
+      console.log(`Top: ${topResults}`);
+    },
+    onReasoningGenerated: ({ stepNumber, reasoning }) => {
+      console.log(`Reasoning step ${stepNumber}:`, reasoning);
+    },
+  },
+});
+```
+
+- [ ] **Callbacks receive correct data** with structured fields
+- [ ] **No CLI dependencies** - library works standalone
+- [ ] **Optional callbacks** don't break when not provided
+- [ ] **TypeScript types** are correct (no type errors)
+
+#### 7. Cross-Command Visual Comparison
+
+Run all three commands on the same form and compare output:
+
+```bash
+markform fill examples/movie-info.md --model openai/gpt-4o-mini
+markform research examples/movie-info.md --model openai/gpt-4o-mini
+markform run examples/movie-info.md --model openai/gpt-4o-mini
+```
+
+- [ ] **Same logging format** across all commands
+- [ ] **Same flags work** identically on all commands
+- [ ] **Same info shown** for equivalent operations
+
+#### 8. Documentation Accuracy
+
+- [ ] **CLI help** (`markform --help`) shows new flags with correct descriptions
+- [ ] **development.md** updated with new flags and log levels
+- [ ] **Examples in docs** match actual behavior
+- [ ] **Callback interface** in docs matches actual TypeScript types
+
+### Acceptance Verification
+
+All acceptance criteria from Stage 1 verified:
+
+- [ ] AC1: Default mode shows model info, tool calls, result titles, token counts, tool summary, patch warnings
+- [ ] AC2: Verbose mode adds harness config, full listings, accept/reject details, validators, progress stats
+- [ ] AC3: Debug mode adds full prompts, raw inputs/outputs (truncated at 500 chars)
+- [ ] AC4: `--wire-log` produces correct YAML file with request, response, usage
+- [ ] AC5: All commands (`fill`, `research`, `run`) produce identical logging
+- [ ] AC6: Library callbacks receive structured tool information
+- [ ] AC7: Library users can build their own UI using callbacks alone
+
+### Regression Checks
+
+- [ ] **Existing tests pass** - no regressions in existing behavior
+- [ ] **Quiet mode unchanged** - `--quiet` still suppresses output
+- [ ] **Transcript mode unchanged** - `--transcript` still works
+- [ ] **Exit codes unchanged** - same exit codes for success/failure
+- [ ] **Output file handling unchanged** - `-o` flag still works correctly
