@@ -109,6 +109,12 @@ export const DEFAULT_PRIORITY: FieldPriorityLevel = 'medium';
 export const DEFAULT_FORMS_DIR = './forms';
 
 /**
+ * Maximum characters to show in debug output for tool inputs/outputs.
+ * Values longer than this are truncated with "...[truncated]" suffix.
+ */
+export const DEBUG_OUTPUT_TRUNCATION_LIMIT = 500;
+
+/**
  * Maximum forms to display in 'markform run' menu.
  * Additional forms are not shown but can be run directly by path.
  */

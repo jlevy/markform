@@ -9,6 +9,22 @@ import type { CommandContext } from '../../../src/cli/lib/cliTypes.js';
 import type { InspectIssue, Patch } from '../../../src/engine/coreTypes.js';
 import type { TurnStats } from '../../../src/harness/harnessTypes.js';
 
+/**
+ * Create a default CommandContext for testing.
+ */
+function createTestContext(overrides: Partial<CommandContext> = {}): CommandContext {
+  return {
+    verbose: false,
+    quiet: false,
+    debug: false,
+    logLevel: 'default',
+    dryRun: false,
+    format: 'console',
+    overwrite: false,
+    ...overrides,
+  };
+}
+
 describe('fillLogging', () => {
   // Capture console.log output
   let consoleOutput: string[];
@@ -27,13 +43,7 @@ describe('fillLogging', () => {
 
   describe('createFillLoggingCallbacks', () => {
     it('returns all expected callbacks', () => {
-      const ctx: CommandContext = {
-        verbose: false,
-        quiet: false,
-        dryRun: false,
-        format: 'console',
-        overwrite: false,
-      };
+      const ctx = createTestContext();
 
       const callbacks = createFillLoggingCallbacks(ctx);
 
@@ -48,13 +58,7 @@ describe('fillLogging', () => {
 
     describe('onIssuesIdentified', () => {
       it('logs turn number and issues by default', () => {
-        const ctx: CommandContext = {
-          verbose: false,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctx = createTestContext();
 
         const callbacks = createFillLoggingCallbacks(ctx);
         const issues: InspectIssue[] = [
@@ -87,13 +91,7 @@ describe('fillLogging', () => {
       });
 
       it('does not log when quiet mode is enabled', () => {
-        const ctx: CommandContext = {
-          verbose: false,
-          quiet: true,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctx = createTestContext({ quiet: true, logLevel: 'quiet' });
 
         const callbacks = createFillLoggingCallbacks(ctx);
         callbacks.onIssuesIdentified!({ turnNumber: 1, issues: [] });
@@ -104,13 +102,7 @@ describe('fillLogging', () => {
 
     describe('onPatchesGenerated', () => {
       it('logs patches with field IDs and values by default', () => {
-        const ctx: CommandContext = {
-          verbose: false,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctx = createTestContext();
 
         const callbacks = createFillLoggingCallbacks(ctx);
         const patches: Patch[] = [
@@ -130,21 +122,9 @@ describe('fillLogging', () => {
       });
 
       it('shows token counts only in verbose mode', () => {
-        const ctxVerbose: CommandContext = {
-          verbose: true,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctxVerbose = createTestContext({ verbose: true, logLevel: 'verbose' });
 
-        const ctxNormal: CommandContext = {
-          verbose: false,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctxNormal = createTestContext();
 
         const patches: Patch[] = [{ op: 'set_string', fieldId: 'test', value: 'value' }];
         const stats: TurnStats = {
@@ -169,13 +149,13 @@ describe('fillLogging', () => {
         const callbacksVerbose = createFillLoggingCallbacks(ctxVerbose);
         callbacksVerbose.onPatchesGenerated!({ turnNumber: 1, patches, stats });
 
-        // Normal should not have token info in main output
+        // Normal mode should have token info in patch header line
         const normalHasTokens = normalOutput.some(
           (line) => line.includes('500') && line.includes('100'),
         );
-        expect(normalHasTokens).toBe(false);
+        expect(normalHasTokens).toBe(true);
 
-        // Verbose should have token info
+        // Verbose should also have token info (in additional verbose lines)
         const verboseHasTokens = consoleOutput.some(
           (line) => line.includes('500') && line.includes('100'),
         );
@@ -185,13 +165,7 @@ describe('fillLogging', () => {
 
     describe('onTurnComplete', () => {
       it('logs completion status when complete', () => {
-        const ctx: CommandContext = {
-          verbose: false,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctx = createTestContext();
 
         const callbacks = createFillLoggingCallbacks(ctx);
         callbacks.onTurnComplete!({
@@ -210,13 +184,7 @@ describe('fillLogging', () => {
       });
 
       it('does not log when not complete', () => {
-        const ctx: CommandContext = {
-          verbose: false,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctx = createTestContext();
 
         const callbacks = createFillLoggingCallbacks(ctx);
         callbacks.onTurnComplete!({
@@ -234,46 +202,30 @@ describe('fillLogging', () => {
       });
     });
 
-    describe('tool callbacks (verbose only)', () => {
-      it('onToolStart logs only in verbose mode', () => {
-        const ctxNormal: CommandContext = {
-          verbose: false,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+    describe('tool callbacks', () => {
+      it('onToolStart logs in default mode', () => {
+        const ctx = createTestContext();
 
-        const ctxVerbose: CommandContext = {
-          verbose: true,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
-
-        // Normal mode
-        const callbacksNormal = createFillLoggingCallbacks(ctxNormal);
-        callbacksNormal.onToolStart!({ name: 'web_search', input: {} });
-        expect(consoleOutput.length).toBe(0);
-
-        // Verbose mode
-        const callbacksVerbose = createFillLoggingCallbacks(ctxVerbose);
-        callbacksVerbose.onToolStart!({ name: 'web_search', input: {} });
+        // Default mode - tool start now logs by default
+        const callbacks = createFillLoggingCallbacks(ctx);
+        callbacks.onToolStart!({ name: 'web_search', input: {} });
         expect(consoleOutput.length).toBe(1);
         expect(consoleOutput[0]).toContain('web_search');
       });
 
-      it('onToolEnd logs only in verbose mode', () => {
-        const ctxVerbose: CommandContext = {
-          verbose: true,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+      it('onToolStart logs with query when provided', () => {
+        const ctx = createTestContext();
 
-        const callbacks = createFillLoggingCallbacks(ctxVerbose);
+        const callbacks = createFillLoggingCallbacks(ctx);
+        callbacks.onToolStart!({ name: 'web_search', input: {}, query: 'test query' });
+        expect(consoleOutput.length).toBe(1);
+        expect(consoleOutput[0]).toContain('test query');
+      });
+
+      it('onToolEnd logs in default mode with formatted duration', () => {
+        const ctx = createTestContext();
+
+        const callbacks = createFillLoggingCallbacks(ctx);
         callbacks.onToolEnd!({
           name: 'web_search',
           output: 'results',
@@ -282,17 +234,12 @@ describe('fillLogging', () => {
 
         expect(consoleOutput.length).toBe(1);
         expect(consoleOutput[0]).toContain('web_search');
-        expect(consoleOutput[0]).toContain('1234');
+        // Duration is now formatted as seconds (1.2s instead of 1234ms)
+        expect(consoleOutput[0]).toContain('1.2s');
       });
 
       it('onToolEnd logs errors', () => {
-        const ctxVerbose: CommandContext = {
-          verbose: true,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctxVerbose = createTestContext({ verbose: true, logLevel: 'verbose' });
 
         const callbacks = createFillLoggingCallbacks(ctxVerbose);
         callbacks.onToolEnd!({
@@ -310,13 +257,7 @@ describe('fillLogging', () => {
 
     describe('LLM callbacks (verbose only)', () => {
       it('onLlmCallStart logs only in verbose mode', () => {
-        const ctxVerbose: CommandContext = {
-          verbose: true,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctxVerbose = createTestContext({ verbose: true, logLevel: 'verbose' });
 
         const callbacks = createFillLoggingCallbacks(ctxVerbose);
         callbacks.onLlmCallStart!({ model: 'claude-sonnet' });
@@ -326,13 +267,7 @@ describe('fillLogging', () => {
       });
 
       it('onLlmCallEnd logs token counts in verbose mode', () => {
-        const ctxVerbose: CommandContext = {
-          verbose: true,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctxVerbose = createTestContext({ verbose: true, logLevel: 'verbose' });
 
         const callbacks = createFillLoggingCallbacks(ctxVerbose);
         callbacks.onLlmCallEnd!({
@@ -349,13 +284,7 @@ describe('fillLogging', () => {
 
     describe('spinner integration', () => {
       it('updates spinner message for web search', () => {
-        const ctx: CommandContext = {
-          verbose: false,
-          quiet: false,
-          dryRun: false,
-          format: 'console',
-          overwrite: false,
-        };
+        const ctx = createTestContext();
 
         const spinnerMessage = vi.fn();
         const callbacks = createFillLoggingCallbacks(ctx, {
