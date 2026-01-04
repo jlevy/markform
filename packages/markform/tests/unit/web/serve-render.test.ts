@@ -14,6 +14,8 @@ import {
   renderMarkdownContent,
   renderYamlContent,
   renderJsonContent,
+  renderViewContent,
+  renderSourceContent,
 } from '../../../src/cli/commands/serve.js';
 
 // Helper to check if HTML contains an element with attributes (unused but kept for future use)
@@ -65,7 +67,7 @@ markform:
 
     it('should not render tab bar with single tab', () => {
       const form = parseForm(formContent);
-      const html = renderFormHtml(form, [{ id: 'form', label: 'Markform', path: '/test.form.md' }]);
+      const html = renderFormHtml(form, [{ id: 'form', label: 'Edit', path: '/test.form.md' }]);
 
       // Should not have the actual tab-bar div (just the CSS class definition is fine)
       expect(html).not.toContain('<div class="tab-bar">');
@@ -74,40 +76,46 @@ markform:
     it('should render tab bar with multiple tabs', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
       const html = renderFormHtml(form, tabs);
 
       expect(html).toContain('tab-bar');
       expect(html).toContain('tab-btn');
+      expect(html).toContain('data-tab="view"');
       expect(html).toContain('data-tab="form"');
       expect(html).toContain('data-tab="values"');
-      expect(html).toContain('>Markform</button>');
+      expect(html).toContain('>View</button>');
+      expect(html).toContain('>Edit</button>');
       expect(html).toContain('>Values</button>');
     });
 
     it('should mark first tab as active', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'report' as const, label: 'Report', path: '/test.report.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
       const html = renderFormHtml(form, tabs);
 
-      // First button should have 'active' class
-      expect(html).toMatch(/tab-btn active[^"]*"[^>]*data-tab="form"/);
+      // First button (View) should have 'active' class
+      expect(html).toMatch(/tab-btn active[^"]*"[^>]*data-tab="view"/);
     });
 
     it('should include tab content containers', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
       const html = renderFormHtml(form, tabs);
 
+      expect(html).toContain('id="tab-view"');
       expect(html).toContain('id="tab-form"');
       expect(html).toContain('id="tab-other"');
       expect(html).toContain('tab-content active');
@@ -116,7 +124,8 @@ markform:
     it('should include tab switching JavaScript', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
       const html = renderFormHtml(form, tabs);
@@ -124,6 +133,7 @@ markform:
       expect(html).toContain('tabButtons.forEach');
       expect(html).toContain('tabCache');
       expect(html).toContain('/tab/');
+      expect(html).toContain('showTab');
     });
   });
 
@@ -141,7 +151,8 @@ markform:
     it('should include CSS classes for syntax highlighting in tabbed forms', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
       const html = renderFormHtml(form, tabs);
@@ -154,10 +165,26 @@ markform:
       expect(html).toContain('.syn-comment');
     });
 
+    it('should include Jinja/MarkDoc syntax highlighting CSS classes', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
+        { id: 'source' as const, label: 'Source', path: '/test.form.md' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      expect(html).toContain('.syn-jinja-tag');
+      expect(html).toContain('.syn-jinja-keyword');
+      expect(html).toContain('.syn-jinja-attr');
+      expect(html).toContain('.syn-jinja-value');
+    });
+
     it('should include markdown content styles in tabbed forms', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'form' as const, label: 'Markform', path: '/test.form.md' },
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'report' as const, label: 'Report', path: '/test.report.md' },
       ];
       const html = renderFormHtml(form, tabs);
@@ -168,6 +195,22 @@ markform:
       expect(html).toContain('.markdown-content li');
       expect(html).toContain('.markdown-content code');
       expect(html).toContain('.markdown-content a');
+    });
+
+    it('should include View tab content styles', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      expect(html).toContain('.view-content');
+      expect(html).toContain('.view-group');
+      expect(html).toContain('.view-field');
+      expect(html).toContain('.view-field-label');
+      expect(html).toContain('.view-field-value');
+      expect(html).toContain('.view-field-empty');
     });
   });
 
@@ -1118,6 +1161,202 @@ markform:
     it('should handle invalid JSON gracefully', () => {
       const html = renderJsonContent('not valid json');
       expect(html).toContain('not valid json');
+    });
+  });
+
+  describe('renderViewContent', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" title="Test Form" %}
+{% group id="group1" title="Group 1" %}
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
+{% field kind="number" id="age" label="Age" %}{% /field %}
+{% /group %}
+{% /form %}`;
+
+    it('should wrap content in view-content div', () => {
+      const form = parseForm(formContent);
+      const html = renderViewContent(form);
+      expect(html).toContain('<div class="view-content">');
+      expect(html).toContain('</div>');
+    });
+
+    it('should render groups with titles', () => {
+      const form = parseForm(formContent);
+      const html = renderViewContent(form);
+      expect(html).toContain('<div class="view-group">');
+      expect(html).toContain('<h2>Group 1</h2>');
+    });
+
+    it('should render fields with labels and type badges', () => {
+      const form = parseForm(formContent);
+      const html = renderViewContent(form);
+      expect(html).toContain('<div class="view-field">');
+      expect(html).toContain('Name');
+      expect(html).toContain('type-badge">string</span>');
+    });
+
+    it('should show required indicator for required fields', () => {
+      const form = parseForm(formContent);
+      const html = renderViewContent(form);
+      expect(html).toContain('class="required"');
+    });
+
+    it('should show "(not filled)" for empty fields', () => {
+      const form = parseForm(formContent);
+      const html = renderViewContent(form);
+      expect(html).toContain('(not filled)');
+    });
+
+    it('should show actual values for filled fields', () => {
+      const formWithValue = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="group1" title="Group 1" %}
+{% field kind="string" id="name" label="Name" %}
+\`\`\`value
+John Doe
+\`\`\`
+{% /field %}
+{% /group %}
+{% /form %}`;
+
+      const form = parseForm(formWithValue);
+      const html = renderViewContent(form);
+      expect(html).toContain('John Doe');
+      expect(html).toContain('class="view-field-value"');
+    });
+
+    it('should show "(skipped)" for skipped fields', () => {
+      const form = parseForm(formContent);
+      form.responsesByFieldId = {
+        name: { state: 'skipped' },
+      };
+      const html = renderViewContent(form);
+      expect(html).toContain('(skipped)');
+    });
+
+    it('should render single_select with selected option label', () => {
+      const formWithSelect = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="group1" title="Group 1" %}
+{% field kind="single_select" id="priority" label="Priority" %}
+- [ ] Low {% #low %}
+- [x] Medium {% #medium %}
+- [ ] High {% #high %}
+{% /field %}
+{% /group %}
+{% /form %}`;
+
+      const form = parseForm(formWithSelect);
+      const html = renderViewContent(form);
+      expect(html).toContain('Medium');
+    });
+
+    it('should render url fields as clickable links', () => {
+      const formWithUrl = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="group1" title="Group 1" %}
+{% field kind="url" id="website" label="Website" %}
+\`\`\`value
+https://example.com
+\`\`\`
+{% /field %}
+{% /group %}
+{% /form %}`;
+
+      const form = parseForm(formWithUrl);
+      const html = renderViewContent(form);
+      expect(html).toContain('href="https://example.com"');
+      expect(html).toContain('target="_blank"');
+    });
+  });
+
+  describe('renderSourceContent', () => {
+    it('should wrap content in pre tag', () => {
+      const html = renderSourceContent('Some source content');
+      expect(html).toContain('<pre>');
+      expect(html).toContain('</pre>');
+    });
+
+    it('should highlight Jinja tags', () => {
+      const html = renderSourceContent('{% form id="test" %}');
+      expect(html).toContain('class="syn-jinja-tag"');
+      expect(html).toContain('class="syn-jinja-keyword"');
+      expect(html).toContain('form');
+    });
+
+    it('should highlight Jinja attributes', () => {
+      const html = renderSourceContent('{% field kind="string" id="name" %}');
+      expect(html).toContain('class="syn-jinja-attr"');
+    });
+
+    it('should highlight Jinja attribute values', () => {
+      const html = renderSourceContent('{% field kind="string" %}');
+      expect(html).toContain('class="syn-jinja-value"');
+    });
+
+    it('should highlight Jinja comments', () => {
+      const html = renderSourceContent('{# This is a comment #}');
+      expect(html).toContain('class="syn-comment"');
+    });
+
+    it('should highlight Markdown headers', () => {
+      const html = renderSourceContent('# Header 1\n## Header 2');
+      expect(html).toContain('class="syn-md-header"');
+    });
+
+    it('should highlight YAML frontmatter markers', () => {
+      const html = renderSourceContent('---');
+      expect(html).toContain('class="syn-comment"');
+    });
+
+    it('should escape HTML in source content', () => {
+      const html = renderSourceContent('<script>alert("xss")</script>');
+      expect(html).toContain('&lt;script&gt;');
+      expect(html).not.toContain('<script>');
+    });
+  });
+
+  describe('renderMarkdownContent list rendering', () => {
+    it('should wrap unordered list items in ul tag', () => {
+      const html = renderMarkdownContent('- Item 1\n- Item 2');
+      expect(html).toContain('<ul>');
+      expect(html).toContain('</ul>');
+      expect(html).toContain('<li>Item 1</li>');
+      expect(html).toContain('<li>Item 2</li>');
+    });
+
+    it('should wrap ordered list items in ol tag', () => {
+      const html = renderMarkdownContent('1. First\n2. Second');
+      expect(html).toContain('<ol>');
+      expect(html).toContain('</ol>');
+      expect(html).toContain('<li>First</li>');
+      expect(html).toContain('<li>Second</li>');
+    });
+
+    it('should close list when transitioning to paragraph', () => {
+      const html = renderMarkdownContent('- Item\n\nParagraph');
+      expect(html).toContain('</ul>');
+      expect(html).toContain('<p>Paragraph</p>');
+    });
+
+    it('should handle mixed list types', () => {
+      const html = renderMarkdownContent('- Bullet\n\n1. Number');
+      expect(html).toContain('<ul>');
+      expect(html).toContain('</ul>');
+      expect(html).toContain('<ol>');
+      expect(html).toContain('</ol>');
     });
   });
 });

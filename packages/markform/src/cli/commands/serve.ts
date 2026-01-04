@@ -81,7 +81,7 @@ function openBrowser(url: string): void {
 
 /** Represents a tab for navigation between related files */
 interface Tab {
-  id: 'form' | 'report' | 'values' | 'schema';
+  id: 'view' | 'form' | 'source' | 'report' | 'values' | 'schema';
   label: string;
   path: string | null; // null if file doesn't exist
 }
@@ -131,11 +131,19 @@ function findRelatedFiles(formPath: string): RelatedFiles {
 
 /**
  * Build tabs for tabbed navigation.
+ * Tab order: View, Edit, Source, Report, Values, Schema
  */
 function buildTabs(relatedFiles: RelatedFiles): Tab[] {
   const tabs: Tab[] = [];
 
-  tabs.push({ id: 'form', label: 'Markform', path: relatedFiles.form });
+  // View tab - read-only display of form (always present for form files)
+  tabs.push({ id: 'view', label: 'View', path: relatedFiles.form });
+
+  // Edit tab - interactive form editor (renamed from "Markform")
+  tabs.push({ id: 'form', label: 'Edit', path: relatedFiles.form });
+
+  // Source tab - syntax-highlighted source code (always present for form files)
+  tabs.push({ id: 'source', label: 'Source', path: relatedFiles.form });
 
   if (relatedFiles.report) {
     tabs.push({ id: 'report', label: 'Report', path: relatedFiles.report });
@@ -237,6 +245,24 @@ async function handleRequest(
   if (req.method === 'GET' && url.startsWith('/tab/') && tabs && tabs.length > 1) {
     const tabId = url.slice(5) as Tab['id'];
     const tab = tabs.find((t) => t.id === tabId);
+
+    // Handle special tabs that need the parsed form or source content
+    if (tabId === 'view' && form) {
+      const html = renderViewContent(form);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
+    if (tabId === 'source' && tab?.path) {
+      const content = await readFileAsync(tab.path, 'utf-8');
+      const html = renderSourceContent(content);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
+    // Handle other tabs (report, values, schema)
     if (tab?.path) {
       const content = await readFileAsync(tab.path, 'utf-8');
       const tabFileType = detectFileType(tab.path);
@@ -659,6 +685,27 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .syn-bool { color: #d73a49; }
     .syn-null { color: #d73a49; }
     .syn-comment { color: #6a737d; font-style: italic; }
+    /* Jinja/MarkDoc syntax highlighting */
+    .syn-jinja-tag { color: #6f42c1; font-weight: 500; }
+    .syn-jinja-keyword { color: #d73a49; }
+    .syn-jinja-attr { color: #005cc5; }
+    .syn-jinja-value { color: #22863a; }
+    /* Markdown syntax highlighting */
+    .syn-md-header { color: #005cc5; font-weight: 600; }
+    .syn-md-bold { font-weight: 600; }
+    .syn-md-italic { font-style: italic; }
+    .syn-md-code { background: #f1f3f5; padding: 0.1em 0.3em; border-radius: 3px; }
+    .syn-md-link { color: #0366d6; }
+    .syn-md-list { color: #d73a49; }
+    /* View tab styles */
+    .view-content { padding: 0.5rem 0; }
+    .view-group { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .view-group h2 { color: #6c757d; font-size: 1.25rem; margin-top: 0; }
+    .view-field { margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e9ecef; }
+    .view-field:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .view-field-label { font-weight: 600; color: #495057; margin-bottom: 0.25rem; }
+    .view-field-value { color: #212529; }
+    .view-field-empty { color: #adb5bd; font-style: italic; }
     /* Markdown content styles */
     .markdown-content { padding: 0.5rem 0; }
     .markdown-content h2 { font-size: 1.4rem; color: #24292e; margin: 1.5rem 0 0.75rem; }
@@ -848,7 +895,10 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
 <body>
   <h1>${escapeHtml(formTitle)}</h1>
   ${tabBarHtml}
-  <div id="tab-form" class="tab-content active">
+  <div id="tab-view" class="tab-content active">
+    <div class="loading">Loading...</div>
+  </div>
+  <div id="tab-form" class="tab-content">
     <form method="POST" action="/save" id="markform">
       ${groupsHtml}
       <div class="toolbar">
@@ -925,9 +975,63 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
 
     // Tab switching logic
     const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabViewContent = document.getElementById('tab-view');
     const tabFormContent = document.getElementById('tab-form');
     const tabOtherContent = document.getElementById('tab-other');
     const tabCache = {};
+
+    // Function to show a specific tab
+    async function showTab(tabId) {
+      // Hide all tab content
+      if (tabViewContent) tabViewContent.classList.remove('active');
+      if (tabFormContent) tabFormContent.classList.remove('active');
+      if (tabOtherContent) tabOtherContent.classList.remove('active');
+
+      if (tabId === 'form') {
+        // Show Edit (form) tab - pre-rendered content
+        if (tabFormContent) tabFormContent.classList.add('active');
+      } else if (tabId === 'view') {
+        // Show View tab
+        if (tabViewContent) {
+          tabViewContent.classList.add('active');
+          // Fetch content if not cached
+          if (!tabCache[tabId]) {
+            tabViewContent.innerHTML = '<div class="loading">Loading...</div>';
+            try {
+              const response = await fetch('/tab/' + tabId);
+              if (response.ok) {
+                tabCache[tabId] = await response.text();
+              } else {
+                tabCache[tabId] = '<div class="error">Failed to load content</div>';
+              }
+            } catch (err) {
+              tabCache[tabId] = '<div class="error">Failed to load content</div>';
+            }
+          }
+          tabViewContent.innerHTML = tabCache[tabId];
+        }
+      } else {
+        // Show other tab content (source, report, values, schema)
+        if (tabOtherContent) {
+          tabOtherContent.classList.add('active');
+          // Fetch content if not cached
+          if (!tabCache[tabId]) {
+            tabOtherContent.innerHTML = '<div class="loading">Loading...</div>';
+            try {
+              const response = await fetch('/tab/' + tabId);
+              if (response.ok) {
+                tabCache[tabId] = await response.text();
+              } else {
+                tabCache[tabId] = '<div class="error">Failed to load content</div>';
+              }
+            } catch (err) {
+              tabCache[tabId] = '<div class="error">Failed to load content</div>';
+            }
+          }
+          tabOtherContent.innerHTML = tabCache[tabId];
+        }
+      }
+    }
 
     tabButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -937,35 +1041,12 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
         tabButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        if (tabId === 'form') {
-          // Show form tab
-          if (tabFormContent) tabFormContent.classList.add('active');
-          if (tabOtherContent) tabOtherContent.classList.remove('active');
-        } else {
-          // Show other tab content
-          if (tabFormContent) tabFormContent.classList.remove('active');
-          if (tabOtherContent) {
-            tabOtherContent.classList.add('active');
-
-            // Fetch content if not cached
-            if (!tabCache[tabId]) {
-              tabOtherContent.innerHTML = '<div class="loading">Loading...</div>';
-              try {
-                const response = await fetch('/tab/' + tabId);
-                if (response.ok) {
-                  tabCache[tabId] = await response.text();
-                } else {
-                  tabCache[tabId] = '<div class="error">Failed to load content</div>';
-                }
-              } catch (err) {
-                tabCache[tabId] = '<div class="error">Failed to load content</div>';
-              }
-            }
-            tabOtherContent.innerHTML = tabCache[tabId];
-          }
-        }
+        await showTab(tabId);
       });
     });
+
+    // Load View tab on page load (it's the default tab)
+    showTab('view');
   </script>
 </body>
 </html>`;
@@ -1674,6 +1755,228 @@ function renderPlainTextHtml(content: string, filename: string): string {
 // =============================================================================
 
 /**
+ * Render form view content (read-only display of form fields).
+ * Used for View tab content.
+ * @public Exported for testing.
+ */
+export function renderViewContent(form: ParsedForm): string {
+  const { schema, responsesByFieldId } = form;
+  let html = '<div class="view-content">';
+
+  for (const group of schema.groups) {
+    const groupTitle = group.title ?? group.id;
+    html += `<div class="view-group"><h2>${escapeHtml(groupTitle)}</h2>`;
+
+    for (const field of group.children) {
+      const response = responsesByFieldId[field.id];
+      const value = response?.state === 'answered' ? response.value : undefined;
+      const isSkipped = response?.state === 'skipped';
+
+      html += '<div class="view-field">';
+      html += `<div class="view-field-label">${escapeHtml(field.label)}`;
+      html += ` <span class="type-badge">${field.kind}</span>`;
+      if (field.required) {
+        html += ' <span class="required">*</span>';
+      }
+      if (isSkipped) {
+        html += ' <span class="skipped-badge">Skipped</span>';
+      }
+      html += '</div>';
+
+      // Render value based on field type
+      html += renderViewFieldValue(field, value, isSkipped);
+      html += '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+/**
+ * Render a field value for the View tab.
+ */
+function renderViewFieldValue(
+  field: Field,
+  value: FieldValue | undefined,
+  isSkipped: boolean,
+): string {
+  if (isSkipped) {
+    return '<div class="view-field-empty">(skipped)</div>';
+  }
+
+  if (value === undefined) {
+    return '<div class="view-field-empty">(not filled)</div>';
+  }
+
+  switch (field.kind) {
+    case 'string': {
+      const v = value.kind === 'string' ? value.value : null;
+      if (v === null || v === '') {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${escapeHtml(v)}</div>`;
+    }
+    case 'number': {
+      const v = value.kind === 'number' ? value.value : null;
+      if (v === null) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${v}</div>`;
+    }
+    case 'string_list': {
+      const items = value.kind === 'string_list' ? value.items : [];
+      if (items.length === 0) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value"><ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`;
+    }
+    case 'single_select': {
+      const selected = value.kind === 'single_select' ? value.selected : null;
+      if (selected === null) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      const opt = field.options.find((o) => o.id === selected);
+      return `<div class="view-field-value">${escapeHtml(opt?.label ?? selected)}</div>`;
+    }
+    case 'multi_select': {
+      const selected = value.kind === 'multi_select' ? value.selected : [];
+      if (selected.length === 0) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      const labels = selected.map((s) => {
+        const opt = field.options.find((o) => o.id === s);
+        return opt?.label ?? s;
+      });
+      return `<div class="view-field-value">${labels.map((l) => escapeHtml(l)).join(', ')}</div>`;
+    }
+    case 'checkboxes': {
+      const values = value.kind === 'checkboxes' ? value.values : {};
+      if (Object.keys(values).length === 0) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      const items = field.options.map((opt) => {
+        const state = values[opt.id] ?? 'todo';
+        return `<li>${escapeHtml(opt.label)}: <em>${state}</em></li>`;
+      });
+      return `<div class="view-field-value"><ul>${items.join('')}</ul></div>`;
+    }
+    case 'url': {
+      const v = value.kind === 'url' ? value.value : null;
+      if (v === null || v === '') {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value"><a href="${escapeHtml(v)}" target="_blank">${escapeHtml(v)}</a></div>`;
+    }
+    case 'url_list': {
+      const items = value.kind === 'url_list' ? value.items : [];
+      if (items.length === 0) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value"><ul>${items.map((u) => `<li><a href="${escapeHtml(u)}" target="_blank">${escapeHtml(u)}</a></li>`).join('')}</ul></div>`;
+    }
+    case 'date': {
+      const v = value.kind === 'date' ? value.value : null;
+      if (v === null || v === '') {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${escapeHtml(v)}</div>`;
+    }
+    case 'year': {
+      const v = value.kind === 'year' ? value.value : null;
+      if (v === null) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${v}</div>`;
+    }
+    case 'table': {
+      const rows = value.kind === 'table' ? value.rows : [];
+      if (rows.length === 0) {
+        return '<div class="view-field-empty">(no data)</div>';
+      }
+      let tableHtml = '<div class="table-container"><table class="data-table">';
+      tableHtml += '<thead><tr>';
+      for (const col of field.columns) {
+        tableHtml += `<th>${escapeHtml(col.label)}</th>`;
+      }
+      tableHtml += '</tr></thead><tbody>';
+      for (const row of rows) {
+        tableHtml += '<tr>';
+        for (const col of field.columns) {
+          const cell = row[col.id];
+          let cellValue = '';
+          if (cell?.state === 'answered' && cell.value !== undefined && cell.value !== null) {
+            cellValue = String(cell.value);
+          }
+          tableHtml += `<td>${escapeHtml(cellValue)}</td>`;
+        }
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</tbody></table></div>';
+      return tableHtml;
+    }
+    default: {
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
+  }
+}
+
+/**
+ * Render source content with Markdown and Jinja syntax highlighting.
+ * Used for Source tab content.
+ * @public Exported for testing.
+ */
+export function renderSourceContent(content: string): string {
+  const lines = content.split('\n');
+  const highlighted = lines.map((line) => highlightSourceLine(line)).join('\n');
+  return `<pre>${highlighted}</pre>`;
+}
+
+/**
+ * Highlight a single line of source code (Markdown + Jinja).
+ */
+function highlightSourceLine(line: string): string {
+  // First escape HTML
+  let result = escapeHtml(line);
+
+  // Highlight Jinja tags: {% tag %}, {% /tag %}, {# comment #}
+  // Match {% ... %} patterns
+  result = result.replace(
+    /(\{%\s*)([a-zA-Z_/]+)(\s+[^%]*)?(%\})/g,
+    (_: string, open: string, keyword: string, attrs: string | undefined, close: string) => {
+      let attrHtml = '';
+      if (attrs) {
+        // Highlight attributes within the tag
+        attrHtml = attrs.replace(
+          /([a-zA-Z_]+)(=)("[^"]*"|&#039;[^&#]*&#039;|[^\s%]+)?/g,
+          (_m: string, attrName: string, eq: string, attrValue: string) => {
+            const valueHtml = attrValue ? `<span class="syn-jinja-value">${attrValue}</span>` : '';
+            return `<span class="syn-jinja-attr">${attrName}</span>${eq}${valueHtml}`;
+          },
+        );
+      }
+      return `<span class="syn-jinja-tag">${open}</span><span class="syn-jinja-keyword">${keyword}</span>${attrHtml}<span class="syn-jinja-tag">${close}</span>`;
+    },
+  );
+
+  // Highlight Jinja comments: {# ... #}
+  result = result.replace(/(\{#)(.*?)(#\})/g, `<span class="syn-comment">$1$2$3</span>`);
+
+  // Highlight Markdown headers
+  result = result.replace(/^(#{1,6}\s.*)$/gm, '<span class="syn-md-header">$1</span>');
+
+  // Highlight YAML frontmatter markers
+  if (result === '---') {
+    result = '<span class="syn-comment">---</span>';
+  }
+
+  return result;
+}
+
+/**
  * Render markdown content (content only, no page wrapper).
  * Used for tab content.
  * @public Exported for testing.
@@ -1684,6 +1987,20 @@ export function renderMarkdownContent(content: string): string {
   let inParagraph = false;
   let inCodeBlock = false;
   let codeBlockContent = '';
+  let inUnorderedList = false;
+  let inOrderedList = false;
+
+  // Helper to close any open list
+  const closeList = () => {
+    if (inUnorderedList) {
+      html += '</ul>';
+      inUnorderedList = false;
+    }
+    if (inOrderedList) {
+      html += '</ol>';
+      inOrderedList = false;
+    }
+  };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -1701,6 +2018,7 @@ export function renderMarkdownContent(content: string): string {
           html += '</p>';
           inParagraph = false;
         }
+        closeList();
         inCodeBlock = true;
       }
       continue;
@@ -1717,30 +2035,42 @@ export function renderMarkdownContent(content: string): string {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h2>${escapeHtml(trimmed.slice(2))}</h2>`;
+      closeList();
+      html += `<h2>${formatInlineMarkdown(trimmed.slice(2))}</h2>`;
     } else if (trimmed.startsWith('## ')) {
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h3>${escapeHtml(trimmed.slice(3))}</h3>`;
+      closeList();
+      html += `<h3>${formatInlineMarkdown(trimmed.slice(3))}</h3>`;
     } else if (trimmed.startsWith('### ')) {
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h4>${escapeHtml(trimmed.slice(4))}</h4>`;
+      closeList();
+      html += `<h4>${formatInlineMarkdown(trimmed.slice(4))}</h4>`;
     } else if (trimmed.startsWith('#### ')) {
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h5>${escapeHtml(trimmed.slice(5))}</h5>`;
+      closeList();
+      html += `<h5>${formatInlineMarkdown(trimmed.slice(5))}</h5>`;
     } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       // Unordered list item
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
+      }
+      if (inOrderedList) {
+        html += '</ol>';
+        inOrderedList = false;
+      }
+      if (!inUnorderedList) {
+        html += '<ul>';
+        inUnorderedList = true;
       }
       html += `<li>${formatInlineMarkdown(trimmed.slice(2))}</li>`;
     } else if (/^\d+\.\s/.test(trimmed)) {
@@ -1749,6 +2079,14 @@ export function renderMarkdownContent(content: string): string {
         html += '</p>';
         inParagraph = false;
       }
+      if (inUnorderedList) {
+        html += '</ul>';
+        inUnorderedList = false;
+      }
+      if (!inOrderedList) {
+        html += '<ol>';
+        inOrderedList = true;
+      }
       const text = trimmed.replace(/^\d+\.\s/, '');
       html += `<li>${formatInlineMarkdown(text)}</li>`;
     } else if (trimmed === '') {
@@ -1756,7 +2094,9 @@ export function renderMarkdownContent(content: string): string {
         html += '</p>';
         inParagraph = false;
       }
+      closeList();
     } else {
+      closeList();
       if (!inParagraph) {
         html += '<p>';
         inParagraph = true;
@@ -1770,6 +2110,7 @@ export function renderMarkdownContent(content: string): string {
   if (inParagraph) {
     html += '</p>';
   }
+  closeList();
 
   html += '</div>';
   return html;
