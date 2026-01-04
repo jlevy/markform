@@ -185,9 +185,9 @@ The CLI should show better real-time progress, especially for tool execution:
 **Default Mode (rich output for interactive use):**
 ```
 Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
-  🔍 web_search: "Pulp Fiction 1994 movie details"
+  [web_search] "Pulp Fiction 1994 movie details"
   ✓ web_search: 8 results (1.2s)
-     Sources: IMDb, Wikipedia, Rotten Tomatoes
+     Sources: imdb.com, wikipedia.org, rottentomatoes.com
   → 5 patches:
     full_title (string) = "Pulp Fiction"
     year (number) = 1994
@@ -199,10 +199,10 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
 ```
 Model: openai/gpt-5-mini
 Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
-  🔍 web_search: "Pulp Fiction 1994 movie details"
+  [web_search] "Pulp Fiction 1994 movie details"
   ✓ web_search: 8 results (1.2s)
-     Sources: IMDb, Wikipedia, Rotten Tomatoes
-     Top results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia"
+     Sources: imdb.com, wikipedia.org, rottentomatoes.com
+     Results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia", ...
   → 5 patches (tokens: ↓1234 ↑567):
     full_title (string) = "Pulp Fiction"
     year (number) = 1994
@@ -220,21 +220,22 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
   ─── Context Prompt ───
   # Current Form State
   ...
-  🔍 web_search: "Pulp Fiction 1994 movie details"
+  [web_search] "Pulp Fiction 1994 movie details"
      Input: { query: "Pulp Fiction 1994 movie details" }
-  ✓ web_search: 8 results from IMDb, Wikipedia, Rotten Tomatoes (1.2s)
-     Top results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia"
-     Output: { results: [...], total: 8 } [truncated]
+  ✓ web_search: 8 results (1.2s)
+     Sources: imdb.com, wikipedia.org, rottentomatoes.com
+     Results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia", ...
+     Output: { results: [...], total: 8 } ...[truncated]
   → 5 patches (tokens: ↓1234 ↑567):
     ...
 ```
 
 **Key Console Improvements:**
-1. Default shows tool calls with queries and timing (not just "Web search...")
-2. Default shows result counts, duration, and source summaries
-3. Use emoji indicators for visual scanning (🔍 search, ✓ complete, → patches)
-4. Verbose adds top result titles, token counts, tool summary
-5. Debug adds full prompts and tool inputs/outputs
+1. Default shows tool calls with queries and timing
+2. Default shows result counts, duration, and source domains
+3. Use limited indicators: ✓ (success), ❌ (error), → (result), [tool_name] for tool calls
+4. Verbose adds first 5-8 result titles, token counts, tool summary
+5. Debug adds full prompts and tool inputs/outputs (truncated at 500 chars)
 
 ## Backward Compatibility
 
@@ -293,7 +294,7 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
 **Should Have:**
 - [ ] Patch validation error details in verbose mode
 - [ ] Consistent spinner/progress behavior across commands
-- [ ] Emoji indicators for visual scanning (🔍 ✓ →)
+- [ ] Limited visual indicators per CLI best practices (✓ ❌ → [tool])
 
 **Won't Have (This Phase):**
 - JSON streaming output format (separate feature)
@@ -307,14 +308,14 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
 
 1. Running `markform research <form> --model <model>` (default mode) shows:
    - Turn numbers with issues list
-   - Tool calls with name and query (🔍 web_search: "query")
-   - Tool completion with result count, timing, and source summary
+   - Tool calls with name and query (`[web_search] "query"`)
+   - Tool completion with result count, timing, and source domains
    - Patches generated with field IDs and values
 
 2. Running with `--verbose` additionally shows:
    - Model and provider info at start
    - Token counts per turn
-   - Top result titles from web search
+   - First 5-8 result titles from web search (with "..." if more)
    - Tool summary at end of turn
 
 3. Running with `--debug` or `LOG_LEVEL=debug` additionally shows:
@@ -390,19 +391,19 @@ export function createFillLoggingCallbacks(
     onToolStart: ({ name, query }) => {
       if (level === 'quiet') return;
       // DEFAULT: Show tool name and query
-      const queryStr = query ? `: "${query}"` : '';
-      logInfo(ctx, `  🔍 ${name}${queryStr}`);
+      const queryStr = query ? ` "${query}"` : '';
+      logInfo(ctx, `  [${name}]${queryStr}`);
       options.spinner?.message(`${name}...`);
       // DEBUG: Show full input
       if (level === 'debug') {
-        logDebug(ctx, `     Input: ${summarize(input)}`);
+        logDebug(ctx, `     Input: ${summarize(input, DEBUG_OUTPUT_TRUNCATION_LIMIT)}`);
       }
     },
 
     onToolEnd: ({ name, resultCount, sources, topResults, durationMs, error }) => {
       if (level === 'quiet') return;
       if (error) {
-        logInfo(ctx, `  ✗ ${name} failed (${durationMs}ms): ${error}`);
+        logInfo(ctx, `  ❌ ${name} failed (${durationMs}ms): ${error}`);
         return;
       }
       // DEFAULT: Show result count, timing, and sources
@@ -411,13 +412,13 @@ export function createFillLoggingCallbacks(
       if (sources) {
         logInfo(ctx, `     Sources: ${sources}`);
       }
-      // VERBOSE: Show top result titles
+      // VERBOSE: Show first 5-8 result titles
       if ((level === 'verbose' || level === 'debug') && topResults) {
-        logVerbose(ctx, `     Top results: ${topResults}`);
+        logVerbose(ctx, `     Results: ${topResults}`);
       }
-      // DEBUG: Show full output
+      // DEBUG: Show full output (truncated)
       if (level === 'debug') {
-        logDebug(ctx, `     Output: ${summarize(output)}`);
+        logDebug(ctx, `     Output: ${summarize(output, DEBUG_OUTPUT_TRUNCATION_LIMIT)}`);
       }
     },
 
@@ -535,11 +536,12 @@ This requires updating `ResearchOptions` to accept callbacks.
 
 ### Phase 2: Logging Infrastructure
 
+- [ ] Add `DEBUG_OUTPUT_TRUNCATION_LIMIT = 500` to `settings.ts`
 - [ ] Add `LogLevel` type and `debug` flag to `CommandContext`
 - [ ] Add `logDebug()` function to `shared.ts`
-- [ ] Update `getCommandContext()` to compute `logLevel` from flags
+- [ ] Update `getCommandContext()` to compute `logLevel` from flags and `LOG_LEVEL` env var
 - [ ] Add `--debug` and `--wire-log <path>` to global CLI options
-- [ ] Enhance `createFillLoggingCallbacks()` with log level awareness and emoji output
+- [ ] Enhance `createFillLoggingCallbacks()` with log level awareness
 
 ### Phase 3: Command Integration
 
@@ -549,13 +551,13 @@ This requires updating `ResearchOptions` to accept callbacks.
 - [ ] Add wire log output writing after fill completes
 - [ ] Ensure consistent behavior across all commands
 
-### Phase 4: Console Experience
+### Phase 4: Web Search Result Parsing
 
-- [ ] Implement web search query display in default mode
-- [ ] Implement result count display with timing
-- [ ] Add source summary extraction for verbose mode
-- [ ] Add emoji indicators (🔍 ✓ →) for visual scanning
-- [ ] Update spinner to show search queries
+- [ ] Add `extractWebSearchResults()` helper to parse provider responses
+- [ ] Extract result count from all providers (OpenAI, Anthropic, Google, XAI)
+- [ ] Extract source domains from URLs (e.g., "imdb.com, wikipedia.org")
+- [ ] Extract first 5-8 result titles with "..." for additional results
+- [ ] Handle provider-specific response structures gracefully
 
 ### Phase 5: Testing and Documentation
 
@@ -566,34 +568,48 @@ This requires updating `ResearchOptions` to accept callbacks.
 - [ ] Update CLI help text and development.md
 - [ ] Add library usage examples to documentation
 
-## Open Questions
+## Resolved Design Decisions
 
-1. **Wire log format**: Should wire log be a separate file format or extend SessionTranscript?
-   - Recommendation: Extend SessionTranscript with optional `wire` field per turn (already exists)
+1. **Wire log format**: Extend `SessionTranscript` with wire format data
+   - **Decision**: Unify with golden test transcript format
+   - Reuse `SessionTranscript` schema, include wire format in each turn
+   - Ensure tool call details are captured (inputs, outputs, timing)
+   - Same format works for `--wire-log`, `--transcript`, and golden tests
 
-2. **Debug output volume**: How to summarize large tool outputs in debug mode?
-   - Recommendation: Truncate to first 500 chars with "...[truncated]" suffix
+2. **Debug output truncation**: Truncate at configurable limit
+   - **Decision**: 500 chars with "...[truncated]" suffix
+   - Add `DEBUG_OUTPUT_TRUNCATION_LIMIT = 500` to `settings.ts`
 
-3. **Environment variable naming**: `LOG_LEVEL` or `MARKFORM_LOG_LEVEL`?
-   - Recommendation: `LOG_LEVEL` for simplicity (common convention)
+3. **Environment variable**: `LOG_LEVEL=debug`
+   - **Decision**: `LOG_LEVEL` is fine
+   - Must have equivalent semantics to `--debug` flag
+   - Values: `quiet`, `default`, `verbose`, `debug`
 
-4. **Web search result extraction**: Different providers return different response structures.
-   How much parsing should we do?
-   - Option A: Simple approach - just count results and show query
-   - Option B: Provider-specific parsing to extract titles, sources, snippets
-   - Recommendation: Start with Option A, add provider-specific parsing later
+4. **Web search result extraction**: Show first 5-8 result titles/domains
+   - **Decision**: Extract titles and domains from all providers
+   - All providers (OpenAI, Anthropic, Google, XAI) return structured results with titles/URLs
+   - Show: "Sources: IMDb, Wikipedia, ..." (domains extracted from URLs)
+   - Show: "Title 1, Title 2, Title 3, ..." (first 5-8 titles, then "...")
+   - Provider-specific parsing is feasible - all return `title` and `url` fields
 
-5. **Emoji usage**: Should emojis be conditional on terminal capabilities?
-   - Recommendation: Yes, check `process.stdout.isTTY` and use text fallbacks for non-TTY
+5. **Emoji usage**: Follow CLI best practices - limited emoji set
+   - **Decision**: Use only approved emojis per `typescript-cli-tool-rules.md`:
+     - ✅ for success (or ✓ checkmark)
+     - ❌ for failure/error
+     - ⚠️ for warnings
+     - ⏰ for timing information
+   - Avoid excessive emojis like 🔍 - use text labels instead
+   - picocolors handles TTY detection automatically
 
-6. **Callback backward compatibility**: The new fields (`toolType`, `query`, `resultCount`,
-   `resultSummary`) are optional additions. Should we version the callback interface?
-   - Recommendation: No versioning needed - all new fields are optional
+6. **Callback backward compatibility**: No backward compat needed
+   - **Decision**: Clean break - design for future, not past
+   - New callback fields are required, not optional
+   - This is a hard cut
 
-7. **Progress display without spinner**: Some terminals don't support spinners well.
-   Should we have a text-only fallback?
-   - Current: We have `createNoOpSpinner()` for quiet/non-TTY
-   - Recommendation: Enhance non-TTY output to still show progress via log lines
+7. **Progress without spinner**: Use log lines for non-TTY
+   - **Decision**: Non-TTY environments get regular log lines
+   - `createNoOpSpinner()` already handles quiet/non-TTY
+   - Progress shown via `logInfo()` calls instead of spinner updates
 
 ## Stage 5: Validation Stage
 
