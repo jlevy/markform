@@ -2,9 +2,12 @@
 
 ## Purpose
 
-This is a technical design doc for improving the logging and CLI experience when running the
-research agent harness. The goal is to provide more comprehensive and flexible logging at
-varying levels, from basic console output to full wire format session capture.
+This is a technical design doc for improving the logging and CLI experience when running
+markform agents. The goal is to provide:
+
+1. **Comprehensive logging levels** - From basic console output to full wire format capture
+2. **Library-first design** - Callbacks that work for both CLI and programmatic TypeScript usage
+3. **Enhanced console experience** - Better progress display with tool details and web search summaries
 
 ## Background
 
@@ -92,6 +95,117 @@ New flags:
 - `LOG_LEVEL=debug`: Alternative to `--debug` flag
 - `MARKFORM_WIRE_LOG=<path>`: Alternative to `--wire-log` flag
 
+### Library-First Callback Design
+
+The logging system must work for both CLI and programmatic TypeScript usage. The `FillCallbacks`
+interface should be rich enough that library users can build their own logging/progress UIs.
+
+**Extended Callback Information:**
+
+```typescript
+interface FillCallbacks {
+  // Existing callbacks (unchanged signature)
+  onTurnStart?(turn: { turnNumber: number; issuesCount: number }): void;
+  onIssuesIdentified?(info: { turnNumber: number; issues: InspectIssue[] }): void;
+  onPatchesGenerated?(info: { turnNumber: number; patches: Patch[]; stats?: TurnStats }): void;
+  onTurnComplete?(progress: TurnProgress): void;
+
+  // Enhanced tool callbacks with richer information
+  onToolStart?(call: {
+    name: string;
+    input: unknown;
+    // NEW: Structured input for known tool types
+    toolType?: 'web_search' | 'fill_form' | 'custom';
+    query?: string;  // For web search tools
+  }): void;
+
+  onToolEnd?(call: {
+    name: string;
+    output: unknown;
+    durationMs: number;
+    error?: string;
+    // NEW: Structured output for known tool types
+    toolType?: 'web_search' | 'fill_form' | 'custom';
+    resultCount?: number;  // For web search: number of results
+    resultSummary?: string;  // For web search: brief summary
+  }): void;
+
+  onLlmCallStart?(call: { model: string }): void;
+  onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+}
+```
+
+**Library Usage Example:**
+
+```typescript
+import { fillForm } from 'markform';
+
+const result = await fillForm({
+  form: markdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: true,
+  captureWireFormat: false,
+  callbacks: {
+    onTurnStart: ({ turnNumber }) => {
+      myLogger.info(`Starting turn ${turnNumber}`);
+    },
+    onToolStart: ({ name, query }) => {
+      if (query) {
+        myProgressUI.showSearching(query);
+      }
+    },
+    onToolEnd: ({ name, resultCount, resultSummary, durationMs }) => {
+      if (resultCount !== undefined) {
+        myProgressUI.showResults(`${resultCount} results (${durationMs}ms)`);
+        myLogger.debug(`Search summary: ${resultSummary}`);
+      }
+    },
+    onPatchesGenerated: ({ patches, stats }) => {
+      myLogger.info(`Generated ${patches.length} patches`);
+      if (stats?.inputTokens) {
+        myMetrics.recordTokens(stats.inputTokens, stats.outputTokens);
+      }
+    },
+  },
+});
+```
+
+### Enhanced Console Progress Display
+
+The CLI should show better real-time progress, especially for tool execution:
+
+**Default Mode (improved):**
+```
+Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
+  🔍 Searching: "Pulp Fiction 1994 movie details"
+  ✓ 8 results (1.2s)
+  → 5 patches:
+    full_title (string) = "Pulp Fiction"
+    year (number) = 1994
+    ...
+```
+
+**Verbose Mode (enhanced):**
+```
+Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
+  🔍 web_search: "Pulp Fiction 1994 movie details"
+  ✓ web_search: 8 results from IMDb, Wikipedia, Rotten Tomatoes (1.2s)
+     Top results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia"
+  → 5 patches (tokens: ↓1234 ↑567):
+    full_title (string) = "Pulp Fiction"
+    year (number) = 1994
+    directors (string_list) = [Quentin Tarantino]
+    ...
+  Tools: web_search(1), fill_form(1)
+```
+
+**Key Console Improvements:**
+1. Show search queries as they happen (not just "Web search...")
+2. Show result counts and source summaries for web search
+3. Use emoji indicators for visual scanning (🔍 search, ✓ complete, → patches)
+4. Show timing for each tool call
+5. In verbose mode, show top result titles from web search
+
 ## Backward Compatibility
 
 **Compatibility Level:** Fully Backward Compatible (Additive Only)
@@ -136,42 +250,64 @@ New flags:
 ### Feature Requirements
 
 **Must Have:**
-- [ ] Unified logging callback system across `fill` and `research` commands
-- [ ] `--verbose` enhanced with tool timing and token counts
+- [ ] Unified logging callback system across `fill`, `research`, and `run` commands
+- [ ] Library-friendly callbacks with structured tool information (query, resultCount, etc.)
+- [ ] `--verbose` enhanced with tool timing, token counts, and search details
 - [ ] `--wire-log <path>` flag to capture full wire format to YAML
 - [ ] Debug mode via `--debug` flag or `LOG_LEVEL=debug` environment variable
+- [ ] Show web search queries and result counts in default mode
+- [ ] Show web search result summaries in verbose mode
 
 **Should Have:**
-- [ ] Web search result summaries in verbose mode
 - [ ] Patch validation error details in verbose mode
-- [ ] Consistent spinner behavior across commands
+- [ ] Consistent spinner/progress behavior across commands
+- [ ] Emoji indicators for visual scanning (🔍 ✓ →)
 
 **Won't Have (This Phase):**
 - JSON streaming output format (separate feature)
 - Progress bars instead of spinners
 - Real-time log streaming to external services
+- Custom tool type registration (use 'custom' type for now)
 
 ### Acceptance Criteria
 
-1. Running `markform research <form> --model <model> --verbose` shows:
-   - All default output (turn, issues, patches)
+**CLI Behavior:**
+
+1. Running `markform research <form> --model <model>` (default mode) shows:
+   - Turn numbers with issues list
+   - Web search queries as they execute (🔍 Searching: "query")
+   - Web search result counts (✓ N results (Xs))
+   - Patches generated with field IDs and values
+
+2. Running with `--verbose` additionally shows:
    - Token counts per turn
-   - Tool call names with timing (e.g., "web_search completed in 1.2s")
+   - Tool call names with timing and source summaries
+   - Top result titles from web search
    - Model and provider info at start
 
-2. Running with `--debug` or `LOG_LEVEL=debug` additionally shows:
+3. Running with `--debug` or `LOG_LEVEL=debug` additionally shows:
    - Full system prompt each turn
    - Full context prompt each turn
    - Tool inputs/outputs (summarized for large responses)
 
-3. Running with `--wire-log session.yaml` produces a YAML file containing:
+4. Running with `--wire-log session.yaml` produces a YAML file containing:
    - `request.system`: Full system prompt
    - `request.prompt`: Full context prompt
    - `request.tools`: Tool schemas
    - `response.steps`: All tool calls and results
    - `response.usage`: Token counts
 
-4. Both `fill` and `research` commands produce identical logging for the same operations
+5. All commands (`fill`, `research`, `run`) produce identical logging for the same operations
+
+**Library API:**
+
+6. `fillForm()` accepts callbacks with structured tool information:
+   ```typescript
+   onToolStart: ({ name, query }) => { /* query available for web search */ }
+   onToolEnd: ({ name, resultCount, resultSummary }) => { /* structured results */ }
+   ```
+
+7. Library users can implement their own progress UI using callbacks alone (no CLI dependencies)
 
 ## Stage 2: Architecture Stage
 
@@ -302,12 +438,16 @@ This requires updating `ResearchOptions` to accept callbacks.
 
 | File | Changes |
 | --- | --- |
+| `src/harness/harnessTypes.ts` | Extend `FillCallbacks` with structured tool fields |
+| `src/harness/liveAgent.ts` | Extract and pass structured tool info to callbacks |
 | `src/cli/lib/cliTypes.ts` | Add `LogLevel`, `debug` to `CommandContext` |
 | `src/cli/lib/shared.ts` | Add `logDebug()`, update `getCommandContext()` |
-| `src/cli/lib/fillLogging.ts` | Enhance callbacks for all log levels |
+| `src/cli/lib/fillLogging.ts` | Enhance callbacks for all log levels, add emoji output |
+| `src/cli/lib/toolParsing.ts` | NEW: Helper to extract web search queries and results |
 | `src/cli/cli.ts` | Add `--debug` and `--wire-log` global options |
 | `src/cli/commands/fill.ts` | Wire up `--wire-log`, use unified callbacks |
 | `src/cli/commands/research.ts` | Use unified callbacks, add wire log support |
+| `src/cli/commands/run.ts` | Use unified callbacks |
 | `src/research/runResearch.ts` | Accept callbacks in options |
 
 ## Stage 3: Refine Architecture
@@ -346,27 +486,45 @@ This requires updating `ResearchOptions` to accept callbacks.
 
 ## Stage 4: Implementation Phase
 
-### Phase 1: Unified Logging Infrastructure
+### Phase 1: Enhanced Callback Types
+
+- [ ] Extend `FillCallbacks.onToolStart` with `toolType`, `query` fields
+- [ ] Extend `FillCallbacks.onToolEnd` with `toolType`, `resultCount`, `resultSummary` fields
+- [ ] Add helper to extract structured info from web search tool inputs/outputs
+- [ ] Update `liveAgent.ts` to populate structured fields in callbacks
+
+### Phase 2: Logging Infrastructure
 
 - [ ] Add `LogLevel` type and `debug` flag to `CommandContext`
 - [ ] Add `logDebug()` function to `shared.ts`
 - [ ] Update `getCommandContext()` to compute `logLevel` from flags
 - [ ] Add `--debug` and `--wire-log <path>` to global CLI options
-- [ ] Enhance `createFillLoggingCallbacks()` with log level awareness
+- [ ] Enhance `createFillLoggingCallbacks()` with log level awareness and emoji output
 
-### Phase 2: Command Integration
+### Phase 3: Command Integration
 
 - [ ] Update `fill.ts` to use `createFillLoggingCallbacks()` consistently
 - [ ] Update `research.ts` to use `createFillLoggingCallbacks()`
+- [ ] Update `run.ts` to use `createFillLoggingCallbacks()`
 - [ ] Add wire log output writing after fill completes
-- [ ] Ensure spinner behavior is consistent across commands
+- [ ] Ensure consistent behavior across all commands
 
-### Phase 3: Testing and Documentation
+### Phase 4: Console Experience
+
+- [ ] Implement web search query display in default mode
+- [ ] Implement result count display with timing
+- [ ] Add source summary extraction for verbose mode
+- [ ] Add emoji indicators (🔍 ✓ →) for visual scanning
+- [ ] Update spinner to show search queries
+
+### Phase 5: Testing and Documentation
 
 - [ ] Add unit tests for logging utilities
+- [ ] Add unit tests for structured callback extraction
 - [ ] Test all three log levels with example forms
 - [ ] Verify wire log output format matches schema
 - [ ] Update CLI help text and development.md
+- [ ] Add library usage examples to documentation
 
 ## Open Questions
 
@@ -378,6 +536,24 @@ This requires updating `ResearchOptions` to accept callbacks.
 
 3. **Environment variable naming**: `LOG_LEVEL` or `MARKFORM_LOG_LEVEL`?
    - Recommendation: `LOG_LEVEL` for simplicity (common convention)
+
+4. **Web search result extraction**: Different providers return different response structures.
+   How much parsing should we do?
+   - Option A: Simple approach - just count results and show query
+   - Option B: Provider-specific parsing to extract titles, sources, snippets
+   - Recommendation: Start with Option A, add provider-specific parsing later
+
+5. **Emoji usage**: Should emojis be conditional on terminal capabilities?
+   - Recommendation: Yes, check `process.stdout.isTTY` and use text fallbacks for non-TTY
+
+6. **Callback backward compatibility**: The new fields (`toolType`, `query`, `resultCount`,
+   `resultSummary`) are optional additions. Should we version the callback interface?
+   - Recommendation: No versioning needed - all new fields are optional
+
+7. **Progress display without spinner**: Some terminals don't support spinners well.
+   Should we have a text-only fallback?
+   - Current: We have `createNoOpSpinner()` for quiet/non-TTY
+   - Recommendation: Enhance non-TTY output to still show progress via log lines
 
 ## Stage 5: Validation Stage
 
