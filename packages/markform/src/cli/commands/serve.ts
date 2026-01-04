@@ -8,17 +8,19 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Command } from 'commander';
 
 import { exec } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import { readFile as readFileAsync } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { basename, resolve } from 'node:path';
 
 import pc from 'picocolors';
+import YAML from 'yaml';
 
 import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
-import { serializeForm } from '../../engine/serialize.js';
-import { ALL_EXTENSIONS, DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
+import { formToJsonSchema } from '../../engine/jsonSchema.js';
+import { serializeForm, serializeReport } from '../../engine/serialize.js';
+import { toNotesArray, toStructuredValues } from '../lib/exportHelpers.js';
+import { DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -76,78 +78,30 @@ function openBrowser(url: string): void {
 }
 
 // =============================================================================
-// Related Files Discovery
+// Tab Configuration
 // =============================================================================
 
-/** Represents a tab for navigation between related files */
+/** Represents a tab for navigation */
 interface Tab {
-  id: 'form' | 'report' | 'values' | 'schema';
+  id: 'view' | 'form' | 'source' | 'report' | 'values' | 'schema';
   label: string;
-  path: string | null; // null if file doesn't exist
-}
-
-/** Collection of related files for a form */
-interface RelatedFiles {
-  form: string;
-  report: string | null;
-  values: string | null;
-  schema: string | null;
+  path: string | null; // Source file path (for source tab) or null for dynamically generated
 }
 
 /**
- * Get the base path by stripping any known markform extension.
+ * Build tabs for a form file.
+ * All tabs are always present - content is generated dynamically from the form.
+ * Tab order: View, Edit, Source, Report, Values, Schema
  */
-function getBasePath(filePath: string): string {
-  for (const ext of Object.values(ALL_EXTENSIONS)) {
-    if (filePath.endsWith(ext)) {
-      return filePath.slice(0, -ext.length);
-    }
-  }
-  // Also handle plain .md files
-  if (filePath.endsWith('.md')) {
-    return filePath.slice(0, -3);
-  }
-  return filePath;
-}
-
-/**
- * Find related files for a form file.
- * Checks for .report.md, .yml, and .schema.json files with the same base name.
- */
-function findRelatedFiles(formPath: string): RelatedFiles {
-  const base = getBasePath(formPath);
-
-  const reportPath = base + ALL_EXTENSIONS.report;
-  const valuesPath = base + ALL_EXTENSIONS.yaml;
-  const schemaPath = base + ALL_EXTENSIONS.schema;
-
-  return {
-    form: formPath,
-    report: existsSync(reportPath) ? reportPath : null,
-    values: existsSync(valuesPath) ? valuesPath : null,
-    schema: existsSync(schemaPath) ? schemaPath : null,
-  };
-}
-
-/**
- * Build tabs for tabbed navigation.
- */
-function buildTabs(relatedFiles: RelatedFiles): Tab[] {
-  const tabs: Tab[] = [];
-
-  tabs.push({ id: 'form', label: 'Markform', path: relatedFiles.form });
-
-  if (relatedFiles.report) {
-    tabs.push({ id: 'report', label: 'Report', path: relatedFiles.report });
-  }
-  if (relatedFiles.values) {
-    tabs.push({ id: 'values', label: 'Values', path: relatedFiles.values });
-  }
-  if (relatedFiles.schema) {
-    tabs.push({ id: 'schema', label: 'Schema', path: relatedFiles.schema });
-  }
-
-  return tabs;
+function buildFormTabs(formPath: string): Tab[] {
+  return [
+    { id: 'view', label: 'View', path: null }, // Generated from form
+    { id: 'form', label: 'Edit', path: formPath }, // Interactive editor
+    { id: 'source', label: 'Source', path: formPath }, // Form source
+    { id: 'report', label: 'Report', path: null }, // Generated from form
+    { id: 'values', label: 'Values', path: null }, // Generated from form
+    { id: 'schema', label: 'Schema', path: null }, // Generated from form
+  ];
 }
 
 /**
@@ -175,9 +129,8 @@ export function registerServeCommand(program: Command): void {
           form = parseForm(content);
         }
 
-        // Discover related files for form files
-        const relatedFiles = fileType === 'form' ? findRelatedFiles(filePath) : null;
-        const tabs = relatedFiles ? buildTabs(relatedFiles) : null;
+        // Build tabs for form files (all tabs are generated dynamically)
+        const tabs = fileType === 'form' ? buildFormTabs(filePath) : null;
 
         // Start the server
         const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -237,23 +190,57 @@ async function handleRequest(
   if (req.method === 'GET' && url.startsWith('/tab/') && tabs && tabs.length > 1) {
     const tabId = url.slice(5) as Tab['id'];
     const tab = tabs.find((t) => t.id === tabId);
-    if (tab?.path) {
-      const content = await readFileAsync(tab.path, 'utf-8');
-      const tabFileType = detectFileType(tab.path);
-      let html: string;
-      if (tabFileType === 'report' || tabFileType === 'raw') {
-        html = renderMarkdownContent(content);
-      } else if (tabFileType === 'yaml') {
-        html = renderYamlContent(content);
-      } else if (tabFileType === 'json' || tabFileType === 'schema') {
-        html = renderJsonContent(content);
-      } else {
-        html = `<pre>${escapeHtml(content)}</pre>`;
-      }
+
+    // Handle special tabs that need the parsed form or source content
+    if (tabId === 'view' && form) {
+      const html = renderViewContent(form);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       return;
     }
+
+    if (tabId === 'source' && tab?.path) {
+      const content = await readFileAsync(tab.path, 'utf-8');
+      const html = renderSourceContent(content);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
+    // Report tab - generate dynamically from form
+    if (tabId === 'report' && form) {
+      const reportContent = serializeReport(form);
+      const html = renderMarkdownContent(reportContent);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
+    // Values tab - generate dynamically from form
+    if (tabId === 'values' && form) {
+      const values = toStructuredValues(form);
+      const notes = toNotesArray(form);
+      const exportData = {
+        values,
+        ...(notes.length > 0 && { notes }),
+      };
+      const yamlContent = YAML.stringify(exportData);
+      const html = renderYamlContent(yamlContent);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
+    // Schema tab - generate dynamically from form
+    if (tabId === 'schema' && form) {
+      const result = formToJsonSchema(form);
+      const jsonContent = JSON.stringify(result.schema, null, 2);
+      const html = renderJsonContent(jsonContent);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(html);
+      return;
+    }
+
     res.writeHead(404);
     res.end('Tab not found');
     return;
@@ -659,6 +646,27 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .syn-bool { color: #d73a49; }
     .syn-null { color: #d73a49; }
     .syn-comment { color: #6a737d; font-style: italic; }
+    /* Jinja/MarkDoc syntax highlighting */
+    .syn-jinja-tag { color: #6f42c1; font-weight: 500; }
+    .syn-jinja-keyword { color: #d73a49; }
+    .syn-jinja-attr { color: #005cc5; }
+    .syn-jinja-value { color: #22863a; }
+    /* Markdown syntax highlighting */
+    .syn-md-header { color: #005cc5; font-weight: 600; }
+    .syn-md-bold { font-weight: 600; }
+    .syn-md-italic { font-style: italic; }
+    .syn-md-code { background: #f1f3f5; padding: 0.1em 0.3em; border-radius: 3px; }
+    .syn-md-link { color: #0366d6; }
+    .syn-md-list { color: #d73a49; }
+    /* View tab styles */
+    .view-content { padding: 0.5rem 0; }
+    .view-group { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .view-group h2 { color: #6c757d; font-size: 1.25rem; margin-top: 0; }
+    .view-field { margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e9ecef; }
+    .view-field:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .view-field-label { font-weight: 600; color: #495057; margin-bottom: 0.25rem; }
+    .view-field-value { color: #212529; }
+    .view-field-empty { color: #adb5bd; font-style: italic; }
     /* Markdown content styles */
     .markdown-content { padding: 0.5rem 0; }
     .markdown-content h2 { font-size: 1.4rem; color: #24292e; margin: 1.5rem 0 0.75rem; }
@@ -667,12 +675,24 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .markdown-content h5 { font-size: 1rem; color: #24292e; margin: 0.75rem 0 0.5rem; }
     .markdown-content p { margin: 0.75rem 0; line-height: 1.6; }
     .markdown-content li { margin: 0.25rem 0; margin-left: 1.5rem; line-height: 1.6; }
+    .markdown-content li.checkbox-item { list-style: none; margin-left: 0; }
     .markdown-content code { background: #f1f3f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
     .markdown-content pre { background: #f8f9fa; padding: 1rem; border-radius: 6px; border: 1px solid #e1e4e8; overflow-x: auto; }
     .markdown-content pre code { background: none; padding: 0; }
     .markdown-content a { color: #0366d6; text-decoration: none; }
     .markdown-content a:hover { text-decoration: underline; }
     .markdown-content strong { font-weight: 600; }
+    /* Checkbox and state styles */
+    .checkbox { font-size: 1.1em; margin-right: 0.25em; }
+    .checkbox.checked { color: #28a745; }
+    .checkbox.unchecked { color: #6c757d; }
+    .state-badge { display: inline-block; width: 1.1em; text-align: center; margin-right: 0.25em; font-weight: 600; }
+    .state-badge.state-active { color: #0d6efd; }
+    .state-badge.state-incomplete { color: #ffc107; }
+    .state-badge.state-na { color: #6c757d; }
+    .state-badge.state-unfilled { color: #adb5bd; }
+    .checkbox-list { list-style: none; padding-left: 0; margin: 0.25rem 0; }
+    .checkbox-list .checkbox-item { margin-left: 0; }
     .loading { text-align: center; padding: 2rem; color: #6c757d; }
     .error { text-align: center; padding: 2rem; color: #dc3545; }
     h2 { color: #6c757d; font-size: 1.25rem; }
@@ -707,6 +727,8 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     }
     input[type="text"],
     input[type="number"],
+    input[type="url"],
+    input[type="date"],
     textarea,
     select {
       width: 100%;
@@ -717,8 +739,14 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
       background: #fff;
       transition: border-color 0.15s ease-in-out;
     }
+    input[type="url"] {
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9rem;
+    }
     input[type="text"]:focus,
     input[type="number"]:focus,
+    input[type="url"]:focus,
+    input[type="date"]:focus,
     textarea:focus,
     select:focus {
       outline: none;
@@ -848,7 +876,10 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
 <body>
   <h1>${escapeHtml(formTitle)}</h1>
   ${tabBarHtml}
-  <div id="tab-form" class="tab-content active">
+  <div id="tab-view" class="tab-content active">
+    <div class="loading">Loading...</div>
+  </div>
+  <div id="tab-form" class="tab-content">
     <form method="POST" action="/save" id="markform">
       ${groupsHtml}
       <div class="toolbar">
@@ -925,9 +956,63 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
 
     // Tab switching logic
     const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabViewContent = document.getElementById('tab-view');
     const tabFormContent = document.getElementById('tab-form');
     const tabOtherContent = document.getElementById('tab-other');
     const tabCache = {};
+
+    // Function to show a specific tab
+    async function showTab(tabId) {
+      // Hide all tab content
+      if (tabViewContent) tabViewContent.classList.remove('active');
+      if (tabFormContent) tabFormContent.classList.remove('active');
+      if (tabOtherContent) tabOtherContent.classList.remove('active');
+
+      if (tabId === 'form') {
+        // Show Edit (form) tab - pre-rendered content
+        if (tabFormContent) tabFormContent.classList.add('active');
+      } else if (tabId === 'view') {
+        // Show View tab
+        if (tabViewContent) {
+          tabViewContent.classList.add('active');
+          // Fetch content if not cached
+          if (!tabCache[tabId]) {
+            tabViewContent.innerHTML = '<div class="loading">Loading...</div>';
+            try {
+              const response = await fetch('/tab/' + tabId);
+              if (response.ok) {
+                tabCache[tabId] = await response.text();
+              } else {
+                tabCache[tabId] = '<div class="error">Failed to load content</div>';
+              }
+            } catch (err) {
+              tabCache[tabId] = '<div class="error">Failed to load content</div>';
+            }
+          }
+          tabViewContent.innerHTML = tabCache[tabId];
+        }
+      } else {
+        // Show other tab content (source, report, values, schema)
+        if (tabOtherContent) {
+          tabOtherContent.classList.add('active');
+          // Fetch content if not cached
+          if (!tabCache[tabId]) {
+            tabOtherContent.innerHTML = '<div class="loading">Loading...</div>';
+            try {
+              const response = await fetch('/tab/' + tabId);
+              if (response.ok) {
+                tabCache[tabId] = await response.text();
+              } else {
+                tabCache[tabId] = '<div class="error">Failed to load content</div>';
+              }
+            } catch (err) {
+              tabCache[tabId] = '<div class="error">Failed to load content</div>';
+            }
+          }
+          tabOtherContent.innerHTML = tabCache[tabId];
+        }
+      }
+    }
 
     tabButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -937,35 +1022,12 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
         tabButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        if (tabId === 'form') {
-          // Show form tab
-          if (tabFormContent) tabFormContent.classList.add('active');
-          if (tabOtherContent) tabOtherContent.classList.remove('active');
-        } else {
-          // Show other tab content
-          if (tabFormContent) tabFormContent.classList.remove('active');
-          if (tabOtherContent) {
-            tabOtherContent.classList.add('active');
-
-            // Fetch content if not cached
-            if (!tabCache[tabId]) {
-              tabOtherContent.innerHTML = '<div class="loading">Loading...</div>';
-              try {
-                const response = await fetch('/tab/' + tabId);
-                if (response.ok) {
-                  tabCache[tabId] = await response.text();
-                } else {
-                  tabCache[tabId] = '<div class="error">Failed to load content</div>';
-                }
-              } catch (err) {
-                tabCache[tabId] = '<div class="error">Failed to load content</div>';
-              }
-            }
-            tabOtherContent.innerHTML = tabCache[tabId];
-          }
-        }
+        await showTab(tabId);
       });
     });
+
+    // Load View tab on page load (it's the default tab)
+    showTab('view');
   </script>
 </body>
 </html>`;
@@ -1674,6 +1736,264 @@ function renderPlainTextHtml(content: string, filename: string): string {
 // =============================================================================
 
 /**
+ * Render form view content (read-only display of form fields).
+ * Used for View tab content.
+ * @public Exported for testing.
+ */
+export function renderViewContent(form: ParsedForm): string {
+  const { schema, responsesByFieldId } = form;
+  let html = '<div class="view-content">';
+
+  for (const group of schema.groups) {
+    const groupTitle = group.title ?? group.id;
+    html += `<div class="view-group"><h2>${escapeHtml(groupTitle)}</h2>`;
+
+    for (const field of group.children) {
+      const response = responsesByFieldId[field.id];
+      const value = response?.state === 'answered' ? response.value : undefined;
+      const isSkipped = response?.state === 'skipped';
+
+      html += '<div class="view-field">';
+      html += `<div class="view-field-label">${escapeHtml(field.label)}`;
+      html += ` <span class="type-badge">${field.kind}</span>`;
+      if (field.required) {
+        html += ' <span class="required">*</span>';
+      }
+      if (isSkipped) {
+        html += ' <span class="skipped-badge">Skipped</span>';
+      }
+      html += '</div>';
+
+      // Render value based on field type
+      html += renderViewFieldValue(field, value, isSkipped);
+      html += '</div>';
+    }
+
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+/**
+ * Format a checkbox state for display.
+ */
+function formatCheckboxState(state: string): string {
+  switch (state) {
+    case 'done':
+      return '<span class="checkbox checked">☑</span>';
+    case 'todo':
+      return '<span class="checkbox unchecked">☐</span>';
+    case 'active':
+      return '<span class="state-badge state-active">●</span>';
+    case 'incomplete':
+      return '<span class="state-badge state-incomplete">○</span>';
+    case 'na':
+      return '<span class="state-badge state-na">—</span>';
+    case 'yes':
+      return '<span class="checkbox checked">☑</span>';
+    case 'no':
+      return '<span class="checkbox unchecked">☐</span>';
+    case 'unfilled':
+      return '<span class="state-badge state-unfilled">?</span>';
+    default:
+      return `<span class="state-badge">${escapeHtml(state)}</span>`;
+  }
+}
+
+/**
+ * Render a field value for the View tab.
+ */
+function renderViewFieldValue(
+  field: Field,
+  value: FieldValue | undefined,
+  isSkipped: boolean,
+): string {
+  if (isSkipped) {
+    return '<div class="view-field-empty">(skipped)</div>';
+  }
+
+  if (value === undefined) {
+    return '<div class="view-field-empty">(not filled)</div>';
+  }
+
+  switch (field.kind) {
+    case 'string': {
+      const v = value.kind === 'string' ? value.value : null;
+      if (v === null || v === '') {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${escapeHtml(v)}</div>`;
+    }
+    case 'number': {
+      const v = value.kind === 'number' ? value.value : null;
+      if (v === null) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${v}</div>`;
+    }
+    case 'string_list': {
+      const items = value.kind === 'string_list' ? value.items : [];
+      if (items.length === 0) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value"><ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`;
+    }
+    case 'single_select': {
+      const selected = value.kind === 'single_select' ? value.selected : null;
+      if (selected === null) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      const opt = field.options.find((o) => o.id === selected);
+      return `<div class="view-field-value">${escapeHtml(opt?.label ?? selected)}</div>`;
+    }
+    case 'multi_select': {
+      const selected = value.kind === 'multi_select' ? value.selected : [];
+      // Show all options with selection state
+      const items = field.options.map((opt) => {
+        const isSelected = selected.includes(opt.id);
+        const checkbox = isSelected
+          ? '<span class="checkbox checked">☑</span>'
+          : '<span class="checkbox unchecked">☐</span>';
+        return `<li class="checkbox-item">${checkbox} ${escapeHtml(opt.label)}</li>`;
+      });
+      return `<div class="view-field-value"><ul class="checkbox-list">${items.join('')}</ul></div>`;
+    }
+    case 'checkboxes': {
+      const values = value.kind === 'checkboxes' ? value.values : {};
+      const mode = field.checkboxMode ?? 'multi';
+      // Show all options with their state
+      const items = field.options.map((opt) => {
+        const state = values[opt.id] ?? (mode === 'explicit' ? 'unfilled' : 'todo');
+        // For simple mode, use checkbox symbols
+        if (mode === 'simple') {
+          const checkbox =
+            state === 'done'
+              ? '<span class="checkbox checked">☑</span>'
+              : '<span class="checkbox unchecked">☐</span>';
+          return `<li class="checkbox-item">${checkbox} ${escapeHtml(opt.label)}</li>`;
+        }
+        // For multi/explicit modes, show state text since there are multiple states
+        const stateDisplay = formatCheckboxState(state);
+        return `<li class="checkbox-item">${stateDisplay} ${escapeHtml(opt.label)}</li>`;
+      });
+      return `<div class="view-field-value"><ul class="checkbox-list">${items.join('')}</ul></div>`;
+    }
+    case 'url': {
+      const v = value.kind === 'url' ? value.value : null;
+      if (v === null || v === '') {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value"><a href="${escapeHtml(v)}" target="_blank">${escapeHtml(v)}</a></div>`;
+    }
+    case 'url_list': {
+      const items = value.kind === 'url_list' ? value.items : [];
+      if (items.length === 0) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value"><ul>${items.map((u) => `<li><a href="${escapeHtml(u)}" target="_blank">${escapeHtml(u)}</a></li>`).join('')}</ul></div>`;
+    }
+    case 'date': {
+      const v = value.kind === 'date' ? value.value : null;
+      if (v === null || v === '') {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${escapeHtml(v)}</div>`;
+    }
+    case 'year': {
+      const v = value.kind === 'year' ? value.value : null;
+      if (v === null) {
+        return '<div class="view-field-empty">(not filled)</div>';
+      }
+      return `<div class="view-field-value">${v}</div>`;
+    }
+    case 'table': {
+      const rows = value.kind === 'table' ? value.rows : [];
+      if (rows.length === 0) {
+        return '<div class="view-field-empty">(no data)</div>';
+      }
+      let tableHtml = '<div class="table-container"><table class="data-table">';
+      tableHtml += '<thead><tr>';
+      for (const col of field.columns) {
+        tableHtml += `<th>${escapeHtml(col.label)}</th>`;
+      }
+      tableHtml += '</tr></thead><tbody>';
+      for (const row of rows) {
+        tableHtml += '<tr>';
+        for (const col of field.columns) {
+          const cell = row[col.id];
+          let cellValue = '';
+          if (cell?.state === 'answered' && cell.value !== undefined && cell.value !== null) {
+            cellValue = String(cell.value);
+          }
+          tableHtml += `<td>${escapeHtml(cellValue)}</td>`;
+        }
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</tbody></table></div>';
+      return tableHtml;
+    }
+    default: {
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
+  }
+}
+
+/**
+ * Render source content with Markdown and Jinja syntax highlighting.
+ * Used for Source tab content.
+ * @public Exported for testing.
+ */
+export function renderSourceContent(content: string): string {
+  const lines = content.split('\n');
+  const highlighted = lines.map((line) => highlightSourceLine(line)).join('\n');
+  return `<pre>${highlighted}</pre>`;
+}
+
+/**
+ * Highlight a single line of source code (Markdown + Jinja).
+ */
+function highlightSourceLine(line: string): string {
+  // First escape HTML
+  let result = escapeHtml(line);
+
+  // Highlight Jinja tags: {% tag %}, {% /tag %}, {# comment #}
+  // Match {% ... %} patterns
+  result = result.replace(
+    /(\{%\s*)([a-zA-Z_/]+)(\s+[^%]*)?(%\})/g,
+    (_: string, open: string, keyword: string, attrs: string | undefined, close: string) => {
+      let attrHtml = '';
+      if (attrs) {
+        // Highlight attributes within the tag
+        attrHtml = attrs.replace(
+          /([a-zA-Z_]+)(=)("[^"]*"|&#039;[^&#]*&#039;|[^\s%]+)?/g,
+          (_m: string, attrName: string, eq: string, attrValue: string) => {
+            const valueHtml = attrValue ? `<span class="syn-jinja-value">${attrValue}</span>` : '';
+            return `<span class="syn-jinja-attr">${attrName}</span>${eq}${valueHtml}`;
+          },
+        );
+      }
+      return `<span class="syn-jinja-tag">${open}</span><span class="syn-jinja-keyword">${keyword}</span>${attrHtml}<span class="syn-jinja-tag">${close}</span>`;
+    },
+  );
+
+  // Highlight Jinja comments: {# ... #}
+  result = result.replace(/(\{#)(.*?)(#\})/g, `<span class="syn-comment">$1$2$3</span>`);
+
+  // Highlight Markdown headers
+  result = result.replace(/^(#{1,6}\s.*)$/gm, '<span class="syn-md-header">$1</span>');
+
+  // Highlight YAML frontmatter markers
+  if (result === '---') {
+    result = '<span class="syn-comment">---</span>';
+  }
+
+  return result;
+}
+
+/**
  * Render markdown content (content only, no page wrapper).
  * Used for tab content.
  * @public Exported for testing.
@@ -1684,6 +2004,51 @@ export function renderMarkdownContent(content: string): string {
   let inParagraph = false;
   let inCodeBlock = false;
   let codeBlockContent = '';
+  let inUnorderedList = false;
+  let inOrderedList = false;
+  let inTable = false;
+  let tableHeaderDone = false;
+
+  // Helper to close any open list
+  const closeList = () => {
+    if (inUnorderedList) {
+      html += '</ul>';
+      inUnorderedList = false;
+    }
+    if (inOrderedList) {
+      html += '</ol>';
+      inOrderedList = false;
+    }
+  };
+
+  // Helper to close table
+  const closeTable = () => {
+    if (inTable) {
+      html += '</tbody></table></div>';
+      inTable = false;
+      tableHeaderDone = false;
+    }
+  };
+
+  // Helper to detect if a line is a table row
+  const isTableRow = (line: string): boolean => {
+    const trimmed = line.trim();
+    return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.includes('|');
+  };
+
+  // Helper to detect table separator line (| --- | --- |)
+  const isTableSeparator = (line: string): boolean => {
+    const trimmed = line.trim();
+    return /^\|[\s-:|]+\|$/.test(trimmed);
+  };
+
+  // Helper to parse table cells
+  const parseTableCells = (line: string): string[] => {
+    const trimmed = line.trim();
+    // Remove leading and trailing pipes, then split by pipes
+    const content = trimmed.slice(1, -1);
+    return content.split('|').map((cell) => cell.trim());
+  };
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -1701,6 +2066,8 @@ export function renderMarkdownContent(content: string): string {
           html += '</p>';
           inParagraph = false;
         }
+        closeList();
+        closeTable();
         inCodeBlock = true;
       }
       continue;
@@ -1711,43 +2078,107 @@ export function renderMarkdownContent(content: string): string {
       continue;
     }
 
+    // Handle table rows
+    if (isTableRow(trimmed)) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      closeList();
+
+      // Skip separator line but mark header as done
+      if (isTableSeparator(trimmed)) {
+        tableHeaderDone = true;
+        continue;
+      }
+
+      const cells = parseTableCells(trimmed);
+
+      if (!inTable) {
+        // Start new table with header
+        html += '<div class="table-container"><table class="data-table"><thead><tr>';
+        for (const cell of cells) {
+          html += `<th>${formatInlineMarkdown(cell)}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+        inTable = true;
+      } else if (tableHeaderDone) {
+        // Regular table row
+        html += '<tr>';
+        for (const cell of cells) {
+          html += `<td>${formatInlineMarkdown(cell)}</td>`;
+        }
+        html += '</tr>';
+      }
+      continue;
+    }
+
+    // Close table if we hit a non-table line
+    if (inTable && !isTableRow(trimmed)) {
+      closeTable();
+    }
+
     // Handle headers
     if (trimmed.startsWith('# ')) {
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h2>${escapeHtml(trimmed.slice(2))}</h2>`;
+      closeList();
+      html += `<h2>${formatInlineMarkdown(trimmed.slice(2))}</h2>`;
     } else if (trimmed.startsWith('## ')) {
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h3>${escapeHtml(trimmed.slice(3))}</h3>`;
+      closeList();
+      html += `<h3>${formatInlineMarkdown(trimmed.slice(3))}</h3>`;
     } else if (trimmed.startsWith('### ')) {
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h4>${escapeHtml(trimmed.slice(4))}</h4>`;
+      closeList();
+      html += `<h4>${formatInlineMarkdown(trimmed.slice(4))}</h4>`;
     } else if (trimmed.startsWith('#### ')) {
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<h5>${escapeHtml(trimmed.slice(5))}</h5>`;
+      closeList();
+      html += `<h5>${formatInlineMarkdown(trimmed.slice(5))}</h5>`;
     } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       // Unordered list item
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
       }
-      html += `<li>${formatInlineMarkdown(trimmed.slice(2))}</li>`;
+      if (inOrderedList) {
+        html += '</ol>';
+        inOrderedList = false;
+      }
+      if (!inUnorderedList) {
+        html += '<ul>';
+        inUnorderedList = true;
+      }
+      const itemContent = trimmed.slice(2);
+      // If item starts with checkbox, use no-bullet class
+      const hasCheckbox = /^\[[ xX]\]/.test(itemContent);
+      const liClass = hasCheckbox ? ' class="checkbox-item"' : '';
+      html += `<li${liClass}>${formatInlineMarkdown(itemContent)}</li>`;
     } else if (/^\d+\.\s/.test(trimmed)) {
       // Ordered list item
       if (inParagraph) {
         html += '</p>';
         inParagraph = false;
+      }
+      if (inUnorderedList) {
+        html += '</ul>';
+        inUnorderedList = false;
+      }
+      if (!inOrderedList) {
+        html += '<ol>';
+        inOrderedList = true;
       }
       const text = trimmed.replace(/^\d+\.\s/, '');
       html += `<li>${formatInlineMarkdown(text)}</li>`;
@@ -1756,7 +2187,9 @@ export function renderMarkdownContent(content: string): string {
         html += '</p>';
         inParagraph = false;
       }
+      closeList();
     } else {
+      closeList();
       if (!inParagraph) {
         html += '<p>';
         inParagraph = true;
@@ -1770,16 +2203,23 @@ export function renderMarkdownContent(content: string): string {
   if (inParagraph) {
     html += '</p>';
   }
+  closeList();
+  closeTable();
 
   html += '</div>';
   return html;
 }
 
 /**
- * Format inline markdown (bold, italic, code, links).
+ * Format inline markdown (bold, italic, code, links, checkboxes).
  */
 function formatInlineMarkdown(text: string): string {
   let result = escapeHtml(text);
+  // Checkboxes - render before other formatting to avoid conflicts
+  // Checked checkbox [x] or [X]
+  result = result.replace(/\[x\]/gi, '<span class="checkbox checked">☑</span>');
+  // Unchecked checkbox [ ]
+  result = result.replace(/\[ \]/g, '<span class="checkbox unchecked">☐</span>');
   // Inline code
   result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
   // Bold

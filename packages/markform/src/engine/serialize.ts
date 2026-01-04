@@ -1332,13 +1332,10 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
     case 'multi_select': {
       const multiValue = value as MultiSelectValue | undefined;
       const selectedSet = new Set(multiValue?.selected ?? []);
-      const selectedOpts = field.options.filter((opt) => selectedSet.has(opt.id));
-      if (selectedOpts.length > 0) {
-        for (const opt of selectedOpts) {
-          lines.push(`- ${opt.label}`);
-        }
-      } else {
-        lines.push('_(none selected)_');
+      // Show all options with checkbox state (consistent with checkboxes and View tab)
+      for (const opt of field.options) {
+        const marker = selectedSet.has(opt.id) ? 'x' : ' ';
+        lines.push(`- [${marker}] ${opt.label}`);
       }
       break;
     }
