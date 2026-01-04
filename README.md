@@ -1,8 +1,9 @@
 # Markform
 
 [![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/workflows/ci.yml)
-![Coverage](./badges/packages/markform/coverage-total.svg) [![X (formerly Twitter)
-Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
+[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
+[![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
 
 **Markform** is a text format for defining structured forms that humans can read,
 machines can parse, and agents can fill via tool calls.
