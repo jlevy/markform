@@ -44,7 +44,7 @@ Use the fill_form tool with patches in these formats:
 | checkboxes | \`{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }\` |
 | table | \`{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }\` |
 
-## ⚠️ CRITICAL: checkboxes vs multi_select
+## Important: checkboxes vs multi_select
 
 These two types look similar but have DIFFERENT value formats:
 
@@ -53,8 +53,8 @@ These two types look similar but have DIFFERENT value formats:
 
 **Checkbox states by mode:**
 - Mode "simple": \`"done"\` or \`"todo"\`
-- Mode "multi": \`"done"\`, \`"todo"\`, \`"na"\`, \`"incomplete"\`, or \`"active"\`
-- Mode "explicit": \`"yes"\` or \`"no"\`
+- Mode "multi": \`"done"\`, \`"todo"\`, \`"incomplete"\`, \`"active"\`, or \`"na"\`
+- Mode "explicit": \`"yes"\` or \`"no"\` (if unknown, use abort_field)
 
 **WRONG:** \`{ op: "set_checkboxes", value: ["task1", "task2"] }\`
 **RIGHT:** \`{ op: "set_checkboxes", value: { "task1": "done", "task2": "done" } }\`
@@ -125,7 +125,8 @@ export const PATCH_FORMATS: Record<string, string> = {
  */
 export const CHECKBOX_MODE_HINTS: Record<string, string> = {
   simple: '{ "opt1": "done", "opt2": "todo" }  // states: done, todo',
-  multi: '{ "opt1": "done", "opt2": "na" }  // states: done, todo, na, incomplete, active',
+  multi:
+    '{ "opt1": "todo", "opt2": "todo", "opt3": "done", "opt4": "incomplete", "opt5": "active", "opt6": "na" }  // states: done, todo, incomplete, active, na',
   explicit: '{ "opt1": "yes", "opt2": "no" }  // states: yes, no',
 };
 

@@ -25,6 +25,10 @@ This reduces wasted turns (~4-8K tokens per form) when LLMs pattern-match from m
 - Critical warning section contrasting checkboxes vs multi_select
 - WRONG vs RIGHT examples for checkbox format
 - Mode-specific checkbox state examples (simple, multi, explicit)
+- **Fix:** Multi mode now lists all 5 states: `done`, `todo`, `incomplete`, `active`, `na`
+  (was incorrectly showing only 3: `done`, `todo`, `na`)
+- **Fix:** Explicit mode guidance clarifies agents should use `abort_field` if answer is unknown
+  (instead of exposing `unfilled` state which is an initial state, not a valid answer)
 
 ### 3. Improved Inline Field Hints
 - Inline examples now use actual option IDs from the field definition
@@ -65,7 +69,7 @@ All tests pass (1431 total):
 
 **Validation Test Coverage:**
 - ✅ `validation.test.ts` - Detects system prompt changes
-- ✅ `validation.test.ts` - Detects tool schema $ref changes
+- ✅ `validation.test.ts` - Detects tool schema $ref changes (fixed quote style mismatch)
 - ✅ Session regeneration is stable (double regeneration produces identical output)
 
 ### Build & Lint
