@@ -214,6 +214,7 @@ pnpm typecheck       # TypeScript type checking
 pnpm test            # All tests
 pnpm test:unit       # Unit tests only
 pnpm test:golden     # Golden session tests only
+pnpm test:tryscript  # CLI end-to-end tests
 pnpm publint         # Validate package exports
 ```
 
@@ -233,6 +234,35 @@ pnpm test:golden
 
 Golden tests replay recorded agent sessions to validate form filling works correctly.
 Session files are in `examples/*/` directories.
+
+**Tryscript Tests** (`tests/cli/`): CLI command end-to-end tests
+
+```bash
+pnpm test:tryscript
+```
+
+Tryscript tests verify CLI commands produce correct output. Test files are Markdown
+documents with console code blocks that capture expected command output. See
+[tryscript](https://github.com/jlevy/tryscript) for format details.
+
+### Updating Tryscript Tests
+
+When CLI output changes, update the tryscript golden files:
+
+```bash
+# 1. Run tests to see failures
+pnpm test:tryscript
+
+# 2. Update golden files with actual output
+pnpm test:tryscript:update
+
+# 3. Review diffs to verify changes are expected
+git diff packages/markform/tests/cli/
+
+# 4. Commit the updated test files
+git add packages/markform/tests/cli/
+git commit -m "Update CLI test files after output change"
+```
 
 ### Regenerating Golden Tests
 

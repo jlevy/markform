@@ -64,7 +64,7 @@ export default defineConfig({
   format: ['esm'],
   platform: 'node',
   target: 'node20',
-  sourcemap: false,
+  sourcemap: true,
   dts: true,
   clean: true,
   banner: ({ fileName }) => (fileName.includes('bin') ? '#!/usr/bin/env node\n' : ''),
