@@ -28,6 +28,7 @@ jobs:
       - run: pnpm build
       - run: pnpm publint
       - run: pnpm --filter markform test:coverage
+      - run: pnpm --filter markform test:tryscript
 
       # Post coverage report as PR comment (always runs so devs see coverage even on failure)
       - name: Coverage Report
