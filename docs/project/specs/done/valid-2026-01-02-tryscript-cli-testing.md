@@ -4,9 +4,11 @@
 
 Validate that tryscript-based CLI testing is correctly implemented and integrated.
 
-**Feature Plan:** [plan-2026-01-02-tryscript-cli-testing.md](plan-2026-01-02-tryscript-cli-testing.md)
+**Feature Plan:** [plan-2026-01-02-tryscript-cli-testing.md](../done/plan-2026-01-02-tryscript-cli-testing.md)
 
-**Bug Report:** [tryscript-bug-report.md](tryscript-bug-report.md) - Documents issues found
+## Status
+
+**All phases complete.** Upgraded to tryscript v0.1.0 with clean, portable test format.
 
 ## Automated Validation (Testing Performed)
 
@@ -14,9 +16,9 @@ Validate that tryscript-based CLI testing is correctly implemented and integrate
 
 Existing CLI unit tests remain unchanged (~328 test cases in `tests/unit/cli/`).
 
-### End-to-End Testing (New)
+### End-to-End Testing
 
-18 tryscript tests added across 2 files:
+18 tryscript tests across 2 files, now using clean v0.1.0 format:
 
 **`tests/cli/commands.tryscript.md`** (12 tests):
 - `--version` - Version output with pattern matching
@@ -40,11 +42,33 @@ Existing CLI unit tests remain unchanged (~328 test cases in `tests/unit/cli/`).
 - `inspect --help` subcommand help
 - `fill --help` subcommand help
 
+### Test Format (v0.1.0)
+
+Tests now use clean, portable format:
+
+```yaml
+---
+cwd: ../..
+env:
+  NO_COLOR: "1"
+  FORCE_COLOR: "0"
+  CLI: ./dist/bin.mjs
+timeout: 30000
+---
+```
+
+Commands use shell variable expansion:
+```console
+$ $CLI status examples/simple/simple.form.md
+```
+
 ### CI Integration
 
-Added `pnpm --filter markform test:tryscript` to `.github/workflows/ci.yml`.
+Tryscript tests run in GitHub Actions CI:
+- Step: `pnpm --filter markform test:tryscript`
+- Enabled in `.github/workflows/ci.yml`
 
-## Manual Testing Needed
+## Manual Testing Checklist
 
 ### 1. Run Tryscript Tests Locally
 
@@ -53,7 +77,7 @@ cd packages/markform
 pnpm test:tryscript
 ```
 
-**Expected:** All 18 tests pass with green output.
+**Expected:** All 18 tests pass.
 
 ### 2. Verify Test Update Workflow
 
@@ -64,9 +88,9 @@ pnpm test:tryscript:update
 
 **Expected:** Command runs successfully. No changes if tests already match.
 
-### 3. Review Test Output Styling
+### 3. Review Test Output
 
-Run a command and compare with test expectations:
+Run commands and compare with test expectations:
 
 ```bash
 cd packages/markform
@@ -74,29 +98,24 @@ cd packages/markform
 ./dist/bin.mjs validate examples/simple/simple.form.md
 ```
 
-**Expected:** Output matches patterns in test files. Colors disabled via NO_COLOR=1.
+**Expected:** Output matches patterns in test files.
 
 ### 4. Verify CI Integration
 
-**Note:** Tryscript tests are currently skipped in CI due to tryscript bugs (hardcoded
-paths don't work across environments). The tests run successfully locally.
-
-After tryscript fixes are implemented:
-1. Uncomment the tryscript step in `.github/workflows/ci.yml`
-2. Verify tests pass in CI environment
+Check GitHub Actions runs include tryscript step and it passes.
 
 ### 5. Review Documentation
 
 Check `docs/development.md` includes tryscript workflow section.
 
-## Known Limitations
+## Resolved Issues
 
-Tests currently use absolute paths due to tryscript bugs:
-- `bin` config is parsed but never used
-- Commands always run in temp directory
+The following tryscript bugs were resolved by upgrading to v0.1.0:
 
-See `tryscript-bug-report.md` for detailed bug report and proposed fixes.
+- **markform-518**: `cwd` option to run from package directory ✓
+- **markform-519**: `bin` config bug (now using env.CLI instead) ✓
+- **markform-520**: `binName` option (now using shell expansion) ✓
 
 ## Open Questions
 
-None - implementation complete pending tryscript fixes for cleaner test syntax.
+None - implementation complete.
