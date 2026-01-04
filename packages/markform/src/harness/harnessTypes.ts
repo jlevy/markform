@@ -19,6 +19,7 @@ import type {
   PatchRejection,
   // Wire format types (defined in coreTypes for session logging)
   WireFormat,
+  WireReasoningContent,
   WireRequestFormat,
   WireResponseFormat,
   WireResponseStep,
@@ -30,6 +31,7 @@ import type { InputContext } from '../engine/valueCoercion.js';
 // Re-export wire format types for convenience
 export type {
   WireFormat,
+  WireReasoningContent,
   WireRequestFormat,
   WireResponseFormat,
   WireResponseStep,

@@ -20,6 +20,7 @@ import type {
   Patch,
   PatchRejection,
   WireFormat,
+  WireReasoningContent,
   WireResponseStep,
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
@@ -181,6 +182,10 @@ export class LiveAgent implements Agent {
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
 
+    // Extract reasoningTokens from usage (AI SDK may include this for models with extended thinking)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const reasoningTokens = (result.usage as any)?.reasoningTokens as number | undefined;
+
     // Call onLlmCallEnd callback (errors don't abort)
     if (this.callbacks?.onLlmCallEnd) {
       try {
@@ -188,6 +193,7 @@ export class LiveAgent implements Agent {
           model: modelId,
           inputTokens: result.usage?.inputTokens ?? 0,
           outputTokens: result.usage?.outputTokens ?? 0,
+          reasoningTokens,
         });
       } catch {
         // Ignore callback errors
@@ -198,7 +204,8 @@ export class LiveAgent implements Agent {
     const patches: Patch[] = [];
     const toolCallCounts = new Map<string, number>();
 
-    for (const step of result.steps) {
+    for (let stepIndex = 0; stepIndex < result.steps.length; stepIndex++) {
+      const step = result.steps[stepIndex]!;
       for (const toolCall of step.toolCalls) {
         // Count tool calls
         const count = toolCallCounts.get(toolCall.toolName) ?? 0;
@@ -208,6 +215,26 @@ export class LiveAgent implements Agent {
         if (toolCall.toolName === FILL_FORM_TOOL_NAME && 'input' in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
           patches.push(...input.patches);
+        }
+      }
+
+      // Extract reasoning from step (AI SDK exposes this for models with extended thinking)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const stepReasoning = (step as any).reasoning as
+        | { type: string; text?: string }[]
+        | undefined;
+      if (stepReasoning && stepReasoning.length > 0 && this.callbacks?.onReasoningGenerated) {
+        try {
+          const reasoningOutput = stepReasoning.map((r) => ({
+            type: r.type === 'redacted' ? ('redacted' as const) : ('reasoning' as const),
+            text: r.text,
+          }));
+          this.callbacks.onReasoningGenerated({
+            stepNumber: stepIndex + 1,
+            reasoning: reasoningOutput,
+          });
+        } catch {
+          // Ignore callback errors
         }
       }
     }
@@ -316,22 +343,46 @@ function buildWireFormat(
       toolCalls: { toolName: string; input?: unknown }[];
       toolResults?: { toolName: string; result?: unknown }[];
       text?: string | null;
+      reasoning?: { type: string; text?: string }[];
     }[];
-    usage?: { inputTokens?: number; outputTokens?: number };
+    usage?: { inputTokens?: number; outputTokens?: number; reasoningTokens?: number };
   },
 ): WireFormat {
   // Build response steps (omit toolCallId for stability)
-  const steps: WireResponseStep[] = result.steps.map((step) => ({
-    toolCalls: step.toolCalls.map((tc) => ({
-      toolName: tc.toolName,
-      input: sortObjectKeys(tc.input),
-    })),
-    toolResults: (step.toolResults ?? []).map((tr) => ({
-      toolName: tr.toolName,
-      result: sortObjectKeys(tr.result),
-    })),
-    text: step.text ?? null,
-  }));
+  const steps: WireResponseStep[] = result.steps.map((step) => {
+    const wireStep: WireResponseStep = {
+      toolCalls: step.toolCalls.map((tc) => ({
+        toolName: tc.toolName,
+        input: sortObjectKeys(tc.input),
+      })),
+      toolResults: (step.toolResults ?? []).map((tr) => ({
+        toolName: tr.toolName,
+        result: sortObjectKeys(tr.result),
+      })),
+      text: step.text ?? null,
+    };
+
+    // Include reasoning if present (for models with extended thinking)
+    if (step.reasoning && step.reasoning.length > 0) {
+      wireStep.reasoning = step.reasoning.map(
+        (r): WireReasoningContent => ({
+          type: r.type === 'redacted' ? 'redacted' : 'reasoning',
+          text: r.text,
+        }),
+      );
+    }
+
+    return wireStep;
+  });
+
+  // Build usage with optional reasoningTokens
+  const usage: WireFormat['response']['usage'] = {
+    inputTokens: result.usage?.inputTokens ?? 0,
+    outputTokens: result.usage?.outputTokens ?? 0,
+  };
+  if (result.usage?.reasoningTokens !== undefined) {
+    usage.reasoningTokens = result.usage.reasoningTokens;
+  }
 
   return {
     request: {
@@ -341,10 +392,7 @@ function buildWireFormat(
     },
     response: {
       steps,
-      usage: {
-        inputTokens: result.usage?.inputTokens ?? 0,
-        outputTokens: result.usage?.outputTokens ?? 0,
-      },
+      usage,
     },
   };
 }
