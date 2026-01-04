@@ -720,6 +720,10 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .markdown-content a { color: #0366d6; text-decoration: none; }
     .markdown-content a:hover { text-decoration: underline; }
     .markdown-content strong { font-weight: 600; }
+    /* Checkbox styles for markdown */
+    .checkbox { font-size: 1.1em; margin-right: 0.25em; }
+    .checkbox.checked { color: #28a745; }
+    .checkbox.unchecked { color: #6c757d; }
     .loading { text-align: center; padding: 2rem; color: #6c757d; }
     .error { text-align: center; padding: 2rem; color: #dc3545; }
     h2 { color: #6c757d; font-size: 1.25rem; }
@@ -754,6 +758,8 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     }
     input[type="text"],
     input[type="number"],
+    input[type="url"],
+    input[type="date"],
     textarea,
     select {
       width: 100%;
@@ -764,8 +770,14 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
       background: #fff;
       transition: border-color 0.15s ease-in-out;
     }
+    input[type="url"] {
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.9rem;
+    }
     input[type="text"]:focus,
     input[type="number"]:focus,
+    input[type="url"]:focus,
+    input[type="date"]:focus,
     textarea:focus,
     select:focus {
       outline: none;
@@ -1989,6 +2001,8 @@ export function renderMarkdownContent(content: string): string {
   let codeBlockContent = '';
   let inUnorderedList = false;
   let inOrderedList = false;
+  let inTable = false;
+  let tableHeaderDone = false;
 
   // Helper to close any open list
   const closeList = () => {
@@ -2000,6 +2014,35 @@ export function renderMarkdownContent(content: string): string {
       html += '</ol>';
       inOrderedList = false;
     }
+  };
+
+  // Helper to close table
+  const closeTable = () => {
+    if (inTable) {
+      html += '</tbody></table></div>';
+      inTable = false;
+      tableHeaderDone = false;
+    }
+  };
+
+  // Helper to detect if a line is a table row
+  const isTableRow = (line: string): boolean => {
+    const trimmed = line.trim();
+    return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.includes('|');
+  };
+
+  // Helper to detect table separator line (| --- | --- |)
+  const isTableSeparator = (line: string): boolean => {
+    const trimmed = line.trim();
+    return /^\|[\s-:|]+\|$/.test(trimmed);
+  };
+
+  // Helper to parse table cells
+  const parseTableCells = (line: string): string[] => {
+    const trimmed = line.trim();
+    // Remove leading and trailing pipes, then split by pipes
+    const content = trimmed.slice(1, -1);
+    return content.split('|').map((cell) => cell.trim());
   };
 
   for (const line of lines) {
@@ -2019,6 +2062,7 @@ export function renderMarkdownContent(content: string): string {
           inParagraph = false;
         }
         closeList();
+        closeTable();
         inCodeBlock = true;
       }
       continue;
@@ -2027,6 +2071,46 @@ export function renderMarkdownContent(content: string): string {
     if (inCodeBlock) {
       codeBlockContent += line + '\n';
       continue;
+    }
+
+    // Handle table rows
+    if (isTableRow(trimmed)) {
+      if (inParagraph) {
+        html += '</p>';
+        inParagraph = false;
+      }
+      closeList();
+
+      // Skip separator line but mark header as done
+      if (isTableSeparator(trimmed)) {
+        tableHeaderDone = true;
+        continue;
+      }
+
+      const cells = parseTableCells(trimmed);
+
+      if (!inTable) {
+        // Start new table with header
+        html += '<div class="table-container"><table class="data-table"><thead><tr>';
+        for (const cell of cells) {
+          html += `<th>${formatInlineMarkdown(cell)}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+        inTable = true;
+      } else if (tableHeaderDone) {
+        // Regular table row
+        html += '<tr>';
+        for (const cell of cells) {
+          html += `<td>${formatInlineMarkdown(cell)}</td>`;
+        }
+        html += '</tr>';
+      }
+      continue;
+    }
+
+    // Close table if we hit a non-table line
+    if (inTable && !isTableRow(trimmed)) {
+      closeTable();
     }
 
     // Handle headers
@@ -2111,16 +2195,22 @@ export function renderMarkdownContent(content: string): string {
     html += '</p>';
   }
   closeList();
+  closeTable();
 
   html += '</div>';
   return html;
 }
 
 /**
- * Format inline markdown (bold, italic, code, links).
+ * Format inline markdown (bold, italic, code, links, checkboxes).
  */
 function formatInlineMarkdown(text: string): string {
   let result = escapeHtml(text);
+  // Checkboxes - render before other formatting to avoid conflicts
+  // Checked checkbox [x] or [X]
+  result = result.replace(/\[x\]/gi, '<span class="checkbox checked">☑</span>');
+  // Unchecked checkbox [ ]
+  result = result.replace(/\[ \]/g, '<span class="checkbox unchecked">☐</span>');
   // Inline code
   result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
   // Bold
