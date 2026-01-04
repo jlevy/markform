@@ -156,10 +156,10 @@ optional_year: (unanswered)
 # Test: readme displays README
 
 ```console
-$ $CLI readme | head -10
+$ $CLI readme | head -5
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/blob/main/badges/latest-run.md)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)][..]
 ...
 ? 0
 ```

@@ -1,7 +1,7 @@
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/blob/main/badges/latest-run.md)
-[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/blob/main/badges/latest-run.md)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/workflows/ci.yml?query=branch%3Amain)
+[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/workflows/ci.yml?query=branch%3Amain)
 [![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
 [![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
 
