@@ -42,6 +42,7 @@ Use the fill_form tool with patches in these formats:
 | single_select | \`{ op: "set_single_select", fieldId: "priority", value: "high" }\` |
 | multi_select | \`{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }\` |
 | checkboxes | \`{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }\` |
+| table | \`{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }\` |
 
 ## ⚠️ CRITICAL: checkboxes vs multi_select
 
@@ -52,7 +53,7 @@ These two types look similar but have DIFFERENT value formats:
 
 **Checkbox states by mode:**
 - Mode "simple": \`"done"\` or \`"todo"\`
-- Mode "multi": \`"done"\`, \`"todo"\`, or \`"na"\`
+- Mode "multi": \`"done"\`, \`"todo"\`, \`"na"\`, \`"incomplete"\`, or \`"active"\`
 - Mode "explicit": \`"yes"\` or \`"no"\`
 
 **WRONG:** \`{ op: "set_checkboxes", value: ["task1", "task2"] }\`
@@ -124,7 +125,7 @@ export const PATCH_FORMATS: Record<string, string> = {
  */
 export const CHECKBOX_MODE_HINTS: Record<string, string> = {
   simple: '{ "opt1": "done", "opt2": "todo" }  // states: done, todo',
-  multi: '{ "opt1": "done", "opt2": "na" }  // states: done, todo, na',
+  multi: '{ "opt1": "done", "opt2": "na" }  // states: done, todo, na, incomplete, active',
   explicit: '{ "opt1": "yes", "opt2": "no" }  // states: yes, no',
 };
 

@@ -149,6 +149,7 @@ turns:
         | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
         | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
         | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+        | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
         ## ⚠️ CRITICAL: checkboxes vs multi_select
 
@@ -159,7 +160,7 @@ turns:
 
         **Checkbox states by mode:**
         - Mode "simple": `"done"` or `"todo"`
-        - Mode "multi": `"done"`, `"todo"`, or `"na"`
+        - Mode "multi": `"done"`, `"todo"`, `"na"`, `"incomplete"`, or `"active"`
         - Mode "explicit": `"yes"` or `"no"`
 
         **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
@@ -464,6 +465,7 @@ turns:
           | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
           | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
           | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+          | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
           ## ⚠️ CRITICAL: checkboxes vs multi_select
 
@@ -474,7 +476,7 @@ turns:
 
           **Checkbox states by mode:**
           - Mode "simple": `"done"` or `"todo"`
-          - Mode "multi": `"done"`, `"todo"`, or `"na"`
+          - Mode "multi": `"done"`, `"todo"`, `"na"`, `"incomplete"`, or `"active"`
           - Mode "explicit": `"yes"` or `"no"`
 
           **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
@@ -955,6 +957,7 @@ turns:
         | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
         | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
         | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+        | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
         ## ⚠️ CRITICAL: checkboxes vs multi_select
 
@@ -965,7 +968,7 @@ turns:
 
         **Checkbox states by mode:**
         - Mode "simple": `"done"` or `"todo"`
-        - Mode "multi": `"done"`, `"todo"`, or `"na"`
+        - Mode "multi": `"done"`, `"todo"`, `"na"`, `"incomplete"`, or `"active"`
         - Mode "explicit": `"yes"` or `"no"`
 
         **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
@@ -1295,6 +1298,7 @@ turns:
           | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
           | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
           | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+          | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
           ## ⚠️ CRITICAL: checkboxes vs multi_select
 
@@ -1305,7 +1309,7 @@ turns:
 
           **Checkbox states by mode:**
           - Mode "simple": `"done"` or `"todo"`
-          - Mode "multi": `"done"`, `"todo"`, or `"na"`
+          - Mode "multi": `"done"`, `"todo"`, `"na"`, `"incomplete"`, or `"active"`
           - Mode "explicit": `"yes"` or `"no"`
 
           **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
@@ -1721,6 +1725,7 @@ turns:
         | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
         | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
         | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+        | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
         ## ⚠️ CRITICAL: checkboxes vs multi_select
 
@@ -1731,7 +1736,7 @@ turns:
 
         **Checkbox states by mode:**
         - Mode "simple": `"done"` or `"todo"`
-        - Mode "multi": `"done"`, `"todo"`, or `"na"`
+        - Mode "multi": `"done"`, `"todo"`, `"na"`, `"incomplete"`, or `"active"`
         - Mode "explicit": `"yes"` or `"no"`
 
         **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
@@ -2034,6 +2039,7 @@ turns:
           | single_select | `{ op: "set_single_select", fieldId: "priority", value: "high" }` |
           | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
           | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
+          | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
           ## ⚠️ CRITICAL: checkboxes vs multi_select
 
@@ -2044,7 +2050,7 @@ turns:
 
           **Checkbox states by mode:**
           - Mode "simple": `"done"` or `"todo"`
-          - Mode "multi": `"done"`, `"todo"`, or `"na"`
+          - Mode "multi": `"done"`, `"todo"`, `"na"`, `"incomplete"`, or `"active"`
           - Mode "explicit": `"yes"` or `"no"`
 
           **WRONG:** `{ op: "set_checkboxes", value: ["task1", "task2"] }`
