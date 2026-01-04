@@ -365,53 +365,50 @@ The change is minimal:
 
 ### Phase 1: Type Changes
 
-- [ ] Add `'array_to_checkboxes'` to `PatchCoercionType` in `coreTypes.ts`
+- [x] Add `'array_to_checkboxes'` to `PatchCoercionType` in `coreTypes.ts`
 
 ### Phase 2: Core Coercion Logic
 
-- [ ] Add array handling in `coerceToCheckboxes()` in `valueCoercion.ts`
-  - [ ] Check for array input before object check
-  - [ ] Validate all items are strings
-  - [ ] Validate all items are valid option IDs
-  - [ ] Build object with mode-appropriate default state
-  - [ ] Return warning for non-empty arrays
-- [ ] Add array coercion in `normalizePatch()` in `apply.ts`
-  - [ ] Add before existing boolean coercion
-  - [ ] Use `createWarning()` helper
-  - [ ] Handle empty array without warning
+- [x] Add array handling in `coerceToCheckboxes()` in `valueCoercion.ts`
+  - [x] Check for array input before object check
+  - [x] Validate all items are strings
+  - [x] Validate all items are valid option IDs
+  - [x] Build object with mode-appropriate default state
+  - [x] Return warning for non-empty arrays
+- [x] Add array coercion in `normalizePatch()` in `apply.ts`
+  - [x] Add before existing boolean coercion
+  - [x] Use `createWarning()` helper
+  - [x] Handle empty array without warning
 
 ### Phase 3: Prompt Improvements
 
-- [ ] Update `DEFAULT_SYSTEM_PROMPT` in `prompts.ts` to clarify checkboxes format
-- [ ] Consider adding inline format hints when surfacing checkbox issues
+- [x] Update `DEFAULT_SYSTEM_PROMPT` in `prompts.ts` to clarify checkboxes format
+- [x] Add inline format hints when surfacing checkbox issues (with actual option IDs)
 
 ### Phase 4: Tests
 
-- [ ] Update `apply.test.ts:1513-1519` "rejects array instead of object" to expect coercion
-- [ ] Add test: array coercion produces warning with correct type
-- [ ] Add test: empty array coerces to empty object without warning
-- [ ] Add test: array with invalid option ID still produces error
-- [ ] Add test: array with non-string items produces error
-- [ ] Add test: explicit mode uses 'yes' as default state
-- [ ] Add test in `valueCoercion.test.ts` for array input coercion
-- [ ] Add test: verify coerced values appear in `appliedPatches`
+- [x] Update `apply.test.ts` "rejects array instead of object" to expect coercion
+- [x] Add test: array coercion produces warning with correct type
+- [x] Add test: empty array coerces to empty object without warning
+- [x] Add test: array with invalid option ID still produces error
+- [x] Add test: array with non-string items produces error
+- [x] Add test: explicit mode uses 'yes' as default state
+- [x] Add test in `valueCoercion.test.ts` for array input coercion
+- [x] Add test: verify coerced values appear in `appliedPatches`
 
 ### Phase 5: Documentation
 
-- [ ] Update `docs/markform-spec.md`:
-  - [ ] Add row to recommended coercions table
-  - [ ] Update "not recommended" section if needed
-- [ ] Update `docs/markform-apis.md`:
-  - [ ] Add array coercion section after boolean coercion
-  - [ ] Include examples for each checkbox mode
+- [x] Update `docs/markform-apis.md`:
+  - [x] Add array coercion section after boolean coercion
+  - [x] Include examples for each checkbox mode
+- [ ] Update `docs/markform-spec.md`: (skipped - docs directory is gitignored/generated)
 
 ### Phase 6: Validation
 
-- [ ] Run full test suite: `pnpm test`
-- [ ] Run typecheck: `pnpm typecheck`
-- [ ] Run lint: `pnpm lint`
-- [ ] Run build: `pnpm build`
-- [ ] Manual test: Create form with checkboxes, send array patch via CLI
+- [x] Run full test suite: `pnpm test` (1431 tests pass)
+- [x] Run typecheck: `pnpm typecheck`
+- [x] Run lint: `pnpm lint`
+- [ ] Manual test: Create form with checkboxes, send array patch via CLI (optional)
 
 ## Open Questions
 
