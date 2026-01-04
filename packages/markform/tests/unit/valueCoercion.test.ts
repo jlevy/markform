@@ -492,13 +492,55 @@ describe('values', () => {
       }
     });
 
-    it('rejects wrong structure', () => {
+    it('coerces array of valid option IDs to checkboxes object', () => {
       const form = parseForm(TEST_FORM_MD);
-      const result = coerceToFieldPatch(form, 'tasks_multi', ['done', 'todo']);
+      const result = coerceToFieldPatch(form, 'tasks_multi', ['research', 'design']);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'tasks_multi',
+          value: { research: 'done', design: 'done' },
+        });
+        expect('warning' in result && result.warning).toContain('Coerced array');
+      }
+    });
+
+    it('rejects array with invalid option IDs', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const result = coerceToFieldPatch(form, 'tasks_multi', ['invalid_option']);
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error).toContain('requires a Record');
+        expect(result.error).toContain('Invalid option');
+      }
+    });
+
+    it('rejects array with non-string items', () => {
+      const form = parseForm(TEST_FORM_MD);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Testing invalid input handling
+      const result = coerceToFieldPatch(form, 'tasks_multi', [123, 'research'] as any);
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toContain('must be strings');
+      }
+    });
+
+    it('coerces empty array to empty object without warning', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const result = coerceToFieldPatch(form, 'tasks_multi', []);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'tasks_multi',
+          value: {},
+        });
+        // No warning for empty array
+        expect('warning' in result).toBe(false);
       }
     });
   });
@@ -563,6 +605,22 @@ describe('values', () => {
       if (!result.ok) {
         expect(result.error).toContain('Invalid checkbox value');
         expect(result.error).toContain('explicit mode');
+      }
+    });
+
+    it('coerces array to checkboxes with yes state in explicit mode', () => {
+      const form = parseForm(TEST_FORM_MD);
+      const result = coerceToFieldPatch(form, 'confirmations', ['backup', 'notify']);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.patch).toEqual({
+          op: 'set_checkboxes',
+          fieldId: 'confirmations',
+          value: { backup: 'yes', notify: 'yes' },
+        });
+        expect('warning' in result && result.warning).toContain('Coerced array');
+        expect('warning' in result && result.warning).toContain("'yes'");
       }
     });
   });

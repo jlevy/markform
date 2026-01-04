@@ -299,15 +299,51 @@ function coerceToCheckboxes(field: Field, rawValue: RawFieldValue): CoercionResu
     };
   }
 
-  if (!isPlainObject(rawValue)) {
+  const validOptions = new Set(field.options.map((o) => o.id));
+  const checkboxMode = field.checkboxMode;
+
+  // Coerce array of option IDs to checkbox object with default state
+  if (Array.isArray(rawValue)) {
+    const defaultState = checkboxMode === 'explicit' ? 'yes' : 'done';
+    const values: Record<string, CheckboxValue> = {};
+
+    for (const item of rawValue) {
+      if (typeof item !== 'string') {
+        return {
+          ok: false,
+          error: `Array items for checkboxes field '${field.id}' must be strings (option IDs), got ${typeof item}`,
+        };
+      }
+      if (!validOptions.has(item)) {
+        return {
+          ok: false,
+          error: `Invalid option '${item}' for checkboxes field '${field.id}'. Valid options: ${Array.from(validOptions).join(', ')}`,
+        };
+      }
+      values[item] = defaultState;
+    }
+
+    const patch: Patch = { op: 'set_checkboxes', fieldId: field.id, value: values };
+
+    // Empty array: no warning needed
+    if (rawValue.length === 0) {
+      return { ok: true, patch };
+    }
+
     return {
-      ok: false,
-      error: `checkboxes field '${field.id}' requires a Record<string, CheckboxValue>, got ${typeof rawValue}`,
+      ok: true,
+      patch,
+      warning: `Coerced array to checkboxes object with '${defaultState}' state for field '${field.id}'`,
     };
   }
 
-  const validOptions = new Set(field.options.map((o) => o.id));
-  const checkboxMode = field.checkboxMode;
+  if (!isPlainObject(rawValue)) {
+    return {
+      ok: false,
+      error: `checkboxes field '${field.id}' requires a Record<string, CheckboxValue> or array of option IDs, got ${typeof rawValue}`,
+    };
+  }
+
   const values: Record<OptionId, CheckboxValue> = {};
   let hadBooleanCoercion = false;
 

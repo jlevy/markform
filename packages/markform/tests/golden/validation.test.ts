@@ -70,8 +70,8 @@ const MUTATIONS: Mutation[] = [
   {
     name: 'system prompt change',
     description: 'Modify system prompt content',
-    find: 'Focus on required fields first',
-    replace: 'Focus on optional fields first',
+    find: 'Address required fields first',
+    replace: 'Address optional fields first',
   },
   {
     name: 'hash change',

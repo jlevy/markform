@@ -493,12 +493,19 @@ function buildContextPrompt(
       const field = findField(form, issue.ref);
       if (field) {
         lines.push(`  Type: ${field.kind}`);
+
+        // Collect option IDs for fields with options
+        let optionIds: string[] | undefined;
         if ('options' in field && field.options) {
-          const optionIds = field.options.map((o) => o.id).join(', ');
-          lines.push(`  Options: ${optionIds}`);
+          optionIds = field.options.map((o) => o.id);
+          lines.push(`  Options: ${optionIds.join(', ')}`);
         }
+
+        // Show checkbox mode
+        let checkboxMode: 'simple' | 'multi' | 'explicit' | undefined;
         if (field.kind === 'checkboxes' && 'checkboxMode' in field) {
-          lines.push(`  Mode: ${field.checkboxMode ?? 'multi'}`);
+          checkboxMode = (field.checkboxMode as 'simple' | 'multi' | 'explicit') ?? 'multi';
+          lines.push(`  Mode: ${checkboxMode}`);
         }
 
         // For table fields, show column IDs so the model knows the expected row structure
@@ -517,8 +524,13 @@ function buildContextPrompt(
           }
         }
 
-        // Add inline instructions for this field
-        const patchHint = getPatchFormatHint(field.kind, field.id, columnIds);
+        // Add inline instructions for this field with concrete examples
+        const patchHint = getPatchFormatHint(field.kind, {
+          fieldId: field.id,
+          columnIds,
+          checkboxMode,
+          optionIds,
+        });
         lines.push(`  Set: ${patchHint}`);
 
         // Show skip instruction for optional fields, or required notice

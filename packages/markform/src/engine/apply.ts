@@ -169,11 +169,39 @@ function normalizePatch(form: ParsedForm, patch: Patch, index: number): Normaliz
     }
   }
 
-  // Coerce boolean → checkbox string
+  // Coerce array → checkboxes object or boolean → checkbox string
   if (patch.op === 'set_checkboxes' && field.kind === 'checkboxes') {
     // Handle null/undefined values - let validation handle the error
     if (!patch.value) {
       return { patch };
+    }
+
+    // Coerce array of option IDs to checkbox object with default state
+    if (Array.isArray(patch.value)) {
+      const defaultState = field.checkboxMode === 'explicit' ? 'yes' : 'done';
+      const values: Record<string, CheckboxValue> = {};
+
+      for (const item of patch.value) {
+        if (typeof item === 'string') {
+          values[item] = defaultState;
+        }
+        // Invalid items will be caught by validation
+      }
+
+      // Empty array: no warning
+      if (patch.value.length === 0) {
+        return { patch: { ...patch, value: values } as SetCheckboxesPatch };
+      }
+
+      return {
+        patch: { ...patch, value: values } as SetCheckboxesPatch,
+        warning: createWarning(
+          index,
+          field.id,
+          'array_to_checkboxes',
+          `Coerced array to checkboxes object with '${defaultState}' state`,
+        ),
+      };
     }
 
     // Check if any values are booleans
