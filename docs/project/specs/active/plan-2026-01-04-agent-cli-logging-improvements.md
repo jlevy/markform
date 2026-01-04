@@ -53,24 +53,31 @@ Improve agent CLI logging with three levels of output and better wire format cap
 ### Logging Levels
 
 1. **Default (no flags)**: Rich output suitable for interactive use:
+   - Model and provider info at start
    - Turn numbers with issues list
    - Tool calls with start notification, query, timing, and duration
    - Web search: query, result count, timing, and source summary
+   - First 5-8 result titles from web search
+   - Token counts per turn
    - Patches generated with field IDs and values
+   - Patch validation warnings/errors
+   - Tool summary at end of turn
    - Completion status
 
-2. **Verbose (`--verbose`)**: Additional details for debugging:
+2. **Verbose (`--verbose`)**: Operational details for debugging:
    - Everything from default
-   - Model and provider info at start
-   - Token counts per turn
-   - Top result titles from web search
-   - Tool summary at end of turn
-   - Patch validation warnings/errors
+   - Harness configuration (maxTurns, maxPatches, targetRoles, fillMode)
+   - Detailed issue breakdown by field/group
+   - Full web search result details (all titles, snippets, URLs)
+   - Patch application details (accepted, rejected, reasons)
+   - Field validation details (which validators ran, pass/fail)
+   - Form progress stats (answered, skipped, remaining by priority)
 
 3. **Debug (`--debug` or `LOG_LEVEL=debug`)**: Full diagnostic output:
    - Everything from verbose
    - Full system and context prompts each turn
-   - Tool inputs and outputs (summarized for large responses)
+   - Raw tool inputs and outputs (truncated at 500 chars)
+   - LLM response steps and reasoning
    - Detailed patch application results
 
 ### Wire Format Capture
@@ -133,8 +140,9 @@ interface FillCallbacks {
     // NEW: Structured output for known tool types
     toolType?: 'web_search' | 'fill_form' | 'custom';
     resultCount?: number;  // For web search: number of results
-    sources?: string;  // For web search: source domains (e.g., "IMDb, Wikipedia, Rotten Tomatoes")
-    topResults?: string;  // For web search: first few result titles
+    sources?: string;  // For web search: source domains (e.g., "imdb.com, wikipedia.org")
+    topResults?: string;  // For web search: first 5-8 result titles with "..."
+    fullResults?: Array<{ index: number; title: string; url: string; snippet?: string }>;
   }): void;
 
   onLlmCallStart?(call: { model: string }): void;
@@ -184,20 +192,7 @@ The CLI should show better real-time progress, especially for tool execution:
 
 **Default Mode (rich output for interactive use):**
 ```
-Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
-  [web_search] "Pulp Fiction 1994 movie details"
-  ✓ web_search: 8 results (1.2s)
-     Sources: imdb.com, wikipedia.org, rottentomatoes.com
-  → 5 patches:
-    full_title (string) = "Pulp Fiction"
-    year (number) = 1994
-    directors (string_list) = [Quentin Tarantino]
-    ...
-```
-
-**Verbose Mode (additional details):**
-```
-Model: openai/gpt-5-mini
+Model: openai/gpt-5-mini (provider: openai)
 Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
   [web_search] "Pulp Fiction 1994 movie details"
   ✓ web_search: 8 results (1.2s)
@@ -209,11 +204,40 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
     directors (string_list) = [Quentin Tarantino]
     ...
   Tools: web_search(1), fill_form(1)
+Turn 2: 3 issue(s): ...
+  ...
+  ✓ Complete
+⏰ Research time: 45.2s
+```
+
+**Verbose Mode (operational details):**
+```
+Model: openai/gpt-5-mini (provider: openai)
+Harness: maxTurns=100, maxPatches=10, targetRoles=[agent], fillMode=continue
+Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
+  Issues by group: movie_info(3), credits(2)
+  [web_search] "Pulp Fiction 1994 movie details"
+  ✓ web_search: 8 results (1.2s)
+     Sources: imdb.com, wikipedia.org, rottentomatoes.com
+     [1] "Pulp Fiction (1994) - IMDb" - imdb.com/title/tt0110912
+     [2] "Pulp Fiction - Wikipedia" - en.wikipedia.org/wiki/Pulp_Fiction
+     [3] "Pulp Fiction - Rotten Tomatoes" - rottentomatoes.com/m/pulp_fiction
+     ... (5 more)
+  → 5 patches (tokens: ↓1234 ↑567):
+    full_title (string) = "Pulp Fiction" [accepted]
+    year (number) = 1994 [accepted]
+    directors (string_list) = [Quentin Tarantino] [accepted]
+    invalid_field (string) = "test" [rejected: field not found]
+    ...
+  Validators: url_validator(2 passed), required(5 passed)
+  Progress: 5 answered, 0 skipped, 12 remaining (3 high, 5 medium, 4 low)
+  Tools: web_search(1), fill_form(1)
 ```
 
 **Debug Mode (full diagnostic):**
 ```
-Model: openai/gpt-5-mini
+Model: openai/gpt-5-mini (provider: openai)
+Harness: maxTurns=100, maxPatches=10, targetRoles=[agent], fillMode=continue
 Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
   ─── System Prompt ───
   You are a research assistant...
@@ -223,19 +247,17 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
   [web_search] "Pulp Fiction 1994 movie details"
      Input: { query: "Pulp Fiction 1994 movie details" }
   ✓ web_search: 8 results (1.2s)
-     Sources: imdb.com, wikipedia.org, rottentomatoes.com
-     Results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia", ...
      Output: { results: [...], total: 8 } ...[truncated]
   → 5 patches (tokens: ↓1234 ↑567):
     ...
 ```
 
 **Key Console Improvements:**
-1. Default shows tool calls with queries and timing
-2. Default shows result counts, duration, and source domains
+1. Default shows model info, token counts, tool summaries, and result titles
+2. Default shows patch validation warnings/errors inline
 3. Use limited indicators: ✓ (success), ❌ (error), → (result), [tool_name] for tool calls
-4. Verbose adds first 5-8 result titles, token counts, tool summary
-5. Debug adds full prompts and tool inputs/outputs (truncated at 500 chars)
+4. Verbose adds harness config, full result listings, patch accept/reject details, validator info
+5. Debug adds full prompts and raw tool inputs/outputs (truncated at 500 chars)
 
 ## Backward Compatibility
 
@@ -286,15 +308,15 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
 **Must Have:**
 - [ ] Unified logging callback system across `fill`, `research`, and `run` commands
 - [ ] Library-friendly callbacks with structured tool information (query, resultCount, sources, topResults)
-- [ ] Default mode shows tool calls with queries, timing, result counts, and source summaries
-- [ ] Verbose mode adds top result titles, token counts, tool summary
+- [ ] Default mode: model info, tool calls, result titles, token counts, tool summary, patch warnings
+- [ ] Verbose mode: harness config, full result listings, patch accept/reject, validator details
 - [ ] Debug mode via `--debug` flag or `LOG_LEVEL=debug` environment variable
 - [ ] `--wire-log <path>` flag to capture full wire format to YAML
 
 **Should Have:**
-- [ ] Patch validation error details in verbose mode
 - [ ] Consistent spinner/progress behavior across commands
 - [ ] Limited visual indicators per CLI best practices (✓ ❌ → [tool])
+- [ ] Form progress stats in verbose mode (answered, skipped, remaining by priority)
 
 **Won't Have (This Phase):**
 - JSON streaming output format (separate feature)
@@ -307,22 +329,29 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
 **CLI Behavior:**
 
 1. Running `markform research <form> --model <model>` (default mode) shows:
+   - Model and provider info at start
    - Turn numbers with issues list
    - Tool calls with name and query (`[web_search] "query"`)
-   - Tool completion with result count, timing, and source domains
+   - Tool completion with result count, timing, source domains, and first 5-8 titles
+   - Token counts per turn
    - Patches generated with field IDs and values
+   - Patch validation warnings/errors
+   - Tool summary at end of turn
+   - Total timing
 
 2. Running with `--verbose` additionally shows:
-   - Model and provider info at start
-   - Token counts per turn
-   - First 5-8 result titles from web search (with "..." if more)
-   - Tool summary at end of turn
+   - Harness configuration (maxTurns, maxPatches, targetRoles, fillMode)
+   - Issues breakdown by group
+   - Full web search result listings (all titles, snippets, URLs)
+   - Patch accept/reject status with reasons
+   - Validator execution details
+   - Form progress stats (answered, skipped, remaining by priority)
 
 3. Running with `--debug` or `LOG_LEVEL=debug` additionally shows:
    - Full system prompt each turn
    - Full context prompt each turn
-   - Tool inputs (before execution)
-   - Tool outputs (summarized for large responses)
+   - Raw tool inputs (before execution)
+   - Raw tool outputs (truncated at 500 chars)
 
 4. Running with `--wire-log session.yaml` produces a YAML file containing:
    - `request.system`: Full system prompt
@@ -400,23 +429,28 @@ export function createFillLoggingCallbacks(
       }
     },
 
-    onToolEnd: ({ name, resultCount, sources, topResults, durationMs, error }) => {
+    onToolEnd: ({ name, resultCount, sources, topResults, fullResults, durationMs, error }) => {
       if (level === 'quiet') return;
       if (error) {
         logInfo(ctx, `  ❌ ${name} failed (${durationMs}ms): ${error}`);
         return;
       }
-      // DEFAULT: Show result count, timing, and sources
+      // DEFAULT: Show result count, timing, sources, and top results
       const countStr = resultCount !== undefined ? `${resultCount} results` : 'done';
       logInfo(ctx, `  ✓ ${name}: ${countStr} (${formatDuration(durationMs)})`);
       if (sources) {
         logInfo(ctx, `     Sources: ${sources}`);
       }
-      // VERBOSE: Show first 5-8 result titles
-      if ((level === 'verbose' || level === 'debug') && topResults) {
-        logVerbose(ctx, `     Results: ${topResults}`);
+      if (topResults) {
+        logInfo(ctx, `     Results: ${topResults}`);
       }
-      // DEBUG: Show full output (truncated)
+      // VERBOSE: Show full result listings
+      if ((level === 'verbose' || level === 'debug') && fullResults) {
+        for (const result of fullResults) {
+          logVerbose(ctx, `     [${result.index}] "${result.title}" - ${result.url}`);
+        }
+      }
+      // DEBUG: Show raw output (truncated)
       if (level === 'debug') {
         logDebug(ctx, `     Output: ${summarize(output, DEBUG_OUTPUT_TRUNCATION_LIMIT)}`);
       }
