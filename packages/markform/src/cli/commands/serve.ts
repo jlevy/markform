@@ -714,16 +714,24 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .markdown-content h5 { font-size: 1rem; color: #24292e; margin: 0.75rem 0 0.5rem; }
     .markdown-content p { margin: 0.75rem 0; line-height: 1.6; }
     .markdown-content li { margin: 0.25rem 0; margin-left: 1.5rem; line-height: 1.6; }
+    .markdown-content li.checkbox-item { list-style: none; margin-left: 0; }
     .markdown-content code { background: #f1f3f5; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.9em; }
     .markdown-content pre { background: #f8f9fa; padding: 1rem; border-radius: 6px; border: 1px solid #e1e4e8; overflow-x: auto; }
     .markdown-content pre code { background: none; padding: 0; }
     .markdown-content a { color: #0366d6; text-decoration: none; }
     .markdown-content a:hover { text-decoration: underline; }
     .markdown-content strong { font-weight: 600; }
-    /* Checkbox styles for markdown */
+    /* Checkbox and state styles */
     .checkbox { font-size: 1.1em; margin-right: 0.25em; }
     .checkbox.checked { color: #28a745; }
     .checkbox.unchecked { color: #6c757d; }
+    .state-badge { display: inline-block; width: 1.1em; text-align: center; margin-right: 0.25em; font-weight: 600; }
+    .state-badge.state-active { color: #0d6efd; }
+    .state-badge.state-incomplete { color: #ffc107; }
+    .state-badge.state-na { color: #6c757d; }
+    .state-badge.state-unfilled { color: #adb5bd; }
+    .checkbox-list { list-style: none; padding-left: 0; margin: 0.25rem 0; }
+    .checkbox-list .checkbox-item { margin-left: 0; }
     .loading { text-align: center; padding: 2rem; color: #6c757d; }
     .error { text-align: center; padding: 2rem; color: #dc3545; }
     h2 { color: #6c757d; font-size: 1.25rem; }
@@ -1808,6 +1816,32 @@ export function renderViewContent(form: ParsedForm): string {
 }
 
 /**
+ * Format a checkbox state for display.
+ */
+function formatCheckboxState(state: string): string {
+  switch (state) {
+    case 'done':
+      return '<span class="checkbox checked">☑</span>';
+    case 'todo':
+      return '<span class="checkbox unchecked">☐</span>';
+    case 'active':
+      return '<span class="state-badge state-active">●</span>';
+    case 'incomplete':
+      return '<span class="state-badge state-incomplete">○</span>';
+    case 'na':
+      return '<span class="state-badge state-na">—</span>';
+    case 'yes':
+      return '<span class="checkbox checked">☑</span>';
+    case 'no':
+      return '<span class="checkbox unchecked">☐</span>';
+    case 'unfilled':
+      return '<span class="state-badge state-unfilled">?</span>';
+    default:
+      return `<span class="state-badge">${escapeHtml(state)}</span>`;
+  }
+}
+
+/**
  * Render a field value for the View tab.
  */
 function renderViewFieldValue(
@@ -1855,25 +1889,35 @@ function renderViewFieldValue(
     }
     case 'multi_select': {
       const selected = value.kind === 'multi_select' ? value.selected : [];
-      if (selected.length === 0) {
-        return '<div class="view-field-empty">(not filled)</div>';
-      }
-      const labels = selected.map((s) => {
-        const opt = field.options.find((o) => o.id === s);
-        return opt?.label ?? s;
+      // Show all options with selection state
+      const items = field.options.map((opt) => {
+        const isSelected = selected.includes(opt.id);
+        const checkbox = isSelected
+          ? '<span class="checkbox checked">☑</span>'
+          : '<span class="checkbox unchecked">☐</span>';
+        return `<li class="checkbox-item">${checkbox} ${escapeHtml(opt.label)}</li>`;
       });
-      return `<div class="view-field-value">${labels.map((l) => escapeHtml(l)).join(', ')}</div>`;
+      return `<div class="view-field-value"><ul class="checkbox-list">${items.join('')}</ul></div>`;
     }
     case 'checkboxes': {
       const values = value.kind === 'checkboxes' ? value.values : {};
-      if (Object.keys(values).length === 0) {
-        return '<div class="view-field-empty">(not filled)</div>';
-      }
+      const mode = field.checkboxMode ?? 'multi';
+      // Show all options with their state
       const items = field.options.map((opt) => {
-        const state = values[opt.id] ?? 'todo';
-        return `<li>${escapeHtml(opt.label)}: <em>${state}</em></li>`;
+        const state = values[opt.id] ?? (mode === 'explicit' ? 'unfilled' : 'todo');
+        // For simple mode, use checkbox symbols
+        if (mode === 'simple') {
+          const checkbox =
+            state === 'done'
+              ? '<span class="checkbox checked">☑</span>'
+              : '<span class="checkbox unchecked">☐</span>';
+          return `<li class="checkbox-item">${checkbox} ${escapeHtml(opt.label)}</li>`;
+        }
+        // For multi/explicit modes, show state text since there are multiple states
+        const stateDisplay = formatCheckboxState(state);
+        return `<li class="checkbox-item">${stateDisplay} ${escapeHtml(opt.label)}</li>`;
       });
-      return `<div class="view-field-value"><ul>${items.join('')}</ul></div>`;
+      return `<div class="view-field-value"><ul class="checkbox-list">${items.join('')}</ul></div>`;
     }
     case 'url': {
       const v = value.kind === 'url' ? value.value : null;
@@ -2156,7 +2200,11 @@ export function renderMarkdownContent(content: string): string {
         html += '<ul>';
         inUnorderedList = true;
       }
-      html += `<li>${formatInlineMarkdown(trimmed.slice(2))}</li>`;
+      const itemContent = trimmed.slice(2);
+      // If item starts with checkbox, use no-bullet class
+      const hasCheckbox = /^\[[ xX]\]/.test(itemContent);
+      const liClass = hasCheckbox ? ' class="checkbox-item"' : '';
+      html += `<li${liClass}>${formatInlineMarkdown(itemContent)}</li>`;
     } else if (/^\d+\.\s/.test(trimmed)) {
       // Ordered list item
       if (inParagraph) {
