@@ -30,8 +30,10 @@ alice@example.com
 Medium
 
 **Categories:**
-- Frontend
-- Backend
+- [x] Frontend
+- [x] Backend
+- [ ] Database
+- [ ] DevOps
 
 ## Checkbox Fields
 
