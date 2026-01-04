@@ -51,11 +51,13 @@ jobs:
 
       - name: Update badge links to this run
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # Update badge links in README.md to point to this specific run
-          # Pattern: match )](URL) where URL starts with github actions - this is the link after badge image
-          sed -i "s|)](https://github.com/jlevy/markform/actions/[^)]*)|](${RUN_URL})|g" README.md
+          # Update badge links using the standalone script
+          ./scripts/update-badge-links.sh
           # Commit the README change
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
