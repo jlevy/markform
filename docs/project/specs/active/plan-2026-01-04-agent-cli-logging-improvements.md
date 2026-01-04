@@ -146,7 +146,16 @@ interface FillCallbacks {
   }): void;
 
   onLlmCallStart?(call: { model: string }): void;
-  onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+  onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number; reasoningTokens?: number }): void;
+
+  // NEW: Reasoning/thinking capture (for models that support it)
+  onReasoningGenerated?(info: {
+    stepNumber: number;
+    reasoning: Array<{
+      type: 'reasoning' | 'redacted';
+      text?: string;
+    }>;
+  }): void;
 }
 ```
 
@@ -593,10 +602,21 @@ This requires updating `ResearchOptions` to accept callbacks.
 - [ ] Extract first 5-8 result titles with "..." for additional results
 - [ ] Handle provider-specific response structures gracefully
 
-### Phase 5: Testing and Documentation
+### Phase 5: Agent Reasoning Capture
+
+- [ ] Extend `WireResponseStep` interface with `reasoning?: ReasoningOutput[]`
+- [ ] Extend `WireResponseFormat.usage` with `reasoningTokens?: number`
+- [ ] Update `buildWireFormat()` in `liveAgent.ts` to capture reasoning from steps
+- [ ] Add `onReasoningGenerated?` callback to `FillCallbacks` interface
+- [ ] In verbose mode, display reasoning content (truncated for readability)
+- [ ] In debug mode, display full reasoning content
+- [ ] Ensure reasoning is properly serialized in wire log YAML output
+
+### Phase 6: Testing and Documentation
 
 - [ ] Add unit tests for logging utilities
 - [ ] Add unit tests for structured callback extraction
+- [ ] Add unit tests for reasoning capture
 - [ ] Test all three log levels with example forms
 - [ ] Verify wire log output format matches schema
 - [ ] Update CLI help text and development.md
@@ -644,6 +664,52 @@ This requires updating `ResearchOptions` to accept callbacks.
    - **Decision**: Non-TTY environments get regular log lines
    - `createNoOpSpinner()` already handles quiet/non-TTY
    - Progress shown via `logInfo()` calls instead of spinner updates
+
+8. **Agent reasoning/thinking capture**: Capture AI SDK reasoning fields
+   - **Decision**: Extend `WireResponseStep` to include reasoning content
+   - The AI SDK provides the following reasoning-related fields:
+     - `reasoningText`: String with reasoning from the last step
+     - `reasoning`: Array of `ReasoningOutput` objects (type: 'reasoning' | 'redacted', text)
+     - `steps[].reasoning`: Reasoning for each step
+     - `usage.reasoningTokens`: Token count for reasoning (for providers that support it)
+     - `providerMetadata`: Provider-specific data (may contain additional reasoning info)
+   - **Implementation**:
+     - Add `reasoning?: ReasoningOutput[]` field to `WireResponseStep` interface
+     - Add `reasoningTokens?: number` to usage object
+     - Update `buildWireFormat()` to extract reasoning from each step
+     - In verbose/debug modes, show reasoning content in console output
+     - Wire log always captures full reasoning when available
+   - **Console display (verbose mode)**:
+     ```
+     Turn 1: 5 issue(s)
+       [reasoning] "I need to search for information about..."
+       [web_search] "Pulp Fiction 1994"
+       ...
+     ```
+   - **Wire format changes**:
+     ```typescript
+     interface WireResponseStep {
+       toolCalls: WireToolCall[];
+       toolResults: WireToolResult[];
+       text: string | null;
+       reasoning?: Array<{
+         type: 'reasoning' | 'redacted';
+         text?: string;
+       }>;
+     }
+
+     interface WireResponseFormat {
+       steps: WireResponseStep[];
+       usage: {
+         inputTokens: number;
+         outputTokens: number;
+         reasoningTokens?: number;  // NEW
+       };
+     }
+     ```
+   - **Note**: Reasoning availability depends on model/provider. Not all models support
+     extended thinking or expose reasoning content. The implementation should handle
+     missing reasoning gracefully.
 
 ## Stage 5: Validation Stage
 
