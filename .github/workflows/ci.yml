@@ -37,4 +37,13 @@ jobs:
         with:
           coverage-summary-path: packages/markform/coverage/coverage-summary.json
           output-folder: ./badges/packages/markform
-          branches: main
+          no-commit: true
+
+      - name: Commit Coverage Badges
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add ./badges/packages/markform
+          git diff --staged --quiet || git commit -m "chore: update coverage badges [skip ci]"
+          git push
