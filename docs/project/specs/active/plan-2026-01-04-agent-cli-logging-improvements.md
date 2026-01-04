@@ -52,19 +52,25 @@ Improve agent CLI logging with three levels of output and better wire format cap
 
 ### Logging Levels
 
-1. **Default (no flags)**: Current behavior - turn numbers, issues, patches, completion
+1. **Default (no flags)**: Rich output suitable for interactive use:
+   - Turn numbers with issues list
+   - Tool calls with start notification, query, timing, and duration
+   - Web search: query, result count, timing, and source summary
+   - Patches generated with field IDs and values
+   - Completion status
 
-2. **Verbose (`--verbose`)**: Enhanced verbose output including:
+2. **Verbose (`--verbose`)**: Additional details for debugging:
+   - Everything from default
+   - Model and provider info at start
    - Token counts per turn
-   - Tool call start/end with timing and duration
-   - Web search queries and result summaries
+   - Top result titles from web search
+   - Tool summary at end of turn
    - Patch validation warnings/errors
-   - LLM model info
 
-3. **Debug (`--debug` or `LOG_LEVEL=debug`)**: Full diagnostic output including:
+3. **Debug (`--debug` or `LOG_LEVEL=debug`)**: Full diagnostic output:
    - Everything from verbose
    - Full system and context prompts each turn
-   - Tool inputs and outputs
+   - Tool inputs and outputs (summarized for large responses)
    - Detailed patch application results
 
 ### Wire Format Capture
@@ -127,7 +133,8 @@ interface FillCallbacks {
     // NEW: Structured output for known tool types
     toolType?: 'web_search' | 'fill_form' | 'custom';
     resultCount?: number;  // For web search: number of results
-    resultSummary?: string;  // For web search: brief summary
+    sources?: string;  // For web search: source domains (e.g., "IMDb, Wikipedia, Rotten Tomatoes")
+    topResults?: string;  // For web search: first few result titles
   }): void;
 
   onLlmCallStart?(call: { model: string }): void;
@@ -154,10 +161,11 @@ const result = await fillForm({
         myProgressUI.showSearching(query);
       }
     },
-    onToolEnd: ({ name, resultCount, resultSummary, durationMs }) => {
+    onToolEnd: ({ name, resultCount, sources, topResults, durationMs }) => {
       if (resultCount !== undefined) {
         myProgressUI.showResults(`${resultCount} results (${durationMs}ms)`);
-        myLogger.debug(`Search summary: ${resultSummary}`);
+        if (sources) myLogger.info(`Sources: ${sources}`);
+        if (topResults) myLogger.debug(`Top results: ${topResults}`);
       }
     },
     onPatchesGenerated: ({ patches, stats }) => {
@@ -174,22 +182,26 @@ const result = await fillForm({
 
 The CLI should show better real-time progress, especially for tool execution:
 
-**Default Mode (improved):**
-```
-Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
-  🔍 Searching: "Pulp Fiction 1994 movie details"
-  ✓ 8 results (1.2s)
-  → 5 patches:
-    full_title (string) = "Pulp Fiction"
-    year (number) = 1994
-    ...
-```
-
-**Verbose Mode (enhanced):**
+**Default Mode (rich output for interactive use):**
 ```
 Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
   🔍 web_search: "Pulp Fiction 1994 movie details"
-  ✓ web_search: 8 results from IMDb, Wikipedia, Rotten Tomatoes (1.2s)
+  ✓ web_search: 8 results (1.2s)
+     Sources: IMDb, Wikipedia, Rotten Tomatoes
+  → 5 patches:
+    full_title (string) = "Pulp Fiction"
+    year (number) = 1994
+    directors (string_list) = [Quentin Tarantino]
+    ...
+```
+
+**Verbose Mode (additional details):**
+```
+Model: openai/gpt-5-mini
+Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
+  🔍 web_search: "Pulp Fiction 1994 movie details"
+  ✓ web_search: 8 results (1.2s)
+     Sources: IMDb, Wikipedia, Rotten Tomatoes
      Top results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia"
   → 5 patches (tokens: ↓1234 ↑567):
     full_title (string) = "Pulp Fiction"
@@ -199,28 +211,49 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
   Tools: web_search(1), fill_form(1)
 ```
 
+**Debug Mode (full diagnostic):**
+```
+Model: openai/gpt-5-mini
+Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
+  ─── System Prompt ───
+  You are a research assistant...
+  ─── Context Prompt ───
+  # Current Form State
+  ...
+  🔍 web_search: "Pulp Fiction 1994 movie details"
+     Input: { query: "Pulp Fiction 1994 movie details" }
+  ✓ web_search: 8 results from IMDb, Wikipedia, Rotten Tomatoes (1.2s)
+     Top results: "Pulp Fiction (1994) - IMDb", "Pulp Fiction - Wikipedia"
+     Output: { results: [...], total: 8 } [truncated]
+  → 5 patches (tokens: ↓1234 ↑567):
+    ...
+```
+
 **Key Console Improvements:**
-1. Show search queries as they happen (not just "Web search...")
-2. Show result counts and source summaries for web search
+1. Default shows tool calls with queries and timing (not just "Web search...")
+2. Default shows result counts, duration, and source summaries
 3. Use emoji indicators for visual scanning (🔍 search, ✓ complete, → patches)
-4. Show timing for each tool call
-5. In verbose mode, show top result titles from web search
+4. Verbose adds top result titles, token counts, tool summary
+5. Debug adds full prompts and tool inputs/outputs
 
 ## Backward Compatibility
 
-**Compatibility Level:** Fully Backward Compatible (Additive Only)
+**Compatibility Level:** Minor Enhancement (More Informative Default Output)
 
 | Area | Impact |
 | --- | --- |
-| CLI | New optional flags; existing flags unchanged |
-| Default behavior | No changes to default output |
-| Verbose behavior | Enhanced (more info) but still respects `--verbose` |
-| API | `FillCallbacks` interface unchanged |
+| CLI | New optional flags (`--debug`, `--wire-log`); existing flags unchanged |
+| Default behavior | Enhanced with tool call details (more informative, same structure) |
+| Verbose behavior | Enhanced with additional details beyond new default |
+| API | `FillCallbacks` interface extended with optional fields |
 
-**Default Behavior (unchanged):**
-- Same turn-by-turn output format
+**Default Behavior Changes:**
+- Now shows tool call names, queries, and timing (previously only in verbose)
+- Same turn-by-turn structure
 - Same exit codes
 - Same output file handling
+
+**Use `--quiet` for minimal output** (unchanged behavior)
 
 ## Stage 1: Planning Stage
 
@@ -251,12 +284,11 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
 
 **Must Have:**
 - [ ] Unified logging callback system across `fill`, `research`, and `run` commands
-- [ ] Library-friendly callbacks with structured tool information (query, resultCount, etc.)
-- [ ] `--verbose` enhanced with tool timing, token counts, and search details
-- [ ] `--wire-log <path>` flag to capture full wire format to YAML
+- [ ] Library-friendly callbacks with structured tool information (query, resultCount, sources, topResults)
+- [ ] Default mode shows tool calls with queries, timing, result counts, and source summaries
+- [ ] Verbose mode adds top result titles, token counts, tool summary
 - [ ] Debug mode via `--debug` flag or `LOG_LEVEL=debug` environment variable
-- [ ] Show web search queries and result counts in default mode
-- [ ] Show web search result summaries in verbose mode
+- [ ] `--wire-log <path>` flag to capture full wire format to YAML
 
 **Should Have:**
 - [ ] Patch validation error details in verbose mode
@@ -275,20 +307,21 @@ Turn 1: 5 issue(s): directors (missing), full_title (missing), ...
 
 1. Running `markform research <form> --model <model>` (default mode) shows:
    - Turn numbers with issues list
-   - Web search queries as they execute (🔍 Searching: "query")
-   - Web search result counts (✓ N results (Xs))
+   - Tool calls with name and query (🔍 web_search: "query")
+   - Tool completion with result count, timing, and source summary
    - Patches generated with field IDs and values
 
 2. Running with `--verbose` additionally shows:
-   - Token counts per turn
-   - Tool call names with timing and source summaries
-   - Top result titles from web search
    - Model and provider info at start
+   - Token counts per turn
+   - Top result titles from web search
+   - Tool summary at end of turn
 
 3. Running with `--debug` or `LOG_LEVEL=debug` additionally shows:
    - Full system prompt each turn
    - Full context prompt each turn
-   - Tool inputs/outputs (summarized for large responses)
+   - Tool inputs (before execution)
+   - Tool outputs (summarized for large responses)
 
 4. Running with `--wire-log session.yaml` produces a YAML file containing:
    - `request.system`: Full system prompt
@@ -354,30 +387,37 @@ export function createFillLoggingCallbacks(
       logInfo(ctx, `Turn ${turnNumber}: ${formatTurnIssues(issues)}`);
     },
 
-    onToolStart: ({ name, input }) => {
+    onToolStart: ({ name, query }) => {
       if (level === 'quiet') return;
-      if (name.includes('search')) {
-        options.spinner?.message(`Web search...`);
-      }
-      if (level === 'verbose' || level === 'debug') {
-        logVerbose(ctx, `  Tool ${name} started`);
-      }
+      // DEFAULT: Show tool name and query
+      const queryStr = query ? `: "${query}"` : '';
+      logInfo(ctx, `  🔍 ${name}${queryStr}`);
+      options.spinner?.message(`${name}...`);
+      // DEBUG: Show full input
       if (level === 'debug') {
-        logDebug(ctx, `  Input: ${summarize(input)}`);
+        logDebug(ctx, `     Input: ${summarize(input)}`);
       }
     },
 
-    onToolEnd: ({ name, output, durationMs, error }) => {
+    onToolEnd: ({ name, resultCount, sources, topResults, durationMs, error }) => {
       if (level === 'quiet') return;
-      if (level === 'verbose' || level === 'debug') {
-        if (error) {
-          logVerbose(ctx, `  Tool ${name} failed (${durationMs}ms): ${error}`);
-        } else {
-          logVerbose(ctx, `  Tool ${name} completed (${durationMs}ms)`);
-        }
+      if (error) {
+        logInfo(ctx, `  ✗ ${name} failed (${durationMs}ms): ${error}`);
+        return;
       }
-      if (level === 'debug' && output) {
-        logDebug(ctx, `  Output: ${summarize(output)}`);
+      // DEFAULT: Show result count, timing, and sources
+      const countStr = resultCount !== undefined ? `${resultCount} results` : 'done';
+      logInfo(ctx, `  ✓ ${name}: ${countStr} (${formatDuration(durationMs)})`);
+      if (sources) {
+        logInfo(ctx, `     Sources: ${sources}`);
+      }
+      // VERBOSE: Show top result titles
+      if ((level === 'verbose' || level === 'debug') && topResults) {
+        logVerbose(ctx, `     Top results: ${topResults}`);
+      }
+      // DEBUG: Show full output
+      if (level === 'debug') {
+        logDebug(ctx, `     Output: ${summarize(output)}`);
       }
     },
 
