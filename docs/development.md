@@ -197,7 +197,39 @@ The CLI is built with Commander and uses these conventions:
 
 - **@clack/prompts** for interactive UI
 
-- Support `--verbose`, `--quiet`, `--dry-run` flags
+- Support `--verbose`, `--quiet`, `--debug`, `--dry-run` flags
+
+### Log Levels
+
+The CLI supports four log levels, controlled by flags or `MARKFORM_LOG_LEVEL` environment variable:
+
+| Level | Flag | Description |
+| --- | --- | --- |
+| `quiet` | `--quiet` | Suppress non-essential output |
+| `default` | (none) | Model info, tool calls, result summaries, token counts |
+| `verbose` | `--verbose` | Adds harness config, full result listings |
+| `debug` | `--debug` | Adds full prompts, raw tool inputs/outputs (truncated) |
+
+### Wire Format Capture
+
+Use `--wire-log <file>` to capture the full LLM request/response for debugging:
+
+```bash
+# Capture wire format to YAML file
+pnpm markform fill form.md --model=openai/gpt-5-mini --wire-log session-wire.yaml
+pnpm markform research form.md --model=google/gemini-2.5-flash --wire-log session-wire.yaml
+pnpm markform run form.md --wire-log session-wire.yaml
+
+# Or use environment variable
+MARKFORM_WIRE_LOG=session.yaml pnpm markform research form.md --model=openai/gpt-5-mini
+```
+
+The wire log captures:
+- System and context prompts sent to the LLM
+- Tool definitions
+- Tool calls and results per step
+- Reasoning content (for models with extended thinking)
+- Token usage (including reasoning tokens)
 
 ## Testing
 
