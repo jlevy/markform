@@ -13,6 +13,7 @@ import pc from 'picocolors';
 
 import { parseForm } from '../../engine/parse.js';
 import { applyPatches } from '../../engine/apply.js';
+import type { SessionTranscript } from '../../engine/coreTypes.js';
 import { runResearch } from '../../research/runResearch.js';
 import {
   formatSuggestedLlms,
@@ -28,7 +29,7 @@ import {
 } from '../../settings.js';
 import { getFormsDir } from '../lib/paths.js';
 import {
-  createSpinner,
+  createSpinnerIfTty,
   getCommandContext,
   logError,
   logInfo,
@@ -37,10 +38,12 @@ import {
   logVerbose,
   logWarn,
   readFile,
+  writeFile,
 } from '../lib/shared.js';
 import { exportMultiFormat } from '../lib/exportHelpers.js';
 import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
 import { parseInitialValues, validateInitialValueFields } from '../lib/initialValues.js';
+import { createFillLoggingCallbacks } from '../lib/fillLogging.js';
 
 /**
  * Register the research command.
@@ -79,6 +82,7 @@ export function registerResearchCommand(program: Command): void {
       String(DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN),
     )
     .option('--transcript', 'Save session transcript')
+    .option('--wire-log <file>', 'Capture full wire format (LLM request/response) to YAML file')
     .action(async (input: string, options: Record<string, unknown>, cmd: Command) => {
       const ctx = getCommandContext(cmd);
       const startTime = Date.now();
@@ -167,14 +171,19 @@ export function registerResearchCommand(program: Command): void {
 
         // Create spinner for research operation (only for TTY, not quiet mode)
         // Note: provider and modelName already extracted via parseModelIdForDisplay above
-        const spinner =
-          process.stdout.isTTY && !ctx.quiet
-            ? createSpinner({
-                type: 'api',
-                provider,
-                model: modelName,
-              })
-            : null;
+        const spinner = createSpinnerIfTty({ type: 'api', provider, model: modelName }, ctx);
+
+        // Create unified logging callbacks
+        const callbacks = createFillLoggingCallbacks(ctx, {
+          spinner,
+          modelId,
+          provider,
+        });
+
+        // Check for wire log (flag or env var)
+        const wireLogPathOption =
+          (options.wireLog as string | undefined) ?? process.env.MARKFORM_WIRE_LOG;
+        const captureWireFormat = !!wireLogPathOption;
 
         // Run research fill
         let result;
@@ -182,16 +191,17 @@ export function registerResearchCommand(program: Command): void {
           result = await runResearch(form, {
             model: modelId,
             enableWebSearch: true,
-            captureWireFormat: false,
+            captureWireFormat,
             maxTurnsTotal: maxTurns,
             maxPatchesPerTurn,
             maxIssuesPerTurn,
             targetRoles: [AGENT_ROLE],
             fillMode: 'continue',
+            callbacks,
           });
-          spinner?.stop();
+          spinner.stop();
         } catch (error) {
-          spinner?.error('Research failed');
+          spinner.error('Research failed');
           throw error;
         }
 
@@ -227,11 +237,31 @@ export function registerResearchCommand(program: Command): void {
         console.log(`  ${formPath}  ${pc.dim('(filled markform source)')}`);
         console.log(`  ${schemaPath}  ${pc.dim('(JSON Schema)')}`);
 
+        // Write wire log if requested (captures full LLM request/response)
+        if (wireLogPathOption && result.transcript) {
+          const { serializeSession } = await import('../../engine/session.js');
+          const wireLogPath = resolve(wireLogPathOption);
+          // Extract wire format data from transcript turns
+          const wireLogData = {
+            sessionVersion: result.transcript.sessionVersion,
+            mode: result.transcript.mode,
+            modelId,
+            formPath: inputPath,
+            turns: result.transcript.turns
+              .map((turn) => ({ turn: turn.turn, wire: turn.wire }))
+              .filter((t) => t.wire), // Only include turns with wire data
+          };
+          await writeFile(
+            wireLogPath,
+            serializeSession(wireLogData as unknown as SessionTranscript),
+          );
+          logSuccess(ctx, `Wire log written to: ${wireLogPath}`);
+        }
+
         // Save transcript if requested
         if (options.transcript && result.transcript) {
           const { serializeSession } = await import('../../engine/session.js');
           const transcriptPath = outputPath.replace(/\.form\.md$/, '.session.yaml');
-          const { writeFile } = await import('../lib/shared.js');
           await writeFile(transcriptPath, serializeSession(result.transcript));
           logInfo(ctx, `Transcript: ${transcriptPath}`);
         }

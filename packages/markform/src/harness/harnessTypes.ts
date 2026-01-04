@@ -207,6 +207,37 @@ export interface ProviderInfo {
 // Fill Callbacks
 // =============================================================================
 
+// =============================================================================
+// Tool Types for Callbacks
+// =============================================================================
+
+/**
+ * Tool type classification for structured callback data.
+ */
+export type ToolType = 'web_search' | 'fill_form' | 'custom';
+
+/**
+ * Structured web search result for callback data.
+ */
+export interface WebSearchResult {
+  /** Result index (1-based) */
+  index: number;
+  /** Result title */
+  title: string;
+  /** Result URL */
+  url: string;
+  /** Optional snippet/description */
+  snippet?: string;
+}
+
+/**
+ * Reasoning output from LLM (for models that support extended thinking).
+ */
+export interface ReasoningOutput {
+  type: 'reasoning' | 'redacted';
+  text?: string;
+}
+
 /**
  * Callbacks for observing form-filling execution in real-time.
  *
@@ -223,7 +254,12 @@ export interface ProviderInfo {
  *     onTurnStart: ({ turnNumber }) => console.log(`Starting turn ${turnNumber}`),
  *     onIssuesIdentified: ({ issues }) => console.log(`Found ${issues.length} issues`),
  *     onPatchesGenerated: ({ patches }) => console.log(`Generated ${patches.length} patches`),
- *     onToolStart: ({ name }) => spinner.message(`🔧 ${name}...`),
+ *     onToolStart: ({ name, query }) => {
+ *       if (query) console.log(`Searching: ${query}`);
+ *     },
+ *     onToolEnd: ({ name, resultCount, sources }) => {
+ *       if (resultCount) console.log(`Found ${resultCount} results from ${sources}`);
+ *     },
  *     onTurnComplete: (progress) => console.log(`Turn ${progress.turnNumber} done`),
  *   },
  * });
@@ -242,17 +278,71 @@ export interface FillCallbacks {
   /** Called when a turn completes */
   onTurnComplete?(progress: TurnProgress): void;
 
-  /** Called before a tool executes */
-  onToolStart?(call: { name: string; input: unknown }): void;
+  /**
+   * Called before a tool executes.
+   *
+   * Enhanced with structured information for known tool types.
+   */
+  onToolStart?(call: {
+    /** Tool name */
+    name: string;
+    /** Raw input to the tool */
+    input: unknown;
+    /** Tool type classification */
+    toolType?: ToolType;
+    /** Search query (for web_search tools) */
+    query?: string;
+  }): void;
 
-  /** Called after a tool completes */
-  onToolEnd?(call: { name: string; output: unknown; durationMs: number; error?: string }): void;
+  /**
+   * Called after a tool completes.
+   *
+   * Enhanced with structured information for known tool types.
+   */
+  onToolEnd?(call: {
+    /** Tool name */
+    name: string;
+    /** Raw output from the tool */
+    output: unknown;
+    /** Duration in milliseconds */
+    durationMs: number;
+    /** Error message if tool failed */
+    error?: string;
+    /** Tool type classification */
+    toolType?: ToolType;
+    /** Number of results (for web_search tools) */
+    resultCount?: number;
+    /** Source domains summary (e.g., "imdb.com, wikipedia.org") */
+    sources?: string;
+    /** Top result titles (first 5-8 with "..." for more) */
+    topResults?: string;
+    /** Full structured results (for detailed logging) */
+    fullResults?: WebSearchResult[];
+  }): void;
 
   /** Called before an LLM request */
   onLlmCallStart?(call: { model: string }): void;
 
   /** Called after an LLM response */
-  onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+  onLlmCallEnd?(call: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    /** Reasoning tokens (for models that support extended thinking) */
+    reasoningTokens?: number;
+  }): void;
+
+  /**
+   * Called when reasoning/thinking content is generated.
+   *
+   * Only fired for models that support extended thinking (e.g., Claude with thinking enabled).
+   */
+  onReasoningGenerated?(info: {
+    /** Step number in the response */
+    stepNumber: number;
+    /** Reasoning content */
+    reasoning: ReasoningOutput[];
+  }): void;
 }
 
 // =============================================================================

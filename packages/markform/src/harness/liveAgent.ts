@@ -43,6 +43,7 @@ import {
   getPatchFormatHint,
 } from './prompts.js';
 import { FILL_FORM_TOOL_NAME, FILL_FORM_TOOL_DESCRIPTION } from './toolApi.js';
+import { extractToolStartInfo, extractToolEndInfo } from './toolParsing.js';
 
 // Re-export types for backwards compatibility
 export type { LiveAgentConfig } from './harnessTypes.js';
@@ -600,6 +601,9 @@ function wrapToolsWithCallbacks(
 
 /**
  * Wrap a single tool with callbacks.
+ *
+ * Uses toolParsing utilities to extract structured information for
+ * web search results and other known tool types.
  */
 function wrapTool(
   name: string,
@@ -612,10 +616,11 @@ function wrapTool(
     execute: async (input: unknown) => {
       const startTime = Date.now();
 
-      // Call onToolStart (errors don't abort)
+      // Call onToolStart with structured info (errors don't abort)
       if (callbacks.onToolStart) {
         try {
-          callbacks.onToolStart({ name, input });
+          const startInfo = extractToolStartInfo(name, input);
+          callbacks.onToolStart(startInfo);
         } catch {
           // Ignore callback errors
         }
@@ -623,15 +628,13 @@ function wrapTool(
 
       try {
         const output = await originalExecute(input);
+        const durationMs = Date.now() - startTime;
 
-        // Call onToolEnd on success (errors don't abort)
+        // Call onToolEnd on success with structured info (errors don't abort)
         if (callbacks.onToolEnd) {
           try {
-            callbacks.onToolEnd({
-              name,
-              output,
-              durationMs: Date.now() - startTime,
-            });
+            const endInfo = extractToolEndInfo(name, output, durationMs);
+            callbacks.onToolEnd(endInfo);
           } catch {
             // Ignore callback errors
           }
@@ -639,15 +642,14 @@ function wrapTool(
 
         return output;
       } catch (error) {
-        // Call onToolEnd on error (errors don't abort)
+        const durationMs = Date.now() - startTime;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        // Call onToolEnd on error with structured info (errors don't abort)
         if (callbacks.onToolEnd) {
           try {
-            callbacks.onToolEnd({
-              name,
-              output: null,
-              durationMs: Date.now() - startTime,
-              error: error instanceof Error ? error.message : String(error),
-            });
+            const endInfo = extractToolEndInfo(name, null, durationMs, errorMsg);
+            callbacks.onToolEnd(endInfo);
           } catch {
             // Ignore callback errors
           }

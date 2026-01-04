@@ -58,6 +58,7 @@ function createProgram(): Command {
     .showHelpAfterError()
     .option('--verbose', 'Enable verbose output')
     .option('--quiet', 'Suppress non-essential output')
+    .option('--debug', 'Enable debug output (full prompts, raw tool I/O)')
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--format <format>', `Output format: ${OUTPUT_FORMATS.join(', ')}`, 'console')
     .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`)

@@ -307,7 +307,15 @@ async function runInteractiveWorkflow(
   console.log(`  ${formatPath(exportResult.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
   logTiming(
-    { verbose: false, format: 'console', dryRun: false, quiet: false, overwrite: false },
+    {
+      verbose: false,
+      format: 'console',
+      dryRun: false,
+      quiet: false,
+      debug: false,
+      logLevel: 'default',
+      overwrite: false,
+    },
     'Fill time',
     Date.now() - startTime,
   );
@@ -414,6 +422,8 @@ export async function runForm(
   const effectiveCtx: CommandContext = ctx ?? {
     verbose: false,
     quiet: false,
+    debug: false,
+    logLevel: 'default',
     dryRun: false,
     format: 'console',
     overwrite,
