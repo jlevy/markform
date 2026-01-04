@@ -35,6 +35,9 @@ importers:
       prettier:
         specifier: ^3.7.4
         version: 3.7.4
+      tryscript:
+        specifier: 0.1.1
+        version: 0.1.1(c8@10.1.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -112,8 +115,8 @@ importers:
         specifier: ^0.3.16
         version: 0.3.16
       tryscript:
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1(c8@10.1.3)
       tsdown:
         specifier: ^0.18.3
         version: 0.18.3(publint@0.3.16)(typescript@5.9.3)
@@ -1856,10 +1859,15 @@ packages:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
     hasBin: true
 
-  tryscript@0.1.0:
-    resolution: {integrity: sha512-8wuNZ/mV5wbTiL4gr7JWbp0be3JcVcnc7WFF3DNPBCeqAcEJ/6bTo+U/0jDPfsFOmUCakzjSqAoekO8leC304g==}
+  tryscript@0.1.1:
+    resolution: {integrity: sha512-j9AyTrjpmtJ81DKD/qUtqaVJh+FABsBGgQPRScCvpRk2mhMbgw5ZJ7jfmxKORUKdHh+o0N3JOxlDC2csCUi+bQ==}
     engines: {node: '>=20'}
     hasBin: true
+    peerDependencies:
+      c8: '>=8.0.0'
+    peerDependenciesMeta:
+      c8:
+        optional: true
 
   ts-api-utils@2.3.0:
     resolution: {integrity: sha512-6eg3Y9SF7SsAvGzRHQvvc1skDAhwI4YQ32ui1scxD1Ccr0G5qIIbUBT3pFTKX8kmWIQClHobtUdNuaBgwdfdWg==}
@@ -3750,7 +3758,7 @@ snapshots:
 
   tree-kill@1.2.2: {}
 
-  tryscript@0.1.0:
+  tryscript@0.1.1(c8@10.1.3):
     dependencies:
       atomically: 2.1.0
       commander: 14.0.2
@@ -3761,6 +3769,8 @@ snapshots:
       tree-kill: 1.2.2
       yaml: 2.8.2
       zod: 3.25.76
+    optionalDependencies:
+      c8: 10.1.3
 
   ts-api-utils@2.3.0(typescript@5.9.3):
     dependencies:

@@ -11,4 +11,11 @@ export default defineConfig({
     VERSION: '\\d+\\.\\d+\\.\\d+(?:-[a-z]+\\.\\d+)?',
     PATH: '/[^\\s]+',
   },
+  // Coverage configuration for CLI subprocess testing
+  coverage: {
+    reportsDir: 'coverage-tryscript',
+    reporters: ['text', 'html'],
+    include: ['dist/**'],
+    src: 'src',
+  },
 });
