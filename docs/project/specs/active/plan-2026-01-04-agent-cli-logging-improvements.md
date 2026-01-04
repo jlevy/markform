@@ -971,3 +971,188 @@ All acceptance criteria from Stage 1 verified:
 - [ ] **Transcript mode unchanged** - `--transcript` still works
 - [ ] **Exit codes unchanged** - same exit codes for success/failure
 - [ ] **Output file handling unchanged** - `-o` flag still works correctly
+
+### Edge Case Testing
+
+#### 1. Form Edge Cases
+
+**File: `tests/unit/cli/edgeCases.test.ts`**
+
+- [ ] **Empty form** - form with no fillable fields logs correctly, no crashes
+- [ ] **Completed form** - form with all fields already filled shows no issues to resolve
+- [ ] **Single field form** - minimal form works end-to-end
+- [ ] **Large form (100+ fields)** - performance and memory are acceptable
+- [ ] **Deeply nested groups** - complex form structure logs correctly
+- [ ] **Unicode in field names/values** - emoji, CJK, RTL text display correctly
+- [ ] **Very long field values** - values > 1000 chars are handled/truncated appropriately
+
+#### 2. Turn and Session Edge Cases
+
+- [ ] **Single turn completion** - form completed in one turn logs correctly
+- [ ] **Maximum turns reached** - hitting maxTurns limit shows appropriate message
+- [ ] **Many turns (50+)** - memory doesn't grow unbounded, wire log remains manageable
+- [ ] **No patches generated** - turn with no patches logs correctly (not error)
+- [ ] **All patches rejected** - turn where all patches fail validation logs reasons clearly
+
+#### 3. Tool Call Edge Cases
+
+- [ ] **No tool calls** - turn without tool calls (pure reasoning) logs correctly
+- [ ] **Multiple tool calls same turn** - all calls logged with correct timing
+- [ ] **Very fast tool call (< 10ms)** - timing shows correctly, not "0ms"
+- [ ] **Slow tool call (> 30s)** - no timeout, progress visible during wait
+- [ ] **Empty web search results** - "0 results" shown clearly, not error
+- [ ] **Web search with 100+ results** - top 5-8 shown, count correct
+- [ ] **Tool output at truncation boundary** - exactly 500 chars, 499, 501 chars handled correctly
+- [ ] **Tool output with binary/null bytes** - doesn't crash, shows placeholder
+
+#### 4. Wire Format Edge Cases
+
+- [ ] **Wire log path with spaces** - `--wire-log "my log.yaml"` works
+- [ ] **Wire log to existing file** - overwrites cleanly
+- [ ] **Wire log to non-existent directory** - creates parent directories or clear error
+- [ ] **Very large wire log (> 10MB)** - writes successfully, no memory issues
+- [ ] **Concurrent wire log writes** - multiple sessions don't corrupt file
+
+### Error Path Testing
+
+#### 1. Network and Provider Errors
+
+**File: `tests/unit/cli/errorHandling.test.ts`**
+
+- [ ] **LLM network timeout** - clear error message with model name and timeout duration
+- [ ] **LLM DNS resolution failure** - helpful message about network connectivity
+- [ ] **LLM rate limit (429)** - shows rate limit error, suggests retry
+- [ ] **LLM quota exceeded** - shows quota error with provider-specific guidance
+- [ ] **LLM invalid response format** - graceful handling, logs what was received
+- [ ] **Web search network failure** - tool failure logged, session continues if possible
+- [ ] **Web search rate limit** - logged as tool error, doesn't crash session
+
+#### 2. Authentication Errors
+
+- [ ] **Missing API key** - clear error message naming which key is missing
+- [ ] **Invalid API key** - clear authentication error, not generic failure
+- [ ] **Expired API key** - distinguishable from missing key if possible
+- [ ] **Wrong provider for key** - clear error about model/key mismatch
+
+#### 3. File System Errors
+
+- [ ] **Wire log path permission denied** - clear error before session starts
+- [ ] **Wire log disk full** - graceful handling, session data not lost
+- [ ] **Wire log path is directory** - clear error message
+- [ ] **Read-only file system** - clear error message
+- [ ] **Symlink to invalid path** - resolved correctly or clear error
+
+#### 4. Interrupted Sessions
+
+- [ ] **Ctrl+C during LLM call** - graceful shutdown, partial wire log saved
+- [ ] **Ctrl+C during tool call** - graceful shutdown, spinner cleared
+- [ ] **Ctrl+C during file write** - no corrupted partial files
+- [ ] **SIGTERM signal** - same as Ctrl+C behavior
+- [ ] **SIGKILL/crash recovery** - next run handles incomplete previous session
+
+#### 5. Malformed Input Handling
+
+- [ ] **Invalid model ID format** - helpful error before API call
+- [ ] **Model ID with typo** - suggestion for similar model names if possible
+- [ ] **Invalid log level** - error message listing valid levels
+- [ ] **Malformed environment variables** - graceful handling with defaults
+
+### Security and Privacy Considerations
+
+#### 1. Sensitive Data in Logs
+
+**Manual verification required:**
+
+- [ ] **API keys never logged** - verify no API keys appear in any log level output
+- [ ] **API keys not in wire log** - verify wire log doesn't contain auth tokens
+- [ ] **Debug mode prompts safe** - system prompts don't contain secrets
+- [ ] **Verbose mode safe for sharing** - output can be shared without exposing secrets
+
+#### 2. Form Data Privacy
+
+- [ ] **PII in form fields** - user data logged but can be suppressed with --quiet
+- [ ] **Sensitive field types** - password/secret fields (if any) not logged in plaintext
+- [ ] **Wire log contains form data** - document that wire logs may contain sensitive form data
+
+#### 3. File Security
+
+- [ ] **Wire log file permissions** - created with 0600 or user's umask, not world-readable
+- [ ] **Temp files cleaned up** - no sensitive data left in temp directories
+- [ ] **No hardcoded paths** - logs use relative or user-specified paths
+
+### Performance and Resource Testing
+
+#### 1. Memory Usage
+
+- [ ] **Memory baseline** - measure memory for simple 3-turn session
+- [ ] **Memory with wire format** - memory increase with captureWireFormat is bounded
+- [ ] **Memory over 50 turns** - no memory leak, stable after warmup
+- [ ] **Large prompt memory** - 100KB context doesn't cause issues
+- [ ] **Callback memory** - callbacks don't retain references causing leaks
+
+#### 2. CPU and I/O Performance
+
+- [ ] **Callback overhead** - callbacks add < 1ms per turn overhead
+- [ ] **Wire log I/O** - writing 10MB wire log takes < 5s
+- [ ] **JSON serialization** - large responses serialize efficiently
+- [ ] **Spinner CPU** - spinner animation doesn't spike CPU
+
+#### 3. Scalability
+
+- [ ] **100 field form** - completes in reasonable time
+- [ ] **50 turn session** - stable performance throughout
+- [ ] **10 concurrent tool calls** - all logged correctly with timing
+
+### Compatibility Matrix Testing
+
+#### 1. Node.js Versions
+
+- [ ] **Node 20 LTS** - all features work correctly
+- [ ] **Node 22 LTS** - all features work correctly
+- [ ] **Latest Node** - no deprecation warnings
+
+#### 2. Operating Systems
+
+- [ ] **Linux (Ubuntu/Debian)** - all features work
+- [ ] **macOS** - all features work, colors correct
+- [ ] **Windows (via WSL)** - all features work
+- [ ] **Windows (native)** - if supported, colors and paths work
+
+#### 3. Terminal Environments
+
+- [ ] **Standard TTY (iTerm/Terminal.app)** - colors, spinner work
+- [ ] **VS Code terminal** - colors, spinner work
+- [ ] **SSH session** - TTY detection correct
+- [ ] **Screen/tmux** - TTY detection correct
+- [ ] **Docker container TTY** - TTY detection correct
+- [ ] **CI (GitHub Actions)** - non-TTY detection correct
+- [ ] **Piped output** - non-TTY, no escape codes
+
+#### 4. Environment Variables
+
+- [ ] **NO_COLOR=1** - all color output suppressed
+- [ ] **TERM=dumb** - no colors, no spinner
+- [ ] **CI=true** - appropriate for CI environment
+- [ ] **Combined flags** - `NO_COLOR=1 LOG_LEVEL=debug` both respected
+
+### Graceful Degradation Testing
+
+#### 1. Partial Failures
+
+- [ ] **One tool fails, others succeed** - failed tool logged, session continues
+- [ ] **Wire log write fails mid-session** - session continues, error logged
+- [ ] **Callback throws exception** - logged, doesn't crash session
+- [ ] **Spinner fails (non-TTY edge case)** - graceful fallback to log lines
+
+#### 2. Missing Optional Features
+
+- [ ] **No reasoning support** - works without crashing, reasoning fields omitted
+- [ ] **No web search available** - fill without web search works
+- [ ] **Model doesn't support tools** - clear error message
+- [ ] **Provider-specific features missing** - graceful handling per provider
+
+#### 3. Backward Compatibility
+
+- [ ] **Old config files** - graceful handling of missing new options
+- [ ] **Old environment variable names** - if renamed, old names still work or clear deprecation
+- [ ] **Mixed version scenarios** - clear errors if incompatible versions detected
