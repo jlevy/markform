@@ -159,7 +159,7 @@ optional_year: (unanswered)
 $ $CLI readme | head -10
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/workflows/ci.yml)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/blob/main/badges/latest-run.md)
 ...
 ? 0
 ```
