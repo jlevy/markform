@@ -969,6 +969,17 @@ export interface WireToolResult {
 }
 
 /**
+ * Reasoning content from LLM extended thinking.
+ * Captured in wire format for transparency and debugging.
+ */
+export interface WireReasoningContent {
+  /** Type of reasoning content */
+  type: 'reasoning' | 'redacted';
+  /** The reasoning text (present when type='reasoning') */
+  text?: string;
+}
+
+/**
  * A single step in the LLM response.
  * Corresponds to one iteration of the tool-calling loop.
  */
@@ -979,6 +990,8 @@ export interface WireResponseStep {
   toolResults: WireToolResult[];
   /** Text output from the model in this step (null if none) */
   text: string | null;
+  /** Reasoning/thinking content (for models with extended thinking) */
+  reasoning?: WireReasoningContent[];
 }
 
 /**
@@ -1011,6 +1024,8 @@ export interface WireResponseFormat {
   usage: {
     inputTokens: number;
     outputTokens: number;
+    /** Reasoning tokens (for models with extended thinking) */
+    reasoningTokens?: number;
   };
 }
 
@@ -1822,10 +1837,16 @@ export const WireToolResultSchema = z.object({
   result: z.unknown(),
 });
 
+export const WireReasoningContentSchema = z.object({
+  type: z.enum(['reasoning', 'redacted']),
+  text: z.string().optional(),
+});
+
 export const WireResponseStepSchema = z.object({
   toolCalls: z.array(WireToolCallSchema),
   toolResults: z.array(WireToolResultSchema),
   text: z.string().nullable(),
+  reasoning: z.array(WireReasoningContentSchema).optional(),
 });
 
 export const WireRequestFormatSchema = z.object({
@@ -1845,6 +1866,7 @@ export const WireResponseFormatSchema = z.object({
   usage: z.object({
     inputTokens: z.number().int().nonnegative(),
     outputTokens: z.number().int().nonnegative(),
+    reasoningTokens: z.number().int().nonnegative().optional(),
   }),
 });
 
