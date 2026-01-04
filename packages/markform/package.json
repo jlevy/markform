@@ -65,7 +65,7 @@
     "test:unit": "vitest run tests/unit",
     "test:golden": "vitest run tests/golden",
     "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
-    "test:coverage": "c8 --src src --all --include 'src/**' --include 'dist/**' --reporter text --reporter html --reports-dir coverage sh -c 'vitest run && tryscript run tests/cli/**/*.tryscript.md'",
+    "test:coverage": "c8 --src src --all --include 'src/**' --include 'dist/**' --reporter text --reporter html --reporter json-summary --reports-dir coverage sh -c 'vitest run && tryscript run tests/cli/**/*.tryscript.md'",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
     "publint": "publint"
