@@ -8,6 +8,13 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment to GitHub Pages
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -47,3 +54,39 @@ jobs:
           coverage-summary-path: packages/markform/coverage/coverage-summary.json
           output-folder: ./badges
           branches: main
+
+      # Upload coverage report for GitHub Pages deployment
+      - name: Upload coverage artifact
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report
+          path: packages/markform/coverage
+          retention-days: 30
+
+  # Deploy coverage report to GitHub Pages (main branch only)
+  deploy-coverage:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: coverage-report
+          path: ./coverage
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./coverage
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
