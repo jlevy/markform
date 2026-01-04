@@ -359,8 +359,15 @@ async function runAgentFillWorkflow(
   const effectiveWireLogPath = wireLogPath ?? process.env.MARKFORM_WIRE_LOG;
   const captureWireFormat = !!effectiveWireLogPath;
 
-  // Create logging callbacks
-  const callbacks = createFillLoggingCallbacks(ctx);
+  // Parse model ID to extract provider
+  const [provider] = modelId.split('/');
+
+  // Create logging callbacks with model info and optional trace file
+  const callbacks = createFillLoggingCallbacks(ctx, {
+    modelId,
+    provider,
+    traceFile: ctx.traceFile,
+  });
 
   // Run form fill
   const workflowLabel = isResearch ? 'Research' : 'Agent fill';

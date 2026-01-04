@@ -242,12 +242,16 @@ export function getCommandContext(command: Command): CommandContext {
     verbose?: boolean;
     quiet?: boolean;
     debug?: boolean;
+    trace?: string;
     format?: OutputFormat;
     formsDir?: string;
     overwrite?: boolean;
   }>();
 
   const logLevel = computeLogLevel(opts);
+
+  // Trace file: --trace flag or MARKFORM_TRACE env var
+  const traceFile = opts.trace ?? process.env.MARKFORM_TRACE;
 
   return {
     dryRun: opts.dryRun ?? false,
@@ -258,6 +262,7 @@ export function getCommandContext(command: Command): CommandContext {
     format: opts.format ?? 'console',
     formsDir: opts.formsDir,
     overwrite: opts.overwrite ?? false,
+    traceFile,
   };
 }
 

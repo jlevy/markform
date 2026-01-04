@@ -59,6 +59,7 @@ function createProgram(): Command {
     .option('--verbose', 'Enable verbose output')
     .option('--quiet', 'Suppress non-essential output')
     .option('--debug', 'Enable debug output (full prompts, raw tool I/O)')
+    .option('--trace <file>', 'Write incremental log output to file during execution')
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--format <format>', `Output format: ${OUTPUT_FORMATS.join(', ')}`, 'console')
     .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`)

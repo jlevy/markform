@@ -56,6 +56,12 @@ export interface CommandContext {
   formsDir?: string;
   /** Whether to overwrite existing field values (default: continue/skip filled) */
   overwrite: boolean;
+  /**
+   * Path to trace file for incremental logging output.
+   * When provided, all log output is also appended to this file (without ANSI colors).
+   * Set via --trace <file> or MARKFORM_TRACE environment variable.
+   */
+  traceFile?: string;
 }
 
 // =============================================================================

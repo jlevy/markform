@@ -111,8 +111,10 @@ export const DEFAULT_FORMS_DIR = './forms';
 /**
  * Maximum characters to show in debug output for tool inputs/outputs.
  * Values longer than this are truncated with "...[truncated]" suffix.
+ * Can be overridden via MARKFORM_DEBUG_TRUNCATION_LIMIT environment variable.
  */
-export const DEBUG_OUTPUT_TRUNCATION_LIMIT = 500;
+export const DEBUG_OUTPUT_TRUNCATION_LIMIT =
+  parseInt(process.env.MARKFORM_DEBUG_TRUNCATION_LIMIT ?? '', 10) || 2000;
 
 /**
  * Maximum forms to display in 'markform run' menu.

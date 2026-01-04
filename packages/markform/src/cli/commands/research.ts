@@ -173,11 +173,12 @@ export function registerResearchCommand(program: Command): void {
         // Note: provider and modelName already extracted via parseModelIdForDisplay above
         const spinner = createSpinnerIfTty({ type: 'api', provider, model: modelName }, ctx);
 
-        // Create unified logging callbacks
+        // Create unified logging callbacks (with optional trace file)
         const callbacks = createFillLoggingCallbacks(ctx, {
           spinner,
           modelId,
           provider,
+          traceFile: ctx.traceFile,
         });
 
         // Check for wire log (flag or env var)
