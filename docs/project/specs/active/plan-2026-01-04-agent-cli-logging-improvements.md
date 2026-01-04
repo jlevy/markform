@@ -661,9 +661,11 @@ This requires updating `ResearchOptions` to accept callbacks.
    - This is a hard cut
 
 7. **Progress without spinner**: Use log lines for non-TTY
-   - **Decision**: Non-TTY environments get regular log lines
-   - `createNoOpSpinner()` already handles quiet/non-TTY
-   - Progress shown via `logInfo()` calls instead of spinner updates
+   - **Decision**: Non-TTY environments get regular log lines (existing behavior)
+   - `createSpinnerIfTty()` already handles this by returning a no-op spinner
+   - `shouldUseColors()` respects `NO_COLOR` env var and TTY detection
+   - picocolors automatically handles color detection
+   - No new implementation needed - just use existing infrastructure
 
 8. **Agent reasoning/thinking capture**: Capture AI SDK reasoning fields
    - **Decision**: Extend `WireResponseStep` to include reasoning content
@@ -710,6 +712,23 @@ This requires updating `ResearchOptions` to accept callbacks.
    - **Note**: Reasoning availability depends on model/provider. Not all models support
      extended thinking or expose reasoning content. The implementation should handle
      missing reasoning gracefully.
+
+9. **Wire format content selection**: Capture selected fields, not entire response
+   - **Decision**: Capture specific useful fields, skip redundant/noisy data
+   - **Capture** (valuable for debugging/analysis):
+     - `steps[].toolCalls` - tool name and input
+     - `steps[].toolResults` - tool name and result
+     - `steps[].text` - model text output
+     - `steps[].reasoning` - reasoning content (when available)
+     - `usage.inputTokens`, `usage.outputTokens`, `usage.reasoningTokens`
+     - `response.id` - response ID for debugging
+     - `response.modelId` - actual model used
+   - **Skip** (redundant or not portable):
+     - `providerMetadata` - provider-specific, not useful across providers
+     - `response.messages` - reconstructable from steps
+     - `finishReason` per step - only final finish reason matters
+     - `isContinued` - internal SDK state, not meaningful for logging
+   - This keeps wire logs focused and diffable while capturing essential info
 
 ## Stage 5: Validation Stage
 
