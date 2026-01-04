@@ -17,6 +17,7 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  SessionTranscript,
   // Wire format types (defined in coreTypes for session logging)
   WireFormat,
   WireReasoningContent,
@@ -502,4 +503,7 @@ export interface FillResult {
     severity: 'required' | 'recommended';
     priority: number;
   }[];
+  /** Session transcript (present when captureWireFormat is enabled) */
+  transcript?: Partial<SessionTranscript> &
+    Pick<SessionTranscript, 'sessionVersion' | 'mode' | 'turns'>;
 }

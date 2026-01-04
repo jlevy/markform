@@ -6,7 +6,8 @@ This is a validation spec for the enhanced CLI logging system that provides:
 - Multiple log levels (quiet, default, verbose, debug)
 - Structured tool callback information (web search queries, results, sources)
 - Wire format capture via `--wire-log` flag
-- Unified logging callbacks across fill and research commands
+- Unified logging callbacks across fill, research, and run commands
+- Reasoning capture in wire format for models with extended thinking
 
 **Feature Plan:** [plan-2026-01-04-agent-cli-logging-improvements.md](plan-2026-01-04-agent-cli-logging-improvements.md)
 
@@ -138,7 +139,19 @@ Verify:
 - [ ] Wire log is created
 - [ ] Callbacks show structured tool info
 
-### 7. Verify Token Count Display
+### 7. Verify Run Command Integration
+
+```bash
+markform run examples/movie-research/movie-research-demo.form.md \
+  --wire-log /tmp/run-wire.yaml
+```
+
+Verify:
+- [ ] --wire-log flag is recognized
+- [ ] Wire log is created after agent fill workflow
+- [ ] Same format as fill and research commands
+
+### 8. Verify Token Count Display
 
 In default mode, patches line should show:
 ```
@@ -161,12 +174,15 @@ Verify:
 - `src/cli/lib/fillLogging.ts` - Enhanced with LogLevel support, structured tool info
 - `src/cli/commands/fill.ts` - Added --wire-log flag and env var support
 - `src/cli/commands/research.ts` - Added --wire-log flag, unified callbacks
-- `src/cli/commands/run.ts` - Updated CommandContext usage
-- `src/harness/harnessTypes.ts` - Extended FillCallbacks with structured fields
-- `src/harness/liveAgent.ts` - Updated wrapTool to use structured parsing
+- `src/cli/commands/run.ts` - Added --wire-log flag, transcript support via fillForm
+- `src/harness/harnessTypes.ts` - Extended FillCallbacks with structured fields, added transcript to FillResult
+- `src/harness/programmaticFill.ts` - Added transcript building when captureWireFormat is enabled
+- `src/harness/liveAgent.ts` - Reasoning extraction, updated wrapTool for structured parsing
+- `src/engine/coreTypes.ts` - Added WireReasoningContent type, reasoning field to WireResponseStep
 - `src/research/runResearch.ts` - Pass callbacks to agent
 - `src/settings.ts` - Added DEBUG_OUTPUT_TRUNCATION_LIMIT constant
 - `tests/unit/cli/fillLogging.test.ts` - Updated tests for new behavior
+- `docs/development.md` - Added Log Levels and Wire Format Capture sections
 
 ## Open Questions
 
