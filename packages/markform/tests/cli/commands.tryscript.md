@@ -245,3 +245,88 @@ anthropic/
 ...
 ? 0
 ```
+
+---
+
+## Report Command
+
+# Test: report generates filtered markdown
+
+```console
+$ $CLI report examples/simple/simple-mock-filled.form.md | head -13
+# Simple Test Form
+
+A fully interactive form demonstrating all Markform v0.1 field types.
+Fill all fields using interactive prompts - no LLM API key needed.
+
+## Basic Fields
+
+**Name:**
+Alice Johnson
+
+**Email:**
+alice@example.com
+? 0
+```
+
+# Test: report --help shows command options
+
+```console
+$ $CLI report --help
+Usage: markform report [options] <file>
+
+Generate filtered markdown report (excludes instructions, report=false elements)
+...
+? 0
+```
+
+---
+
+## Render Command
+
+# Test: render --help shows command options
+
+```console
+$ $CLI render --help
+Usage: markform render [options] <file>
+
+Render a form as static HTML output
+...
+? 0
+```
+
+# Test: render --dry-run shows what would be done
+
+```console
+$ $CLI render examples/simple/simple.form.md --dry-run
+[DRY RUN] Would write HTML to: [..]simple.form.html
+? 0
+```
+
+---
+
+## Spec Command
+
+# Test: spec shows specification
+
+```console
+$ $CLI spec | head -10
+# Markform Specification
+...
+? 0
+```
+
+---
+
+## APIs Command
+
+# Test: apis shows API documentation
+
+```console
+$ $CLI apis | head -5
+# Markform APIs
+
+Markform provides TypeScript APIs for parsing, validating, and manipulating forms
+programmatically.
+? 0
+```
