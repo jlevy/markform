@@ -16,17 +16,15 @@
  * - Useful for monitoring long-running fills and post-hoc debugging
  */
 
-import { appendFileSync, writeFileSync } from 'node:fs';
-
 import pc from 'picocolors';
 
 import type { FillCallbacks, TurnStats } from '../../harness/harnessTypes.js';
-import { DEBUG_OUTPUT_TRUNCATION_LIMIT } from '../../settings.js';
 import type { CommandContext, LogLevel } from './cliTypes.js';
 import type { SpinnerHandle } from './shared.js';
 import { logInfo, logVerbose, logDebug } from './shared.js';
 import { formatTurnIssues } from './formatting.js';
 import { formatPatchType, formatPatchValue } from './patchFormat.js';
+import { createTracer, truncate, formatDuration } from './traceUtils.js';
 
 // =============================================================================
 // Types
@@ -48,67 +46,6 @@ export interface FillLoggingOptions {
    * The file is created/truncated at start with a timestamp header.
    */
   traceFile?: string;
-}
-
-// =============================================================================
-// Helpers
-// =============================================================================
-
-/**
- * Strip ANSI escape codes from a string for file output.
- */
-function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, '');
-}
-
-/**
- * Create a trace function that writes to a file if traceFile is provided.
- * Returns a no-op function if no trace file is configured.
- */
-function createTracer(
-  traceFile: string | undefined,
-  modelId: string | undefined,
-): (line: string) => void {
-  if (!traceFile) {
-    return () => undefined; // No-op
-  }
-
-  // Initialize trace file with header
-  const timestamp = new Date().toISOString();
-  const header = `# Markform Trace Log\n# Started: ${timestamp}\n# Model: ${modelId ?? 'unknown'}\n\n`;
-  try {
-    writeFileSync(traceFile, header, 'utf-8');
-  } catch {
-    console.error(`Warning: Could not create trace file: ${traceFile}`);
-    return () => undefined;
-  }
-
-  // Return function that appends lines
-  return (line: string) => {
-    try {
-      const plainLine = stripAnsi(line);
-      appendFileSync(traceFile, plainLine + '\n', 'utf-8');
-    } catch {
-      // Silently ignore write errors to not disrupt main flow
-    }
-  };
-}
-
-/**
- * Truncate a string to a maximum length with ellipsis indicator.
- */
-function truncate(str: string, maxLength: number = DEBUG_OUTPUT_TRUNCATION_LIMIT): string {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength) + '...[truncated]';
-}
-
-/**
- * Format duration in milliseconds to human-readable string.
- */
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 /**

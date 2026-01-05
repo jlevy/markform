@@ -13,7 +13,6 @@ import pc from 'picocolors';
 
 import { parseForm } from '../../engine/parse.js';
 import { applyPatches } from '../../engine/apply.js';
-import type { SessionTranscript } from '../../engine/coreTypes.js';
 import { runResearch } from '../../research/runResearch.js';
 import {
   formatSuggestedLlms,
@@ -82,7 +81,6 @@ export function registerResearchCommand(program: Command): void {
       String(DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN),
     )
     .option('--transcript', 'Save session transcript')
-    .option('--wire-log <file>', 'Capture full wire format (LLM request/response) to YAML file')
     .action(async (input: string, options: Record<string, unknown>, cmd: Command) => {
       const ctx = getCommandContext(cmd);
       const startTime = Date.now();
@@ -181,18 +179,13 @@ export function registerResearchCommand(program: Command): void {
           traceFile: ctx.traceFile,
         });
 
-        // Check for wire log (flag or env var)
-        const wireLogPathOption =
-          (options.wireLog as string | undefined) ?? process.env.MARKFORM_WIRE_LOG;
-        const captureWireFormat = !!wireLogPathOption;
-
         // Run research fill
         let result;
         try {
           result = await runResearch(form, {
             model: modelId,
             enableWebSearch: true,
-            captureWireFormat,
+            captureWireFormat: !!options.transcript,
             maxTurnsTotal: maxTurns,
             maxPatchesPerTurn,
             maxIssuesPerTurn,
@@ -237,27 +230,6 @@ export function registerResearchCommand(program: Command): void {
         console.log(`  ${yamlPath}  ${pc.dim('(output values)')}`);
         console.log(`  ${formPath}  ${pc.dim('(filled markform source)')}`);
         console.log(`  ${schemaPath}  ${pc.dim('(JSON Schema)')}`);
-
-        // Write wire log if requested (captures full LLM request/response)
-        if (wireLogPathOption && result.transcript) {
-          const { serializeSession } = await import('../../engine/session.js');
-          const wireLogPath = resolve(wireLogPathOption);
-          // Extract wire format data from transcript turns
-          const wireLogData = {
-            sessionVersion: result.transcript.sessionVersion,
-            mode: result.transcript.mode,
-            modelId,
-            formPath: inputPath,
-            turns: result.transcript.turns
-              .map((turn) => ({ turn: turn.turn, wire: turn.wire }))
-              .filter((t) => t.wire), // Only include turns with wire data
-          };
-          await writeFile(
-            wireLogPath,
-            serializeSession(wireLogData as unknown as SessionTranscript),
-          );
-          logSuccess(ctx, `Wire log written to: ${wireLogPath}`);
-        }
 
         // Save transcript if requested
         if (options.transcript && result.transcript) {

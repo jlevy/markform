@@ -12,7 +12,7 @@
  */
 
 import { readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 import type { Command } from 'commander';
 import * as p from '@clack/prompts';
@@ -21,7 +21,7 @@ import pc from 'picocolors';
 import { parseForm } from '../../engine/parse.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
-import type { ParsedForm, SessionTranscript } from '../../engine/coreTypes.js';
+import type { ParsedForm } from '../../engine/coreTypes.js';
 import { getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
 import {
   AGENT_ROLE,
@@ -56,11 +56,9 @@ import {
   getCommandContext,
   logError,
   logInfo,
-  logSuccess,
   logTiming,
   logVerbose,
   readFile,
-  writeFile,
   type CommandContext,
 } from '../lib/shared.js';
 import { createFillLoggingCallbacks } from '../lib/fillLogging.js';
@@ -337,7 +335,6 @@ async function runAgentFillWorkflow(
   isResearch: boolean,
   overwrite: boolean,
   ctx: CommandContext,
-  wireLogPath?: string,
 ): Promise<ExportResult> {
   const startTime = Date.now();
 
@@ -354,10 +351,6 @@ async function runAgentFillWorkflow(
     ctx,
     `Config: max_turns=${maxTurns}, max_issues_per_turn=${maxIssuesPerTurn}, max_patches_per_turn=${maxPatchesPerTurn}`,
   );
-
-  // Check for wire log (flag or env var)
-  const effectiveWireLogPath = wireLogPath ?? process.env.MARKFORM_WIRE_LOG;
-  const captureWireFormat = !!effectiveWireLogPath;
 
   // Parse model ID to extract provider
   const [provider] = modelId.split('/');
@@ -382,7 +375,7 @@ async function runAgentFillWorkflow(
     targetRoles: [AGENT_ROLE],
     fillMode: overwrite ? 'overwrite' : 'continue',
     enableWebSearch: isResearch,
-    captureWireFormat,
+    captureWireFormat: false,
     callbacks,
   });
 
@@ -406,27 +399,6 @@ async function runAgentFillWorkflow(
   console.log(`  ${formatPath(exportResult.yamlPath)}  ${pc.dim('(output values)')}`);
   console.log(`  ${formatPath(exportResult.formPath)}  ${pc.dim('(filled markform source)')}`);
   console.log(`  ${formatPath(exportResult.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
-
-  // Write wire log if requested
-  if (effectiveWireLogPath && result.transcript) {
-    const { serializeSession } = await import('../../engine/session.js');
-    const resolvedWireLogPath = resolve(effectiveWireLogPath);
-    // Extract wire format data from transcript turns
-    const wireLogData = {
-      sessionVersion: result.transcript.sessionVersion,
-      mode: result.transcript.mode,
-      modelId,
-      formPath: filePath,
-      turns: result.transcript.turns
-        .map((turn) => ({ turn: turn.turn, wire: turn.wire }))
-        .filter((t) => t.wire), // Only include turns with wire data
-    };
-    await writeFile(
-      resolvedWireLogPath,
-      serializeSession(wireLogData as unknown as SessionTranscript),
-    );
-    logSuccess(ctx, `Wire log written to: ${resolvedWireLogPath}`);
-  }
 
   logTiming(ctx, isResearch ? 'Research time' : 'Fill time', Date.now() - startTime);
 
@@ -524,144 +496,134 @@ export function registerRunCommand(program: Command): void {
       `Maximum forms to show in menu (default: ${MAX_FORMS_IN_MENU})`,
       String(MAX_FORMS_IN_MENU),
     )
-    .option('--wire-log <file>', 'Capture full wire format (LLM request/response) to YAML file')
-    .action(
-      async (
-        file: string | undefined,
-        options: { limit?: string; wireLog?: string },
-        cmd: Command,
-      ) => {
-        const ctx = getCommandContext(cmd);
+    .action(async (file: string | undefined, options: { limit?: string }, cmd: Command) => {
+      const ctx = getCommandContext(cmd);
 
-        try {
-          const formsDir = getFormsDir(ctx.formsDir);
-          const limit = options.limit ? parseInt(options.limit, 10) : MAX_FORMS_IN_MENU;
-          let selectedPath: string;
+      try {
+        const formsDir = getFormsDir(ctx.formsDir);
+        const limit = options.limit ? parseInt(options.limit, 10) : MAX_FORMS_IN_MENU;
+        let selectedPath: string;
 
-          // =====================================================================
-          // STEP 1: Select a form
-          // =====================================================================
-          if (file) {
-            // Direct file path provided
-            selectedPath = file.startsWith('/') ? file : join(formsDir, file);
-            if (!selectedPath.endsWith('.form.md') && !selectedPath.endsWith('.md')) {
-              // Try adding extension
-              const withExt = `${selectedPath}.form.md`;
-              selectedPath = withExt;
-            }
-          } else {
-            // Show menu
-            p.intro(pc.bgCyan(pc.black(' markform run ')));
+        // =====================================================================
+        // STEP 1: Select a form
+        // =====================================================================
+        if (file) {
+          // Direct file path provided
+          selectedPath = file.startsWith('/') ? file : join(formsDir, file);
+          if (!selectedPath.endsWith('.form.md') && !selectedPath.endsWith('.md')) {
+            // Try adding extension
+            const withExt = `${selectedPath}.form.md`;
+            selectedPath = withExt;
+          }
+        } else {
+          // Show menu
+          p.intro(pc.bgCyan(pc.black(' markform run ')));
 
-            const entries = scanFormsDirectory(formsDir);
+          const entries = scanFormsDirectory(formsDir);
 
-            if (entries.length === 0) {
-              p.log.warn(`No forms found in ${formatPath(formsDir)}`);
-              console.log('');
-              console.log(`Run ${pc.cyan("'markform examples'")} to get started.`);
-              p.outro('');
-              return;
-            }
+          if (entries.length === 0) {
+            p.log.warn(`No forms found in ${formatPath(formsDir)}`);
+            console.log('');
+            console.log(`Run ${pc.cyan("'markform examples'")} to get started.`);
+            p.outro('');
+            return;
+          }
 
-            // Enrich entries with metadata (limit to menu size)
-            const entriesToShow = entries.slice(0, limit);
-            const enrichedEntries = await Promise.all(entriesToShow.map(enrichFormEntry));
+          // Enrich entries with metadata (limit to menu size)
+          const entriesToShow = entries.slice(0, limit);
+          const enrichedEntries = await Promise.all(entriesToShow.map(enrichFormEntry));
 
-            // Build menu options using shared formatters
-            const menuOptions = enrichedEntries.map((entry) => ({
-              value: entry.path,
-              label: formatFormLabel(entry),
-              hint: formatFormHint(entry),
-            }));
+          // Build menu options using shared formatters
+          const menuOptions = enrichedEntries.map((entry) => ({
+            value: entry.path,
+            label: formatFormLabel(entry),
+            hint: formatFormHint(entry),
+          }));
 
-            // Find the default example for initial selection
-            const defaultExample = getExampleById(DEFAULT_EXAMPLE_ID);
-            const defaultEntry = enrichedEntries.find(
-              (e) => e.filename === defaultExample?.filename,
-            );
-            const initialValue = defaultEntry?.path;
+          // Find the default example for initial selection
+          const defaultExample = getExampleById(DEFAULT_EXAMPLE_ID);
+          const defaultEntry = enrichedEntries.find((e) => e.filename === defaultExample?.filename);
+          const initialValue = defaultEntry?.path;
 
-            if (entries.length > limit) {
-              console.log(pc.dim(`Showing ${limit} of ${entries.length} forms`));
-            }
+          if (entries.length > limit) {
+            console.log(pc.dim(`Showing ${limit} of ${entries.length} forms`));
+          }
 
-            const selection = await p.select({
-              message: 'Select a form to run:',
-              options: menuOptions,
-              initialValue,
-            });
+          const selection = await p.select({
+            message: 'Select a form to run:',
+            options: menuOptions,
+            initialValue,
+          });
 
-            if (p.isCancel(selection)) {
+          if (p.isCancel(selection)) {
+            p.cancel('Cancelled.');
+            process.exit(0);
+          }
+
+          selectedPath = selection;
+        }
+
+        // =====================================================================
+        // STEP 2: Parse form and determine run mode
+        // =====================================================================
+        logVerbose(ctx, `Reading form: ${selectedPath}`);
+        const content = await readFile(selectedPath);
+        const form = parseForm(content);
+
+        const runModeResult = determineRunMode(form);
+        if (!runModeResult.success) {
+          logError(runModeResult.error);
+          process.exit(1);
+        }
+
+        const { runMode, source } = runModeResult;
+        logInfo(ctx, `Run mode: ${runMode} (${formatRunModeSource(source)})`);
+
+        // =====================================================================
+        // STEP 3: Execute workflow based on run mode
+        // =====================================================================
+        switch (runMode) {
+          case 'interactive':
+            await runInteractiveWorkflow(form, selectedPath, formsDir);
+            break;
+
+          case 'fill':
+          case 'research': {
+            const isResearch = runMode === 'research';
+
+            // First collect user input if form has user-role fields
+            const userInputSuccess = await collectUserInput(form);
+            if (!userInputSuccess) {
               p.cancel('Cancelled.');
               process.exit(0);
             }
 
-            selectedPath = selection;
-          }
-
-          // =====================================================================
-          // STEP 2: Parse form and determine run mode
-          // =====================================================================
-          logVerbose(ctx, `Reading form: ${selectedPath}`);
-          const content = await readFile(selectedPath);
-          const form = parseForm(content);
-
-          const runModeResult = determineRunMode(form);
-          if (!runModeResult.success) {
-            logError(runModeResult.error);
-            process.exit(1);
-          }
-
-          const { runMode, source } = runModeResult;
-          logInfo(ctx, `Run mode: ${runMode} (${formatRunModeSource(source)})`);
-
-          // =====================================================================
-          // STEP 3: Execute workflow based on run mode
-          // =====================================================================
-          switch (runMode) {
-            case 'interactive':
-              await runInteractiveWorkflow(form, selectedPath, formsDir);
-              break;
-
-            case 'fill':
-            case 'research': {
-              const isResearch = runMode === 'research';
-
-              // First collect user input if form has user-role fields
-              const userInputSuccess = await collectUserInput(form);
-              if (!userInputSuccess) {
-                p.cancel('Cancelled.');
-                process.exit(0);
-              }
-
-              // Then prompt for model and run agent fill
-              const modelId = await promptForModel(isResearch);
-              if (!modelId) {
-                p.cancel('Cancelled.');
-                process.exit(0);
-              }
-              await runAgentFillWorkflow(
-                form,
-                modelId,
-                formsDir,
-                selectedPath,
-                isResearch,
-                ctx.overwrite,
-                ctx,
-                options.wireLog,
-              );
-              break;
+            // Then prompt for model and run agent fill
+            const modelId = await promptForModel(isResearch);
+            if (!modelId) {
+              p.cancel('Cancelled.');
+              process.exit(0);
             }
+            await runAgentFillWorkflow(
+              form,
+              modelId,
+              formsDir,
+              selectedPath,
+              isResearch,
+              ctx.overwrite,
+              ctx,
+            );
+            break;
           }
-
-          if (!file) {
-            p.outro('Happy form filling!');
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          logError(message);
-          process.exit(1);
         }
-      },
-    );
+
+        if (!file) {
+          p.outro('Happy form filling!');
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logError(message);
+        process.exit(1);
+      }
+    });
 }

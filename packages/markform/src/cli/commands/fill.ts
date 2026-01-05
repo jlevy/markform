@@ -7,7 +7,6 @@
 
 import type { Command } from 'commander';
 
-import { appendFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import * as p from '@clack/prompts';
@@ -71,51 +70,7 @@ import { formatTurnIssues } from '../lib/formatting.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
 import { createCliToolCallbacks } from '../lib/fillCallbacks.js';
-
-// =============================================================================
-// Trace File Helpers
-// =============================================================================
-
-/**
- * Strip ANSI escape codes from a string for file output.
- */
-function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, '');
-}
-
-/**
- * Create a trace function that writes to a file if traceFile is provided.
- * Returns a no-op function if no trace file is configured.
- */
-function createTracer(
-  traceFile: string | undefined,
-  modelId: string | undefined,
-): (line: string) => void {
-  if (!traceFile) {
-    return () => undefined; // No-op
-  }
-
-  // Initialize trace file with header
-  const timestamp = new Date().toISOString();
-  const header = `# Markform Fill Trace Log\n# Started: ${timestamp}\n# Model: ${modelId ?? 'mock'}\n\n`;
-  try {
-    writeFileSync(traceFile, header, 'utf-8');
-  } catch {
-    console.error(`Warning: Could not create trace file: ${traceFile}`);
-    return () => undefined;
-  }
-
-  // Return function that appends lines
-  return (line: string) => {
-    try {
-      const plainLine = stripAnsi(line);
-      appendFileSync(traceFile, plainLine + '\n', 'utf-8');
-    } catch {
-      // Silently ignore write errors to not disrupt main flow
-    }
-  };
-}
+import { createTracer } from '../lib/traceUtils.js';
 
 // =============================================================================
 // Console Formatting
@@ -184,7 +139,6 @@ export function registerFillCommand(program: Command): void {
     )
     .option('--mock-source <file>', 'Path to completed form for mock agent')
     .option('--record <file>', 'Record session transcript to file')
-    .option('--wire-log <file>', 'Capture full wire format (LLM request/response) to YAML file')
     .option(
       '--max-turns <n>',
       `Maximum turns (default: ${DEFAULT_MAX_TURNS})`,
@@ -228,7 +182,6 @@ export function registerFillCommand(program: Command): void {
           model?: string;
           mockSource?: string;
           record?: string;
-          wireLog?: string;
           maxTurns?: string;
           maxPatches?: string;
           maxIssues?: string;
@@ -700,34 +653,6 @@ export function registerFillCommand(program: Command): void {
             outputPath,
           );
 
-          // Write wire log if requested (captures full LLM request/response)
-          // Support both --wire-log flag and MARKFORM_WIRE_LOG env var
-          const wireLogPathOption = options.wireLog ?? process.env.MARKFORM_WIRE_LOG;
-          if (wireLogPathOption) {
-            const wireLogPath = resolve(wireLogPathOption);
-            // Extract wire format data from transcript turns
-            const wireLogData = {
-              sessionVersion: transcript.sessionVersion,
-              mode: transcript.mode,
-              modelId: options.model,
-              formPath: filePath,
-              turns: transcript.turns
-                .map((turn) => ({
-                  turn: turn.turn,
-                  wire: turn.wire,
-                }))
-                .filter((t) => t.wire), // Only include turns with wire data
-            };
-            const wireYaml = serializeSession(wireLogData as unknown as SessionTranscript);
-
-            if (ctx.dryRun) {
-              logInfo(ctx, `[DRY RUN] Would write wire log to: ${wireLogPath}`);
-            } else {
-              await writeFile(wireLogPath, wireYaml);
-              logSuccess(ctx, `Wire log written to: ${wireLogPath}`);
-            }
-          }
-
           // Output or record session
           if (options.record) {
             const recordPath = resolve(options.record);
@@ -741,8 +666,8 @@ export function registerFillCommand(program: Command): void {
               await writeFile(recordPath, yaml);
               logSuccess(ctx, `Session recorded to: ${recordPath}`);
             }
-          } else if (!wireLogPathOption) {
-            // Output to stdout in requested format (skip if wire log was written)
+          } else {
+            // Output to stdout in requested format
             const output = formatOutput(ctx, transcript, (data, useColors) =>
               formatConsoleSession(data as SessionTranscript, useColors),
             );
