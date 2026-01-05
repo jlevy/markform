@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-01-05
 
-**Status**: In Progress
+**Status**: Complete
 
 **Related**:
 
@@ -14,14 +14,26 @@
 
 ## Executive Summary
 
-This research brief explores the design space for **subforms** (also called dependent forms, nested forms, or child forms) in Markform. The core question is how to extend Markform's current flat form structure to support hierarchical, recursive form-filling scenarios where:
+This research brief explores the design space for **subforms** (also called dependent forms, nested forms, or child forms) in Markform. The core question is how to extend Markform's current flat form structure to support hierarchical form-filling scenarios where:
 
 1. A field in a parent form references another form (one-to-one subform)
 2. A table column contains references to subforms (one-to-many subform rows)
 3. Subforms are filled by subagents with context from the parent form
-4. The agentic loop can handle recursive form structures with appropriate context propagation
+4. The agentic loop can handle subform structures with appropriate context propagation
 
 This capability would enable deep research workflows where, for example, a form contains a table of companies, and each company row has a "research details" subform that gets filled by a dedicated subagent.
+
+### Key Finding: No Recursive Nesting
+
+Research into production systems (Claude Code, OpenAI Codex) reveals a critical design constraint: **subagents cannot spawn their own subagents**. Claude Code explicitly prohibits this to prevent infinite recursion, simplify debugging, and bound complexity. Markform should adopt this same constraint—subforms should be limited to **one level of nesting only**.
+
+### Key Insights from Production Systems
+
+| System | Architecture | Key Lesson for Markform |
+| --- | --- | --- |
+| **Claude Code** | Task tool + isolated context windows (200k each) | Context isolation prevents pollution; no nested spawning |
+| **OpenAI Codex** | Cloud sandboxes, parallel task execution | Independent tasks can run in parallel; results returned with provenance |
+| **OpenAI Agents SDK** | Handoffs (agentic vs programmatic) | Row-only context (programmatic) is usually better than full context (agentic) |
 
 **Research Questions**:
 
@@ -31,6 +43,7 @@ This capability would enable deep research workflows where, for example, a form 
 4. How should context be propagated from parent forms to subform agents?
 5. What parallelization and concurrency strategies should be supported?
 6. How should field filling order and dependencies be handled?
+7. **NEW**: What constraints do production agent systems (Claude Code, Codex) suggest for subform nesting?
 
 * * *
 
@@ -50,6 +63,8 @@ This capability would enable deep research workflows where, for example, a form 
 - Typeform conditional logic and branching documentation
 - JSON Schema composition keywords (allOf, oneOf, anyOf)
 - AI agent orchestration research (Anthropic, Google ADK, LangChain, AWS Strands)
+- Claude Code Task tool and subagent architecture
+- OpenAI Codex and Agents SDK orchestration patterns
 - Workflow orchestration platforms (Temporal, Airflow, Step Functions)
 
 * * *
@@ -326,6 +341,162 @@ Anthropic's research system uses two levels of parallelization:
 - For table fields with N rows, could spawn N subagent calls in parallel
 - Should support configurable max concurrency (e.g., 5 at a time)
 - Tool parallelization already handled by AI SDK's generateText
+
+* * *
+
+#### 2.4 Claude Code Task Tool and Subagent Architecture
+
+**Status**: ✅ Complete
+
+Claude Code provides a production-ready implementation of subagent orchestration that directly informs Markform's design:
+
+**Core Architecture**:
+- **Task Tool**: The foundational parallel processing engine for spawning subagents
+- **Subagents**: Lightweight Claude instances with their own context windows (200k tokens each)
+- **Two-Layer Model**: Task tool is the execution engine; subagents are the management layer built on top
+
+**Spawning Mechanism**:
+- Subagents are spawned **exclusively through the Task tool**
+- Without Task in `allowedTools`, Claude cannot delegate to subagents
+- Each subagent maintains separate transcript files (`agent-{agentId}.jsonl`)
+- By default, Claude is cautious about spawning and requires explicit delegation instructions
+
+**Context Isolation** (Critical Design Pattern):
+- Each subagent operates in its **own isolated context window**
+- Prevents "context pollution" of the main conversation
+- Only relevant findings are returned to the parent—not the full exploration history
+- Example: A research subagent can explore dozens of files without cluttering the main thread
+
+**Tool Permissions**:
+- Configurable per subagent via the `tools` field
+- Default: inherit all tools from parent (omit `tools` field)
+- Restricted: specify comma-separated list (e.g., `tools: Read, Grep, Glob`)
+- Role-based patterns:
+  - **Read-only agents**: `Read, Grep, Glob` (analyzers, reviewers)
+  - **Research agents**: `Read, Grep, Glob, WebFetch, WebSearch`
+  - **Code writers**: `Read, Write, Edit, Bash, Glob, Grep`
+
+**Critical Constraint: No Nested Subagents**:
+- "Subagents cannot spawn other subagents" — explicit architectural limitation
+- **Do NOT include Task in a subagent's `tools` array**
+- Prevents: infinite recursion, uncontrolled delegation loops, architectural complexity
+- **Implication for Markform**: Maximum one level of subform nesting via subagents
+
+**Parallelization**:
+- Parallelism capped at **10 concurrent operations** (tasks queued beyond this)
+- Task tool supports large numbers of tasks (100+ demonstrated)
+- Batch execution: waits for current batch to complete before starting next
+- **7-Parallel-Task Method**: Component creation, styles, tests, types, hooks, integration, config—all in parallel
+
+**Result Return**:
+- Subagents return findings with **absolute file paths** for references
+- Parent agent synthesizes subagent results back to user
+- Detection: check for `tool_use` blocks with `name: "Task"`
+
+**Token Cost Considerations**:
+- Active multi-agent sessions consume **3-4x more tokens** than single-threaded
+- Balance performance gains against token costs
+- Group related tasks rather than spawning separate agents for every operation
+
+**Relevance to Markform**:
+- **Direct analog**: Parent form = main agent, subforms = subagents via Task tool
+- **Context isolation model**: Each subform fill gets isolated context, returns only results
+- **No recursive subforms**: Aligns with Claude Code's no-nested-subagents constraint
+- **Parallelism cap**: 10 concurrent suggests similar default for Markform (5-10)
+- **Tool permissions**: Subform agents could have restricted tool access
+
+**Sources**:
+- [Subagents - Claude Code Docs](https://code.claude.com/docs/en/sub-agents)
+- [Claude Code: Best practices for agentic coding - Anthropic](https://www.anthropic.com/engineering/claude-code-best-practices)
+- [Claude Code Subagent Deep Dive - Code Centre](https://cuong.io/blog/2025/06/24-claude-code-subagent-deep-dive)
+- [How to Use Claude Code Subagents - Zach Wills](https://zachwills.net/how-to-use-claude-code-subagents-to-parallelize-development/)
+- [Task Tool vs. Subagents - iCodeWith.ai](https://www.icodewith.ai/blog/task-tool-vs-subagents-how-agents-work-in-claude-code/)
+
+* * *
+
+#### 2.5 OpenAI Codex and Agents SDK
+
+**Status**: ✅ Complete
+
+OpenAI Codex represents a different architectural approach—cloud-based parallel task execution:
+
+**Codex Architecture Overview**:
+- **Cloud-based agent**: Tasks run in isolated cloud sandbox environments
+- **Parallel by default**: Can work on many tasks simultaneously
+- **Repository preloading**: Each sandbox is preloaded with your repository
+- **Powered by codex-1**: Optimized version of o3 for software engineering
+
+**Cloud Sandbox Model**:
+- Each task runs in its own **Docker-like sandbox** environment
+- Internet access **disabled during execution** (security isolation)
+- Agent interacts only with explicitly provided code and pre-installed dependencies
+- Container state cached for up to 12 hours (speeds up follow-up tasks)
+- Task completion: 1-30 minutes depending on complexity
+
+**Parallel Task Execution**:
+- Developers can queue multiple tasks (features, docs, refactoring, bugs)
+- Tasks execute independently in separate containers
+- Results returned independently as each completes
+- No explicit concurrency limit documented (infrastructure-dependent)
+
+**Control Plane Architecture**:
+- Codex acts as a **control plane** routing tasks to execution surfaces:
+  - Local IDE/terminal (lowest latency)
+  - Cloud sandbox (reproducible, isolated)
+  - Server-side via SDK (background automation)
+- Maintains shared **task graph** and **contextual memory** across executions
+- "Run anywhere" approach—not IDE-bound
+
+**OpenAI Agents SDK (Evolution of Swarm)**:
+- Production-ready multi-agent orchestration framework
+- Key primitives:
+  - **Agents**: LLMs with instructions and tools
+  - **Handoffs**: Delegate to other agents for specific tasks
+  - **Guardrails**: Validate agent inputs/outputs
+  - **Sessions**: Maintain conversation history across runs
+
+**Handoff Patterns**:
+Two fundamental handoff types:
+1. **Agentic Handoff**: Entire message history passed to next agent (full context transfer)
+2. **Programmatic Handoff**: Only required information passed (selective context)
+
+**Multi-Agent Workflow Example** (from Codex + Agents SDK):
+- Project Manager → Designer → Frontend Dev → Backend Dev → Tester
+- Each agent has scoped instructions and output folders
+- Handoffs transfer control based on task completion
+- Tracing captures prompts, tool calls, execution times for debugging
+
+**Function Calling**:
+- Swarm/Agents SDK automatically converts functions to JSON Schema
+- Docstrings become function descriptions
+- Type hints map to parameter types
+- Handoffs are a subset of tools that transfer control
+
+**Latest Model (GPT-5-Codex)**:
+- Further optimized for agentic software engineering
+- Can work independently for **7+ hours** on complex tasks
+- Iterates on implementation, fixes test failures, delivers working code
+
+**Relevance to Markform**:
+- **Sandbox isolation**: Each subform fill could run in isolated context (like Codex containers)
+- **Parallel independence**: Subforms are naturally independent tasks (like Codex tasks)
+- **Handoff patterns**: Agentic (full context) vs programmatic (row-only) maps to Markform context propagation options
+- **Control plane concept**: Markform harness as control plane routing to subform execution
+- **Verifiable evidence**: Codex returns citations/logs; subforms could return fill provenance
+
+**Key Difference from Claude Code**:
+- Codex: Heavy isolation (separate containers), cloud-first, long-running
+- Claude Code: Light isolation (context windows), local-first, quick delegation
+- **For Markform**: Claude Code's lightweight model is more appropriate for form filling
+
+**Sources**:
+- [Introducing Codex - OpenAI](https://openai.com/index/introducing-codex/)
+- [Codex Cloud Environments - OpenAI Developers](https://developers.openai.com/codex/cloud/environments/)
+- [Use Codex with the Agents SDK - OpenAI](https://developers.openai.com/codex/guides/agents-sdk/)
+- [Building Consistent Workflows with Codex CLI & Agents SDK - OpenAI Cookbook](https://cookbook.openai.com/examples/codex/codex_mcp_agents_sdk/building_consistent_workflows_codex_cli_agents_sdk)
+- [OpenAI Agents SDK - GitHub](https://openai.github.io/openai-agents-python/)
+- [Orchestrating Agents: Routines and Handoffs - OpenAI Cookbook](https://cookbook.openai.com/examples/orchestrating_agents)
+- [OpenAI Swarm - GitHub](https://github.com/openai/swarm)
 
 * * *
 
@@ -835,6 +1006,8 @@ Cons:
 
 ## Comparative Analysis
 
+### Form/Data Systems Comparison
+
 | Aspect | Access | Excel | Typeform | JSON Schema | Markform (Proposed) |
 | --- | --- | --- | --- | --- | --- |
 | **Subform mechanism** | Embedded form control | Not native | Branching logic | $ref composition | Subform column type |
@@ -844,35 +1017,64 @@ Cons:
 | **Context sharing** | Automatic filtering | Formula references | Variable piping | Parent schema access | Configurable propagation |
 | **Nesting depth** | Unlimited | ~2-3 levels | Flat with jumps | Unlimited | Configurable (default: 2) |
 
+### Agent Systems Comparison
+
+| Aspect | Claude Code | OpenAI Codex | Anthropic Research | Markform (Proposed) |
+| --- | --- | --- | --- | --- |
+| **Subagent mechanism** | Task tool spawns subagents | Cloud sandbox tasks | Lead agent + workers | Harness spawns subform fills |
+| **Context isolation** | Separate 200k context windows | Separate Docker containers | Separate contexts | Separate form instances |
+| **Nesting allowed** | ❌ No (single level only) | N/A (flat task queue) | ❌ No | ❌ No (recommended) |
+| **Max concurrency** | 10 (queues beyond) | Infrastructure-dependent | 3-5 subagents | 5-10 (configurable) |
+| **Context propagation** | Returns summary only | Task-specific context | Results aggregated | Row context + optional parent |
+| **Tool permissions** | Configurable per subagent | Sandbox-limited | Inherited | Inherited (configurable) |
+| **Result return** | Findings + file paths | Commits + citations | Synthesized report | Filled subform file |
+| **Token overhead** | 3-4x single-threaded | N/A (separate models) | Higher but bounded | Per-subform context |
+
 **Strengths/Weaknesses Summary**:
 
 - **Access**: Rich subform model but UI-focused, not text/agent-friendly
 - **Excel**: Limited nesting, but data validation patterns are relevant
 - **Typeform**: Good branching logic, but not true subforms
 - **JSON Schema**: Strong composition model, directly applicable to Markform's schema export
-- **Markform (Proposed)**: Can combine best aspects: Access's master-detail, JSON Schema's $ref, modern agent orchestration
+- **Claude Code**: Production-proven subagent model with context isolation; **no nesting** is a key design decision
+- **OpenAI Codex**: Heavy isolation via containers; better for long-running independent tasks
+- **Markform (Proposed)**: Can combine best aspects: Access's master-detail, JSON Schema's $ref, Claude Code's context isolation and single-level constraint
 
 * * *
 
 ## Best Practices
 
-Based on research findings, the following best practices should guide implementation:
+Based on research findings—especially lessons from Claude Code and OpenAI Codex—the following best practices should guide implementation:
 
-1. **Start Simple**: Begin with table-based subforms (one-to-many), add standalone subforms later
+### Architecture Principles (from Claude Code/Codex)
 
-2. **External Storage**: Store subforms in separate files to keep parent forms manageable
+1. **No Recursive Subforms**: Follow Claude Code's proven constraint—subforms cannot spawn their own subforms. This prevents infinite recursion, simplifies debugging, and bounds complexity. Maximum depth = 1 level.
 
-3. **Row Context by Default**: Subforms should receive their row's data automatically; full form context should be opt-in
+2. **Context Isolation**: Each subform fill should operate in isolated context (like Claude Code's separate 200k context windows). Only return relevant findings to parent, not full exploration history.
 
-4. **Conservative Concurrency**: Default to 5 concurrent subforms; let users increase if needed
+3. **Conservative Concurrency**: Default to 5-10 concurrent subforms (Claude Code caps at 10). Queue excess work rather than failing. Higher isn't always faster due to overhead.
 
-5. **Shallow Hierarchies**: Limit nesting depth to 2-3 levels by default (like Excel's practical limit)
+4. **Token Budget Awareness**: Multi-agent sessions consume 3-4x more tokens. Group related tasks rather than spawning separate agents for every small operation.
 
-6. **Clear Naming**: Use deterministic file naming for subforms: `{parentId}/{rowIndex}-{fieldId}.form.md`
+### Form Design Principles
 
-7. **Graceful Degradation**: Failed subforms should be marked as aborted, not fail the entire form
+5. **Start Simple**: Begin with table-based subforms (one-to-many), add standalone subforms later
 
-8. **Library-First**: Keep the agentic loop in the library by default; expose hooks for advanced users
+6. **External Storage**: Store subforms in separate files to keep parent forms manageable (like Codex's separate containers)
+
+7. **Row Context by Default**: Subforms should receive their row's data automatically; full form context should be opt-in (programmatic handoff > agentic handoff for most cases)
+
+8. **Clear Naming**: Use deterministic file naming for subforms: `{parentId}/{rowIndex}-{fieldId}.form.md`
+
+### Operational Principles
+
+9. **Graceful Degradation**: Failed subforms should be marked as aborted, not fail the entire form (partial progress is valuable)
+
+10. **Library-First**: Keep the agentic loop in the library by default; expose hooks for advanced users (like Claude Code's Task tool abstraction)
+
+11. **Configurable Tool Permissions**: Allow restricting tools available to subform agents (read-only analyzers vs full write access)
+
+12. **Batch Execution**: Process subforms in batches, waiting for batch completion before starting next (Claude Code pattern)
 
 * * *
 
@@ -896,49 +1098,76 @@ Based on research findings, the following best practices should guide implementa
 
 ### Summary
 
-Based on this research, we recommend a phased approach to implementing subforms in Markform:
+Based on this research—especially the production-proven patterns from Claude Code and OpenAI Codex—we recommend a phased approach to implementing subforms in Markform:
+
+### Critical Design Decision: Single-Level Nesting Only
+
+**Subforms CANNOT contain their own subforms.** This follows Claude Code's explicit architectural constraint and prevents:
+- Infinite recursion chains
+- Exponential complexity growth
+- Debugging nightmares
+- Unbounded token consumption
+
+If a use case seems to require deeper nesting, the solution is to flatten the hierarchy or have the parent form orchestrate multiple independent subforms.
 
 ### Phase 1: Table-Based Subforms (MVP)
 
 1. **New column type**: `subform:path/to/template.form.md`
 2. **External storage**: Subforms stored in `{formDir}/subforms/{parentFieldId}/{rowIndex}.form.md`
 3. **Linear execution**: Fill parent fields first, then subforms sequentially
-4. **Row context**: Pass row values as `inputContext` to subform harness
-5. **Library-owned loop**: Extend current harness with recursive call for subforms
+4. **Row context**: Pass row values as `inputContext` to subform harness (programmatic handoff)
+5. **Library-owned loop**: Extend current harness with subform call (NOT recursive—single level)
+6. **No Task tool in subform**: Subform agents cannot spawn further subforms
 
 ### Phase 2: Parallel Execution
 
-1. **Concurrency config**: Add `maxConcurrency` to `FillOptions`
-2. **Parallel subform filling**: Fill N subforms concurrently
+1. **Concurrency config**: Add `maxConcurrency` to `FillOptions` (default: 5, max: 10)
+2. **Batch execution**: Process subforms in batches, wait for batch completion (Claude Code pattern)
 3. **Progress callbacks**: Extend `FillCallbacks` with `onSubformStart`, `onSubformComplete`
-4. **Error handling**: Mark failed subforms as aborted, continue others
+4. **Error handling**: Mark failed subforms as aborted, continue others (graceful degradation)
+5. **Token budget tracking**: Monitor total token usage across parallel subforms
 
 ### Phase 3: Advanced Features
 
-1. **Standalone subform fields**: Non-table subform references
-2. **Context configuration**: `subformContext` attribute for custom context
-3. **Subform handler hook**: Allow caller to override subform filling
-4. **Depth limits**: Configurable `maxDepth` with default of 2
+1. **Standalone subform fields**: Non-table subform references (one-to-one relationship)
+2. **Context configuration**: `subformContext` attribute for custom context propagation
+3. **Subform handler hook**: Allow caller to override subform filling (like Claude Code's Task tool abstraction)
+4. **Tool permissions**: Allow restricting tools available to subform agents (read-only vs full access)
+5. **Result provenance**: Track which agent filled each subform, with citations (like Codex)
 
 ### Rationale
 
 This phased approach:
+- **Follows production-proven patterns**: Claude Code's no-nested-subagents, context isolation, batch execution
 - Delivers value quickly with MVP table-based subforms
 - Follows proven patterns from Access (master-detail) and modern agent systems (orchestrator-worker)
-- Keeps complexity manageable by deferring advanced features
+- Keeps complexity bounded by prohibiting recursive nesting
 - Maintains Markform's design principles: text-based, human-readable, agent-friendly
 
 ### Alternative Approaches
 
-**Alternative: Caller-Owned Loop First**
-Instead of extending the harness, expose a "next action" CLI command that callers use to drive execution. This is more flexible but shifts complexity to callers.
+**Alternative: Caller-Owned Loop (External Orchestration)**
 
-**When to consider**: If primary users are sophisticated orchestrators (Claude Code, custom agents) rather than direct API users.
+Instead of extending the harness, expose a "next action" CLI command that callers use to drive execution:
+
+```bash
+markform next parent.form.md
+# Returns: { "action": "fill_subform", "row": 0, "formRef": "...", "context": {...} }
+
+markform fill subforms/acme.form.md --context '{"company": "Acme", ...}'
+
+markform complete-subform parent.form.md --row 0 --subformPath subforms/acme.form.md
+```
+
+**When to consider**: If primary users are sophisticated orchestrators (Claude Code, custom agents) that want full control over parallelization and error handling.
+
+**Hybrid approach**: Implement library-owned loop first, but design it so the CLI commands exist and can be called externally. This matches how Claude Code's Task tool works—it abstracts complexity but the primitives are accessible.
 
 **Alternative: Inline Subforms**
+
 Embed subform content directly in parent form rather than external files.
 
-**When to consider**: If forms are typically small and single-file simplicity is paramount. Not recommended for deep research use cases.
+**When to consider**: If forms are typically small and single-file simplicity is paramount. Not recommended for research use cases with many subforms.
 
 * * *
 
@@ -967,6 +1196,26 @@ Embed subform content directly in parent form rather than external files.
 - [Recursive Planning - Acta Machina](https://actamachina.com/posts/recursive-planning)
 - [Parallel agents - Google ADK](https://google.github.io/adk-docs/agents/workflow-agents/parallel-agents/)
 - [Multi-agent - LangChain](https://docs.langchain.com/oss/python/langchain/multi-agent)
+
+### Claude Code
+- [Subagents - Claude Code Docs](https://code.claude.com/docs/en/sub-agents)
+- [Claude Code: Best practices for agentic coding - Anthropic](https://www.anthropic.com/engineering/claude-code-best-practices)
+- [Building agents with the Claude Agent SDK - Anthropic](https://www.anthropic.com/engineering/building-agents-with-the-claude-agent-sdk)
+- [Subagents in the SDK - Claude Docs](https://platform.claude.com/docs/en/agent-sdk/subagents)
+- [Claude Code Subagent Deep Dive - Code Centre](https://cuong.io/blog/2025/06/24-claude-code-subagent-deep-dive)
+- [How to Use Claude Code Subagents - Zach Wills](https://zachwills.net/how-to-use-claude-code-subagents-to-parallelize-development/)
+- [Task Tool vs. Subagents - iCodeWith.ai](https://www.icodewith.ai/blog/task-tool-vs-subagents-how-agents-work-in-claude-code/)
+- [Best practices for Claude Code subagents - PubNub](https://www.pubnub.com/blog/best-practices-for-claude-code-sub-agents/)
+
+### OpenAI Codex and Agents SDK
+- [Introducing Codex - OpenAI](https://openai.com/index/introducing-codex/)
+- [Codex Cloud Environments - OpenAI Developers](https://developers.openai.com/codex/cloud/environments/)
+- [Use Codex with the Agents SDK - OpenAI](https://developers.openai.com/codex/guides/agents-sdk/)
+- [Building Consistent Workflows with Codex CLI & Agents SDK - OpenAI Cookbook](https://cookbook.openai.com/examples/codex/codex_mcp_agents_sdk/building_consistent_workflows_codex_cli_agents_sdk)
+- [OpenAI Agents SDK - GitHub](https://openai.github.io/openai-agents-python/)
+- [Orchestrating Agents: Routines and Handoffs - OpenAI Cookbook](https://cookbook.openai.com/examples/orchestrating_agents)
+- [OpenAI Swarm - GitHub](https://github.com/openai/swarm)
+- [How Codex ran OpenAI DevDay 2025 - OpenAI](https://developers.openai.com/blog/codex-at-devday/)
 
 ### Database Design
 - [Universal Database Design Patterns - Redgate](https://www.red-gate.com/blog/database-design-patterns)
@@ -1086,4 +1335,291 @@ research-project/
         ├── 0.form.md                  # Row 0 (Acme Corp)
         ├── 1.form.md                  # Row 1 (Beta Inc)
         └── 2.form.md                  # Row 2 (Gamma Ltd - aborted)
+```
+
+### Appendix D: Implementation Patterns from Production Systems
+
+#### Claude Code Task Tool Pattern
+
+Claude Code's Task tool provides a model for how Markform's subform filling should work:
+
+```typescript
+// How Claude Code spawns subagents (conceptual)
+interface TaskToolCall {
+  name: "Task";
+  parameters: {
+    description: string;      // Short description (3-5 words)
+    prompt: string;           // Detailed task for subagent
+    subagent_type: string;    // Agent type (e.g., "Explore", "Plan")
+    model?: string;           // Optional model override
+  };
+}
+
+// Key constraints enforced by Claude Code:
+// 1. Subagents cannot include "Task" in their tools array
+// 2. Each subagent gets isolated 200k context window
+// 3. Max 10 concurrent tasks (excess queued)
+// 4. Batch execution: wait for batch before starting next
+```
+
+**Markform Equivalent**:
+
+```typescript
+// Proposed Markform subform fill call
+interface SubformFillCall {
+  parentForm: string;         // Path to parent form
+  subformTemplate: string;    // Path to subform template
+  outputPath: string;         // Where to save filled subform
+  rowContext: {               // Context from parent row
+    [fieldId: string]: unknown;
+  };
+  parentContext?: {           // Optional additional parent context
+    title?: string;
+    description?: string;
+    [fieldId: string]: unknown;
+  };
+}
+
+// Key constraints (following Claude Code):
+// 1. Subform harness call CANNOT trigger further subform fills
+// 2. Each subform fill gets isolated context
+// 3. Max 5-10 concurrent fills (configurable)
+// 4. Batch execution with progress callbacks
+```
+
+#### OpenAI Agents SDK Handoff Pattern
+
+The handoff pattern from OpenAI's Agents SDK informs context propagation:
+
+```python
+# OpenAI Agents SDK handoff types (conceptual)
+
+# Agentic handoff: Full context transfer
+def agentic_handoff(from_agent, to_agent):
+    """Pass entire message history to next agent."""
+    to_agent.context = from_agent.full_history
+    return to_agent.run()
+
+# Programmatic handoff: Selective context
+def programmatic_handoff(from_agent, to_agent, required_data):
+    """Pass only required information to next agent."""
+    to_agent.context = required_data  # e.g., just row values
+    return to_agent.run()
+```
+
+**Markform Equivalent**:
+
+```typescript
+// Context propagation options for subforms
+type ContextPropagation =
+  | "row"           // Programmatic: only row values (recommended default)
+  | "row+parent"    // Row values + parent form metadata
+  | "full";         // Agentic: entire parent form (expensive, rarely needed)
+
+interface SubformOptions {
+  contextPropagation: ContextPropagation;
+
+  // For "row+parent", specify which parent fields to include
+  includeParentFields?: string[];
+}
+
+// Example: Row-only context (programmatic handoff)
+const rowContext = {
+  company_name: "Acme Corp",
+  company_url: "https://acme.com"
+};
+
+// Example: Row + parent metadata
+const rowPlusParent = {
+  ...rowContext,
+  _parent: {
+    title: "Competitor Analysis Research",
+    industry: "Enterprise Software"
+  }
+};
+```
+
+#### Codex Cloud Sandbox Pattern
+
+Codex's isolated sandbox model informs error handling and result return:
+
+```typescript
+// Codex task result pattern
+interface CodexTaskResult {
+  status: "completed" | "failed" | "timeout";
+
+  // Verifiable evidence
+  citations: {
+    file: string;
+    line?: number;
+    content: string;
+  }[];
+
+  // Terminal logs for debugging
+  logs: string[];
+
+  // Changes made
+  commits?: {
+    sha: string;
+    message: string;
+    files: string[];
+  }[];
+}
+```
+
+**Markform Equivalent**:
+
+```typescript
+// Subform fill result
+interface SubformFillResult {
+  status: "completed" | "aborted" | "timeout";
+
+  // Path to filled subform
+  outputPath: string;
+
+  // Fill provenance (like Codex citations)
+  provenance?: {
+    model: string;
+    timestamp: string;
+    tokensUsed: number;
+
+    // Sources used during fill
+    sources?: {
+      type: "web" | "file" | "input";
+      reference: string;
+    }[];
+  };
+
+  // Error details if aborted
+  error?: {
+    code: string;
+    message: string;
+    retryable: boolean;
+  };
+}
+```
+
+#### Batch Execution Pattern (from Claude Code)
+
+```typescript
+// Claude Code batch execution (conceptual)
+async function executeTasks(tasks: Task[], maxConcurrency: number) {
+  const batches = chunk(tasks, maxConcurrency);
+  const results: TaskResult[] = [];
+
+  for (const batch of batches) {
+    // Execute batch in parallel
+    const batchResults = await Promise.all(
+      batch.map(task => executeTask(task))
+    );
+
+    // Wait for entire batch before starting next
+    results.push(...batchResults);
+
+    // Optional: callback for progress tracking
+    onBatchComplete?.(batchResults);
+  }
+
+  return results;
+}
+```
+
+**Markform Equivalent**:
+
+```typescript
+// Subform batch execution
+async function fillSubforms(
+  subforms: SubformFillCall[],
+  options: SubformOptions
+): Promise<SubformFillResult[]> {
+  const { maxConcurrency = 5 } = options;
+  const batches = chunk(subforms, maxConcurrency);
+  const results: SubformFillResult[] = [];
+
+  for (const batch of batches) {
+    // Execute batch in parallel with isolated contexts
+    const batchResults = await Promise.all(
+      batch.map(subform => fillSubform(subform, {
+        // Subform harness CANNOT spawn further subforms
+        allowSubforms: false
+      }))
+    );
+
+    results.push(...batchResults);
+
+    // Progress callback
+    options.callbacks?.onBatchComplete?.(batchResults);
+  }
+
+  return results;
+}
+```
+
+### Appendix E: Why No Recursive Subforms (Detailed Rationale)
+
+Claude Code's prohibition on nested subagents is a deliberate architectural decision. Here's why Markform should follow the same constraint:
+
+#### 1. Infinite Recursion Risk
+
+```
+Without constraint:
+  Parent form
+    → Subform A
+      → Subform A.1
+        → Subform A.1.1
+          → ... (unbounded)
+```
+
+Even with a depth limit, the complexity grows exponentially. Claude Code solves this by simply disallowing it.
+
+#### 2. Debugging Complexity
+
+With nested subagents:
+- Error in A.1.1 must propagate through A.1 to A to parent
+- Each level has its own context, making root cause analysis difficult
+- Token usage is hard to attribute
+
+With single level:
+- All subforms report directly to parent
+- Clear ownership and error attribution
+- Simpler mental model
+
+#### 3. Token Budget Management
+
+```
+Nested (problematic):
+  Parent: 50k tokens
+    Child 1: 50k tokens
+      Grandchild 1.1: 50k tokens  (150k total for one path!)
+      Grandchild 1.2: 50k tokens
+    Child 2: 50k tokens
+      ...
+
+Single level (bounded):
+  Parent: 50k tokens
+  Child 1: 50k tokens (isolated)
+  Child 2: 50k tokens (isolated)
+  ...
+  Total = Parent + N × Child (predictable)
+```
+
+#### 4. Alternative for "Deep" Use Cases
+
+If you think you need nested subforms, consider:
+
+1. **Flatten**: Make all subforms children of the root form
+2. **Sequentialize**: Fill subform 1, use results as context for subform 2
+3. **Orchestrate externally**: Use Claude Code or another orchestrator to manage the hierarchy
+
+Example of flattening:
+```
+Instead of:
+  Company Research Form
+    → Company Details Subform
+      → Executive Profile Subform (nested!)
+
+Do:
+  Company Research Form
+    → Company Details Subform
+    → Executive Profile Subform (sibling, with company context)
 ```
