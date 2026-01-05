@@ -9,6 +9,7 @@
 - [Markform Specification](../../../markform-spec.md)
 - [Architecture Design](../../architecture/current/arch-markform-design.md)
 - [Harness Implementation](../../../../packages/markform/src/harness/)
+- [External Analysis: Subform Design Space](./analysis-subform-design-space.md)
 
 * * *
 
@@ -43,7 +44,9 @@ Research into production systems (Claude Code, OpenAI Codex) reveals a critical 
 4. How should context be propagated from parent forms to subform agents?
 5. What parallelization and concurrency strategies should be supported?
 6. How should field filling order and dependencies be handled?
-7. **NEW**: What constraints do production agent systems (Claude Code, Codex) suggest for subform nesting?
+7. What constraints do production agent systems (Claude Code, Codex) suggest for subform nesting?
+8. How should subform values be exported (references vs inline vs dual with provenance)?
+9. How should multiple related forms be managed as a workspace?
 
 * * *
 
@@ -539,6 +542,174 @@ Common patterns from workflow orchestration platforms:
 
 ## Design Considerations for Markform Subforms
 
+### Markform's Core Constraints Relevant to Subforms
+
+Before exploring design options, it's important to understand how Markform's existing design shapes what subforms can look like:
+
+1. **Single text file and forms-as-context**: A `.form.md` document intentionally co-locates instructions (Markdown), schema (Markdoc tags), and values (inline in tags). This is explicit context engineering—everything needed to fill/validate/review is in one diff-friendly file.
+
+2. **Global ID uniqueness**: Structural IDs (form/group/field) must be globally unique within a document. Option IDs are only unique within their field. This constraint matters significantly for embedded/repeated subforms.
+
+3. **Patch-based editing**: The tool API centers on typed patch operations (`set_string`, `set_table`, `skip_field`, `abort_field`), not "rewrite the doc". Subforms must fit the patch vocabulary and `inspect`/issue model.
+
+4. **Incremental filling + validation loop**: Markform expects: `inspect` → learn what's missing → `patch` → `inspect` again → repeat until complete. Subforms must participate in this completion and validation story.
+
+5. **Tables are rows of scalars**: Table rows are `Record<ColumnId, CellValue>`. Notably, there's no first-class row identity (no row IDs), which matters for per-row subforms.
+
+### Four Design Families for Subforms
+
+Based on external analysis and survey of existing systems, subform implementations fall into four design families:
+
+#### Family A: Separate Files, Referenced from Parent
+
+The "relational/linked record" approach—subforms live in separate `.form.md` files.
+
+**What it looks like:**
+
+```jinja
+{% field kind="subform_ref" id="market_analysis" label="Market analysis" required=true %}
+```value
+forms/market-analysis.form.md
+```
+{% /field %}
+```
+
+For tables, an explicit ref column:
+
+```jinja
+{% field kind="table" id="companies" label="Companies"
+   columnIds=["company_id","company","url","research_form"]
+   columnTypes=["string","string","url","string"] %}
+| company_id | company | url | research_form |
+| --- | --- | --- | --- |
+| acme | Acme Inc. | https://acme.com | forms/company-acme.research.form.md |
+| globex | Globex | https://globex.com | forms/company-globex.research.form.md |
+{% /field %}
+```
+
+**Pros:**
+- Respects Markform's global-unique ID rule (each file is its own namespace)
+- Compatible with existing tool API (`inspect`/`apply`/`export` per form)
+- Scales to many subforms without one enormous file
+- Avoids reinventing row identity inside Markform
+- Easy to parallelize—each subform is independent
+
+**Cons:**
+- Loses "everything in one file" context advantage
+- Reviewers must jump between files
+- Requires file naming conventions and lifecycle management
+- Needs a "workspace" notion for caller-owned orchestration
+
+#### Family B: Embedded Subforms Inside One Document
+
+The "single file contains the whole tree" approach.
+
+**What it looks like:**
+
+```jinja
+{% field kind="subform" id="market_analysis" label="Market analysis" required=true %}
+  {% form id="market_analysis_form" %}
+    {% field kind="string" id="tam" label="TAM" role="agent" required=true %}{% /field %}
+    {% field kind="string_list" id="competitors" label="Competitors" role="agent" %}{% /field %}
+  {% /form %}
+{% /field %}
+```
+
+**The ID scoping problem:** If you embed 10 identical company research subforms, you either:
+- Rename every field ID with a prefix (`acme_revenue`, `globex_revenue`), or
+- Change the spec to allow local scopes and path addressing
+
+Changing the ID model is a **major shift** because:
+- Patch operations currently take `fieldId: Id` (simple string)
+- Inspection issues reference `ref: Id`
+- If IDs become non-unique, you need fully-qualified paths (like JSON Pointer), cascading through patches, issues, doc blocks, and derived metadata
+
+**Pros:**
+- Strongly preserves "single file = full context"
+- Great for human review (one artifact)
+- Export is straightforward (tree already present)
+
+**Cons:**
+- Forces redesign of ID scoping and patch addressing for repetition
+- Document can become huge and unwieldy
+- Canonicalization/serialization complexity increases
+- Table+subform-per-row is awkward inside Markdown tables
+
+**Verdict:** Possible but requires "big spec changes."
+
+#### Family C: Repeatable Groups (Array of Objects)
+
+The "JSON Schema style" approach in Markform's Markdoc idiom.
+
+**What it looks like:**
+
+```jinja
+{% group id="companies" label="Companies" repeat=true itemLabel="Company" %}
+- {% group id="acme" label="Acme Inc." %}
+    {% field kind="string" id="company" label="Company" %}…{% /field %}
+    {% field kind="url" id="url" label="URL" %}…{% /field %}
+
+    {% group id="research" label="Research details" %}
+      {% field kind="string" id="summary" label="Summary" role="agent" required=true %}{% /field %}
+      {% field kind="single_select" id="rating" label="Rating" role="agent" %}…{% /field %}
+    {% /group %}
+  {% /group %}
+- {% group id="globex" label="Globex" %}…{% /group %}
+{% /group %}
+```
+
+Each repeated instance gets a stable ID (`acme`, `globex`), and nested structure is natural.
+
+**Pros:**
+- Models domain accurately: companies are objects, not table rows
+- Stable identity is natural (instance ID)
+- Easy to attach nested structures per object
+
+**Cons:**
+- Requires scoped IDs or multiple files (collapses to Family A)
+- Harder for quick "glanceable" summary than a table
+- Would need tooling to project a summary table
+
+#### Family D: Hybrid—Table with First-Class Row Identity
+
+The "Airtable in a text file" approach—keep tables but add stable row IDs.
+
+**Option D1: Require explicit row_id column**
+- First column is row identity
+- Markform tooling enforces uniqueness
+- Subform instances are keyed to row IDs
+
+**Option D2: Row annotations in table syntax**
+Allow per-row Markdoc annotations (but Markdown tables don't naturally support this).
+
+**Option D3: Derived metadata**
+Parser assigns row IDs stored in frontmatter (breaks when humans edit tables manually).
+
+**Practical choice: D1** (explicit key column in source).
+
+**Pros:**
+- Preserves table editing experience
+- Introduces stability for row-attached subforms
+- Enables nice UIs (table + "open details")
+
+**Cons:**
+- Requires users to think in IDs/keys
+- Still need to decide where subform data lives
+- More spec surface area (row identity rules, uniqueness)
+
+### Design Family Comparison
+
+| Family | Best When | Main Risk |
+| --- | --- | --- |
+| **A (separate files)** | Need repetition (per-row subforms); want minimal spec disruption; care about parallel execution | Context fragmentation unless you standardize context injection |
+| **B (embedded)** | Truly want "one artifact" and subforms are few (not repeated) | ID scoping + patch addressing gets complicated fast |
+| **C (repeatable groups)** | Want native hierarchical schema model like JSON Schema | Requires scoped IDs or multi-file anyway |
+| **D (table + row IDs)** | Strongly want "spreadsheet table feel" in source | Evolving toward relational features (scope increase) |
+
+**Recommendation:** Family A (separate files) + Family D1 (explicit row IDs) for Phase 1. This gives stable identity, parallelism, no redesign of field IDs or patch addressing, and clean separation between parent and subform lifecycles.
+
+* * *
+
 ### Design Question 1: Syntax for Subform Fields
 
 **Option A: New `subform` Field Kind**
@@ -759,7 +930,18 @@ Cons:
 
 **Question**: What context does a subform agent receive from the parent?
 
-**Option A: Row Context Only**
+#### Context Propagation Modes
+
+Based on external analysis and production patterns (OpenAI Agents SDK handoffs), there are four distinct modes:
+
+| Mode | What's Included | Token Cost | Best For |
+| --- | --- | --- | --- |
+| **minimal** | Row context only (company + url) | Lowest | Independent research tasks |
+| **parent_values** | Exported parent values JSON | Low-medium | Tasks needing parent context |
+| **parent** | Entire parent form markdown | High | Tasks requiring full context |
+| **workspace** | Include other completed subforms | Highest | Cross-referencing (rare) |
+
+**Mode 1: Minimal (Row Context Only)**
 
 Subform receives only the values from its row in the parent table:
 
@@ -772,74 +954,92 @@ Subform receives only the values from its row in the parent table:
 }
 ```
 
-Pros:
-- Minimal token usage
-- Clear, focused context
-- Subform is isolated from other rows
+**Pros:** Minimal token usage, clear focus, isolated from other rows
+**Cons:** May miss relevant parent context, can't compare across rows
+**Maps to:** OpenAI Agents SDK "programmatic handoff"
 
-Cons:
-- May miss relevant context from other fields
-- Can't compare across rows
+**Mode 2: Parent Values (Exported JSON)**
 
-**Option B: Full Parent Form Context**
-
-Subform receives the entire parent form state:
+Subform receives row context plus exported parent values:
 
 ```typescript
 {
-  context: {
-    parentForm: { /* full form markdown */ },
-    currentRow: { /* row data */ },
-    rowIndex: 0
+  rowContext: {
+    company_name: "Acme Corp",
+    company_url: "https://acme.com"
+  },
+  parentValues: {
+    industry: "Enterprise Software",
+    research_focus: "Competitive analysis"
   }
 }
 ```
 
-Pros:
-- Maximum context available
-- Can reference any parent field
-- Can see other rows for comparison
+**Pros:** Smaller than full markdown, structured data
+**Cons:** Loses instructions/prose context
+**Recommended default** for most use cases
 
-Cons:
-- High token usage
-- May confuse agent with irrelevant context
-- Larger prompts = slower/more expensive
+**Mode 3: Parent (Full Markdown)**
 
-**Option C: Configurable Context Scope**
+Subform receives the entire parent form markdown:
 
-Let the form designer specify what context to propagate:
-
-```jinja
-{% field kind="table" id="companies"
-   columnTypes=["string", "url", "subform:company-research.form.md"]
-   subformContext=["company_name", "company_url", "parent:industry"] %}
+```typescript
+{
+  parentForm: "# Research Project\n{% form %}...",
+  currentRow: { /* row data */ },
+  rowIndex: 0
+}
 ```
 
-Pros:
-- Flexible per use case
-- Designer controls token budget
-- Can include specific parent fields
+**Pros:** Maximum context, can reference any parent field
+**Cons:** High token usage, may confuse agent
+**Maps to:** OpenAI Agents SDK "agentic handoff"
 
-Cons:
-- More syntax complexity
-- Designer must understand context implications
+**Mode 4: Workspace (Cross-Subform)**
 
-**Option D: Automatic Context Selection**
+Subform can access other completed subforms:
 
-Harness automatically includes:
-- Row values (always)
-- Parent form title/description
-- Any fields referenced in subform instructions
+```typescript
+{
+  rowContext: { /* current row */ },
+  siblings: {
+    "row_0": { /* completed subform values */ },
+    "row_1": { /* completed subform values */ }
+  }
+}
+```
 
-Pros:
-- Smart defaults
-- No configuration needed for common cases
+**Pros:** Enables comparison and cross-referencing
+**Cons:** Very expensive, potential for confusion
+**Use case:** Summary fields that need to see all subforms
 
-Cons:
-- Harder to predict what's included
-- May include too much or too little
+#### Configuration Options
 
-**Recommendation**: Option D (automatic) with Option C (explicit override) for fine-tuning.
+**Option A: Schema Attribute**
+
+```jinja
+{% field kind="subform_ref" id="research"
+   contextMode="parent_values"
+   includeFields=["industry", "research_focus"] %}
+```
+
+**Option B: Runtime Configuration**
+
+```typescript
+const result = await fillForm({
+  form: parentFormMarkdown,
+  subform: {
+    contextMode: "parent_values",
+    includeParentFields: ["industry", "research_focus"]
+  }
+});
+```
+
+**Option C: Automatic Selection with Override**
+
+Default to `parent_values` + row context; allow explicit override per subform field or harness config.
+
+**Recommendation**: Default to `parent_values` mode (programmatic handoff) with explicit override capability. Full parent context (agentic handoff) is rarely needed and usually indicates the form structure should be flattened.
 
 * * *
 
@@ -854,20 +1054,27 @@ Cons:
 
 **New Considerations with Subforms**:
 
+#### The Simplest Viable Ordering for v1
+
+For the "companies table + research subforms" use case:
+
+1. **Fill parent "index" fields first** (anything that defines the set of subforms)
+2. **Materialize subform instances** (create files or embedded blocks)
+3. **Fill subforms** (parallelizable once context is ready)
+4. **Fill any parent summary fields** that depend on subform results
+
+This matches how humans work: create list → research each → summarize.
+
+#### Ordering Options
+
 **Option A: Linear (Parent First, Then Subforms)**
 
 1. Fill all regular parent fields
 2. For each row with a subform, fill the subform
 3. Complete
 
-Pros:
-- Simple to implement
-- Predictable order
-- Subforms get complete row context
-
-Cons:
-- May be slow (sequential)
-- Can't start subforms until all parent fields done
+**Pros:** Simple, predictable, subforms get complete row context
+**Cons:** May be slow (sequential), can't start subforms early
 
 **Option B: Eager Subforms (Fill ASAP)**
 
@@ -879,30 +1086,25 @@ Fill subforms as soon as their row has required context:
 4. Fill parent field C
 5. Complete remaining subforms
 
-Pros:
-- Faster overall (parallelism)
-- More efficient use of time
+**Pros:** Faster overall (parallelism)
+**Cons:** Complex dependency tracking, may need re-filling if context changes
 
-Cons:
-- Complex dependency tracking
-- Subform may need re-filling if parent context changes
-
-**Option C: Explicit Dependencies**
+**Option C: Explicit Dependencies via `dependsOn`**
 
 Form designer specifies dependencies:
 
 ```jinja
-{% field kind="subform" id="details"
-   dependsOn=["company_name", "company_url"] %}
+{% field kind="subform_ref" id="research" dependsOn=["company", "url"] %}
 ```
 
-Pros:
-- Clear control over order
-- Prevents premature subform filling
+For computed summary fields that depend on subforms:
 
-Cons:
-- More configuration burden
-- Easy to get wrong
+```jinja
+{% field kind="string" id="overall_findings" dependsOn=["companies.*.research"] %}
+```
+
+**Pros:** Clear control, prevents premature filling, enables safe parallelism
+**Cons:** More configuration burden, easy to get wrong
 
 **Option D: Semantic Analysis**
 
@@ -910,15 +1112,35 @@ Harness analyzes subform instructions to infer dependencies:
 
 "Research the company {{company_name}} at {{company_url}}" → depends on company_name, company_url
 
-Pros:
-- Automatic for well-written instructions
-- No explicit configuration
+**Pros:** Automatic for well-written instructions
+**Cons:** Unreliable, complex to implement
 
-Cons:
-- Unreliable if instructions don't use variables
-- Complex to implement
+#### The `dependsOn` Attribute
 
-**Recommendation**: Option A (linear) for v1 simplicity, with Option C (explicit dependencies) as an optional enhancement.
+Adding `dependsOn` as an optional schema attribute provides:
+
+1. **Ordering hints**: Fields with dependencies filled after their dependencies
+2. **Context clues**: Dependencies automatically included in subform context
+3. **Parallelism safety**: Fields without cross-dependencies can run in parallel
+4. **Validation**: Warn if filling a field whose dependencies are incomplete
+
+**Syntax options:**
+
+```jinja
+// Simple field dependencies
+{% field kind="subform_ref" id="research" dependsOn=["company", "url"] %}
+
+// Cross-table dependencies (subform depends on values in parent table)
+{% field kind="subform_ref" id="deep_dive" dependsOn=["parent:industry", "row:company"] %}
+
+// Summary field depending on all subforms
+{% field kind="string" id="synthesis" dependsOn=["companies[*].research"] %}
+```
+
+**Recommendation**: Option A (linear) for v1 simplicity. Add `dependsOn` in Phase 3 as an optional enhancement for:
+- Improving context passed to subagents
+- Avoiding premature filling
+- Enabling safe parallel execution decisions
 
 * * *
 
@@ -1001,6 +1223,167 @@ Cons:
 - May retry hopeless failures
 
 **Recommendation**: Option B (continue with errors) + Option C (configurable retries).
+
+* * *
+
+### Design Question 8: Export Semantics
+
+**Question**: How should filled subforms be represented when exporting values?
+
+#### Export Option 1: References Only
+
+Parent export includes table rows, subform refs as strings/paths:
+
+```json
+{
+  "companies": [
+    {
+      "company": "Acme Inc.",
+      "url": "https://acme.com",
+      "research": "./subforms/companies/0.form.md"
+    }
+  ]
+}
+```
+
+**Pros:** Simple, lightweight, preserves source of truth
+**Cons:** Caller must load N more files to get full data
+
+#### Export Option 2: Inline Subform Values (Recursive)
+
+Parent export recursively reads subforms and returns nested JSON:
+
+```json
+{
+  "companies": [
+    {
+      "company": "Acme Inc.",
+      "url": "https://acme.com",
+      "research": {
+        "summary": "Market leader in widgets...",
+        "rating": "strong",
+        "competitive_position": "..."
+      }
+    }
+  ]
+}
+```
+
+**Pros:** What most users want—complete data tree
+**Cons:** Requires filesystem/workspace notion, recursion rules
+
+#### Export Option 3: Dual (Inline + Provenance)
+
+Return both nested values AND source pointers for traceability:
+
+```json
+{
+  "companies": [
+    {
+      "company": "Acme Inc.",
+      "url": "https://acme.com",
+      "research": {
+        "_source": "./subforms/companies/0.form.md",
+        "_status": "complete",
+        "summary": "Market leader in widgets...",
+        "rating": "strong"
+      }
+    }
+  ]
+}
+```
+
+**Pros:** Complete data plus provenance, useful for debugging and audit
+**Cons:** More verbose output format
+
+#### Validation/Completion and Subforms
+
+How should parent form completion relate to subform completion?
+
+| Validation Mode | Parent "Complete" When | Use Case |
+| --- | --- | --- |
+| **Strict** | All required subform refs point to complete subforms | High-integrity workflows |
+| **Loose** | Subform refs are non-empty and files exist | Iterative/draft workflows |
+| **Independent** | Parent and subforms validated separately | Maximum flexibility |
+
+**Recommendation**: Export Option 2 (inline values) as default with Option 3 (dual with provenance) as a flag. Use strict validation for production, loose for development.
+
+* * *
+
+### Design Question 9: Workspace and Multi-Form Management
+
+**Question**: How should multiple related forms be managed as a unit?
+
+With external subforms (Family A), you need a concept of "workspace"—a collection of related forms that can be operated on together.
+
+#### Workspace Responsibilities
+
+1. **Discovery**: Find all forms in a project (parent + subforms)
+2. **Status aggregation**: "What's the overall completion status?"
+3. **Coordinated operations**: Inspect/fill across multiple forms
+4. **Dependency tracking**: Which subforms depend on which parent fields?
+
+#### Option A: Implicit Workspace (Convention-Based)
+
+Forms in a directory tree are a workspace:
+
+```
+research-project/
+├── main.form.md              # Parent
+└── subforms/
+    └── companies/
+        ├── 0.form.md
+        └── 1.form.md
+```
+
+`markform inspect .` inspects all forms and aggregates status.
+
+**Pros:** No configuration, works with existing file layouts
+**Cons:** Less explicit, may pick up unrelated forms
+
+#### Option B: Explicit Workspace Manifest
+
+A workspace file defines the forms:
+
+```yaml
+# .markform-workspace.yaml
+parent: main.form.md
+subforms:
+  companies: subforms/companies/*.form.md
+```
+
+**Pros:** Explicit control, can span directories
+**Cons:** Another file to maintain
+
+#### Option C: Parent Form Declares Subforms
+
+Parent form's metadata lists subform patterns:
+
+```jinja
+{% form id="research"
+   subformPattern="subforms/{fieldId}/{rowIndex}.form.md" %}
+```
+
+**Pros:** Self-contained, no external config
+**Cons:** Pattern syntax complexity
+
+#### Tool API Implications
+
+For caller-owned orchestration, useful workspace-level operations:
+
+```bash
+# Aggregate status across all forms in workspace
+markform workspace status .
+
+# What's the next action across the whole workspace?
+markform workspace next .
+# Returns: { "form": "subforms/companies/0.form.md", "action": "fill", "context": {...} }
+
+# Export entire workspace as nested JSON
+markform workspace export . --inline
+```
+
+**Recommendation**: Start with Option A (implicit, convention-based) for v1. Add explicit workspace manifest in Phase 2 if needed for complex projects.
 
 * * *
 
@@ -1098,9 +1481,11 @@ Based on research findings—especially lessons from Claude Code and OpenAI Code
 
 ### Summary
 
-Based on this research—especially the production-proven patterns from Claude Code and OpenAI Codex—we recommend a phased approach to implementing subforms in Markform:
+Based on this research—combining insights from existing form systems (Access, JSON Schema), production agent systems (Claude Code, OpenAI Codex), and external analysis—we recommend a phased approach that prioritizes minimal spec disruption while enabling powerful subform workflows.
 
-### Critical Design Decision: Single-Level Nesting Only
+### Critical Design Decisions
+
+#### 1. Single-Level Nesting Only
 
 **Subforms CANNOT contain their own subforms.** This follows Claude Code's explicit architectural constraint and prevents:
 - Infinite recursion chains
@@ -1110,39 +1495,143 @@ Based on this research—especially the production-proven patterns from Claude C
 
 If a use case seems to require deeper nesting, the solution is to flatten the hierarchy or have the parent form orchestrate multiple independent subforms.
 
-### Phase 1: Table-Based Subforms (MVP)
+#### 2. Design Family Choice: A + D1
 
-1. **New column type**: `subform:path/to/template.form.md`
-2. **External storage**: Subforms stored in `{formDir}/subforms/{parentFieldId}/{rowIndex}.form.md`
-3. **Linear execution**: Fill parent fields first, then subforms sequentially
-4. **Row context**: Pass row values as `inputContext` to subform harness (programmatic handoff)
-5. **Library-owned loop**: Extend current harness with subform call (NOT recursive—single level)
-6. **No Task tool in subform**: Subform agents cannot spawn further subforms
+Recommend **Family A (separate files)** combined with **Family D1 (explicit row IDs)**:
+- Subforms live in separate `.form.md` files
+- Tables use an explicit ID column as stable row keys
+- Subform instances are keyed to row IDs
+- No changes to Markform's global ID uniqueness rule
+- No changes to patch addressing model
 
-### Phase 2: Parallel Execution
+This gives: stable identity, parallelism, no redesign of core spec, clean separation between parent and subform lifecycles.
 
-1. **Concurrency config**: Add `maxConcurrency` to `FillOptions` (default: 5, max: 10)
-2. **Batch execution**: Process subforms in batches, wait for batch completion (Claude Code pattern)
-3. **Progress callbacks**: Extend `FillCallbacks` with `onSubformStart`, `onSubformComplete`
-4. **Error handling**: Mark failed subforms as aborted, continue others (graceful degradation)
-5. **Token budget tracking**: Monitor total token usage across parallel subforms
+#### 3. Context Propagation Default
 
-### Phase 3: Advanced Features
+Default to **`parent_values` mode** (programmatic handoff):
+- Row values always included
+- Parent form's exported values included (not raw markdown)
+- Full parent context is opt-in, not default
 
-1. **Standalone subform fields**: Non-table subform references (one-to-one relationship)
-2. **Context configuration**: `subformContext` attribute for custom context propagation
-3. **Subform handler hook**: Allow caller to override subform filling (like Claude Code's Task tool abstraction)
-4. **Tool permissions**: Allow restricting tools available to subform agents (read-only vs full access)
-5. **Result provenance**: Track which agent filled each subform, with citations (like Codex)
+This aligns with OpenAI Agents SDK's finding that programmatic handoff (selective context) usually outperforms agentic handoff (full context).
+
+### Phase 1: External Subforms with Row IDs (MVP)
+
+**Goal**: Enable the "companies table + research subforms" use case with minimal spec changes.
+
+1. **Standardize table-of-entities pattern**:
+   - Require a `*_id` column as stable row key (e.g., `company_id`)
+   - Include a `research_form` column for subform file path
+
+2. **New `subform_ref` column type** (optional syntactic sugar):
+   ```jinja
+   columnTypes=["string", "url", "subform_ref:company-research.form.md"]
+   ```
+
+3. **File storage convention**:
+   - Subforms stored in `{formDir}/subforms/{fieldId}/{rowId}.form.md`
+   - Or explicit paths in table cells
+
+4. **Harness logic**:
+   - Fill table columns (at least ID/name/url) first
+   - Generate missing subform files from template
+   - Fill subforms sequentially (v1)
+   - Return to parent for any summary fields
+
+5. **Validation semantics**:
+   - Loose by default: subform ref is valid if file exists
+   - Strict mode: subform ref is valid only if subform is complete
+
+6. **No nested subforms**: Subform harness call cannot trigger further subform fills
+
+### Phase 2: Workspace and Parallel Execution
+
+**Goal**: Enable efficient parallel filling and workspace-level operations.
+
+1. **Workspace concept**:
+   - Implicit workspace: forms in directory tree are a unit
+   - `markform workspace status .` aggregates all form status
+   - `markform workspace next .` returns next action across all forms
+
+2. **Parallel subform filling**:
+   - Add `maxConcurrency` to `FillOptions` (default: 5, max: 10)
+   - Batch execution: wait for batch before starting next
+   - Progress callbacks: `onSubformStart`, `onSubformComplete`, `onBatchComplete`
+
+3. **Export enhancements**:
+   - Default: inline subform values (recursive)
+   - Flag: include provenance metadata (`_source`, `_status`)
+   - Workspace export: entire tree as nested JSON
+
+4. **Error handling**:
+   - Mark failed subforms as aborted
+   - Continue filling other subforms
+   - Configurable retry with backoff
+
+### Phase 3: Dependencies and Context Configuration
+
+**Goal**: Enable smart ordering and fine-grained context control.
+
+1. **`dependsOn` attribute**:
+   ```jinja
+   {% field kind="subform_ref" id="research" dependsOn=["company", "url"] %}
+   ```
+   - Ordering hints for fill sequence
+   - Auto-include dependencies in subform context
+   - Enable safe parallel execution
+
+2. **Context propagation modes**:
+   - `minimal`: row context only
+   - `parent_values`: row + parent exported values (default)
+   - `parent`: full parent markdown
+   - `workspace`: include sibling subforms (expensive)
+
+3. **Subform handler hook**:
+   ```typescript
+   subformHandler: async (context) => {
+     // Return null for default, or custom fill result
+   }
+   ```
+
+4. **Tool permissions per subform**:
+   - Read-only agents: `tools: ["web_search"]`
+   - Full access: inherit parent tools
+
+### Phase 4: Embedded Subforms (Only If Needed)
+
+**Goal**: Support single-file subforms for simple cases.
+
+**Only pursue if Phase 1-3 prove insufficient.** This requires:
+- Scoped IDs or path addressing in patches
+- Changes to issue references
+- More complex canonicalization
+
+The external analysis notes this is "big spec changes" territory—avoid unless clear user demand.
+
+### Decision Matrix
+
+| Decision | Recommendation | Rationale |
+| --- | --- | --- |
+| **Design family** | A + D1 (separate files + row IDs) | Minimal spec disruption, proven patterns |
+| **Nesting depth** | 1 level only | Claude Code constraint, bounded complexity |
+| **Context default** | `parent_values` (programmatic) | Token efficiency, focus |
+| **Concurrency** | 5 default, 10 max | Claude Code proven limits |
+| **Export default** | Inline values | What users want |
+| **Validation default** | Loose (file exists) | Supports iterative workflows |
+| **Loop ownership** | Library-first, hooks for callers | Progressive complexity |
+| **Workspace** | Implicit (convention-based) | Zero config for common case |
 
 ### Rationale
 
 This phased approach:
 - **Follows production-proven patterns**: Claude Code's no-nested-subagents, context isolation, batch execution
-- Delivers value quickly with MVP table-based subforms
-- Follows proven patterns from Access (master-detail) and modern agent systems (orchestrator-worker)
-- Keeps complexity bounded by prohibiting recursive nesting
-- Maintains Markform's design principles: text-based, human-readable, agent-friendly
+- **Minimizes spec disruption**: Family A + D1 requires no changes to ID model, patch addressing, or validation
+- **Delivers value quickly**: MVP enables the core "table + per-row research" use case
+- **Follows proven patterns**: Access (master-detail), JSON Schema ($ref), Claude Code (context isolation)
+- **Keeps complexity bounded**: Single-level nesting prevents exponential growth
+- **Maintains Markform's design principles**: text-based, human-readable, agent-friendly
+- **Enables caller control**: Workspace commands support caller-owned orchestration (Claude Code, MCP tools)
+- **Integrates external analysis**: Design families framework and phased approach align with prior research
 
 ### Alternative Approaches
 
