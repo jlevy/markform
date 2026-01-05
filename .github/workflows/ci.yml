@@ -30,14 +30,15 @@ jobs:
       # Run all tests with unified coverage (vitest + tryscript CLI tests)
       - run: pnpm --filter markform test:coverage
 
-      # Post coverage report as PR comment
+      # Post coverage report (PR comment + job summary)
       - name: Coverage Report
         uses: davelosert/vitest-coverage-report-action@v2
-        if: always() && github.event_name == 'pull_request'
+        if: always()
         with:
           json-summary-path: packages/markform/coverage/coverage-summary.json
           json-final-path: packages/markform/coverage/coverage-final.json
-          file-coverage-mode: changes
+          # Only show changed files on PRs, show all on main
+          file-coverage-mode: ${{ github.event_name == 'pull_request' && 'changes' || 'all' }}
 
       # Generate and commit coverage badges (main branch only)
       - name: Coverage Badges
@@ -50,10 +51,13 @@ jobs:
 
       - name: Update badge links to this run
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # Update both badge links in README.md to point to this specific run
-          sed -i "s|](https://github.com/jlevy/markform/actions/[^)]*)|](${RUN_URL})|g" README.md
+          # Update badge links using the standalone script
+          ./scripts/update-badge-links.sh
           # Commit the README change
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
