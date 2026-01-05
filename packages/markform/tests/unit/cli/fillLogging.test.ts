@@ -282,6 +282,80 @@ describe('fillLogging', () => {
       });
     });
 
+    describe('onReasoningGenerated (debug only)', () => {
+      it('logs reasoning content in debug mode', () => {
+        const ctx = createTestContext({ debug: true, logLevel: 'debug' });
+
+        const callbacks = createFillLoggingCallbacks(ctx);
+        callbacks.onReasoningGenerated!({
+          stepNumber: 1,
+          reasoning: [
+            { type: 'reasoning', text: 'Let me think about this problem...' },
+            { type: 'reasoning', text: 'The answer should be 42.' },
+          ],
+        });
+
+        expect(consoleOutput.length).toBe(3); // header + 2 reasoning lines
+        expect(consoleOutput[0]).toContain('[reasoning step 1]');
+        expect(consoleOutput[1]).toContain('Let me think about this problem');
+        expect(consoleOutput[2]).toContain('The answer should be 42');
+      });
+
+      it('logs redacted reasoning', () => {
+        const ctx = createTestContext({ debug: true, logLevel: 'debug' });
+
+        const callbacks = createFillLoggingCallbacks(ctx);
+        callbacks.onReasoningGenerated!({
+          stepNumber: 2,
+          reasoning: [{ type: 'redacted' }],
+        });
+
+        expect(consoleOutput.length).toBe(2);
+        expect(consoleOutput[0]).toContain('[reasoning step 2]');
+        expect(consoleOutput[1]).toContain('[redacted]');
+      });
+
+      it('does not log in non-debug mode', () => {
+        const ctx = createTestContext({ verbose: true, logLevel: 'verbose' });
+
+        const callbacks = createFillLoggingCallbacks(ctx);
+        callbacks.onReasoningGenerated!({
+          stepNumber: 1,
+          reasoning: [{ type: 'reasoning', text: 'Some thinking...' }],
+        });
+
+        expect(consoleOutput.length).toBe(0);
+      });
+
+      it('handles empty reasoning array', () => {
+        const ctx = createTestContext({ debug: true, logLevel: 'debug' });
+
+        const callbacks = createFillLoggingCallbacks(ctx);
+        callbacks.onReasoningGenerated!({
+          stepNumber: 1,
+          reasoning: [],
+        });
+
+        // Should still log the header
+        expect(consoleOutput.length).toBe(1);
+        expect(consoleOutput[0]).toContain('[reasoning step 1]');
+      });
+
+      it('shows placeholder when reasoning text is missing', () => {
+        const ctx = createTestContext({ debug: true, logLevel: 'debug' });
+
+        const callbacks = createFillLoggingCallbacks(ctx);
+        callbacks.onReasoningGenerated!({
+          stepNumber: 1,
+          reasoning: [{ type: 'reasoning' }], // No text property
+        });
+
+        expect(consoleOutput.length).toBe(2);
+        expect(consoleOutput[0]).toContain('[reasoning step 1]');
+        expect(consoleOutput[1]).toContain('[reasoning content not available]');
+      });
+    });
+
     describe('spinner integration', () => {
       it('updates spinner message for web search', () => {
         const ctx = createTestContext();

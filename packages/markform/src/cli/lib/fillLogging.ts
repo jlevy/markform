@@ -290,6 +290,10 @@ export function createFillLoggingCallbacks(
           const text = truncate(r.text);
           logDebug(ctx, `     ${text}`);
           trace(`     ${text}`);
+        } else {
+          // Show placeholder if reasoning item has no text content
+          logDebug(ctx, `     [reasoning content not available]`);
+          trace(`     [reasoning content not available]`);
         }
       }
     },

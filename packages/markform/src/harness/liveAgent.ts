@@ -219,15 +219,17 @@ export class LiveAgent implements Agent {
       }
 
       // Extract reasoning from step (AI SDK exposes this for models with extended thinking)
+      // Different providers may use different property names (text, content, etc.)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       const stepReasoning = (step as any).reasoning as
-        | { type: string; text?: string }[]
+        | { type?: string; text?: string; content?: string }[]
         | undefined;
       if (stepReasoning && stepReasoning.length > 0 && this.callbacks?.onReasoningGenerated) {
         try {
           const reasoningOutput = stepReasoning.map((r) => ({
             type: r.type === 'redacted' ? ('redacted' as const) : ('reasoning' as const),
-            text: r.text,
+            // Support both 'text' and 'content' property names
+            text: r.text ?? r.content,
           }));
           this.callbacks.onReasoningGenerated({
             stepNumber: stepIndex + 1,
@@ -363,13 +365,16 @@ function buildWireFormat(
     };
 
     // Include reasoning if present (for models with extended thinking)
+    // Support both 'text' and 'content' property names for different providers
     if (step.reasoning && step.reasoning.length > 0) {
-      wireStep.reasoning = step.reasoning.map(
-        (r): WireReasoningContent => ({
+      wireStep.reasoning = step.reasoning.map((r): WireReasoningContent => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        const content = (r as any).content as string | undefined;
+        return {
           type: r.type === 'redacted' ? 'redacted' : 'reasoning',
-          text: r.text,
-        }),
-      );
+          text: r.text ?? content,
+        };
+      });
     }
 
     return wireStep;
