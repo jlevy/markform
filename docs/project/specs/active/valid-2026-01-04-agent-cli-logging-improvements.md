@@ -62,7 +62,19 @@ All changes have been verified against the following quality gates:
 - `pnpm run test:tryscript` - CLI integration tests
 - `pnpm run build` - Production bundle
 
-## Manual Testing Needed
+## Manual Testing Completed (2026-01-05)
+
+### Test Results Summary
+
+| Test | Result | Notes |
+|------|--------|-------|
+| Default log level | ✅ PASS | Shows turns, patches, completion |
+| --quiet flag | ⚠️ BUG | Session transcript still printed (markform-8) |
+| --verbose flag | ✅ PASS | Shows config details, timing |
+| --debug flag | ✅ PASS | Works (no extra output for mock agents) |
+| --trace file | ✅ PASS | Creates file, correct content, no ANSI |
+| ANSI stripping | ✅ PASS | No escape codes in trace files |
+| Live agent | ⏳ BLOCKED | Network issues prevented API testing |
 
 ### 1. Verify --trace Flag for Fill Command
 
@@ -75,14 +87,14 @@ markform fill examples/simple/simple.form.md \
 ```
 
 Verify:
-- [ ] `/tmp/fill-trace.log` is created
-- [ ] File begins with header: `# Markform Fill Trace Log`
-- [ ] Header includes timestamp and model info
-- [ ] Turn info is logged: `Turn 1: ...`
-- [ ] Patches are logged with field IDs and values
-- [ ] Completion status is logged: `Form completed in N turn(s)`
-- [ ] Output file path is logged
-- [ ] ANSI color codes are stripped (no escape sequences in file)
+- [x] `/tmp/fill-trace.log` is created
+- [x] File begins with header: `# Markform Trace Log`
+- [x] Header includes timestamp and model info
+- [x] Turn info is logged: `Turn 1: ...`
+- [x] Patches are logged with field IDs and values
+- [x] Completion status is logged: `Form completed in N turn(s)`
+- [x] Output file path is logged
+- [x] ANSI color codes are stripped (no escape sequences in file)
 
 ### 2. Verify --trace Flag for Run Command
 
@@ -137,21 +149,9 @@ Verify:
 - [ ] Raw tool output is shown after completion
 - [ ] System and context prompts are shown after patches
 
-### 6. Verify --wire-log Flag
+### 6. Verify --wire-log Flag (REMOVED)
 
-Run with `--wire-log` to capture wire format:
-
-```bash
-markform fill examples/movie-research/movie-research-demo.form.md \
-  --model openai/gpt-5-mini \
-  --wire-log /tmp/wire.yaml
-```
-
-Verify:
-- [ ] `/tmp/wire.yaml` is created
-- [ ] Contains `sessionVersion`, `mode`, `modelId`, `formPath`
-- [ ] Contains `turns` array with `turn` number and `wire` data
-- [ ] Wire data includes `request` with system/prompt and `response` with steps
+**Note:** The `--wire-log` flag has been removed per PR review feedback. All trace output now uses the global `--trace` flag for consistency.
 
 ### 7. Verify MARKFORM_LOG_LEVEL Environment Variable
 
