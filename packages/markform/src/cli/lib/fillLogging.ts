@@ -24,7 +24,7 @@ import type { SpinnerHandle } from './shared.js';
 import { logInfo, logVerbose, logDebug } from './shared.js';
 import { formatTurnIssues } from './formatting.js';
 import { formatPatchType, formatPatchValue } from './patchFormat.js';
-import { createTracer, truncate, formatDuration } from './traceUtils.js';
+import { createTracer, truncate, formatDuration, safeStringify } from './traceUtils.js';
 
 // =============================================================================
 // Types
@@ -46,17 +46,6 @@ export interface FillLoggingOptions {
    * The file is created/truncated at start with a timestamp header.
    */
   traceFile?: string;
-}
-
-/**
- * Safely stringify an object for debug output.
- */
-function safeStringify(obj: unknown): string {
-  try {
-    return JSON.stringify(obj, null, 2);
-  } catch {
-    return String(obj);
-  }
 }
 
 /**

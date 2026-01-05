@@ -398,9 +398,10 @@ export function registerFillCommand(program: Command): void {
 
             // Create callbacks that reference the mutable spinner
             // Callbacks update spinner during tool execution (especially web search)
-            const callbacks = createCliToolCallbacks(
-              {
-                // Proxy to current spinner (may be null between turns)
+            // Also writes to trace file when --trace is provided
+            const callbacks = createCliToolCallbacks({
+              // Proxy to current spinner (may be null between turns)
+              spinner: {
                 message: (msg) => currentSpinner?.message(msg),
                 update: (context) => currentSpinner?.update(context),
                 stop: (msg) => currentSpinner?.stop(msg),
@@ -408,7 +409,8 @@ export function registerFillCommand(program: Command): void {
                 getElapsedMs: () => currentSpinner?.getElapsedMs() ?? 0,
               },
               ctx,
-            );
+              trace,
+            });
 
             // Pass first target role to agent (for instruction lookup)
             targetRole = targetRoles[0] === '*' ? AGENT_ROLE : (targetRoles[0] ?? AGENT_ROLE);

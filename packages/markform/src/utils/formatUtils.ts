@@ -57,3 +57,19 @@ export function humanReadableSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+// =============================================================================
+// JSON Utilities
+// =============================================================================
+
+/**
+ * Safely stringify an object for debug output.
+ * Falls back to String() if JSON.stringify fails (e.g., circular references).
+ */
+export function safeStringify(obj: unknown): string {
+  try {
+    return JSON.stringify(obj, null, 2);
+  } catch {
+    return String(obj);
+  }
+}

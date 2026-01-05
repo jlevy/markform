@@ -15,6 +15,7 @@ export {
   safeTruncate,
   formatDuration,
   humanReadableSize,
+  safeStringify,
 } from '../../utils/formatUtils.js';
 
 // Alias for backward compatibility
