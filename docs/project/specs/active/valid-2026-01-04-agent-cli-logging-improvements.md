@@ -6,10 +6,13 @@ This is a validation spec for the enhanced CLI logging system that provides:
 - Multiple log levels (quiet, default, verbose, debug)
 - Structured tool callback information (web search queries, results, sources)
 - Wire format capture via `--wire-log` flag
+- **Trace file support via `--trace` flag for incremental logging during execution**
 - Unified logging callbacks across fill, research, and run commands
 - Reasoning capture in wire format for models with extended thinking
 
 **Feature Plan:** [plan-2026-01-04-agent-cli-logging-improvements.md](plan-2026-01-04-agent-cli-logging-improvements.md)
+
+**Review Document:** [review-2026-01-04-cli-logging-system.md](review-2026-01-04-cli-logging-system.md)
 
 ## Stage 4: Validation Stage
 
@@ -22,7 +25,7 @@ All code changes have been reviewed, type-checked, linted, and tested.
 
 ### Unit Testing
 
-- **fillLogging.test.ts** - 20 tests covering all logging callbacks:
+- **fillLogging.test.ts** - 14 tests covering all logging callbacks:
   - `createFillLoggingCallbacks` returns all expected callbacks
   - `onIssuesIdentified` logs turn number and issues by default
   - `onIssuesIdentified` does not log when quiet mode is enabled
@@ -36,25 +39,89 @@ All code changes have been reviewed, type-checked, linted, and tested.
   - `onLlmCallStart` logs model name in verbose mode
   - `onLlmCallEnd` logs token counts in verbose mode
   - Spinner integration updates message for web search
+  - **Trace file tests** - createTracer writes header and strips ANSI codes
+
+- **commands.tryscript.md** - 12 CLI command tests including:
+  - `--help` shows all global options including `--debug` and `--trace`
+  - All commands function correctly with updated option parsing
 
 ### Integration Testing
 
 - **Type checking passes** - All 0 TypeScript errors
 - **Lint passes** - All 0 ESLint errors
-- **1432 unit tests pass** - Full test suite green
+- **1455 unit tests pass** - Full test suite green
+- **18 tryscript tests pass** - CLI command integration tests
 - **Build succeeds** - dist/ output verified
 
 ### Code Quality Verification
 
 All changes have been verified against the following quality gates:
-- `npm run typecheck` - TypeScript strict mode
-- `npm run lint` - ESLint with --max-warnings 0
-- `npm run test` - Vitest full test suite
-- `npm run build` - Production bundle
+- `pnpm run typecheck` - TypeScript strict mode
+- `pnpm run lint` - ESLint with --max-warnings 0
+- `pnpm run test` - Vitest full test suite
+- `pnpm run test:tryscript` - CLI integration tests
+- `pnpm run build` - Production bundle
 
 ## Manual Testing Needed
 
-### 1. Verify --debug Flag
+### 1. Verify --trace Flag for Fill Command
+
+Run with `--trace` flag to capture incremental output to file:
+
+```bash
+markform fill examples/simple/simple.form.md \
+  --mock --mock-source examples/simple/simple-mock-filled.form.md \
+  --trace /tmp/fill-trace.log
+```
+
+Verify:
+- [ ] `/tmp/fill-trace.log` is created
+- [ ] File begins with header: `# Markform Fill Trace Log`
+- [ ] Header includes timestamp and model info
+- [ ] Turn info is logged: `Turn 1: ...`
+- [ ] Patches are logged with field IDs and values
+- [ ] Completion status is logged: `Form completed in N turn(s)`
+- [ ] Output file path is logged
+- [ ] ANSI color codes are stripped (no escape sequences in file)
+
+### 2. Verify --trace Flag for Run Command
+
+```bash
+markform run examples/simple/simple.form.md \
+  --trace /tmp/run-trace.log
+```
+
+Verify:
+- [ ] Trace file is created during form selection/execution
+- [ ] Header format matches fill command
+- [ ] All execution stages are logged
+
+### 3. Verify --trace Flag for Research Command
+
+```bash
+markform research examples/movie-research/movie-research-demo.form.md \
+  --model openai/gpt-5-mini \
+  --trace /tmp/research-trace.log
+```
+
+Verify:
+- [ ] Trace file is created
+- [ ] Web search queries and results are logged
+- [ ] Token counts are logged
+
+### 4. Verify MARKFORM_TRACE Environment Variable
+
+```bash
+MARKFORM_TRACE=/tmp/env-trace.log markform fill examples/simple/simple.form.md \
+  --mock --mock-source examples/simple/simple-mock-filled.form.md
+```
+
+Verify:
+- [ ] Trace file is created at specified path
+- [ ] Works without --trace flag
+- [ ] `--trace` flag takes precedence over env var
+
+### 5. Verify --debug Flag
 
 Run with `--debug` flag to see enhanced output:
 
@@ -70,7 +137,7 @@ Verify:
 - [ ] Raw tool output is shown after completion
 - [ ] System and context prompts are shown after patches
 
-### 2. Verify --wire-log Flag
+### 6. Verify --wire-log Flag
 
 Run with `--wire-log` to capture wire format:
 
@@ -86,7 +153,7 @@ Verify:
 - [ ] Contains `turns` array with `turn` number and `wire` data
 - [ ] Wire data includes `request` with system/prompt and `response` with steps
 
-### 3. Verify MARKFORM_LOG_LEVEL Environment Variable
+### 7. Verify MARKFORM_LOG_LEVEL Environment Variable
 
 ```bash
 MARKFORM_LOG_LEVEL=debug markform fill ... --model openai/gpt-5-mini
@@ -97,17 +164,25 @@ Verify:
 - [ ] Setting to `verbose` shows verbose-level output
 - [ ] Setting to `quiet` suppresses normal output
 
-### 4. Verify MARKFORM_WIRE_LOG Environment Variable
+### 8. Verify Combined Flags
+
+Test multiple flags together:
 
 ```bash
-MARKFORM_WIRE_LOG=/tmp/wire-env.yaml markform fill ... --model openai/gpt-5-mini
+markform fill examples/movie-research/movie-research-demo.form.md \
+  --model openai/gpt-5-mini \
+  --trace /tmp/combined-trace.log \
+  --wire-log /tmp/combined-wire.yaml \
+  --debug
 ```
 
 Verify:
-- [ ] Wire log is created at specified path
-- [ ] Works without --wire-log flag
+- [ ] Both trace and wire log files are created
+- [ ] Console shows debug output
+- [ ] Trace file contains readable (non-colored) output
+- [ ] Wire file contains YAML-formatted request/response data
 
-### 5. Verify Tool Callback Output
+### 9. Verify Tool Callback Output
 
 Run a web search and verify structured output:
 
@@ -126,32 +201,7 @@ Verify in verbose mode (`--verbose`):
 - [ ] Full result listing shows `[1] "title" - url` format
 - [ ] LLM call metadata shows model and tokens
 
-### 6. Verify Research Command Integration
-
-```bash
-markform research examples/movie-research/movie-research-demo.form.md \
-  --model openai/gpt-5-mini \
-  --wire-log /tmp/research-wire.yaml
-```
-
-Verify:
-- [ ] Same logging output format as fill command
-- [ ] Wire log is created
-- [ ] Callbacks show structured tool info
-
-### 7. Verify Run Command Integration
-
-```bash
-markform run examples/movie-research/movie-research-demo.form.md \
-  --wire-log /tmp/run-wire.yaml
-```
-
-Verify:
-- [ ] --wire-log flag is recognized
-- [ ] Wire log is created after agent fill workflow
-- [ ] Same format as fill and research commands
-
-### 8. Verify Token Count Display
+### 10. Verify Token Count Display
 
 In default mode, patches line should show:
 ```
@@ -162,27 +212,49 @@ Verify:
 - [ ] Token counts appear in dim text after patch count
 - [ ] Format is `↓input ↑output`
 
+## Edge Cases and Error Handling
+
+### Trace File Error Handling
+
+- [ ] Invalid trace path (e.g., `/nonexistent/dir/trace.log`) shows warning but doesn't crash
+- [ ] Read-only file system silently ignores write errors
+- [ ] Very long lines are handled correctly
+
+### Environment Variable Priority
+
+- [ ] CLI flags take precedence over environment variables
+- [ ] MARKFORM_TRACE + --trace: --trace wins
+- [ ] MARKFORM_LOG_LEVEL + --debug: --debug wins
+
 ## Files Changed
 
 ### New Files
 - `src/harness/toolParsing.ts` - Web search result extraction utilities
 
 ### Modified Files
-- `src/cli/lib/cliTypes.ts` - Added LogLevel type, debug property to CommandContext
-- `src/cli/lib/shared.ts` - Added logDebug function, computeLogLevel helper
-- `src/cli/cli.ts` - Added --debug global flag
-- `src/cli/lib/fillLogging.ts` - Enhanced with LogLevel support, structured tool info
-- `src/cli/commands/fill.ts` - Added --wire-log flag and env var support
-- `src/cli/commands/research.ts` - Added --wire-log flag, unified callbacks
-- `src/cli/commands/run.ts` - Added --wire-log flag, transcript support via fillForm
+- `src/cli/lib/cliTypes.ts` - Added LogLevel type, debug property, traceFile to CommandContext
+- `src/cli/lib/shared.ts` - Added logDebug function, computeLogLevel helper, traceFile extraction
+- `src/cli/cli.ts` - Added --debug and --trace global flags
+- `src/cli/lib/fillLogging.ts` - Enhanced with LogLevel support, structured tool info, trace file support
+- `src/cli/commands/fill.ts` - Added --wire-log flag, trace file support with createTracer helper
+- `src/cli/commands/research.ts` - Added --wire-log flag, unified callbacks, traceFile support
+- `src/cli/commands/run.ts` - Added --wire-log flag, transcript support via fillForm, traceFile support
 - `src/harness/harnessTypes.ts` - Extended FillCallbacks with structured fields, added transcript to FillResult
 - `src/harness/programmaticFill.ts` - Added transcript building when captureWireFormat is enabled
 - `src/harness/liveAgent.ts` - Reasoning extraction, updated wrapTool for structured parsing
 - `src/engine/coreTypes.ts` - Added WireReasoningContent type, reasoning field to WireResponseStep
 - `src/research/runResearch.ts` - Pass callbacks to agent
-- `src/settings.ts` - Added DEBUG_OUTPUT_TRUNCATION_LIMIT constant
+- `src/settings.ts` - Added DEBUG_OUTPUT_TRUNCATION_LIMIT constant (increased to 2000)
 - `tests/unit/cli/fillLogging.test.ts` - Updated tests for new behavior
+- `tests/cli/commands.tryscript.md` - Updated to include --debug and --trace in help output
 - `docs/development.md` - Added Log Levels and Wire Format Capture sections
+
+## Potential Issues to Watch For
+
+1. **Trace file size**: Long-running fills with verbose prompts could create large trace files
+2. **File locking**: Concurrent writes to the same trace file are not protected
+3. **Performance**: Synchronous file I/O for each trace line could slow down execution
+4. **Unicode handling**: Complex characters in field values might not display correctly in trace
 
 ## Open Questions
 
@@ -194,3 +266,6 @@ Verify:
 
 3. Should reasoning tokens be displayed separately in verbose mode?
    (Currently included in onLlmCallEnd callback but not explicitly displayed)
+
+4. Should trace file use async I/O to avoid blocking main execution?
+   (Currently uses synchronous writeFileSync/appendFileSync)
