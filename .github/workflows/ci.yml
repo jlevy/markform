@@ -35,8 +35,10 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2
         if: always()
         with:
-          json-summary-path: packages/markform/coverage/coverage-summary.json
-          json-final-path: packages/markform/coverage/coverage-final.json
+          # Working directory for monorepo support - action looks for vite config and coverage files here
+          working-directory: packages/markform
+          json-summary-path: coverage/coverage-summary.json
+          json-final-path: coverage/coverage-final.json
           # Only show changed files on PRs, show all on main
           file-coverage-mode: ${{ github.event_name == 'pull_request' && 'changes' || 'all' }}
 
