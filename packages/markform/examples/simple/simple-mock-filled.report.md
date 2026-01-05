@@ -57,9 +57,9 @@ Medium
 [alice.dev](https://alice.dev)
 
 **References:**
-- [docs.example.com](https://docs.example.com/guide)
-- [github.com](https://github.com/example/project)
-- [medium.com](https://medium.com/article-about-forms)
+- [docs.example.com/guide](https://docs.example.com/guide)
+- [github.com/example/proj…](https://github.com/example/project)
+- [medium.com/article-abou…](https://medium.com/article-about-forms)
 
 ## Date and Year Fields
 
@@ -89,7 +89,7 @@ This is a test note.
 _(empty)_
 
 **Related URL:**
-[markform.dev](https://markform.dev/docs)
+[markform.dev/docs](https://markform.dev/docs)
 
 **Optional Date:**
 _(empty)_

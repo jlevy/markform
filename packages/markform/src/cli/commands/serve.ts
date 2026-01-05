@@ -53,7 +53,7 @@ import {
   writeFile,
 } from '../lib/shared.js';
 import { generateVersionedPath } from '../lib/versioning.js';
-import { extractDomain } from '../../utils/urlFormat.js';
+import { friendlyUrlAbbrev } from '../../utils/urlFormat.js';
 
 /**
  * Open a URL in the default browser (cross-platform).
@@ -922,6 +922,43 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     }
     .data-table tbody tr:hover {
       background: #f8f9fa;
+    }
+    /* Print styles */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+      h1 {
+        margin-top: 0;
+        padding-top: 0;
+      }
+      .tab-bar {
+        display: none !important;
+      }
+      .tab-content {
+        display: none !important;
+      }
+      .tab-content.active {
+        display: block !important;
+      }
+      .group {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .url-link {
+        color: #0d6efd;
+        text-decoration: none;
+      }
+      .url-copy-tooltip {
+        display: none !important;
+      }
+      a[href]:after {
+        content: none;
+      }
     }
   </style>
 </head>
@@ -2048,7 +2085,7 @@ function renderViewFieldValue(
       if (v === null || v === '') {
         return '<div class="view-field-empty">(not filled)</div>';
       }
-      const domain = extractDomain(v);
+      const domain = friendlyUrlAbbrev(v);
       return `<div class="view-field-value"><a href="${escapeHtml(v)}" target="_blank" class="url-link" data-url="${escapeHtml(v)}">${escapeHtml(domain)}</a></div>`;
     }
     case 'url_list': {
@@ -2058,7 +2095,7 @@ function renderViewFieldValue(
       }
       return `<div class="view-field-value"><ul>${items
         .map((u) => {
-          const domain = extractDomain(u);
+          const domain = friendlyUrlAbbrev(u);
           return `<li><a href="${escapeHtml(u)}" target="_blank" class="url-link" data-url="${escapeHtml(u)}">${escapeHtml(domain)}</a></li>`;
         })
         .join('')}</ul></div>`;
@@ -2098,7 +2135,7 @@ function renderViewFieldValue(
             cellValue = String(cell.value);
             // Format URL columns as domain links
             if (col.type === 'url' && cellValue) {
-              const domain = extractDomain(cellValue);
+              const domain = friendlyUrlAbbrev(cellValue);
               cellHtml = `<a href="${escapeHtml(cellValue)}" target="_blank" class="url-link" data-url="${escapeHtml(cellValue)}">${escapeHtml(domain)}</a>`;
             } else {
               cellHtml = escapeHtml(cellValue);
