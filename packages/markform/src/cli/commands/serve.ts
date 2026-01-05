@@ -693,36 +693,46 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
       text-decoration: underline;
     }
     .url-copy-tooltip {
-      position: absolute;
-      left: 100%;
-      top: 50%;
-      transform: translateY(-50%);
-      margin-left: 0.25rem;
-      padding: 0.2rem 0.4rem;
-      background: #495057;
+      position: fixed;
+      padding: 0.25rem 0.5rem;
+      background: #6c757d;
       color: white;
-      border-radius: 3px;
+      border-radius: 4px;
       font-size: 0.75rem;
       white-space: nowrap;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.15s, visibility 0.15s;
+      pointer-events: none;
+      transition: opacity 0.2s ease, visibility 0.2s ease, background 0.2s ease, transform 0.15s ease;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 0.25rem;
-      z-index: 1000;
+      z-index: 10000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
-    .url-link:hover .url-copy-tooltip {
+    .url-copy-tooltip.visible {
       opacity: 1;
       visibility: visible;
+      pointer-events: auto;
+    }
+    .url-copy-tooltip:hover {
+      background: #343a40;
+      transform: translateY(-50%) scale(1.02);
     }
     .url-copy-tooltip svg {
       width: 12px;
       height: 12px;
+      transition: opacity 0.15s ease;
     }
     .url-copy-tooltip.copied {
       background: #28a745;
+    }
+    .url-copy-tooltip.copied:hover {
+      background: #218838;
+    }
+    .url-copy-tooltip.transitioning {
+      opacity: 0.7;
     }
     /* Checkbox and state styles */
     .checkbox { font-size: 1.1em; margin-right: 0.25em; }
@@ -1076,40 +1086,99 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
       // Feather copy icon SVG (inline to avoid external dependency)
       const copyIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
 
-      document.querySelectorAll('.url-link').forEach(link => {
-        // Skip if already has tooltip
-        if (link.querySelector('.url-copy-tooltip')) return;
-
-        const url = link.getAttribute('data-url') || link.getAttribute('href');
-        if (!url) return;
-
-        // Create tooltip element
-        const tooltip = document.createElement('span');
+      // Create a single shared tooltip element
+      let tooltip = document.getElementById('url-copy-tooltip');
+      if (!tooltip) {
+        tooltip = document.createElement('span');
+        tooltip.id = 'url-copy-tooltip';
         tooltip.className = 'url-copy-tooltip';
         tooltip.innerHTML = copyIconSvg + ' Copy';
-        tooltip.setAttribute('data-url', url);
+        document.body.appendChild(tooltip);
+      }
 
-        // Handle click on tooltip
-        tooltip.addEventListener('click', async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          try {
-            await navigator.clipboard.writeText(url);
-            tooltip.innerHTML = copyIconSvg + ' Copied!';
+      let activeLink = null;
+      let hideTimeout = null;
+
+      function showTooltip(link) {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+        activeLink = link;
+        const rect = link.getBoundingClientRect();
+        tooltip.style.left = (rect.right + 6) + 'px';
+        tooltip.style.top = (rect.top + rect.height / 2) + 'px';
+        tooltip.style.transform = 'translateY(-50%)';
+        tooltip.classList.add('visible');
+      }
+
+      function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+          tooltip.classList.remove('visible');
+          activeLink = null;
+        }, 100);
+      }
+
+      // Tooltip hover keeps it visible
+      tooltip.addEventListener('mouseenter', () => {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+      });
+
+      tooltip.addEventListener('mouseleave', () => {
+        hideTooltip();
+      });
+
+      // Handle click on tooltip with smooth transitions
+      tooltip.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!activeLink) return;
+        const url = activeLink.getAttribute('data-url') || activeLink.getAttribute('href');
+        if (!url) return;
+        try {
+          await navigator.clipboard.writeText(url);
+          // Fade out, change text, fade in
+          tooltip.classList.add('transitioning');
+          setTimeout(() => {
+            tooltip.innerHTML = 'Copied!';
             tooltip.classList.add('copied');
+            tooltip.classList.remove('transitioning');
+          }, 100);
+          // Reset after delay
+          setTimeout(() => {
+            tooltip.classList.add('transitioning');
             setTimeout(() => {
               tooltip.innerHTML = copyIconSvg + ' Copy';
               tooltip.classList.remove('copied');
-            }, 1500);
-          } catch (err) {
+              tooltip.classList.remove('transitioning');
+            }, 100);
+          }, 1500);
+        } catch (err) {
+          tooltip.classList.add('transitioning');
+          setTimeout(() => {
             tooltip.innerHTML = 'Failed';
+            tooltip.classList.remove('transitioning');
+          }, 100);
+          setTimeout(() => {
+            tooltip.classList.add('transitioning');
             setTimeout(() => {
               tooltip.innerHTML = copyIconSvg + ' Copy';
-            }, 1500);
-          }
-        });
+              tooltip.classList.remove('transitioning');
+            }, 100);
+          }, 1500);
+        }
+      });
 
-        link.appendChild(tooltip);
+      document.querySelectorAll('.url-link').forEach(link => {
+        // Skip if already setup
+        if (link.hasAttribute('data-tooltip-setup')) return;
+        link.setAttribute('data-tooltip-setup', 'true');
+
+        link.addEventListener('mouseenter', () => showTooltip(link));
+        link.addEventListener('mouseleave', () => hideTooltip());
       });
     }
 
