@@ -1,30 +1,24 @@
 /**
  * Trace file utilities for CLI logging.
  *
- * This module provides shared utilities for trace file output, including:
- * - ANSI code stripping for clean file output
- * - Trace file initialization and writing
- * - String truncation for debug output
- * - Duration formatting
+ * This module provides utilities for trace file output during command execution.
+ * For general string formatting utilities, see src/utils/formatUtils.ts.
  */
 
 import { appendFileSync, writeFileSync } from 'node:fs';
 
-import { DEBUG_OUTPUT_TRUNCATION_LIMIT } from '../../settings.js';
+import { stripAnsi } from '../../utils/formatUtils.js';
 
-// =============================================================================
-// ANSI Utilities
-// =============================================================================
+// Re-export common utilities for convenience (backward compatibility)
+export {
+  stripAnsi,
+  safeTruncate,
+  formatDuration,
+  humanReadableSize,
+} from '../../utils/formatUtils.js';
 
-/**
- * Strip ANSI escape codes from a string for file output.
- * This is necessary because console output uses colors (via picocolors)
- * but trace files should contain plain text.
- */
-export function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, '');
-}
+// Alias for backward compatibility
+export { safeTruncate as truncate } from '../../utils/formatUtils.js';
 
 // =============================================================================
 // Trace File Utilities
@@ -68,34 +62,4 @@ export function createTracer(
       // Silently ignore write errors to not disrupt main flow
     }
   };
-}
-
-// =============================================================================
-// String Utilities
-// =============================================================================
-
-/**
- * Truncate a string to a maximum length with ellipsis indicator.
- * Useful for debug output where full content would be too verbose.
- */
-export function truncate(str: string, maxLength: number = DEBUG_OUTPUT_TRUNCATION_LIMIT): string {
-  if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength) + '...[truncated]';
-}
-
-/**
- * Format duration in milliseconds to human-readable string.
- * Uses seconds format (e.g., "1.5s") for consistency.
- */
-export function formatDuration(ms: number): string {
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-/**
- * Format a file size in bytes to human-readable string.
- */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
