@@ -54,12 +54,12 @@ Medium
 ## URL Fields
 
 **Website:**
-https://alice.dev
+[alice.dev](https://alice.dev)
 
 **References:**
-- https://docs.example.com/guide
-- https://github.com/example/project
-- https://medium.com/article-about-forms
+- [docs.example.com](https://docs.example.com/guide)
+- [github.com](https://github.com/example/project)
+- [medium.com](https://medium.com/article-about-forms)
 
 ## Date and Year Fields
 
@@ -89,7 +89,7 @@ This is a test note.
 _(empty)_
 
 **Related URL:**
-https://markform.dev/docs
+[markform.dev](https://markform.dev/docs)
 
 **Optional Date:**
 _(empty)_

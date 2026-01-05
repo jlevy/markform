@@ -53,10 +53,10 @@ High
 ## URL Fields
 
 **Website:**
-https://test.example.com
+[test.example.com](https://test.example.com)
 
 **References:**
-- https://docs.example.com
+- [docs.example.com](https://docs.example.com)
 
 ## Date and Year Fields
 

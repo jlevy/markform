@@ -1068,7 +1068,9 @@ markform:
 
     it('should render links', () => {
       const html = renderMarkdownContent('Check out [example](https://example.com)');
-      expect(html).toContain('<a href="https://example.com" target="_blank">example</a>');
+      expect(html).toContain(
+        '<a href="https://example.com" target="_blank" class="url-link" data-url="https://example.com">example</a>',
+      );
     });
   });
 

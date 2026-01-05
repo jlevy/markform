@@ -49,6 +49,7 @@ import type {
 } from './coreTypes.js';
 import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
 import { priorityKeyComparator } from '../utils/keySort.js';
+import { formatUrlAsMarkdownLink } from '../utils/urlFormat.js';
 
 // =============================================================================
 // Smart Fence Selection Helpers
@@ -837,8 +838,9 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
 
 /**
  * Serialize a cell value for table output.
+ * URL-typed columns are formatted as markdown links with domain as display text.
  */
-function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): string {
+function serializeCellValue(cell: CellResponse, columnType: ColumnTypeName): string {
   if (cell.state === 'skipped') {
     return cell.reason ? `%SKIP:${cell.reason}%` : '%SKIP%';
   }
@@ -851,6 +853,10 @@ function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): st
   // Convert value to string based on type
   if (typeof cell.value === 'number') {
     return String(cell.value);
+  }
+  // Format URL columns as markdown links
+  if (columnType === 'url') {
+    return formatUrlAsMarkdownLink(cell.value);
   }
   return cell.value;
 }
@@ -1351,7 +1357,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
     case 'url': {
       const urlValue = value as UrlValue | undefined;
       if (urlValue?.value) {
-        lines.push(urlValue.value);
+        lines.push(formatUrlAsMarkdownLink(urlValue.value));
       } else {
         lines.push('_(empty)_');
       }
@@ -1361,7 +1367,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       const urlListValue = value as UrlListValue | undefined;
       if (urlListValue?.items && urlListValue.items.length > 0) {
         for (const item of urlListValue.items) {
-          lines.push(`- ${item}`);
+          lines.push(`- ${formatUrlAsMarkdownLink(item)}`);
         }
       } else {
         lines.push('_(empty)_');

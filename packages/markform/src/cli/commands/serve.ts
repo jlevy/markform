@@ -53,6 +53,7 @@ import {
   writeFile,
 } from '../lib/shared.js';
 import { generateVersionedPath } from '../lib/versioning.js';
+import { extractDomain } from '../../utils/urlFormat.js';
 
 /**
  * Open a URL in the default browser (cross-platform).
@@ -682,6 +683,47 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .markdown-content a { color: #0366d6; text-decoration: none; }
     .markdown-content a:hover { text-decoration: underline; }
     .markdown-content strong { font-weight: 600; }
+    /* URL link with hover copy */
+    .url-link {
+      color: #0366d6;
+      text-decoration: none;
+      position: relative;
+    }
+    .url-link:hover {
+      text-decoration: underline;
+    }
+    .url-copy-tooltip {
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-left: 0.25rem;
+      padding: 0.2rem 0.4rem;
+      background: #495057;
+      color: white;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s, visibility 0.15s;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      z-index: 1000;
+    }
+    .url-link:hover .url-copy-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
+    .url-copy-tooltip svg {
+      width: 12px;
+      height: 12px;
+    }
+    .url-copy-tooltip.copied {
+      background: #28a745;
+    }
     /* Checkbox and state styles */
     .checkbox { font-size: 1.1em; margin-right: 0.25em; }
     .checkbox.checked { color: #28a745; }
@@ -1028,6 +1070,58 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
 
     // Load View tab on page load (it's the default tab)
     showTab('view');
+
+    // URL copy tooltip functionality
+    function setupUrlCopyTooltips() {
+      // Feather copy icon SVG (inline to avoid external dependency)
+      const copyIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+      document.querySelectorAll('.url-link').forEach(link => {
+        // Skip if already has tooltip
+        if (link.querySelector('.url-copy-tooltip')) return;
+
+        const url = link.getAttribute('data-url') || link.getAttribute('href');
+        if (!url) return;
+
+        // Create tooltip element
+        const tooltip = document.createElement('span');
+        tooltip.className = 'url-copy-tooltip';
+        tooltip.innerHTML = copyIconSvg + ' Copy';
+        tooltip.setAttribute('data-url', url);
+
+        // Handle click on tooltip
+        tooltip.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            await navigator.clipboard.writeText(url);
+            tooltip.innerHTML = copyIconSvg + ' Copied!';
+            tooltip.classList.add('copied');
+            setTimeout(() => {
+              tooltip.innerHTML = copyIconSvg + ' Copy';
+              tooltip.classList.remove('copied');
+            }, 1500);
+          } catch (err) {
+            tooltip.innerHTML = 'Failed';
+            setTimeout(() => {
+              tooltip.innerHTML = copyIconSvg + ' Copy';
+            }, 1500);
+          }
+        });
+
+        link.appendChild(tooltip);
+      });
+    }
+
+    // Setup tooltips after tab content loads
+    const originalShowTab = showTab;
+    showTab = async function(tabId) {
+      await originalShowTab(tabId);
+      setupUrlCopyTooltips();
+    };
+
+    // Also setup on initial load after view tab loads
+    setTimeout(setupUrlCopyTooltips, 100);
   </script>
 </body>
 </html>`;
@@ -1885,14 +1979,20 @@ function renderViewFieldValue(
       if (v === null || v === '') {
         return '<div class="view-field-empty">(not filled)</div>';
       }
-      return `<div class="view-field-value"><a href="${escapeHtml(v)}" target="_blank">${escapeHtml(v)}</a></div>`;
+      const domain = extractDomain(v);
+      return `<div class="view-field-value"><a href="${escapeHtml(v)}" target="_blank" class="url-link" data-url="${escapeHtml(v)}">${escapeHtml(domain)}</a></div>`;
     }
     case 'url_list': {
       const items = value.kind === 'url_list' ? value.items : [];
       if (items.length === 0) {
         return '<div class="view-field-empty">(not filled)</div>';
       }
-      return `<div class="view-field-value"><ul>${items.map((u) => `<li><a href="${escapeHtml(u)}" target="_blank">${escapeHtml(u)}</a></li>`).join('')}</ul></div>`;
+      return `<div class="view-field-value"><ul>${items
+        .map((u) => {
+          const domain = extractDomain(u);
+          return `<li><a href="${escapeHtml(u)}" target="_blank" class="url-link" data-url="${escapeHtml(u)}">${escapeHtml(domain)}</a></li>`;
+        })
+        .join('')}</ul></div>`;
     }
     case 'date': {
       const v = value.kind === 'date' ? value.value : null;
@@ -1924,10 +2024,18 @@ function renderViewFieldValue(
         for (const col of field.columns) {
           const cell = row[col.id];
           let cellValue = '';
+          let cellHtml = '';
           if (cell?.state === 'answered' && cell.value !== undefined && cell.value !== null) {
             cellValue = String(cell.value);
+            // Format URL columns as domain links
+            if (col.type === 'url' && cellValue) {
+              const domain = extractDomain(cellValue);
+              cellHtml = `<a href="${escapeHtml(cellValue)}" target="_blank" class="url-link" data-url="${escapeHtml(cellValue)}">${escapeHtml(domain)}</a>`;
+            } else {
+              cellHtml = escapeHtml(cellValue);
+            }
           }
-          tableHtml += `<td>${escapeHtml(cellValue)}</td>`;
+          tableHtml += `<td>${cellHtml}</td>`;
         }
         tableHtml += '</tr>';
       }
@@ -2227,10 +2335,13 @@ function formatInlineMarkdown(text: string): string {
   // Italic
   result = result.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   // Links - need to unescape the URL first
+  // Add url-link class and data-url for copy tooltip support
   result = result.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_: string, linkText: string, url: string) =>
-      `<a href="${url.replace(/&amp;/g, '&')}" target="_blank">${linkText}</a>`,
+    (_: string, linkText: string, url: string) => {
+      const cleanUrl = url.replace(/&amp;/g, '&');
+      return `<a href="${cleanUrl}" target="_blank" class="url-link" data-url="${cleanUrl}">${linkText}</a>`;
+    },
   );
   return result;
 }
