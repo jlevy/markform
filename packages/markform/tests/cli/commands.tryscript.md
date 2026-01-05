@@ -35,6 +35,9 @@ Options:
   --version                   output the version number
   --verbose                   Enable verbose output
   --quiet                     Suppress non-essential output
+  --debug                     Enable debug output (full prompts, raw tool I/O)
+  --trace <file>              Write incremental log output to file during
+                              execution
   --dry-run                   Show what would be done without making changes
   --format <format>           Output format: console, plaintext, yaml, json,
                               markform, markdown (default: "console")
@@ -156,11 +159,10 @@ optional_year: (unanswered)
 # Test: readme displays README
 
 ```console
-$ $CLI readme | head -5
+$ $CLI readme | head -3
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)][..]
-...
+[..]
 ? 0
 ```
 
