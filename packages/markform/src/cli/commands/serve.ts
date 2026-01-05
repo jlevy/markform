@@ -1118,23 +1118,21 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     // Load View tab on page load (it's the default tab)
     showTab('view');
 
-    // URL copy tooltip functionality
-    function setupUrlCopyTooltips() {
+    // URL copy tooltip functionality - initialize once
+    (function initUrlCopyTooltip() {
       // Feather copy icon SVG (inline to avoid external dependency)
       const copyIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
 
-      // Create a single shared tooltip element
-      let tooltip = document.getElementById('url-copy-tooltip');
-      if (!tooltip) {
-        tooltip = document.createElement('span');
-        tooltip.id = 'url-copy-tooltip';
-        tooltip.className = 'url-copy-tooltip';
-        tooltip.innerHTML = copyIconSvg + ' Copy';
-        document.body.appendChild(tooltip);
-      }
-
+      // Shared state
       let activeLink = null;
       let hideTimeout = null;
+
+      // Create tooltip element
+      const tooltip = document.createElement('span');
+      tooltip.id = 'url-copy-tooltip';
+      tooltip.className = 'url-copy-tooltip';
+      tooltip.innerHTML = copyIconSvg + ' Copy';
+      document.body.appendChild(tooltip);
 
       function showTooltip(link) {
         if (hideTimeout) {
@@ -1168,7 +1166,7 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
         hideTooltip();
       });
 
-      // Handle click on tooltip with smooth transitions
+      // Handle click on tooltip
       tooltip.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1177,7 +1175,7 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
         if (!url) return;
         try {
           await navigator.clipboard.writeText(url);
-          // Fade out, change text, fade in
+          // Transition to copied state
           tooltip.classList.add('transitioning');
           setTimeout(() => {
             tooltip.innerHTML = 'Copied!';
@@ -1194,40 +1192,33 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
             }, 100);
           }, 1500);
         } catch (err) {
-          tooltip.classList.add('transitioning');
+          tooltip.innerHTML = 'Failed';
           setTimeout(() => {
-            tooltip.innerHTML = 'Failed';
-            tooltip.classList.remove('transitioning');
-          }, 100);
-          setTimeout(() => {
-            tooltip.classList.add('transitioning');
-            setTimeout(() => {
-              tooltip.innerHTML = copyIconSvg + ' Copy';
-              tooltip.classList.remove('transitioning');
-            }, 100);
+            tooltip.innerHTML = copyIconSvg + ' Copy';
           }, 1500);
         }
       });
 
-      document.querySelectorAll('.url-link').forEach(link => {
-        // Skip if already setup
-        if (link.hasAttribute('data-tooltip-setup')) return;
-        link.setAttribute('data-tooltip-setup', 'true');
+      // Function to attach hover listeners to new links
+      function attachLinkListeners() {
+        document.querySelectorAll('.url-link').forEach(link => {
+          if (link.hasAttribute('data-tooltip-setup')) return;
+          link.setAttribute('data-tooltip-setup', 'true');
+          link.addEventListener('mouseenter', () => showTooltip(link));
+          link.addEventListener('mouseleave', () => hideTooltip());
+        });
+      }
 
-        link.addEventListener('mouseenter', () => showTooltip(link));
-        link.addEventListener('mouseleave', () => hideTooltip());
-      });
-    }
+      // Attach to links after tab content loads
+      const originalShowTab = showTab;
+      showTab = async function(tabId) {
+        await originalShowTab(tabId);
+        attachLinkListeners();
+      };
 
-    // Setup tooltips after tab content loads
-    const originalShowTab = showTab;
-    showTab = async function(tabId) {
-      await originalShowTab(tabId);
-      setupUrlCopyTooltips();
-    };
-
-    // Also setup on initial load after view tab loads
-    setTimeout(setupUrlCopyTooltips, 100);
+      // Initial setup
+      setTimeout(attachLinkListeners, 100);
+    })();
   </script>
 </body>
 </html>`;
