@@ -22,7 +22,11 @@ This research brief explores the design space for **subforms** (also called depe
 3. Subforms are filled by subagents with context from the parent form
 4. The agentic loop can handle subform structures with appropriate context propagation
 
-This capability would enable deep research workflows where, for example, a form contains a table of companies, and each company row has a "research details" subform that gets filled by a dedicated subagent.
+This capability would enable two primary workflow patterns:
+
+**Pattern 1: Tabular (Per-Row) Subforms** — A form contains a table of companies, and each company row has a "research details" subform filled by a dedicated subagent. Rows are typically independent and parallelizable.
+
+**Pattern 2: Sequential (Pipeline) Subforms** — A parent form orchestrates multiple subforms with dependencies between them. For example, an earnings analysis form depends on a company research form, and a final synthesis field depends on both. This captures the "build dependency" pattern where Form B needs Form A's output.
 
 ### Key Finding: No Recursive Nesting
 
@@ -1384,6 +1388,359 @@ markform workspace export . --inline
 ```
 
 **Recommendation**: Start with Option A (implicit, convention-based) for v1. Add explicit workspace manifest in Phase 2 if needed for complex projects.
+
+* * *
+
+## Use Case: Sequential Form Dependencies (Pipeline Pattern)
+
+### The Problem
+
+A common pattern distinct from tabular per-row subforms is **sequential form dependencies**—where Form B depends on the output of Form A. For example:
+
+- **Company Research Form** → collects company overview, financials, competitive landscape
+- **Earnings Analysis Form** → analyzes quarterly earnings, requires company context from above
+
+Currently this is solved by:
+1. Running company research form as a tool, passing output to earnings analysis as `inputContext`
+2. Wrapping both forms in an external agent framework where one tool calls another
+
+Neither is ideal—the dependency relationship isn't captured in the form structure itself, and orchestration lives outside Markform.
+
+### How Subforms Could Solve This
+
+With subforms, you could create a **thin orchestrator form** that declares both as subforms with explicit dependencies:
+
+```jinja
+{% form id="quarterly_company_analysis" label="Quarterly Company Analysis" %}
+
+{% field kind="string" id="company_name" label="Company Name" role="human" required=true %}{% /field %}
+
+{% field kind="string" id="ticker" label="Stock Ticker" role="human" required=true %}{% /field %}
+
+{% field kind="string" id="quarter" label="Quarter (e.g., Q3 2025)" role="human" required=true %}{% /field %}
+
+{% field kind="subform_ref" id="company_research" label="Company Research"
+   formRef="templates/company-research.form.md" required=true %}
+```value
+```
+{% /field %}
+
+{% field kind="subform_ref" id="earnings_analysis" label="Earnings Analysis"
+   formRef="templates/earnings-analysis.form.md"
+   dependsOn=["company_research"] required=true %}
+```value
+```
+{% /field %}
+
+{% field kind="string" id="investment_recommendation" label="Investment Recommendation"
+   role="agent" dependsOn=["company_research", "earnings_analysis"] %}{% /field %}
+
+{% /form %}
+```
+
+### Design Options for Sequential Dependencies
+
+#### Option 1: Explicit `dependsOn` Attribute
+
+Each subform field declares what it depends on:
+
+```jinja
+{% field kind="subform_ref" id="earnings_analysis"
+   dependsOn=["company_research"] %}
+```
+
+**How it works:**
+- Harness builds a dependency graph from `dependsOn` declarations
+- Topological sort determines fill order
+- Dependent subforms receive their dependencies' exported values in context
+
+**Context propagation for earnings_analysis:**
+```typescript
+{
+  rowContext: {
+    company_name: "Acme Corp",
+    ticker: "ACME",
+    quarter: "Q3 2025"
+  },
+  dependencies: {
+    company_research: {
+      // Full exported values from company-research.form.md
+      overview: "Acme Corp is a...",
+      financials: { revenue: "...", margins: "..." },
+      competitive_position: "..."
+    }
+  }
+}
+```
+
+**Pros:**
+- Explicit and declarative
+- Enables parallel execution of independent branches
+- Clear error attribution (if A fails, B is skipped)
+- Works for any graph structure (not just linear chains)
+
+**Cons:**
+- Requires graph traversal and cycle detection
+- More configuration burden
+- Form designer must understand dependency implications
+
+#### Option 2: Implicit Document Order
+
+Simpler approach: subforms are filled in document order, and each subform automatically has access to all preceding subforms' outputs.
+
+```jinja
+{% field kind="subform_ref" id="company_research" ... %}
+{% field kind="subform_ref" id="earnings_analysis" ... %}
+```
+
+`earnings_analysis` implicitly depends on `company_research` because it appears later.
+
+**How it works:**
+- Fill subforms top-to-bottom
+- Each subform's context includes all previously-completed subforms' values
+- No explicit declaration needed
+
+**Context for earnings_analysis:**
+```typescript
+{
+  rowContext: { company_name, ticker, quarter },
+  preceding: {
+    company_research: { /* exported values */ }
+  }
+}
+```
+
+**Pros:**
+- Zero configuration for linear pipelines
+- Natural reading order = execution order
+- No graph complexity
+
+**Cons:**
+- Can't express parallel branches (A and B both needed by C)
+- Forces sequential execution even when parallelism is safe
+- Less explicit—harder to understand dependencies by reading the form
+
+#### Option 3: Hybrid (Implicit Default + Explicit Override)
+
+Default to document-order semantics, but allow `dependsOn` for complex cases:
+
+- If no `dependsOn`: depends on all preceding subform fields
+- If `dependsOn=[]` (empty): no dependencies, can run in parallel with others
+- If `dependsOn=["specific_field"]`: explicit dependency graph
+
+```jinja
+// Sequential (implicit)
+{% field kind="subform_ref" id="company_research" ... %}
+{% field kind="subform_ref" id="earnings_analysis" ... %}
+
+// Parallel (explicit opt-out)
+{% field kind="subform_ref" id="market_research" dependsOn=[] ... %}
+{% field kind="subform_ref" id="competitor_analysis" dependsOn=[] ... %}
+
+// Convergent (explicit dependencies)
+{% field kind="subform_ref" id="synthesis"
+   dependsOn=["market_research", "competitor_analysis"] ... %}
+```
+
+**Pros:**
+- Simple cases stay simple
+- Complex cases are possible
+- Progressive disclosure
+
+**Cons:**
+- Two mental models to understand
+- Empty array semantics may be surprising
+
+### Dependency Graph Considerations
+
+If using explicit `dependsOn`, the harness must handle:
+
+#### Cycle Detection
+
+```jinja
+{% field kind="subform_ref" id="a" dependsOn=["b"] %}
+{% field kind="subform_ref" id="b" dependsOn=["a"] %}  // CYCLE!
+```
+
+**Solution:** Topological sort at parse/inspect time. If cycle detected, report as validation error before any filling begins.
+
+#### Diamond Dependencies
+
+```
+    A
+   / \
+  B   C
+   \ /
+    D
+```
+
+Where D depends on both B and C, which both depend on A.
+
+**Execution:**
+1. Fill A
+2. Fill B and C in parallel (both have A complete)
+3. Fill D (has B and C complete)
+
+This requires the harness to track completion state and wake up dependent fields when their dependencies are satisfied.
+
+#### Missing Dependencies
+
+```jinja
+{% field kind="subform_ref" id="analysis" dependsOn=["nonexistent_field"] %}
+```
+
+**Solution:** Validate at parse time that all `dependsOn` references point to existing fields.
+
+### Context Propagation for Sequential Dependencies
+
+The key question: **what does the dependent subform receive?**
+
+| Mode | What's Passed | Best For |
+| --- | --- | --- |
+| **Values only** | Exported JSON from dependency | Most cases—structured data |
+| **Values + source** | JSON + path to dependency form file | When subform needs to cite sources |
+| **Full form** | Entire dependency form markdown | Rare—when instructions matter |
+
+**Recommended default:** Values only (exported JSON).
+
+```typescript
+// Context passed to earnings_analysis
+{
+  // Parent form scalar fields
+  company_name: "Acme Corp",
+  ticker: "ACME",
+  quarter: "Q3 2025",
+
+  // Dependency outputs (values only)
+  company_research: {
+    overview: "...",
+    financials: { revenue: "...", margins: "..." },
+    competitive_position: "...",
+    key_risks: ["..."]
+  }
+}
+```
+
+### Comparison: Sequential vs Tabular Subforms
+
+| Aspect | Tabular (Per-Row) | Sequential (Pipeline) |
+| --- | --- | --- |
+| **Relationship** | 1:N (parent table → many subforms) | 1:1 or N:1 (chain/graph) |
+| **Identity** | Row ID (e.g., `company_id`) | Field ID |
+| **Parallelism** | Usually parallel (rows independent) | Usually sequential (dependencies) |
+| **Context source** | Row values | Preceding subform outputs |
+| **Primary use case** | "Research each company in this list" | "First research, then analyze" |
+| **Form structure** | Table field with subform column | Multiple subform_ref fields |
+
+### Worked Example: Quarterly Analysis Pipeline
+
+**Parent orchestrator form:**
+
+```jinja
+---
+title: Quarterly Company Analysis
+---
+
+# Quarterly Company Analysis
+
+{% form id="quarterly_analysis" %}
+
+## Target Company
+
+{% group id="target" label="Target Company" %}
+
+{% field kind="string" id="company_name" label="Company Name" role="human" required=true %}{% /field %}
+
+{% field kind="string" id="ticker" label="Stock Ticker" role="human" required=true %}{% /field %}
+
+{% field kind="single_select" id="quarter" label="Quarter" role="human" required=true %}
+- Q1 2025
+- Q2 2025
+- Q3 2025
+- Q4 2025
+{% /field %}
+
+{% /group %}
+
+## Analysis Pipeline
+
+{% group id="pipeline" label="Analysis Pipeline" %}
+
+{% field kind="subform_ref" id="company_research" label="1. Company Research"
+   formRef="templates/company-research.form.md" required=true %}
+```value
+```
+{% /field %}
+
+{% instructions ref="company_research" %}
+Conduct comprehensive company research for {{company_name}} ({{ticker}}).
+Focus on business model, competitive position, and financial health.
+{% /instructions %}
+
+{% field kind="subform_ref" id="earnings_analysis" label="2. Earnings Analysis"
+   formRef="templates/earnings-analysis.form.md"
+   dependsOn=["company_research"] required=true %}
+```value
+```
+{% /field %}
+
+{% instructions ref="earnings_analysis" %}
+Analyze {{quarter}} earnings for {{company_name}}.
+Use the company research context to inform your analysis of earnings quality,
+guidance credibility, and management commentary.
+{% /instructions %}
+
+{% /group %}
+
+## Synthesis
+
+{% field kind="string" id="investment_thesis" label="Investment Thesis"
+   role="agent" dependsOn=["company_research", "earnings_analysis"] required=true %}{% /field %}
+
+{% instructions ref="investment_thesis" %}
+Based on the company research and earnings analysis, provide a concise
+investment thesis. Should this stock be bought, held, or sold?
+{% /instructions %}
+
+{% /form %}
+```
+
+**Execution flow:**
+
+1. Human fills `company_name`, `ticker`, `quarter`
+2. Harness fills `company_research` subform (creates `subforms/company_research.form.md`)
+3. When company_research completes, harness fills `earnings_analysis` with company_research output in context
+4. When both complete, harness fills `investment_thesis` scalar field with both subform outputs in context
+5. Parent form marked complete
+
+**Resulting file structure:**
+
+```
+quarterly-analysis.form.md              # Parent (orchestrator)
+subforms/
+├── company_research.form.md            # Filled company research
+└── earnings_analysis.form.md           # Filled earnings analysis (has company context)
+```
+
+### Recommendation for Sequential Dependencies
+
+**Phase 1 (v1):** Implicit document order
+- Subforms filled top-to-bottom
+- Each subform receives all preceding subforms' exported values
+- Simple, covers most pipeline use cases
+- No graph complexity
+
+**Phase 2 (v2):** Add explicit `dependsOn`
+- For parallel branches that converge
+- For opting out of implicit dependencies (`dependsOn=[]`)
+- Requires cycle detection and topological sort
+
+**Phase 3 (if needed):** Full DAG support
+- Complex multi-branch pipelines
+- Conditional dependencies
+- Only if real-world usage demands it
+
+This approach follows the principle of **progressive disclosure**—simple cases stay simple, complex cases are possible.
 
 * * *
 
