@@ -11,7 +11,6 @@
  *   markform run --limit=50        # Override menu limit
  */
 
-import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { Command } from 'commander';
@@ -22,7 +21,6 @@ import { parseForm } from '../../engine/parse.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
 import type { ParsedForm } from '../../engine/coreTypes.js';
-import { getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
 import {
   AGENT_ROLE,
   USER_ROLE,
@@ -34,7 +32,6 @@ import {
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
 } from '../../settings.js';
 import { getFormsDir } from '../lib/paths.js';
-import { SUGGESTED_LLMS, hasWebSearchSupport } from '../../llms.js';
 import { determineRunMode, formatRunModeSource } from '../lib/runMode.js';
 import { exportMultiFormat } from '../lib/exportHelpers.js';
 import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
@@ -44,12 +41,8 @@ import {
   showInteractiveOutro,
 } from '../lib/interactivePrompts.js';
 import { formatFormLabel, formatFormHint } from '../lib/formatting.js';
-import type { FormDisplayInfo, ExportResult } from '../lib/cliTypes.js';
-import {
-  getExampleOrder,
-  getExampleById,
-  DEFAULT_EXAMPLE_ID,
-} from '../examples/exampleRegistry.js';
+import type { ExportResult } from '../lib/cliTypes.js';
+import { getExampleById, DEFAULT_EXAMPLE_ID } from '../examples/exampleRegistry.js';
 import {
   ensureFormsDir,
   formatPath,
@@ -64,114 +57,7 @@ import {
 import { createFillLoggingCallbacks } from '../lib/fillLogging.js';
 import { fillForm } from '../../harness/programmaticFill.js';
 import { createTracer } from '../lib/traceUtils.js';
-
-// =============================================================================
-// Types
-// =============================================================================
-
-interface FormEntry extends FormDisplayInfo {
-  path: string;
-  mtime: Date;
-}
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Scan forms directory for .form.md files.
- */
-function scanFormsDirectory(formsDir: string): FormEntry[] {
-  const entries: FormEntry[] = [];
-
-  try {
-    const files = readdirSync(formsDir);
-    for (const file of files) {
-      if (!file.endsWith('.form.md')) continue;
-
-      const fullPath = join(formsDir, file);
-      try {
-        const stat = statSync(fullPath);
-        if (stat.isFile()) {
-          entries.push({
-            path: fullPath,
-            filename: file,
-            mtime: stat.mtime,
-          });
-        }
-      } catch {
-        // Skip files we can't stat
-      }
-    }
-  } catch {
-    // Directory doesn't exist or can't be read
-  }
-
-  // Sort by canonical example order, then alphabetically for unknown files
-  entries.sort((a, b) => {
-    const orderDiff = getExampleOrder(a.filename) - getExampleOrder(b.filename);
-    if (orderDiff !== 0) return orderDiff;
-    return a.filename.localeCompare(b.filename);
-  });
-
-  return entries;
-}
-
-/**
- * Load form metadata for menu display.
- */
-async function enrichFormEntry(entry: FormEntry): Promise<FormEntry> {
-  try {
-    const content = await readFile(entry.path);
-    const form = parseForm(content);
-    const runModeResult = determineRunMode(form);
-
-    return {
-      ...entry,
-      title: form.schema.title,
-      description: form.schema.description,
-      runMode: runModeResult.success ? runModeResult.runMode : undefined,
-    };
-  } catch {
-    return entry;
-  }
-}
-
-/**
- * Build model options for the select prompt.
- */
-function buildModelOptions(
-  webSearchOnly: boolean,
-): { value: string; label: string; hint?: string }[] {
-  const options: { value: string; label: string; hint?: string }[] = [];
-
-  for (const [provider, models] of Object.entries(SUGGESTED_LLMS)) {
-    // Filter for web search support if required
-    if (webSearchOnly && !hasWebSearchSupport(provider)) {
-      continue;
-    }
-
-    const info = getProviderInfo(provider as ProviderName);
-    const hasKey = !!process.env[info.envVar];
-    const keyStatus = hasKey ? pc.green('✓') : '○';
-
-    for (const model of models) {
-      options.push({
-        value: `${provider}/${model}`,
-        label: `${provider}/${model}`,
-        hint: `${keyStatus} ${info.envVar}`,
-      });
-    }
-  }
-
-  options.push({
-    value: 'custom',
-    label: 'Enter custom model ID...',
-    hint: 'provider/model-id format',
-  });
-
-  return options;
-}
+import { scanFormsDirectory, enrichFormEntry, buildModelOptions } from '../lib/runHelpers.js';
 
 /**
  * Prompt user to select a model.

@@ -1741,6 +1741,72 @@ markform:
       const appliedPatch = result.appliedPatches[0] as { value: string[] };
       expect(appliedPatch.value).toEqual(['coerced']);
     });
+
+    it('coerces boolean to checkbox string with explicit mode (yes/no)', () => {
+      const explicitForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="checkboxes" id="confirms" label="Confirmations" checkboxMode="explicit" %}
+- [ ] Confirmed {% #confirmed %}
+- [ ] Verified {% #verified %}
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(explicitForm);
+      const patch = {
+        op: 'set_checkboxes',
+        fieldId: 'confirms',
+        value: { confirmed: true, verified: false },
+      } as any;
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      expect(result.warnings.length).toBe(1);
+      expect(result.warnings[0]?.coercion).toBe('boolean_to_checkbox');
+
+      const value = form.responsesByFieldId.confirms?.value as { values: Record<string, string> };
+      expect(value.values.confirmed).toBe('yes');
+      expect(value.values.verified).toBe('no');
+    });
+
+    it('coerces empty array to checkboxes object without warning', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      const patch = {
+        op: 'set_checkboxes',
+        fieldId: 'checks',
+        value: [],
+      } as any;
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('applied');
+      // Empty array should not produce a warning
+      expect(result.warnings.length).toBe(0);
+
+      const value = form.responsesByFieldId.checks?.value as { values: Record<string, string> };
+      expect(value.values).toEqual({});
+    });
+
+    it('rejects invalid option ID in multi_select', () => {
+      const form = parseForm(COERCION_TEST_FORM);
+      const patch: Patch = {
+        op: 'set_multi_select',
+        fieldId: 'tags',
+        value: ['opt1', 'invalid_option'],
+      };
+      const result = applyPatches(form, [patch]);
+
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches.length).toBe(1);
+      expect(result.rejectedPatches[0]?.message).toContain('Invalid option');
+      expect(result.rejectedPatches[0]?.message).toContain('invalid_option');
+    });
   });
   /* eslint-enable @typescript-eslint/no-unsafe-argument */
 

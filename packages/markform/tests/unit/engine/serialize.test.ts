@@ -3,7 +3,11 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { parseForm } from '../../../src/engine/parse.js';
-import { serializeForm, serializeRawMarkdown } from '../../../src/engine/serialize.js';
+import {
+  serializeForm,
+  serializeRawMarkdown,
+  serializeReport,
+} from '../../../src/engine/serialize.js';
 
 describe('engine/serialize', () => {
   describe('serialize', () => {
@@ -817,6 +821,47 @@ markform:
       // Should NOT contain the old placeholder format
       expect(output).not.toContain('_(2 rows)_');
     });
+
+    it('includes group-level and field-level documentation blocks', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" title="Test Form" %}
+
+{% group id="g1" title="Personal Info" %}
+{% field kind="string" id="name" label="Full Name" %}
+\`\`\`value
+John Doe
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% description ref="g1" %}
+This section collects personal information.
+{% /description %}
+
+{% description ref="name" %}
+Please enter your full legal name.
+{% /description %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeRawMarkdown(parsed);
+
+      // Should contain group-level docs
+      expect(output).toContain('This section collects personal information.');
+
+      // Should contain field-level docs
+      expect(output).toContain('Please enter your full legal name.');
+
+      // Docs should appear after group header and field value
+      expect(output).toContain('## Personal Info');
+      expect(output).toContain('**Full Name:**');
+      expect(output).toContain('John Doe');
+    });
   });
 
   describe('unified response model - serialize state (markform-233)', () => {
@@ -1429,6 +1474,107 @@ This description should NOT appear in report.
       const reparsedDescription = reparsed.docs.find((d) => d.tag === 'description');
       expect(reparsedInstructions?.report).toBe(true);
       expect(reparsedDescription?.report).toBe(false);
+    });
+  });
+
+  describe('serializeReport', () => {
+    it('produces filtered report with group/field docs respecting report attribute', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" title="Test Report" %}
+
+{% group id="g1" title="Visible Section" %}
+{% field kind="string" id="name" label="Name" %}
+\`\`\`value
+Alice
+\`\`\`
+{% /field %}
+{% field kind="string" id="secret" label="Secret" report=false %}
+\`\`\`value
+Hidden Value
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% group id="g2" title="Hidden Section" report=false %}
+{% field kind="string" id="internal" label="Internal" %}
+\`\`\`value
+Internal Data
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% description ref="g1" %}
+Group description included in report.
+{% /description %}
+
+{% description ref="name" %}
+Field description included in report.
+{% /description %}
+
+{% instructions ref="name" %}
+Instructions excluded by default.
+{% /instructions %}
+
+{% instructions ref="test" report=true %}
+Form instructions explicitly included.
+{% /instructions %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeReport(parsed);
+
+      // Should include form title
+      expect(output).toContain('# Test Report');
+
+      // Should include visible group and field
+      expect(output).toContain('## Visible Section');
+      expect(output).toContain('**Name:**');
+      expect(output).toContain('Alice');
+
+      // Should include group and field descriptions
+      expect(output).toContain('Group description included in report.');
+      expect(output).toContain('Field description included in report.');
+
+      // Should include explicitly included instructions
+      expect(output).toContain('Form instructions explicitly included.');
+
+      // Should exclude instructions by default
+      expect(output).not.toContain('Instructions excluded by default.');
+
+      // Should exclude field with report=false
+      expect(output).not.toContain('Secret');
+      expect(output).not.toContain('Hidden Value');
+
+      // Should exclude group with report=false
+      expect(output).not.toContain('Hidden Section');
+      expect(output).not.toContain('Internal Data');
+    });
+
+    it('handles group with no visible fields but has title', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="Empty But Visible" %}
+{% field kind="string" id="hidden" label="Hidden" report=false %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeReport(parsed);
+
+      // Group title should appear even though no fields are visible
+      expect(output).toContain('## Empty But Visible');
+      expect(output).not.toContain('Hidden');
     });
   });
 });
