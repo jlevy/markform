@@ -31,12 +31,12 @@ export default defineConfig({
         '**/commands/run.ts',
         '**/commands/research.ts',
       ],
-      // Thresholds based on current coverage (~50%); will increase as coverage improves
+      // Thresholds based on current coverage (~60%); will increase as coverage improves
       thresholds: {
-        statements: 50,
-        branches: 49,
-        functions: 49,
-        lines: 50,
+        statements: 60,
+        branches: 58,
+        functions: 63,
+        lines: 60,
       },
       // Generate reports even when thresholds fail (needed for PR comments)
       reportOnFailure: true,
