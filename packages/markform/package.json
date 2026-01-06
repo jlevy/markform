@@ -65,10 +65,12 @@
     "test:unit": "vitest run tests/unit",
     "test:golden": "vitest run tests/golden",
     "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
-    "test:coverage": "vitest run --coverage",
-    "test:coverage:all": "pnpm test:coverage && pnpm test:tryscript",
+    "test:coverage": "pnpm test:coverage:vitest && pnpm test:coverage:tryscript && pnpm coverage:merge",
+    "test:coverage:vitest": "vitest run --coverage",
+    "test:coverage:tryscript": "tryscript run --coverage 'tests/cli/**/*.tryscript.md'",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
+    "coverage:merge": "bash scripts/merge-coverage.sh",
     "publint": "publint"
   },
   "dependencies": {

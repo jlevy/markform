@@ -14,7 +14,8 @@ export default defineConfig({
   // Coverage configuration for CLI subprocess testing
   coverage: {
     reportsDir: 'coverage-tryscript',
-    reporters: ['text', 'html'],
+    // Include lcov for merging with vitest coverage
+    reporters: ['text', 'html', 'lcov', 'json'],
     include: ['dist/**'],
     src: 'src',
   },
