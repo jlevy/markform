@@ -70,7 +70,7 @@
     "test:coverage:tryscript": "tryscript run --coverage 'tests/cli/**/*.tryscript.md'",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
-    "coverage:merge": "bash scripts/merge-coverage.sh",
+    "coverage:merge": "npx tsx scripts/merge-coverage.ts",
     "publint": "publint"
   },
   "dependencies": {
