@@ -27,8 +27,10 @@ jobs:
       - run: pnpm lint:check
       - run: pnpm build
       - run: pnpm publint
-      # Run all tests with unified coverage (vitest + tryscript CLI tests)
+      # Run unit tests with coverage
       - run: pnpm --filter markform test:coverage
+      # Run CLI integration tests (tryscript)
+      - run: pnpm --filter markform test:tryscript
 
       # Post coverage report (PR comment + job summary)
       - name: Coverage Report
