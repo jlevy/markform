@@ -251,6 +251,33 @@ Rather than excluding entire files with partial coverage, refactor to extract te
 
 * * *
 
+## Implementation Status
+
+**Phase 1: Configuration Fix** ✅ Complete
+- Switched from c8 to vitest's built-in coverage
+- Removed buggy `--include 'dist/**'` that pulled in node_modules
+- Added `@vitest/coverage-v8` dependency
+
+**Phase 2: Refactoring** ✅ Complete
+- Extracted `cli/lib/browseHelpers.ts` with `isViewableFile`, `getExtension`, `scanFormsDirectory`, `getExtensionHint`, `formatFileLabel`
+- Extracted `cli/lib/runHelpers.ts` with `scanFormsDirectory`, `enrichFormEntry`, `buildModelOptions`
+- Extracted `cli/lib/researchHelpers.ts` with `validateResearchModel`, `parseResearchHarnessOptions`
+- Added 40 new unit tests covering all extracted helpers
+
+**Phase 3: Interactive Exclusions** ✅ Complete
+- Updated `vitest.config.ts` to exclude `browse.ts`, `run.ts`, `research.ts`
+- These files are now thin wrappers calling tested helpers
+
+**Phase 4: Branch Coverage** 🔜 Pending
+- See beads: markform-8, markform-9, markform-10
+
+**Phase 5: Threshold Updates** 🔜 Pending
+- See bead: markform-11
+
+**Coverage After Implementation**: ~64% lines, ~62% branches (vitest-only measurement)
+
+* * *
+
 ## Open Research Questions
 
 1. **Server coverage**: The `serve.ts` command has 49 uncovered branches related to WebSocket handlers. Should we add integration tests for the server, or exclude it?
