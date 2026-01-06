@@ -1,6 +1,6 @@
 # Research Brief: Modern TypeScript Monorepo Package Architecture
 
-**Last Updated**: 2025-12-23 (Added dependency upgrade management with ncu)
+**Last Updated**: 2026-01-06 (Added CLI development workflow with tsx)
 
 **Status**: Complete
 
@@ -35,6 +35,7 @@
 | **changesets/action** | v1 | [github.com/changesets/action](https://github.com/changesets/action) |
 | **lefthook** | ^2.0.0 | [github.com/evilmartians/lefthook/releases](https://github.com/evilmartians/lefthook/releases) |
 | **npm-check-updates** | ^19.0.0 | [npmjs.com/package/npm-check-updates](https://www.npmjs.com/package/npm-check-updates) |
+| **tsx** | ^4.0.0 | [github.com/privatenumber/tsx/releases](https://github.com/privatenumber/tsx/releases) |
 | **prettier** | ^3.0.0 | [github.com/prettier/prettier/releases](https://github.com/prettier/prettier/releases) |
 | **eslint-config-prettier** | ^10.0.0 | [github.com/prettier/eslint-config-prettier/releases](https://github.com/prettier/eslint-config-prettier/releases) |
 
@@ -1336,7 +1337,98 @@ upgrades. Options:
 
 * * *
 
-### 12. Private Package Distribution
+### 12. CLI Development Workflow
+
+#### Running CLI from Source
+
+**Status**: Strongly Recommended
+
+**Details**:
+
+During development, CLI commands should run directly from TypeScript source rather than
+requiring a build step. This ensures developers always work with the current code and
+eliminates the common frustration of debugging stale builds.
+
+**The dual-script pattern**:
+
+```json
+{
+  "scripts": {
+    "cli-name": "npx tsx packages/package-name/src/cli/bin.ts",
+    "cli-name:bin": "node packages/package-name/dist/bin.mjs"
+  }
+}
+```
+
+| Script | Purpose | When to use |
+| --- | --- | --- |
+| `cli-name` | Runs source via tsx | Development—always current, no build needed |
+| `cli-name:bin` | Runs built binary | Pre-release verification of published output |
+
+**Why this matters**:
+
+1. **No stale builds**: Developers never accidentally run old code while debugging
+
+2. **Faster iteration**: No build step between code changes and testing
+
+3. **Reduced confusion**: "Did I forget to build?" is never the answer
+
+4. **Still verifiable**: The `:bin` variant ensures the production build works correctly
+
+* * *
+
+#### tsx vs vite-node vs ts-node
+
+**Status**: tsx Recommended
+
+**Details**:
+
+For running TypeScript CLI commands directly, **tsx** is the recommended choice:
+
+| Aspect | tsx | vite-node | ts-node |
+| --- | --- | --- | --- |
+| **Speed** | 5-10x faster than ts-node | Fast (esbuild) | Slow |
+| **Startup time** | Single-digit milliseconds | Fast | Noticeable delay |
+| **Configuration** | Zero-config | Requires Vite familiarity | Often needs config |
+| **Use case** | CLI and scripts | Vite ecosystem projects | Legacy projects |
+| **Maintenance** | Active | Active | Active but slower |
+
+**When to choose each**:
+
+- **tsx**: Default choice for CLI development, scripts, and simple TypeScript execution
+- **vite-node**: When you need Vite's plugin ecosystem (e.g., CSS imports, asset handling)
+- **ts-node**: Only for legacy projects already using it
+
+**Example implementation**:
+
+```json
+{
+  "scripts": {
+    "markform": "npx tsx packages/markform/src/cli/bin.ts",
+    "markform:bin": "node packages/markform/dist/bin.mjs"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  }
+}
+```
+
+**Assessment**: tsx provides the best developer experience for CLI development. It uses
+esbuild for near-instant compilation while maintaining compatibility with all modern
+TypeScript features. Reserve vite-node for projects that specifically need Vite's
+transformation pipeline.
+
+**References**:
+
+- [tsx documentation](https://tsx.is/)
+
+- [TSX vs ts-node comparison](https://betterstack.com/community/guides/scaling-nodejs/tsx-vs-ts-node/)
+
+- [ts-runtime-comparison benchmarks](https://github.com/privatenumber/ts-runtime-comparison)
+
+* * *
+
+### 13. Private Package Distribution
 
 #### Option A: GitHub Packages (Recommended)
 
@@ -1550,6 +1642,10 @@ experience.
 18. **Use dynamic git-based versioning**: Inject version at build time using
     `X.Y.Z-dev.N.hash` format. This provides traceability during development without
     manual version bumps. See "Dynamic Git-Based Versioning" section for implementation.
+
+19. **Run CLI from source during development**: Use the dual-script pattern with tsx to
+    run CLI commands directly from TypeScript source. Provide a separate `:bin` script
+    for verifying the built output. This eliminates "did I forget to build?" confusion.
 
 * * *
 
