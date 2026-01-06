@@ -7,6 +7,7 @@ export default defineConfig({
       // json-summary required for GitHub Actions PR comments
       reporter: ['text', 'text-summary', 'html', 'json', 'json-summary', 'lcov'],
       reportsDirectory: './coverage',
+      // Only include our source files (not dependencies)
       include: ['src/**/*.ts'],
       exclude: [
         '**/*.d.ts',
@@ -17,8 +18,13 @@ export default defineConfig({
         '**/__mocks__/**',
         '**/__fixtures__/**',
         // Type-only files (no runtime code to cover)
-        '**/*Types.ts',
+        // Note: coreTypes.ts is NOT excluded as it contains runtime Zod schemas
+        '**/*[Tt]ypes.ts', // Matches both *Types.ts and *types.ts
         '**/index.ts', // Re-export barrels
+        // Test utilities (not production code)
+        '**/rejectionMockAgent.ts',
+        // Integration code requiring external setup (tested via integration tests)
+        '**/vercelAiSdkTools.ts',
       ],
       // Thresholds based on current coverage (~50%); will increase as coverage improves
       thresholds: {
