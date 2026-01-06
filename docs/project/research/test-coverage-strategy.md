@@ -1,78 +1,159 @@
-# Coverage Strategy Review
+# Research Brief: Test Coverage Strategy
 
-**Author**: Senior Engineer Review (Claude)
-**Date**: 2026-01-06
-**Status**: Analysis Complete
+**Last Updated**: 2026-01-06
+
+**Status**: Complete
+
+**Related**:
+
+- `docs/general/agent-guidelines/golden-testing-guidelines.md`
+- `packages/markform/vitest.config.ts`
+- `packages/markform/tests/cli/*.tryscript.md`
+
+* * *
 
 ## Executive Summary
 
-This document presents a strategic review of the test coverage infrastructure, analyzing whether coverage is being measured correctly, evaluating the effectiveness of the tryscript framework, and proposing high-leverage improvements to achieve 90%+ coverage while maintaining code quality.
+This research brief presents a strategic review of the test coverage infrastructure for the Markform project. The analysis reveals that source-only line coverage is already excellent at **96.9%**, but branch coverage at **69.7%** is the real gap. A configuration bug causes the reported numbers to be inflated by including node_modules.
 
-**Key Findings:**
-1. ✅ Source-only line coverage is already excellent at **96.9%**
-2. ⚠️ Branch coverage is **69.7%** - this is the real gap
-3. 🐛 Coverage config bug: c8 includes node_modules, inflating reported numbers
-4. 📊 Three files (1144 lines) are genuinely untestable and should be excluded
+Three files with partial coverage (`research.ts`, `browse.ts`, `run.ts`) contain both testable and untestable code. Rather than excluding entire files, a refactoring approach can extract testable helper functions, improving coverage accuracy while keeping the codebase organized.
 
-**Recommendation:** With strategic exclusions and config fixes, the project can achieve **90%+ effective coverage** with minimal additional tests.
+**Research Questions**:
 
----
+1. Is coverage being measured correctly and accurately?
 
-## Current State Analysis
+2. Is the tryscript framework being accurately reflected in coverage metrics?
 
-### Coverage Configuration Issue
+3. What are the low-coverage areas and their root causes?
 
-The current c8 configuration in `package.json` includes `--include 'dist/**'` which incorrectly pulls in transpiled node_modules:
+4. How can we achieve 90%+ coverage in a maintainable way?
 
-```json
-"test:coverage": "c8 --src src --all --include 'src/**' --include 'dist/**' ..."
-```
+* * *
 
-This causes the coverage report to include external packages like:
-- `@ai-sdk/anthropic/dist/index.mjs` (77.04% coverage reported)
-- `@ai-sdk/provider-utils/dist/index.mjs` (97.36% coverage reported)
+## Research Methodology
 
-**Impact:** The reported 94.34% coverage is artificially inflated by ~7,400 lines of external code.
+### Approach
 
-### True Source Coverage (Excluding node_modules)
+1. Ran coverage analysis with `pnpm test:coverage`
+2. Analyzed c8 and vitest configuration
+3. Calculated source-only coverage (excluding node_modules)
+4. Examined low-coverage files to understand what's testable vs interactive
+5. Reviewed tryscript and golden test coverage contribution
 
-| Metric | Current | Target |
-|--------|---------|--------|
+### Sources
+
+- Coverage reports (`coverage/coverage-summary.json`)
+- Source file analysis of `browse.ts`, `run.ts`, `research.ts`
+- Tryscript test files in `tests/cli/`
+- Golden test files in `tests/golden/`
+
+* * *
+
+## Research Findings
+
+### Configuration Issue
+
+**Status**: ✅ Complete
+
+**Details**:
+
+- The c8 configuration includes `--include 'dist/**'` which pulls in transpiled node_modules
+- External packages like `@ai-sdk/anthropic` appear in coverage reports (~7,400 lines)
+- Reported 94.34% coverage is artificially inflated
+
+**Assessment**: Bug in coverage configuration that should be fixed.
+
+* * *
+
+### True Source Coverage
+
+**Status**: ✅ Complete
+
+**Details**:
+
+| Metric | Value | Target |
+| --- | --- | --- |
 | Files | 69 | - |
 | Lines | 96.9% | 90% |
 | Branches | 69.7% | 75% |
 | Functions | 69.9% | 80% |
 
-**Line coverage is already excellent.** The real gap is branch coverage.
+**Assessment**: Line coverage already exceeds target. Branch coverage is the gap.
 
-### Low-Coverage Files Analysis
+* * *
 
-| File | Lines | Branches | Root Cause |
-|------|-------|----------|------------|
-| `research.ts` | 33.7% | 100% | Requires web-search API |
-| `browse.ts` | 76.2% | 100% | Interactive @clack/prompts |
-| `run.ts` | 78.9% | 100% | Interactive @clack/prompts |
-| `report.ts` | 82.5% | 50% | Missing tryscript tests |
-| `apply.ts` | 85.1% | 29.4% | Error handling untested |
-| `runMode.ts` | 89.9% | 25% | Edge cases untested |
+### Partially-Covered Files Analysis
 
-### Branch Coverage Gaps
+**Status**: ✅ Complete
 
-Top files with significant uncovered branches:
+**Details**:
 
-| File | Uncovered Branches | Nature |
-|------|-------------------|--------|
-| `engine/serialize.ts` | 97 | Edge cases in serialization |
-| `engine/parse.ts` | 51 | Error handling paths |
-| `cli/commands/serve.ts` | 49 | Server edge cases |
-| `engine/apply.ts` | 36 | Patch validation errors |
-| `cli/commands/inspect.ts` | 36 | Format/output options |
+| File | Lines | Covered | Testable Lines | Interactive Lines |
+| --- | --- | --- | --- | --- |
+| `research.ts` | 246 | 33.7% | ~100 (validation, config) | ~146 (API calls, spinner) |
+| `browse.ts` | 286 | 76.2% | ~130 (helpers, scanning) | ~156 (p.select, p.intro) |
+| `run.ts` | 612 | 78.9% | ~350 (helpers, workflows) | ~262 (menus, prompts) |
 
----
+**Assessment**: These files contain significant testable code mixed with interactive code. Excluding entire files loses valid coverage data. Refactoring can improve accuracy.
 
-## Tryscript Framework Effectiveness
+* * *
 
-### What Tryscript Covers Well
+### Refactoring Analysis
+
+**Status**: ✅ Complete
+
+#### browse.ts Refactoring
+
+**Testable functions (lines 40-132)**:
+- `isViewableFile(filename)` - Pure function
+- `getExtension(filename)` - Pure function
+- `scanFormsDirectory(formsDir, filter)` - File I/O but deterministic
+- `getExtensionHint(ext)` - Pure function
+- `formatFileLabel(entry)` - Pure function
+
+**Interactive portions (lines 148-286)**:
+- `browseFormsDirectory()` - Uses `showFileViewerChooser`
+- `registerBrowseCommand()` - Uses `p.intro`, `p.select`
+
+**Recommendation**: Extract helpers to `cli/lib/browseHelpers.ts`
+
+#### run.ts Refactoring
+
+**Testable functions**:
+- `scanFormsDirectory(formsDir)` (lines 83-117)
+- `enrichFormEntry(entry)` (lines 122-137)
+- `buildModelOptions(webSearchOnly)` (lines 142-173)
+- `runAgentFillWorkflow()` (lines 322-391) - Only uses `p.log` for output
+
+**Interactive portions**:
+- `promptForModel()` - Uses `p.select`, `p.text`
+- `collectUserInput()` - Uses interactive prompts
+- `runInteractiveWorkflow()` - Uses interactive prompts
+- `registerRunCommand()` - Uses `p.intro`, `p.select`
+
+**Recommendation**: Extract helpers to `cli/lib/runHelpers.ts`
+
+#### research.ts Refactoring
+
+**Extractable logic**:
+- Model validation (lines 88-115): `validateResearchModel(modelId)`
+- Option parsing (lines 127-160): `parseResearchOptions(options)`
+- Output formatting (lines 218-228): `formatResearchOutput(result)`
+
+**Interactive/API portions**:
+- Spinner creation and management
+- `runResearch()` API call
+- Console output with colors
+
+**Recommendation**: Extract helpers to `cli/lib/researchHelpers.ts`
+
+* * *
+
+### Tryscript Framework Effectiveness
+
+**Status**: ✅ Complete
+
+**Details**:
 
 The tryscript tests in `tests/cli/*.tryscript.md` effectively cover:
 
@@ -82,148 +163,112 @@ The tryscript tests in `tests/cli/*.tryscript.md` effectively cover:
 4. **Apply command** - Patching forms with JSON patches
 5. **Mock fill workflows** - Using `--mock` and `--mock-source`
 
-### What Tryscript Cannot Cover
+**Assessment**: Tryscript is working well and accurately contributing to coverage.
 
-| Area | Reason | Alternative |
-|------|--------|-------------|
-| Interactive CLI (browse, run) | Requires TTY input | Exclude from coverage |
-| Research command | Requires web-search API | Exclude from coverage |
-| Branch paths in CLI commands | Only tests main path | Add unit tests |
-| Server WebSocket handlers | Requires running server | Integration tests |
+* * *
 
-### Golden Tests Effectiveness
+### Branch Coverage Gaps
 
-Golden tests in `tests/golden/` provide excellent coverage of:
-- Form parsing for all field types
-- Session replay with mock agents
-- JSON schema generation
-- Export format generation (report.md, .yml, .schema.json)
+**Status**: ✅ Complete
 
----
+**Details**:
 
-## Strategic Recommendations
+Top files with significant uncovered branches:
 
-### Strategy 1: Fix Coverage Configuration
+| File | Uncovered Branches | Nature |
+| --- | --- | --- |
+| `engine/serialize.ts` | 97 | Edge cases in serialization |
+| `engine/parse.ts` | 51 | Error handling paths |
+| `cli/commands/serve.ts` | 49 | Server edge cases |
+| `engine/apply.ts` | 36 | Patch validation errors |
+| `cli/commands/inspect.ts` | 36 | Format/output options |
 
-**Action:** Update `package.json` to properly exclude node_modules:
+**Assessment**: These are error handling paths and edge cases that can be covered with targeted unit tests or tryscript tests.
 
-```json
-"test:coverage": "c8 --src src --all --include 'src/**' --exclude '**/node_modules/**' --exclude '**/*[Tt]ypes.ts' --exclude '**/index.ts' ..."
-```
+* * *
 
-Or better, rely on vitest's built-in coverage which is already configured correctly.
+## Best Practices
 
-**Impact:** Accurate coverage numbers without external package inflation.
+1. **Separate testable from interactive code**: Keep pure functions and business logic in separate modules from interactive CLI code.
 
-### Strategy 2: Exclude Genuinely Untestable Code
+2. **Use golden tests for E2E coverage**: The tryscript and golden test frameworks provide effective coverage of integrated behavior.
 
-**Files to exclude:**
+3. **Target branch coverage with error tests**: Add tryscript tests that exercise error paths (invalid inputs, missing files).
 
-```typescript
-// vitest.config.ts
-exclude: [
-  // ... existing exclusions ...
-  '**/research.ts',        // Requires web-search LLM API
-  '**/browse.ts',          // Interactive @clack/prompts UI
-  '**/commands/run.ts',    // Interactive @clack/prompts UI
-]
-```
+4. **Progressive thresholds**: Increase thresholds incrementally as coverage improves.
 
-**Rationale:**
-- `research.ts` - The research command requires web-search-enabled LLM APIs (Google, OpenAI) which cannot be mocked in coverage tests. The underlying `runResearch.ts` module IS covered.
-- `browse.ts` / `run.ts` - These use `@clack/prompts` for interactive menus which require TTY input. The helper functions they call ARE covered.
+* * *
 
-**Impact:** Coverage with exclusions = **98.2% lines**
+## Recommendations
 
-### Strategy 3: High-Leverage Branch Coverage Improvements
+### Summary
 
-Add targeted tests for the highest-impact uncovered branches:
+Rather than excluding entire files with partial coverage, refactor to extract testable helper functions. This improves coverage accuracy and keeps the codebase well-organized.
 
-#### Priority 1: Engine Apply Errors (36 branches)
+### Recommended Approach
 
-Add unit tests for:
-- Invalid patch types
-- Field type mismatches
-- Missing field errors
-- Table column validation
+**Phase 1: Configuration Fix** (P0 - Immediate)
+- Fix c8 configuration to exclude node_modules
+- Or switch to vitest's built-in coverage entirely
 
-```typescript
-// tests/unit/engine/apply.test.ts
-describe('patch validation errors', () => {
-  it('rejects patch for non-existent field', ...);
-  it('rejects type mismatch (string to number)', ...);
-  it('rejects invalid table row structure', ...);
-});
-```
+**Phase 2: Refactoring** (P1 - High Priority)
+- Extract `cli/lib/browseHelpers.ts` from `browse.ts`
+- Extract `cli/lib/runHelpers.ts` from `run.ts`
+- Extract `cli/lib/researchHelpers.ts` from `research.ts`
+- Add unit tests for extracted helpers
 
-#### Priority 2: CLI Format Options
+**Phase 3: Interactive Exclusions** (P1 - After Refactoring)
+- Update vitest.config.ts to exclude only the interactive command files
+- These files will now be thin wrappers calling tested helpers
 
-Add tryscript tests for format variations:
+**Phase 4: Branch Coverage** (P2 - Medium Priority)
+- Add tryscript tests for CLI error paths
+- Add unit tests for apply.ts error branches
+- Add unit tests for serialize.ts edge cases
 
-```markdown
-# Test: inspect --format=yaml
-$ $CLI inspect examples/simple/simple.form.md --format=yaml | head -5
-...
+**Phase 5: Threshold Updates** (P3 - After Improvements)
+- Update thresholds progressively:
+  - After refactoring: 85% lines, 70% branches
+  - After branch tests: 90% lines, 75% branches
 
-# Test: validate with all issue types
-$ $CLI validate examples/validation-errors.form.md
-...
-```
+**Rationale**:
 
-#### Priority 3: Serialize Edge Cases
+- Refactoring maintains accurate coverage without losing valid test data
+- Extracted helpers are independently testable
+- Interactive code is genuinely untestable and should be excluded
+- Approach aligns with golden testing guidelines
 
-Add unit tests for serialization edge cases:
-- Empty values
-- Special characters
-- Boundary conditions
+### Alternative Approaches
 
-### Strategy 4: Progressive Threshold Increases
+**Alternative 1: Exclude entire files**
+- Simpler but loses ~580 lines of valid coverage data
+- Less accurate representation of actual test coverage
 
-Update thresholds incrementally:
+**Alternative 2: Integration tests with TTY mocking**
+- Complex to implement
+- Brittle and hard to maintain
+- Not recommended
 
-| Phase | Lines | Branches | Functions |
-|-------|-------|----------|-----------|
-| Current | 50% | 49% | 49% |
-| After config fix | 85% | 65% | 65% |
-| After exclusions | 90% | 70% | 70% |
-| After targeted tests | 95% | 75% | 75% |
+* * *
 
----
+## Open Research Questions
 
-## Implementation Plan
+1. **Server coverage**: The `serve.ts` command has 49 uncovered branches related to WebSocket handlers. Should we add integration tests for the server, or exclude it?
 
-### Phase 1: Configuration Fixes (Immediate)
+2. **CI performance**: Will the additional tests significantly impact CI time? Need to monitor after implementation.
 
-1. Update vitest.config.ts to exclude interactive/API-dependent files
-2. Fix or remove the c8 configuration
-3. Update CI workflow if needed
+* * *
 
-### Phase 2: Targeted Tests (1-2 hours)
+## References
 
-1. Add apply.ts error path tests
-2. Add format option tryscript tests
-3. Add report command tryscript tests
+- Vitest coverage documentation: https://vitest.dev/guide/coverage
+- c8 documentation: https://github.com/bcoe/c8
+- @clack/prompts: https://github.com/natemoo-re/clack
+- Golden testing guidelines: `docs/general/agent-guidelines/golden-testing-guidelines.md`
 
-### Phase 3: Threshold Updates
+* * *
 
-1. Update thresholds after each improvement
-2. Add coverage badges to reflect true coverage
-
----
-
-## Conclusion
-
-The coverage infrastructure is fundamentally sound. The tryscript framework effectively tests CLI behavior, and golden tests ensure the core engine works correctly. The main issues are:
-
-1. **Configuration artifact** - c8 including node_modules
-2. **Missing exclusions** - Interactive/API code counting against coverage
-3. **Branch coverage gap** - Error paths not tested
-
-By implementing the recommendations above, the project can achieve **90%+ meaningful coverage** while avoiding the maintenance burden of brittle unit tests. The strategy aligns with the golden testing guidelines: few but comprehensive end-to-end tests, supplemented by targeted unit tests for edge cases.
-
----
-
-## Appendix: Coverage Calculation Details
+## Appendix A: Coverage Calculation Details
 
 ### Source Files Breakdown
 
@@ -232,12 +277,43 @@ Total source files: 69
 Total lines: 25,369
 Covered lines: 24,582 (96.9%)
 
-With exclusions (research.ts, browse.ts, run.ts):
+With full exclusions (research.ts, browse.ts, run.ts):
 Total lines: 24,225
 Covered lines: 23,799 (98.2%)
+
+With refactoring (estimate):
+Testable code extracted: ~580 additional lines
+Expected coverage improvement: +1-2% branch coverage
 ```
 
-### Files Already Well-Covered (>95%)
+### Current Exclusions in vitest.config.ts
+
+```typescript
+exclude: [
+  '**/*.d.ts',
+  '**/dist/**',
+  '**/node_modules/**',
+  '**/*.config.*',
+  '**/tests/**',
+  '**/__mocks__/**',
+  '**/__fixtures__/**',
+  '**/*[Tt]ypes.ts',
+  '**/index.ts',
+  '**/rejectionMockAgent.ts',
+  '**/vercelAiSdkTools.ts',
+]
+```
+
+### Proposed Additional Exclusions (After Refactoring)
+
+```typescript
+// Only exclude the thin interactive wrappers, not the helper modules
+'**/commands/browse.ts',   // Interactive wrapper only
+'**/commands/run.ts',      // Interactive wrapper only
+'**/commands/research.ts', // Interactive wrapper only
+```
+
+## Appendix B: Files Already Well-Covered (>95%)
 
 - `engine/coreTypes.ts` - 100%
 - `engine/validate.ts` - 98.24%
