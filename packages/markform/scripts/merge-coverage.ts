@@ -105,6 +105,16 @@ function parseLcov(content: string): CoverageData {
   return { lines, branches, functions };
 }
 
+/**
+ * Merge coverage data from two sources using standard LCOV merge algorithm.
+ *
+ * Algorithm (same as lcov-result-merger):
+ * - For coverpoints that exist in both: sum the hit counts
+ * - For coverpoints that exist in only one: add to result (union)
+ *
+ * This is the standard approach used by tools like lcov-result-merger, nyc merge,
+ * and istanbul-merge.
+ */
 function mergeCoverageData(a: CoverageData, b: CoverageData): CoverageData {
   const merged: CoverageData = {
     lines: new Map(a.lines),
@@ -121,7 +131,7 @@ function mergeCoverageData(a: CoverageData, b: CoverageData): CoverageData {
     merged.functions.set(file, newMap);
   }
 
-  // Merge lines
+  // Merge lines: union with hit count summation
   for (const [file, fileLines] of b.lines) {
     if (!merged.lines.has(file)) {
       merged.lines.set(file, new Map(fileLines));
@@ -134,7 +144,7 @@ function mergeCoverageData(a: CoverageData, b: CoverageData): CoverageData {
     }
   }
 
-  // Merge branches
+  // Merge branches: union with hit count summation
   for (const [file, fileBranches] of b.branches) {
     if (!merged.branches.has(file)) {
       merged.branches.set(file, new Map(fileBranches));
@@ -147,7 +157,7 @@ function mergeCoverageData(a: CoverageData, b: CoverageData): CoverageData {
     }
   }
 
-  // Merge functions
+  // Merge functions: union with hit count summation
   for (const [file, fileFuncs] of b.functions) {
     if (!merged.functions.has(file)) {
       const newMap = new Map<string, FunctionInfo>();
@@ -369,14 +379,14 @@ function main() {
   const mergedLcov = generateLcov(mergedData);
   writeFileSync(join(MERGED_DIR, 'lcov.info'), mergedLcov);
 
-  // Calculate stats
+  // Calculate stats from merged data
   const stats = calculateStats(mergedData);
 
-  // Update coverage-summary.json with merged totals and per-file data
+  // Update coverage-summary.json with merged coverage data
   if (existsSync(coverageSummaryPath)) {
     const summary = JSON.parse(readFileSync(coverageSummaryPath, 'utf8')) as CoverageSummary;
 
-    // Update totals
+    // Update totals from merged data
     summary.total = {
       lines: {
         total: stats.lines.total,
@@ -434,7 +444,7 @@ function main() {
     );
   }
 
-  // Print summary
+  // Print merged summary
   console.log('');
   console.log('=== Merged Coverage Summary ===');
   console.log(`Lines:      ${stats.lines.pct}% (${stats.lines.covered}/${stats.lines.total})`);
