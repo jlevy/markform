@@ -16,6 +16,9 @@ export default defineConfig({
         '**/tests/**',
         '**/__mocks__/**',
         '**/__fixtures__/**',
+        // Type-only files (no runtime code to cover)
+        '**/*Types.ts',
+        '**/index.ts', // Re-export barrels
       ],
       // Thresholds based on current coverage (~50%); will increase as coverage improves
       thresholds: {
