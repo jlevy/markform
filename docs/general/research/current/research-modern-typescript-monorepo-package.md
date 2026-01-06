@@ -1404,8 +1404,8 @@ For running TypeScript CLI commands directly, **tsx** is the recommended choice:
 ```json
 {
   "scripts": {
-    "markform": "tsx packages/markform/src/cli/bin.ts",
-    "markform:bin": "node packages/markform/dist/bin.mjs"
+    "my-cli": "tsx packages/my-package/src/cli/bin.ts",
+    "my-cli:bin": "node packages/my-package/dist/bin.mjs"
   },
   "devDependencies": {
     "tsx": "^4.0.0"
