@@ -158,6 +158,48 @@ alwaysApply: true
   }
   ```
 
+## Exhaustiveness Checks
+
+- **Always add exhaustiveness checks to `switch` statements on discriminated union
+  types.** When switching on unions (like `field.kind` or `action.type`), include a
+  `default` branch that assigns to `never`. This forces a compile-time error if a new
+  variant is added but not handled.
+
+  ```ts
+  // GOOD: Exhaustiveness check catches missing cases at compile time
+  switch (field.kind) {
+    case 'string':
+      return handleString(field);
+    case 'number':
+      return handleNumber(field);
+    // ... all cases ...
+    default: {
+      const _exhaustive: never = field;
+      throw new Error(`Unhandled field kind: ${(_exhaustive as { kind: string }).kind}`);
+    }
+  }
+  
+  // BAD: Missing cases silently fall through or return undefined
+  switch (field.kind) {
+    case 'string':
+      return handleString(field);
+    case 'number':
+      return handleNumber(field);
+    // New field kinds won't cause compile errors!
+  }
+  
+  // BAD: Default that masks missing cases
+  switch (field.kind) {
+    case 'string':
+      return handleString(field);
+    default:
+      return null; // Silently handles unknown cases
+  }
+  ```
+
+  This pattern ensures that when new variants are added to a union type, every `switch`
+  that handles that type will fail to compile until updated.
+
 ## Function Parameters
 
 - **Avoid optional parameters in methods where accidental omission of a value can lead

@@ -1,6 +1,6 @@
 # Research Brief: Convex Database Limits, Best Practices, and Workarounds
 
-**Last Updated**: 2025-11-20
+**Last Updated**: 2026-01-05
 
 **Status**: Complete
 
@@ -1198,6 +1198,125 @@ appropriate granularity (minute, hour, day) based on write frequency.
 
 - [Convex Aggregate Component](https://github.com/get-convex/aggregate)
 
+### Pitfall 9: Dangling Promises in Actions
+
+**Symptom**: Console warnings showing "1 unawaited operation" in Convex logs, or
+intermittent errors in action invocations that seem unrelated to the current operation.
+
+**Root Cause**: Fire-and-forget async patterns like `void fn()` or `fn().catch()` create
+unawaited promises. When an action returns, any promises still running may or may not
+complete. Since Convex reuses Node.js execution environments between action calls, dangling
+promises can cause errors in subsequent action invocations.
+
+**Convex Documentation Warning**:
+
+> "Make sure to await all promises created within an action. Async tasks still running when
+> the function returns might or might not complete. In addition, since the Node.js execution
+> environment might be reused between action calls, dangling promises might result in errors
+> in subsequent action invocations."
+
+**Example Scenarios**:
+
+```typescript
+// BAD: Fire-and-forget with void (promise may not complete)
+export const processData = internalAction({
+  handler: async (ctx, args) => {
+    void logger.trackEvent({ event: 'started', ...args }); // Dangling!
+
+    const result = await doWork(args);
+
+    void logger.trackEvent({ event: 'completed', result }); // Dangling!
+    return result;
+  },
+});
+
+// BAD: Fire-and-forget with .catch() (still dangling)
+export const processData = internalAction({
+  handler: async (ctx, args) => {
+    logger.trackEvent({ event: 'started' }).catch((err) => {
+      console.error('Logging failed:', err);
+    }); // Dangling! The promise is not awaited
+
+    const result = await doWork(args);
+    return result;
+  },
+});
+```
+
+**Workaround**: Always await async operations, even "fire-and-forget" logging calls.
+
+```typescript
+// CORRECT: All promises awaited
+export const processData = internalAction({
+  handler: async (ctx, args) => {
+    await logger.trackEvent({ event: 'started', ...args }); // Properly awaited
+
+    const result = await doWork(args);
+
+    await logger.trackEvent({ event: 'completed', result }); // Properly awaited
+    return result;
+  },
+});
+
+// CORRECT: With error handling that still awaits
+export const processData = internalAction({
+  handler: async (ctx, args) => {
+    try {
+      await logger.trackEvent({ event: 'started' });
+    } catch (err) {
+      console.error('Logging failed:', err);
+      // Continue execution even if logging fails
+    }
+
+    const result = await doWork(args);
+    return result;
+  },
+});
+```
+
+**Key Patterns to Avoid**:
+
+| Pattern | Issue | Fix |
+| --- | --- | --- |
+| `void asyncFn()` | Promise not awaited | `await asyncFn()` |
+| `asyncFn().catch(...)` | Promise not awaited (catch returns new Promise) | `await asyncFn()` with try/catch |
+| `setTimeout(() => asyncFn(), 0)` | Promise escapes action scope | Use `ctx.scheduler.runAfter(0, ...)` |
+| Returning before awaiting | Promise orphaned | Ensure all awaits complete before return |
+
+**Common Affected Operations**:
+
+- Logging and telemetry calls
+- Background analytics tracking
+- Non-critical side effects (notifications, metrics)
+- Cleanup operations at end of actions
+
+**Best Practices**:
+
+1. **Always await every async call** in actions, even for "non-critical" operations
+
+2. **Use try/catch if the operation can fail** and you want to continue:
+   ```typescript
+   try {
+     await optionalOperation();
+   } catch (err) {
+     console.warn('Optional operation failed:', err);
+   }
+   ```
+
+3. **Use `ctx.scheduler.runAfter`** for truly fire-and-forget operations that should run
+   independently:
+   ```typescript
+   // If you truly don't need to wait and want it to run separately
+   await ctx.scheduler.runAfter(0, internal.logging.trackEvent, { event: 'completed' });
+   ```
+
+4. **Audit existing code** for `void` keyword and `.catch()` patterns in actions
+
+**Sources**:
+
+- [Convex Actions Documentation](https://docs.convex.dev/functions/actions) — Section on
+  awaiting promises
+
 * * *
 
 ## Best Practices Checklist
@@ -1280,7 +1399,15 @@ appropriate granularity (minute, hour, day) based on write frequency.
 
    - Break work into chunks that finish within 10-minute action limit
 
-10. **Limit scheduled job fan-out**
+10. **Await all promises in actions**
+
+    - Never use `void asyncFn()` or `asyncFn().catch()` patterns
+
+    - Use try/catch for non-critical operations that can fail
+
+    - Use `ctx.scheduler.runAfter` for truly independent operations
+
+11. **Limit scheduled job fan-out**
 
     - Schedule at most 1,000 functions per mutation
 
@@ -1290,7 +1417,7 @@ appropriate granularity (minute, hour, day) based on write frequency.
 
 ### Storage and Cost Management
 
-11. **Monitor storage and bandwidth proactively**
+12. **Monitor storage and bandwidth proactively**
 
     - Set up alerts at 75-80% of quota limits
 
@@ -1298,7 +1425,7 @@ appropriate granularity (minute, hour, day) based on write frequency.
 
     - Track growth trends to project costs
 
-12. **Implement data archival policies**
+13. **Implement data archival policies**
 
     - Export historical data to external storage (S3, etc.)
 
@@ -1306,7 +1433,7 @@ appropriate granularity (minute, hour, day) based on write frequency.
 
     - Define archival criteria before hitting limits
 
-13. **Optimize index usage**
+14. **Optimize index usage**
 
     - Remove unused indexes
 
@@ -1316,7 +1443,7 @@ appropriate granularity (minute, hour, day) based on write frequency.
 
 ### Code Organization
 
-14. **Use proper function visibility**
+15. **Use proper function visibility**
 
     - Use `internalQuery`/`internalMutation`/`internalAction` for private functions
 
@@ -1324,7 +1451,7 @@ appropriate granularity (minute, hour, day) based on write frequency.
 
     - Follow file-based routing conventions
 
-15. **Always include validators**
+16. **Always include validators**
 
     - Add `args` and `returns` validators to all functions
 
@@ -1410,6 +1537,7 @@ appropriate granularity (minute, hour, day) based on write frequency.
 | High OCC retry rates | Write contention on shared documents | Use namespacing; avoid wide aggregate reads; isolate entity writes |
 | Slow query performance | Table scan without index | Create composite index matching query pattern; avoid post-index `.filter()` |
 | Storage overage charges | Data retention without archival | Implement archival policy; export historical data; delete old records |
+| `"1 unawaited operation"` warning | Dangling promises from `void fn()` or `fn().catch()` | Await all async operations; use try/catch for error handling |
 
 ### Decision Matrix: When to Use Each Pattern
 

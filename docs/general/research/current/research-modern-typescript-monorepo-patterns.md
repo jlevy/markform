@@ -1,6 +1,6 @@
-# Research Brief: Modern TypeScript Monorepo Package Architecture
+# Research Brief: Modern TypeScript Monorepo Architecture Patterns
 
-**Last Updated**: 2026-01-06 (Added CLI development workflow with tsx)
+**Last Updated**: 2026-01-05 (Updated all tool versions, fixed section numbering)
 
 **Status**: Complete
 
@@ -23,19 +23,19 @@
 | Tool / Package | Version | Check For Updates |
 | --- | --- | --- |
 | **Node.js** | 24 (LTS "Krypton") | [nodejs.org/releases](https://nodejs.org/en/about/previous-releases) — Active LTS until Oct 2026 |
-| **pnpm** | 10.26.1 | [github.com/pnpm/pnpm/releases](https://github.com/pnpm/pnpm/releases) |
-| **TypeScript** | ^5.0.0 | [github.com/microsoft/TypeScript/releases](https://github.com/microsoft/TypeScript/releases) |
-| **tsdown** | ^0.16.0 | [github.com/rolldown/tsdown/releases](https://github.com/rolldown/tsdown/releases) |
+| **pnpm** | 10.27.0 | [github.com/pnpm/pnpm/releases](https://github.com/pnpm/pnpm/releases) |
+| **TypeScript** | ^5.9.0 | [github.com/microsoft/TypeScript/releases](https://github.com/microsoft/TypeScript/releases) — 5.9 adds `import defer`, `--module node20` |
+| **tsdown** | ^0.18.0 | [github.com/rolldown/tsdown/releases](https://github.com/rolldown/tsdown/releases) — 0.19.x in beta |
 | **publint** | ^0.3.0 | [npmjs.com/package/publint](https://www.npmjs.com/package/publint) |
-| **@changesets/cli** | ^2.28.0 | [github.com/changesets/changesets/releases](https://github.com/changesets/changesets/releases) |
-| **@types/node** | ^24.0.0 | Should match Node.js major version |
-| **actions/checkout** | v5 | [github.com/actions/checkout/releases](https://github.com/actions/checkout/releases) |
+| **@changesets/cli** | ^2.29.0 | [github.com/changesets/changesets/releases](https://github.com/changesets/changesets/releases) |
+| **@types/node** | ^24.0.0 | Should match Node.js major version (^25.0.0 also available) |
+| **actions/checkout** | v5 | [github.com/actions/checkout/releases](https://github.com/actions/checkout/releases) — v6 available, uses Node 24 |
 | **actions/setup-node** | v6 | [github.com/actions/setup-node/releases](https://github.com/actions/setup-node/releases) |
 | **pnpm/action-setup** | v4 | [github.com/pnpm/action-setup/releases](https://github.com/pnpm/action-setup/releases) |
 | **changesets/action** | v1 | [github.com/changesets/action](https://github.com/changesets/action) |
 | **lefthook** | ^2.0.0 | [github.com/evilmartians/lefthook/releases](https://github.com/evilmartians/lefthook/releases) |
 | **npm-check-updates** | ^19.0.0 | [npmjs.com/package/npm-check-updates](https://www.npmjs.com/package/npm-check-updates) |
-| **tsx** | ^4.0.0 | [github.com/privatenumber/tsx/releases](https://github.com/privatenumber/tsx/releases) |
+| **tsx** | ^4.21.0 | [github.com/privatenumber/tsx/releases](https://github.com/privatenumber/tsx/releases) |
 | **prettier** | ^3.0.0 | [github.com/prettier/prettier/releases](https://github.com/prettier/prettier/releases) |
 | **eslint-config-prettier** | ^10.0.0 | [github.com/prettier/eslint-config-prettier/releases](https://github.com/prettier/eslint-config-prettier/releases) |
 
@@ -654,8 +654,8 @@ It integrates seamlessly with pnpm and GitHub Actions.
 **Details**:
 
 While Changesets handles release versioning, development builds benefit from dynamic
-git-based version strings. This provides traceability during development without manual
-version bumps.
+git-based version strings.
+This provides traceability during development without manual version bumps.
 
 **Format**: `X.Y.Z-dev.N.hash`
 
@@ -740,9 +740,9 @@ export const VERSION: string =
 | Sorting | Standard semver | PEP 440 compliant |
 | Configuration | In bundler config | In `pyproject.toml` |
 
-**Assessment**: Dynamic versioning complements Changesets—use Changesets for releases and
-git-based versioning for development builds. This provides full traceability without
-manual intervention.
+**Assessment**: Dynamic versioning complements Changesets—use Changesets for releases
+and git-based versioning for development builds.
+This provides full traceability without manual intervention.
 
 * * *
 
@@ -1174,7 +1174,7 @@ Never skip CI because hooks passed—hooks can be bypassed with `--no-verify`.
     "prepare": "lefthook install"
   },
   "devDependencies": {
-    "lefthook": "^1.11.0"
+    "lefthook": "^2.0.0"
   }
 }
 ```
@@ -1346,8 +1346,9 @@ upgrades. Options:
 **Details**:
 
 During development, CLI commands should run directly from TypeScript source rather than
-requiring a build step. This ensures developers always work with the current code and
-eliminates the common frustration of debugging stale builds.
+requiring a build step.
+This ensures developers always work with the current code and eliminates the common
+frustration of debugging stale builds.
 
 **The dual-script pattern**:
 
@@ -1371,7 +1372,8 @@ eliminates the common frustration of debugging stale builds.
 
 2. **Faster iteration**: No build step between code changes and testing
 
-3. **Reduced confusion**: "Did I forget to build?" is never the answer
+3. **Reduced confusion**: “Did I forget to build?”
+   is never the answer
 
 4. **Still verifiable**: The `:bin` variant ensures the production build works correctly
 
@@ -1396,7 +1398,10 @@ For running TypeScript CLI commands directly, **tsx** is the recommended choice:
 **When to choose each**:
 
 - **tsx**: Default choice for CLI development, scripts, and simple TypeScript execution
-- **vite-node**: When you need Vite's plugin ecosystem (e.g., CSS imports, asset handling)
+
+- **vite-node**: When you need Vite’s plugin ecosystem (e.g., CSS imports, asset
+  handling)
+
 - **ts-node**: Only for legacy projects already using it
 
 **Example implementation**:
@@ -1408,21 +1413,22 @@ For running TypeScript CLI commands directly, **tsx** is the recommended choice:
     "markform:bin": "node packages/markform/dist/bin.mjs"
   },
   "devDependencies": {
-    "tsx": "^4.0.0"
+    "tsx": "^4.21.0"
   }
 }
 ```
 
-**Assessment**: tsx provides the best developer experience for CLI development. It uses
-esbuild for near-instant compilation while maintaining compatibility with all modern
-TypeScript features. Reserve vite-node for projects that specifically need Vite's
-transformation pipeline.
+**Assessment**: tsx provides the best developer experience for CLI development.
+It uses esbuild for near-instant compilation while maintaining compatibility with all
+modern TypeScript features.
+Reserve vite-node for projects that specifically need Vite’s transformation pipeline.
 
 **References**:
 
 - [tsx documentation](https://tsx.is/)
 
-- [TSX vs ts-node comparison](https://betterstack.com/community/guides/scaling-nodejs/tsx-vs-ts-node/)
+- [TSX vs ts-node
+  comparison](https://betterstack.com/community/guides/scaling-nodejs/tsx-vs-ts-node/)
 
 - [ts-runtime-comparison benchmarks](https://github.com/privatenumber/ts-runtime-comparison)
 
@@ -1549,6 +1555,190 @@ experience.
 
 * * *
 
+### 14. Library/CLI Hybrid Packages
+
+#### Node-Free Core Pattern
+
+**Status**: Recommended
+
+**Details**:
+
+When building a package that functions as both a library and a CLI tool, **isolate all
+Node.js dependencies to CLI-only code**. This allows the core library to be used in
+non-Node environments (browsers, edge runtimes, Cloudflare Workers, Convex, etc.).
+
+Node.js-specific imports like `node:path`, `node:fs`, or `node:module` will cause
+bundler errors or runtime failures in non-Node environments.
+Even if only the CLI uses these imports, if they’re in shared code, the entire library
+becomes Node-dependent.
+
+**Directory Structure for Isolation**:
+
+Keep CLI code in a dedicated subdirectory:
+
+```
+src/
+├── index.ts           # Library entry point (NO node: imports)
+├── settings.ts        # Configuration constants (NO node: imports)
+├── engine/            # Core library code (NO node: imports)
+├── cli/               # CLI-only code (node: imports OK here)
+│   ├── cli.ts         # CLI entry point
+│   ├── commands/      # Command implementations
+│   └── lib/           # CLI utilities (path resolution, etc.)
+└── integrations/      # Optional integrations (NO node: imports)
+```
+
+**Assessment**: This pattern is essential for libraries targeting multiple runtimes.
+The directory structure creates clear boundaries that are easy to enforce with automated
+tests.
+
+* * *
+
+#### Pattern: Move Node.js Utilities to CLI
+
+**Status**: Recommended
+
+**Details**:
+
+Configuration constants belong in node-free files; functions that use Node.js APIs
+belong in CLI-specific code:
+
+```ts
+// BAD: Node.js import in shared settings
+// src/settings.ts
+import { resolve } from 'node:path';
+
+export const DEFAULT_OUTPUT_DIR = './output';
+
+export function getOutputDir(override?: string): string {
+  return resolve(process.cwd(), override ?? DEFAULT_OUTPUT_DIR);
+}
+
+// GOOD: Constant in settings, function in CLI
+// src/settings.ts (node-free)
+export const DEFAULT_OUTPUT_DIR = './output';
+
+// src/cli/lib/paths.ts (node: imports OK)
+import { resolve } from 'node:path';
+import { DEFAULT_OUTPUT_DIR } from '../../settings.js';
+
+export { DEFAULT_OUTPUT_DIR };  // Re-export for CLI convenience
+
+export function getOutputDir(override?: string): string {
+  return resolve(process.cwd(), override ?? DEFAULT_OUTPUT_DIR);
+}
+```
+
+**Assessment**: This pattern keeps the core library portable while providing full
+Node.js functionality in CLI contexts.
+
+* * *
+
+#### Pattern: Build-Time Constants
+
+**Status**: Recommended
+
+**Details**:
+
+For values that need Node.js at build time (like reading `package.json`), use bundler
+`define` options to inject them as compile-time constants:
+
+```ts
+// tsdown.config.ts / esbuild / rollup config
+import pkg from './package.json' with { type: 'json' };
+
+export default {
+  define: {
+    __VERSION__: JSON.stringify(pkg.version),
+  },
+};
+
+// src/index.ts (node-free)
+declare const __VERSION__: string;
+
+export const VERSION: string =
+  typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'development';
+```
+
+**Assessment**: Build-time injection eliminates runtime Node.js dependencies for values
+that are constant at build time.
+This is cleaner than dynamic requires or filesystem reads.
+
+* * *
+
+#### Guard Tests for Node-Free Core
+
+**Status**: Strongly Recommended
+
+**Details**:
+
+Add automated tests to prevent Node.js dependency leaks:
+
+```ts
+// tests/node-free-core.test.ts
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+
+const SRC_DIR = 'src';
+const NODE_ALLOWED_DIRS = ['cli'];  // Only CLI can use node:
+const NODE_IMPORT_PATTERN = /from\s+['"]node:/g;
+
+function getAllTsFiles(dir: string): string[] { /* recursive scan */ }
+
+describe('Node-free core library', () => {
+  it('source files outside cli/ should not import from node:', () => {
+    const violations: string[] = [];
+
+    for (const file of getAllTsFiles(SRC_DIR)) {
+      const rel = relative(SRC_DIR, file);
+      if (NODE_ALLOWED_DIRS.some(d => rel.startsWith(d + '/'))) continue;
+
+      const content = readFileSync(file, 'utf-8');
+      if (NODE_IMPORT_PATTERN.test(content)) {
+        violations.push(rel);
+      }
+    }
+
+    expect(violations).toHaveLength(0);
+  });
+
+  it('dist/index.mjs should not reference node: modules', () => {
+    const content = readFileSync('dist/index.mjs', 'utf-8');
+    expect(content).not.toMatch(NODE_IMPORT_PATTERN);
+  });
+});
+```
+
+**Assessment**: Guard tests catch accidental node: imports during development rather
+than discovering them when users try to use the library in browser/edge contexts.
+
+* * *
+
+#### Checklist for Library/CLI Packages
+
+**Status**: Best Practice
+
+**Checklist**:
+
+- [ ] Core library entry point (`index.ts`) has no `node:` imports
+
+- [ ] All `node:` imports are in `cli/` directory only
+
+- [ ] Configuration constants are in node-free files
+
+- [ ] Build-time values use bundler `define` injection
+
+- [ ] Guard tests prevent future regressions
+
+- [ ] Built output (`dist/*.mjs`) has no `node:` references
+
+**References**:
+
+- [CLI Tool Development Rules](../../agent-rules/typescript-cli-tool-rules.md) —
+  CLI-specific patterns using Commander.js, picocolors, and @clack/prompts
+
+* * *
+
 ## Comparative Analysis
 
 ### Build Tools Comparison
@@ -1640,12 +1830,15 @@ experience.
     `lint:check` to ensure formatting is applied before linting.
 
 18. **Use dynamic git-based versioning**: Inject version at build time using
-    `X.Y.Z-dev.N.hash` format. This provides traceability during development without
-    manual version bumps. See "Dynamic Git-Based Versioning" section for implementation.
+    `X.Y.Z-dev.N.hash` format.
+    This provides traceability during development without manual version bumps.
+    See “Dynamic Git-Based Versioning” section for implementation.
 
 19. **Run CLI from source during development**: Use the dual-script pattern with tsx to
-    run CLI commands directly from TypeScript source. Provide a separate `:bin` script
-    for verifying the built output. This eliminates "did I forget to build?" confusion.
+    run CLI commands directly from TypeScript source.
+    Provide a separate `:bin` script for verifying the built output.
+    This eliminates “did I forget to build?”
+    confusion.
 
 * * *
 
@@ -1655,13 +1848,19 @@ experience.
    Rolldown Vite’s Library Mode.
    Monitor for announcements that may affect best practices.
 
-2. **ESLint v10 multi-config**: ESLint v10 promises stable support for multiple config
+2. **TypeScript 6.0/7.0 Transition**: TypeScript 7.0 will be a complete rewrite in Go,
+   promising up to 10x faster builds.
+   TypeScript 6.0 will serve as a transition point.
+   Monitor for migration guidance and breaking changes.
+
+3. **Native TypeScript Execution**: TypeScript 5.8+ supports `--erasableSyntaxOnly`
+   flag, enabling direct execution in Node.js 23.6+ without transpilation.
+   This may reduce the need for tsx in some workflows.
+   Monitor for broader adoption and tooling support.
+
+4. **ESLint v10 multi-config**: ESLint v10 promises stable support for multiple config
    files in monorepos. Currently, a single root config is recommended but has
    limitations.
-
-3. **TypeScript isolatedDeclarations**: TypeScript 5.5+ supports
-   `--isolatedDeclarations` for faster, tool-assisted type generation.
-   Consider enabling when tsdown fully supports it.
 
 * * *
 
@@ -1844,8 +2043,8 @@ ready for public release.
   "devDependencies": {
     "@types/node": "^24.0.0",
     "publint": "^0.3.0",
-    "tsdown": "^0.16.0",
-    "typescript": "^5.0.0"
+    "tsdown": "^0.18.0",
+    "typescript": "^5.9.0"
   }
 }
 ```
@@ -1856,7 +2055,7 @@ ready for public release.
 {
   "name": "project-workspace",
   "private": true,
-  "packageManager": "pnpm@10.26.1",
+  "packageManager": "pnpm@10.27.0",
   "engines": {
     "node": ">=24"
   },
@@ -1878,7 +2077,7 @@ ready for public release.
     "upgrade:major": "ncu --target latest --interactive --format group"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.28.0",
+    "@changesets/cli": "^2.29.0",
     "@changesets/changelog-github": "^0.5.0",
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
@@ -1886,7 +2085,7 @@ ready for public release.
     "lefthook": "^2.0.0",
     "npm-check-updates": "^19.0.0",
     "prettier": "^3.0.0",
-    "typescript": "^5.0.0",
+    "typescript": "^5.9.0",
     "typescript-eslint": "^8.0.0"
   }
 }

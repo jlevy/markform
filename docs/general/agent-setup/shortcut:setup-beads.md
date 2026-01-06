@@ -18,43 +18,26 @@ If bd is already installed, `bd prime` loads the workflow context.
 
 **If bd is not installed**, use the direct download method:
 
-**Quick install (Linux x86_64 / amd64):**
-
 ```bash
-# Get latest version, download, and install
-curl -sI https://github.com/steveyegge/beads/releases/latest | grep -i "^location:"
-# Note the version (e.g., v0.35.0), then:
-curl -fsSL -o /tmp/beads.tar.gz "https://github.com/steveyegge/beads/releases/download/v0.35.0/beads_0.35.0_linux_amd64.tar.gz"
+# Detect platform
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+[ "$ARCH" = "x86_64" ] && ARCH="amd64"
+[ "$ARCH" = "aarch64" ] && ARCH="arm64"
+
+# Get latest version from GitHub API
+BD_VERSION=$(curl -sI https://github.com/steveyegge/beads/releases/latest | \
+  grep -i "^location:" | sed 's/.*tag\///' | tr -d '\r\n')
+
+# Download and install the binary
+curl -fsSL -o /tmp/beads.tar.gz \
+  "https://github.com/steveyegge/beads/releases/download/${BD_VERSION}/beads_${BD_VERSION#v}_${OS}_${ARCH}.tar.gz"
 tar -xzf /tmp/beads.tar.gz -C /tmp
 mkdir -p ~/.local/bin
 cp /tmp/bd ~/.local/bin/
 chmod +x ~/.local/bin/bd
 export PATH="$HOME/.local/bin:$PATH"
 bd prime   # Get workflow context
-```
-
-**For other platforms**, run each step separately:
-
-```bash
-# Step 1: Detect platform
-uname -s | tr '[:upper:]' '[:lower:]'   # OS: linux, darwin
-uname -m                                  # ARCH: x86_64->amd64, aarch64->arm64
-
-# Step 2: Get latest version
-curl -sI https://github.com/steveyegge/beads/releases/latest | grep -i "^location:"
-# Extract version from URL (e.g., v0.35.0)
-
-# Step 3: Download (substitute OS, ARCH, VERSION)
-# Example: beads_0.35.0_linux_amd64.tar.gz or beads_0.35.0_darwin_arm64.tar.gz
-curl -fsSL -o /tmp/beads.tar.gz "https://github.com/steveyegge/beads/releases/download/VERSION/beads_VERSION_OS_ARCH.tar.gz"
-
-# Step 4: Install
-tar -xzf /tmp/beads.tar.gz -C /tmp
-mkdir -p ~/.local/bin
-cp /tmp/bd ~/.local/bin/
-chmod +x ~/.local/bin/bd
-export PATH="$HOME/.local/bin:$PATH"
-bd prime
 ```
 
 For troubleshooting, see: https://github.com/steveyegge/beads/releases
@@ -71,6 +54,39 @@ bd doctor       # Check installation health
 bd doctor --fix # Fix any setup issues
 ```
 
+### Sync Branch Configuration
+
+Beads can commit issue changes to a dedicated sync branch (recommended for team
+projects). This uses git worktrees internally.
+
+**IMPORTANT:** Never use `main` as the sync branch - it locks `main` in a worktree,
+preventing normal `git checkout main`. Use a dedicated branch like `beads-sync`.
+
+**Check current config:**
+```bash
+bd config get sync.branch
+```
+
+**For new projects** - add to `.beads/config.yaml`:
+```yaml
+sync-branch: 'beads-sync'
+```
+
+**For existing projects with wrong sync branch:**
+```bash
+bd config set sync.branch beads-sync
+bd daemon stop && bd daemon start
+```
+
+**If you see “fatal: ‘main’ is already used by worktree”:**
+```bash
+# Fix: remove beads worktrees and change sync branch
+rm -rf .git/beads-worktrees .git/worktrees/beads-*
+git worktree prune
+bd config set sync.branch beads-sync
+bd daemon stop && bd daemon start
+```
+
 ### Git Merge Driver (required for each clone)
 
 The `.gitattributes` file configures beads JSONL files to use a custom merge driver, but
@@ -83,53 +99,14 @@ git config merge.beads.name "bd JSONL merge driver"
 
 Verify with: `bd doctor | grep "Git Merge Driver"` (should show checkmark)
 
-### This Project Uses no-db Mode
+### SQLite WAL Mode Errors (common in containers/VMs)
 
-**IMPORTANT:** This project has `no-db: true` in `.beads/config.yaml`.
+If you see `failed to enable WAL mode: sqlite3: locking protocol`, use JSONL-only mode:
 
-In no-db mode, the JSONL file IS the database.
-This means:
-
-- **Do NOT run `bd sync`** - it will fail or corrupt data
-
-- bd commands read/write directly to `.beads/issues.jsonl`
-
-- Use git to sync issues between environments (not `bd sync`)
-
-**Session close protocol for no-db mode:**
 ```bash
-git status                      # Check what changed
-git add <files>                 # Stage code changes
-git add .beads/issues.jsonl     # Stage issue changes
-git commit -m "..."             # Commit everything
-git push                        # Push to remote
+echo "no-db: true" >> .beads/config.yaml
+# Or use --no-db flag: bd --no-db status
 ```
-
-### Git Merge Driver (IMPORTANT)
-
-The beads JSONL file requires a custom git merge driver to handle 3-way merges
-correctly. Without it, git will use line-based merging which can corrupt issue statuses
-during merges.
-
-**Check if configured:**
-```bash
-git config --get merge.beads.driver || echo "Not configured"
-```
-
-**Configure if missing:**
-```bash
-git config merge.beads.driver "bd merge %A %O %A %B"
-git config merge.beads.name "bd JSONL merge driver"
-```
-
-The `.gitattributes` file should already contain:
-```
-.beads/issues.jsonl merge=beads
-```
-
-**Note:** `bd init` automatically configures the merge driver.
-If you cloned an existing repo with beads, run the config commands above or `bd doctor
---fix` to set it up.
 
 ### Issue Types
 
@@ -178,11 +155,10 @@ Use `0-4` or `P0-P4` format (NOT "high"/"medium"/"low"):
 
 6. **Session close protocol** (CRITICAL - before saying “done”):
    ```bash
-   git status                      # Check what changed
-   git add <files>                 # Stage code changes
-   git add .beads/issues.jsonl     # Stage issue changes (if modified)
-   git commit -m "..."             # Commit everything
-   git push                        # Push to remote
+   git status              # Check what changed
+   git add <files>         # Stage code changes
+   bd sync --from-main     # Pull beads updates from main
+   git commit -m "..."     # Commit code changes
    ```
 
 ### Useful Commands
@@ -213,9 +189,7 @@ Use `0-4` or `P0-P4` format (NOT "high"/"medium"/"low"):
 
 - Store AI planning docs in `history/` directory
 
-- Run `bd <cmd> --help` to discover available flags
-
-- Do NOT run `bd sync` (this project uses no-db mode)
+- Run `bd sync --from-main` at session end
 
 - Do NOT use "high"/"medium"/"low" for priorities (use 0-4 or P0-P4)
 
