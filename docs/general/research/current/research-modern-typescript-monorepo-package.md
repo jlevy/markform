@@ -1354,7 +1354,7 @@ eliminates the common frustration of debugging stale builds.
 ```json
 {
   "scripts": {
-    "cli-name": "npx tsx packages/package-name/src/cli/bin.ts",
+    "cli-name": "tsx packages/package-name/src/cli/bin.ts",
     "cli-name:bin": "node packages/package-name/dist/bin.mjs"
   }
 }
@@ -1404,7 +1404,7 @@ For running TypeScript CLI commands directly, **tsx** is the recommended choice:
 ```json
 {
   "scripts": {
-    "markform": "npx tsx packages/markform/src/cli/bin.ts",
+    "markform": "tsx packages/markform/src/cli/bin.ts",
     "markform:bin": "node packages/markform/dist/bin.mjs"
   },
   "devDependencies": {

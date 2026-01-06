@@ -24,10 +24,10 @@
     "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
     "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
     "precommit": "pnpm format && pnpm lint:check && pnpm test",
-    "markform": "npx tsx packages/markform/src/cli/bin.ts",
+    "markform": "tsx packages/markform/src/cli/bin.ts",
     "markform:bin": "node packages/markform/dist/bin.mjs",
     "changeset": "changeset",
-    "changeset:add": "npx tsx scripts/create-changeset.ts",
+    "changeset:add": "tsx scripts/create-changeset.ts",
     "version-packages": "changeset version",
     "release": "pnpm build && pnpm publint && changeset publish"
   },
