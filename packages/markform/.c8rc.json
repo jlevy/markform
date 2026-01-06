@@ -1,0 +1,14 @@
+{
+  "excludeNodeModules": true,
+  "all": false,
+  "exclude": [
+    "**/*node_modules*/**",
+    "node_modules/**",
+    "tests/**",
+    "coverage/**",
+    "coverage-tryscript/**",
+    "coverage-merged/**",
+    "scripts/**"
+  ],
+  "include": ["src/**"]
+}

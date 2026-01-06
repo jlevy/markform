@@ -64,13 +64,13 @@
     "test:watch": "vitest",
     "test:unit": "vitest run tests/unit",
     "test:golden": "vitest run tests/golden",
-    "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
+    "test:golden:regen": "tsx scripts/regen-golden-sessions.ts",
     "test:coverage": "pnpm test:coverage:vitest && pnpm test:coverage:tryscript && pnpm coverage:merge",
     "test:coverage:vitest": "vitest run --coverage",
     "test:coverage:tryscript": "tryscript run --coverage 'tests/cli/**/*.tryscript.md'",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
-    "coverage:merge": "npx tsx scripts/merge-coverage.ts",
+    "coverage:merge": "tsx scripts/merge-coverage.ts",
     "publint": "publint"
   },
   "dependencies": {
@@ -90,6 +90,18 @@
     "yaml": "^2.8.2",
     "zod": "^4.2.1"
   },
+  "c8": {
+    "excludeNodeModules": true,
+    "include": [
+      "src/**"
+    ],
+    "exclude": [
+      "**/node_modules/**",
+      "tests/**",
+      "coverage/**",
+      "scripts/**"
+    ]
+  },
   "devDependencies": {
     "@ai-sdk/anthropic": "^3.0.1",
     "@types/node": "^22.15.30",
@@ -100,6 +112,7 @@
     "publint": "^0.3.16",
     "tryscript": "^0.1.1",
     "tsdown": "^0.18.3",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   }
