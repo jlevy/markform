@@ -67,7 +67,7 @@
     "test:golden:regen": "tsx scripts/regen-golden-sessions.ts",
     "test:coverage": "pnpm test:coverage:vitest && pnpm test:coverage:tryscript && pnpm coverage:merge",
     "test:coverage:vitest": "vitest run --coverage",
-    "test:coverage:tryscript": "tryscript run --coverage 'tests/cli/**/*.tryscript.md'",
+    "test:coverage:tryscript": "tryscript run --coverage 'tests/cli/**/*.tryscript.md' 2>&1 | awk '/node_modules|@ai-sdk|eventsource-parser/{skip=1;next} /^ packages\\/markform/{skip=0} !skip || !/^  .*\\./'",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
     "coverage:merge": "tsx scripts/merge-coverage.ts",
