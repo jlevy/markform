@@ -25,6 +25,11 @@ export default defineConfig({
         '**/rejectionMockAgent.ts',
         // Integration code requiring external setup (tested via integration tests)
         '**/vercelAiSdkTools.ts',
+        // Interactive CLI commands (use @clack/prompts, tested via tryscript)
+        // Testable logic extracted to *Helpers.ts modules
+        '**/commands/browse.ts',
+        '**/commands/run.ts',
+        '**/commands/research.ts',
       ],
       // Thresholds based on current coverage (~50%); will increase as coverage improves
       thresholds: {

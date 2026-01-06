@@ -65,7 +65,8 @@
     "test:unit": "vitest run tests/unit",
     "test:golden": "vitest run tests/golden",
     "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
-    "test:coverage": "c8 --src src --all --include 'src/**' --include 'dist/**' --exclude '**/*[Tt]ypes.ts' --exclude '**/index.ts' --exclude '**/rejectionMockAgent.ts' --exclude '**/vercelAiSdkTools.ts' --exclude '**/scopeRefValidation.ts' --reporter text --reporter html --reporter json --reporter json-summary --reports-dir coverage sh -c 'vitest run && tryscript run tests/cli/**/*.tryscript.md'",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:all": "pnpm test:coverage && pnpm test:tryscript",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
     "publint": "publint"
@@ -90,6 +91,7 @@
   "devDependencies": {
     "@ai-sdk/anthropic": "^3.0.1",
     "@types/node": "^22.15.30",
+    "@vitest/coverage-v8": "^4.0.16",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "c8": "^10.1.3",
