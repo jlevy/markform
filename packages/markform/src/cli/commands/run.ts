@@ -56,6 +56,7 @@ import {
 } from '../lib/shared.js';
 import { createFillLoggingCallbacks } from '../lib/fillLogging.js';
 import { fillForm } from '../../harness/programmaticFill.js';
+import { createTracer } from '../lib/traceUtils.js';
 import { scanFormsDirectory, enrichFormEntry, buildModelOptions } from '../lib/runHelpers.js';
 
 /**
@@ -193,7 +194,15 @@ async function runInteractiveWorkflow(
   console.log(`  ${formatPath(exportResult.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
   logTiming(
-    { verbose: false, format: 'console', dryRun: false, quiet: false, overwrite: false },
+    {
+      verbose: false,
+      format: 'console',
+      dryRun: false,
+      quiet: false,
+      debug: false,
+      logLevel: 'default',
+      overwrite: false,
+    },
     'Fill time',
     Date.now() - startTime,
   );
@@ -230,11 +239,29 @@ async function runAgentFillWorkflow(
     `Config: max_turns=${maxTurns}, max_issues_per_turn=${maxIssuesPerTurn}, max_patches_per_turn=${maxPatchesPerTurn}`,
   );
 
-  // Create logging callbacks
-  const callbacks = createFillLoggingCallbacks(ctx);
+  // Parse model ID to extract provider
+  const [provider] = modelId.split('/');
+
+  // Create tracer for incremental file logging (no-op if no traceFile)
+  const workflowLabel = isResearch ? 'Research' : 'Agent fill';
+  const trace = createTracer(ctx.traceFile, modelId, workflowLabel);
+
+  // Log workflow configuration to trace
+  trace(`Filling form: ${filePath}`);
+  trace(`Mode: ${workflowLabel}`);
+  trace(`Max turns: ${maxTurns}`);
+  trace(`Max patches per turn: ${maxPatchesPerTurn}`);
+  trace(`Max issues per turn: ${maxIssuesPerTurn}`);
+  trace(`Fill mode: ${overwrite ? 'overwrite' : 'continue'}`);
+
+  // Create logging callbacks with model info and optional trace file
+  const callbacks = createFillLoggingCallbacks(ctx, {
+    modelId,
+    provider,
+    traceFile: ctx.traceFile,
+  });
 
   // Run form fill
-  const workflowLabel = isResearch ? 'Research' : 'Agent fill';
   p.log.step(pc.bold(`${workflowLabel} in progress...`));
 
   const result = await fillForm({
@@ -251,18 +278,27 @@ async function runAgentFillWorkflow(
   });
 
   // Check result
+  const durationMs = Date.now() - startTime;
   if (result.status.ok) {
-    p.log.success(pc.green(`Form completed in ${result.turns} turn(s)`));
+    const successMsg = `Form completed in ${result.turns} turn(s)`;
+    p.log.success(pc.green(successMsg));
+    trace(successMsg);
   } else if (result.status.reason === 'max_turns') {
-    p.log.warn(pc.yellow(`Max turns reached (${maxTurns})`));
+    const warnMsg = `Max turns reached (${maxTurns})`;
+    p.log.warn(pc.yellow(warnMsg));
+    trace(warnMsg);
   } else {
     throw new Error(result.status.message ?? `Fill failed: ${result.status.reason}`);
   }
+
+  trace(`Fill time: ${durationMs}ms`);
 
   // Export
   await ensureFormsDir(formsDir);
   const outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
   const exportResult = await exportMultiFormat(result.form, outputPath);
+
+  trace(`Form written to: ${exportResult.formPath}`);
 
   console.log('');
   p.log.success(`${workflowLabel} complete. Outputs:`);
@@ -271,7 +307,7 @@ async function runAgentFillWorkflow(
   console.log(`  ${formatPath(exportResult.formPath)}  ${pc.dim('(filled markform source)')}`);
   console.log(`  ${formatPath(exportResult.schemaPath)}  ${pc.dim('(JSON Schema)')}`);
 
-  logTiming(ctx, isResearch ? 'Research time' : 'Fill time', Date.now() - startTime);
+  logTiming(ctx, isResearch ? 'Research time' : 'Fill time', durationMs);
 
   return exportResult;
 }
@@ -300,6 +336,8 @@ export async function runForm(
   const effectiveCtx: CommandContext = ctx ?? {
     verbose: false,
     quiet: false,
+    debug: false,
+    logLevel: 'default',
     dryRun: false,
     format: 'console',
     overwrite,

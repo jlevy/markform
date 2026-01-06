@@ -68,6 +68,7 @@ function buildResult(
   status: FillStatus,
   inputContextWarnings?: string[],
   remainingIssues?: InspectIssue[],
+  transcript?: FillResult['transcript'],
 ): FillResult {
   // Extract values from responses
   const values: Record<string, FieldValue> = {};
@@ -97,6 +98,10 @@ function buildResult(
       severity: issue.severity,
       priority: issue.priority,
     }));
+  }
+
+  if (transcript) {
+    result.transcript = transcript;
   }
 
   return result;
@@ -392,9 +397,29 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
   }
 
-  // 6. Determine final status
+  // 6. Build transcript if captureWireFormat was enabled
+  let transcript: FillResult['transcript'] | undefined;
+  if (options.captureWireFormat) {
+    const modelId = typeof options.model === 'string' ? options.model : undefined;
+    transcript = {
+      sessionVersion: '0.1.0',
+      mode: 'live',
+      turns: harness.getTurns(),
+      ...(modelId && { live: { modelId } }),
+    };
+  }
+
+  // 7. Determine final status
   if (stepResult.isComplete) {
-    return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
+    return buildResult(
+      form,
+      turnCount,
+      totalPatches,
+      { ok: true },
+      inputContextWarnings,
+      undefined,
+      transcript,
+    );
   }
 
   // Hit max turns without completing
@@ -405,5 +430,6 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     { ok: false, reason: 'max_turns', message: `Reached maximum total turns (${maxTurnsTotal})` },
     inputContextWarnings,
     stepResult.issues,
+    transcript,
   );
 }

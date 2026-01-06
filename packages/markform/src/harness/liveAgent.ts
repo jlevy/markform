@@ -20,6 +20,7 @@ import type {
   Patch,
   PatchRejection,
   WireFormat,
+  WireReasoningContent,
   WireResponseStep,
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
@@ -43,6 +44,7 @@ import {
   getPatchFormatHint,
 } from './prompts.js';
 import { FILL_FORM_TOOL_NAME, FILL_FORM_TOOL_DESCRIPTION } from './toolApi.js';
+import { extractToolStartInfo, extractToolEndInfo } from './toolParsing.js';
 
 // Re-export types for backwards compatibility
 export type { LiveAgentConfig } from './harnessTypes.js';
@@ -157,7 +159,8 @@ export class LiveAgent implements Agent {
     };
 
     // Wrap tools with callbacks for observability
-    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks);
+    // Returns both wrapped tools and set of tool names that have local execute (for tracking)
+    const { tools, wrappedToolNames } = wrapToolsWithCallbacks(rawTools, this.callbacks);
 
     // Get model ID for callbacks (may not be available on all model types)
     const modelId = (this.model as { modelId?: string }).modelId ?? 'unknown';
@@ -180,6 +183,10 @@ export class LiveAgent implements Agent {
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
 
+    // Extract reasoningTokens from usage (AI SDK may include this for models with extended thinking)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const reasoningTokens = (result.usage as any)?.reasoningTokens as number | undefined;
+
     // Call onLlmCallEnd callback (errors don't abort)
     if (this.callbacks?.onLlmCallEnd) {
       try {
@@ -187,6 +194,7 @@ export class LiveAgent implements Agent {
           model: modelId,
           inputTokens: result.usage?.inputTokens ?? 0,
           outputTokens: result.usage?.outputTokens ?? 0,
+          reasoningTokens,
         });
       } catch {
         // Ignore callback errors
@@ -197,16 +205,74 @@ export class LiveAgent implements Agent {
     const patches: Patch[] = [];
     const toolCallCounts = new Map<string, number>();
 
-    for (const step of result.steps) {
+    for (let stepIndex = 0; stepIndex < result.steps.length; stepIndex++) {
+      const step = result.steps[stepIndex]!;
+
+      // Build a map of tool results by toolCallId for matching
+      const toolResultMap = new Map<string, unknown>();
+      for (const toolResult of step.toolResults) {
+        if ('toolCallId' in toolResult) {
+          toolResultMap.set(toolResult.toolCallId, toolResult.output);
+        }
+      }
+
       for (const toolCall of step.toolCalls) {
         // Count tool calls
         const count = toolCallCounts.get(toolCall.toolName) ?? 0;
         toolCallCounts.set(toolCall.toolName, count + 1);
 
+        // Fire callbacks for server-side tools (those not wrapped locally)
+        // These include OpenAI's web_search which executes server-side
+        if (!wrappedToolNames.has(toolCall.toolName) && this.callbacks) {
+          // Fire onToolStart
+          if (this.callbacks.onToolStart) {
+            try {
+              const startInfo = extractToolStartInfo(toolCall.toolName, toolCall.input);
+              this.callbacks.onToolStart(startInfo);
+            } catch {
+              // Ignore callback errors
+            }
+          }
+
+          // Fire onToolEnd with result if available
+          if (this.callbacks.onToolEnd) {
+            try {
+              const toolResult = toolResultMap.get(toolCall.toolCallId);
+              // Server-side tools don't have timing info, use 0
+              const endInfo = extractToolEndInfo(toolCall.toolName, toolResult, 0);
+              this.callbacks.onToolEnd(endInfo);
+            } catch {
+              // Ignore callback errors
+            }
+          }
+        }
+
         // Extract patches from fill_form calls
         if (toolCall.toolName === FILL_FORM_TOOL_NAME && 'input' in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
           patches.push(...input.patches);
+        }
+      }
+
+      // Extract reasoning from step (AI SDK exposes this for models with extended thinking)
+      // Different providers may use different property names (text, content, etc.)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const stepReasoning = (step as any).reasoning as
+        | { type?: string; text?: string; content?: string }[]
+        | undefined;
+      if (stepReasoning && stepReasoning.length > 0 && this.callbacks?.onReasoningGenerated) {
+        try {
+          const reasoningOutput = stepReasoning.map((r) => ({
+            type: r.type === 'redacted' ? ('redacted' as const) : ('reasoning' as const),
+            // Support both 'text' and 'content' property names
+            text: r.text ?? r.content,
+          }));
+          this.callbacks.onReasoningGenerated({
+            stepNumber: stepIndex + 1,
+            reasoning: reasoningOutput,
+          });
+        } catch {
+          // Ignore callback errors
         }
       }
     }
@@ -315,22 +381,49 @@ function buildWireFormat(
       toolCalls: { toolName: string; input?: unknown }[];
       toolResults?: { toolName: string; result?: unknown }[];
       text?: string | null;
+      reasoning?: { type: string; text?: string }[];
     }[];
-    usage?: { inputTokens?: number; outputTokens?: number };
+    usage?: { inputTokens?: number; outputTokens?: number; reasoningTokens?: number };
   },
 ): WireFormat {
   // Build response steps (omit toolCallId for stability)
-  const steps: WireResponseStep[] = result.steps.map((step) => ({
-    toolCalls: step.toolCalls.map((tc) => ({
-      toolName: tc.toolName,
-      input: sortObjectKeys(tc.input),
-    })),
-    toolResults: (step.toolResults ?? []).map((tr) => ({
-      toolName: tr.toolName,
-      result: sortObjectKeys(tr.result),
-    })),
-    text: step.text ?? null,
-  }));
+  const steps: WireResponseStep[] = result.steps.map((step) => {
+    const wireStep: WireResponseStep = {
+      toolCalls: step.toolCalls.map((tc) => ({
+        toolName: tc.toolName,
+        input: sortObjectKeys(tc.input),
+      })),
+      toolResults: (step.toolResults ?? []).map((tr) => ({
+        toolName: tr.toolName,
+        result: sortObjectKeys(tr.result),
+      })),
+      text: step.text ?? null,
+    };
+
+    // Include reasoning if present (for models with extended thinking)
+    // Support both 'text' and 'content' property names for different providers
+    if (step.reasoning && step.reasoning.length > 0) {
+      wireStep.reasoning = step.reasoning.map((r): WireReasoningContent => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        const content = (r as any).content as string | undefined;
+        return {
+          type: r.type === 'redacted' ? 'redacted' : 'reasoning',
+          text: r.text ?? content,
+        };
+      });
+    }
+
+    return wireStep;
+  });
+
+  // Build usage with optional reasoningTokens
+  const usage: WireFormat['response']['usage'] = {
+    inputTokens: result.usage?.inputTokens ?? 0,
+    outputTokens: result.usage?.outputTokens ?? 0,
+  };
+  if (result.usage?.reasoningTokens !== undefined) {
+    usage.reasoningTokens = result.usage.reasoningTokens;
+  }
 
   return {
     request: {
@@ -340,10 +433,7 @@ function buildWireFormat(
     },
     response: {
       steps,
-      usage: {
-        inputTokens: result.usage?.inputTokens ?? 0,
-        outputTokens: result.usage?.outputTokens ?? 0,
-      },
+      usage,
     },
   };
 }
@@ -572,14 +662,19 @@ function findField(form: ParsedForm, fieldId: string) {
  *
  * Only wraps tools that have an execute function.
  * Declarative tools (schema only) are passed through unchanged.
+ *
+ * Returns both the wrapped tools and a set of tool names that were wrapped,
+ * so we can fire callbacks for server-side tools from step results.
  */
 function wrapToolsWithCallbacks(
   tools: Record<string, Tool>,
   callbacks?: FillCallbacks,
-): Record<string, Tool> {
+): { tools: Record<string, Tool>; wrappedToolNames: Set<string> } {
+  const wrappedToolNames = new Set<string>();
+
   // Skip wrapping if no tool callbacks
   if (!callbacks?.onToolStart && !callbacks?.onToolEnd) {
-    return tools;
+    return { tools, wrappedToolNames };
   }
 
   const wrapped: Record<string, Tool> = {};
@@ -590,16 +685,20 @@ function wrapToolsWithCallbacks(
     if (typeof execute === 'function') {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       wrapped[name] = wrapTool(name, tool, execute, callbacks);
+      wrappedToolNames.add(name);
     } else {
       // Pass through declarative tools unchanged
       wrapped[name] = tool;
     }
   }
-  return wrapped;
+  return { tools: wrapped, wrappedToolNames };
 }
 
 /**
  * Wrap a single tool with callbacks.
+ *
+ * Uses toolParsing utilities to extract structured information for
+ * web search results and other known tool types.
  */
 function wrapTool(
   name: string,
@@ -612,10 +711,11 @@ function wrapTool(
     execute: async (input: unknown) => {
       const startTime = Date.now();
 
-      // Call onToolStart (errors don't abort)
+      // Call onToolStart with structured info (errors don't abort)
       if (callbacks.onToolStart) {
         try {
-          callbacks.onToolStart({ name, input });
+          const startInfo = extractToolStartInfo(name, input);
+          callbacks.onToolStart(startInfo);
         } catch {
           // Ignore callback errors
         }
@@ -623,15 +723,13 @@ function wrapTool(
 
       try {
         const output = await originalExecute(input);
+        const durationMs = Date.now() - startTime;
 
-        // Call onToolEnd on success (errors don't abort)
+        // Call onToolEnd on success with structured info (errors don't abort)
         if (callbacks.onToolEnd) {
           try {
-            callbacks.onToolEnd({
-              name,
-              output,
-              durationMs: Date.now() - startTime,
-            });
+            const endInfo = extractToolEndInfo(name, output, durationMs);
+            callbacks.onToolEnd(endInfo);
           } catch {
             // Ignore callback errors
           }
@@ -639,15 +737,14 @@ function wrapTool(
 
         return output;
       } catch (error) {
-        // Call onToolEnd on error (errors don't abort)
+        const durationMs = Date.now() - startTime;
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        // Call onToolEnd on error with structured info (errors don't abort)
         if (callbacks.onToolEnd) {
           try {
-            callbacks.onToolEnd({
-              name,
-              output: null,
-              durationMs: Date.now() - startTime,
-              error: error instanceof Error ? error.message : String(error),
-            });
+            const endInfo = extractToolEndInfo(name, null, durationMs, errorMsg);
+            callbacks.onToolEnd(endInfo);
           } catch {
             // Ignore callback errors
           }

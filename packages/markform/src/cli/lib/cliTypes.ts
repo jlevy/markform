@@ -22,6 +22,20 @@
  */
 export type OutputFormat = 'console' | 'plaintext' | 'yaml' | 'json' | 'markform' | 'markdown';
 
+// =============================================================================
+// Log Level Types
+// =============================================================================
+
+/**
+ * Log level for CLI output verbosity.
+ *
+ * - quiet: Minimal output, only errors
+ * - default: Normal output with turn info, patches, completion status
+ * - verbose: Additional details like token counts, tool timing, harness config
+ * - debug: Full diagnostic output including prompts, raw tool I/O (truncated)
+ */
+export type LogLevel = 'quiet' | 'default' | 'verbose' | 'debug';
+
 /**
  * Context available to all commands.
  */
@@ -29,11 +43,25 @@ export interface CommandContext {
   dryRun: boolean;
   verbose: boolean;
   quiet: boolean;
+  /** Debug mode for full diagnostic output (--debug or MARKFORM_LOG_LEVEL=debug) */
+  debug: boolean;
+  /**
+   * Computed log level from flags and environment.
+   *
+   * Priority: --quiet > --debug > --verbose > MARKFORM_LOG_LEVEL > default
+   */
+  logLevel: LogLevel;
   format: OutputFormat;
   /** Optional forms directory override from --forms-dir CLI option */
   formsDir?: string;
   /** Whether to overwrite existing field values (default: continue/skip filled) */
   overwrite: boolean;
+  /**
+   * Path to trace file for incremental logging output.
+   * When provided, all log output is also appended to this file (without ANSI colors).
+   * Set via --trace <file> or MARKFORM_TRACE environment variable.
+   */
+  traceFile?: string;
 }
 
 // =============================================================================

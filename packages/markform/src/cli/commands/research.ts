@@ -28,7 +28,7 @@ import {
 } from '../../settings.js';
 import { getFormsDir } from '../lib/paths.js';
 import {
-  createSpinner,
+  createSpinnerIfTty,
   getCommandContext,
   logError,
   logInfo,
@@ -37,10 +37,12 @@ import {
   logVerbose,
   logWarn,
   readFile,
+  writeFile,
 } from '../lib/shared.js';
 import { exportMultiFormat } from '../lib/exportHelpers.js';
 import { generateVersionedPathInFormsDir } from '../lib/versioning.js';
 import { parseInitialValues, validateInitialValueFields } from '../lib/initialValues.js';
+import { createFillLoggingCallbacks } from '../lib/fillLogging.js';
 
 /**
  * Register the research command.
@@ -167,14 +169,15 @@ export function registerResearchCommand(program: Command): void {
 
         // Create spinner for research operation (only for TTY, not quiet mode)
         // Note: provider and modelName already extracted via parseModelIdForDisplay above
-        const spinner =
-          process.stdout.isTTY && !ctx.quiet
-            ? createSpinner({
-                type: 'api',
-                provider,
-                model: modelName,
-              })
-            : null;
+        const spinner = createSpinnerIfTty({ type: 'api', provider, model: modelName }, ctx);
+
+        // Create unified logging callbacks (with optional trace file)
+        const callbacks = createFillLoggingCallbacks(ctx, {
+          spinner,
+          modelId,
+          provider,
+          traceFile: ctx.traceFile,
+        });
 
         // Run research fill
         let result;
@@ -182,16 +185,17 @@ export function registerResearchCommand(program: Command): void {
           result = await runResearch(form, {
             model: modelId,
             enableWebSearch: true,
-            captureWireFormat: false,
+            captureWireFormat: !!options.transcript,
             maxTurnsTotal: maxTurns,
             maxPatchesPerTurn,
             maxIssuesPerTurn,
             targetRoles: [AGENT_ROLE],
             fillMode: 'continue',
+            callbacks,
           });
-          spinner?.stop();
+          spinner.stop();
         } catch (error) {
-          spinner?.error('Research failed');
+          spinner.error('Research failed');
           throw error;
         }
 
@@ -231,7 +235,6 @@ export function registerResearchCommand(program: Command): void {
         if (options.transcript && result.transcript) {
           const { serializeSession } = await import('../../engine/session.js');
           const transcriptPath = outputPath.replace(/\.form\.md$/, '.session.yaml');
-          const { writeFile } = await import('../lib/shared.js');
           await writeFile(transcriptPath, serializeSession(result.transcript));
           logInfo(ctx, `Transcript: ${transcriptPath}`);
         }

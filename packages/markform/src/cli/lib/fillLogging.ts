@@ -5,25 +5,26 @@
  * run form-filling (fill, run, examples). API consumers can also use
  * these callbacks or implement their own.
  *
- * Default output (always shown unless --quiet):
- * - Turn numbers with issues list (field IDs + issue types)
- * - Patches per turn (field ID + value)
- * - Completion status
+ * Log Levels:
+ * - quiet: Only errors
+ * - default: Turn info, tool calls with queries/results, patches, completion
+ * - verbose: + harness config, full result listings, accept/reject details
+ * - debug: + full prompts, raw tool inputs/outputs (truncated)
  *
- * Verbose output (--verbose flag):
- * - Token counts per turn
- * - Tool call start/end with timing
- * - Detailed stats and LLM metadata
+ * Trace File:
+ * - When traceFile is provided, all log output is also appended to the file
+ * - Useful for monitoring long-running fills and post-hoc debugging
  */
 
 import pc from 'picocolors';
 
-import type { FillCallbacks } from '../../harness/harnessTypes.js';
-import type { CommandContext } from './cliTypes.js';
+import type { FillCallbacks, TurnStats } from '../../harness/harnessTypes.js';
+import type { CommandContext, LogLevel } from './cliTypes.js';
 import type { SpinnerHandle } from './shared.js';
-import { logInfo, logVerbose } from './shared.js';
+import { logInfo, logVerbose, logDebug } from './shared.js';
 import { formatTurnIssues } from './formatting.js';
 import { formatPatchType, formatPatchValue } from './patchFormat.js';
+import { createTracer, truncate, formatDuration, safeStringify } from './traceUtils.js';
 
 // =============================================================================
 // Types
@@ -35,6 +36,26 @@ import { formatPatchType, formatPatchValue } from './patchFormat.js';
 export interface FillLoggingOptions {
   /** Spinner handle for updating during LLM/tool calls */
   spinner?: SpinnerHandle;
+  /** Model identifier for display */
+  modelId?: string;
+  /** Provider name for display */
+  provider?: string;
+  /**
+   * Path to trace file for incremental logging.
+   * When provided, all log output is also appended to this file (without ANSI colors).
+   * The file is created/truncated at start with a timestamp header.
+   */
+  traceFile?: string;
+}
+
+/**
+ * Check if we should show output at this level.
+ */
+function shouldShow(ctx: CommandContext, minLevel: LogLevel): boolean {
+  const levels: LogLevel[] = ['quiet', 'default', 'verbose', 'debug'];
+  const currentIndex = levels.indexOf(ctx.logLevel);
+  const minIndex = levels.indexOf(minLevel);
+  return currentIndex >= minIndex;
 }
 
 // =============================================================================
@@ -44,25 +65,21 @@ export interface FillLoggingOptions {
 /**
  * Create FillCallbacks that produce standard CLI logging output.
  *
- * Default output (always shown unless --quiet):
- * - Turn numbers with issues list (field IDs + issue types)
- * - Patches per turn (field ID + value)
- * - Completion status
- *
- * Verbose output (--verbose flag):
- * - Token counts per turn
- * - Tool call start/end with timing
- * - Detailed stats and LLM metadata
+ * Log Levels:
+ * - quiet: Only errors
+ * - default: Turn info, tool calls with queries/results, patches, completion
+ * - verbose: + harness config, full result listings, accept/reject details
+ * - debug: + full prompts, raw tool inputs/outputs (truncated)
  *
  * This is used by fill, run, and examples commands for consistent output.
  *
- * @param ctx - Command context for verbose/quiet flags
- * @param options - Optional spinner for tool progress
+ * @param ctx - Command context for log level
+ * @param options - Optional spinner and model info
  * @returns FillCallbacks with all logging implemented
  *
  * @example
  * ```typescript
- * const callbacks = createFillLoggingCallbacks(ctx, { spinner });
+ * const callbacks = createFillLoggingCallbacks(ctx, { spinner, modelId, provider });
  * const result = await fillForm({
  *   form: formMarkdown,
  *   model: 'anthropic/claude-sonnet-4-5',
@@ -75,15 +92,38 @@ export function createFillLoggingCallbacks(
   ctx: CommandContext,
   options: FillLoggingOptions = {},
 ): FillCallbacks {
+  // Create tracer for file output (no-op if no traceFile provided)
+  const trace = createTracer(options.traceFile, options.modelId);
+
+  // Show model info at start if provided (default level)
+  if (options.modelId && shouldShow(ctx, 'default')) {
+    const providerInfo = options.provider ? ` (provider: ${options.provider})` : '';
+    const modelLine = pc.bold(`Model: ${options.modelId}${providerInfo}`);
+    logInfo(ctx, modelLine);
+    trace(`Model: ${options.modelId}${providerInfo}`);
+  }
+
   return {
     // DEFAULT: Always show turn number and issues
     onIssuesIdentified: ({ turnNumber, issues }) => {
-      logInfo(ctx, `${pc.bold(`Turn ${turnNumber}:`)} ${formatTurnIssues(issues)}`);
+      if (!shouldShow(ctx, 'default')) return;
+      const issuesText = formatTurnIssues(issues);
+      logInfo(ctx, `${pc.bold(`Turn ${turnNumber}:`)} ${issuesText}`);
+      trace(`Turn ${turnNumber}: ${issuesText}`);
     },
 
     // DEFAULT: Always show patches with field IDs and values
     onPatchesGenerated: ({ patches, stats }) => {
-      logInfo(ctx, `  -> ${pc.yellow(String(patches.length))} patch(es):`);
+      if (!shouldShow(ctx, 'default')) return;
+
+      // Show patches
+      const tokenInfo = formatTokenInfo(stats);
+      const tokenInfoPlain =
+        stats?.inputTokens || stats?.outputTokens
+          ? ` (tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`
+          : '';
+      logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patch(es)${tokenInfo}:`);
+      trace(`  → ${patches.length} patch(es)${tokenInfoPlain}:`);
 
       for (const patch of patches) {
         const typeName = formatPatchType(patch);
@@ -93,52 +133,168 @@ export function createFillLoggingCallbacks(
           'fieldId' in patch ? patch.fieldId : patch.op === 'add_note' ? patch.ref : '';
         if (fieldId) {
           logInfo(ctx, `    ${pc.cyan(fieldId)} ${pc.dim(`(${typeName})`)} = ${pc.green(value)}`);
+          trace(`    ${fieldId} (${typeName}) = ${value}`);
         } else {
           logInfo(ctx, `    ${pc.dim(`(${typeName})`)} = ${pc.green(value)}`);
+          trace(`    (${typeName}) = ${value}`);
         }
       }
 
-      // VERBOSE: Token counts and detailed stats
-      if (stats && ctx.verbose) {
-        logVerbose(ctx, `  Tokens: in=${stats.inputTokens ?? 0} out=${stats.outputTokens ?? 0}`);
-        if (stats.toolCalls && stats.toolCalls.length > 0) {
-          const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(', ');
-          logVerbose(ctx, `  Tools: ${toolSummary}`);
-        }
+      // VERBOSE: Tool summary
+      if (stats?.toolCalls && stats.toolCalls.length > 0 && shouldShow(ctx, 'verbose')) {
+        const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(', ');
+        logVerbose(ctx, `  Tools: ${toolSummary}`);
+        trace(`  Tools: ${toolSummary}`);
+      }
+
+      // DEBUG: Full prompts
+      if (stats?.prompts && shouldShow(ctx, 'debug')) {
+        logDebug(ctx, `  ─── System Prompt ───`);
+        logDebug(ctx, truncate(stats.prompts.system));
+        logDebug(ctx, `  ─── Context Prompt ───`);
+        logDebug(ctx, truncate(stats.prompts.context));
+        trace(`  ─── System Prompt ───\n${truncate(stats.prompts.system)}`);
+        trace(`  ─── Context Prompt ───\n${truncate(stats.prompts.context)}`);
       }
     },
 
     // DEFAULT: Show completion status
     onTurnComplete: ({ isComplete }) => {
-      if (isComplete) {
+      if (isComplete && shouldShow(ctx, 'default')) {
         logInfo(ctx, pc.green(`  ✓ Complete`));
+        trace(`  ✓ Complete`);
       }
     },
 
-    // VERBOSE: Tool call details (with spinner update for web search)
-    onToolStart: ({ name }) => {
-      // Web search gets spinner update even without --verbose
-      if (name.includes('search')) {
-        options.spinner?.message(`Web search...`);
+    // DEFAULT: Tool calls with queries and structured results
+    onToolStart: ({ name, input, query, toolType }) => {
+      // Update spinner for web search (even in quiet mode)
+      if (toolType === 'web_search' || name.includes('search')) {
+        const queryText = query ? ` "${query}"` : '';
+        options.spinner?.message(`Web search${queryText}...`);
       }
-      logVerbose(ctx, `  Tool started: ${name}`);
+
+      if (!shouldShow(ctx, 'default')) return;
+
+      // Show tool start with query if available
+      const queryInfo = query ? ` ${pc.yellow(`"${query}"`)}` : '';
+      const queryInfoPlain = query ? ` "${query}"` : '';
+      logInfo(ctx, `  [${name}]${queryInfo}`);
+      trace(`  [${name}]${queryInfoPlain}`);
+
+      // DEBUG: Show raw input
+      if (shouldShow(ctx, 'debug') && input !== undefined) {
+        const inputStr = truncate(safeStringify(input));
+        logDebug(ctx, `     Input: ${inputStr}`);
+        trace(`     Input: ${inputStr}`);
+      }
     },
 
-    onToolEnd: ({ name, durationMs, error }) => {
+    onToolEnd: ({
+      name,
+      durationMs,
+      error,
+      toolType,
+      resultCount,
+      sources,
+      topResults,
+      fullResults,
+      output,
+    }) => {
+      if (!shouldShow(ctx, 'default')) return;
+
+      const durationStr = formatDuration(durationMs);
+
       if (error) {
-        logVerbose(ctx, `  Tool ${name} failed: ${error} (${durationMs}ms)`);
+        logInfo(ctx, `  ${pc.red('❌')} ${name} failed (${durationStr}): ${error}`);
+        trace(`  ❌ ${name} failed (${durationStr}): ${error}`);
+        return;
+      }
+
+      // Format result info based on tool type
+      if (toolType === 'web_search') {
+        const countStr = resultCount !== undefined ? `${resultCount} results` : 'done';
+        logInfo(ctx, `  ${pc.green('✓')} ${name}: ${countStr} (${durationStr})`);
+        trace(`  ✓ ${name}: ${countStr} (${durationStr})`);
+
+        // DEFAULT: Show sources and top results
+        if (sources) {
+          logInfo(ctx, `     Sources: ${sources}`);
+          trace(`     Sources: ${sources}`);
+        }
+        if (topResults) {
+          logInfo(ctx, `     Results: ${topResults}`);
+          trace(`     Results: ${topResults}`);
+        }
+
+        // VERBOSE: Show full result listings
+        if (fullResults && fullResults.length > 0 && shouldShow(ctx, 'verbose')) {
+          for (const result of fullResults) {
+            const resultLine = `     [${result.index}] "${result.title}" - ${result.url}`;
+            logVerbose(ctx, resultLine);
+            trace(resultLine);
+          }
+        }
       } else {
-        logVerbose(ctx, `  Tool ${name} completed (${durationMs}ms)`);
+        logInfo(ctx, `  ${pc.green('✓')} ${name}: done (${durationStr})`);
+        trace(`  ✓ ${name}: done (${durationStr})`);
+      }
+
+      // DEBUG: Show raw output (input is available on onToolStart)
+      if (shouldShow(ctx, 'debug') && output !== undefined) {
+        const outputStr = truncate(safeStringify(output));
+        logDebug(ctx, `     Output: ${outputStr}`);
+        trace(`     Output: ${outputStr}`);
       }
     },
 
     // VERBOSE: LLM call metadata
     onLlmCallStart: ({ model }) => {
-      logVerbose(ctx, `  LLM call: ${model}`);
+      if (shouldShow(ctx, 'verbose')) {
+        logVerbose(ctx, `  LLM call: ${model}`);
+        trace(`  LLM call: ${model}`);
+      }
     },
 
-    onLlmCallEnd: ({ model, inputTokens, outputTokens }) => {
-      logVerbose(ctx, `  LLM response: ${model} (in=${inputTokens} out=${outputTokens})`);
+    onLlmCallEnd: ({ model, inputTokens, outputTokens, reasoningTokens }) => {
+      if (shouldShow(ctx, 'verbose')) {
+        const reasoningInfo = reasoningTokens ? ` reasoning=${reasoningTokens}` : '';
+        const line = `  LLM response: ${model} (in=${inputTokens} out=${outputTokens}${reasoningInfo})`;
+        logVerbose(ctx, line);
+        trace(line);
+      }
+    },
+
+    // DEBUG: Reasoning content
+    onReasoningGenerated: ({ stepNumber, reasoning }) => {
+      if (!shouldShow(ctx, 'debug')) return;
+
+      logDebug(ctx, `  [reasoning step ${stepNumber}]`);
+      trace(`  [reasoning step ${stepNumber}]`);
+      for (const r of reasoning) {
+        if (r.type === 'redacted') {
+          logDebug(ctx, `     [redacted]`);
+          trace(`     [redacted]`);
+        } else if (r.text) {
+          const text = truncate(r.text);
+          logDebug(ctx, `     ${text}`);
+          trace(`     ${text}`);
+        } else {
+          // Show placeholder if reasoning item has no text content
+          logDebug(ctx, `     [reasoning content not available]`);
+          trace(`     [reasoning content not available]`);
+        }
+      }
     },
   };
+}
+
+/**
+ * Format token info for patch output.
+ */
+function formatTokenInfo(stats?: TurnStats): string {
+  if (!stats?.inputTokens && !stats?.outputTokens) return '';
+  const inTokens = stats.inputTokens ?? 0;
+  const outTokens = stats.outputTokens ?? 0;
+  return pc.dim(` (tokens: ↓${inTokens} ↑${outTokens})`);
 }

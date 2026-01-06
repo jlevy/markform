@@ -12,7 +12,7 @@ import pc from 'picocolors';
 import YAML from 'yaml';
 
 import { convertKeysToSnakeCase } from './naming.js';
-import type { CommandContext, OutputFormat } from './cliTypes.js';
+import type { CommandContext, LogLevel, OutputFormat } from './cliTypes.js';
 
 // =============================================================================
 // Spinner Utility Types
@@ -65,7 +65,7 @@ export interface SpinnerHandle {
 }
 
 // Re-export types for backwards compatibility
-export type { CommandContext, OutputFormat } from './cliTypes.js';
+export type { CommandContext, LogLevel, OutputFormat } from './cliTypes.js';
 
 // =============================================================================
 // Spinner Utility Functions
@@ -214,6 +214,26 @@ export const OUTPUT_FORMATS: OutputFormat[] = [
 ];
 
 /**
+ * Compute log level from flags and environment.
+ *
+ * Priority: --quiet > --debug > --verbose > MARKFORM_LOG_LEVEL > default
+ */
+function computeLogLevel(opts: { quiet?: boolean; debug?: boolean; verbose?: boolean }): LogLevel {
+  // Flags take precedence over environment
+  if (opts.quiet) return 'quiet';
+  if (opts.debug) return 'debug';
+  if (opts.verbose) return 'verbose';
+
+  // Check environment variable (consistent naming with MARKFORM_ prefix)
+  const envLevel = process.env.MARKFORM_LOG_LEVEL?.toLowerCase();
+  if (envLevel === 'quiet' || envLevel === 'debug' || envLevel === 'verbose') {
+    return envLevel;
+  }
+
+  return 'default';
+}
+
+/**
  * Extract command context from Commander options.
  */
 export function getCommandContext(command: Command): CommandContext {
@@ -221,17 +241,28 @@ export function getCommandContext(command: Command): CommandContext {
     dryRun?: boolean;
     verbose?: boolean;
     quiet?: boolean;
+    debug?: boolean;
+    trace?: string;
     format?: OutputFormat;
     formsDir?: string;
     overwrite?: boolean;
   }>();
+
+  const logLevel = computeLogLevel(opts);
+
+  // Trace file: --trace flag or MARKFORM_TRACE env var
+  const traceFile = opts.trace ?? process.env.MARKFORM_TRACE;
+
   return {
     dryRun: opts.dryRun ?? false,
     verbose: opts.verbose ?? false,
     quiet: opts.quiet ?? false,
+    debug: opts.debug ?? false,
+    logLevel,
     format: opts.format ?? 'console',
     formsDir: opts.formsDir,
     overwrite: opts.overwrite ?? false,
+    traceFile,
   };
 }
 
@@ -284,11 +315,22 @@ export function logDryRun(message: string, details?: unknown): void {
 }
 
 /**
- * Log a verbose message (only shown if --verbose is set).
+ * Log a verbose message (only shown if --verbose or --debug is set).
  */
 export function logVerbose(ctx: CommandContext, message: string): void {
-  if (ctx.verbose) {
+  if (ctx.verbose || ctx.debug) {
     console.log(pc.dim(message));
+  }
+}
+
+/**
+ * Log a debug message (only shown if --debug is set or MARKFORM_LOG_LEVEL=debug).
+ *
+ * Use for full diagnostic output like raw prompts and tool I/O.
+ */
+export function logDebug(ctx: CommandContext, message: string): void {
+  if (ctx.debug || ctx.logLevel === 'debug') {
+    console.log(pc.magenta(message));
   }
 }
 

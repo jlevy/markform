@@ -70,6 +70,11 @@ import { formatTurnIssues } from '../lib/formatting.js';
 import { inspect } from '../../engine/inspect.js';
 import { applyPatches } from '../../engine/apply.js';
 import { createCliToolCallbacks } from '../lib/fillCallbacks.js';
+import { createTracer } from '../lib/traceUtils.js';
+
+// =============================================================================
+// Console Formatting
+// =============================================================================
 
 /**
  * Format session transcript for console output.
@@ -349,6 +354,9 @@ export function registerFillCommand(program: Command): void {
           // Create harness
           const harness = createHarness(form, harnessConfig);
 
+          // Create tracer for incremental file logging (no-op if no traceFile)
+          const trace = createTracer(ctx.traceFile, options.model);
+
           // Create agent based on type
           let agent: Agent;
           let mockPath: string | undefined;
@@ -390,9 +398,10 @@ export function registerFillCommand(program: Command): void {
 
             // Create callbacks that reference the mutable spinner
             // Callbacks update spinner during tool execution (especially web search)
-            const callbacks = createCliToolCallbacks(
-              {
-                // Proxy to current spinner (may be null between turns)
+            // Also writes to trace file when --trace is provided
+            const callbacks = createCliToolCallbacks({
+              // Proxy to current spinner (may be null between turns)
+              spinner: {
                 message: (msg) => currentSpinner?.message(msg),
                 update: (context) => currentSpinner?.update(context),
                 stop: (msg) => currentSpinner?.stop(msg),
@@ -400,7 +409,8 @@ export function registerFillCommand(program: Command): void {
                 getElapsedMs: () => currentSpinner?.getElapsedMs() ?? 0,
               },
               ctx,
-            );
+              trace,
+            });
 
             // Pass first target role to agent (for instruction lookup)
             targetRole = targetRoles[0] === '*' ? AGENT_ROLE : (targetRoles[0] ?? AGENT_ROLE);
@@ -421,27 +431,29 @@ export function registerFillCommand(program: Command): void {
           }
 
           logInfo(ctx, pc.cyan(`Filling form: ${filePath}`));
-          logInfo(
-            ctx,
-            `Agent: ${options.mock ? 'mock' : 'live'}${options.model ? ` (${options.model})` : ''}`,
-          );
+          trace(`Filling form: ${filePath}`);
+          const agentInfo = `Agent: ${options.mock ? 'mock' : 'live'}${options.model ? ` (${options.model})` : ''}`;
+          logInfo(ctx, agentInfo);
+          trace(agentInfo);
           logVerbose(ctx, `Max turns: ${harnessConfig.maxTurns}`);
+          trace(`Max turns: ${harnessConfig.maxTurns}`);
           logVerbose(ctx, `Max patches per turn: ${harnessConfig.maxPatchesPerTurn}`);
+          trace(`Max patches per turn: ${harnessConfig.maxPatchesPerTurn}`);
           logVerbose(ctx, `Max issues per turn: ${harnessConfig.maxIssuesPerTurn}`);
-          logVerbose(
-            ctx,
-            `Target roles: ${targetRoles.includes('*') ? '*' : targetRoles.join(', ')}`,
-          );
+          trace(`Max issues per turn: ${harnessConfig.maxIssuesPerTurn}`);
+          const rolesInfo = `Target roles: ${targetRoles.includes('*') ? '*' : targetRoles.join(', ')}`;
+          logVerbose(ctx, rolesInfo);
+          trace(rolesInfo);
           logVerbose(ctx, `Fill mode: ${fillMode}`);
+          trace(`Fill mode: ${fillMode}`);
 
           // Run harness loop
           let stepResult = harness.step();
           // Track rejections for wire format context (helps LLM learn from mistakes)
           let previousRejections: PatchRejection[] | undefined;
-          logInfo(
-            ctx,
-            `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
-          );
+          const issuesText = formatTurnIssues(stepResult.issues);
+          logInfo(ctx, `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${issuesText}`);
+          trace(`Turn ${stepResult.turnNumber}: ${issuesText}`);
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
             // Create spinner for LLM call (only for live agent with TTY)
@@ -484,7 +496,11 @@ export function registerFillCommand(program: Command): void {
             const tokenSuffix = stats
               ? ` ${pc.dim(`(tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`)}`
               : '';
+            const tokenSuffixPlain = stats
+              ? ` (tokens: ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0})`
+              : '';
             logInfo(ctx, `  → ${pc.yellow(String(patches.length))} patches${tokenSuffix}:`);
+            trace(`  → ${patches.length} patches${tokenSuffixPlain}:`);
             for (const patch of patches) {
               const typeName = formatPatchType(patch);
               const value = formatPatchValue(patch);
@@ -496,33 +512,39 @@ export function registerFillCommand(program: Command): void {
                   ctx,
                   `    ${pc.cyan(fieldId)} ${pc.dim(`(${typeName})`)} = ${pc.green(value)}`,
                 );
+                trace(`    ${fieldId} (${typeName}) = ${value}`);
               } else {
                 logInfo(ctx, `    ${pc.dim(`(${typeName})`)} = ${pc.green(value)}`);
+                trace(`    (${typeName}) = ${value}`);
               }
             }
 
             // Log stats and prompts in verbose mode
             if (stats) {
-              logVerbose(
-                ctx,
-                `  Stats: tokens ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0}`,
-              );
+              const statsInfo = `  Stats: tokens ↓${stats.inputTokens ?? 0} ↑${stats.outputTokens ?? 0}`;
+              logVerbose(ctx, statsInfo);
+              trace(statsInfo);
               if (stats.toolCalls && stats.toolCalls.length > 0) {
                 const toolSummary = stats.toolCalls.map((t) => `${t.name}(${t.count})`).join(', ');
                 logVerbose(ctx, `  Tools: ${toolSummary}`);
+                trace(`  Tools: ${toolSummary}`);
               }
 
               // Log full prompts in verbose mode
               if (stats.prompts) {
                 logVerbose(ctx, ``);
                 logVerbose(ctx, pc.dim(`  ─── System Prompt ───`));
+                trace(`  ─── System Prompt ───`);
                 for (const line of stats.prompts.system.split('\n')) {
                   logVerbose(ctx, pc.dim(`  ${line}`));
+                  trace(`  ${line}`);
                 }
                 logVerbose(ctx, ``);
                 logVerbose(ctx, pc.dim(`  ─── Context Prompt ───`));
+                trace(`  ─── Context Prompt ───`);
                 for (const line of stats.prompts.context.split('\n')) {
                   logVerbose(ctx, pc.dim(`  ${line}`));
+                  trace(`  ${line}`);
                 }
                 logVerbose(ctx, ``);
               }
@@ -574,13 +596,13 @@ export function registerFillCommand(program: Command): void {
 
             if (stepResult.isComplete) {
               logInfo(ctx, pc.green(`  ✓ Complete`));
+              trace(`  ✓ Complete`);
             } else if (!harness.hasReachedMaxTurns()) {
               // Step for next turn (only if not at max turns)
               stepResult = harness.step();
-              logInfo(
-                ctx,
-                `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
-              );
+              const nextIssuesText = formatTurnIssues(stepResult.issues);
+              logInfo(ctx, `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${nextIssuesText}`);
+              trace(`Turn ${stepResult.turnNumber}: ${nextIssuesText}`);
             }
           }
 
@@ -588,12 +610,17 @@ export function registerFillCommand(program: Command): void {
 
           // Check if completed
           if (stepResult.isComplete) {
-            logSuccess(ctx, `Form completed in ${harness.getTurnNumber()} turn(s)`);
+            const successMsg = `Form completed in ${harness.getTurnNumber()} turn(s)`;
+            logSuccess(ctx, successMsg);
+            trace(successMsg);
           } else if (harness.hasReachedMaxTurns()) {
-            logWarn(ctx, `Max turns reached (${harnessConfig.maxTurns})`);
+            const warnMsg = `Max turns reached (${harnessConfig.maxTurns})`;
+            logWarn(ctx, warnMsg);
+            trace(warnMsg);
           }
 
           logTiming(ctx, 'Fill time', durationMs);
+          trace(`Fill time: ${durationMs}ms`);
 
           // Write output file
           // Default to forms directory when --output is not specified
@@ -609,9 +636,11 @@ export function registerFillCommand(program: Command): void {
 
           if (ctx.dryRun) {
             logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
+            trace(`[DRY RUN] Would write form to: ${outputPath}`);
           } else {
             await writeFile(outputPath, formMarkdown);
             logSuccess(ctx, `Form written to: ${outputPath}`);
+            trace(`Form written to: ${outputPath}`);
           }
 
           // Build session transcript

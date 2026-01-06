@@ -81,6 +81,8 @@ describe('shared utilities', () => {
       dryRun: false,
       verbose: false,
       quiet: false,
+      debug: false,
+      logLevel: 'default',
       format: 'console',
       overwrite: false,
     };
@@ -123,6 +125,8 @@ describe('shared utilities', () => {
       dryRun: false,
       verbose: false,
       quiet: false,
+      debug: false,
+      logLevel: 'default',
       format: 'console',
       overwrite: false,
     };
