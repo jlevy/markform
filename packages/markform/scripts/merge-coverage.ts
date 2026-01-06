@@ -33,16 +33,29 @@ interface CoverageSummary {
   [file: string]: unknown;
 }
 
+/**
+ * Check if a file path should be excluded from coverage (e.g., node_modules)
+ */
+function shouldExcludeFile(filePath: string): boolean {
+  return filePath.includes('node_modules');
+}
+
 function parseLcov(content: string): CoverageData {
   const lines = new Map<string, Map<number, number>>();
   const branches = new Map<string, Map<string, number>>();
   const functions = new Map<string, Map<string, FunctionInfo>>();
 
   let currentFile = '';
+  let skipCurrentFile = false;
 
   for (const line of content.split('\n')) {
     if (line.startsWith('SF:')) {
       currentFile = line.slice(3);
+      skipCurrentFile = shouldExcludeFile(currentFile);
+      if (skipCurrentFile) {
+        currentFile = '';
+        continue;
+      }
       if (!lines.has(currentFile)) {
         lines.set(currentFile, new Map());
       }
@@ -222,6 +235,60 @@ function generateLcov(data: CoverageData): string {
   return output.join('\n');
 }
 
+interface FileStats {
+  lines: { total: number; covered: number; skipped: number; pct: number };
+  statements: { total: number; covered: number; skipped: number; pct: number };
+  functions: { total: number; covered: number; skipped: number; pct: number };
+  branches: { total: number; covered: number; skipped: number; pct: number };
+}
+
+function calculateFileStats(file: string, data: CoverageData): FileStats {
+  const fileLines = data.lines.get(file);
+  const fileBranches = data.branches.get(file);
+  const fileFuncs = data.functions.get(file);
+
+  let linesTotal = 0;
+  let linesCovered = 0;
+  let branchesTotal = 0;
+  let branchesCovered = 0;
+  let functionsTotal = 0;
+  let functionsCovered = 0;
+
+  if (fileLines) {
+    for (const hits of fileLines.values()) {
+      linesTotal++;
+      if (hits > 0) linesCovered++;
+    }
+  }
+
+  if (fileBranches) {
+    for (const hits of fileBranches.values()) {
+      branchesTotal++;
+      if (hits > 0) branchesCovered++;
+    }
+  }
+
+  if (fileFuncs) {
+    for (const info of fileFuncs.values()) {
+      functionsTotal++;
+      if (info.hits > 0) functionsCovered++;
+    }
+  }
+
+  const linesPct = linesTotal > 0 ? Number(((linesCovered / linesTotal) * 100).toFixed(2)) : 100;
+  const branchesPct =
+    branchesTotal > 0 ? Number(((branchesCovered / branchesTotal) * 100).toFixed(2)) : 100;
+  const functionsPct =
+    functionsTotal > 0 ? Number(((functionsCovered / functionsTotal) * 100).toFixed(2)) : 100;
+
+  return {
+    lines: { total: linesTotal, covered: linesCovered, skipped: 0, pct: linesPct },
+    statements: { total: linesTotal, covered: linesCovered, skipped: 0, pct: linesPct },
+    functions: { total: functionsTotal, covered: functionsCovered, skipped: 0, pct: functionsPct },
+    branches: { total: branchesTotal, covered: branchesCovered, skipped: 0, pct: branchesPct },
+  };
+}
+
 function calculateStats(data: CoverageData) {
   let linesTotal = 0;
   let linesCovered = 0;
@@ -305,10 +372,11 @@ function main() {
   // Calculate stats
   const stats = calculateStats(mergedData);
 
-  // Update coverage-summary.json with merged totals
+  // Update coverage-summary.json with merged totals and per-file data
   if (existsSync(coverageSummaryPath)) {
     const summary = JSON.parse(readFileSync(coverageSummaryPath, 'utf8')) as CoverageSummary;
 
+    // Update totals
     summary.total = {
       lines: {
         total: stats.lines.total,
@@ -337,8 +405,33 @@ function main() {
       branchesTrue: { total: 0, covered: 0, skipped: 0, pct: 100 },
     };
 
-    writeFileSync(coverageSummaryPath, JSON.stringify(summary));
-    console.log(`Updated ${coverageSummaryPath} with merged totals`);
+    // Update per-file coverage with merged data
+    // Get all unique files from merged data (these use relative paths like src/errors.ts)
+    const allMergedFiles = new Set([
+      ...mergedData.lines.keys(),
+      ...mergedData.branches.keys(),
+      ...mergedData.functions.keys(),
+    ]);
+
+    // Summary uses absolute paths, lcov uses relative paths
+    // Build a mapping from relative paths to absolute paths
+    const summaryKeys = Object.keys(summary).filter((k) => k !== 'total');
+
+    let filesUpdated = 0;
+    for (const relativeFile of allMergedFiles) {
+      // Find the matching absolute path in summary
+      const absolutePath = summaryKeys.find((absPath) => absPath.endsWith('/' + relativeFile));
+      if (absolutePath) {
+        const fileStats = calculateFileStats(relativeFile, mergedData);
+        (summary as Record<string, unknown>)[absolutePath] = fileStats;
+        filesUpdated++;
+      }
+    }
+
+    writeFileSync(coverageSummaryPath, JSON.stringify(summary, null, 2));
+    console.log(
+      `Updated ${coverageSummaryPath} with merged totals and ${filesUpdated} file entries`,
+    );
   }
 
   // Print summary
