@@ -220,6 +220,29 @@ markform fill examples/startup-research/startup-research.form.md \
 
 ---
 
+## Bug Fixes Applied (2026-01-06)
+
+### Server-Side Tool Callbacks (Critical Fix)
+
+**Issue:** Tool callbacks (`onToolStart`, `onToolEnd`) were not firing for server-side tools like OpenAI's `web_search`. This meant console output showed patches and token counts but NO tool usage information like `[web_search] "query"`.
+
+**Root Cause:** OpenAI's `web_search` tool has `execute: undefined` because it executes server-side (not locally via the SDK). The `wrapToolsWithCallbacks` function only wrapped tools with local execute functions, so server-side tools were passed through unwrapped, causing callbacks to never fire.
+
+**Fix Applied to `src/harness/liveAgent.ts`:**
+1. Modified `wrapToolsWithCallbacks` to return `{ tools, wrappedToolNames }` - tracking which tools were wrapped locally
+2. Added code in the step processing loop to fire callbacks for server-side tools by checking step results:
+   - If a tool call is not in `wrappedToolNames`, fire `onToolStart` with extracted info
+   - Fire `onToolEnd` using tool result from `toolResultMap` (built from step.toolResults)
+3. Fixed property names for AI SDK types: `toolCall.input` (not `args`), `toolResult.output` (not `result`)
+
+**Verification:**
+- TypeScript typecheck: ✅ PASS
+- Unit tests: ✅ 1460 tests pass
+- ESLint: ✅ PASS
+- Build: ✅ PASS
+
+---
+
 ## Known Issues
 
 ### markform-8: --quiet flag doesn't suppress session transcript

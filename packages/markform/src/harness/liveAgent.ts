@@ -159,7 +159,8 @@ export class LiveAgent implements Agent {
     };
 
     // Wrap tools with callbacks for observability
-    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks);
+    // Returns both wrapped tools and set of tool names that have local execute (for tracking)
+    const { tools, wrappedToolNames } = wrapToolsWithCallbacks(rawTools, this.callbacks);
 
     // Get model ID for callbacks (may not be available on all model types)
     const modelId = (this.model as { modelId?: string }).modelId ?? 'unknown';
@@ -206,10 +207,45 @@ export class LiveAgent implements Agent {
 
     for (let stepIndex = 0; stepIndex < result.steps.length; stepIndex++) {
       const step = result.steps[stepIndex]!;
+
+      // Build a map of tool results by toolCallId for matching
+      const toolResultMap = new Map<string, unknown>();
+      for (const toolResult of step.toolResults) {
+        if ('toolCallId' in toolResult) {
+          toolResultMap.set(toolResult.toolCallId, toolResult.output);
+        }
+      }
+
       for (const toolCall of step.toolCalls) {
         // Count tool calls
         const count = toolCallCounts.get(toolCall.toolName) ?? 0;
         toolCallCounts.set(toolCall.toolName, count + 1);
+
+        // Fire callbacks for server-side tools (those not wrapped locally)
+        // These include OpenAI's web_search which executes server-side
+        if (!wrappedToolNames.has(toolCall.toolName) && this.callbacks) {
+          // Fire onToolStart
+          if (this.callbacks.onToolStart) {
+            try {
+              const startInfo = extractToolStartInfo(toolCall.toolName, toolCall.input);
+              this.callbacks.onToolStart(startInfo);
+            } catch {
+              // Ignore callback errors
+            }
+          }
+
+          // Fire onToolEnd with result if available
+          if (this.callbacks.onToolEnd) {
+            try {
+              const toolResult = toolResultMap.get(toolCall.toolCallId);
+              // Server-side tools don't have timing info, use 0
+              const endInfo = extractToolEndInfo(toolCall.toolName, toolResult, 0);
+              this.callbacks.onToolEnd(endInfo);
+            } catch {
+              // Ignore callback errors
+            }
+          }
+        }
 
         // Extract patches from fill_form calls
         if (toolCall.toolName === FILL_FORM_TOOL_NAME && 'input' in toolCall) {
@@ -626,14 +662,19 @@ function findField(form: ParsedForm, fieldId: string) {
  *
  * Only wraps tools that have an execute function.
  * Declarative tools (schema only) are passed through unchanged.
+ *
+ * Returns both the wrapped tools and a set of tool names that were wrapped,
+ * so we can fire callbacks for server-side tools from step results.
  */
 function wrapToolsWithCallbacks(
   tools: Record<string, Tool>,
   callbacks?: FillCallbacks,
-): Record<string, Tool> {
+): { tools: Record<string, Tool>; wrappedToolNames: Set<string> } {
+  const wrappedToolNames = new Set<string>();
+
   // Skip wrapping if no tool callbacks
   if (!callbacks?.onToolStart && !callbacks?.onToolEnd) {
-    return tools;
+    return { tools, wrappedToolNames };
   }
 
   const wrapped: Record<string, Tool> = {};
@@ -644,12 +685,13 @@ function wrapToolsWithCallbacks(
     if (typeof execute === 'function') {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       wrapped[name] = wrapTool(name, tool, execute, callbacks);
+      wrappedToolNames.add(name);
     } else {
       // Pass through declarative tools unchanged
       wrapped[name] = tool;
     }
   }
-  return wrapped;
+  return { tools: wrapped, wrappedToolNames };
 }
 
 /**
