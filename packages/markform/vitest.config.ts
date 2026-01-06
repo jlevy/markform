@@ -30,6 +30,8 @@ export default defineConfig({
         '**/commands/browse.ts',
         '**/commands/run.ts',
         '**/commands/research.ts',
+        // Research integration code (requires live API access)
+        '**/research/runResearch.ts',
       ],
       // Thresholds based on current coverage (~60%); will increase as coverage improves
       thresholds: {
