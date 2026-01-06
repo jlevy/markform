@@ -11,9 +11,15 @@ const COVERAGE_DIR = 'coverage';
 const TRYSCRIPT_DIR = 'coverage-tryscript';
 const MERGED_DIR = 'coverage-merged';
 
+interface FunctionInfo {
+  line: number;
+  hits: number;
+}
+
 interface CoverageData {
   lines: Map<string, Map<number, number>>; // file -> line -> hit count
   branches: Map<string, Map<string, number>>; // file -> branchId -> hit count
+  functions: Map<string, Map<string, FunctionInfo>>; // file -> funcName -> { line, hits }
 }
 
 interface CoverageSummary {
@@ -30,6 +36,7 @@ interface CoverageSummary {
 function parseLcov(content: string): CoverageData {
   const lines = new Map<string, Map<number, number>>();
   const branches = new Map<string, Map<string, number>>();
+  const functions = new Map<string, Map<string, FunctionInfo>>();
 
   let currentFile = '';
 
@@ -41,6 +48,31 @@ function parseLcov(content: string): CoverageData {
       }
       if (!branches.has(currentFile)) {
         branches.set(currentFile, new Map());
+      }
+      if (!functions.has(currentFile)) {
+        functions.set(currentFile, new Map());
+      }
+    } else if (line.startsWith('FN:') && currentFile) {
+      // FN:lineNumber,functionName
+      const commaIdx = line.indexOf(',');
+      const lineNum = Number(line.slice(3, commaIdx));
+      const funcName = line.slice(commaIdx + 1);
+      const fileFuncs = functions.get(currentFile)!;
+      if (!fileFuncs.has(funcName)) {
+        fileFuncs.set(funcName, { line: lineNum, hits: 0 });
+      }
+    } else if (line.startsWith('FNDA:') && currentFile) {
+      // FNDA:hitCount,functionName
+      const commaIdx = line.indexOf(',');
+      const hits = Number(line.slice(5, commaIdx));
+      const funcName = line.slice(commaIdx + 1);
+      const fileFuncs = functions.get(currentFile)!;
+      const existing = fileFuncs.get(funcName);
+      if (existing) {
+        existing.hits += hits;
+      } else {
+        // Function hit data without FN definition - create entry
+        fileFuncs.set(funcName, { line: 0, hits });
       }
     } else if (line.startsWith('DA:') && currentFile) {
       const [lineNum, hits] = line.slice(3).split(',');
@@ -57,14 +89,24 @@ function parseLcov(content: string): CoverageData {
     }
   }
 
-  return { lines, branches };
+  return { lines, branches, functions };
 }
 
 function mergeCoverageData(a: CoverageData, b: CoverageData): CoverageData {
   const merged: CoverageData = {
     lines: new Map(a.lines),
     branches: new Map(a.branches),
+    functions: new Map(),
   };
+
+  // Deep copy functions from a
+  for (const [file, fileFuncs] of a.functions) {
+    const newMap = new Map<string, FunctionInfo>();
+    for (const [name, info] of fileFuncs) {
+      newMap.set(name, { line: info.line, hits: info.hits });
+    }
+    merged.functions.set(file, newMap);
+  }
 
   // Merge lines
   for (const [file, fileLines] of b.lines) {
@@ -92,19 +134,73 @@ function mergeCoverageData(a: CoverageData, b: CoverageData): CoverageData {
     }
   }
 
+  // Merge functions
+  for (const [file, fileFuncs] of b.functions) {
+    if (!merged.functions.has(file)) {
+      const newMap = new Map<string, FunctionInfo>();
+      for (const [name, info] of fileFuncs) {
+        newMap.set(name, { line: info.line, hits: info.hits });
+      }
+      merged.functions.set(file, newMap);
+    } else {
+      const existingFuncs = merged.functions.get(file)!;
+      for (const [funcName, info] of fileFuncs) {
+        const existing = existingFuncs.get(funcName);
+        if (existing) {
+          existing.hits += info.hits;
+        } else {
+          existingFuncs.set(funcName, { line: info.line, hits: info.hits });
+        }
+      }
+    }
+  }
+
   return merged;
 }
 
 function generateLcov(data: CoverageData): string {
   const output: string[] = [];
 
-  for (const [file, fileLines] of data.lines) {
+  // Get all files from lines, branches, and functions
+  const allFiles = new Set([
+    ...data.lines.keys(),
+    ...data.branches.keys(),
+    ...data.functions.keys(),
+  ]);
+
+  for (const file of allFiles) {
     output.push(`SF:${file}`);
 
+    // Output function definitions (FN)
+    const fileFuncs = data.functions.get(file);
+    if (fileFuncs) {
+      const sortedFuncs = [...fileFuncs.entries()].sort((a, b) => a[1].line - b[1].line);
+      for (const [funcName, info] of sortedFuncs) {
+        output.push(`FN:${info.line},${funcName}`);
+      }
+      // Output function hit data (FNDA)
+      for (const [funcName, info] of sortedFuncs) {
+        output.push(`FNDA:${info.hits},${funcName}`);
+      }
+      // Output function summary (FNF/FNH)
+      const fnf = fileFuncs.size;
+      const fnh = [...fileFuncs.values()].filter((f) => f.hits > 0).length;
+      output.push(`FNF:${fnf}`);
+      output.push(`FNH:${fnh}`);
+    }
+
     // Output line data
-    const sortedLines = [...fileLines.entries()].sort((a, b) => a[0] - b[0]);
-    for (const [lineNum, hits] of sortedLines) {
-      output.push(`DA:${lineNum},${hits}`);
+    const fileLines = data.lines.get(file);
+    if (fileLines) {
+      const sortedLines = [...fileLines.entries()].sort((a, b) => a[0] - b[0]);
+      for (const [lineNum, hits] of sortedLines) {
+        output.push(`DA:${lineNum},${hits}`);
+      }
+      // Output line summary (LF/LH)
+      const lf = fileLines.size;
+      const lh = [...fileLines.values()].filter((h) => h > 0).length;
+      output.push(`LF:${lf}`);
+      output.push(`LH:${lh}`);
     }
 
     // Output branch data
@@ -113,6 +209,11 @@ function generateLcov(data: CoverageData): string {
       for (const [branchId, hits] of fileBranches) {
         output.push(`BRDA:${branchId},${hits}`);
       }
+      // Output branch summary (BRF/BRH)
+      const brf = fileBranches.size;
+      const brh = [...fileBranches.values()].filter((h) => h > 0).length;
+      output.push(`BRF:${brf}`);
+      output.push(`BRH:${brh}`);
     }
 
     output.push('end_of_record');
@@ -126,6 +227,8 @@ function calculateStats(data: CoverageData) {
   let linesCovered = 0;
   let branchesTotal = 0;
   let branchesCovered = 0;
+  let functionsTotal = 0;
+  let functionsCovered = 0;
 
   for (const fileLines of data.lines.values()) {
     for (const hits of fileLines.values()) {
@@ -141,6 +244,13 @@ function calculateStats(data: CoverageData) {
     }
   }
 
+  for (const fileFuncs of data.functions.values()) {
+    for (const info of fileFuncs.values()) {
+      functionsTotal++;
+      if (info.hits > 0) functionsCovered++;
+    }
+  }
+
   return {
     lines: {
       total: linesTotal,
@@ -151,6 +261,11 @@ function calculateStats(data: CoverageData) {
       total: branchesTotal,
       covered: branchesCovered,
       pct: branchesTotal > 0 ? Number(((branchesCovered / branchesTotal) * 100).toFixed(2)) : 0,
+    },
+    functions: {
+      total: functionsTotal,
+      covered: functionsCovered,
+      pct: functionsTotal > 0 ? Number(((functionsCovered / functionsTotal) * 100).toFixed(2)) : 0,
     },
   };
 }
@@ -194,9 +309,6 @@ function main() {
   if (existsSync(coverageSummaryPath)) {
     const summary = JSON.parse(readFileSync(coverageSummaryPath, 'utf8')) as CoverageSummary;
 
-    // Keep original function stats (not available in merged lcov)
-    const originalFunctions = summary.total.functions;
-
     summary.total = {
       lines: {
         total: stats.lines.total,
@@ -210,7 +322,12 @@ function main() {
         skipped: 0,
         pct: stats.lines.pct,
       },
-      functions: originalFunctions, // Keep original function stats
+      functions: {
+        total: stats.functions.total,
+        covered: stats.functions.covered,
+        skipped: 0,
+        pct: stats.functions.pct,
+      },
       branches: {
         total: stats.branches.total,
         covered: stats.branches.covered,
@@ -228,6 +345,9 @@ function main() {
   console.log('');
   console.log('=== Merged Coverage Summary ===');
   console.log(`Lines:      ${stats.lines.pct}% (${stats.lines.covered}/${stats.lines.total})`);
+  console.log(
+    `Functions:  ${stats.functions.pct}% (${stats.functions.covered}/${stats.functions.total})`,
+  );
   console.log(
     `Branches:   ${stats.branches.pct}% (${stats.branches.covered}/${stats.branches.total})`,
   );
