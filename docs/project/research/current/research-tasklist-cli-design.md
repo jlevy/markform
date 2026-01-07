@@ -1458,6 +1458,139 @@ Based on these additional considerations:
 
 * * *
 
+## Category 8: Markdown-to-Markform Conversion
+
+A powerful capability would be automatic conversion of plain Markdown checklists into valid Markform. This would allow users to draft task lists in any editor using familiar syntax, then convert them to structured Markform for reliable agent manipulation.
+
+### 8.1 Core Concept
+
+**Command**: `markform wrap` or `markform convert`
+
+**Input**: Plain Markdown with checkbox lists:
+```markdown
+## Setup Tasks
+- [ ] Install dependencies
+- [ ] Configure environment
+- [ ] Run tests
+
+## Implementation
+- [ ] Implement parser
+- [ ] Write unit tests
+- [ ] Add integration tests
+```
+
+**Output**: Valid `.form.md` with proper field wrappers:
+```markdown
+---
+markform:
+  spec: MF/0.1
+  title: Setup Tasks
+---
+
+{% form id="form" %}
+
+## Setup Tasks
+{% field id="setup_tasks" kind="checkboxes" checkboxMode="multi" %}
+- [ ] Install dependencies {% #install_dependencies %}
+- [ ] Configure environment {% #configure_environment %}
+- [ ] Run tests {% #run_tests %}
+{% /field %}
+
+## Implementation
+{% field id="implementation" kind="checkboxes" checkboxMode="multi" %}
+- [ ] Implement parser {% #impl_parser %}
+- [ ] Write unit tests {% #write_unit_tests %}
+- [ ] Add integration tests {% #add_integration_tests %}
+{% /field %}
+
+{% /form %}
+```
+
+### 8.2 Design Considerations
+
+#### ID Generation Strategy
+
+| Source | Algorithm | Example |
+| --- | --- | --- |
+| Preceding heading | Slugify heading text | `## Setup Tasks` → `id="setup_tasks"` |
+| Positional | Index-based | First checklist → `id="checklist_1"` |
+| First item | Slugify first option | `- [ ] Install deps` → `id="install_deps"` |
+
+**Recommendation**: Prefer heading-based IDs when a heading immediately precedes the checklist; fall back to positional.
+
+#### Option ID Generation
+
+Each checkbox item needs a unique ID for programmatic access:
+
+```markdown
+- [ ] Install dependencies {% #install_dependencies %}
+- [ ] Run tests {% #run_tests %}
+```
+
+**Algorithm**:
+1. Slugify the item text (lowercase, replace spaces with `_`, remove special chars)
+2. Truncate to max 50 characters
+3. Add numeric suffix if duplicate: `run_tests`, `run_tests_2`
+
+#### Command-Line Options
+
+```bash
+markform wrap <input.md> [output.form.md]
+
+Options:
+  --checkbox-mode <mode>   Checkbox mode: multi|simple|explicit (default: multi)
+  --id-source <source>     ID source: heading|position|first-item (default: heading)
+  --add-frontmatter        Add complete frontmatter (default: true)
+  --preserve-content       Keep non-checklist content intact (default: true)
+  --dry-run                Show what would be generated without writing
+```
+
+### 8.3 Edge Cases
+
+| Case | Handling |
+| --- | --- |
+| Nested checklists | Flatten to single level, preserve indentation in label |
+| Mixed content between items | Keep as-is (Markform allows prose between options) |
+| Already-wrapped fields | Skip (idempotent operation) |
+| No preceding heading | Use positional ID: `checklist_1`, `checklist_2` |
+| Multiple checklists under one heading | First gets heading ID, rest get `{heading}_2`, etc. |
+| Pre-existing IDs (`{% #foo %}`) | Preserve existing IDs |
+
+### 8.4 Workflow Integration
+
+This feature enables a powerful agent workflow:
+
+1. **Human drafts plan** in plain Markdown (familiar, fast)
+2. **Convert to Markform**: `markform wrap plan.md plan.form.md`
+3. **Validate**: `markform validate plan.form.md` (ensures correct syntax)
+4. **Agent executes**: Agent checks off items as it completes them
+5. **Track progress**: Human or agent can query status via CLI
+
+**Testing Integration**:
+```bash
+# Convert and validate in one step
+markform wrap plan.md plan.form.md && markform validate plan.form.md
+
+# CI/CD: Ensure all task lists are valid Markform
+find . -name "*.form.md" -exec markform validate {} \;
+```
+
+### 8.5 Implementation Notes
+
+The implementation would:
+1. Use a Markdown parser (markdown-it or similar) to identify checkbox lists
+2. Group contiguous checkbox items into logical lists
+3. Generate IDs using the slugify algorithm (Appendix C)
+4. Wrap each list in `{% field %}` tags
+5. Add form wrapper and frontmatter
+6. Preserve all non-checklist content
+
+**Complexity**: Low-medium. Leverages existing Markform serialization; main work is Markdown list detection and ID generation.
+
+**Testing**: Round-trip validation — convert, then validate output equals expected structure.
+
+* * *
+
 ## References
 
 - [Markform Specification](../../../markform-spec.md)
