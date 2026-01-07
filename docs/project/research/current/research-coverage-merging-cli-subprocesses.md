@@ -100,6 +100,51 @@ This is why tryscript uses c8 - it's the standard way to collect subprocess cove
 
 * * *
 
+### Critical Finding: NODE_V8_COVERAGE Cannot Capture Vitest Coverage
+
+**Status**: ✅ Complete (2026-01-07)
+
+**Details**:
+
+A critical discovery was made while implementing `tryscript coverage "pnpm vitest run"`:
+
+**NODE_V8_COVERAGE does NOT capture vitest's unit test coverage.**
+
+When vitest runs under NODE_V8_COVERAGE:
+- V8 coverage files are written to the temp directory
+- BUT they only contain vitest **framework** files (vitest.mjs, workers/forks.js, etc.)
+- The actual source files being tested (src/*.ts) are NOT present
+
+**Root cause**: Vitest runs tests through Vite's virtual module system. Vite transforms and loads modules in a way that V8's native coverage collector cannot track. The source files never "exist" as V8 sees them.
+
+**Verification**:
+```bash
+# Run vitest under NODE_V8_COVERAGE
+$ NODE_V8_COVERAGE=/tmp/v8-cov pnpm vitest run
+$ cat /tmp/v8-cov/*.json | jq '.result[].url' | grep src/
+# No results - only vitest framework files present
+```
+
+**Implications for `tryscript coverage`**:
+
+| Command | V8 Coverage Contains |
+|---------|---------------------|
+| `tryscript coverage "node dist/bin.mjs ..."` | ✅ Source files (subprocess) |
+| `tryscript coverage "pnpm vitest run"` | ❌ Only vitest framework files |
+
+The `tryscript coverage` command **cannot** merge vitest and CLI coverage in a single command. They must be collected separately:
+
+```bash
+# Correct approach
+pnpm vitest run --coverage       # Uses ast-v8-to-istanbul internally
+tryscript run --coverage tests/  # Uses NODE_V8_COVERAGE for subprocess
+# Merge lcov files manually if needed
+```
+
+**Assessment**: This is a fundamental limitation of how Vite/Vitest works, not a bug in tryscript.
+
+* * *
+
 ### The Line Count Inflation Problem
 
 **Status**: ✅ Complete
