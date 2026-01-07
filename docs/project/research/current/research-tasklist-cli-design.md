@@ -1162,6 +1162,289 @@ Support --pending, --done, --format flags.
 
 * * *
 
+## Category 7: Additional Design Considerations
+
+### 7.1 Using Markform Notes for Item Descriptions
+
+**Finding**: Markform already has a `notes` system that can attach text to any element.
+
+**Current Note Structure**:
+```typescript
+interface Note {
+  id: NoteId;      // e.g., "n1", "n2"
+  ref: Id;         // target ID (field, group, form, or option)
+  role: string;    // who created (agent, user, system)
+  text: string;    // markdown content
+}
+```
+
+**Notes in Frontmatter**:
+```yaml
+notes:
+  - id: n1
+    ref: impl_parser
+    role: agent
+    text: |
+      This task involves implementing the core parser.
+
+      Key steps:
+      1. Read the input file
+      2. Tokenize content
+      3. Build AST
+```
+
+**Assessment**: Notes can reference option IDs (like `impl_parser`), providing a clean way to attach descriptions to individual checklist items. This is more flexible than documentation blocks because:
+- Notes are stored in frontmatter (structured data)
+- Notes can be programmatically added/modified
+- Notes support role attribution (who wrote it)
+
+**Pattern: Notes for Item Descriptions**
+```markdown
+---
+markform:
+  spec: MF/0.1
+  title: Implementation Tasks
+notes:
+  - id: n1
+    ref: tasks.impl_parser
+    role: user
+    text: |
+      Implement the parser module.
+      See: architecture-design.md for patterns.
+      Depends on: schema definition (done)
+  - id: n2
+    ref: tasks.write_tests
+    role: user
+    text: |
+      Write comprehensive unit tests.
+      Coverage target: 80%
+---
+
+{% form id="impl" %}
+{% field kind="checkboxes" id="tasks" checkboxMode="multi" %}
+- [ ] Implement parser {% #impl_parser %}
+- [ ] Write tests {% #write_tests %}
+{% /field %}
+{% /form %}
+```
+
+### 7.2 Structured YAML Notes for Rich Metadata
+
+**Concept**: Extend notes to support YAML content with optional schemas, enabling Beads-like structured metadata per item.
+
+**Option A: Text Notes with YAML Content**
+```yaml
+notes:
+  - id: n1
+    ref: tasks.impl_parser
+    role: system
+    text: |
+      ---
+      status: in_progress
+      priority: P1
+      assignee: alice
+      due: 2026-01-15
+      depends_on: [schema_def]
+      ---
+      Implement the parser module following the architecture patterns.
+```
+
+**Option B: Typed Note Kind**
+```yaml
+notes:
+  - id: n1
+    ref: tasks.impl_parser
+    role: system
+    kind: metadata  # new field
+    data:           # structured YAML instead of text
+      status: in_progress
+      priority: P1
+      assignee: alice
+      due: 2026-01-15
+      depends_on: [schema_def]
+    text: Implement the parser module.  # optional description
+```
+
+**Option C: Separate Metadata Section in Frontmatter**
+```yaml
+markform:
+  spec: MF/0.1
+  title: Implementation Tasks
+item_metadata:  # new top-level section
+  impl_parser:
+    status: in_progress
+    priority: P1
+    assignee: alice
+    due: 2026-01-15
+    description: |
+      Implement the parser module.
+      See architecture-design.md.
+  write_tests:
+    status: todo
+    priority: P2
+    depends_on: [impl_parser]
+```
+
+**Recommendation**: **Option A** for initial implementation (no spec changes needed—just convention). Consider **Option C** for cleaner separation if this pattern proves valuable.
+
+### 7.3 Multi-Checkbox Mode as Default
+
+**Rationale**: `checkboxMode="multi"` provides 5 states that map well to task workflows:
+
+| State | Token | Use Case |
+| --- | --- | --- |
+| `todo` | `[ ]` | Not started |
+| `active` | `[>]` | Currently working (in_progress) |
+| `incomplete` | `[/]` | Partially done, blocked, or paused |
+| `done` | `[x]` | Completed |
+| `na` | `[-]` | Not applicable, skipped |
+
+**Agent Workflow Benefits**:
+- Agent can mark items `[>]` when starting work
+- Agent can mark items `[/]` when blocked or interrupted
+- Human can see progress state, not just done/not-done
+- Maps cleanly to Beads statuses (open→todo, in_progress→active, closed→done)
+
+**CLI Commands with Multi-Mode**:
+```bash
+taskl start impl_parser    # [ ] → [>]
+taskl pause impl_parser    # [>] → [/]
+taskl done impl_parser     # [>] or [/] → [x]
+taskl skip impl_parser     # any → [-]
+taskl reset impl_parser    # any → [ ]
+```
+
+**Recommendation**: Use `checkboxMode="multi"` as the default for Tasklist. Simpler `checkboxMode="simple"` can be an option for basic checklists.
+
+### 7.4 Atomic File Writes
+
+**Finding**: Markform already implements atomic writes using the `atomically` library.
+
+**Implementation** (from `packages/markform/src/cli/lib/shared.ts:360-367`):
+```typescript
+/**
+ * Write contents to a file atomically.
+ *
+ * Uses the atomically library to prevent partial or corrupted files
+ * if the process crashes mid-write.
+ */
+export async function writeFile(filePath: string, contents: string): Promise<void> {
+  const { writeFile: atomicWriteFile } = await import('atomically');
+  await atomicWriteFile(filePath, contents);
+}
+```
+
+**How Atomic Writes Work**:
+1. Write to a temporary file in the same directory
+2. `fsync` the temporary file to ensure data is on disk
+3. Atomically rename temp file to target path
+4. If crash occurs mid-write, only temp file is affected
+
+**Tasklist Implications**:
+- Tasklist CLI should use Markform's `writeFile` function
+- No additional work needed for atomic writes
+- Safe for concurrent access (last writer wins, no corruption)
+
+### 7.5 Notes Placement: Frontmatter vs Footnotes
+
+**Two Valid Locations for Notes**:
+
+**Frontmatter (YAML header)**:
+```yaml
+---
+markform:
+  spec: MF/0.1
+notes:
+  - id: n1
+    ref: tasks.impl_parser
+    text: Description here
+---
+```
+- Pros: Structured, machine-readable, grouped together
+- Cons: Separated from the items they describe
+
+**Footnotes (Markdown body)**:
+```markdown
+{% field kind="checkboxes" id="tasks" %}
+- [ ] Implement parser {% #impl_parser %}
+{% /field %}
+
+{% notes ref="tasks.impl_parser" %}
+Description here with **markdown** support.
+{% /notes %}
+```
+- Pros: Co-located with content, visible in rendered markdown
+- Cons: Scattered throughout document
+
+**Hybrid Approach**:
+- Use **frontmatter** for structured metadata (status, priority, assignee)
+- Use **footnotes** for rich markdown descriptions that benefit from rendering
+
+**Example Hybrid Pattern**:
+```markdown
+---
+markform:
+  spec: MF/0.1
+  title: Implementation Plan
+item_metadata:
+  impl_parser:
+    priority: P1
+    assignee: alice
+  write_tests:
+    priority: P2
+    depends_on: [impl_parser]
+---
+
+{% form id="impl" %}
+{% field kind="checkboxes" id="tasks" checkboxMode="multi" %}
+- [ ] Implement parser {% #impl_parser %}
+- [ ] Write tests {% #write_tests %}
+{% /field %}
+
+{% notes ref="tasks.impl_parser" %}
+## Parser Implementation
+
+Follow the architecture patterns in arch-design.md.
+
+Key considerations:
+- Handle malformed input gracefully
+- Support streaming for large files
+{% /notes %}
+
+{% notes ref="tasks.write_tests" %}
+Target 80% coverage. Focus on edge cases.
+{% /notes %}
+{% /form %}
+```
+
+### 7.6 Updated Recommendations
+
+Based on these additional considerations:
+
+**For MVP**:
+1. **Use `checkboxMode="multi"`** as default (supports in_progress state)
+2. **Use existing notes** for item descriptions (no spec changes needed)
+3. **Leverage atomic writes** from Markform (already implemented)
+4. **Use frontmatter notes** for structured metadata if needed
+
+**For Future Versions**:
+1. Consider `item_metadata` frontmatter section for cleaner structured data
+2. Consider typed note kinds (`kind: "metadata"` vs `kind: "description"`)
+3. Consider schema validation for structured note content
+
+**CLI Command Mapping to Multi-Mode**:
+
+| Command | Effect | Token Change |
+| --- | --- | --- |
+| `taskl check <id>` | Mark done | → `[x]` |
+| `taskl uncheck <id>` | Reset to todo | → `[ ]` |
+| `taskl start <id>` | Mark active | → `[>]` |
+| `taskl pause <id>` | Mark incomplete | → `[/]` |
+| `taskl skip <id>` | Mark N/A | → `[-]` |
+| `taskl status <id> <state>` | Set any state | → specified |
+
+* * *
+
 ## References
 
 - [Markform Specification](../../../markform-spec.md)
