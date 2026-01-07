@@ -1,11 +1,21 @@
 /**
  * CLI integration tests that spawn the markform CLI as a subprocess.
  *
- * These tests ensure NODE_V8_COVERAGE captures CLI code coverage when running
- * under `tryscript coverage`. The subprocess spawning is the key mechanism that
- * allows coverage collection.
+ * Purpose:
+ * 1. **Regression tests** - Vitest-based tests for CLI commands (easier to debug than golden tests)
+ * 2. **Subprocess coverage** - When run under `tryscript coverage`, spawns are captured via
+ *    NODE_V8_COVERAGE (for dist/, remapped to src/ via sourcemaps)
  *
- * This pattern is copied from tryscript's own cli.integration.test.ts.
+ * Coverage Architecture (per tryscript docs):
+ * - Vitest uses `node:inspector` for coverage, NOT NODE_V8_COVERAGE
+ * - Unit tests importing directly from src/ → captured by vitest --coverage
+ * - CLI subprocess spawns → captured by NODE_V8_COVERAGE (tryscript coverage)
+ * - For projects like markform (mostly programmatic imports), use vitest --coverage
+ *   as primary, with optional LCOV merge for CLI coverage
+ *
+ * See: tryscript docs/tryscript-reference.md and PR #97
+ *
+ * Pattern copied from tryscript's cli.integration.test.ts.
  */
 
 import { spawnSync } from 'node:child_process';
