@@ -1168,13 +1168,14 @@ Support --pending, --done, --format flags.
 
 **Finding**: Markform already has a `notes` system that can attach text to any element.
 
-**Current Note Structure**:
+**Current Note Structure** (from Markform spec):
 ```typescript
 interface Note {
-  id: NoteId;      // e.g., "n1", "n2"
-  ref: Id;         // target ID (field, group, form, or option)
-  role: string;    // who created (agent, user, system)
-  text: string;    // markdown content
+  id: NoteId;                    // e.g., "n1", "n2"
+  ref: Id;                       // target ID (field, group, form, or option)
+  role: string;                  // who created (agent, user, system)
+  state?: 'skipped' | 'aborted'; // optional: links note to skip/abort action
+  text: string;                  // markdown content
 }
 ```
 
@@ -1294,22 +1295,22 @@ item_metadata:  # new top-level section
 | State | Token | Use Case |
 | --- | --- | --- |
 | `todo` | `[ ]` | Not started |
-| `active` | `[>]` | Currently working (in_progress) |
+| `active` | `[*]` | Currently working (in_progress) |
 | `incomplete` | `[/]` | Partially done, blocked, or paused |
 | `done` | `[x]` | Completed |
 | `na` | `[-]` | Not applicable, skipped |
 
 **Agent Workflow Benefits**:
-- Agent can mark items `[>]` when starting work
+- Agent can mark items `[*]` when starting work
 - Agent can mark items `[/]` when blocked or interrupted
 - Human can see progress state, not just done/not-done
 - Maps cleanly to Beads statuses (open→todo, in_progress→active, closed→done)
 
 **CLI Commands with Multi-Mode**:
 ```bash
-taskl start impl_parser    # [ ] → [>]
-taskl pause impl_parser    # [>] → [/]
-taskl done impl_parser     # [>] or [/] → [x]
+taskl start impl_parser    # [ ] → [*]
+taskl pause impl_parser    # [*] → [/]
+taskl done impl_parser     # [*] or [/] → [x]
 taskl skip impl_parser     # any → [-]
 taskl reset impl_parser    # any → [ ]
 ```
@@ -1438,7 +1439,7 @@ Based on these additional considerations:
 | --- | --- | --- |
 | `taskl check <id>` | Mark done | → `[x]` |
 | `taskl uncheck <id>` | Reset to todo | → `[ ]` |
-| `taskl start <id>` | Mark active | → `[>]` |
+| `taskl start <id>` | Mark active | → `[*]` |
 | `taskl pause <id>` | Mark incomplete | → `[/]` |
 | `taskl skip <id>` | Mark N/A | → `[-]` |
 | `taskl status <id> <state>` | Set any state | → specified |
