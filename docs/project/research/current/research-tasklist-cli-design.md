@@ -1166,40 +1166,42 @@ Support --pending, --done, --format flags.
 
 ### 7.1 Using Markform Notes for Item Descriptions
 
-**Finding**: Markform already has a `notes` system that can attach text to any element.
+**Finding**: Markform has a `notes` system that can attach text to elements.
 
-**Current Note Structure** (from Markform spec):
+**Current Engine Note Type** (from `packages/markform/src/engine/coreTypes.ts:56-62`):
 ```typescript
+/** Note attached to a field, group, or form */
 interface Note {
-  id: NoteId;                    // e.g., "n1", "n2"
-  ref: Id;                       // target ID (field, group, form, or option)
-  role: string;                  // who created (agent, user, system)
-  state?: 'skipped' | 'aborted'; // optional: links note to skip/abort action
-  text: string;                  // markdown content
+  id: NoteId;      // e.g., "n1", "n2"
+  ref: Id;         // target ID (field, group, or form) — NOT options
+  role: string;    // who created (agent, user, ...)
+  text: string;    // markdown content
 }
 ```
 
-**Notes in Frontmatter**:
+**Spec vs Implementation Gap**: The spec (markform-spec.md:1193-1199) includes an optional `state?: 'skipped' | 'aborted'` field, but the current engine implementation does not include this field.
+
+**Important Limitation**: Notes currently support refs to **fields, groups, or forms only** — not individual checkbox options. Using `ref: "tasks.impl_parser"` (a qualified option ID) would be a **proposed extension**, not current functionality.
+
+**Notes in Frontmatter** (field-level ref — currently supported):
 ```yaml
 notes:
   - id: n1
-    ref: impl_parser
+    ref: tasks           # field ID, NOT option ID
     role: agent
     text: |
-      This task involves implementing the core parser.
+      Notes about the tasks field as a whole.
 
-      Key steps:
-      1. Read the input file
-      2. Tokenize content
-      3. Build AST
+      Per-item details would need to be structured
+      within this single note, or use documentation blocks.
 ```
 
-**Assessment**: Notes can reference option IDs (like `impl_parser`), providing a clean way to attach descriptions to individual checklist items. This is more flexible than documentation blocks because:
-- Notes are stored in frontmatter (structured data)
-- Notes can be programmatically added/modified
-- Notes support role attribution (who wrote it)
+**Assessment**: For Tasklist to attach notes to individual checklist items, one of these approaches is needed:
+1. **Use field-level notes** with structured content (works today)
+2. **Use documentation blocks** with `{% instructions ref="tasks" %}` (works today)
+3. **Extend Note.ref to support option IDs** (proposed extension — would require engine changes)
 
-**Pattern: Notes for Item Descriptions**
+**Pattern: Field-Level Notes with Structured Content** (works today):
 ```markdown
 ---
 markform:
@@ -1207,16 +1209,14 @@ markform:
   title: Implementation Tasks
 notes:
   - id: n1
-    ref: tasks.impl_parser
+    ref: tasks              # field-level ref (supported)
     role: user
     text: |
+      ## impl_parser
       Implement the parser module.
       See: architecture-design.md for patterns.
-      Depends on: schema definition (done)
-  - id: n2
-    ref: tasks.write_tests
-    role: user
-    text: |
+
+      ## write_tests
       Write comprehensive unit tests.
       Coverage target: 80%
 ---
@@ -1227,6 +1227,19 @@ notes:
 - [ ] Write tests {% #write_tests %}
 {% /field %}
 {% /form %}
+```
+
+**Proposed Pattern: Per-Option Notes** (would require engine extension):
+```markdown
+notes:
+  - id: n1
+    ref: tasks.impl_parser  # option-level ref (NOT YET SUPPORTED)
+    role: user
+    text: Implement the parser module.
+  - id: n2
+    ref: tasks.write_tests  # option-level ref (NOT YET SUPPORTED)
+    role: user
+    text: Write comprehensive unit tests.
 ```
 
 ### 7.2 Structured YAML Notes for Rich Metadata
@@ -1350,44 +1363,46 @@ export async function writeFile(filePath: string, contents: string): Promise<voi
 
 **Two Valid Locations for Notes**:
 
-**Frontmatter (YAML header)**:
+**Frontmatter (YAML header)** — field-level refs work today:
 ```yaml
 ---
 markform:
   spec: MF/0.1
 notes:
   - id: n1
-    ref: tasks.impl_parser
-    text: Description here
+    ref: tasks         # field-level (supported)
+    text: Description for entire field
 ---
 ```
 - Pros: Structured, machine-readable, grouped together
-- Cons: Separated from the items they describe
+- Cons: Separated from the items they describe; no per-option granularity without extension
 
-**Footnotes (Markdown body)**:
+**Footnotes (Markdown body)** — documentation blocks:
 ```markdown
 {% field kind="checkboxes" id="tasks" %}
 - [ ] Implement parser {% #impl_parser %}
 {% /field %}
 
-{% notes ref="tasks.impl_parser" %}
-Description here with **markdown** support.
-{% /notes %}
+{% instructions ref="tasks" %}
+Field-level description here with **markdown** support.
+{% /instructions %}
 ```
 - Pros: Co-located with content, visible in rendered markdown
-- Cons: Scattered throughout document
+- Cons: Option-level refs (`ref="tasks.impl_parser"`) are parsed but not serialized back
 
-**Hybrid Approach**:
+**Note**: The `{% notes %}` tag in Markdoc body uses the same limitations as frontmatter notes — option-level refs would require engine extension.
+
+**Hybrid Approach** (proposed — requires extensions):
 - Use **frontmatter** for structured metadata (status, priority, assignee)
 - Use **footnotes** for rich markdown descriptions that benefit from rendering
 
-**Example Hybrid Pattern**:
+**Example Hybrid Pattern** (proposed extension — `item_metadata` and option-level refs not yet supported):
 ```markdown
 ---
 markform:
   spec: MF/0.1
   title: Implementation Plan
-item_metadata:
+item_metadata:              # PROPOSED: not in current spec
   impl_parser:
     priority: P1
     assignee: alice
@@ -1402,21 +1417,18 @@ item_metadata:
 - [ ] Write tests {% #write_tests %}
 {% /field %}
 
-{% notes ref="tasks.impl_parser" %}
-## Parser Implementation
-
+{% instructions ref="tasks" %}
+## impl_parser
 Follow the architecture patterns in arch-design.md.
+Handle malformed input gracefully. Support streaming for large files.
 
-Key considerations:
-- Handle malformed input gracefully
-- Support streaming for large files
-{% /notes %}
-
-{% notes ref="tasks.write_tests" %}
+## write_tests
 Target 80% coverage. Focus on edge cases.
-{% /notes %}
+{% /instructions %}
 {% /form %}
 ```
+
+**Note**: The example above uses field-level `{% instructions %}` which works today. The `item_metadata` frontmatter section would be a proposed extension.
 
 ### 7.6 Updated Recommendations
 
@@ -1424,9 +1436,9 @@ Based on these additional considerations:
 
 **For MVP**:
 1. **Use `checkboxMode="multi"`** as default (supports in_progress state)
-2. **Use existing notes** for item descriptions (no spec changes needed)
+2. **Use field-level documentation blocks** (`{% instructions ref="tasks" %}`) for descriptions
 3. **Leverage atomic writes** from Markform (already implemented)
-4. **Use frontmatter notes** for structured metadata if needed
+4. **Use field-level notes** in frontmatter for structured content if needed
 
 **For Future Versions**:
 1. Consider `item_metadata` frontmatter section for cleaner structured data
