@@ -882,6 +882,286 @@ Tasklist should be a minimal, focused CLI that wraps Markform for simple task li
 
 * * *
 
+## Category 6: Workflow Mapping — Beads to Tasklist
+
+This section analyzes a typical Beads implementation workflow and maps each component to Tasklist, identifying what's easy, hard, or requires design decisions.
+
+### 6.1 Typical Beads Workflow
+
+**Scenario**: Planning implementation of a specification with 5-15 issues and dependencies.
+
+```
+1. Read spec → Identify tasks
+2. Create epic: bd create "Implement Feature X" --type epic
+3. Create tasks:
+   bd create "Set up data models" -d "..." --priority 1
+   bd create "Implement API endpoints" -d "..." --priority 1
+   bd create "Write tests" -d "..." --priority 2
+   bd create "Update docs" -d "..." --priority 3
+4. Add dependencies:
+   bd dep add api-endpoints data-models  (endpoints depend on models)
+   bd dep add write-tests api-endpoints  (tests depend on endpoints)
+5. Work through: bd ready → bd update --status in_progress → bd close
+6. Track: bd list --status open, bd blocked, bd stats
+```
+
+**Key Beads Features Used**:
+- Hash-based IDs for collision-free distributed creation
+- Rich descriptions (multi-paragraph markdown)
+- Dependency graphs (blocks/depends-on)
+- Status tracking (open/in_progress/closed)
+- Priority levels
+- Cross-references between issues
+
+### 6.2 Workflow Mapping Analysis
+
+| Beads Feature | Tasklist Mapping | Difficulty | Notes |
+| --- | --- | --- | --- |
+| Create issues | Create checklist items | **Easy** | Direct mapping to checkbox options |
+| Rich descriptions | Documentation blocks | **Easy** | Field-level `{% instructions %}` works well |
+| Multi-paragraph text | Documentation blocks | **Easy** | Tested: works with current Markform |
+| Sequential ordering | Checkbox order | **Easy** | Items naturally ordered in file |
+| Hash-based IDs | Slugified IDs | **Easy** | Auto-generate from titles |
+| Cross-references | Markdown links/text | **Medium** | No formal linking, use text references |
+| Dependencies | Ordering + notes | **Medium** | Implicit via order; explicit via notes |
+| Status (open/in_progress/closed) | Checkbox state | **Medium** | Simple: todo/done. Multi: 5 states available |
+| Priority levels | N/A or ordering | **Hard** | Not directly supported; use item order |
+| Epic/subtask hierarchy | Multiple files or sections | **Hard** | Would need conventions or extensions |
+| Project-wide queries | N/A | **Not Supported** | Single-file scope by design |
+| Blocking detection | N/A | **Not Supported** | No automated dependency enforcement |
+
+### 6.3 Multi-Paragraph Descriptions
+
+**Finding**: Markform field-level documentation blocks support multi-paragraph content.
+
+**Tested Working Pattern**:
+```markdown
+{% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="simple" %}
+- [ ] Implement parser {% #impl_parser %}
+- [ ] Write tests {% #write_tests %}
+{% /field %}
+
+{% instructions ref="tasks" %}
+## Implementation Notes
+
+This is the first paragraph with overview.
+
+This is the second paragraph with more detail.
+
+**Key considerations:**
+- Point one
+- Point two
+- Point three
+
+See also related work in other files.
+{% /instructions %}
+```
+
+**Current Limitation**: Option-level docs (`ref="tasks.impl_parser"`) are parsed but not serialized back. Field-level docs are preserved.
+
+**Recommendation**: Use field-level documentation blocks for now. For per-item details, consider:
+1. A "notes" convention within the field instructions
+2. Future Markform enhancement for option-level doc serialization
+
+### 6.4 Cross-References Between Items
+
+**Beads Pattern**:
+```
+Description: "See markform-123 for related work. Depends on markform-456."
+```
+
+**Tasklist Options**:
+
+**Option A: Plain Text References**
+```markdown
+{% instructions ref="tasks" %}
+## Task Details
+
+### impl_parser
+Implement the parser module.
+See also: `deploy-auth.form.md#setup_oauth` for auth patterns.
+Depends on: `write_tests` completing first.
+
+### write_tests
+Write comprehensive tests.
+Reference: Check patterns in `test-patterns.form.md`.
+{% /instructions %}
+```
+
+**Option B: Structured Cross-Reference Convention**
+```markdown
+{% field kind="checkboxes" id="tasks" label="Tasks" %}
+- [ ] Implement parser {% #impl_parser %}
+- [ ] Write tests (depends: impl_parser) {% #write_tests %}
+- [ ] Update docs (depends: write_tests) {% #update_docs %}
+{% /field %}
+```
+
+**Option C: Separate Dependencies Field**
+```markdown
+{% field kind="string_list" id="dependencies" label="Dependencies" %}
+```value
+write_tests → impl_parser
+update_docs → write_tests
+```
+{% /field %}
+```
+
+**Recommendation**: **Option A** (plain text) for simplicity. Cross-references are documentation, not enforced constraints.
+
+### 6.5 Handling Dependencies Through Ordering
+
+**Beads Approach**: Explicit dependency graph with blocking relationships.
+
+**Tasklist Approach**: Implicit ordering with optional notes.
+
+**Pattern: Sequential Tasks**
+```markdown
+{% field kind="checkboxes" id="phase_1" label="Phase 1: Setup" checkboxMode="simple" %}
+- [ ] Create project scaffold {% #scaffold %}
+- [ ] Set up TypeScript config {% #tsconfig %}
+- [ ] Add ESLint/Prettier {% #linting %}
+{% /field %}
+
+{% field kind="checkboxes" id="phase_2" label="Phase 2: Core (requires Phase 1)" checkboxMode="simple" %}
+- [ ] Implement parser {% #parser %}
+- [ ] Add validation {% #validation %}
+- [ ] Write serializer {% #serializer %}
+{% /field %}
+
+{% field kind="checkboxes" id="phase_3" label="Phase 3: Polish (requires Phase 2)" checkboxMode="simple" %}
+- [ ] Add CLI commands {% #cli %}
+- [ ] Write documentation {% #docs %}
+- [ ] Release {% #release %}
+{% /field %}
+```
+
+**Assessment**: Multiple checkbox fields create natural phases. Titles indicate dependencies. Items within each field are implicitly sequential (work top-to-bottom).
+
+### 6.6 Task List as Implementation Plan
+
+**Complete Example: Implementing a Spec**
+
+```markdown
+---
+markform:
+  spec: MF/0.1
+  title: "Implement: Tasklist CLI v1.0"
+  run_mode: interactive
+---
+
+{% form id="impl_tasklist_v1" title="Implement Tasklist CLI v1.0" %}
+
+{% description ref="impl_tasklist_v1" %}
+Implementation plan for Tasklist CLI based on research-tasklist-cli-design.md.
+Target: MVP with create, add, check, list commands.
+{% /description %}
+
+{% field kind="checkboxes" id="setup" label="1. Project Setup" checkboxMode="simple" %}
+- [ ] Create tasklist package in packages/ {% #create_package %}
+- [ ] Add dependencies (markform, commander, picocolors) {% #add_deps %}
+- [ ] Set up TypeScript config {% #ts_config %}
+- [ ] Create CLI entry point {% #cli_entry %}
+{% /field %}
+
+{% instructions ref="setup" %}
+**create_package**: Use `pnpm init` in packages/tasklist/
+
+**add_deps**:
+- `markform` - core form engine
+- `commander` - CLI framework
+- `picocolors` - terminal colors
+
+**cli_entry**: Follow pattern from packages/markform/src/cli/bin.ts
+{% /instructions %}
+
+{% field kind="checkboxes" id="core_commands" label="2. Core Commands (requires Setup)" checkboxMode="simple" %}
+- [ ] Implement `create` command {% #cmd_create %}
+- [ ] Implement `add` command {% #cmd_add %}
+- [ ] Implement `check`/`uncheck` commands {% #cmd_check %}
+- [ ] Implement `list` command {% #cmd_list %}
+{% /field %}
+
+{% instructions ref="core_commands" %}
+**cmd_create**: Generate minimal .form.md with checkbox field.
+See Appendix A in research doc for template.
+
+**cmd_add**: Parse file, add checkbox option, re-serialize.
+Use `applyPatches` is NOT suitable—need to modify schema.
+Instead: parse → mutate schema → serialize.
+
+**cmd_check**: Use `applyPatches` with `set_checkboxes` op.
+This is the cleanest path.
+
+**cmd_list**: Parse file, extract checkbox states, format output.
+Support --pending, --done, --format flags.
+{% /instructions %}
+
+{% field kind="checkboxes" id="testing" label="3. Testing (parallel with Core)" checkboxMode="simple" %}
+- [ ] Unit tests for ID generation {% #test_ids %}
+- [ ] Integration tests for each command {% #test_commands %}
+- [ ] Add to CI workflow {% #test_ci %}
+{% /field %}
+
+{% field kind="checkboxes" id="polish" label="4. Polish (requires Core + Testing)" checkboxMode="simple" %}
+- [ ] Add --help for all commands {% #help_text %}
+- [ ] Error handling and messages {% #error_handling %}
+- [ ] README documentation {% #readme %}
+{% /field %}
+
+{% /form %}
+```
+
+### 6.7 What Works Well
+
+| Aspect | Assessment |
+| --- | --- |
+| Sequential task lists | Excellent fit—natural checkbox ordering |
+| Multi-paragraph descriptions | Works via field-level doc blocks |
+| Per-item notes | Works via structured doc blocks |
+| Phase-based organization | Multiple checkbox fields work well |
+| File-based persistence | Perfect for session/task scope |
+| Human readability | Markdown renders nicely anywhere |
+| Agent manipulation | CLI + patches work reliably |
+
+### 6.8 What Needs Conventions
+
+| Aspect | Recommended Convention |
+| --- | --- |
+| Cross-file references | Use relative paths: `see ./other-task.form.md` |
+| Same-file references | Use item IDs: `depends on: impl_parser` |
+| Priority indication | Use item order (first = highest) or title prefix |
+| Blocked items | Note in description: `(blocked by: other_item)` |
+| Epic/subtask | Separate files: `epic.form.md` + `subtask-1.form.md` |
+
+### 6.9 What Requires Extensions
+
+| Feature | Current State | Potential Extension |
+| --- | --- | --- |
+| Option-level docs | Parsed, not serialized | Fix serializer to output option-level docs |
+| Formal dependencies | Not supported | Could add `depends` attribute to options |
+| Status beyond done/todo | Use `checkboxMode="multi"` | Already supported (5 states) |
+| Due dates | Not supported | Add metadata field or Markform date type |
+| Assignees | Not supported | Add metadata field |
+
+### 6.10 Recommendation: Start Simple
+
+**For MVP**, the current Markform capabilities are sufficient:
+
+1. **Use `checkboxMode="simple"`** for straightforward done/todo
+2. **Use field-level `{% instructions %}`** for rich descriptions
+3. **Use multiple checkbox fields** for phases/dependencies
+4. **Use plain text** for cross-references
+5. **Use item ordering** for implicit priority/sequence
+
+**Defer to later versions**:
+- Formal dependency tracking
+- Option-level documentation serialization
+- Metadata fields (assignee, due date)
+- Cross-file linking conventions
+
+* * *
+
 ## References
 
 - [Markform Specification](../../../markform-spec.md)
