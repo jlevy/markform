@@ -18,5 +18,10 @@ export default defineConfig({
     reporters: ['text', 'html', 'lcov', 'json'],
     include: ['dist/**'],
     src: 'src',
+    // Exclude node_modules from coverage (default in 0.1.2+)
+    excludeNodeModules: true,
+    // Use monocart for AST-aware line counts that align with vitest
+    // This prevents inflated line counts when merging coverage reports
+    monocart: true,
   },
 });
