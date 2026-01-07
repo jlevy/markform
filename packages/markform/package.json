@@ -65,7 +65,8 @@
     "test:unit": "vitest run tests/unit",
     "test:golden": "vitest run tests/golden",
     "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
-    "test:coverage": "tryscript coverage --monocart \"pnpm vitest run\" \"tryscript run 'tests/cli/**/*.tryscript.md'\"",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:cli": "tryscript run --coverage 'tests/cli/**/*.tryscript.md'",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
     "publint": "publint"
