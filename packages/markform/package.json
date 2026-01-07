@@ -65,7 +65,9 @@
     "test:unit": "vitest run tests/unit",
     "test:golden": "vitest run tests/golden",
     "test:golden:regen": "npx tsx scripts/regen-golden-sessions.ts",
-    "test:coverage": "tryscript coverage --monocart --exclude-node-modules --exclude-after-remap --exclude '**/node_modules/**,**/*[Tt]ypes.ts,**/index.ts,**/rejectionMockAgent.ts,**/vercelAiSdkTools.ts,**/commands/browse.ts,**/commands/run.ts,**/commands/research.ts,**/research/runResearch.ts' --include 'dist/**,src/**' \"pnpm vitest run\" \"tryscript run 'tests/cli/**/*.tryscript.md'\"",
+    "test:coverage": "pnpm test:coverage:vitest && pnpm test:coverage:tryscript",
+    "test:coverage:vitest": "vitest run --coverage",
+    "test:coverage:tryscript": "tryscript run --coverage --coverage-monocart 'tests/cli/**/*.tryscript.md'",
     "test:tryscript": "tryscript run 'tests/cli/**/*.tryscript.md'",
     "test:tryscript:update": "tryscript run --update 'tests/cli/**/*.tryscript.md'",
     "publint": "publint"
