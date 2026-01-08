@@ -44,6 +44,10 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+          # Get previous tag for compare link
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
           # Extract changelog section for this version
           # Matches from "## $VERSION" until the next "## " header
           NOTES=$(awk -v ver="$VERSION" '
@@ -60,7 +64,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: v${{ steps.release_notes.outputs.version }}
-          body: ${{ steps.release_notes.outputs.notes }}
+          body: |
+            ${{ steps.release_notes.outputs.notes }}
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.release_notes.outputs.prev_tag }}...v${{ steps.release_notes.outputs.version }}
           draft: false
           prerelease: ${{ contains(steps.release_notes.outputs.version, '-') }}
         env:

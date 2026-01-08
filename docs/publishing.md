@@ -65,15 +65,20 @@ git pull
 git status  # Must be clean
 ```
 
-### Step 2: Determine Version
+### Step 2: Review Changes and Determine Version
 
-Review changes since last release:
+Preview release notes (auto-generated from merged PRs):
 
 ```bash
-git log $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~20")..HEAD --oneline
+pnpm release-notes
 ```
 
-Choose version bump:
+This shows:
+
+- All PRs merged since the last release, categorized by type
+- A compare link to the full diff
+
+Choose version bump based on the changes:
 
 - `patch` (0.1.0 → 0.1.1): Bug fixes, docs, internal changes
 
@@ -82,6 +87,26 @@ Choose version bump:
 - `major` (0.1.0 → 1.0.0): Breaking changes
 
 ### Step 3: Create Changeset
+
+**Option A: Auto-generate from PRs (recommended)**
+
+```bash
+pnpm release-notes --changeset --bump <type>
+```
+
+This creates a `.changeset/v{version}.md` file with structured release notes.
+
+Examples:
+
+```bash
+pnpm release-notes --changeset                    # patch bump (default)
+pnpm release-notes --changeset --bump minor       # minor bump
+pnpm release-notes --changeset --bump major       # major bump
+```
+
+**Option B: Manual summary**
+
+For releases where you want a custom summary instead of PR-based notes:
 
 ```bash
 pnpm changeset:add <bump> <version> "<summary>"
@@ -95,9 +120,10 @@ pnpm changeset:add minor 0.2.0 "Add new export format"
 pnpm changeset:add major 1.0.0 "Breaking API changes"
 ```
 
-Commit:
+**Review and commit:**
 
 ```bash
+cat .changeset/v*.md   # Review the changeset
 git add .changeset
 git commit -m "chore: add changeset for v0.2.0"
 ```
@@ -168,33 +194,38 @@ The GitHub Actions workflow will build and publish to npm using OIDC authenticat
 ### Local Development (direct push)
 
 ```bash
-# Full release sequence (replace version as needed)
+# Full release sequence
 git checkout main && git pull
-pnpm changeset:add minor 0.2.0 "Summary of changes"
-git add .changeset && git commit -m "chore: add changeset for v0.2.0"
+
+# Preview and generate release notes
+pnpm release-notes                      # Preview
+pnpm release-notes --changeset          # Generate .changeset/v0.x.y.md
+
+# Commit and version
+git add .changeset && git commit -m "chore: add changeset for v0.x.y"
 pnpm version-packages
-git add . && git commit -m "chore: release PACKAGE v0.2.0"
-git push && git tag v0.2.0 && git push --tags
+git add . && git commit -m "chore: release markform v0.x.y"
+git push && git tag v0.x.y && git push --tags
 ```
 
 ### Restricted Environments (via PR and API)
 
 ```bash
 # Prepare release on feature branch
-pnpm changeset:add minor 0.2.0 "Summary of changes"
-git add .changeset && git commit -m "chore: add changeset for v0.2.0"
+pnpm release-notes --changeset          # Generate release notes
+git add .changeset && git commit -m "chore: add changeset for v0.x.y"
 pnpm version-packages
-git add . && git commit -m "chore: release PACKAGE v0.2.0"
+git add . && git commit -m "chore: release markform v0.x.y"
 git push -u origin <branch-name>
 
 # Merge via PR
 gh pr create -R OWNER/PACKAGE --base main --head <branch-name> \
-  --title "chore: release PACKAGE v0.2.0" --body "Release v0.2.0"
+  --title "chore: release markform v0.x.y" --body "Release v0.x.y"
 gh pr merge <pr-number> -R OWNER/PACKAGE --merge
 
 # Create tag via API (triggers release workflow)
 MERGE_SHA=$(gh pr view <pr-number> -R OWNER/PACKAGE --json mergeCommit -q '.mergeCommit.oid')
-gh api repos/OWNER/PACKAGE/git/refs -X POST -f ref="refs/tags/v0.2.0" -f sha="$MERGE_SHA"
+gh api repos/OWNER/PACKAGE/git/refs -X POST -f ref="refs/tags/v0.x.y" -f sha="$MERGE_SHA"
 
 # Verify (release workflow creates GitHub Release automatically)
 gh run list -R OWNER/PACKAGE --limit 3
@@ -221,10 +252,33 @@ The release workflow automatically creates a GitHub Release when a tag is pushed
 
 - **Release notes**: Extracted from the CHANGELOG for the tagged version
 
+- **Compare link**: Auto-generated link to diff between versions
+
 - **Pre-release flag**: Automatically set for versions containing `-` (e.g., `1.0.0-beta.1`)
 
 After pushing a tag, verify the release appears at:
 `https://github.com/OWNER/PACKAGE/releases`
+
+## PR Conventions for Release Notes
+
+For best auto-generated release notes, use [conventional commit](https://www.conventionalcommits.org/)
+format in PR titles:
+
+| Prefix | Category | Example |
+| --- | --- | --- |
+| `feat:` | Features | `feat: add export to CSV` |
+| `fix:` | Bug Fixes | `fix: handle empty input` |
+| `docs:` | Documentation | `docs: update API reference` |
+| `test:` | Testing | `test: add unit tests for parser` |
+| `refactor:` | Refactoring | `refactor: simplify validation` |
+| `perf:` | Performance | `perf: optimize large file handling` |
+| `ci:` | CI/CD | `ci: add caching to workflow` |
+| `chore:` | Maintenance | `chore: update dependencies` |
+
+Optional scope: `feat(cli): add --verbose flag`
+
+The `pnpm release-notes` command categorizes PRs by these prefixes. PRs without conventional
+prefixes appear under "Other Changes".
 
 ## Troubleshooting
 
