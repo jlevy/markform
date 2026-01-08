@@ -11,15 +11,13 @@ export default defineConfig({
     VERSION: '\\d+\\.\\d+\\.\\d+(?:-[a-z]+\\.\\d+)?',
     PATH: '/[^\\s]+',
   },
-  // Coverage configuration for CLI subprocess testing (used by test:coverage:cli)
-  // Per tryscript docs, for projects with programmatic imports (like markform),
-  // use separate vitest + tryscript coverage runs and merge LCOV files:
-  //   vitest run --coverage          → coverage/lcov.info
-  //   tryscript run --coverage ...   → coverage-cli/lcov.info
-  //   lcov -a coverage/lcov.info -a coverage-cli/lcov.info -o merged/lcov.info
+  // Coverage configuration for CLI subprocess testing
+  // tryscript v0.1.4+ uses --merge-lcov to combine vitest + tryscript coverage:
+  //   vitest run --coverage && tryscript run ... --coverage --merge-lcov coverage/lcov.info
+  // This merges vitest's LCOV into tryscript's coverage output (coverage-tryscript/)
   // See: https://github.com/jlevy/tryscript/blob/main/docs/tryscript-reference.md
   coverage: {
-    reportsDir: 'coverage-cli',
+    reportsDir: 'coverage-tryscript',
     reporters: ['text', 'text-summary', 'html', 'lcov'],
     include: ['dist/**'],
     src: 'src',

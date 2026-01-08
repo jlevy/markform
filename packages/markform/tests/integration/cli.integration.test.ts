@@ -6,12 +6,10 @@
  * 2. **Subprocess coverage** - When run under `tryscript run --coverage`, spawns are captured
  *    via NODE_V8_COVERAGE (for dist/, remapped to src/ via sourcemaps)
  *
- * Coverage Architecture (per tryscript docs):
- * - Vitest uses `node:inspector` for coverage, NOT NODE_V8_COVERAGE
- * - Unit tests importing directly from src/ → captured by `vitest run --coverage`
- * - CLI subprocess spawns → captured by `tryscript run --coverage`
- * - For projects like markform (programmatic imports), merge LCOV files:
- *     vitest run --coverage && tryscript run --coverage ... && lcov -a ... -o merged/
+ * Coverage Architecture (tryscript v0.1.4+):
+ * - Vitest uses `node:inspector` for coverage, tryscript uses NODE_V8_COVERAGE
+ * - Use `--merge-lcov` to combine both:
+ *     vitest run --coverage && tryscript run ... --coverage --merge-lcov coverage/lcov.info
  *
  * See: https://github.com/jlevy/tryscript/blob/main/docs/tryscript-reference.md
  *

@@ -121,8 +121,8 @@ importers:
         specifier: ^0.3.16
         version: 0.3.16
       tryscript:
-        specifier: ^0.1.3
-        version: 0.1.3(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9)
+        specifier: ^0.1.4
+        version: 0.1.4(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9)
       tsdown:
         specifier: ^0.18.3
         version: 0.18.3(publint@0.3.16)(typescript@5.9.3)
@@ -1899,8 +1899,8 @@ packages:
       c8:
         optional: true
 
-  tryscript@0.1.3:
-    resolution: {integrity: sha512-36lHuYYc33BSD00tFp6fihJOP+7Zo5UgzrCfDTcEtqRX6wPA5ASVzgp1iJzzrOJt0FOgONHHUc3lOldkFqp15g==}
+  tryscript@0.1.4:
+    resolution: {integrity: sha512-zInrUPQe8PpQXVTp0DPsIzhL+/yAobQU8ZLSe7/EDy+aF69TdwsRsUxu+leHZktIgbdlmFc4fdF09UGpu5WDtw==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -3853,7 +3853,7 @@ snapshots:
     optionalDependencies:
       c8: 10.1.3(monocart-coverage-reports@2.12.9)
 
-  tryscript@0.1.3(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9):
+  tryscript@0.1.4(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9):
     dependencies:
       atomically: 2.1.0
       commander: 14.0.2
