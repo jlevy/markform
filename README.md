@@ -822,8 +822,18 @@ Or see [markdoc/language-server](https://github.com/markdoc/language-server).
 
 ## License
 
-AGPL-3.0-or-later. [Contact me](https://github.com/jlevy) for additional licensing
-options.
+This project uses a dual licensing approach:
+
+- **Markform Specification** ([`docs/markform-spec.md`](docs/markform-spec.md),
+  [`docs/markform-reference.md`](docs/markform-reference.md)):
+  [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
+  You may freely implement this specification in your own software under any license.
+
+- **Reference Implementation** (all code in this repository):
+  [AGPL-3.0-or-later](./LICENSE).
+  [Contact me](https://github.com/jlevy) for commercial licensing options.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution terms.
 
 [markdoc-overview]: https://markdoc.dev/docs/overview
 [stripe-markdoc]: https://stripe.com/blog/markdoc
