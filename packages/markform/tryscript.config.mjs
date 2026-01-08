@@ -8,7 +8,8 @@ export default defineConfig({
   },
   timeout: 30000,
   patterns: {
-    VERSION: '\\d+\\.\\d+\\.\\d+(?:-[a-z]+\\.\\d+)?',
+    // Matches semver and dev versions: 0.1.15, 0.1.15-beta.1, 0.1.15-dev.116.abc123-dirty
+    VERSION: '\\d+\\.\\d+\\.\\d+(?:-[a-z0-9.-]+)?',
     PATH: '/[^\\s]+',
   },
   // Coverage configuration for CLI subprocess testing
