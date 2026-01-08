@@ -3,13 +3,23 @@
  * Tests pure functions that don't require Commander or TTY infrastructure.
  */
 
-import { describe, it, expect } from 'vitest';
+import { join } from 'node:path';
+import { describe, it, expect, vi } from 'vitest';
 import {
   formatPath,
   createNoOpSpinner,
   OUTPUT_FORMATS,
   formatOutput,
   shouldUseColors,
+  logDryRun,
+  logVerbose,
+  logInfo,
+  logError,
+  logSuccess,
+  logTiming,
+  logWarn,
+  readFile,
+  ensureFormsDir,
 } from '../../../src/cli/lib/shared.js';
 import { stripAnsi } from '../../utils/ansi.js';
 import type { CommandContext } from '../../../src/cli/lib/cliTypes.js';
@@ -137,6 +147,115 @@ describe('shared utilities', () => {
 
     it('returns false for plaintext format', () => {
       expect(shouldUseColors({ ...baseCtx, format: 'plaintext' })).toBe(false);
+    });
+  });
+
+  describe('log functions', () => {
+    const baseCtx: CommandContext = {
+      dryRun: false,
+      verbose: false,
+      quiet: false,
+      format: 'console',
+      overwrite: false,
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    const noop = (): void => {};
+
+    it('logDryRun outputs message', () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      logDryRun('test message');
+      expect(spy).toHaveBeenCalled();
+      const output = spy.mock.calls[0]?.[0] as string;
+      expect(output).toContain('[DRY RUN]');
+      expect(output).toContain('test message');
+      spy.mockRestore();
+    });
+
+    it('logDryRun outputs details when provided', () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      logDryRun('test', { key: 'value' });
+      expect(spy).toHaveBeenCalledTimes(2);
+      spy.mockRestore();
+    });
+
+    it('logVerbose only outputs in verbose mode', () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      logVerbose(baseCtx, 'not shown');
+      expect(spy).not.toHaveBeenCalled();
+      logVerbose({ ...baseCtx, verbose: true }, 'shown');
+      expect(spy).toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('logInfo respects quiet mode', () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      logInfo(baseCtx, 'shown');
+      expect(spy).toHaveBeenCalled();
+      spy.mockClear();
+      logInfo({ ...baseCtx, quiet: true }, 'not shown');
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('logError always outputs', () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
+      logError('error message');
+      expect(spy).toHaveBeenCalled();
+      const output = spy.mock.calls[0]?.[0] as string;
+      expect(output).toContain('error message');
+      spy.mockRestore();
+    });
+
+    it('logSuccess respects quiet mode', () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      logSuccess(baseCtx, 'success');
+      expect(spy).toHaveBeenCalled();
+      spy.mockClear();
+      logSuccess({ ...baseCtx, quiet: true }, 'not shown');
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('logTiming respects quiet mode and formats duration', () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      logTiming(baseCtx, 'operation', 1500);
+      expect(spy).toHaveBeenCalled();
+      const output = spy.mock.calls[0]?.[0] as string;
+      expect(output).toContain('operation');
+      expect(output).toContain('1.5s');
+      spy.mockClear();
+      logTiming({ ...baseCtx, quiet: true }, 'op', 1000);
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('logWarn respects quiet mode', () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      logWarn(baseCtx, 'warning');
+      expect(spy).toHaveBeenCalled();
+      spy.mockClear();
+      logWarn({ ...baseCtx, quiet: true }, 'not shown');
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+  });
+
+  describe('file utilities', () => {
+    it('readFile reads file contents', async () => {
+      const content = await readFile(join(__dirname, '../../../package.json'));
+      expect(content).toContain('"name"');
+      expect(content).toContain('markform');
+    });
+
+    it('ensureFormsDir creates directory', async () => {
+      const testDir = join(__dirname, '../../../coverage/test-forms-dir');
+      await ensureFormsDir(testDir);
+      const { existsSync } = await import('node:fs');
+      expect(existsSync(testDir)).toBe(true);
+      // Cleanup
+      const { rmdir } = await import('node:fs/promises');
+      await rmdir(testDir);
     });
   });
 });
