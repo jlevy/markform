@@ -168,14 +168,16 @@ $ $CLI readme | head -5
 
 ```console
 $ $CLI docs | head -10
-# Markform Quick Reference
+<!--
+SPDX-License-Identifier: CC-BY-4.0
 
-**Version:** MF/0.1
+Markform Quick Reference - Licensed under Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
 
-Markform is structured Markdown for forms.
-Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define
-typed, validated fields.
-...
+You may freely implement this specification in your own software under any license.
+The reference implementation at https://github.com/jlevy/markform is separately
+licensed under AGPL-3.0-or-later. Contact the author for commercial licensing options.
+-->
 ? 0
 ```
 
@@ -311,8 +313,16 @@ $ $CLI render examples/simple/simple.form.md --dry-run
 
 ```console
 $ $CLI spec | head -10
-# Markform Specification
-...
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+
+Markform Specification - Licensed under Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+
+You may freely implement this specification in your own software under any license.
+The reference implementation at https://github.com/jlevy/markform is separately
+licensed under AGPL-3.0-or-later. Contact the author for commercial licensing options.
+-->
 ? 0
 ```
 
