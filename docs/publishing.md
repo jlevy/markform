@@ -171,24 +171,15 @@ and meaningful.
 
 ### Step 1: Review Changes
 
-Get the commit history since the last release:
+Run the release changes script to see commits organized by category:
 
 ```bash
-# Get last tag
-LAST_TAG=$(git describe --tags --abbrev=0)
-
-# View commits since last release
-git log $LAST_TAG..HEAD --oneline
-
-# See feature commits
-git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^feat:"
-
-# See fix commits
-git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^fix:"
-
-# See other significant changes
-git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^refactor:|^test:|^docs:"
+pnpm release:changes
 ```
+
+This outputs all commits since the last release tag, grouped by conventional commit type
+(features, fixes, refactoring, tests, docs, other). Use this as input for writing the
+release notes summary.
 
 ### Step 2: Categorize and Summarize
 
