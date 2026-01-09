@@ -137,10 +137,10 @@ When direct push to main is restricted, use GitHub CLI. See
 # 1. Push to feature branch
 git push -u origin <branch-name>
 
-# 2. Create and merge PR
+# 2. Create and merge PR (use release notes format from "Writing Release Notes" section)
 gh pr create -R OWNER/PACKAGE --base main --head <branch-name> \
   --title "chore: release PACKAGE v0.2.0" \
-  --body "Release v0.2.0"
+  --body-file release-notes.md  # Or use --body with the formatted notes
 gh pr merge <pr-number> -R OWNER/PACKAGE --merge
 
 # 3. Get merge commit SHA
@@ -162,6 +162,112 @@ gh run view --log                        # Watch progress
 ```
 
 The GitHub Actions workflow will build and publish to npm using OIDC authentication.
+
+## Writing Release Notes
+
+Each release should include clear, human-readable release notes that summarize what changed.
+This is a manual process—not automated parsing of commit messages—so the notes are readable
+and meaningful.
+
+### Step 1: Review Changes
+
+Get the commit history since the last release:
+
+```bash
+# Get last tag
+LAST_TAG=$(git describe --tags --abbrev=0)
+
+# View commits since last release
+git log $LAST_TAG..HEAD --oneline
+
+# See feature commits
+git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^feat:"
+
+# See fix commits
+git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^fix:"
+
+# See other significant changes
+git log $LAST_TAG..HEAD --pretty=format:"%s" | grep -E "^refactor:|^test:|^docs:"
+```
+
+### Step 2: Categorize and Summarize
+
+Group changes thematically, not by individual commit. Categories to use:
+
+- **Features**: New capabilities, significant enhancements
+- **Fixes**: Bug fixes, corrections
+- **Refactoring**: Internal improvements, code quality (if notable)
+- **Documentation**: Significant doc changes (skip trivial updates)
+
+Write concise descriptions that explain what changed from the user's perspective. Multiple
+related commits should be combined into a single bullet point.
+
+### Step 3: Format the Release Notes
+
+Use this format for the PR body and GitHub release:
+
+```markdown
+## What's Changed
+
+### Features
+
+- **Feature name**: Brief description of what it does
+- **Another feature**: What users can now do
+
+### Fixes
+
+- Fixed specific issue with clear description
+- Another fix with context
+
+### Refactoring
+
+- Significant internal change (if user-relevant)
+
+### Documentation
+
+- Notable doc updates (if significant)
+
+**Full commit history**: https://github.com/OWNER/PACKAGE/compare/vX.X.X...vY.Y.Y
+```
+
+### Example Release Notes
+
+Here's an example of good release notes (from v0.1.15):
+
+```markdown
+## What's Changed
+
+### Features
+
+- **Tryscript CLI testing**: End-to-end CLI tests with coverage support
+- **Unified test coverage**: Merged vitest and tryscript coverage into single report
+- **Web UI URL formatting**: URLs display as domain links with hover-to-copy
+
+### Fixes
+
+- Fixed tooltip positioning and checkbox rendering in web UI
+- Fixed coverage exclusion patterns and monorepo working directory
+
+### Refactoring
+
+- CLI integration tests converted to tryscript format
+- Coverage merge script rewritten in TypeScript
+
+### Documentation
+
+- Added CC-BY-4.0 license for spec and CLA for contributors
+- Research briefs on subforms and coverage infrastructure
+
+**Full commit history**: https://github.com/jlevy/markform/compare/v0.1.14...v0.1.15
+```
+
+### Tips
+
+- **Be concise**: Each bullet should be one line
+- **Focus on impact**: What can users do now? What's fixed?
+- **Group related commits**: "Fixed 5 coverage bugs" not 5 separate bullets
+- **Skip trivial changes**: Badge updates, typo fixes don't need mention
+- **Link to full history**: Always include the compare URL for those who want details
 
 ## Quick Reference
 
@@ -187,9 +293,9 @@ pnpm version-packages
 git add . && git commit -m "chore: release PACKAGE v0.2.0"
 git push -u origin <branch-name>
 
-# Merge via PR
+# Merge via PR (see "Writing Release Notes" section for body format)
 gh pr create -R OWNER/PACKAGE --base main --head <branch-name> \
-  --title "chore: release PACKAGE v0.2.0" --body "Release v0.2.0"
+  --title "chore: release PACKAGE v0.2.0" --body-file release-notes.md
 gh pr merge <pr-number> -R OWNER/PACKAGE --merge
 
 # Create tag via API (triggers release workflow)
@@ -219,12 +325,19 @@ The release workflow automatically creates a GitHub Release when a tag is pushed
 
 - **Release name**: Matches the tag (e.g., `v0.1.1`)
 
-- **Release notes**: Extracted from the CHANGELOG for the tagged version
+- **Release notes**: Initially extracted from CHANGELOG; update manually with formatted notes
+  (see "Writing Release Notes" section)
 
 - **Pre-release flag**: Automatically set for versions containing `-` (e.g., `1.0.0-beta.1`)
 
-After pushing a tag, verify the release appears at:
-`https://github.com/OWNER/PACKAGE/releases`
+After pushing a tag:
+
+1. Verify the release appears at: `https://github.com/OWNER/PACKAGE/releases`
+
+2. Edit the release to add properly formatted release notes following the "Writing Release
+   Notes" section format
+
+3. The release PR body should already contain the notes—copy them to the GitHub release
 
 ## Troubleshooting
 
