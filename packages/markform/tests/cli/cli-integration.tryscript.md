@@ -196,8 +196,9 @@ No x-markform found
 
 ```console
 $ $CLI docs | head -3
-<!--
-SPDX-License-Identifier: CC-BY-4.0
+# Markform Quick Reference
+
+**Version:** MF/0.1
 ? 0
 ```
 

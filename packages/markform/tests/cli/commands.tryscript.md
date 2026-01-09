@@ -168,16 +168,16 @@ $ $CLI readme | head -5
 
 ```console
 $ $CLI docs | head -10
-<!--
-SPDX-License-Identifier: CC-BY-4.0
+# Markform Quick Reference
 
-Markform Quick Reference - Licensed under Creative Commons Attribution 4.0 International
-https://creativecommons.org/licenses/by/4.0/
+**Version:** MF/0.1
 
-You may freely implement this specification in your own software under any license.
-The reference implementation at https://github.com/jlevy/markform is separately
-licensed under AGPL-3.0-or-later. Contact the author for commercial licensing options.
--->
+Markform is structured Markdown for forms.
+Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define
+typed, validated fields.
+
+**More info:** [Project README](https://github.com/jlevy/markform) |
+[Full Specification](markform-spec.md) (`markform spec`) |
 ? 0
 ```
 
@@ -313,16 +313,16 @@ $ $CLI render examples/simple/simple.form.md --dry-run
 
 ```console
 $ $CLI spec | head -10
-<!--
-SPDX-License-Identifier: CC-BY-4.0
+# Markform Specification
 
-Markform Specification - Licensed under Creative Commons Attribution 4.0 International
-https://creativecommons.org/licenses/by/4.0/
+**Version:** MF/0.1 (draft)
 
-You may freely implement this specification in your own software under any license.
-The reference implementation at https://github.com/jlevy/markform is separately
-licensed under AGPL-3.0-or-later. Contact the author for commercial licensing options.
--->
+## Overview
+
+Markform is a format, data model, and editing API for agent-friendly, human-readable
+text forms. The format is a superset of Markdown based on
+[Markdoc](https://github.com/markdoc/markdoc) that is easily readable by agents and
+humans.
 ? 0
 ```
 

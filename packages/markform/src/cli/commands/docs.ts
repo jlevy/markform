@@ -13,7 +13,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 
-import { getCommandContext, logError } from '../lib/shared.js';
+import { getCommandContext, logError, stripHtmlComments } from '../lib/shared.js';
 
 /**
  * Get the path to the markform-reference.md file.
@@ -135,7 +135,9 @@ export function registerDocsCommand(program: Command): void {
       const ctx = getCommandContext(cmd);
 
       try {
-        const docs = loadDocs();
+        const rawDocs = loadDocs();
+        // Strip HTML comments (license headers, etc.) for cleaner output
+        const docs = stripHtmlComments(rawDocs);
 
         // Determine if we should colorize
         const shouldColorize = !options.raw && isInteractive() && !ctx.quiet;
