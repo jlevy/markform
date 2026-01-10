@@ -28,6 +28,7 @@
     "markform:bin": "node packages/markform/dist/bin.mjs",
     "changeset": "changeset",
     "changeset:add": "tsx scripts/create-changeset.ts",
+    "release:changes": "./scripts/release-notes.sh",
     "version-packages": "changeset version",
     "release": "pnpm build && pnpm publint && changeset publish"
   },

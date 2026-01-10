@@ -175,7 +175,9 @@ $ $CLI docs | head -10
 Markform is structured Markdown for forms.
 Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define
 typed, validated fields.
-...
+
+**More info:** [Project README](https://github.com/jlevy/markform) |
+[Full Specification](markform-spec.md) (`markform spec`) |
 ? 0
 ```
 
@@ -312,7 +314,15 @@ $ $CLI render examples/simple/simple.form.md --dry-run
 ```console
 $ $CLI spec | head -10
 # Markform Specification
-...
+
+**Version:** MF/0.1 (draft)
+
+## Overview
+
+Markform is a format, data model, and editing API for agent-friendly, human-readable
+text forms. The format is a superset of Markdown based on
+[Markdoc](https://github.com/markdoc/markdoc) that is easily readable by agents and
+humans.
 ? 0
 ```
 

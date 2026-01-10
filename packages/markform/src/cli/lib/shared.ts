@@ -337,6 +337,17 @@ export function logWarn(ctx: CommandContext, message: string): void {
 }
 
 /**
+ * Strip HTML comments from markdown content.
+ * Removes <!-- ... --> blocks (including multiline) and trims leading whitespace.
+ */
+export function stripHtmlComments(content: string): string {
+  // Remove HTML comments (multiline-safe)
+  const stripped = content.replace(/<!--[\s\S]*?-->/g, '');
+  // Trim leading whitespace that may remain after comment removal
+  return stripped.replace(/^\s+/, '');
+}
+
+/**
  * Format a file path for display: relative to cwd, colored green.
  * If the path is within the cwd, shows as relative (e.g., "./simple-filled1.form.md")
  * If outside cwd, shows the absolute path.
