@@ -33,7 +33,7 @@ function isAtLineStart(input: string, pos: number): boolean {
  * Check if position is in leading whitespace of a line.
  * Returns true if all characters between the last newline (or start) and pos are spaces.
  */
-function isInLeadingWhitespace(input: string, pos: number): boolean {
+export function isInLeadingWhitespace(input: string, pos: number): boolean {
   let j = pos - 1;
   while (j >= 0 && input[j] !== '\n') {
     if (input[j] !== ' ' && input[j] !== '\t') {
@@ -147,7 +147,7 @@ function matchFenceClosing(
  * Find the end of an inline code span starting at the given position.
  * Returns the position after the closing backticks, or -1 if not a valid span.
  */
-function findInlineCodeEnd(input: string, pos: number): number {
+export function findInlineCodeEnd(input: string, pos: number): number {
   // Count opening backticks
   let openCount = 0;
   let i = pos;
@@ -318,40 +318,82 @@ export function preprocessCommentSyntax(input: string): string {
  * Scans for the first occurrence of either HTML comment syntax (`<!-- f:`, `<!-- #`, `<!-- .`)
  * or Markdoc syntax (`{%`). Returns the style of whichever appears first.
  *
+ * Code blocks (fenced and inline) are skipped to avoid false positives from examples.
+ *
  * @param input - The markdown content
  * @returns The detected syntax style, defaults to 'markdoc' if ambiguous
  */
 export function detectSyntaxStyle(input: string): SyntaxStyle {
-  // Track positions of first occurrence of each pattern
-  let firstCommentPos = -1;
-  let firstMarkdocPos = -1;
+  let state: State = State.NORMAL;
+  let fenceChar = '';
+  let fenceLength = 0;
+  let i = 0;
 
-  // Search for HTML comment patterns (must be outside code blocks)
-  // Simple search - we check for the distinctive patterns
-  const commentPatterns = ['<!-- f:', '<!-- /f:', '<!-- #', '<!-- .'];
-  for (const pattern of commentPatterns) {
-    const pos = input.indexOf(pattern);
-    if (pos !== -1 && (firstCommentPos === -1 || pos < firstCommentPos)) {
-      firstCommentPos = pos;
+  while (i < input.length) {
+    switch (state) {
+      case State.NORMAL: {
+        // Check for fenced code block at line start
+        if (isAtLineStart(input, i)) {
+          const fence = matchFenceOpening(input, i);
+          if (fence) {
+            state = State.FENCED_CODE;
+            fenceChar = fence.char;
+            fenceLength = fence.length;
+            i += fence.fullMatch.length;
+            continue;
+          }
+        }
+
+        // Check for inline code (skip it entirely)
+        if (input[i] === '`' && !isInLeadingWhitespace(input, i)) {
+          const end = findInlineCodeEnd(input, i);
+          if (end !== -1) {
+            i = end;
+            continue;
+          }
+        }
+
+        // Check for HTML comment patterns
+        if (input.slice(i, i + 7) === '<!-- f:' || input.slice(i, i + 8) === '<!-- /f:') {
+          return 'html-comment';
+        }
+        if (input.slice(i, i + 6) === '<!-- #' || input.slice(i, i + 6) === '<!-- .') {
+          return 'html-comment';
+        }
+
+        // Check for Markdoc pattern
+        if (input.slice(i, i + 2) === '{%') {
+          return 'markdoc';
+        }
+
+        i++;
+        break;
+      }
+
+      case State.FENCED_CODE: {
+        // Check for fence close at line start
+        if (isAtLineStart(input, i) && matchFenceClosing(input, i, fenceChar, fenceLength)) {
+          // Find end of closing fence line
+          let endLine = i;
+          while (endLine < input.length && input[endLine] !== '\n') {
+            endLine++;
+          }
+          if (endLine < input.length) {
+            endLine++; // Include newline
+          }
+          i = endLine;
+          state = State.NORMAL;
+          fenceChar = '';
+          fenceLength = 0;
+          continue;
+        }
+
+        i++;
+        break;
+      }
     }
   }
 
-  // Search for Markdoc pattern
-  firstMarkdocPos = input.indexOf('{%');
-
-  // If neither found, default to markdoc
-  if (firstCommentPos === -1 && firstMarkdocPos === -1) {
-    return 'markdoc';
-  }
-
-  // If only one found, return that
-  if (firstCommentPos === -1) {
-    return 'markdoc';
-  }
-  if (firstMarkdocPos === -1) {
-    return 'html-comment';
-  }
-
-  // Both found - return whichever comes first
-  return firstCommentPos < firstMarkdocPos ? 'html-comment' : 'markdoc';
+  // No syntax markers found, default to markdoc
+  return 'markdoc';
 }

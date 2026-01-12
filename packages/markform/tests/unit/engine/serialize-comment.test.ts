@@ -501,4 +501,87 @@ This is example Markdoc code
       }
     });
   });
+
+  describe('inline code preservation', () => {
+    it('postprocessToCommentSyntax preserves inline code with Markdoc syntax', () => {
+      const input = 'Use `{% field %}` to define a field.';
+      const result = postprocessToCommentSyntax(input);
+
+      // Inline code should not be transformed
+      expect(result).toBe('Use `{% field %}` to define a field.');
+      expect(result).not.toContain('<!-- f:field');
+    });
+
+    it('postprocessToCommentSyntax preserves double-backtick inline code', () => {
+      const input = 'Example: `` {% form %} `` is a tag.';
+      const result = postprocessToCommentSyntax(input);
+
+      // Inline code should not be transformed
+      expect(result).toBe('Example: `` {% form %} `` is a tag.');
+      expect(result).not.toContain('<!-- f:form');
+    });
+
+    it('postprocessToCommentSyntax transforms tags outside inline code', () => {
+      const input = 'Use `{% field %}` to create {% field %}';
+      const result = postprocessToCommentSyntax(input);
+
+      // First one (in inline code) should be preserved
+      expect(result).toContain('`{% field %}`');
+      // Second one (outside) should be transformed
+      expect(result).toContain('<!-- f:field -->');
+    });
+
+    it('postprocessToCommentSyntax handles mixed inline code and fenced blocks', () => {
+      const input = `Use \`{% form %}\` inline.
+
+\`\`\`md
+{% form %}
+\`\`\`
+
+And {% form %} here.`;
+
+      const result = postprocessToCommentSyntax(input);
+
+      // Inline code preserved
+      expect(result).toContain('`{% form %}`');
+      // Fenced code preserved
+      expect(result).toContain('```md\n{% form %}\n```');
+      // Outside code transformed
+      expect(result).toContain('<!-- f:form -->');
+    });
+
+    it('round-trip preserves documentation with inline code examples', () => {
+      // Note: Value fences with Markdoc-like content need {% process=false %} to prevent
+      // Markdoc from interpreting the content as tags
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+<!-- f:form id="doc-example" -->
+<!-- f:group id="g1" -->
+<!-- f:field kind="string" id="help" label="Help Text" multiline=true -->
+\`\`\`value {% process=false %}
+Use \`{% field %}\` to create fields.
+\`\`\`
+<!-- /f:field -->
+<!-- /f:group -->
+<!-- /f:form -->`;
+
+      const parsed = parseForm(markdown);
+      const serialized = serializeForm(parsed);
+
+      // Value fence should be present
+      expect(serialized).toContain('```value');
+
+      // The inline code in the value should be preserved (Markdoc syntax in value is OK)
+      // Note: The value fence content is raw text, not transformed
+      expect(serialized).toContain('Use `{% field %}` to create fields.');
+
+      // Round-trip should work
+      const reparsed = parseForm(serialized);
+      if (reparsed.responsesByFieldId.help?.value?.kind === 'string') {
+        expect(reparsed.responsesByFieldId.help.value.value).toContain('`{% field %}`');
+      }
+    });
+  });
 });

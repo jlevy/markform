@@ -309,5 +309,53 @@ markform:
 
       expect(detectSyntaxStyle(input)).toBe('html-comment');
     });
+
+    describe('ignores code blocks', () => {
+      it('ignores comment syntax in fenced code block', () => {
+        const input = `\`\`\`md
+<!-- f:form -->
+\`\`\`
+{% form %}`;
+
+        expect(detectSyntaxStyle(input)).toBe('markdoc');
+      });
+
+      it('ignores markdoc syntax in fenced code block', () => {
+        const input = `\`\`\`md
+{% form %}
+\`\`\`
+<!-- f:form -->`;
+
+        expect(detectSyntaxStyle(input)).toBe('html-comment');
+      });
+
+      it('ignores comment syntax in inline code span', () => {
+        const input = 'Use the syntax `<!-- f:form -->` to create forms. {% form %}';
+        expect(detectSyntaxStyle(input)).toBe('markdoc');
+      });
+
+      it('ignores markdoc syntax in inline code span', () => {
+        const input = 'Use the syntax `{% form %}` to create forms. <!-- f:form -->';
+        expect(detectSyntaxStyle(input)).toBe('html-comment');
+      });
+
+      it('handles double-backtick inline code', () => {
+        const input = 'Example: `` `<!-- f:form -->` `` and then {% form %}';
+        expect(detectSyntaxStyle(input)).toBe('markdoc');
+      });
+
+      it('returns markdoc when only code blocks contain syntax', () => {
+        const input = `Here is an example:
+
+\`\`\`md
+<!-- f:form -->
+{% form %}
+\`\`\`
+
+No real tags here.`;
+
+        expect(detectSyntaxStyle(input)).toBe('markdoc');
+      });
+    });
   });
 });

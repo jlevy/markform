@@ -51,6 +51,7 @@ import type {
 import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
 import { priorityKeyComparator } from '../utils/keySort.js';
 import { formatUrlAsMarkdownLink } from '../utils/urlFormat.js';
+import { findInlineCodeEnd, isInLeadingWhitespace } from './preprocess.js';
 
 // =============================================================================
 // Smart Fence Selection Helpers
@@ -232,6 +233,17 @@ export function postprocessToCommentSyntax(input: string): string {
       output += input[i];
       i++;
       continue;
+    }
+
+    // Check for inline code (skip it entirely to preserve content)
+    // But not if we're in leading whitespace (those might be intended for indented content)
+    if (input[i] === '`' && !isInLeadingWhitespace(input, i)) {
+      const end = findInlineCodeEnd(input, i);
+      if (end !== -1) {
+        output += input.slice(i, end);
+        i = end;
+        continue;
+      }
     }
 
     // Check for Markdoc tag
