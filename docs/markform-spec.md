@@ -1060,6 +1060,70 @@ Then configure:
 Here the serializer chose tildes (`~~~`) because the content contains backticks. The
 content includes multiple fenced code blocks that are preserved exactly as authored.
 
+#### Alternative Tag Syntax (HTML Comments)
+
+Markform supports an alternative **HTML comment syntax** in addition to standard Markdoc
+tags. This enables forms to render cleanly on GitHub and standard Markdown editors,
+where Markdoc tags would otherwise display as visible text.
+
+**Syntax mapping:**
+
+| Markdoc Form | HTML Comment Form | Notes |
+| --- | --- | --- |
+| `{% tag attr="val" %}` | `<!-- f:tag attr="val" -->` | Tags use `f:` prefix |
+| `{% /tag %}` | `<!-- /f:tag -->` | Closing: slash before prefix |
+| `{% tag /%}` | `<!-- f:tag /-->` | Self-closing: `/` before `-->` |
+| `{% #id %}` | `<!-- #id -->` | Annotations: no prefix needed |
+| `{% .class %}` | `<!-- .class -->` | Annotations: naturally distinctive |
+
+**Behavioral rules:**
+
+- *required:* Both syntaxes are **always supported** with no configuration needed
+
+- *required:* Implementations MUST accept either syntax as input
+
+- *recommended:* Round-trip serialization SHOULD preserve the original syntax style
+
+- *recommended:* The `f:` prefix follows the WordPress Gutenberg pattern (e.g., `wp:`)
+  for semantic namespacing
+
+**Syntax detection:**
+
+- A document using `<!-- f:...` or `<!-- #...` patterns is detected as `html-comment`
+  style
+
+- A document using `{%...%}` patterns is detected as `markdoc` style
+
+- Mixed syntax within a document is supported but not recommended
+
+**Example (HTML comment syntax):**
+
+```md
+---
+markform:
+  spec: MF/0.1
+---
+<!-- f:form id="survey" -->
+<!-- f:group id="ratings" -->
+
+<!-- f:field kind="single_select" id="quality" label="Quality Rating" -->
+- [ ] Excellent <!-- #excellent -->
+- [ ] Good <!-- #good -->
+- [ ] Fair <!-- #fair -->
+<!-- /f:field -->
+
+<!-- /f:group -->
+<!-- /f:form -->
+```
+
+On GitHub, all `<!-- ... -->` comments are hidden, leaving only the visible content:
+- [ ] Excellent
+- [ ] Good
+- [ ] Fair
+
+**Constraint:** Values containing the literal string `-->` require escaping or should
+use the Markdoc syntax to avoid prematurely closing the comment.
+
 * * *
 
 ## Layer 2: Form Data Model

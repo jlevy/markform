@@ -36,6 +36,7 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  SyntaxStyle,
   TableColumn,
   TableField,
   TableRowResponse,
@@ -123,6 +124,166 @@ export function pickFence(value: string): FenceChoice {
 }
 
 // =============================================================================
+// Postprocessor for HTML Comment Syntax
+// =============================================================================
+
+/**
+ * Transform Markdoc syntax to HTML comment syntax.
+ *
+ * Patterns transformed:
+ * - `{% tagname ... %}` → `<!-- f:tagname ... -->`
+ * - `{% /tagname %}` → `<!-- /f:tagname -->`
+ * - `{% tagname ... /%}` → `<!-- f:tagname ... /-->`
+ * - `{% #id %}` → `<!-- #id -->`
+ * - `{% .class %}` → `<!-- .class -->`
+ *
+ * Code blocks (fenced) are preserved unchanged.
+ *
+ * @param input - The Markdoc content
+ * @returns The content with HTML comment syntax
+ */
+export function postprocessToCommentSyntax(input: string): string {
+  let output = '';
+  let inFencedCode = false;
+  let fenceChar = '';
+  let fenceLength = 0;
+  let i = 0;
+
+  while (i < input.length) {
+    // Check for fenced code block at line start
+    if (!inFencedCode && (i === 0 || input[i - 1] === '\n')) {
+      // Check for 0-3 leading spaces followed by fence
+      let indent = 0;
+      let j = i;
+      while (j < input.length && input[j] === ' ' && indent < 4) {
+        indent++;
+        j++;
+      }
+
+      if (indent < 4 && (input[j] === '`' || input[j] === '~')) {
+        const fc = input[j]!; // Guaranteed by condition above
+        let len = 0;
+        while (j + len < input.length && input[j + len] === fc) {
+          len++;
+        }
+        if (len >= 3) {
+          // Entering fenced code block
+          inFencedCode = true;
+          fenceChar = fc;
+          fenceLength = len;
+          // Copy up to end of line
+          let endLine = j + len;
+          while (endLine < input.length && input[endLine] !== '\n') {
+            endLine++;
+          }
+          if (endLine < input.length) {
+            endLine++; // Include newline
+          }
+          output += input.slice(i, endLine);
+          i = endLine;
+          continue;
+        }
+      }
+    }
+
+    // Check for closing fence in fenced code block
+    if (inFencedCode && (i === 0 || input[i - 1] === '\n')) {
+      let indent = 0;
+      let j = i;
+      while (j < input.length && input[j] === ' ' && indent < 4) {
+        indent++;
+        j++;
+      }
+
+      if (input[j] === fenceChar) {
+        let len = 0;
+        while (j + len < input.length && input[j + len] === fenceChar) {
+          len++;
+        }
+        if (len >= fenceLength) {
+          // Check rest of line is whitespace
+          let afterFence = j + len;
+          let isClosing = true;
+          while (afterFence < input.length && input[afterFence] !== '\n') {
+            if (input[afterFence] !== ' ' && input[afterFence] !== '\t') {
+              isClosing = false;
+              break;
+            }
+            afterFence++;
+          }
+          if (isClosing) {
+            // Exiting fenced code block
+            if (afterFence < input.length) {
+              afterFence++; // Include newline
+            }
+            output += input.slice(i, afterFence);
+            i = afterFence;
+            inFencedCode = false;
+            fenceChar = '';
+            fenceLength = 0;
+            continue;
+          }
+        }
+      }
+    }
+
+    // Inside fenced code, pass through unchanged
+    if (inFencedCode) {
+      output += input[i];
+      i++;
+      continue;
+    }
+
+    // Check for Markdoc tag
+    if (input.slice(i, i + 2) === '{%') {
+      const endTag = input.indexOf('%}', i + 2);
+      if (endTag !== -1) {
+        const interior = input.slice(i + 2, endTag).trim();
+
+        // Check for self-closing tag: {% tagname ... /%}
+        if (interior.endsWith('/')) {
+          const tagContent = interior.slice(0, -1).trim();
+          // Check if it's an annotation (#id or .class)
+          if (tagContent.startsWith('#') || tagContent.startsWith('.')) {
+            // Annotations don't have self-closing form, but handle gracefully
+            output += '<!-- ' + tagContent + ' /-->';
+          } else {
+            output += '<!-- f:' + tagContent + ' /-->';
+          }
+          i = endTag + 2;
+          continue;
+        }
+
+        // Check for closing tag: {% /tagname %}
+        if (interior.startsWith('/')) {
+          const tagName = interior.slice(1).trim();
+          output += '<!-- /f:' + tagName + ' -->';
+          i = endTag + 2;
+          continue;
+        }
+
+        // Check for annotation (#id or .class)
+        if (interior.startsWith('#') || interior.startsWith('.')) {
+          output += '<!-- ' + interior + ' -->';
+          i = endTag + 2;
+          continue;
+        }
+
+        // Regular opening tag: {% tagname ... %}
+        output += '<!-- f:' + interior + ' -->';
+        i = endTag + 2;
+        continue;
+      }
+    }
+
+    output += input[i];
+    i++;
+  }
+
+  return output;
+}
+
+// =============================================================================
 // Sentinel Value Helpers
 // =============================================================================
 
@@ -158,6 +319,14 @@ function getSentinelContent(response: FieldResponse | undefined): string {
 export interface SerializeOptions {
   /** Markform spec version to use in frontmatter. Defaults to MF_SPEC_VERSION. */
   specVersion?: string;
+  /**
+   * Syntax style to use for output.
+   * - 'markdoc': Use Markdoc syntax ({% tag %})
+   * - 'html-comment': Use HTML comment syntax (<!-- f:tag -->)
+   * If not specified, uses the form's detected syntax style (form.syntaxStyle),
+   * defaulting to 'markdoc' if not detected.
+   */
+  syntaxStyle?: SyntaxStyle;
 }
 
 // =============================================================================
@@ -1262,7 +1431,20 @@ export function serializeForm(form: ParsedForm, opts?: SerializeOptions): string
   // Serialize form body
   const body = serializeFormSchema(form.schema, form.responsesByFieldId, form.docs, form.notes);
 
-  return `${frontmatter}\n\n${body}\n`;
+  let result = `${frontmatter}\n\n${body}\n`;
+
+  // Determine output syntax style:
+  // 1. Use explicit option if provided
+  // 2. Fall back to form's detected syntax style
+  // 3. Default to 'markdoc'
+  const syntaxStyle = opts?.syntaxStyle ?? form.syntaxStyle ?? 'markdoc';
+
+  // Transform to HTML comment syntax if requested
+  if (syntaxStyle === 'html-comment') {
+    result = postprocessToCommentSyntax(result);
+  }
+
+  return result;
 }
 
 // =============================================================================
