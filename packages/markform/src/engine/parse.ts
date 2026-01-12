@@ -21,12 +21,14 @@ import type {
   Note,
   ParsedForm,
   RunMode,
+  SyntaxStyle,
 } from './coreTypes.js';
 import { RunModeSchema } from './coreTypes.js';
 import { DEFAULT_ROLES, DEFAULT_ROLE_INSTRUCTIONS } from '../settings.js';
 import { parseField } from './parseFields.js';
 import { getBooleanAttr, getStringAttr, getValidateAttr, isTagNode } from './parseHelpers.js';
 import { MarkformParseError } from '../errors.js';
+import { detectSyntaxStyle, preprocessCommentSyntax } from './preprocess.js';
 
 // Re-export ParseError for backward compatibility
 export { ParseError } from '../errors.js';
@@ -526,14 +528,21 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
 /**
  * Parse a Markform .form.md document.
  *
+ * Supports both Markdoc syntax (`{% tag %}`) and HTML comment syntax (`<!-- f:tag -->`).
+ * The original syntax style is detected and preserved for round-trip serialization.
+ *
  * @param markdown - The full markdown content including frontmatter
  * @returns The parsed form representation
  * @throws ParseError if the document is invalid
  */
 export function parseForm(markdown: string): ParsedForm {
+  // Step 0: Detect syntax style and preprocess HTML comment syntax to Markdoc
+  const syntaxStyle: SyntaxStyle = detectSyntaxStyle(markdown);
+  const preprocessed = preprocessCommentSyntax(markdown);
+
   // Step 1: Parse Markdoc AST (raw AST, not transformed)
   // Markdoc natively handles frontmatter extraction and stores it in ast.attributes.frontmatter
-  const ast = Markdoc.parse(markdown);
+  const ast = Markdoc.parse(preprocessed);
 
   // Step 2: Extract frontmatter and metadata from AST
   const { metadata, description } = extractFrontmatter(ast);
@@ -592,5 +601,6 @@ export function parseForm(markdown: string): ParsedForm {
     orderIndex,
     idIndex,
     ...(metadata && { metadata }),
+    syntaxStyle,
   };
 }
