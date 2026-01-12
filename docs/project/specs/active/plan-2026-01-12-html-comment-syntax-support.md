@@ -41,7 +41,7 @@ comment syntax with no configuration required:
 3. **Serialization**: Support outputting in either syntax (default: preserve original)
 4. **Specification Update**: Document HTML comment syntax as equivalent alternative
 5. **Documentation Update**: Show examples in both syntaxes throughout docs
-6. **CLI Conversion Utility**: Optional `markform convert` command for bulk migration
+6. **CLI Syntax Option**: Optional `--syntax` flag on output commands for format conversion
 
 **Syntax Mapping (Option C - Namespace Prefix):**
 
@@ -121,7 +121,7 @@ comment syntax with no configuration required:
 | Serialization | Output in detected syntax | Force syntax via config flag |
 | Specification | Document as equivalent syntax | Define as primary/preferred |
 | Examples | Update 2-3 key examples | Convert all examples |
-| CLI | Optional `convert` command | Interactive converter |
+| CLI | Optional `--syntax` output option | Separate convert command |
 | Tests | Unit + integration tests | Performance benchmarks |
 
 ## Stage 2: Architecture Stage
@@ -212,7 +212,7 @@ comment syntax with no configuration required:
 | `tests/unit/engine/serialize-comment.test.ts` | NEW | Comment syntax serialization tests |
 | `docs/markform-spec.md` | MODIFY | Document alternative syntax |
 | `docs/markform-reference.md` | MODIFY | Add comment syntax examples |
-| `src/cli/commands/convert.ts` | NEW | Optional convert command |
+| `src/cli/commands/validate.ts` | MODIFY | Add `--syntax` output option |
 
 ## Stage 3: Refine Architecture
 
@@ -309,22 +309,34 @@ Update specification and reference documentation.
 - [ ] Update `packages/markform/examples/simple/simple.form.md`:
   - [ ] Create comment-syntax variant for comparison
 
-### Phase 4: CLI Conversion Utility (Optional)
+### Phase 4: CLI Syntax Output Option (Optional)
 
-Add optional CLI command for bulk conversion.
+Add `--syntax` option to output commands for format conversion.
+
+**Design:**
+
+Instead of a separate `convert` command, add `--syntax` option to existing commands.
+To convert a file, simply validate it and output with a different syntax:
+
+```bash
+# Convert Markdoc → comments
+markform validate myform.form.md --syntax=comments
+
+# Convert comments → Markdoc
+markform validate myform.form.md --syntax=tags
+
+# Preserve original (default behavior)
+markform validate myform.form.md
+```
 
 **Tasks:**
 
-- [ ] Create `src/cli/commands/convert.ts`:
-  - [ ] Implement `markform convert` command
-  - [ ] `--to-comments` flag for Markdoc → comments
-  - [ ] `--to-markdoc` flag for comments → Markdoc
-  - [ ] `--dry-run` flag for preview
-  - [ ] Support stdin/stdout and file paths
+- [ ] Update `src/cli/commands/validate.ts`:
+  - [ ] Add `--syntax` option with values `'comments'` | `'tags'`
+  - [ ] Pass syntax style to `serializeForm()` when outputting
+  - [ ] Default: preserve original syntax (no option needed)
 
-- [ ] Update CLI index to register command
-
-- [ ] Add tryscript test for convert command
+- [ ] Add tryscript test for `--syntax` option
 
 ### Testing Strategy
 
