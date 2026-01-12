@@ -134,9 +134,40 @@ Per CommonMark specification:
 | Cannot contain `-->` in content | Low risk—Markform values rarely contain this |
 | Type 2 block rules | Multiline directives become HTML blocks |
 | Literal content preservation | Useful—attributes preserved exactly |
+| Same-line trailing text captured | **Important**—see edge case below |
+
+**Critical Edge Case (CommonMark Spec Behavior)**:
+
+When an HTML comment's opening (`<!--`) and closing (`-->`) are on the **same line**, the
+*entire line* becomes the HTML block body. This means:
+
+```markdown
+<!--% field id="x" --> Some trailing text
+```
+
+The text "Some trailing text" is captured as part of the HTML block body, **not** parsed as
+Markdown. This is spec-compliant behavior per [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/#html-block).
+
+However, content on **subsequent lines** is parsed normally:
+
+```markdown
+<!--% field id="x" -->
+Some text on next line
+```
+
+Here "Some text on next line" is parsed as a separate Markdown paragraph.
+
+**Mitigation**: For Markform, this is not a significant concern because:
+1. Most directives are on their own lines
+2. Inline annotations like `<!--% #id -->` at end of list items work correctly
+3. The preprocessor transforms before CommonMark parsing
+
+Reference: [frostming/marko#202](https://github.com/frostming/marko/issues/202) documents this
+behavior and confirms spec compliance.
 
 **Assessment**: HTML comments are well-suited for directive syntax. The `-->` constraint is
-manageable with escaping or documenting as a limitation.
+manageable with escaping or documenting as a limitation. The same-line trailing text behavior
+is a minor edge case that doesn't affect typical Markform usage patterns.
 
 ### 4. Proposed Syntax Mapping
 
@@ -360,6 +391,11 @@ Markdoc syntax is acceptable. Loses the community/tooling around Markdoc.
    uses Markdoc's parse phase (not transform/render) should be preserved—it makes
    swapping parsing layers easier.
 
+6. **Place comment directives on their own lines or at line end**: Due to CommonMark
+   HTML block behavior, avoid placing text after `-->` on the same line. Either put
+   the directive on its own line, or at the end of a line (like `<!--% #id -->` at
+   the end of a list item). This ensures subsequent Markdown is parsed correctly.
+
 * * *
 
 ## Open Research Questions
@@ -515,6 +551,7 @@ opt-in required. This ensures:
 - [markdown-it API](https://markdown-it.github.io/markdown-it/) - Tokenizer documentation
 - [Markdoc GitHub Discussion #517](https://github.com/markdoc/markdoc/discussions/517) - Plugin usage
 - [Stripe Markdoc Blog Post](https://stripe.com/blog/markdoc) - Design philosophy
+- [frostming/marko#202](https://github.com/frostming/marko/issues/202) - CommonMark HTML block trailing text behavior
 
 * * *
 
