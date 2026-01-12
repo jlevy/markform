@@ -3,7 +3,7 @@
 ## Purpose
 
 This technical design document defines the implementation of HTML comment syntax
-(`<!--% ... -->`) as an alternative to Markdoc's Jinja-style tags (`{% ... %}`). This
+(`<!-- f:tag -->`) as an alternative to Markdoc's Jinja-style tags (`{% ... %}`). This
 enables Markform files to render cleanly on GitHub and in standard Markdown editors while
 maintaining full backward compatibility with existing Markdoc syntax.
 
@@ -17,9 +17,11 @@ compatibility issues:
 2. **Editor support**: Standard Markdown editors don't recognize Markdoc syntax
 3. **Preview tools**: Markdown preview tools show raw tags instead of hiding them
 
-The proposed solution is to support HTML comment-style syntax (`<!--% tag -->`) that:
+The proposed solution is to support HTML comment-style syntax using an `f:` namespace
+prefix (`<!-- f:tag -->`) that:
 - Is valid HTML/Markdown and hidden by renderers
-- Is visually distinct from regular HTML comments (`<!--%` vs `<!--`)
+- Uses `f:` prefix for tags (semantically "form"), following WordPress Gutenberg's `wp:` pattern
+- Uses plain annotations (`<!-- #id -->`, `<!-- .class -->`) without prefix (naturally distinctive)
 - Can coexist with Markdoc syntax (both always supported)
 
 **Related Documentation:**
@@ -34,22 +36,28 @@ The proposed solution is to support HTML comment-style syntax (`<!--% tag -->`) 
 Implement an **always-on preprocessor** that transparently supports both Markdoc and HTML
 comment syntax with no configuration required:
 
-1. **Preprocessor**: Transform `<!--% ... -->` to `{% ... %}` before Markdoc parsing
+1. **Preprocessor**: Transform `<!-- f:... -->` to `{% ... %}` before Markdoc parsing
 2. **Syntax Detection**: Track which syntax the original document used
 3. **Serialization**: Support outputting in either syntax (default: preserve original)
 4. **Specification Update**: Document HTML comment syntax as equivalent alternative
 5. **Documentation Update**: Show examples in both syntaxes throughout docs
 6. **CLI Conversion Utility**: Optional `markform convert` command for bulk migration
 
-**Syntax Mapping:**
+**Syntax Mapping (Option C - Namespace Prefix):**
 
-| Markdoc Form | Comment Form |
-| --- | --- |
-| `{% tag attr="val" %}` | `<!--% tag attr="val" -->` |
-| `{% /tag %}` | `<!--% /tag -->` |
-| `{% tag /%}` | `<!--% tag /-->` |
-| `{% #id %}` | `<!--% #id -->` |
-| `{% .class %}` | `<!--% .class -->` |
+| Markdoc Form | Comment Form | Notes |
+| --- | --- | --- |
+| `{% tag attr="val" %}` | `<!-- f:tag attr="val" -->` | Tags use `f:` prefix |
+| `{% /tag %}` | `<!-- /f:tag -->` | Closing tags: slash before prefix |
+| `{% tag /%}` | `<!-- f:tag /-->` | Self-closing: `/` before `-->` |
+| `{% #id %}` | `<!-- #id -->` | Annotations: no prefix needed |
+| `{% .class %}` | `<!-- .class -->` | Annotations: naturally distinctive |
+
+**Why Option C over Option A (`<!--%`)**:
+- `f:` is semantically meaningful ("form")
+- Follows WordPress Gutenberg's established `wp:` pattern
+- Annotations (`#id`, `.class`) look like CSS selectors—naturally distinctive
+- Cleaner overall appearance
 
 ## Backward Compatibility
 
@@ -83,7 +91,7 @@ comment syntax with no configuration required:
 **Core Requirements:**
 
 1. **Always-on preprocessing** - No configuration flags, CLI options, or opt-in required
-2. **Transparent dual syntax** - Both `{% %}` and `<!--% -->` always work
+2. **Transparent dual syntax** - Both `{% %}` and `<!-- f: -->` always work
 3. **Preserve original syntax** - Serialization outputs in the same syntax as input
 4. **Code block awareness** - Preprocessor must skip fenced code blocks and inline code
 5. **Lossless round-trip** - parse → serialize produces equivalent document
@@ -94,7 +102,7 @@ comment syntax with no configuration required:
 - [ ] New comment syntax forms parse to identical AST as equivalent Markdoc forms
 - [ ] Serializing a comment-syntax form produces comment-syntax output
 - [ ] Serializing a Markdoc-syntax form produces Markdoc-syntax output
-- [ ] Code blocks containing `<!--%` are not transformed
+- [ ] Code blocks containing `<!-- f:` or `<!-- #` are not transformed
 - [ ] All existing tests continue passing
 - [ ] New tests cover comment syntax parsing and serialization
 
@@ -170,12 +178,15 @@ comment syntax with no configuration required:
 
 1. **`preprocessCommentSyntax(markdown: string): string`**
    - State machine to track: normal, fenced-code-block, inline-code
-   - Transform `<!--% ... -->` → `{% ... %}`
-   - Handle self-closing: `<!--% tag /-->` → `{% tag /%}`
+   - Transform tags: `<!-- f:tag -->` → `{% tag %}`
+   - Transform closing: `<!-- /f:tag -->` → `{% /tag %}`
+   - Handle self-closing: `<!-- f:tag /-->` → `{% tag /%}`
+   - Transform annotations: `<!-- #id -->` → `{% #id %}`, `<!-- .class -->` → `{% .class %}`
    - Returns unchanged if no comment syntax found
 
 2. **`detectSyntaxStyle(markdown: string): SyntaxStyle`**
-   - Scan for first `<!--%` or `{%` pattern
+   - Scan for first `<!-- f:` or `<!-- #` or `<!-- .` pattern (comment syntax)
+   - Scan for first `{%` pattern (markdoc syntax)
    - Return `'html-comment'` or `'markdoc'`
    - Default to `'markdoc'` for empty/ambiguous documents
 
@@ -361,6 +372,13 @@ enum State {
   INLINE_CODE,      // Inside `...`
 }
 
+// Patterns to recognize:
+// <!-- f:tagname ... -->     → {% tagname ... %}
+// <!-- /f:tagname -->        → {% /tagname %}
+// <!-- f:tagname ... /-->    → {% tagname ... /%}
+// <!-- #id -->               → {% #id %}
+// <!-- .class -->            → {% .class %}
+
 function preprocessCommentSyntax(input: string): string {
   let output = '';
   let state = State.NORMAL;
@@ -392,20 +410,41 @@ function preprocessCommentSyntax(input: string): string {
             continue;
           }
         }
-        // Check for <!--% directive
-        if (input.slice(i, i + 5) === '<!--%') {
-          const end = input.indexOf('-->', i + 5);
+        // Check for <!-- comment directive
+        if (input.slice(i, i + 4) === '<!--') {
+          const end = input.indexOf('-->', i + 4);
           if (end !== -1) {
-            const interior = input.slice(i + 5, end).trim();
-            // Transform to Markdoc syntax
-            if (interior.endsWith('/')) {
-              // Self-closing: <!--% tag /--> → {% tag /%}
-              output += '{% ' + interior.slice(0, -1).trim() + ' /%}';
-            } else {
-              output += '{% ' + interior + ' %}';
+            const interior = input.slice(i + 4, end).trim();
+
+            // Check for f: namespace prefix (tags)
+            if (interior.startsWith('f:')) {
+              const tagContent = interior.slice(2); // Remove 'f:'
+              if (tagContent.endsWith('/')) {
+                // Self-closing: <!-- f:tag /--> → {% tag /%}
+                output += '{% ' + tagContent.slice(0, -1).trim() + ' /%}';
+              } else {
+                output += '{% ' + tagContent + ' %}';
+              }
+              i = end + 3;
+              continue;
             }
-            i = end + 3;
-            continue;
+
+            // Check for /f: closing tag
+            if (interior.startsWith('/f:')) {
+              const tagName = interior.slice(3); // Remove '/f:'
+              output += '{% /' + tagName + ' %}';
+              i = end + 3;
+              continue;
+            }
+
+            // Check for #id or .class annotations
+            if (interior.startsWith('#') || interior.startsWith('.')) {
+              output += '{% ' + interior + ' %}';
+              i = end + 3;
+              continue;
+            }
+
+            // Not a markform directive, pass through unchanged
           }
         }
         output += input[i];
@@ -449,29 +488,40 @@ markform:
 {% /form %}
 ```
 
-**Converted (Comment syntax):**
+**Converted (Option C - `f:` namespace prefix):**
 
 ```markdown
 ---
 markform:
   spec: MF/0.1
 ---
-<!--% form id="example" -->
-<!--% group id="basics" -->
+<!-- f:form id="example" -->
+<!-- f:group id="basics" -->
 
-<!--% field kind="string" id="name" label="Name" required=true --><!--% /field -->
+<!-- f:field kind="string" id="name" label="Name" required=true --><!-- /f:field -->
 
-<!--% field kind="single_select" id="rating" label="Rating" -->
-- [ ] Good <!--% #good -->
-- [ ] Bad <!--% #bad -->
-<!--% /field -->
+<!-- f:field kind="single_select" id="rating" label="Rating" -->
+- [ ] Good <!-- #good -->
+- [ ] Bad <!-- #bad -->
+<!-- /f:field -->
 
-<!--% /group -->
-<!--% /form -->
+<!-- /f:group -->
+<!-- /f:form -->
 ```
 
-**GitHub Rendering**: The comment version renders as clean Markdown with the checklist
-visible and all directives hidden.
+**GitHub Rendering**: All `<!-- f:... -->` and `<!-- #... -->` comments are hidden.
+Only the checkboxes are visible:
+- [ ] Good
+- [ ] Bad
+
+**Key Syntax Differences from Option A (`<!--%`):**
+
+| Aspect | Option A | Option C (Recommended) |
+| --- | --- | --- |
+| Tags | `<!--% field -->` | `<!-- f:field -->` |
+| Closing | `<!--% /field -->` | `<!-- /f:field -->` |
+| Annotations | `<!--% #id -->` | `<!-- #id -->` |
+| Prefix style | `%` (arbitrary) | `f:` (semantic, like `wp:`) |
 
 ## References
 
