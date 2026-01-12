@@ -27,7 +27,8 @@ The current Markform implementation uses Markdoc (`@markdoc/markdoc` v0.5.4), wh
 - Builds an AST that Markform traverses to extract form schema, values, and documentation
 
 This research evaluates four main approaches to introduce an alternative syntax and analyzes
-trade-offs for each.
+trade-offs for each. The recommended approach is an **always-on preprocessor** that
+transparently supports both syntaxes with no configuration required.
 
 **Research Questions**:
 
@@ -37,7 +38,7 @@ trade-offs for each.
 
 3. Should Markform stick with Markdoc, fork it, or move to a custom parser?
 
-4. What are the risks and limitations of each approach?
+4. Can both syntaxes be supported transparently without configuration flags?
 
 * * *
 
@@ -188,34 +189,38 @@ Option A is more readable but requires new convention for self-closing.
 
 ### Approach 1: Preprocessor (Recommended)
 
-Transform `<!--% ... -->` → `{% ... %}` before passing to Markdoc.
+Transform `<!--% ... -->` → `{% ... %}` before passing to Markdoc. **Always enabled**
+with no configuration needed.
 
 | Criteria | Assessment |
 | --- | --- |
 | Implementation effort | Low-Medium |
 | Markdoc compatibility | Full—uses Markdoc as-is |
 | Two-way conversion | Yes—can convert both directions |
-| Dual syntax support | Easy—preprocess only comment form |
-| Source mapping | Lost (line numbers may shift slightly) |
+| Dual syntax support | **Always on**—both syntaxes work transparently |
+| Source mapping | Preserved (line numbers unchanged) |
 | Maintenance burden | Low—Markdoc updates automatically work |
 
 **Implementation Notes**:
 
 ```typescript
-// Pseudocode
-function preprocess(markdown: string): string {
+// Pseudocode - runs on every parse
+function preprocessCommentSyntax(markdown: string): string {
   // Must skip fenced code blocks and inline code
   // Replace <!--% ... --> with {% ... %}
   // Handle self-closing: <!--% tag /--> → {% tag /%}
+  // Returns unchanged if no comment syntax found
 }
 ```
 
-**Challenges**:
+**Key Design Points**:
 - Must correctly skip fenced code blocks (``` and ~~~)
 - Must skip inline code spans
-- Regex alone is fragile; need simple state machine
+- Use simple state machine (not regex-only)
+- **No flags needed**—`<!--%` prefix is unambiguous
 
-**Assessment**: Best balance of effort vs. benefits. Can support both syntaxes.
+**Assessment**: Best balance of effort vs. benefits. Backward compatible. Both
+syntaxes always supported with zero configuration.
 
 ### Approach 2: Patch Markdoc's Tokenizer
 
@@ -360,25 +365,24 @@ Markdoc syntax is acceptable. Loses the community/tooling around Markdoc.
 ## Open Research Questions
 
 1. **Performance impact of preprocessing**: How does adding a preprocessing step
-   affect parse performance for large forms? Need benchmarks.
+   affect parse performance for large forms? The preprocessor is simple string
+   manipulation, likely negligible, but should verify with benchmarks.
 
 2. **Error message quality**: How to provide good error messages that map back to
-   original source when using preprocessing? May need source map support.
+   original source when using preprocessing? Line numbers should be preserved since
+   we only replace delimiters, not change line structure.
 
-3. **Interpolation/variable syntax**: Markdoc's `{% $variable %}` renders content.
-   In HTML comments, this becomes invisible. Need policy decision:
-   - Forbid interpolation in comment syntax?
-   - Require visible fallback text?
-   - Different handling for different contexts?
+3. **Self-closing tag convention**: The proposed syntax is `<!--% tag /-->`. Is
+   this sufficiently clear? Alternative considered: `<!--% tag /%-->` (closer to
+   Markdoc's `/%}`). Current recommendation: `/--> ` for simplicity.
 
-4. **Self-closing tag convention**: What's the best syntax for self-closing?
-   - `<!--% tag /-->`
-   - `<!--% tag / -->`
-   - `<!--% tag /%-->`
-   Need user feedback on readability.
+4. **Syntax detection for serialization**: When a document uses both syntaxes (or
+   neither because it's empty), which should be used for output? Proposed: detect
+   first directive found, default to Markdoc syntax if ambiguous.
 
 5. **Tooling/editor support**: What's needed for syntax highlighting of the new
-   format? VSCode extension possibilities?
+   format? The comment syntax is valid Markdown, so basic highlighting works.
+   Enhanced highlighting for `<!--% %>` could be added to VSCode extensions.
 
 * * *
 
@@ -391,18 +395,27 @@ Markdoc syntax is acceptable. Loses the community/tooling around Markdoc.
 This provides the best balance of:
 - Minimal implementation effort
 - Full backward compatibility with existing Markdoc syntax
-- Ability to support both syntaxes during transition
+- Always-on dual syntax support (no flags or configuration needed)
 - Low maintenance burden
 - GitHub rendering compatibility
 
 ### Recommended Approach
 
-Implement a **Markdown-aware preprocessor** that:
+Implement a **Markdown-aware preprocessor** that is **always enabled**:
 
 1. Transforms `<!--% ... -->` to `{% ... %}` before Markdoc.parse()
 2. Correctly skips fenced code blocks and inline code
-3. Optionally supports both syntaxes in parallel
+3. **Always supports both syntaxes in parallel** - no flags needed
 4. Is implemented as a simple state machine (not regex-only)
+
+**Key Design Decision**: The `<!--%` prefix is distinctive enough that it will never
+conflict with regular HTML comments or existing Markdoc syntax. Therefore, the
+preprocessor should **always be active** - no configuration flags, CLI options, or
+opt-in required. This ensures:
+
+- Existing Markform documents using `{% %}` continue to work unchanged
+- New documents can use `<!--% -->` for GitHub compatibility
+- Documents can mix both syntaxes if desired (though not recommended for clarity)
 
 **Syntax Specification**:
 
@@ -420,15 +433,16 @@ Implement a **Markdown-aware preprocessor** that:
 - Clear visual distinction from regular HTML comments (`<!--%` vs `<!--`)
 - Consistent closing pattern
 - Lossless round-trip conversion possible
+- **No configuration burden** - just works
 
-### Alternative Approaches
+### Alternative Approaches (Not Recommended)
 
-1. **Option B wrapper syntax** (`<!--{% %}-->`): Consider if editor support for
-   Markdoc-inside-comment is valuable, at cost of more verbose syntax.
+1. **Option B wrapper syntax** (`<!--{% %}-->`): More verbose but preserves literal
+   Markdoc inside. Not recommended due to verbosity.
 
 2. **Patch Markdoc**: Consider only if:
-   - Source mapping for errors is critical
-   - Performance of preprocessing is unacceptable
+   - Source mapping for errors becomes critical
+   - Performance of preprocessing is proven unacceptable
    - Long-term commitment to maintaining a fork is acceptable
 
 3. **Full rewrite**: Consider only if:
@@ -442,43 +456,52 @@ Implement a **Markdown-aware preprocessor** that:
 
 ### Phase 1: Preprocessor MVP
 
-1. **Create `preprocessMarkform(markdown: string): string`**
+1. **Create `preprocessCommentSyntax(markdown: string): string`**
    - State machine to track: normal, fenced-code-block, inline-code
    - Transform `<!--% ... -->` → `{% ... %}`
    - Handle self-closing: `<!--% tag /-->` → `{% tag /%}`
+   - Always runs (no opt-in)
 
-2. **Update `parseForm()` to optionally preprocess**
+2. **Update `parseForm()` to always preprocess**
    ```typescript
-   export function parseForm(markdown: string, options?: { preprocessComments?: boolean }): ParsedForm {
-     const content = options?.preprocessComments ? preprocessMarkform(markdown) : markdown;
+   export function parseForm(markdown: string): ParsedForm {
+     // Always preprocess - both syntaxes supported transparently
+     const content = preprocessCommentSyntax(markdown);
      const ast = Markdoc.parse(content);
      // ... rest unchanged
    }
    ```
 
-3. **Add reverse transform for serialization**
-   - When serializing, optionally output comment syntax
-   - Support round-trip: parse comment → serialize comment
+3. **Track original syntax for serialization**
+   - Detect which syntax was used (scan for `<!--%` vs `{%`)
+   - Store in ParsedForm metadata
+   - Serialize back in same format by default
 
-### Phase 2: Dual Syntax Support
+### Phase 2: Serialization Support
 
-1. **Auto-detect syntax**
-   - Check for `<!--%` at start of first directive
-   - Set mode accordingly
+1. **Auto-detect and preserve syntax**
+   - Check for `<!--%` presence to determine original syntax
+   - Default: serialize back in the same syntax as input
+   - API option to force specific syntax on output if needed
 
-2. **Preserve original syntax on serialize**
-   - Track which syntax was used in parsed form
-   - Serialize back in same format
+2. **Add reverse transform for comment syntax output**
+   - Transform `{% ... %}` → `<!--% ... -->` during serialization
+   - Preserves round-trip: parse comment → serialize comment
 
-### Phase 3: CLI Integration
+### Phase 3: Spec and Documentation Updates
 
-1. **Add `--syntax` flag**
-   - `markform inspect --syntax=comment myform.form.md`
-   - `markform export --syntax=comment --format=markform`
+1. **Update Markform Specification**
+   - Document comment syntax as equivalent alternative
+   - Clarify both syntaxes always supported
 
-2. **Add conversion command**
+2. **Update Reference Documentation**
+   - Show examples in both syntaxes
+   - Explain GitHub rendering benefits
+
+3. **Add CLI conversion utility** (optional convenience)
    - `markform convert --to-comments myform.form.md`
    - `markform convert --to-markdoc myform.form.md`
+   - Not required for normal usage, just for bulk migration
 
 * * *
 
