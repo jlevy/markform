@@ -364,18 +364,18 @@ readability and maintainability. The `--syntax` option enables:
 
 **Tasks:**
 
-- [ ] Update `src/cli/commands/validate.ts`:
-  - [ ] Add `--syntax` option with values `'comments'` | `'tags'`
-  - [ ] Implement strict syntax validation when option provided
-  - [ ] Pass syntax style to `serializeForm()` when outputting
-  - [ ] Default (no option): permissive, preserve original syntax
+- [x] Update `src/cli/commands/validate.ts`:
+  - [x] Add `--syntax` option with values `'comments'` | `'tags'`
+  - [x] Implement strict syntax validation when option provided
+  - [x] Pass syntax style to `serializeForm()` when outputting
+  - [x] Default (no option): permissive, preserve original syntax
 
-- [ ] Add `validateSyntaxConsistency()` helper function:
-  - [ ] Scan for patterns of the "wrong" syntax
-  - [ ] Return line numbers and patterns found
-  - [ ] Skip fenced code blocks and inline code spans
+- [x] Add `validateSyntaxConsistency()` helper function:
+  - [x] Scan for patterns of the "wrong" syntax
+  - [x] Return line numbers and patterns found
+  - [x] Skip fenced code blocks and inline code spans
 
-- [ ] Add tryscript test for `--syntax` option (both success and failure cases)
+- [x] Add tryscript test for `--syntax` option (both success and failure cases)
 
 ### Testing Strategy
 
@@ -389,7 +389,7 @@ readability and maintainability. The `--syntax` option enables:
 1. **Phase 1**: Core preprocessor (parsing works) ✓
 2. **Phase 2**: Serialization (full round-trip) ✓
 3. **Phase 3**: Documentation (users can adopt) ✓
-4. **Phase 4**: CLI utility (bulk migration tool)
+4. **Phase 4**: CLI `--syntax` option (strict validation + conversion) ✓
 5. **Phase 5**: Make HTML comment syntax primary (documentation & examples)
 
 ### Phase 5: Make HTML Comment Syntax Primary (Documentation & Examples)
