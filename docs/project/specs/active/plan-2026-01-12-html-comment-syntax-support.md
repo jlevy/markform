@@ -3,9 +3,11 @@
 ## Purpose
 
 This technical design document defines the implementation of HTML comment syntax
-(`<!-- f:tag -->`) as an alternative to Markdoc's Jinja-style tags (`{% ... %}`). This
-enables Markform files to render cleanly on GitHub and in standard Markdown editors while
-maintaining full backward compatibility with existing Markdoc syntax.
+(`<!-- f:tag -->`) as the primary syntax for Markform. With this syntax, **Markform
+files are completely valid Markdown** with form structure defined in readable HTML
+comments. This enables forms to render cleanly on GitHub and in any Markdown editor,
+while the legacy Markdoc tag syntax (`{% ... %}`) remains fully supported for backward
+compatibility.
 
 ## Background
 
@@ -119,10 +121,11 @@ comment syntax with no configuration required:
 | --- | --- | --- |
 | Parsing | Preprocess comment → Markdoc | Custom parser/fork Markdoc |
 | Serialization | Output in detected syntax | Force syntax via config flag |
-| Specification | Document as equivalent syntax | Define as primary/preferred |
-| Examples | Update 2-3 key examples | Convert all examples |
+| Specification | Document comment syntax as primary | Remove Markdoc syntax support |
+| Examples | Convert all examples to comment syntax | N/A |
 | CLI | Optional `--syntax` output option | Separate convert command |
-| Tests | Unit + integration tests | Performance benchmarks |
+| Tests | Unit + integration tests, both syntaxes | Performance benchmarks |
+| README | Update intro, de-emphasize Markdoc | Remove Markdoc mentions entirely |
 
 ## Stage 2: Architecture Stage
 
@@ -347,10 +350,169 @@ markform validate myform.form.md
 
 ### Rollout Plan
 
-1. **Phase 1**: Core preprocessor (parsing works)
-2. **Phase 2**: Serialization (full round-trip)
-3. **Phase 3**: Documentation (users can adopt)
+1. **Phase 1**: Core preprocessor (parsing works) ✓
+2. **Phase 2**: Serialization (full round-trip) ✓
+3. **Phase 3**: Documentation (users can adopt) ✓
 4. **Phase 4**: CLI utility (bulk migration tool)
+5. **Phase 5**: Make HTML comment syntax primary (documentation & examples)
+
+### Phase 5: Make HTML Comment Syntax Primary (Documentation & Examples)
+
+Promote HTML comment syntax from "alternative" to "primary/recommended" syntax, with
+Markdoc syntax documented as a secondary/legacy option. This improves GitHub rendering
+and Markdown compatibility while maintaining full backward compatibility.
+
+**Key Insight:** With HTML comment syntax, **Markform files are completely valid
+Markdown**. The form structure is defined entirely in well-structured, readable HTML
+comments that Markdown renderers naturally hide. Users see clean, readable documents
+while the underlying structure remains machine-parseable.
+
+**Rationale:**
+- **Valid Markdown**: Comment syntax means `.form.md` files render perfectly everywhere
+- **GitHub-friendly**: All form tags are hidden; users see only content and checkboxes
+- **Editor-compatible**: Standard Markdown editors and preview tools work seamlessly
+- **Semantic prefix**: The `f:` prefix is meaningful ("form"), following `wp:` pattern
+- **Implementation detail**: Markdoc is under the hood—users don't need to know about it
+
+**Scope of Changes:**
+
+#### 5.1 Documentation Updates
+
+**README.md:**
+- [ ] Reframe introduction: "Markform is structured Markdown for forms" (not "Markdoc-based")
+- [ ] Lead with HTML comment syntax examples in all code blocks
+- [ ] Mention Markdoc only briefly: "Built on Markdoc for parsing"
+- [ ] Update Quick Start example to use comment syntax
+- [ ] Update any inline examples throughout
+
+**docs/markform-spec.md:**
+- [ ] Rename "Alternative Tag Syntax" → "Tag Syntax"
+- [ ] Present HTML comment syntax FIRST as the primary syntax
+- [ ] Move Markdoc syntax to a subsection: "Legacy Markdoc Syntax (Alternative)"
+- [ ] Update all inline examples to use comment syntax
+- [ ] Update Layer 1 introduction to not emphasize Markdoc
+- [ ] Change: "Built on Markdoc's tag syntax" → "Uses Markdoc for parsing internally"
+- [ ] Update "Structural Tags" section examples
+- [ ] Update "Field Tags" section examples
+- [ ] Update "Option Syntax" section examples
+- [ ] Update Checkbox State Tokens examples
+
+**docs/markform-reference.md:**
+- [ ] Lead "File Structure" example with comment syntax
+- [ ] Swap the syntax table order (comment syntax first, Markdoc second)
+- [ ] Update "Field Kinds" examples to use comment syntax
+- [ ] Update all code examples throughout
+
+**docs/markform-apis.md:**
+- [ ] Update any API examples that show form content
+
+#### 5.2 Example Files Conversion
+
+Convert all example `.form.md` files to use HTML comment syntax as primary:
+
+**Primary examples (convert to comment syntax):**
+- [ ] `examples/simple/simple.form.md`
+- [ ] `examples/simple/simple-mock-filled.form.md`
+- [ ] `examples/simple/simple-skipped-filled.form.md`
+- [ ] `examples/startup-research/startup-research.form.md`
+- [ ] `examples/startup-research/startup-research-mock-filled.form.md`
+- [ ] `examples/movie-research/movie-research-demo.form.md`
+- [ ] `examples/movie-research/movie-deep-research.form.md`
+- [ ] `examples/movie-research/movie-deep-research-mock-filled.form.md`
+- [ ] `examples/startup-deep-research/startup-deep-research.form.md`
+- [ ] `examples/rejection-test/rejection-test.form.md`
+- [ ] `examples/rejection-test/rejection-test-mock-filled.form.md`
+
+**Keep as comment syntax variant:**
+- [ ] `examples/simple/simple-comment-syntax.form.md` → rename to `simple-markdoc-syntax.form.md` (legacy example)
+
+#### 5.3 Test Suite Updates
+
+**Strategy:** Keep both syntaxes well-tested, but use comment syntax as primary in new tests.
+
+**Unit tests to update (use comment syntax as primary):**
+- [ ] `tests/unit/engine/parse.test.ts` - Add/update tests using comment syntax
+- [ ] `tests/unit/engine/serialize.test.ts` - Ensure comment syntax examples
+- [ ] `tests/unit/engine/apply.test.ts` - Update form fixtures
+
+**Tests to keep as Markdoc (for backward compatibility coverage):**
+- [ ] `tests/unit/engine/preprocess.test.ts` - Tests both syntaxes explicitly
+- [ ] `tests/unit/engine/parse-comment.test.ts` - Tests comment syntax specifically
+- [ ] `tests/unit/engine/serialize-comment.test.ts` - Tests round-trip
+
+**Golden tests:**
+- [ ] Regenerate golden tests after example conversion: `pnpm test:golden:regen`
+- [ ] Session transcripts may need updates if forms changed
+
+**Integration tests:**
+- [ ] Review and update any test fixtures using Markdoc syntax
+
+#### 5.4 Default Behavior Changes (Optional)
+
+Consider whether to change default behaviors:
+
+**Option A: Preserve current defaults (recommended for Phase 5)**
+- `detectSyntaxStyle()` returns `'markdoc'` for ambiguous documents
+- `serializeForm()` preserves original syntax (no change)
+- CLI `--syntax` option defaults to preserving original
+- Backward compatible, no surprises for existing users
+
+**Option B: Change default to comment syntax (future consideration)**
+- `detectSyntaxStyle()` could return `'html-comment'` for ambiguous documents
+- New forms created by tools could default to comment syntax
+- Breaking change for tooling that expects Markdoc output
+- Defer to future version if needed
+
+#### 5.5 File Inventory
+
+**Files requiring content changes:**
+
+| File | Type | Changes |
+| --- | --- | --- |
+| `README.md` | docs | Reframe intro, update examples |
+| `docs/markform-spec.md` | spec | Major restructure of syntax section, all examples |
+| `docs/markform-reference.md` | docs | Update examples, swap syntax order |
+| `docs/markform-apis.md` | docs | Update any form examples |
+| `examples/simple/*.form.md` (4 files) | examples | Convert to comment syntax |
+| `examples/startup-research/*.form.md` (2 files) | examples | Convert to comment syntax |
+| `examples/movie-research/*.form.md` (3 files) | examples | Convert to comment syntax |
+| `examples/startup-deep-research/*.form.md` (1 file) | examples | Convert to comment syntax |
+| `examples/rejection-test/*.form.md` (2 files) | examples | Convert to comment syntax |
+| `tests/unit/engine/*.test.ts` (select files) | tests | Update primary examples |
+
+**Files NOT requiring changes:**
+- `src/engine/preprocess.ts` - Already handles both syntaxes
+- `src/engine/serialize.ts` - Already outputs both syntaxes
+- `src/engine/parse.ts` - No changes needed
+- Type definitions - No changes needed
+
+#### 5.6 Migration Checklist
+
+**Pre-migration:**
+- [ ] Run all tests to establish baseline: `pnpm test`
+- [ ] Document current test count
+
+**Migration:**
+- [ ] Convert example files (can use CLI: `markform validate <file> --syntax=comments`)
+- [ ] Update documentation
+- [ ] Update test fixtures
+- [ ] Regenerate golden tests
+
+**Post-migration:**
+- [ ] Run all tests: `pnpm test`
+- [ ] Verify test count unchanged (or document new tests)
+- [ ] Run `pnpm precommit`
+- [ ] Manual review: check a few examples render correctly on GitHub
+
+#### 5.7 Rollback Plan
+
+If issues arise:
+- All changes are documentation/example content only
+- Git revert can undo changes
+- Markdoc syntax continues to work (backward compatible)
+- No code changes required for rollback
+
+---
 
 ## Stage 5: Implementation Checklist
 
