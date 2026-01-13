@@ -397,3 +397,154 @@ export function detectSyntaxStyle(input: string): SyntaxStyle {
   // No syntax markers found, default to markdoc
   return 'markdoc';
 }
+
+// =============================================================================
+// Syntax Consistency Validation
+// =============================================================================
+
+/**
+ * A violation found when validating syntax consistency.
+ */
+export interface SyntaxViolation {
+  /** 1-indexed line number where the violation was found */
+  line: number;
+  /** The pattern that violated the expected syntax */
+  pattern: string;
+  /** The syntax style that was found (opposite of expected) */
+  foundSyntax: SyntaxStyle;
+}
+
+/**
+ * Validate that a document uses only the specified syntax style.
+ *
+ * Scans the document for patterns of the "wrong" syntax and returns violations.
+ * Code blocks (fenced and inline) are skipped.
+ *
+ * @param input - The markdown content
+ * @param expectedSyntax - The syntax style that should be used
+ * @returns Array of violations (empty if document is consistent)
+ */
+export function validateSyntaxConsistency(
+  input: string,
+  expectedSyntax: SyntaxStyle,
+): SyntaxViolation[] {
+  const violations: SyntaxViolation[] = [];
+  let state: State = State.NORMAL;
+  let fenceChar = '';
+  let fenceLength = 0;
+  let i = 0;
+  let lineNumber = 1;
+
+  while (i < input.length) {
+    // Track line numbers
+    if (input[i] === '\n') {
+      lineNumber++;
+    }
+
+    switch (state) {
+      case State.NORMAL: {
+        // Check for fenced code block at line start
+        if (isAtLineStart(input, i)) {
+          const fence = matchFenceOpening(input, i);
+          if (fence) {
+            state = State.FENCED_CODE;
+            fenceChar = fence.char;
+            fenceLength = fence.length;
+            // Count newlines in the fence line
+            for (const ch of fence.fullMatch) {
+              if (ch === '\n') lineNumber++;
+            }
+            i += fence.fullMatch.length;
+            continue;
+          }
+        }
+
+        // Check for inline code (skip it entirely)
+        if (input[i] === '`' && !isInLeadingWhitespace(input, i)) {
+          const end = findInlineCodeEnd(input, i);
+          if (end !== -1) {
+            // Count newlines in the inline code
+            for (let j = i; j < end; j++) {
+              if (input[j] === '\n') lineNumber++;
+            }
+            i = end;
+            continue;
+          }
+        }
+
+        // Check for violations based on expected syntax
+        if (expectedSyntax === 'html-comment') {
+          // Looking for Markdoc syntax violations
+          if (input.slice(i, i + 2) === '{%') {
+            // Find the end of this tag to get the pattern
+            const endTag = input.indexOf('%}', i + 2);
+            if (endTag !== -1) {
+              const pattern = input.slice(i, endTag + 2);
+              violations.push({
+                line: lineNumber,
+                pattern,
+                foundSyntax: 'markdoc',
+              });
+            }
+          }
+        } else {
+          // expectedSyntax === 'markdoc'
+          // Looking for HTML comment syntax violations
+          if (input.slice(i, i + 7) === '<!-- f:' || input.slice(i, i + 8) === '<!-- /f:') {
+            const endComment = input.indexOf('-->', i + 4);
+            if (endComment !== -1) {
+              const pattern = input.slice(i, endComment + 3);
+              violations.push({
+                line: lineNumber,
+                pattern,
+                foundSyntax: 'html-comment',
+              });
+            }
+          } else if (input.slice(i, i + 6) === '<!-- #' || input.slice(i, i + 6) === '<!-- .') {
+            const endComment = input.indexOf('-->', i + 4);
+            if (endComment !== -1) {
+              const interior = input.slice(i + 4, endComment).trim();
+              // Only flag if it's actually an annotation (starts with # or . only)
+              if (/^[#.][a-zA-Z_-]/.test(interior)) {
+                const pattern = input.slice(i, endComment + 3);
+                violations.push({
+                  line: lineNumber,
+                  pattern,
+                  foundSyntax: 'html-comment',
+                });
+              }
+            }
+          }
+        }
+
+        i++;
+        break;
+      }
+
+      case State.FENCED_CODE: {
+        // Check for fence close at line start
+        if (isAtLineStart(input, i) && matchFenceClosing(input, i, fenceChar, fenceLength)) {
+          // Find end of closing fence line
+          let endLine = i;
+          while (endLine < input.length && input[endLine] !== '\n') {
+            endLine++;
+          }
+          if (endLine < input.length) {
+            endLine++; // Include newline
+            lineNumber++;
+          }
+          i = endLine;
+          state = State.NORMAL;
+          fenceChar = '';
+          fenceLength = 0;
+          continue;
+        }
+
+        i++;
+        break;
+      }
+    }
+  }
+
+  return violations;
+}

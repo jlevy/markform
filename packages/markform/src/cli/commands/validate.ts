@@ -16,8 +16,48 @@ import pc from 'picocolors';
 
 import { inspect } from '../../engine/inspect.js';
 import { parseForm } from '../../engine/parse.js';
-import type { InspectIssue, ProgressState } from '../../engine/coreTypes.js';
-import { formatOutput, getCommandContext, logError, logVerbose, readFile } from '../lib/shared.js';
+import { validateSyntaxConsistency, type SyntaxViolation } from '../../engine/preprocess.js';
+import type { InspectIssue, ProgressState, SyntaxStyle } from '../../engine/coreTypes.js';
+import {
+  formatOutput,
+  getCommandContext,
+  logError,
+  logVerbose,
+  readFile,
+  shouldUseColors,
+} from '../lib/shared.js';
+
+/** Map CLI option values to internal SyntaxStyle */
+type SyntaxOption = 'comments' | 'tags';
+
+function syntaxOptionToStyle(option: SyntaxOption): SyntaxStyle {
+  return option === 'comments' ? 'html-comment' : 'markdoc';
+}
+
+/**
+ * Format syntax violations for console output.
+ */
+function formatSyntaxViolations(
+  violations: SyntaxViolation[],
+  expectedSyntax: SyntaxOption,
+  useColors: boolean,
+): string {
+  const lines: string[] = [];
+  const red = useColors ? pc.red : (s: string) => s;
+  const bold = useColors ? pc.bold : (s: string) => s;
+  const dim = useColors ? pc.dim : (s: string) => s;
+
+  lines.push(red(bold(`Syntax violations found (expected: ${expectedSyntax}):`)));
+  lines.push('');
+
+  for (const v of violations) {
+    const syntaxName = v.foundSyntax === 'markdoc' ? 'Markdoc tag' : 'HTML comment';
+    lines.push(`  Line ${v.line}: ${syntaxName} found`);
+    lines.push(`    ${dim(v.pattern.length > 60 ? v.pattern.slice(0, 60) + '...' : v.pattern)}`);
+  }
+
+  return lines.join('\n');
+}
 
 /**
  * Format state badge for console output.
@@ -163,6 +203,11 @@ function formatConsoleReport(report: ValidateReport, useColors: boolean): string
   return lines.join('\n');
 }
 
+/** Options for validate command */
+interface ValidateOptions {
+  syntax?: SyntaxOption;
+}
+
 /**
  * Register the validate command.
  */
@@ -170,12 +215,54 @@ export function registerValidateCommand(program: Command): void {
   program
     .command('validate <file>')
     .description('Validate a form and display summary and issues (no form content)')
-    .action(async (file: string, _options: Record<string, unknown>, cmd: Command) => {
+    .option(
+      '--syntax <style>',
+      'Enforce syntax style (comments or tags). Fails if file uses the other syntax.',
+      (value: string) => {
+        if (value !== 'comments' && value !== 'tags') {
+          throw new Error(`Invalid syntax value: ${value}. Must be 'comments' or 'tags'.`);
+        }
+        return value as SyntaxOption;
+      },
+    )
+    .action(async (file: string, options: ValidateOptions, cmd: Command) => {
       const ctx = getCommandContext(cmd);
 
       try {
         logVerbose(ctx, `Reading file: ${file}`);
         const content = await readFile(file);
+
+        // If --syntax is specified, validate syntax consistency first
+        if (options.syntax) {
+          logVerbose(ctx, `Checking syntax consistency (expected: ${options.syntax})...`);
+          const expectedStyle = syntaxOptionToStyle(options.syntax);
+          const violations = validateSyntaxConsistency(content, expectedStyle);
+
+          if (violations.length > 0) {
+            const useColors = shouldUseColors(ctx);
+            if (ctx.format === 'json') {
+              console.log(
+                JSON.stringify(
+                  {
+                    error: 'syntax_violation',
+                    expected: options.syntax,
+                    violations: violations.map((v) => ({
+                      line: v.line,
+                      pattern: v.pattern,
+                      foundSyntax: v.foundSyntax,
+                    })),
+                  },
+                  null,
+                  2,
+                ),
+              );
+            } else {
+              console.error(formatSyntaxViolations(violations, options.syntax, useColors));
+            }
+            process.exit(1);
+          }
+          logVerbose(ctx, 'Syntax consistency check passed.');
+        }
 
         logVerbose(ctx, 'Parsing form...');
         const form = parseForm(content);

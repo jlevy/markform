@@ -340,3 +340,71 @@ Markform provides TypeScript APIs for parsing, validating, and manipulating form
 programmatically.
 ? 0
 ```
+
+---
+
+## Validate Command --syntax Option
+
+# Test: validate --syntax=comments passes for comment syntax file
+
+```console
+$ $CLI validate examples/simple/simple-comment-syntax.form.md --syntax=comments
+Form Validation Report
+Title: Simple Test Form
+
+Form State: ◌ empty
+...
+? 0
+```
+
+# Test: validate --syntax=tags passes for Markdoc syntax file
+
+```console
+$ $CLI validate examples/simple/simple.form.md --syntax=tags
+Form Validation Report
+Title: Simple Test Form
+
+Form State: ◌ empty
+...
+? 0
+```
+
+# Test: validate --syntax=comments fails for Markdoc syntax file
+
+```console
+$ $CLI validate examples/simple/simple.form.md --syntax=comments
+Syntax violations found (expected: comments):
+
+  Line 13: Markdoc tag found
+...
+? 1
+```
+
+# Test: validate --syntax=tags fails for comment syntax file
+
+```console
+$ $CLI validate examples/simple/simple-comment-syntax.form.md --syntax=tags
+Syntax violations found (expected: tags):
+
+  Line 13: HTML comment found
+...
+? 1
+```
+
+# Test: validate --syntax with invalid value shows error
+
+```console
+$ $CLI validate examples/simple/simple.form.md --syntax=invalid 2>&1 | head -1
+Fatal error: Error: Invalid syntax value: invalid. Must be 'comments' or 'tags'.
+? 0
+```
+
+# Test: validate --syntax=comments with --format json outputs violations
+
+```console
+$ $CLI validate examples/simple/simple.form.md --syntax=comments --format json 2>&1 | grep -A2 '"error"'
+  "error": "syntax_violation",
+  "expected": "comments",
+  "violations": [
+? 0
+```

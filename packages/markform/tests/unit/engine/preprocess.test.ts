@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { detectSyntaxStyle, preprocessCommentSyntax } from '../../../src/engine/preprocess.js';
+import {
+  detectSyntaxStyle,
+  preprocessCommentSyntax,
+  validateSyntaxConsistency,
+} from '../../../src/engine/preprocess.js';
 
 describe('engine/preprocess', () => {
   describe('preprocessCommentSyntax', () => {
@@ -355,6 +359,181 @@ markform:
 No real tags here.`;
 
         expect(detectSyntaxStyle(input)).toBe('markdoc');
+      });
+    });
+  });
+
+  describe('validateSyntaxConsistency', () => {
+    describe('when expecting html-comment syntax', () => {
+      it('returns empty array for pure comment syntax', () => {
+        const input = `<!-- f:form id="test" -->
+<!-- f:field kind="string" id="name" --><!-- /f:field -->
+<!-- /f:form -->`;
+
+        const violations = validateSyntaxConsistency(input, 'html-comment');
+        expect(violations).toEqual([]);
+      });
+
+      it('returns violations for Markdoc tags', () => {
+        const input = `<!-- f:form id="test" -->
+{% field kind="string" id="name" %}{% /field %}
+<!-- /f:form -->`;
+
+        const violations = validateSyntaxConsistency(input, 'html-comment');
+        expect(violations).toHaveLength(2);
+        expect(violations[0]).toMatchObject({
+          line: 2,
+          foundSyntax: 'markdoc',
+        });
+        expect(violations[0]!.pattern).toContain('{% field');
+      });
+
+      it('returns violation with correct line number', () => {
+        const input = `Line 1
+Line 2
+{% form %}
+Line 4`;
+
+        const violations = validateSyntaxConsistency(input, 'html-comment');
+        expect(violations).toHaveLength(1);
+        expect(violations[0]!.line).toBe(3);
+      });
+
+      it('ignores Markdoc syntax inside code blocks', () => {
+        const input = `<!-- f:form -->
+\`\`\`
+{% field %}
+\`\`\`
+<!-- /f:form -->`;
+
+        const violations = validateSyntaxConsistency(input, 'html-comment');
+        expect(violations).toEqual([]);
+      });
+
+      it('ignores Markdoc syntax inside inline code', () => {
+        const input = `<!-- f:form -->
+Use \`{% field %}\` to create fields.
+<!-- /f:form -->`;
+
+        const violations = validateSyntaxConsistency(input, 'html-comment');
+        expect(violations).toEqual([]);
+      });
+    });
+
+    describe('when expecting markdoc syntax', () => {
+      it('returns empty array for pure Markdoc syntax', () => {
+        const input = `{% form id="test" %}
+{% field kind="string" id="name" %}{% /field %}
+{% /form %}`;
+
+        const violations = validateSyntaxConsistency(input, 'markdoc');
+        expect(violations).toEqual([]);
+      });
+
+      it('returns violations for f: comment tags', () => {
+        const input = `{% form id="test" %}
+<!-- f:field kind="string" id="name" --><!-- /f:field -->
+{% /form %}`;
+
+        const violations = validateSyntaxConsistency(input, 'markdoc');
+        expect(violations).toHaveLength(2);
+        expect(violations[0]).toMatchObject({
+          line: 2,
+          foundSyntax: 'html-comment',
+        });
+        expect(violations[0]!.pattern).toContain('<!-- f:field');
+      });
+
+      it('returns violations for #id annotations', () => {
+        const input = `{% form %}
+- [ ] Option <!-- #opt -->
+{% /form %}`;
+
+        const violations = validateSyntaxConsistency(input, 'markdoc');
+        expect(violations).toHaveLength(1);
+        expect(violations[0]).toMatchObject({
+          line: 2,
+          pattern: '<!-- #opt -->',
+          foundSyntax: 'html-comment',
+        });
+      });
+
+      it('returns violations for .class annotations', () => {
+        const input = `{% form %}
+- [ ] Option <!-- .highlight -->
+{% /form %}`;
+
+        const violations = validateSyntaxConsistency(input, 'markdoc');
+        expect(violations).toHaveLength(1);
+        expect(violations[0]!.pattern).toBe('<!-- .highlight -->');
+      });
+
+      it('does not flag regular HTML comments', () => {
+        const input = `{% form %}
+<!-- This is a regular comment -->
+{% /form %}`;
+
+        const violations = validateSyntaxConsistency(input, 'markdoc');
+        expect(violations).toEqual([]);
+      });
+
+      it('ignores comment syntax inside code blocks', () => {
+        const input = `{% form %}
+\`\`\`
+<!-- f:field -->
+<!-- #id -->
+\`\`\`
+{% /form %}`;
+
+        const violations = validateSyntaxConsistency(input, 'markdoc');
+        expect(violations).toEqual([]);
+      });
+    });
+
+    describe('edge cases', () => {
+      it('handles empty input', () => {
+        expect(validateSyntaxConsistency('', 'html-comment')).toEqual([]);
+        expect(validateSyntaxConsistency('', 'markdoc')).toEqual([]);
+      });
+
+      it('handles multiple violations on same line', () => {
+        const input = '{% form %}{% field %}{% /field %}{% /form %}';
+        const violations = validateSyntaxConsistency(input, 'html-comment');
+
+        expect(violations.length).toBeGreaterThanOrEqual(4);
+        // All should be on line 1
+        for (const v of violations) {
+          expect(v.line).toBe(1);
+        }
+      });
+
+      it('handles mixed syntax document', () => {
+        const input = `<!-- f:form -->
+{% field %}
+<!-- #id -->
+{% /field %}
+<!-- /f:form -->`;
+
+        // When expecting comments, find markdoc violations
+        const commentViolations = validateSyntaxConsistency(input, 'html-comment');
+        expect(commentViolations.length).toBe(2);
+        expect(commentViolations.every((v) => v.foundSyntax === 'markdoc')).toBe(true);
+
+        // When expecting markdoc, find comment violations
+        const markdocViolations = validateSyntaxConsistency(input, 'markdoc');
+        expect(markdocViolations.length).toBe(3);
+        expect(markdocViolations.every((v) => v.foundSyntax === 'html-comment')).toBe(true);
+      });
+
+      it('truncates long patterns in violation', () => {
+        const longTag =
+          '{% field kind="string" id="very-long-identifier" label="A very long label" %}';
+        const input = `<!-- f:form -->\n${longTag}`;
+
+        const violations = validateSyntaxConsistency(input, 'html-comment');
+        expect(violations).toHaveLength(1);
+        // Pattern should be captured (may be long)
+        expect(violations[0]!.pattern).toBe(longTag);
       });
     });
   });

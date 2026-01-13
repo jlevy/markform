@@ -6,8 +6,15 @@ This technical design document defines the implementation of HTML comment syntax
 (`<!-- f:tag -->`) as the primary syntax for Markform. With this syntax, **Markform
 files are completely valid Markdown** with form structure defined in readable HTML
 comments. This enables forms to render cleanly on GitHub and in any Markdown editor,
-while the legacy Markdoc tag syntax (`{% ... %}`) remains fully supported for backward
-compatibility.
+while the Markdoc tag syntax (`{% ... %}`) remains fully supported as a secondary option.
+
+**Dual Syntax Model:**
+
+Markform supports both syntaxes through a **preprocessing step**: comment syntax is
+transformed to Markdoc syntax before parsing, and optionally back during serialization.
+Both syntaxes are always supported—no configuration required. However, **users are
+encouraged to use only one syntax per file**, with HTML comment syntax recommended as
+the default for new forms.
 
 ## Background
 
@@ -80,8 +87,10 @@ comment syntax with no configuration required:
 - **File formats**: SUPPORT BOTH
   - Existing `.form.md` files with Markdoc syntax continue working unchanged
   - New files can use either syntax
-  - Mixed syntax within a file is supported (not recommended)
+  - Mixed syntax within a file is supported but **not recommended**
+  - Users are encouraged to use only one syntax per file
   - Round-trip: files preserve their original syntax by default
+  - CLI `--syntax` option enables strict single-syntax enforcement
 
 - **Database schemas**: N/A
   - No database component affected
@@ -123,7 +132,7 @@ comment syntax with no configuration required:
 | Serialization | Output in detected syntax | Force syntax via config flag |
 | Specification | Document comment syntax as primary | Remove Markdoc syntax support |
 | Examples | Convert all examples to comment syntax | N/A |
-| CLI | Optional `--syntax` output option | Separate convert command |
+| CLI | `--syntax` option for strict validation + output | Separate convert command |
 | Tests | Unit + integration tests, both syntaxes | Performance benchmarks |
 | README | Update intro, de-emphasize Markdoc | Remove Markdoc mentions entirely |
 
@@ -312,34 +321,61 @@ Update specification and reference documentation.
 - [ ] Update `packages/markform/examples/simple/simple.form.md`:
   - [ ] Create comment-syntax variant for comparison
 
-### Phase 4: CLI Syntax Output Option (Optional)
+### Phase 4: CLI Syntax Option (Optional)
 
-Add `--syntax` option to output commands for format conversion.
+Add `--syntax` option to validate command for syntax enforcement and format conversion.
 
 **Design:**
 
-Instead of a separate `convert` command, add `--syntax` option to existing commands.
-To convert a file, simply validate it and output with a different syntax:
+The `--syntax` option serves two purposes:
+1. **Strict validation**: When provided, validate enforces that the input file uses ONLY
+   the specified syntax. Mixed syntax or the wrong syntax causes validation to fail.
+2. **Format conversion**: When outputting, serializes in the specified syntax.
 
 ```bash
-# Convert Markdoc → comments
+# Strict validation (fails if file contains Markdoc syntax)
 markform validate myform.form.md --syntax=comments
 
-# Convert comments → Markdoc
+# Strict validation (fails if file contains comment syntax)
 markform validate myform.form.md --syntax=tags
 
-# Preserve original (default behavior)
+# Permissive validation (accepts either/both syntaxes, default)
 markform validate myform.form.md
+
+# Convert Markdoc → comments (strict input, comment output)
+markform validate myform.form.md --syntax=comments --output=converted.form.md
 ```
+
+**Strict Mode Behavior:**
+
+When `--syntax` is specified:
+- Scan the document for syntax patterns (excluding code blocks)
+- If `--syntax=comments`: fail if any `{% ... %}` patterns found
+- If `--syntax=tags`: fail if any `<!-- f:... -->` or `<!-- #... -->` patterns found
+- Error message should identify the line/pattern that violates the syntax constraint
+
+**Rationale:**
+
+While Markform accepts both syntaxes, **consistent syntax within a file** improves
+readability and maintainability. The `--syntax` option enables:
+- CI/linting enforcement of syntax consistency
+- Style guide compliance checking
+- Deliberate format migration with validation
 
 **Tasks:**
 
 - [ ] Update `src/cli/commands/validate.ts`:
   - [ ] Add `--syntax` option with values `'comments'` | `'tags'`
+  - [ ] Implement strict syntax validation when option provided
   - [ ] Pass syntax style to `serializeForm()` when outputting
-  - [ ] Default: preserve original syntax (no option needed)
+  - [ ] Default (no option): permissive, preserve original syntax
 
-- [ ] Add tryscript test for `--syntax` option
+- [ ] Add `validateSyntaxConsistency()` helper function:
+  - [ ] Scan for patterns of the "wrong" syntax
+  - [ ] Return line numbers and patterns found
+  - [ ] Skip fenced code blocks and inline code spans
+
+- [ ] Add tryscript test for `--syntax` option (both success and failure cases)
 
 ### Testing Strategy
 
