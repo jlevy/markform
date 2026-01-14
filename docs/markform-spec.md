@@ -1060,21 +1060,45 @@ Then configure:
 Here the serializer chose tildes (`~~~`) because the content contains backticks. The
 content includes multiple fenced code blocks that are preserved exactly as authored.
 
-#### Alternative Tag Syntax (HTML Comments)
+#### Syntax Styles
 
-Markform supports an alternative **HTML comment syntax** in addition to standard Markdoc
-tags. This enables forms to render cleanly on GitHub and standard Markdown editors,
-where Markdoc tags would otherwise display as visible text.
+Markform supports two syntax styles for structural tags. Both are **always supported**
+with no configuration needed—implementations MUST accept either as input.
+
+**Comment syntax** (primary, recommended) uses HTML comments with the `f:` namespace:
+
+```md
+<!-- f:form id="survey" -->
+<!-- f:field kind="string" id="name" label="Name" -->
+<!-- /f:field -->
+<!-- /f:form -->
+```
+
+**Tag syntax** (alternative) uses standard Markdoc tag notation:
+
+```md
+{% form id="survey" %}
+{% field kind="string" id="name" label="Name" %}
+{% /field %}
+{% /form %}
+```
+
+**Why prefer comment syntax?**
+
+- Forms render cleanly on GitHub and standard Markdown editors (comments are hidden)
+- Only the content (checkboxes, text) is visible to readers
+- The `f:` prefix follows the WordPress Gutenberg pattern (e.g., `wp:`) for semantic
+  namespacing
 
 **Syntax mapping:**
 
-| Markdoc Form | HTML Comment Form | Notes |
+| Comment Syntax | Tag Syntax | Notes |
 | --- | --- | --- |
-| `{% tag attr="val" %}` | `<!-- f:tag attr="val" -->` | Tags use `f:` prefix |
-| `{% /tag %}` | `<!-- /f:tag -->` | Closing: slash before prefix |
-| `{% tag /%}` | `<!-- f:tag /-->` | Self-closing: `/` before `-->` |
-| `{% #id %}` | `<!-- #id -->` | Annotations: no prefix needed |
-| `{% .class %}` | `<!-- .class -->` | Annotations: naturally distinctive |
+| `<!-- f:tag attr="val" -->` | `{% tag attr="val" %}` | Tags use `f:` prefix |
+| `<!-- /f:tag -->` | `{% /tag %}` | Closing: slash before prefix |
+| `<!-- f:tag /-->` | `{% tag /%}` | Self-closing: `/` before `-->` |
+| `<!-- #id -->` | `{% #id %}` | Annotations: no prefix needed |
+| `<!-- .class -->` | `{% .class %}` | Annotations: naturally distinctive |
 
 **Behavioral rules:**
 
@@ -1084,19 +1108,17 @@ where Markdoc tags would otherwise display as visible text.
 
 - *recommended:* Round-trip serialization SHOULD preserve the original syntax style
 
-- *recommended:* The `f:` prefix follows the WordPress Gutenberg pattern (e.g., `wp:`)
-  for semantic namespacing
+- *recommended:* Use only one syntax per file for consistency
 
 **Syntax detection:**
 
-- A document using `<!-- f:...` or `<!-- #...` patterns is detected as `html-comment`
-  style
+- A document using `<!-- f:...` or `<!-- #...` patterns is detected as `comments` style
 
-- A document using `{%...%}` patterns is detected as `markdoc` style
+- A document using `{%...%}` patterns is detected as `tags` style
 
 - Mixed syntax within a document is supported but not recommended
 
-**Example (HTML comment syntax):**
+**Example (comment syntax):**
 
 ```md
 ---
@@ -1122,7 +1144,7 @@ On GitHub, all `<!-- ... -->` comments are hidden, leaving only the visible cont
 - [ ] Fair
 
 **Constraint:** Values containing the literal string `-->` require escaping or should
-use the Markdoc syntax to avoid prematurely closing the comment.
+use the tag syntax to avoid prematurely closing the comment.
 
 * * *
 
