@@ -321,7 +321,7 @@ export function preprocessCommentSyntax(input: string): string {
  * Code blocks (fenced and inline) are skipped to avoid false positives from examples.
  *
  * @param input - The markdown content
- * @returns The detected syntax style, defaults to 'markdoc' if ambiguous
+ * @returns The detected syntax style, defaults to 'tags' if ambiguous
  */
 export function detectSyntaxStyle(input: string): SyntaxStyle {
   let state: State = State.NORMAL;
@@ -355,15 +355,15 @@ export function detectSyntaxStyle(input: string): SyntaxStyle {
 
         // Check for HTML comment patterns
         if (input.slice(i, i + 7) === '<!-- f:' || input.slice(i, i + 8) === '<!-- /f:') {
-          return 'html-comment';
+          return 'comments';
         }
         if (input.slice(i, i + 6) === '<!-- #' || input.slice(i, i + 6) === '<!-- .') {
-          return 'html-comment';
+          return 'comments';
         }
 
         // Check for Markdoc pattern
         if (input.slice(i, i + 2) === '{%') {
-          return 'markdoc';
+          return 'tags';
         }
 
         i++;
@@ -394,8 +394,8 @@ export function detectSyntaxStyle(input: string): SyntaxStyle {
     }
   }
 
-  // No syntax markers found, default to markdoc
-  return 'markdoc';
+  // No syntax markers found, default to tags
+  return 'tags';
 }
 
 // =============================================================================
@@ -473,7 +473,7 @@ export function validateSyntaxConsistency(
         }
 
         // Check for violations based on expected syntax
-        if (expectedSyntax === 'html-comment') {
+        if (expectedSyntax === 'comments') {
           // Looking for Markdoc syntax violations
           if (input.slice(i, i + 2) === '{%') {
             // Find the end of this tag to get the pattern
@@ -483,12 +483,12 @@ export function validateSyntaxConsistency(
               violations.push({
                 line: lineNumber,
                 pattern,
-                foundSyntax: 'markdoc',
+                foundSyntax: 'tags',
               });
             }
           }
         } else {
-          // expectedSyntax === 'markdoc'
+          // expectedSyntax === 'tags'
           // Looking for HTML comment syntax violations
           if (input.slice(i, i + 7) === '<!-- f:' || input.slice(i, i + 8) === '<!-- /f:') {
             const endComment = input.indexOf('-->', i + 4);
@@ -497,7 +497,7 @@ export function validateSyntaxConsistency(
               violations.push({
                 line: lineNumber,
                 pattern,
-                foundSyntax: 'html-comment',
+                foundSyntax: 'comments',
               });
             }
           } else if (input.slice(i, i + 6) === '<!-- #' || input.slice(i, i + 6) === '<!-- .') {
@@ -510,7 +510,7 @@ export function validateSyntaxConsistency(
                 violations.push({
                   line: lineNumber,
                   pattern,
-                  foundSyntax: 'html-comment',
+                  foundSyntax: 'comments',
                 });
               }
             }

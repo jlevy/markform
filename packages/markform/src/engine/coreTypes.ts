@@ -497,10 +497,10 @@ export interface IdIndexEntry {
 
 /**
  * The syntax style used in a Markform document.
- * - 'markdoc': Traditional Markdoc Jinja-style syntax (`{% tag %}`)
- * - 'html-comment': HTML comment syntax with f: namespace (`<!-- f:tag -->`)
+ * - 'comments': HTML comment syntax with f: namespace (`<!-- f:tag -->`) - primary/default
+ * - 'tags': Traditional Markdoc Jinja-style syntax (`{% tag %}`)
  */
-export type SyntaxStyle = 'markdoc' | 'html-comment';
+export type SyntaxStyle = 'comments' | 'tags';
 
 /** Canonical internal representation returned by parseForm() */
 export interface ParsedForm {

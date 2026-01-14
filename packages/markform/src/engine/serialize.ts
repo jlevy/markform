@@ -333,10 +333,10 @@ export interface SerializeOptions {
   specVersion?: string;
   /**
    * Syntax style to use for output.
-   * - 'markdoc': Use Markdoc syntax ({% tag %})
-   * - 'html-comment': Use HTML comment syntax (<!-- f:tag -->)
+   * - 'comments': Use HTML comment syntax (<!-- f:tag -->) - primary/default
+   * - 'tags': Use Markdoc syntax ({% tag %})
    * If not specified, uses the form's detected syntax style (form.syntaxStyle),
-   * defaulting to 'markdoc' if not detected.
+   * defaulting to 'tags' if not detected.
    */
   syntaxStyle?: SyntaxStyle;
 }
@@ -1448,11 +1448,11 @@ export function serializeForm(form: ParsedForm, opts?: SerializeOptions): string
   // Determine output syntax style:
   // 1. Use explicit option if provided
   // 2. Fall back to form's detected syntax style
-  // 3. Default to 'markdoc'
-  const syntaxStyle = opts?.syntaxStyle ?? form.syntaxStyle ?? 'markdoc';
+  // 3. Default to 'tags'
+  const syntaxStyle = opts?.syntaxStyle ?? form.syntaxStyle ?? 'tags';
 
   // Transform to HTML comment syntax if requested
-  if (syntaxStyle === 'html-comment') {
+  if (syntaxStyle === 'comments') {
     result = postprocessToCommentSyntax(result);
   }
 

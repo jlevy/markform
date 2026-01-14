@@ -17,7 +17,7 @@ import pc from 'picocolors';
 import { inspect } from '../../engine/inspect.js';
 import { parseForm } from '../../engine/parse.js';
 import { validateSyntaxConsistency, type SyntaxViolation } from '../../engine/preprocess.js';
-import type { InspectIssue, ProgressState, SyntaxStyle } from '../../engine/coreTypes.js';
+import type { InspectIssue, ProgressState } from '../../engine/coreTypes.js';
 import {
   formatOutput,
   getCommandContext,
@@ -27,12 +27,8 @@ import {
   shouldUseColors,
 } from '../lib/shared.js';
 
-/** Map CLI option values to internal SyntaxStyle */
+/** CLI syntax option type - matches SyntaxStyle */
 type SyntaxOption = 'comments' | 'tags';
-
-function syntaxOptionToStyle(option: SyntaxOption): SyntaxStyle {
-  return option === 'comments' ? 'html-comment' : 'markdoc';
-}
 
 /**
  * Format syntax violations for console output.
@@ -51,7 +47,7 @@ function formatSyntaxViolations(
   lines.push('');
 
   for (const v of violations) {
-    const syntaxName = v.foundSyntax === 'markdoc' ? 'Markdoc tag' : 'HTML comment';
+    const syntaxName = v.foundSyntax === 'tags' ? 'Markdoc tag' : 'HTML comment';
     lines.push(`  Line ${v.line}: ${syntaxName} found`);
     lines.push(`    ${dim(v.pattern.length > 60 ? v.pattern.slice(0, 60) + '...' : v.pattern)}`);
   }
@@ -235,8 +231,7 @@ export function registerValidateCommand(program: Command): void {
         // If --syntax is specified, validate syntax consistency first
         if (options.syntax) {
           logVerbose(ctx, `Checking syntax consistency (expected: ${options.syntax})...`);
-          const expectedStyle = syntaxOptionToStyle(options.syntax);
-          const violations = validateSyntaxConsistency(content, expectedStyle);
+          const violations = validateSyntaxConsistency(content, options.syntax);
 
           if (violations.length > 0) {
             const useColors = shouldUseColors(ctx);

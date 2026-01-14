@@ -23,7 +23,7 @@ markform:
       expect(group.id).toBe('basics');
       expect(group.children).toHaveLength(1);
       expect(group.children[0]!.id).toBe('name');
-      expect(parsed.syntaxStyle).toBe('html-comment');
+      expect(parsed.syntaxStyle).toBe('comments');
     });
 
     it('parses form with Markdoc syntax', () => {
@@ -40,7 +40,7 @@ markform:
       const parsed = parseForm(markdown);
 
       expect(parsed.schema.id).toBe('test');
-      expect(parsed.syntaxStyle).toBe('markdoc');
+      expect(parsed.syntaxStyle).toBe('tags');
     });
 
     it('parses single_select with #id annotations', () => {
@@ -70,7 +70,7 @@ markform:
         expect(field.options[1]!.id).toBe('good');
         expect(field.options[2]!.id).toBe('fair');
       }
-      expect(parsed.syntaxStyle).toBe('html-comment');
+      expect(parsed.syntaxStyle).toBe('comments');
     });
 
     it('parses checkboxes with .class annotations', () => {
@@ -145,8 +145,8 @@ markform:
       expect(commentParsed.orderIndex).toEqual(markdocParsed.orderIndex);
 
       // Only syntaxStyle should differ
-      expect(markdocParsed.syntaxStyle).toBe('markdoc');
-      expect(commentParsed.syntaxStyle).toBe('html-comment');
+      expect(markdocParsed.syntaxStyle).toBe('tags');
+      expect(commentParsed.syntaxStyle).toBe('comments');
     });
   });
 
@@ -188,7 +188,7 @@ markform:
 
       expect(parsed.schema.id).toBe('complete');
       expect(group.children).toHaveLength(8);
-      expect(parsed.syntaxStyle).toBe('html-comment');
+      expect(parsed.syntaxStyle).toBe('comments');
 
       // Verify field kinds
       const children = group.children;
@@ -282,7 +282,7 @@ markform:
       const parsed = parseForm(markdown);
 
       expect(parsed.schema.id).toBe('mixed');
-      expect(parsed.syntaxStyle).toBe('html-comment');
+      expect(parsed.syntaxStyle).toBe('comments');
     });
 
     it('preserves code block content with comment-like text', () => {

@@ -137,7 +137,7 @@ markform:
 <!-- /f:form -->`;
 
       const parsed = parseForm(markdown);
-      expect(parsed.syntaxStyle).toBe('html-comment');
+      expect(parsed.syntaxStyle).toBe('comments');
 
       const serialized = serializeForm(parsed);
 
@@ -165,7 +165,7 @@ markform:
 {% /form %}`;
 
       const parsed = parseForm(markdown);
-      expect(parsed.syntaxStyle).toBe('markdoc');
+      expect(parsed.syntaxStyle).toBe('tags');
 
       const serialized = serializeForm(parsed);
 
@@ -193,9 +193,9 @@ markform:
 {% /form %}`;
 
       const parsed = parseForm(markdown);
-      expect(parsed.syntaxStyle).toBe('markdoc');
+      expect(parsed.syntaxStyle).toBe('tags');
 
-      const serialized = serializeForm(parsed, { syntaxStyle: 'html-comment' });
+      const serialized = serializeForm(parsed, { syntaxStyle: 'comments' });
 
       // Should contain HTML comment syntax (overridden)
       expect(serialized).toContain('<!-- f:form');
@@ -215,9 +215,9 @@ markform:
 <!-- /f:form -->`;
 
       const parsed = parseForm(markdown);
-      expect(parsed.syntaxStyle).toBe('html-comment');
+      expect(parsed.syntaxStyle).toBe('comments');
 
-      const serialized = serializeForm(parsed, { syntaxStyle: 'markdoc' });
+      const serialized = serializeForm(parsed, { syntaxStyle: 'tags' });
 
       // Should contain Markdoc syntax (overridden)
       expect(serialized).toContain('{% form');
@@ -257,7 +257,7 @@ markform:
       // Round-trip should produce parseable form
       const reparsed = parseForm(serialized);
       expect(reparsed.schema.id).toBe('roundtrip');
-      expect(reparsed.syntaxStyle).toBe('html-comment');
+      expect(reparsed.syntaxStyle).toBe('comments');
     });
 
     it('preserves Markdoc syntax through parse -> serialize cycle', () => {
@@ -290,7 +290,7 @@ markform:
       // Round-trip should produce parseable form
       const reparsed = parseForm(serialized);
       expect(reparsed.schema.id).toBe('roundtrip');
-      expect(reparsed.syntaxStyle).toBe('markdoc');
+      expect(reparsed.syntaxStyle).toBe('tags');
     });
 
     it('round-trip produces equivalent schemas', () => {
@@ -352,7 +352,7 @@ markform:
       // Verify round-trip preserves structure
       const reparsed = parseForm(serialized);
       expect(reparsed.schema.groups[0]!.children).toHaveLength(7);
-      expect(reparsed.syntaxStyle).toBe('html-comment');
+      expect(reparsed.syntaxStyle).toBe('comments');
 
       // Verify comment syntax preserved
       expect(serialized).toContain('<!-- f:field kind="string"');

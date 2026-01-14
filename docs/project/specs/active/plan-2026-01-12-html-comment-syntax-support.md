@@ -199,8 +199,8 @@ comment syntax with no configuration required:
 2. **`detectSyntaxStyle(markdown: string): SyntaxStyle`**
    - Scan for first `<!-- f:` or `<!-- #` or `<!-- .` pattern (comment syntax)
    - Scan for first `{%` pattern (markdoc syntax)
-   - Return `'html-comment'` or `'markdoc'`
-   - Default to `'markdoc'` for empty/ambiguous documents
+   - Return `'comments'` or `'tags'`
+   - Default to `'tags'` for empty/ambiguous documents
 
 3. **Updated `parseForm()`**
    - Call `preprocessCommentSyntax()` before `Markdoc.parse()`
@@ -488,13 +488,13 @@ Convert all example `.form.md` files to use HTML comment syntax as primary:
 Consider whether to change default behaviors:
 
 **Option A: Preserve current defaults (recommended for Phase 5)**
-- `detectSyntaxStyle()` returns `'markdoc'` for ambiguous documents
+- `detectSyntaxStyle()` returns `'tags'` for ambiguous documents
 - `serializeForm()` preserves original syntax (no change)
 - CLI `--syntax` option defaults to preserving original
 - Backward compatible, no surprises for existing users
 
 **Option B: Change default to comment syntax (future consideration)**
-- `detectSyntaxStyle()` could return `'html-comment'` for ambiguous documents
+- `detectSyntaxStyle()` could return `'comments'` for ambiguous documents
 - New forms created by tools could default to comment syntax
 - Breaking change for tooling that expects Markdoc output
 - Defer to future version if needed
