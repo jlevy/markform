@@ -92,32 +92,69 @@ When a tag contains a list, Flowmark moves the closing tag onto the same line as
 
 ---
 
-## Issue 3: Tags Wrapped Across Lines
+## Issue 3: Same-Line Tag Pairs Broken by Wrapping
 
 ### Problem
-Long tags with many attributes get wrapped mid-tag, breaking the tag syntax.
+PR #10 correctly keeps individual tags atomic, but when two tags appear on the same line
+(common for empty/self-closing fields), line wrapping can break the second tag.
+
+**Note:** Individual tags on their own lines ARE preserved correctly in v0.6.0.
 
 ### Before (correct)
 ```markdown
-{% field kind="string" id="email" label="Email" required=true pattern="^[^@]+@[^@]+\.[^@]+$" %}{% /field %}
+{% field kind="string" id="email" label="Email" required=true placeholder="email" %}{% /field %}
 ```
 
 ### After Flowmark (broken)
 ```markdown
-{% field kind="string" id="email" label="Email" required=true pattern="^[^@]+@[^@]+.[^@]+$" %}{%
+{% field kind="string" id="email" label="Email" required=true placeholder="email" %}{%
 /field %}
 ```
 
 ### HTML comment variant (also broken)
 ```markdown
-<!-- f:field kind="string" id="email" ... --><!--
+<!-- Before -->
+<!-- f:field kind="string" id="email" label="Email" required=true placeholder="email" --><!-- /f:field -->
+
+<!-- After -->
+<!-- f:field kind="string" id="email" label="Email" required=true placeholder="email" --><!--
 /f:field -->
 ```
 
+### Workaround
+Put closing tags on separate lines:
+```markdown
+{% field kind="string" id="email" label="Email" required=true placeholder="email" %}
+{% /field %}
+```
+This is preserved correctly in v0.6.0.
+
 ### Impact
-- Tag syntax is invalid (newline inside `{% %}` or `<!-- -->`)
-- Parser cannot recognize the closing tag
-- Backslash in regex pattern `\.` was incorrectly simplified to `.`
+- Second tag in same-line pairs gets broken
+- Common Markform pattern `{% field %}{% /field %}` for empty fields is affected
+- Parser cannot recognize the split closing tag
+
+---
+
+## Issue 3a: Backslash Escapes Stripped from Attribute Values
+
+### Problem
+Backslash characters in attribute values (e.g., regex patterns) are being removed.
+
+### Before (correct)
+```markdown
+pattern="^[^@]+@[^@]+\.[^@]+$"
+```
+
+### After Flowmark (broken)
+```markdown
+pattern="^[^@]+@[^@]+.[^@]+$"
+```
+
+### Impact
+- Regex patterns are corrupted (`\.` → `.` changes meaning)
+- Any escaped characters in attributes are affected
+- Silent data corruption - no error, just wrong output
 
 ---
 
