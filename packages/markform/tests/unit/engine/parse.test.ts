@@ -423,6 +423,173 @@ markform:
     });
   });
 
+  describe('loose list parsing (blank lines between items)', () => {
+    // Loose lists (with blank lines between items) are valid Markdown and should be supported.
+    // Markdoc places ID annotations in different AST locations for tight vs loose lists:
+    // - Tight list: item.attributes.id
+    // - Loose list: item.children[0].attributes.id
+
+    it('parses single-select with loose list', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="single_select" id="priority" label="Priority" %}
+
+- [ ] Low {% #low %}
+
+- [x] Medium {% #medium %}
+
+- [ ] High {% #high %}
+
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('single_select');
+      if (field?.kind === 'single_select') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('low');
+        expect(field.options[1]?.id).toBe('medium');
+        expect(field.options[2]?.id).toBe('high');
+      }
+
+      const value = result.responsesByFieldId.priority?.value;
+      expect(value?.kind).toBe('single_select');
+      if (value?.kind === 'single_select') {
+        expect(value.selected).toBe('medium');
+      }
+    });
+
+    it('parses multi-select with loose list', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="multi_select" id="categories" label="Categories" %}
+
+- [x] Frontend {% #frontend %}
+
+- [ ] Backend {% #backend %}
+
+- [x] Database {% #database %}
+
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('multi_select');
+      if (field?.kind === 'multi_select') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('frontend');
+        expect(field.options[1]?.id).toBe('backend');
+        expect(field.options[2]?.id).toBe('database');
+      }
+
+      const value = result.responsesByFieldId.categories?.value;
+      expect(value?.kind).toBe('multi_select');
+      if (value?.kind === 'multi_select') {
+        expect(value.selected).toContain('frontend');
+        expect(value.selected).toContain('database');
+        expect(value.selected).not.toContain('backend');
+      }
+    });
+
+    it('parses checkboxes with loose list', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="multi" %}
+
+- [x] Research {% #research %}
+
+- [ ] Design {% #design %}
+
+- [/] Implement {% #implement %}
+
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('checkboxes');
+      if (field?.kind === 'checkboxes') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('research');
+        expect(field.options[1]?.id).toBe('design');
+        expect(field.options[2]?.id).toBe('implement');
+      }
+
+      const value = result.responsesByFieldId.tasks?.value;
+      expect(value?.kind).toBe('checkboxes');
+      if (value?.kind === 'checkboxes') {
+        expect(value.values.research).toBe('done');
+        expect(value.values.design).toBe('todo');
+        expect(value.values.implement).toBe('incomplete');
+      }
+    });
+
+    it('parses mixed tight and loose list items', () => {
+      // Some items have blank lines before/after, others don't
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="single_select" id="rating" label="Rating" %}
+- [ ] Poor {% #poor %}
+
+- [x] Good {% #good %}
+- [ ] Excellent {% #excellent %}
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('single_select');
+      if (field?.kind === 'single_select') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('poor');
+        expect(field.options[1]?.id).toBe('good');
+        expect(field.options[2]?.id).toBe('excellent');
+      }
+    });
+  });
+
   describe('parseForm with simple.form.md', () => {
     it('parses the simple test form', async () => {
       const formPath = join(import.meta.dirname, '../../../examples/simple/simple.form.md');
