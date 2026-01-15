@@ -1,41 +1,35 @@
-
-> markform-workspace@ markform /Users/levy/wrk/aisw/markform
-> node packages/markform/dist/bin.mjs export packages/markform/examples/simple/simple.form.md --format markdown
+> markform-workspace@ markform /Users/levy/wrk/aisw/markform node
+> packages/markform/dist/bin.mjs export packages/markform/examples/simple/simple.form.md
+> --format markdown
 
 # Simple Test Form
 
-A minimal form testing all Markform v0.1 field types and features.Used for TDD development and golden session testing.
+A minimal form testing all Markform v0.1 field types and features.Used for TDD
+development and golden session testing.
 
 ## Basic Fields
 
-**Name:**
-_(empty)_
+**Name:** *(empty)*
 
 Enter your full name (2-50 characters).
 
-**Email:**
-_(empty)_
+**Email:** *(empty)*
 
-**Age:**
-_(empty)_
+**Age:** *(empty)*
 
-**Score:**
-_(empty)_
+**Score:** *(empty)*
 
 ## List Fields
 
-**Tags:**
-_(empty)_
+**Tags:** *(empty)*
 
 Add 1-5 unique tags (each at least 2 characters).
 
 ## Selection Fields
 
-**Priority:**
-_(none selected)_
+**Priority:** *(none selected)*
 
-**Categories:**
-_(none selected)_
+**Categories:** *(none selected)*
 
 ## Checkbox Fields
 
@@ -45,7 +39,8 @@ _(none selected)_
 - [ ] Implement
 - [ ] Test
 
-Track task progress. All must reach done or na state to complete.
+Track task progress.
+All must reach done or na state to complete.
 
 **Agreements (Simple Mode):**
 - [ ] I have read the guidelines
@@ -55,13 +50,11 @@ Track task progress. All must reach done or na state to complete.
 - [ ] Data has been backed up
 - [ ] Stakeholders notified
 
-Answer yes or no for each confirmation. All must be explicitly answered.
+Answer yes or no for each confirmation.
+All must be explicitly answered.
 
 ## Optional Fields
 
-**Notes:**
-_(empty)_
+**Notes:** *(empty)*
 
-**Optional Number:**
-_(empty)_
-
+**Optional Number:** *(empty)*

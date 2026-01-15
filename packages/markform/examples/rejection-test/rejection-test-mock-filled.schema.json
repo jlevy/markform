@@ -40,7 +40,7 @@
     }
   },
   "title": "Rejection Test Form",
-  "description": "A form to test patch rejection scenarios - verifies that type mismatch\nerrors are properly recorded and recovery works.",
+  "description": "A form to test patch rejection scenarios - verifies that type mismatch errors are\nproperly recorded and recovery works.",
   "required": ["ratings", "title"],
   "x-markform": {
     "spec": "MF/0.1",
