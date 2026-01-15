@@ -190,8 +190,21 @@ export function extractOptionItems(node: Node): ParsedOptionItem[] {
     // List items contain the option text and ID
     if (child.type === 'item') {
       const text = collectText(child);
-      // Markdoc parses {% #id %} as an id attribute on the item
-      const id = typeof child.attributes?.id === 'string' ? child.attributes.id : null;
+      // Markdoc parses {% #id %} as an id attribute on the item (tight list)
+      // or on the first child paragraph (loose list with blank lines between items)
+      let id: string | null = null;
+      if (typeof child.attributes?.id === 'string') {
+        // Tight list: ID is directly on the item
+        id = child.attributes.id;
+      } else if (
+        child.children &&
+        Array.isArray(child.children) &&
+        child.children.length > 0 &&
+        typeof child.children[0]?.attributes?.id === 'string'
+      ) {
+        // Loose list: ID is on the first child (paragraph)
+        id = child.children[0].attributes.id;
+      }
       if (text.trim()) {
         items.push({ id, text: text.trim() });
       }
