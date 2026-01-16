@@ -51,6 +51,20 @@ describe('engine/serialize - HTML comment syntax', () => {
       expect(output).toBe(input);
     });
 
+    it('preserves inline code at start of line (PR #103 fix)', () => {
+      // This tests the fix for the bug where inline code at line start
+      // was not being preserved during comment syntax conversion
+      const input = '`{% field %}`';
+      const output = postprocessToCommentSyntax(input);
+      expect(output).toBe(input);
+    });
+
+    it('preserves inline code with only leading whitespace', () => {
+      const input = '  `{% form id="test" %}`';
+      const output = postprocessToCommentSyntax(input);
+      expect(output).toBe(input);
+    });
+
     it('transforms multiple tags in a document', () => {
       const input = `{% form id="test" %}
 {% group id="g1" %}

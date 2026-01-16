@@ -236,13 +236,25 @@ export function postprocessToCommentSyntax(input: string): string {
     }
 
     // Check for inline code (skip it entirely to preserve content)
-    // But not if we're in leading whitespace (those might be intended for indented content)
-    if (input[i] === '`' && !isInLeadingWhitespace(input, i)) {
-      const end = findInlineCodeEnd(input, i);
-      if (end !== -1) {
-        output += input.slice(i, end);
-        i = end;
-        continue;
+    // For 3+ backticks at line start, skip - they might be fence-like patterns
+    // (e.g., indented code blocks that look like fences but aren't valid fences)
+    // For 1-2 backticks, always treat as inline code regardless of position
+    if (input[i] === '`') {
+      let backtickCount = 0;
+      let j = i;
+      while (j < input.length && input[j] === '`') {
+        backtickCount++;
+        j++;
+      }
+      // Skip fence-like patterns (3+ backticks) at line start
+      const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+      if (!skipInlineCode) {
+        const end = findInlineCodeEnd(input, i);
+        if (end !== -1) {
+          output += input.slice(i, end);
+          i = end;
+          continue;
+        }
       }
     }
 

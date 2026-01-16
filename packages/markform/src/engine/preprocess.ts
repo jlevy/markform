@@ -225,14 +225,24 @@ export function preprocessCommentSyntax(input: string): string {
           }
         }
 
-        // Check for inline code (but not if we're in leading whitespace of a line,
-        // as those backticks might be intended for indented code or other purposes)
-        if (input[i] === '`' && !isInLeadingWhitespace(input, i)) {
-          const end = findInlineCodeEnd(input, i);
-          if (end !== -1) {
-            output += input.slice(i, end);
-            i = end;
-            continue;
+        // Check for inline code (skip it entirely to preserve content)
+        // For 3+ backticks at line start, skip - they might be fence-like patterns
+        // For 1-2 backticks, always treat as inline code regardless of position
+        if (input[i] === '`') {
+          let backtickCount = 0;
+          let j = i;
+          while (j < input.length && input[j] === '`') {
+            backtickCount++;
+            j++;
+          }
+          const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+          if (!skipInlineCode) {
+            const end = findInlineCodeEnd(input, i);
+            if (end !== -1) {
+              output += input.slice(i, end);
+              i = end;
+              continue;
+            }
           }
         }
 
@@ -345,11 +355,21 @@ export function detectSyntaxStyle(input: string): SyntaxStyle {
         }
 
         // Check for inline code (skip it entirely)
-        if (input[i] === '`' && !isInLeadingWhitespace(input, i)) {
-          const end = findInlineCodeEnd(input, i);
-          if (end !== -1) {
-            i = end;
-            continue;
+        // For 3+ backticks at line start, skip - they might be fence-like patterns
+        if (input[i] === '`') {
+          let backtickCount = 0;
+          let j = i;
+          while (j < input.length && input[j] === '`') {
+            backtickCount++;
+            j++;
+          }
+          const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+          if (!skipInlineCode) {
+            const end = findInlineCodeEnd(input, i);
+            if (end !== -1) {
+              i = end;
+              continue;
+            }
           }
         }
 
@@ -460,15 +480,25 @@ export function validateSyntaxConsistency(
         }
 
         // Check for inline code (skip it entirely)
-        if (input[i] === '`' && !isInLeadingWhitespace(input, i)) {
-          const end = findInlineCodeEnd(input, i);
-          if (end !== -1) {
-            // Count newlines in the inline code
-            for (let j = i; j < end; j++) {
-              if (input[j] === '\n') lineNumber++;
+        // For 3+ backticks at line start, skip - they might be fence-like patterns
+        if (input[i] === '`') {
+          let backtickCount = 0;
+          let k = i;
+          while (k < input.length && input[k] === '`') {
+            backtickCount++;
+            k++;
+          }
+          const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+          if (!skipInlineCode) {
+            const end = findInlineCodeEnd(input, i);
+            if (end !== -1) {
+              // Count newlines in the inline code
+              for (let m = i; m < end; m++) {
+                if (input[m] === '\n') lineNumber++;
+              }
+              i = end;
+              continue;
             }
-            i = end;
-            continue;
           }
         }
 

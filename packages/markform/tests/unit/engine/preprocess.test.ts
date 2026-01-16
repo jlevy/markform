@@ -153,6 +153,23 @@ More text`;
         expect(result).toBe(input);
       });
 
+      it('does not transform inside inline code at start of line (PR #103 fix)', () => {
+        // This tests the fix for the bug where inline code at line start
+        // was not being preserved during preprocessing
+        const input = '`<!-- f:form -->`';
+        const result = preprocessCommentSyntax(input);
+
+        expect(result).toBe(input);
+        expect(result).not.toContain('{% form');
+      });
+
+      it('does not transform inside inline code with only leading whitespace', () => {
+        const input = '  `<!-- f:field id="test" -->`';
+        const result = preprocessCommentSyntax(input);
+
+        expect(result).toBe(input);
+      });
+
       it('handles nested code blocks correctly', () => {
         const input = `\`\`\`\`markdown
 Here's a code example:
