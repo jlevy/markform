@@ -35,7 +35,14 @@ function startsWithMarkformTag(content: string): string | null {
 
 /**
  * Check if content represents a valid form tag with id= attribute.
- * A valid form tag must have attributes (contain =) and include id=.
+ * A valid form tag must:
+ * - Start with "form " (the tag name followed by space for attributes)
+ * - Include an `id=` attribute in any valid Markdoc syntax:
+ *   - Double quotes: id="value"
+ *   - Single quotes: id='value'
+ *   - Unquoted: id=value
+ *   - Expression: id={variable}
+ *   - With spaces: id = "value"
  */
 function isValidFormTag(content: string): boolean {
   const trimmed = content.trim();
@@ -44,6 +51,7 @@ function isValidFormTag(content: string): boolean {
     return false;
   }
   // Must contain = (has attributes) and id= specifically
+  // \b ensures word boundary so "valid=" doesn't match "id" in "valid"
   return trimmed.includes('=') && /\bid\s*=/.test(trimmed);
 }
 

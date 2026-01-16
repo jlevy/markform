@@ -62,6 +62,50 @@ describe('engine/preprocess', () => {
       });
     });
 
+    describe('Markdoc attribute syntax variations', () => {
+      it('transforms form with double-quoted id', () => {
+        const input = '<!-- form id="test" --><!-- /form -->';
+        const expected = '{% form id="test" %}{% /form %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms form with single-quoted id', () => {
+        const input = "<!-- form id='test' --><!-- /form -->";
+        const expected = "{% form id='test' %}{% /form %}";
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms form with unquoted id', () => {
+        const input = '<!-- form id=test --><!-- /form -->';
+        const expected = '{% form id=test %}{% /form %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms form with expression id', () => {
+        const input = '<!-- form id={variable} --><!-- /form -->';
+        const expected = '{% form id={variable} %}{% /form %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms form with spaced id assignment', () => {
+        const input = '<!-- form id = "test" --><!-- /form -->';
+        const expected = '{% form id = "test" %}{% /form %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms form with id not as first attribute', () => {
+        const input = '<!-- form spec="MF/0.1" id="test" title="Survey" --><!-- /form -->';
+        const expected = '{% form spec="MF/0.1" id="test" title="Survey" %}{% /form %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('does not transform form with id-like substring in another attribute', () => {
+        // "valid" contains "id" but is not the id attribute
+        const input = '<!-- form valid="test" -->';
+        expect(preprocessCommentSyntax(input)).toBe(input);
+      });
+    });
+
     describe('spacing tolerance', () => {
       it('transforms tag with space after <!--', () => {
         const input = '<!-- form id="test" -->';
@@ -381,6 +425,51 @@ No closing fence`;
       // "form follows" is not a valid form tag
       const input = '<!-- form follows for the meeting -->';
       expect(detectSyntaxStyle(input)).toBe('tags');
+    });
+
+    describe('Markdoc attribute syntax variations', () => {
+      it('detects form with double-quoted id', () => {
+        const input = '<!-- form id="test" -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects form with single-quoted id', () => {
+        const input = "<!-- form id='test' -->";
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects form with unquoted id', () => {
+        const input = '<!-- form id=test -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects form with expression id', () => {
+        const input = '<!-- form id={variable} -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects form with spaced id assignment', () => {
+        const input = '<!-- form id = "test" -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects form with id not as first attribute', () => {
+        const input = '<!-- form spec="MF/0.1" id="test" title="My Form" -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('does not match id inside another word', () => {
+        // "valid" contains "id" but should not match
+        const input = '<!-- form valid="test" -->';
+        expect(detectSyntaxStyle(input)).toBe('tags');
+      });
+
+      it('detects Markdoc tag syntax with various id formats', () => {
+        expect(detectSyntaxStyle('{% form id="x" %}')).toBe('tags');
+        expect(detectSyntaxStyle("{% form id='x' %}")).toBe('tags');
+        expect(detectSyntaxStyle('{% form id=x %}')).toBe('tags');
+        expect(detectSyntaxStyle('{% form id={var} %}')).toBe('tags');
+      });
     });
 
     it('handles frontmatter correctly', () => {
