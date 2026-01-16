@@ -1,16 +1,46 @@
 /**
  * Preprocessor for HTML comment syntax in Markform files.
  *
- * Transforms HTML comment-style directives (`<!-- f:tag -->`) to Markdoc syntax (`{% tag %}`)
+ * Transforms HTML comment-style directives (`<!-- tag -->`) to Markdoc syntax (`{% tag %}`)
  * before parsing. This enables forms to render cleanly on GitHub and standard Markdown editors.
  *
  * The preprocessor is always-on with no configuration required.
+ * Comment syntax is only recognized for known Markform tag names.
  */
 
 import type { SyntaxStyle } from './coreTypes.js';
 
 // Re-export for convenience
 export type { SyntaxStyle } from './coreTypes.js';
+
+// Known Markform tag names that trigger comment-to-tag transformation
+const MARKFORM_TAGS = new Set([
+  'form',
+  'field',
+  'group',
+  'note',
+  'instructions',
+  'description',
+]);
+
+/**
+ * Check if a string starts with a known Markform tag name.
+ * Returns the tag name if found, null otherwise.
+ */
+function startsWithMarkformTag(content: string): string | null {
+  const trimmed = content.trim();
+  for (const tag of MARKFORM_TAGS) {
+    // Check for exact tag name followed by space, end, or attribute
+    if (
+      trimmed === tag ||
+      trimmed.startsWith(tag + ' ') ||
+      trimmed.startsWith(tag + '/')
+    ) {
+      return tag;
+    }
+  }
+  return null;
+}
 
 // =============================================================================
 // State Machine for Code Block Detection
@@ -190,10 +220,10 @@ export function findInlineCodeEnd(input: string, pos: number): number {
 /**
  * Transform HTML comment syntax to Markdoc syntax.
  *
- * Patterns transformed:
- * - `<!-- f:tagname ... -->` → `{% tagname ... %}`
- * - `<!-- /f:tagname -->` → `{% /tagname %}`
- * - `<!-- f:tagname ... /-->` → `{% tagname ... /%}`
+ * Patterns transformed (only for known Markform tags: form, field, group, note, instructions):
+ * - `<!-- tagname ... -->` → `{% tagname ... %}`
+ * - `<!-- /tagname -->` → `{% /tagname %}`
+ * - `<!-- tagname ... /-->` → `{% tagname ... /%}`
  * - `<!-- #id -->` → `{% #id %}`
  * - `<!-- .class -->` → `{% .class %}`
  *
@@ -252,25 +282,27 @@ export function preprocessCommentSyntax(input: string): string {
           if (endComment !== -1) {
             const interior = input.slice(i + 4, endComment).trim();
 
-            // Check for f: namespace prefix (opening tags)
-            if (interior.startsWith('f:')) {
-              const tagContent = interior.slice(2); // Remove 'f:'
-              if (tagContent.endsWith('/')) {
-                // Self-closing: <!-- f:tag /--> → {% tag /%}
-                output += '{% ' + tagContent.slice(0, -1).trim() + ' /%}';
+            // Check for known Markform tag (opening tags)
+            const tagName = startsWithMarkformTag(interior);
+            if (tagName) {
+              if (interior.endsWith('/')) {
+                // Self-closing: <!-- tag /--> → {% tag /%}
+                output += '{% ' + interior.slice(0, -1).trim() + ' /%}';
               } else {
-                output += '{% ' + tagContent + ' %}';
+                output += '{% ' + interior + ' %}';
               }
               i = endComment + 3;
               continue;
             }
 
-            // Check for /f: closing tag
-            if (interior.startsWith('/f:')) {
-              const tagName = interior.slice(3); // Remove '/f:'
-              output += '{% /' + tagName + ' %}';
-              i = endComment + 3;
-              continue;
+            // Check for closing tag: <!-- /tagname -->
+            if (interior.startsWith('/')) {
+              const closingTagName = startsWithMarkformTag(interior.slice(1));
+              if (closingTagName) {
+                output += '{% ' + interior + ' %}';
+                i = endComment + 3;
+                continue;
+              }
             }
 
             // Check for #id or .class annotations
@@ -325,8 +357,9 @@ export function preprocessCommentSyntax(input: string): string {
 /**
  * Detect which syntax style is used in a document.
  *
- * Scans for the first occurrence of either HTML comment syntax (`<!-- f:`, `<!-- #`, `<!-- .`)
+ * Scans for the first occurrence of either HTML comment syntax (`<!-- tagname`, `<!-- #`, `<!-- .`)
  * or Markdoc syntax (`{%`). Returns the style of whichever appears first.
+ * Only known Markform tags (form, field, group, note, instructions) are recognized.
  *
  * Code blocks (fenced and inline) are skipped to avoid false positives from examples.
  *
@@ -374,11 +407,23 @@ export function detectSyntaxStyle(input: string): SyntaxStyle {
         }
 
         // Check for HTML comment patterns
-        if (input.slice(i, i + 7) === '<!-- f:' || input.slice(i, i + 8) === '<!-- /f:') {
-          return 'comments';
-        }
-        if (input.slice(i, i + 6) === '<!-- #' || input.slice(i, i + 6) === '<!-- .') {
-          return 'comments';
+        if (input.slice(i, i + 4) === '<!--') {
+          const endComment = input.indexOf('-->', i + 4);
+          if (endComment !== -1) {
+            const interior = input.slice(i + 4, endComment).trim();
+            // Check for known Markform tag
+            if (startsWithMarkformTag(interior)) {
+              return 'comments';
+            }
+            // Check for closing tag: <!-- /tagname -->
+            if (interior.startsWith('/') && startsWithMarkformTag(interior.slice(1))) {
+              return 'comments';
+            }
+            // Check for #id or .class annotations
+            if (interior.startsWith('#') || interior.startsWith('.')) {
+              return 'comments';
+            }
+          }
         }
 
         // Check for Markdoc pattern
@@ -519,24 +564,31 @@ export function validateSyntaxConsistency(
           }
         } else {
           // expectedSyntax === 'tags'
-          // Looking for HTML comment syntax violations
-          if (input.slice(i, i + 7) === '<!-- f:' || input.slice(i, i + 8) === '<!-- /f:') {
-            const endComment = input.indexOf('-->', i + 4);
-            if (endComment !== -1) {
-              const pattern = input.slice(i, endComment + 3);
-              violations.push({
-                line: lineNumber,
-                pattern,
-                foundSyntax: 'comments',
-              });
-            }
-          } else if (input.slice(i, i + 6) === '<!-- #' || input.slice(i, i + 6) === '<!-- .') {
+          // Looking for HTML comment syntax violations (known Markform tags)
+          if (input.slice(i, i + 4) === '<!--') {
             const endComment = input.indexOf('-->', i + 4);
             if (endComment !== -1) {
               const interior = input.slice(i + 4, endComment).trim();
-              // Only flag if it's actually an annotation (starts with # or . only)
-              if (/^[#.][a-zA-Z_-]/.test(interior)) {
-                const pattern = input.slice(i, endComment + 3);
+              const pattern = input.slice(i, endComment + 3);
+
+              // Check for known Markform tag
+              if (startsWithMarkformTag(interior)) {
+                violations.push({
+                  line: lineNumber,
+                  pattern,
+                  foundSyntax: 'comments',
+                });
+              }
+              // Check for closing tag: <!-- /tagname -->
+              else if (interior.startsWith('/') && startsWithMarkformTag(interior.slice(1))) {
+                violations.push({
+                  line: lineNumber,
+                  pattern,
+                  foundSyntax: 'comments',
+                });
+              }
+              // Check for #id or .class annotations
+              else if (/^[#.][a-zA-Z_-]/.test(interior)) {
                 violations.push({
                   line: lineNumber,
                   pattern,

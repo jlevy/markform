@@ -8,19 +8,19 @@ describe('engine/serialize - HTML comment syntax', () => {
     it('transforms opening tags', () => {
       const input = '{% form id="test" %}';
       const output = postprocessToCommentSyntax(input);
-      expect(output).toBe('<!-- f:form id="test" -->');
+      expect(output).toBe('<!-- form id="test" -->');
     });
 
     it('transforms closing tags', () => {
       const input = '{% /form %}';
       const output = postprocessToCommentSyntax(input);
-      expect(output).toBe('<!-- /f:form -->');
+      expect(output).toBe('<!-- /form -->');
     });
 
     it('transforms self-closing tags', () => {
       const input = '{% field kind="string" /%}';
       const output = postprocessToCommentSyntax(input);
-      expect(output).toBe('<!-- f:field kind="string" /-->');
+      expect(output).toBe('<!-- field kind="string" /-->');
     });
 
     it('transforms #id annotations', () => {
@@ -72,11 +72,11 @@ describe('engine/serialize - HTML comment syntax', () => {
 {% /group %}
 {% /form %}`;
 
-      const expected = `<!-- f:form id="test" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="f1" label="Field" --><!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+      const expected = `<!-- form id="test" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="f1" label="Field" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const output = postprocessToCommentSyntax(input);
       expect(output).toBe(expected);
@@ -88,10 +88,10 @@ describe('engine/serialize - HTML comment syntax', () => {
 - [ ] Inactive {% #inactive %}
 {% /field %}`;
 
-      const expected = `<!-- f:field kind="single_select" id="status" label="Status" -->
+      const expected = `<!-- field kind="single_select" id="status" label="Status" -->
 - [ ] Active <!-- #active -->
 - [ ] Inactive <!-- #inactive -->
-<!-- /f:field -->`;
+<!-- /field -->`;
 
       const output = postprocessToCommentSyntax(input);
       expect(output).toBe(expected);
@@ -105,9 +105,9 @@ Regular markdown content
 Some text after`;
 
       const expected = `Some text before
-<!-- f:form id="test" -->
+<!-- form id="test" -->
 Regular markdown content
-<!-- /f:form -->
+<!-- /form -->
 Some text after`;
 
       const output = postprocessToCommentSyntax(input);
@@ -123,7 +123,7 @@ Some text after`;
       // The indented fence is still recognized
       const output = postprocessToCommentSyntax(input);
       expect(output).toContain('{% form id="inside" %}'); // Preserved
-      expect(output).toContain('<!-- f:form id="outside" -->'); // Transformed
+      expect(output).toContain('<!-- form id="outside" -->'); // Transformed
     });
 
     it('skips 4-space indented content (not a fence)', () => {
@@ -134,7 +134,7 @@ Some text after`;
       // 4-space indent = indented code block, not a fence
       // So the {% form %} tag should be transformed
       const output = postprocessToCommentSyntax(input);
-      expect(output).toContain('<!-- f:form id="should-transform" -->');
+      expect(output).toContain('<!-- form id="should-transform" -->');
     });
   });
 
@@ -144,11 +144,11 @@ Some text after`;
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="test" -->
-<!-- f:group id="basics" -->
-<!-- f:field kind="string" id="name" label="Name" --><!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- form id="test" -->
+<!-- group id="basics" -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       expect(parsed.syntaxStyle).toBe('comments');
@@ -156,10 +156,10 @@ markform:
       const serialized = serializeForm(parsed);
 
       // Should contain HTML comment syntax
-      expect(serialized).toContain('<!-- f:form');
-      expect(serialized).toContain('<!-- f:group');
-      expect(serialized).toContain('<!-- f:field');
-      expect(serialized).toContain('<!-- /f:form -->');
+      expect(serialized).toContain('<!-- form');
+      expect(serialized).toContain('<!-- group');
+      expect(serialized).toContain('<!-- field');
+      expect(serialized).toContain('<!-- /form -->');
 
       // Should NOT contain Markdoc syntax
       expect(serialized).not.toContain('{% form');
@@ -189,8 +189,8 @@ markform:
       expect(serialized).toContain('{% field');
 
       // Should NOT contain HTML comment syntax
-      expect(serialized).not.toContain('<!-- f:form');
-      expect(serialized).not.toContain('<!-- f:group');
+      expect(serialized).not.toContain('<!-- form');
+      expect(serialized).not.toContain('<!-- group');
     });
   });
 
@@ -212,8 +212,8 @@ markform:
       const serialized = serializeForm(parsed, { syntaxStyle: 'comments' });
 
       // Should contain HTML comment syntax (overridden)
-      expect(serialized).toContain('<!-- f:form');
-      expect(serialized).toContain('<!-- /f:form -->');
+      expect(serialized).toContain('<!-- form');
+      expect(serialized).toContain('<!-- /form -->');
       expect(serialized).not.toContain('{% form');
     });
 
@@ -222,11 +222,11 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="test" -->
-<!-- f:group id="basics" -->
-<!-- f:field kind="string" id="name" label="Name" --><!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- form id="test" -->
+<!-- group id="basics" -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       expect(parsed.syntaxStyle).toBe('comments');
@@ -236,7 +236,7 @@ markform:
       // Should contain Markdoc syntax (overridden)
       expect(serialized).toContain('{% form');
       expect(serialized).toContain('{% /form %}');
-      expect(serialized).not.toContain('<!-- f:form');
+      expect(serialized).not.toContain('<!-- form');
     });
   });
 
@@ -246,27 +246,27 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="roundtrip" -->
-<!-- f:group id="g1" -->
+<!-- form id="roundtrip" -->
+<!-- group id="g1" -->
 
-<!-- f:field kind="string" id="name" label="Name" --><!-- /f:field -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
 
-<!-- f:field kind="single_select" id="status" label="Status" -->
+<!-- field kind="single_select" id="status" label="Status" -->
 - [ ] Active <!-- #active -->
 - [ ] Inactive <!-- #inactive -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- /f:group -->
-<!-- /f:form -->
+<!-- /group -->
+<!-- /form -->
 `;
 
       const parsed = parseForm(original);
       const serialized = serializeForm(parsed);
 
       // Should preserve HTML comment syntax
-      expect(serialized).toContain('<!-- f:form');
+      expect(serialized).toContain('<!-- form');
       expect(serialized).toContain('<!-- #active -->');
-      expect(serialized).toContain('<!-- /f:form -->');
+      expect(serialized).toContain('<!-- /form -->');
 
       // Round-trip should produce parseable form
       const reparsed = parseForm(serialized);
@@ -312,12 +312,12 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="equiv" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="f1" label="Field 1" required=true --><!-- /f:field -->
-<!-- f:field kind="number" id="f2" label="Field 2" min=0 max=100 --><!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- form id="equiv" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="f1" label="Field 1" required=true --><!-- /field -->
+<!-- field kind="number" id="f2" label="Field 2" min=0 max=100 --><!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed1 = parseForm(commentForm);
       const serialized = serializeForm(parsed1);
@@ -334,31 +334,31 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="complete" -->
-<!-- f:group id="main" -->
+<!-- form id="complete" -->
+<!-- group id="main" -->
 
-<!-- f:field kind="string" id="name" label="Name" required=true --><!-- /f:field -->
-<!-- f:field kind="number" id="age" label="Age" min=0 max=150 --><!-- /f:field -->
-<!-- f:field kind="url" id="website" label="Website" --><!-- /f:field -->
-<!-- f:field kind="date" id="dob" label="Date of Birth" --><!-- /f:field -->
+<!-- field kind="string" id="name" label="Name" required=true --><!-- /field -->
+<!-- field kind="number" id="age" label="Age" min=0 max=150 --><!-- /field -->
+<!-- field kind="url" id="website" label="Website" --><!-- /field -->
+<!-- field kind="date" id="dob" label="Date of Birth" --><!-- /field -->
 
-<!-- f:field kind="single_select" id="status" label="Status" -->
+<!-- field kind="single_select" id="status" label="Status" -->
 - [ ] Active <!-- #active -->
 - [ ] Inactive <!-- #inactive -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- f:field kind="multi_select" id="tags" label="Tags" -->
+<!-- field kind="multi_select" id="tags" label="Tags" -->
 - [ ] Important <!-- #important -->
 - [ ] Urgent <!-- #urgent -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- f:field kind="checkboxes" id="agree" label="Agreements" checkboxMode="explicit" -->
+<!-- field kind="checkboxes" id="agree" label="Agreements" checkboxMode="explicit" -->
 - [ ] Terms of Service <!-- #terms -->
 - [ ] Privacy Policy <!-- #privacy -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const serialized = serializeForm(parsed);
@@ -369,7 +369,7 @@ markform:
       expect(reparsed.syntaxStyle).toBe('comments');
 
       // Verify comment syntax preserved
-      expect(serialized).toContain('<!-- f:field kind="string"');
+      expect(serialized).toContain('<!-- field kind="string"');
       expect(serialized).toContain('<!-- #active -->');
       expect(serialized).toContain('<!-- #terms -->');
     });
@@ -379,19 +379,19 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="filled" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="name" label="Name" -->
+<!-- form id="filled" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="name" label="Name" -->
 \`\`\`value
 John Doe
 \`\`\`
-<!-- /f:field -->
-<!-- f:field kind="single_select" id="status" label="Status" -->
+<!-- /field -->
+<!-- field kind="single_select" id="status" label="Status" -->
 - [x] Active <!-- #active -->
 - [ ] Inactive <!-- #inactive -->
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const serialized = serializeForm(parsed);
@@ -409,7 +409,7 @@ John Doe
       }
 
       // Syntax should be preserved
-      expect(serialized).toContain('<!-- f:form');
+      expect(serialized).toContain('<!-- form');
     });
 
     it('handles notes and documentation blocks in comment syntax', () => {
@@ -417,16 +417,16 @@ John Doe
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="documented" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="f1" label="Field" --><!-- /f:field -->
-<!-- /f:group -->
+<!-- form id="documented" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="f1" label="Field" --><!-- /field -->
+<!-- /group -->
 
-<!-- f:note id="n1" ref="f1" role="analyst" -->
+<!-- note id="n1" ref="f1" role="analyst" -->
 This is a note.
-<!-- /f:note -->
+<!-- /note -->
 
-<!-- /f:form -->`;
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       expect(parsed.notes).toHaveLength(1);
@@ -434,8 +434,8 @@ This is a note.
       const serialized = serializeForm(parsed);
 
       // Verify notes are serialized with comment syntax
-      expect(serialized).toContain('<!-- f:note');
-      expect(serialized).toContain('<!-- /f:note -->');
+      expect(serialized).toContain('<!-- note');
+      expect(serialized).toContain('<!-- /note -->');
 
       // Verify round-trip
       const reparsed = parseForm(serialized);
@@ -450,16 +450,16 @@ This is a note.
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="empty" -->
-<!-- f:group id="g1" -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- form id="empty" -->
+<!-- group id="g1" -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const serialized = serializeForm(parsed);
 
-      expect(serialized).toContain('<!-- f:form');
-      expect(serialized).toContain('<!-- /f:form -->');
+      expect(serialized).toContain('<!-- form');
+      expect(serialized).toContain('<!-- /form -->');
     });
 
     it('preserves code blocks containing comment-like text', () => {
@@ -467,21 +467,21 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="code" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="example" label="Example" multiline=true -->
+<!-- form id="code" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="example" label="Example" multiline=true -->
 \`\`\`value
-Example with <!-- f:form id="fake" --> in code
+Example with <!--form id="fake" --> in code
 \`\`\`
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const serialized = serializeForm(parsed);
 
       // The content inside value fence should be preserved
-      expect(serialized).toContain('<!-- f:form id="fake" -->');
+      expect(serialized).toContain('<!--form id="fake" -->');
 
       // But the outer form should use comment syntax
       const reparsed = parseForm(serialized);
@@ -493,17 +493,17 @@ Example with <!-- f:form id="fake" --> in code
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="process" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="code" label="Code Example" -->
+<!-- form id="process" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="code" label="Code Example" -->
 \`\`\`value {% process=false %}
 {% form id="example" %}
 This is example Markdoc code
 {% /form %}
 \`\`\`
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const serialized = serializeForm(parsed);
@@ -523,7 +523,7 @@ This is example Markdoc code
 
       // Inline code should not be transformed
       expect(result).toBe('Use `{% field %}` to define a field.');
-      expect(result).not.toContain('<!-- f:field');
+      expect(result).not.toContain('<!-- field');
     });
 
     it('postprocessToCommentSyntax preserves double-backtick inline code', () => {
@@ -532,7 +532,7 @@ This is example Markdoc code
 
       // Inline code should not be transformed
       expect(result).toBe('Example: `` {% form %} `` is a tag.');
-      expect(result).not.toContain('<!-- f:form');
+      expect(result).not.toContain('<!-- form');
     });
 
     it('postprocessToCommentSyntax transforms tags outside inline code', () => {
@@ -542,7 +542,7 @@ This is example Markdoc code
       // First one (in inline code) should be preserved
       expect(result).toContain('`{% field %}`');
       // Second one (outside) should be transformed
-      expect(result).toContain('<!-- f:field -->');
+      expect(result).toContain('<!-- field -->');
     });
 
     it('postprocessToCommentSyntax handles mixed inline code and fenced blocks', () => {
@@ -561,7 +561,7 @@ And {% form %} here.`;
       // Fenced code preserved
       expect(result).toContain('```md\n{% form %}\n```');
       // Outside code transformed
-      expect(result).toContain('<!-- f:form -->');
+      expect(result).toContain('<!-- form -->');
     });
 
     it('round-trip preserves documentation with inline code examples', () => {
@@ -571,15 +571,15 @@ And {% form %} here.`;
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="doc-example" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="help" label="Help Text" multiline=true -->
+<!-- form id="doc-example" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="help" label="Help Text" multiline=true -->
 \`\`\`value {% process=false %}
 Use \`{% field %}\` to create fields.
 \`\`\`
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const serialized = serializeForm(parsed);

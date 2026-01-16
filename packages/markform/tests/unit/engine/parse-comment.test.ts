@@ -9,11 +9,11 @@ describe('engine/parse - HTML comment syntax', () => {
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="test" -->
-<!-- f:group id="basics" -->
-<!-- f:field kind="string" id="name" label="Name" --><!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- form id="test" -->
+<!-- group id="basics" -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
 
@@ -48,15 +48,15 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="survey" -->
-<!-- f:group id="ratings" -->
-<!-- f:field kind="single_select" id="quality" label="Quality" -->
+<!-- form id="survey" -->
+<!-- group id="ratings" -->
+<!-- field kind="single_select" id="quality" label="Quality" -->
 - [ ] Excellent <!-- #excellent -->
 - [ ] Good <!-- #good -->
 - [ ] Fair <!-- #fair -->
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const group = parsed.schema.groups[0]!;
@@ -78,14 +78,14 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="todo" -->
-<!-- f:group id="tasks" -->
-<!-- f:field kind="checkboxes" id="items" label="Tasks" -->
+<!-- form id="todo" -->
+<!-- group id="tasks" -->
+<!-- field kind="checkboxes" id="items" label="Tasks" -->
 - [ ] Task A <!-- #taskA --> <!-- .priority -->
 - [ ] Task B <!-- #taskB -->
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const group = parsed.schema.groups[0]!;
@@ -120,15 +120,15 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="equiv" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="f1" label="Field 1" required=true --><!-- /f:field -->
-<!-- f:field kind="single_select" id="f2" label="Field 2" -->
+<!-- form id="equiv" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="f1" label="Field 1" required=true --><!-- /field -->
+<!-- field kind="single_select" id="f2" label="Field 2" -->
 - [ ] Option A <!-- #optA -->
 - [ ] Option B <!-- #optB -->
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const markdocParsed = parseForm(markdocForm);
       const commentParsed = parseForm(commentForm);
@@ -156,32 +156,32 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="complete" -->
-<!-- f:group id="main" -->
+<!-- form id="complete" -->
+<!-- group id="main" -->
 
-<!-- f:field kind="string" id="name" label="Name" --><!-- /f:field -->
-<!-- f:field kind="number" id="age" label="Age" --><!-- /f:field -->
-<!-- f:field kind="url" id="website" label="Website" --><!-- /f:field -->
-<!-- f:field kind="date" id="dob" label="Date of Birth" --><!-- /f:field -->
-<!-- f:field kind="year" id="year" label="Year" --><!-- /f:field -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
+<!-- field kind="number" id="age" label="Age" --><!-- /field -->
+<!-- field kind="url" id="website" label="Website" --><!-- /field -->
+<!-- field kind="date" id="dob" label="Date of Birth" --><!-- /field -->
+<!-- field kind="year" id="year" label="Year" --><!-- /field -->
 
-<!-- f:field kind="single_select" id="status" label="Status" -->
+<!-- field kind="single_select" id="status" label="Status" -->
 - [ ] Active <!-- #active -->
 - [ ] Inactive <!-- #inactive -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- f:field kind="multi_select" id="tags" label="Tags" -->
+<!-- field kind="multi_select" id="tags" label="Tags" -->
 - [ ] Tag A <!-- #tagA -->
 - [ ] Tag B <!-- #tagB -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- f:field kind="checkboxes" id="agree" label="Agreements" -->
+<!-- field kind="checkboxes" id="agree" label="Agreements" -->
 - [ ] Terms <!-- #terms -->
 - [ ] Privacy <!-- #privacy -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
       const group = parsed.schema.groups[0]!;
@@ -207,19 +207,19 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="noted" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="f1" label="Field" --><!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->
+<!-- form id="noted" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="f1" label="Field" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->
 
-<!-- f:note id="n1" ref="f1" role="analyst" -->
+<!-- note id="n1" ref="f1" role="analyst" -->
 This is a note about the field.
-<!-- /f:note -->
+<!-- /note -->
 
-<!-- f:description ref="f1" -->
+<!-- description ref="f1" -->
 Field description here.
-<!-- /f:description -->`;
+<!-- /description -->`;
 
       const parsed = parseForm(markdown);
 
@@ -237,19 +237,19 @@ Field description here.
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="filled" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="name" label="Name" -->
+<!-- form id="filled" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="name" label="Name" -->
 \`\`\`value
 John Doe
 \`\`\`
-<!-- /f:field -->
-<!-- f:field kind="single_select" id="status" label="Status" -->
+<!-- /field -->
+<!-- field kind="single_select" id="status" label="Status" -->
 - [x] Active <!-- #active -->
 - [ ] Inactive <!-- #inactive -->
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
 
@@ -272,12 +272,12 @@ markform:
   spec: MF/0.1
 ---
 <!-- This is a regular comment that should be ignored -->
-<!-- f:form id="mixed" -->
+<!-- form id="mixed" -->
 <!-- Another regular comment -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="f1" label="Field" --><!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- group id="g1" -->
+<!-- field kind="string" id="f1" label="Field" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
 
@@ -290,18 +290,18 @@ markform:
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="code" -->
-<!-- f:group id="g1" -->
-<!-- f:field kind="string" id="example" label="Example" multiline=true -->
+<!-- form id="code" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="example" label="Example" multiline=true -->
 \`\`\`value
 Here's how to use comments:
-<!-- f:form id="nested" -->
+<!-- form id="nested" -->
 This is NOT a form directive, just example text.
-<!-- /f:form -->
+<!-- /form -->
 \`\`\`
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->`;
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
 
@@ -309,7 +309,7 @@ This is NOT a form directive, just example text.
       const value = parsed.responsesByFieldId.example?.value;
       expect(value?.kind).toBe('string');
       if (value?.kind === 'string') {
-        expect(value.value).toContain('<!-- f:form id="nested" -->');
+        expect(value.value).toContain('<!-- form id="nested" -->');
       }
     });
   });

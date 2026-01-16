@@ -132,9 +132,9 @@ export function pickFence(value: string): FenceChoice {
  * Transform Markdoc syntax to HTML comment syntax.
  *
  * Patterns transformed:
- * - `{% tagname ... %}` → `<!-- f:tagname ... -->`
- * - `{% /tagname %}` → `<!-- /f:tagname -->`
- * - `{% tagname ... /%}` → `<!-- f:tagname ... /-->`
+ * - `{% tagname ... %}` → `<!-- tagname ... -->`
+ * - `{% /tagname %}` → `<!-- /tagname -->`
+ * - `{% tagname ... /%}` → `<!-- tagname ... /-->`
  * - `{% #id %}` → `<!-- #id -->`
  * - `{% .class %}` → `<!-- .class -->`
  *
@@ -272,7 +272,7 @@ export function postprocessToCommentSyntax(input: string): string {
             // Annotations don't have self-closing form, but handle gracefully
             output += '<!-- ' + tagContent + ' /-->';
           } else {
-            output += '<!-- f:' + tagContent + ' /-->';
+            output += '<!-- ' + tagContent + ' /-->';
           }
           i = endTag + 2;
           continue;
@@ -281,7 +281,7 @@ export function postprocessToCommentSyntax(input: string): string {
         // Check for closing tag: {% /tagname %}
         if (interior.startsWith('/')) {
           const tagName = interior.slice(1).trim();
-          output += '<!-- /f:' + tagName + ' -->';
+          output += '<!-- /' + tagName + ' -->';
           i = endTag + 2;
           continue;
         }
@@ -294,7 +294,7 @@ export function postprocessToCommentSyntax(input: string): string {
         }
 
         // Regular opening tag: {% tagname ... %}
-        output += '<!-- f:' + interior + ' -->';
+        output += '<!-- ' + interior + ' -->';
         i = endTag + 2;
         continue;
       }
@@ -345,7 +345,7 @@ export interface SerializeOptions {
   specVersion?: string;
   /**
    * Syntax style to use for output.
-   * - 'comments': Use HTML comment syntax (<!-- f:tag -->) - primary/default
+   * - 'comments': Use HTML comment syntax (<!-- tag -->) - primary/default
    * - 'tags': Use Markdoc syntax ({% tag %})
    * If not specified, uses the form's detected syntax style (form.syntaxStyle),
    * defaulting to 'tags' if not detected.

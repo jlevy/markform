@@ -48,47 +48,46 @@ markform:
     agent: "Instructions for AI agents"
 ---
 
-<!-- f:form id="form_id" title="Form Title" -->
+<!-- form id="form_id" title="Form Title" -->
 
-<!-- f:group id="group_id" title="Group Title" -->
+<!-- group id="group_id" title="Group Title" -->
 
 <!-- fields go here -->
 
-<!-- /f:group -->
+<!-- /group -->
 
-<!-- /f:form -->
+<!-- /form -->
 ```
 
 ## Conventions
 
 Use `.form.md` for Markform files.
-Markform uses HTML comment syntax with the `f:` namespace for structure tags.
-This enables forms to render cleanly on GitHub and in standard Markdown editors.
+Markform uses HTML comment syntax for structure tags, which render invisibly on GitHub.
 
 ### Syntax
 
-**Primary syntax** uses HTML comments with the `f:` namespace:
+**Primary syntax** uses HTML comments:
 
 | Element | Syntax | Notes |
 |---------|--------|-------|
-| Opening tag | `<!-- f:form id="x" -->` | Tags use `f:` prefix |
-| Closing tag | `<!-- /f:form -->` | Closing tags |
-| Self-closing | `<!-- f:field ... /-->` | Self-closing tags |
+| Opening tag | `<!-- form id="x" -->` | Tag name directly after `<!--` |
+| Closing tag | `<!-- /form -->` | Closing tags |
+| Self-closing | `<!-- field ... /-->` | Self-closing tags |
 | ID annotation | `<!-- #id -->` | ID annotations |
 | Class annotation | `<!-- .class -->` | Class annotations |
 
 **Example:**
 
 ```markdown
-<!-- f:form id="survey" -->
-<!-- f:group id="basics" -->
-<!-- f:field kind="string" id="name" label="Name" --><!-- /f:field -->
-<!-- f:field kind="single_select" id="rating" label="Rating" -->
+<!-- form id="survey" -->
+<!-- group id="basics" -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
+<!-- field kind="single_select" id="rating" label="Rating" -->
 - [ ] Good <!-- #good -->
 - [ ] Bad <!-- #bad -->
-<!-- /f:field -->
-<!-- /f:group -->
-<!-- /f:form -->
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->
 ```
 
 ### Alternative Syntax (Markdoc Tags)
@@ -98,8 +97,8 @@ format used internally:
 
 | HTML Comment | Markdoc Tag |
 |--------------|-------------|
-| `<!-- f:form id="x" -->` | `{% form id="x" %}` |
-| `<!-- /f:form -->` | `{% /form %}` |
+| `<!-- form id="x" -->` | `{% form id="x" %}` |
+| `<!-- /form -->` | `{% /form %}` |
 | `<!-- #id -->` | `{% #id %}` |
 | `<!-- .class -->` | `{% .class %}` |
 

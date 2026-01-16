@@ -1065,13 +1065,13 @@ content includes multiple fenced code blocks that are preserved exactly as autho
 Markform supports two syntax styles for structural tags. Both are **always supported**
 with no configuration needed—implementations MUST accept either as input.
 
-**Comment syntax** (primary, recommended) uses HTML comments with the `f:` namespace:
+**Comment syntax** (primary, recommended) uses HTML comments:
 
 ```md
-<!-- f:form id="survey" -->
-<!-- f:field kind="string" id="name" label="Name" -->
-<!-- /f:field -->
-<!-- /f:form -->
+<!-- form id="survey" -->
+<!-- field kind="string" id="name" label="Name" -->
+<!-- /field -->
+<!-- /form -->
 ```
 
 **Tag syntax** (alternative) uses standard Markdoc tag notation:
@@ -1087,18 +1087,17 @@ with no configuration needed—implementations MUST accept either as input.
 
 - Forms render cleanly on GitHub and standard Markdown editors (comments are hidden)
 - Only the content (checkboxes, text) is visible to readers
-- The `f:` prefix follows the WordPress Gutenberg pattern (e.g., `wp:`) for semantic
-  namespacing
+- Tag names match the Markdoc tags directly (e.g., `form`, `field`, `group`)
 
 **Syntax mapping:**
 
 | Comment Syntax | Tag Syntax | Notes |
 | --- | --- | --- |
-| `<!-- f:tag attr="val" -->` | `{% tag attr="val" %}` | Tags use `f:` prefix |
-| `<!-- /f:tag -->` | `{% /tag %}` | Closing: slash before prefix |
-| `<!-- f:tag /-->` | `{% tag /%}` | Self-closing: `/` before `-->` |
-| `<!-- #id -->` | `{% #id %}` | Annotations: no prefix needed |
-| `<!-- .class -->` | `{% .class %}` | Annotations: naturally distinctive |
+| `<!-- tag attr="val" -->` | `{% tag attr="val" %}` | Same tag name in both |
+| `<!-- /tag -->` | `{% /tag %}` | Closing tags |
+| `<!-- tag /-->` | `{% tag /%}` | Self-closing: `/` before `-->` |
+| `<!-- #id -->` | `{% #id %}` | ID annotations |
+| `<!-- .class -->` | `{% .class %}` | Class annotations |
 
 **Behavioral rules:**
 
@@ -1112,7 +1111,8 @@ with no configuration needed—implementations MUST accept either as input.
 
 **Syntax detection:**
 
-- A document using `<!-- f:...` or `<!-- #...` patterns is detected as `comments` style
+- A document using `<!-- form...`, `<!-- field...`, `<!-- #...` patterns is detected as
+  `comments` style
 
 - A document using `{%...%}` patterns is detected as `tags` style
 
@@ -1125,17 +1125,17 @@ with no configuration needed—implementations MUST accept either as input.
 markform:
   spec: MF/0.1
 ---
-<!-- f:form id="survey" -->
-<!-- f:group id="ratings" -->
+<!-- form id="survey" -->
+<!-- group id="ratings" -->
 
-<!-- f:field kind="single_select" id="quality" label="Quality Rating" -->
+<!-- field kind="single_select" id="quality" label="Quality Rating" -->
 - [ ] Excellent <!-- #excellent -->
 - [ ] Good <!-- #good -->
 - [ ] Fair <!-- #fair -->
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- /f:group -->
-<!-- /f:form -->
+<!-- /group -->
+<!-- /form -->
 ```
 
 On GitHub, all `<!-- ... -->` comments are hidden, leaving only the visible content:

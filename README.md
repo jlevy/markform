@@ -34,7 +34,7 @@ in one place.
 
 Markform syntax is a good source format: token-efficient text you can read, diff, and
 version control.
-Structure is defined with HTML comment tags (`<!-- f:field -->`) that render invisibly
+Structure is defined with HTML comment tags (`<!-- field -->`) that render invisibly
 on GitHub, so forms look like regular Markdown.
 
 ## Why Do Agents Need Forms?
@@ -99,17 +99,17 @@ The text can be any Markdown.
 The tags define things like fields:
 
 ```markdown
-<!-- f:field kind="string" id="movie" label="Movie" role="user"
-   required=true minLength=1 maxLength=300 --><!-- /f:field -->
+<!-- field kind="string" id="movie" label="Movie" role="user"
+   required=true minLength=1 maxLength=300 --><!-- /field -->
 
-<!-- f:field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
+<!-- field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
 - [ ] G <!-- #g -->
 - [ ] PG <!-- #pg -->
 - [ ] PG-13 <!-- #pg_13 -->
 - [ ] R <!-- #r -->
 - [ ] NC-17 <!-- #nc_17 -->
 - [ ] NR/Unrated <!-- #nr -->
-<!-- /f:field -->
+<!-- /field -->
 ```
 
 Fields have types defined by the attributes.
@@ -117,21 +117,21 @@ Values are filled in incrementally, just like any form.
 Once filled in, values appear directly inside the tags, in Markdown format:
 
 ````markdown
-<!-- f:field kind="string" id="movie" label="Movie" role="user"
+<!-- field kind="string" id="movie" label="Movie" role="user"
    required=true minLength=1 maxLength=300 -->
 ```value
 The Shawshank Redemption
 ```
-<!-- /f:field -->
+<!-- /field -->
 
-<!-- f:field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
+<!-- field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
 - [ ] G <!-- #g -->
 - [ ] PG <!-- #pg -->
 - [ ] PG-13 <!-- #pg_13 -->
 - [x] R <!-- #r -->
 - [ ] NC-17 <!-- #nc_17 -->
 - [ ] NR/Unrated <!-- #nr -->
-<!-- /f:field -->
+<!-- /field -->
 ````
 
 Note fields can have a `role="user"` to indicate they are filled interactively by the

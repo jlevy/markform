@@ -173,8 +173,8 @@ $ $CLI docs | head -10
 **Version:** MF/0.1
 
 Markform is structured Markdown for forms.
-Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define
-typed, validated fields.
+Files combine YAML frontmatter with HTML comment tags to define typed, validated fields.
+Forms render cleanly on GitHub since structure is hidden in comments.
 
 **More info:** [Project README](https://github.com/jlevy/markform) |
 [Full Specification](markform-spec.md) (`markform spec`) |
