@@ -304,7 +304,7 @@ Commands:
   serve [options] <file>      Serve a file as a web page (forms are interactive,
                               others are read-only)
   status <file>               Display form fill status with per-role breakdown
-  validate <file>             Validate a form and display summary and issues (no
+  validate [options] <file>   Validate a form and display summary and issues (no
                               form content)
   help [command]              display help for command
 ? 1

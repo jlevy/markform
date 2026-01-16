@@ -1060,6 +1060,137 @@ Then configure:
 Here the serializer chose tildes (`~~~`) because the content contains backticks. The
 content includes multiple fenced code blocks that are preserved exactly as authored.
 
+#### Syntax Styles
+
+Markform supports two syntax styles for structural tags. Both are **always supported**
+with no configuration needed—implementations MUST accept either as input.
+
+**Comment syntax** (primary, recommended) uses HTML comments:
+
+```md
+<!-- form id="survey" -->
+<!-- field kind="string" id="name" label="Name" -->
+<!-- /field -->
+<!-- /form -->
+```
+
+**Tag syntax** (alternative) uses standard Markdoc tag notation:
+
+```md
+{% form id="survey" %}
+{% field kind="string" id="name" label="Name" %}
+{% /field %}
+{% /form %}
+```
+
+**Why prefer comment syntax?**
+
+- Forms render cleanly on GitHub and standard Markdown editors (comments are hidden)
+- Only the content (checkboxes, text) is visible to readers
+- Tag names match the Markdoc tags directly (e.g., `form`, `field`, `group`)
+
+**Syntax mapping:**
+
+| Comment Syntax | Tag Syntax | Notes |
+| --- | --- | --- |
+| `<!-- tag attr="val" -->` | `{% tag attr="val" %}` | Same tag name in both |
+| `<!-- /tag -->` | `{% /tag %}` | Closing tags |
+| `<!-- tag /-->` | `{% tag /%}` | Self-closing: `/` before `-->` |
+| `<!-- #id -->` | `{% #id %}` | ID annotations |
+| `<!-- .class -->` | `{% .class %}` | Class annotations |
+
+**Behavioral rules:**
+
+- *required:* Both syntaxes are **always supported** with no configuration needed
+
+- *required:* Implementations MUST accept either syntax as input
+
+- *required:* Whitespace after `<!--` is flexible—both `<!-- form` and `<!--form` MUST be
+  accepted as valid input
+
+- *recommended:* Output SHOULD use consistent spacing with a space after `<!--`
+  (e.g., `<!-- form -->` not `<!--form -->`)
+
+- *recommended:* Round-trip serialization SHOULD preserve the original syntax style
+
+- *recommended:* Use only one syntax per file for consistency
+
+**Markform document identification:**
+
+A document is identified as a Markform document when it contains a **form tag** that:
+
+1. Uses either comment syntax (`<!-- form ... -->`) or tag syntax (`{% form ... %}`)
+2. Contains well-formed attributes (i.e., has at least one `=` character)
+3. Includes an `id` attribute (not necessarily as the first attribute)
+
+Examples of valid form tags that identify a Markform document:
+
+```md
+<!-- form id="survey" -->                           ✓ valid
+<!-- form id="survey" spec="MF/0.1" -->             ✓ valid (spec optional)
+{% form id="survey" %}                              ✓ valid (tag syntax)
+<!-- form spec="MF/0.1" id="survey" title="..." --> ✓ valid (id not first)
+```
+
+Examples that do NOT identify a Markform document:
+
+```md
+<!-- form -->                     ✗ no attributes
+<!-- form follows -->             ✗ no = (not attributes)
+<!-- form notes for meeting -->   ✗ no = (just text)
+```
+
+**Tag transformation scope:**
+
+- *required:* Comment-to-tag transformation MUST only occur **within** the form tag
+  boundaries (between the opening `<!-- form ... -->` and closing `<!-- /form -->`)
+
+- *required:* HTML comments outside the form tag MUST pass through unchanged, even if
+  they match Markform tag names (e.g., `<!-- field notes -->` before the form tag)
+
+- *required:* The form tag itself is always recognized to establish document boundaries
+
+This scoping rule prevents collisions with regular HTML comments in documents that
+happen to contain words like "form", "field", or "group".
+
+**Syntax detection:**
+
+- A document is detected as `comments` style when the form tag uses comment syntax
+  (`<!-- form id="..." -->`)
+
+- A document is detected as `tags` style when the form tag uses tag syntax
+  (`{% form id="..." %}`) or when no valid form tag is found
+
+- Mixed syntax within a document is supported but not recommended
+
+**Example (comment syntax):**
+
+```md
+---
+markform:
+  spec: MF/0.1
+---
+<!-- form id="survey" -->
+<!-- group id="ratings" -->
+
+<!-- field kind="single_select" id="quality" label="Quality Rating" -->
+- [ ] Excellent <!-- #excellent -->
+- [ ] Good <!-- #good -->
+- [ ] Fair <!-- #fair -->
+<!-- /field -->
+
+<!-- /group -->
+<!-- /form -->
+```
+
+On GitHub, all `<!-- ... -->` comments are hidden, leaving only the visible content:
+- [ ] Excellent
+- [ ] Good
+- [ ] Fair
+
+**Constraint:** Values containing the literal string `-->` require escaping or should
+use the tag syntax to avoid prematurely closing the comment.
+
 * * *
 
 ## Layer 2: Form Data Model

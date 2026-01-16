@@ -14,8 +14,8 @@ licensed under AGPL-3.0-or-later. Contact the author for commercial licensing op
 **Version:** MF/0.1
 
 Markform is structured Markdown for forms.
-Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define
-typed, validated fields.
+Files combine YAML frontmatter with HTML comment tags to define typed, validated fields.
+Forms render cleanly on GitHub since structure is hidden in comments.
 
 **More info:** [Project README](https://github.com/jlevy/markform) |
 [Full Specification](markform-spec.md) (`markform spec`) |
@@ -48,21 +48,61 @@ markform:
     agent: "Instructions for AI agents"
 ---
 
-{% form id="form_id" title="Form Title" %}
+<!-- form id="form_id" title="Form Title" -->
 
-{% group id="group_id" title="Group Title" %}
+<!-- group id="group_id" title="Group Title" -->
 
 <!-- fields go here -->
 
-{% /group %}
+<!-- /group -->
 
-{% /form %}
+<!-- /form -->
 ```
 
 ## Conventions
 
 Use `.form.md` for Markform files.
-They are Markdoc syntax, which is a superset of Markdown.
+Markform uses HTML comment syntax for structure tags, which render invisibly on GitHub.
+
+### Syntax
+
+**Primary syntax** uses HTML comments:
+
+| Element | Syntax | Notes |
+|---------|--------|-------|
+| Opening tag | `<!-- form id="x" -->` | Tag name directly after `<!--` |
+| Closing tag | `<!-- /form -->` | Closing tags |
+| Self-closing | `<!-- field ... /-->` | Self-closing tags |
+| ID annotation | `<!-- #id -->` | ID annotations |
+| Class annotation | `<!-- .class -->` | Class annotations |
+
+**Example:**
+
+```markdown
+<!-- form id="survey" -->
+<!-- group id="basics" -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
+<!-- field kind="single_select" id="rating" label="Rating" -->
+- [ ] Good <!-- #good -->
+- [ ] Bad <!-- #bad -->
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->
+```
+
+### Alternative Syntax (Markdoc Tags)
+
+Markform also supports **Markdoc tag syntax** (`{% tag %}`), which is the underlying
+format used internally:
+
+| HTML Comment | Markdoc Tag |
+|--------------|-------------|
+| `<!-- form id="x" -->` | `{% form id="x" %}` |
+| `<!-- /form -->` | `{% /form %}` |
+| `<!-- #id -->` | `{% #id %}` |
+| `<!-- .class -->` | `{% .class %}` |
+
+Both syntaxes are always supported. Files preserve their original syntax on round-trip.
 
 ## Field Kinds
 
