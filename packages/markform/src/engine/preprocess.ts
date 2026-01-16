@@ -14,14 +14,7 @@ import type { SyntaxStyle } from './coreTypes.js';
 export type { SyntaxStyle } from './coreTypes.js';
 
 // Known Markform tag names that trigger comment-to-tag transformation
-const MARKFORM_TAGS = new Set([
-  'form',
-  'field',
-  'group',
-  'note',
-  'instructions',
-  'description',
-]);
+const MARKFORM_TAGS = new Set(['form', 'field', 'group', 'note', 'instructions', 'description']);
 
 /**
  * Check if a string starts with a known Markform tag name.
@@ -31,11 +24,7 @@ function startsWithMarkformTag(content: string): string | null {
   const trimmed = content.trim();
   for (const tag of MARKFORM_TAGS) {
     // Check for exact tag name followed by space, end, or attribute
-    if (
-      trimmed === tag ||
-      trimmed.startsWith(tag + ' ') ||
-      trimmed.startsWith(tag + '/')
-    ) {
+    if (trimmed === tag || trimmed.startsWith(tag + ' ') || trimmed.startsWith(tag + '/')) {
       return tag;
     }
   }

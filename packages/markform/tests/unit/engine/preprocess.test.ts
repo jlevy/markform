@@ -231,9 +231,7 @@ Here's a code example:
 
       it('handles whitespace variations in comments', () => {
         // Extra whitespace
-        expect(preprocessCommentSyntax('<!--   form id="test"   -->')).toBe(
-          '{% form id="test" %}',
-        );
+        expect(preprocessCommentSyntax('<!--   form id="test"   -->')).toBe('{% form id="test" %}');
         // Minimal whitespace
         expect(preprocessCommentSyntax('<!-- form id="test"-->')).toBe('{% form id="test" %}');
       });
