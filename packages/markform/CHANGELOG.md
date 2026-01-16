@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.16
+
+### Patch Changes
+
+- 97390e0: Add HTML comment syntax as a cleaner alternative to Markdoc tags, making forms render as valid Markdown on GitHub while maintaining full backward compatibility with existing tag syntax
+
 ## 0.1.15
 
 ### Patch Changes
