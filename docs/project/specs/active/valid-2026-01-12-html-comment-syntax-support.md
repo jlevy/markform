@@ -12,18 +12,20 @@ the HTML comment syntax feature, which allows Markform forms to use HTML comment
 
 ## Validation Planning
 
-The implementation covers three phases:
-1. **Phase 1**: Core preprocessor for parsing HTML comment syntax
-2. **Phase 2**: Serialization support for round-trip preservation
-3. **Phase 3**: Documentation updates
+The implementation covers four phases:
+1. **Phase 1**: Core preprocessor for parsing HTML comment syntax ✓ Complete
+2. **Phase 2**: Serialization support for round-trip preservation ✓ Complete
+3. **Phase 3**: Documentation updates ✓ Complete
+4. **Phase 4**: CLI `--syntax` option for strict validation ✓ Complete
 
-Phase 4 (CLI `--syntax` option) is optional and not implemented in this PR.
+Phase 5 (Make HTML comment syntax primary in all docs/examples) is planned for future
+work.
 
 ## Automated Validation (Testing Performed)
 
 ### Unit Testing
 
-**Preprocessor Tests** (`tests/unit/engine/preprocess.test.ts` - 34 tests):
+**Preprocessor Tests** (`tests/unit/engine/preprocess.test.ts` - 55 tests):
 - Basic tag transformations (`<!-- f:tag -->` → `{% tag %}`)
 - Closing tag transformations (`<!-- /f:tag -->` → `{% /tag %}`)
 - Self-closing tag transformations (`<!-- f:tag /-->` → `{% tag /%}`)
@@ -33,8 +35,11 @@ Phase 4 (CLI `--syntax` option) is optional and not implemented in this PR.
 - Inline code preservation
 - 4-space indented code blocks (CommonMark spec compliance)
 - Edge cases: empty input, no tags, mixed content
+- Syntax detection (`detectSyntaxStyle()`)
+- Syntax consistency validation (`validateSyntaxConsistency()`)
+- Violation detection for "wrong" syntax patterns
 
-**Serialization Tests** (`tests/unit/engine/serialize-comment.test.ts` - 25 tests):
+**Serialization Tests** (`tests/unit/engine/serialize-comment.test.ts` - 30 tests):
 - `postprocessToCommentSyntax()` transformations
 - `serializeForm()` syntax style preservation
 - Explicit syntax style override via options
@@ -66,44 +71,66 @@ Phase 4 (CLI `--syntax` option) is optional and not implemented in this PR.
 - Existing golden tests continue to pass
 - Ensures no regression in Markdoc syntax handling
 
-### Manual Testing Needed
+**CLI Tryscript Tests** (`tests/cli/commands.tryscript.md` - 6 tests for --syntax):
+- `--syntax=comments` passes for comment syntax file
+- `--syntax=tags` passes for Markdoc syntax file
+- `--syntax=comments` fails for Markdoc syntax file (correct detection)
+- `--syntax=tags` fails for comment syntax file (correct detection)
+- Invalid `--syntax` value shows error message
+- `--syntax=comments` with `--format json` outputs violations
 
-#### 1. Verify Comment Syntax Example Form
+### Manual Testing Performed
 
+All manual testing items have been verified during this merge:
+
+#### 1. Comment Syntax Example Form ✓ Verified
 ```bash
-# Parse and validate the comment-syntax example form
-cd packages/markform
-npx markform validate examples/simple/simple-comment-syntax.form.md
+node dist/bin.mjs validate examples/simple/simple-comment-syntax.form.md
 ```
+**Result**: Form parses successfully with expected validation issues (empty required fields).
 
-**Expected**: Form parses successfully with no errors.
-
-#### 2. Verify Round-Trip Preservation
-
+#### 2. Round-Trip Preservation ✓ Verified
 ```bash
-# Parse a comment-syntax form and re-serialize it
-npx markform validate examples/simple/simple-comment-syntax.form.md --output /tmp/roundtrip.form.md
-
-# Compare - should use comment syntax, not Markdoc syntax
-head -30 /tmp/roundtrip.form.md
+node dist/bin.mjs export examples/simple/simple-comment-syntax.form.md --format=form
 ```
+**Result**: Output contains `<!-- f:form` and `<!-- f:field` patterns, correctly preserving comment syntax.
 
-**Expected**: Output should contain `<!-- f:form` and `<!-- f:field` patterns, NOT `{% form` or `{% field`.
+#### 3. `--syntax` Enforcement ✓ Verified
+```bash
+# Should pass
+node dist/bin.mjs validate examples/simple/simple-comment-syntax.form.md --syntax=comments
+# Should fail with violations
+node dist/bin.mjs validate examples/simple/simple.form.md --syntax=comments
+```
+**Result**: Correctly enforces syntax consistency.
 
-#### 3. Verify GitHub Rendering
+### Remaining Manual Validation (For User)
+
+#### 1. Verify GitHub Rendering
 
 Open the example file on GitHub and verify the form tags are hidden:
 - `packages/markform/examples/simple/simple-comment-syntax.form.md`
 
 **Expected**: Only the checkbox lists and markdown content should be visible. The `<!-- f:... -->` tags should be completely hidden.
 
-#### 4. Verify Documentation Updates
+#### 2. Verify Documentation Updates
 
 Review the updated documentation:
 - `docs/markform-spec.md` - "Alternative Tag Syntax (HTML Comments)" section
 - `docs/markform-reference.md` - Syntax table and example in Conventions section
 
 **Expected**: Documentation is clear and accurate, includes syntax mapping table.
+
+## Test Summary
+
+| Test Category | Tests | Status |
+|---------------|-------|--------|
+| Preprocessor unit tests | 55 | ✓ Pass |
+| Serialization unit tests | 30 | ✓ Pass |
+| Parse integration tests | 10 | ✓ Pass |
+| CLI tryscript tests (--syntax) | 6 | ✓ Pass |
+| Golden/session tests | 26 | ✓ Pass |
+| Full test suite | 1641 | ✓ Pass |
 
 ## Open Questions
 
