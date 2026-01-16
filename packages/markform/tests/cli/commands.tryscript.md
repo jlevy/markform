@@ -255,7 +255,7 @@ anthropic/
 # Test: report generates filtered markdown
 
 ```console
-$ $CLI report examples/simple/simple-mock-filled.form.md | head -13
+$ $CLI report examples/simple/simple-mock-filled.form.md | head -15
 # Simple Test Form
 
 A fully interactive form demonstrating all Markform v0.1 field types.
@@ -264,9 +264,11 @@ Fill all fields using interactive prompts - no LLM API key needed.
 ## Basic Fields
 
 **Name:**
+
 Alice Johnson
 
 **Email:**
+
 alice@example.com
 ? 0
 ```
@@ -375,7 +377,7 @@ Form State: ◌ empty
 $ $CLI validate examples/simple/simple.form.md --syntax=comments
 Syntax violations found (expected: comments):
 
-  Line 13: Markdoc tag found
+  Line 12: Markdoc tag found
 ...
 ? 1
 ```
