@@ -1,5 +1,8 @@
 attic/
 
+# Beads issue tracking - only track at root, ignore in subdirectories
+packages/**/.beads/
+
 # User-generated forms output directory
 forms/
 
