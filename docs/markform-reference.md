@@ -14,8 +14,8 @@ licensed under AGPL-3.0-or-later. Contact the author for commercial licensing op
 **Version:** MF/0.1
 
 Markform is structured Markdown for forms.
-Files combine YAML frontmatter with [Markdoc](https://markdoc.dev/) tags to define
-typed, validated fields.
+Files combine YAML frontmatter with HTML comment tags to define typed, validated fields.
+Forms render cleanly on GitHub since structure is hidden in comments.
 
 **More info:** [Project README](https://github.com/jlevy/markform) |
 [Full Specification](markform-spec.md) (`markform spec`) |
@@ -48,35 +48,36 @@ markform:
     agent: "Instructions for AI agents"
 ---
 
-{% form id="form_id" title="Form Title" %}
+<!-- f:form id="form_id" title="Form Title" -->
 
-{% group id="group_id" title="Group Title" %}
+<!-- f:group id="group_id" title="Group Title" -->
 
 <!-- fields go here -->
 
-{% /group %}
+<!-- /f:group -->
 
-{% /form %}
+<!-- /f:form -->
 ```
 
 ## Conventions
 
 Use `.form.md` for Markform files.
-They are Markdoc syntax, which is a superset of Markdown.
-
-### Alternative Syntax (HTML Comments)
-
-Markform supports **HTML comment syntax** as an alternative to Markdoc tags.
+Markform uses HTML comment syntax with the `f:` namespace for structure tags.
 This enables forms to render cleanly on GitHub and in standard Markdown editors.
 
-| Markdoc | HTML Comment | Notes |
-|---------|--------------|-------|
-| `{% form id="x" %}` | `<!-- f:form id="x" -->` | Tags use `f:` prefix |
-| `{% /form %}` | `<!-- /f:form -->` | Closing tags |
-| `{% #id %}` | `<!-- #id -->` | ID annotations |
-| `{% .class %}` | `<!-- .class -->` | Class annotations |
+### Syntax
 
-**Example (HTML comment syntax):**
+**Primary syntax** uses HTML comments with the `f:` namespace:
+
+| Element | Syntax | Notes |
+|---------|--------|-------|
+| Opening tag | `<!-- f:form id="x" -->` | Tags use `f:` prefix |
+| Closing tag | `<!-- /f:form -->` | Closing tags |
+| Self-closing | `<!-- f:field ... /-->` | Self-closing tags |
+| ID annotation | `<!-- #id -->` | ID annotations |
+| Class annotation | `<!-- .class -->` | Class annotations |
+
+**Example:**
 
 ```markdown
 <!-- f:form id="survey" -->
@@ -89,6 +90,18 @@ This enables forms to render cleanly on GitHub and in standard Markdown editors.
 <!-- /f:group -->
 <!-- /f:form -->
 ```
+
+### Alternative Syntax (Markdoc Tags)
+
+Markform also supports **Markdoc tag syntax** (`{% tag %}`), which is the underlying
+format used internally:
+
+| HTML Comment | Markdoc Tag |
+|--------------|-------------|
+| `<!-- f:form id="x" -->` | `{% form id="x" %}` |
+| `<!-- /f:form -->` | `{% /form %}` |
+| `<!-- #id -->` | `{% #id %}` |
+| `<!-- .class -->` | `{% .class %}` |
 
 Both syntaxes are always supported. Files preserve their original syntax on round-trip.
 

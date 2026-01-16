@@ -34,8 +34,8 @@ in one place.
 
 Markform syntax is a good source format: token-efficient text you can read, diff, and
 version control.
-It is built with [Markdoc](https://github.com/markdoc/markdoc), which is
-a Markdown extension from Stripe with Jinja-style `{% tag %}` annotations.
+Structure is defined with HTML comment tags (`<!-- f:field -->`) that render invisibly
+on GitHub, so forms look like regular Markdown.
 
 ## Why Do Agents Need Forms?
 
@@ -54,8 +54,8 @@ or dependent on model whims (changes unpredictably with model updates).
 
 Forms solve this. Forms codify operational excellence.
 They’re easy to read, easy to edit, and enforce standards.
-Because LLMs handle Markdown and Jinja-style tags well, agents can also help create and
-improve the forms themselves—closing the meta-loop.
+Because LLMs handle Markdown well, agents can also help create and improve the forms
+themselves—closing the meta-loop.
 
 It’s time to bring bureaucracy to the agents!
 See [the FAQ](#faq) for more on the design.
@@ -94,46 +94,44 @@ npm install markform
 
 ### Form Definition
 
-A `.form.md` file is simply a Markdoc file.
-It combines YAML frontmatter with Markdoc-tagged content.
-
+A `.form.md` file combines YAML frontmatter with HTML comment tags that define structure.
 The text can be any Markdown.
 The tags define things like fields:
 
-```jinja
-{% field kind="string" id="movie" label="Movie" role="user"
-   required=true minLength=1 maxLength=300 %}{% /field %}
+```markdown
+<!-- f:field kind="string" id="movie" label="Movie" role="user"
+   required=true minLength=1 maxLength=300 --><!-- /f:field -->
 
-{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
-- [ ] G {% #g %}
-- [ ] PG {% #pg %}
-- [ ] PG-13 {% #pg_13 %}
-- [ ] R {% #r %}
-- [ ] NC-17 {% #nc_17 %}
-- [ ] NR/Unrated {% #nr %}
-{% /field %}
+<!-- f:field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
+- [ ] G <!-- #g -->
+- [ ] PG <!-- #pg -->
+- [ ] PG-13 <!-- #pg_13 -->
+- [ ] R <!-- #r -->
+- [ ] NC-17 <!-- #nc_17 -->
+- [ ] NR/Unrated <!-- #nr -->
+<!-- /f:field -->
 ```
 
 Fields have types defined by the attributes.
 Values are filled in incrementally, just like any form.
 Once filled in, values appear directly inside the tags, in Markdown format:
 
-````jinja
-{% field kind="string" id="movie" label="Movie" role="user"
-   required=true minLength=1 maxLength=300 %}
+````markdown
+<!-- f:field kind="string" id="movie" label="Movie" role="user"
+   required=true minLength=1 maxLength=300 -->
 ```value
 The Shawshank Redemption
 ```
-{% /field %}
+<!-- /f:field -->
 
-{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
-- [ ] G {% #g %}
-- [ ] PG {% #pg %}
-- [ ] PG-13 {% #pg_13 %}
-- [x] R {% #r %}
-- [ ] NC-17 {% #nc_17 %}
-- [ ] NR/Unrated {% #nr %}
-{% /field %}
+<!-- f:field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
+- [ ] G <!-- #g -->
+- [ ] PG <!-- #pg -->
+- [ ] PG-13 <!-- #pg_13 -->
+- [x] R <!-- #r -->
+- [ ] NC-17 <!-- #nc_17 -->
+- [ ] NR/Unrated <!-- #nr -->
+<!-- /f:field -->
 ````
 
 Note fields can have a `role="user"` to indicate they are filled interactively by the
@@ -145,13 +143,13 @@ grouping of forms.
 Checkboxes and tables as values are supported!
 Checkboxes can be single-select or multi-select.
 
-Here’s a full example:
+Here's a full example (using the alternative Markdoc tag syntax, which also works):
 
 <details>
 
 <summary>Markform for Movie Research Demo (click to expand)</summary>
 
-```jinja
+```markdown
 ---
 markform:
   spec: MF/0.1
