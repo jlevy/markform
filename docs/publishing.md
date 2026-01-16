@@ -118,7 +118,20 @@ git add .
 git commit -m "chore: release PACKAGE v0.2.0"
 ```
 
-### Step 5: Push and Tag
+### Step 5: Write Release Notes
+
+**Before pushing**, write release notes following the "Writing Release Notes" section below.
+These notes will be used for both the PR body and the GitHub release.
+
+```bash
+# Review changes since last release
+pnpm release:changes
+
+# Write release notes (see format in "Writing Release Notes" section)
+# Save to release-notes.md or prepare for --body argument
+```
+
+### Step 6: Push and Tag
 
 **Option A: Direct git push (local development)**
 
@@ -137,7 +150,7 @@ When direct push to main is restricted, use GitHub CLI. See
 # 1. Push to feature branch
 git push -u origin <branch-name>
 
-# 2. Create and merge PR (use release notes format from "Writing Release Notes" section)
+# 2. Create and merge PR (use release notes from Step 5)
 gh pr create -R OWNER/PACKAGE --base main --head <branch-name> \
   --title "chore: release PACKAGE v0.2.0" \
   --body-file release-notes.md  # Or use --body with the formatted notes
@@ -154,11 +167,23 @@ gh api repos/OWNER/PACKAGE/git/refs -X POST \
 
 The release workflow will automatically create the GitHub Release when the tag is pushed.
 
-### Step 6: Verify
+### Step 7: Update GitHub Release
+
+After the release workflow completes, update the GitHub release with the full release notes:
 
 ```bash
-gh run list -R OWNER/PACKAGE --limit 3  # Check release workflow started
-gh run view --log                        # Watch progress
+# Wait for release workflow to complete
+gh run list -R OWNER/PACKAGE --limit 3
+
+# Update release notes (use same notes from Step 5)
+gh release edit v0.2.0 -R OWNER/PACKAGE --notes-file release-notes.md
+# Or use --notes with the content directly
+```
+
+### Step 8: Verify
+
+```bash
+gh release view v0.2.0 -R OWNER/PACKAGE  # Verify release notes
 ```
 
 The GitHub Actions workflow will build and publish to npm using OIDC authentication.
@@ -271,7 +296,15 @@ pnpm changeset:add minor 0.2.0 "Summary of changes"
 git add .changeset && git commit -m "chore: add changeset for v0.2.0"
 pnpm version-packages
 git add . && git commit -m "chore: release PACKAGE v0.2.0"
+
+# Write release notes BEFORE pushing (see "Writing Release Notes" section)
+pnpm release:changes  # Review changes
+# Create release-notes.md following the format template
+
 git push && git tag v0.2.0 && git push --tags
+
+# Update GitHub release with full notes after workflow completes
+gh release edit v0.2.0 -R OWNER/PACKAGE --notes-file release-notes.md
 ```
 
 ### Restricted Environments (via PR and API)
@@ -282,9 +315,14 @@ pnpm changeset:add minor 0.2.0 "Summary of changes"
 git add .changeset && git commit -m "chore: add changeset for v0.2.0"
 pnpm version-packages
 git add . && git commit -m "chore: release PACKAGE v0.2.0"
+
+# Write release notes BEFORE creating PR (see "Writing Release Notes" section)
+pnpm release:changes  # Review changes
+# Create release-notes.md following the format template
+
 git push -u origin <branch-name>
 
-# Merge via PR (see "Writing Release Notes" section for body format)
+# Merge via PR (use release notes in body)
 gh pr create -R OWNER/PACKAGE --base main --head <branch-name> \
   --title "chore: release PACKAGE v0.2.0" --body-file release-notes.md
 gh pr merge <pr-number> -R OWNER/PACKAGE --merge
@@ -293,8 +331,12 @@ gh pr merge <pr-number> -R OWNER/PACKAGE --merge
 MERGE_SHA=$(gh pr view <pr-number> -R OWNER/PACKAGE --json mergeCommit -q '.mergeCommit.oid')
 gh api repos/OWNER/PACKAGE/git/refs -X POST -f ref="refs/tags/v0.2.0" -f sha="$MERGE_SHA"
 
-# Verify (release workflow creates GitHub Release automatically)
-gh run list -R OWNER/PACKAGE --limit 3
+# Update GitHub release with full notes after workflow completes
+gh run list -R OWNER/PACKAGE --limit 3  # Wait for completion
+gh release edit v0.2.0 -R OWNER/PACKAGE --notes-file release-notes.md
+
+# Verify
+gh release view v0.2.0 -R OWNER/PACKAGE
 ```
 
 ## How OIDC Publishing Works
