@@ -9,33 +9,34 @@ import {
 describe('engine/preprocess', () => {
   describe('preprocessCommentSyntax', () => {
     describe('basic transformations', () => {
-      it('transforms opening tag', () => {
+      it('transforms form opening tag with id=', () => {
         const input = '<!-- form id="test" -->';
         const expected = '{% form id="test" %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
-      it('transforms closing tag', () => {
-        const input = '<!-- /form -->';
-        const expected = '{% /form %}';
+      it('transforms closing tag after form opening', () => {
+        const input = '<!-- form id="test" --><!-- /form -->';
+        const expected = '{% form id="test" %}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
-      it('transforms self-closing tag', () => {
-        const input = '<!-- field kind="string" id="name" /-->';
-        const expected = '{% field kind="string" id="name" /%}';
+      it('transforms self-closing tag inside form', () => {
+        const input =
+          '<!-- form id="test" --><!-- field kind="string" id="name" /--><!-- /form -->';
+        const expected = '{% form id="test" %}{% field kind="string" id="name" /%}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
-      it('transforms #id annotation', () => {
-        const input = '<!-- #good -->';
-        const expected = '{% #good %}';
+      it('transforms #id annotation inside form', () => {
+        const input = '<!-- form id="test" --><!-- #good --><!-- /form -->';
+        const expected = '{% form id="test" %}{% #good %}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
-      it('transforms .class annotation', () => {
-        const input = '<!-- .highlight -->';
-        const expected = '{% .highlight %}';
+      it('transforms .class annotation inside form', () => {
+        const input = '<!-- form id="test" --><!-- .highlight --><!-- /form -->';
+        const expected = '{% form id="test" %}{% .highlight %}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
@@ -46,6 +47,17 @@ describe('engine/preprocess', () => {
 
       it('passes through Markdoc syntax unchanged', () => {
         const input = '{% form id="test" %}{% /form %}';
+        expect(preprocessCommentSyntax(input)).toBe(input);
+      });
+
+      it('does not transform form tag without id=', () => {
+        const input = '<!-- form -->';
+        expect(preprocessCommentSyntax(input)).toBe(input);
+      });
+
+      it('does not transform tags outside form', () => {
+        const input = '<!-- field id="x" --><!-- #id -->';
+        // No form tag, so no transformation
         expect(preprocessCommentSyntax(input)).toBe(input);
       });
     });
@@ -70,20 +82,21 @@ describe('engine/preprocess', () => {
       });
 
       it('transforms closing tag without space', () => {
-        const input = '<!--/form -->';
-        const expected = '{% /form %}';
+        // Closing tag still transformed since it follows form opening
+        const input = '<!-- form id="test" --><!--/form -->';
+        const expected = '{% form id="test" %}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
-      it('transforms #id annotation without space', () => {
-        const input = '<!--#good -->';
-        const expected = '{% #good %}';
+      it('transforms #id annotation without space (inside form)', () => {
+        const input = '<!-- form id="test" --><!--#good --><!-- /form -->';
+        const expected = '{% form id="test" %}{% #good %}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
-      it('transforms .class annotation without space', () => {
-        const input = '<!--.highlight -->';
-        const expected = '{% .highlight %}';
+      it('transforms .class annotation without space (inside form)', () => {
+        const input = '<!-- form id="test" --><!--.highlight --><!-- /form -->';
+        const expected = '{% form id="test" %}{% .highlight %}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
     });
@@ -261,9 +274,10 @@ Here's a code example:
         expect(preprocessCommentSyntax(input)).toBe(input);
       });
 
-      it('handles multiple annotations on same line', () => {
-        const input = '- [ ] Option A <!-- #optA --> <!-- .primary -->';
-        const expected = '- [ ] Option A {% #optA %} {% .primary %}';
+      it('handles multiple annotations on same line (inside form)', () => {
+        const input =
+          '<!-- form id="test" -->- [ ] Option A <!-- #optA --> <!-- .primary --><!-- /form -->';
+        const expected = '{% form id="test" %}- [ ] Option A {% #optA %} {% .primary %}{% /form %}';
         expect(preprocessCommentSyntax(input)).toBe(expected);
       });
 
@@ -274,8 +288,8 @@ Here's a code example:
         expect(preprocessCommentSyntax('<!-- form id="test"-->')).toBe('{% form id="test" %}');
       });
 
-      it('handles self-closing with whitespace before slash', () => {
-        const input = '<!-- field kind="string" /  -->';
+      it('handles self-closing with whitespace before slash (inside form)', () => {
+        const input = '<!-- form id="test" --><!-- field kind="string" /  --><!-- /form -->';
         // The slash with trailing space should still be detected
         expect(preprocessCommentSyntax(input)).toContain('/%}');
       });
@@ -326,34 +340,46 @@ No closing fence`;
       expect(detectSyntaxStyle(input)).toBe('tags');
     });
 
-    it('detects html-comment from #id annotation', () => {
+    it('does not detect from #id annotation alone (requires form tag)', () => {
       const input = '- [ ] Option <!-- #opt -->';
-      expect(detectSyntaxStyle(input)).toBe('comments');
+      expect(detectSyntaxStyle(input)).toBe('tags'); // No form tag with id=
     });
 
-    it('detects html-comment from .class annotation', () => {
+    it('does not detect from .class annotation alone (requires form tag)', () => {
       const input = '- [ ] Option <!-- .highlight -->';
-      expect(detectSyntaxStyle(input)).toBe('comments');
+      expect(detectSyntaxStyle(input)).toBe('tags'); // No form tag with id=
     });
 
-    it('detects html-comment from closing tag', () => {
+    it('does not detect from closing tag alone (requires form tag)', () => {
       const input = 'Some content\n<!-- /form -->';
-      expect(detectSyntaxStyle(input)).toBe('comments');
+      expect(detectSyntaxStyle(input)).toBe('tags'); // No opening form tag with id=
     });
 
-    it('returns style that appears first when mixed', () => {
-      // Markdoc first
-      const markdocFirst = '{% form %}<!-- field -->';
+    it('returns style based on form tag with id=', () => {
+      // Markdoc form tag with id=
+      const markdocFirst = '{% form id="x" %}<!-- field -->{% /form %}';
       expect(detectSyntaxStyle(markdocFirst)).toBe('tags');
 
-      // Comment first
-      const commentFirst = '<!-- form -->{% field %}';
+      // Comment form tag with id=
+      const commentFirst = '<!-- form id="x" -->{% field %}<!-- /form -->';
       expect(detectSyntaxStyle(commentFirst)).toBe('comments');
     });
 
     it('ignores regular HTML comments when detecting', () => {
       // Regular comment before Markdoc tag
       const input = '<!-- regular comment -->{% form id="test" %}';
+      expect(detectSyntaxStyle(input)).toBe('tags');
+    });
+
+    it('ignores form tag without id= attribute', () => {
+      // Form tag without id= should not trigger detection
+      const input = '<!-- form -->some content<!-- /form -->';
+      expect(detectSyntaxStyle(input)).toBe('tags');
+    });
+
+    it('ignores form tag with text but no attributes', () => {
+      // "form follows" is not a valid form tag
+      const input = '<!-- form follows for the meeting -->';
       expect(detectSyntaxStyle(input)).toBe('tags');
     });
 
@@ -370,34 +396,34 @@ markform:
     describe('ignores code blocks', () => {
       it('ignores comment syntax in fenced code block', () => {
         const input = `\`\`\`md
-<!-- form -->
+<!-- form id="x" -->
 \`\`\`
-{% form %}`;
+{% form id="y" %}`;
 
         expect(detectSyntaxStyle(input)).toBe('tags');
       });
 
       it('ignores markdoc syntax in fenced code block', () => {
         const input = `\`\`\`md
-{% form %}
+{% form id="x" %}
 \`\`\`
-<!-- form -->`;
+<!-- form id="y" -->`;
 
         expect(detectSyntaxStyle(input)).toBe('comments');
       });
 
       it('ignores comment syntax in inline code span', () => {
-        const input = 'Use the syntax `<!-- form -->` to create forms. {% form %}';
+        const input = 'Use the syntax `<!-- form id="x" -->` to create forms. {% form id="y" %}';
         expect(detectSyntaxStyle(input)).toBe('tags');
       });
 
       it('ignores markdoc syntax in inline code span', () => {
-        const input = 'Use the syntax `{% form %}` to create forms. <!-- form -->';
+        const input = 'Use the syntax `{% form id="x" %}` to create forms. <!-- form id="y" -->';
         expect(detectSyntaxStyle(input)).toBe('comments');
       });
 
       it('handles double-backtick inline code', () => {
-        const input = 'Example: `` `<!-- form -->` `` and then {% form %}';
+        const input = 'Example: `` `<!-- form id="x" -->` `` and then {% form id="y" %}';
         expect(detectSyntaxStyle(input)).toBe('tags');
       });
 
@@ -405,8 +431,8 @@ markform:
         const input = `Here is an example:
 
 \`\`\`md
-<!-- form -->
-{% form %}
+<!-- form id="x" -->
+{% form id="y" %}
 \`\`\`
 
 No real tags here.`;
@@ -431,14 +457,14 @@ No real tags here.`;
         expect(detectSyntaxStyle(input)).toBe('comments');
       });
 
-      it('detects #id annotation without space', () => {
+      it('does not detect #id annotation alone (requires form tag)', () => {
         const input = '- [ ] Option <!--#opt -->';
-        expect(detectSyntaxStyle(input)).toBe('comments');
+        expect(detectSyntaxStyle(input)).toBe('tags'); // No form tag with id=
       });
 
-      it('detects closing tag without space', () => {
+      it('does not detect closing tag alone (requires form tag)', () => {
         const input = 'Some content\n<!--/form -->';
-        expect(detectSyntaxStyle(input)).toBe('comments');
+        expect(detectSyntaxStyle(input)).toBe('tags'); // No opening form tag with id=
       });
     });
   });
@@ -469,10 +495,11 @@ No real tags here.`;
       });
 
       it('returns violation with correct line number', () => {
-        const input = `Line 1
+        const input = `<!-- form id="test" -->
 Line 2
-{% form %}
-Line 4`;
+{% field id="x" %}
+Line 4
+<!-- /form -->`;
 
         const violations = validateSyntaxConsistency(input, 'comments');
         expect(violations).toHaveLength(1);
@@ -480,7 +507,7 @@ Line 4`;
       });
 
       it('ignores Markdoc syntax inside code blocks', () => {
-        const input = `<!-- form -->
+        const input = `<!-- form id="test" -->
 \`\`\`
 {% field %}
 \`\`\`
@@ -491,7 +518,7 @@ Line 4`;
       });
 
       it('ignores Markdoc syntax inside inline code', () => {
-        const input = `<!-- form -->
+        const input = `<!-- form id="test" -->
 Use \`{% field %}\` to create fields.
 <!-- /form -->`;
 
@@ -525,7 +552,7 @@ Use \`{% field %}\` to create fields.
       });
 
       it('returns violations for #id annotations', () => {
-        const input = `{% form %}
+        const input = `{% form id="test" %}
 - [ ] Option <!-- #opt -->
 {% /form %}`;
 
@@ -539,7 +566,7 @@ Use \`{% field %}\` to create fields.
       });
 
       it('returns violations for .class annotations', () => {
-        const input = `{% form %}
+        const input = `{% form id="test" %}
 - [ ] Option <!-- .highlight -->
 {% /form %}`;
 
@@ -549,7 +576,7 @@ Use \`{% field %}\` to create fields.
       });
 
       it('does not flag regular HTML comments', () => {
-        const input = `{% form %}
+        const input = `{% form id="test" %}
 <!-- This is a regular comment -->
 {% /form %}`;
 
@@ -558,7 +585,7 @@ Use \`{% field %}\` to create fields.
       });
 
       it('ignores comment syntax inside code blocks', () => {
-        const input = `{% form %}
+        const input = `{% form id="test" %}
 \`\`\`
 <!-- field -->
 <!-- #id -->
@@ -577,7 +604,8 @@ Use \`{% field %}\` to create fields.
       });
 
       it('handles multiple violations on same line', () => {
-        const input = '{% form %}{% field %}{% /field %}{% /form %}';
+        const input =
+          '<!-- form id="test" -->{% field id="a" %}{% /field %}{% field id="b" %}{% /field %}<!-- /form -->';
         const violations = validateSyntaxConsistency(input, 'comments');
 
         expect(violations.length).toBeGreaterThanOrEqual(4);
@@ -588,8 +616,8 @@ Use \`{% field %}\` to create fields.
       });
 
       it('handles mixed syntax document', () => {
-        const input = `<!-- form -->
-{% field %}
+        const input = `<!-- form id="test" -->
+{% field id="x" %}
 <!-- #id -->
 {% /field %}
 <!-- /form -->`;
@@ -601,19 +629,32 @@ Use \`{% field %}\` to create fields.
 
         // When expecting markdoc, find comment violations
         const markdocViolations = validateSyntaxConsistency(input, 'tags');
-        expect(markdocViolations.length).toBe(3);
+        expect(markdocViolations.length).toBe(2); // form and #id
         expect(markdocViolations.every((v) => v.foundSyntax === 'comments')).toBe(true);
       });
 
       it('truncates long patterns in violation', () => {
         const longTag =
           '{% field kind="string" id="very-long-identifier" label="A very long label" %}';
-        const input = `<!-- form -->\n${longTag}`;
+        const input = `<!-- form id="test" -->\n${longTag}\n<!-- /form -->`;
 
         const violations = validateSyntaxConsistency(input, 'comments');
         expect(violations).toHaveLength(1);
         // Pattern should be captured (may be long)
         expect(violations[0]!.pattern).toBe(longTag);
+      });
+
+      it('ignores comments outside form boundaries', () => {
+        // Comments before and after form should pass through
+        const input = `<!-- field notes for this section -->
+{% form id="test" %}
+{% field id="name" %}{% /field %}
+{% /form %}
+<!-- form follows later -->`;
+
+        // No violations - the comment-like patterns are outside form
+        const violations = validateSyntaxConsistency(input, 'tags');
+        expect(violations).toEqual([]);
       });
     });
   });

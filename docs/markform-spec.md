@@ -1115,12 +1115,51 @@ with no configuration needed—implementations MUST accept either as input.
 
 - *recommended:* Use only one syntax per file for consistency
 
+**Markform document identification:**
+
+A document is identified as a Markform document when it contains a **form tag** that:
+
+1. Uses either comment syntax (`<!-- form ... -->`) or tag syntax (`{% form ... %}`)
+2. Contains well-formed attributes (i.e., has at least one `=` character)
+3. Includes an `id` attribute (not necessarily as the first attribute)
+
+Examples of valid form tags that identify a Markform document:
+
+```md
+<!-- form id="survey" -->                           ✓ valid
+<!-- form id="survey" spec="MF/0.1" -->             ✓ valid (spec optional)
+{% form id="survey" %}                              ✓ valid (tag syntax)
+<!-- form spec="MF/0.1" id="survey" title="..." --> ✓ valid (id not first)
+```
+
+Examples that do NOT identify a Markform document:
+
+```md
+<!-- form -->                     ✗ no attributes
+<!-- form follows -->             ✗ no = (not attributes)
+<!-- form notes for meeting -->   ✗ no = (just text)
+```
+
+**Tag transformation scope:**
+
+- *required:* Comment-to-tag transformation MUST only occur **within** the form tag
+  boundaries (between the opening `<!-- form ... -->` and closing `<!-- /form -->`)
+
+- *required:* HTML comments outside the form tag MUST pass through unchanged, even if
+  they match Markform tag names (e.g., `<!-- field notes -->` before the form tag)
+
+- *required:* The form tag itself is always recognized to establish document boundaries
+
+This scoping rule prevents collisions with regular HTML comments in documents that
+happen to contain words like "form", "field", or "group".
+
 **Syntax detection:**
 
-- A document using `<!-- form...`, `<!-- field...`, `<!-- #...` patterns is detected as
-  `comments` style
+- A document is detected as `comments` style when the form tag uses comment syntax
+  (`<!-- form id="..." -->`)
 
-- A document using `{%...%}` patterns is detected as `tags` style
+- A document is detected as `tags` style when the form tag uses tag syntax
+  (`{% form id="..." %}`) or when no valid form tag is found
 
 - Mixed syntax within a document is supported but not recommended
 

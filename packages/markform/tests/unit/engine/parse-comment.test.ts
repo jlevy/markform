@@ -211,7 +211,6 @@ markform:
 <!-- group id="g1" -->
 <!-- field kind="string" id="f1" label="Field" --><!-- /field -->
 <!-- /group -->
-<!-- /form -->
 
 <!-- note id="n1" ref="f1" role="analyst" -->
 This is a note about the field.
@@ -219,7 +218,8 @@ This is a note about the field.
 
 <!-- description ref="f1" -->
 Field description here.
-<!-- /description -->`;
+<!-- /description -->
+<!-- /form -->`;
 
       const parsed = parseForm(markdown);
 
