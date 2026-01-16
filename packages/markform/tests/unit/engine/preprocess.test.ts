@@ -50,6 +50,44 @@ describe('engine/preprocess', () => {
       });
     });
 
+    describe('spacing tolerance', () => {
+      it('transforms tag with space after <!--', () => {
+        const input = '<!-- form id="test" -->';
+        const expected = '{% form id="test" %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms tag without space after <!--', () => {
+        const input = '<!--form id="test" -->';
+        const expected = '{% form id="test" %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms tag with multiple spaces after <!--', () => {
+        const input = '<!--  form id="test" -->';
+        const expected = '{% form id="test" %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms closing tag without space', () => {
+        const input = '<!--/form -->';
+        const expected = '{% /form %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms #id annotation without space', () => {
+        const input = '<!--#good -->';
+        const expected = '{% #good %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+
+      it('transforms .class annotation without space', () => {
+        const input = '<!--.highlight -->';
+        const expected = '{% .highlight %}';
+        expect(preprocessCommentSyntax(input)).toBe(expected);
+      });
+    });
+
     describe('complex documents', () => {
       it('transforms a complete form', () => {
         const input = `---
@@ -374,6 +412,33 @@ markform:
 No real tags here.`;
 
         expect(detectSyntaxStyle(input)).toBe('tags');
+      });
+    });
+
+    describe('spacing tolerance', () => {
+      it('detects comment syntax with space after <!--', () => {
+        const input = '<!-- form id="test" --><!-- /form -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects comment syntax without space after <!--', () => {
+        const input = '<!--form id="test" --><!-- /form -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects comment syntax with multiple spaces after <!--', () => {
+        const input = '<!--  form id="test" --><!-- /form -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects #id annotation without space', () => {
+        const input = '- [ ] Option <!--#opt -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
+      });
+
+      it('detects closing tag without space', () => {
+        const input = 'Some content\n<!--/form -->';
+        expect(detectSyntaxStyle(input)).toBe('comments');
       });
     });
   });

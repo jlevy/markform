@@ -1105,6 +1105,12 @@ with no configuration needed—implementations MUST accept either as input.
 
 - *required:* Implementations MUST accept either syntax as input
 
+- *required:* Whitespace after `<!--` is flexible—both `<!-- form` and `<!--form` MUST be
+  accepted as valid input
+
+- *recommended:* Output SHOULD use consistent spacing with a space after `<!--`
+  (e.g., `<!-- form -->` not `<!--form -->`)
+
 - *recommended:* Round-trip serialization SHOULD preserve the original syntax style
 
 - *recommended:* Use only one syntax per file for consistency
