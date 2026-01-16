@@ -9,7 +9,6 @@ markform:
   role_instructions:
     user: "Fill in all fields in this form."
 ---
-
 {% form id="simple_test" title="Simple Test Form" %}
 
 {% description ref="simple_test" %}
@@ -50,16 +49,20 @@ Add 1-5 unique tags (each at least 2 characters).
 {% group id="selection_fields" title="Selection Fields" %}
 
 {% field kind="single_select" id="priority" label="Priority" role="user" required=true %}
+
 - [ ] Low {% #low %}
 - [ ] Medium {% #medium %}
 - [ ] High {% #high %}
+
 {% /field %}
 
 {% field kind="multi_select" id="categories" label="Categories" role="user" required=true minSelections=1 maxSelections=3 %}
+
 - [ ] Frontend {% #frontend %}
 - [ ] Backend {% #backend %}
 - [ ] Database {% #database %}
 - [ ] DevOps {% #devops %}
+
 {% /field %}
 
 {% /group %}
@@ -67,28 +70,36 @@ Add 1-5 unique tags (each at least 2 characters).
 {% group id="checkbox_fields" title="Checkbox Fields" %}
 
 {% field kind="checkboxes" id="tasks_multi" label="Tasks (Multi Mode)" role="user" checkboxMode="multi" required=true %}
+
 - [ ] Research {% #research %}
 - [ ] Design {% #design %}
 - [ ] Implement {% #implement %}
 - [ ] Test {% #test %}
+
 {% /field %}
 
 {% instructions ref="tasks_multi" %}
-Track task progress. All must reach done or na state to complete.
+Track task progress.
+All must reach done or na state to complete.
 {% /instructions %}
 
 {% field kind="checkboxes" id="tasks_simple" label="Agreements (Simple Mode)" role="user" checkboxMode="simple" required=true %}
+
 - [ ] I have read the guidelines {% #read_guidelines %}
 - [ ] I agree to the terms {% #agree_terms %}
+
 {% /field %}
 
 {% field kind="checkboxes" id="confirmations" label="Confirmations (Explicit Mode)" role="user" checkboxMode="explicit" required=true %}
+
 - [ ] Data has been backed up {% #backed_up %}
 - [ ] Stakeholders notified {% #notified %}
+
 {% /field %}
 
 {% instructions ref="confirmations" %}
-Answer yes or no for each confirmation. All must be explicitly answered.
+Answer yes or no for each confirmation.
+All must be explicitly answered.
 {% /instructions %}
 
 {% /group %}
@@ -127,22 +138,22 @@ Enter the year the company was founded (1900-2030).
 
 {% group id="table_fields" title="Table Fields" %}
 
-{% field kind="table" id="team_members" label="Team Members" role="user" minRows=0 maxRows=5
-   columnIds=["name", "role", "start_date"]
-   columnTypes=[{type: "string", required: true}, "string", "date"] %}
+{% field kind="table" id="team_members" label="Team Members" role="user" minRows=0 maxRows=5 columnIds=["name", "role", "start_date"] columnTypes=[{type: "string", required: true}, "string", "date"] %}
+
 | Name | Role | Start Date |
 |------|------|------------|
+
 {% /field %}
 
 {% instructions ref="team_members" %}
 Add team members with their name (required), role, and start date.
 {% /instructions %}
 
-{% field kind="table" id="project_tasks" label="Project Tasks" role="user" minRows=0 maxRows=10
-   columnIds=["task", "estimate_hrs", "link"]
-   columnTypes=[{type: "string", required: true}, "number", "url"] %}
+{% field kind="table" id="project_tasks" label="Project Tasks" role="user" minRows=0 maxRows=10 columnIds=["task", "estimate_hrs", "link"] columnTypes=[{type: "string", required: true}, "number", "url"] %}
+
 | Task | Estimate (hrs) | Link |
 |------|----------------|------|
+
 {% /field %}
 
 {% instructions ref="project_tasks" %}

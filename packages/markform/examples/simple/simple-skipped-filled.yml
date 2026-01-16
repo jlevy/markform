@@ -74,4 +74,4 @@ notes:
   - id: note-summary
     ref: simple_test
     role: user
-    text: All required fields completed successfully. Optional fields skipped.
+    text: All required fields completed successfully.Optional fields skipped.

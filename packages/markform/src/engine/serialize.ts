@@ -1485,6 +1485,8 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
   const lines: string[] = [];
 
   lines.push(`**${field.label}:**`);
+  // Blank line after label to ensure new paragraph (and prevent Flowmark merging)
+  lines.push('');
 
   // Extract value from response if state is "answered"
   const value = response?.state === 'answered' ? response.value : undefined;

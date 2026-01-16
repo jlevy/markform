@@ -39,11 +39,12 @@ markform:
     max_issues_per_turn: 5
     max_patches_per_turn: 15
 ---
-
 {% form id="movie_research_deep" title="Movie Deep Research" %}
 
 {% description ref="movie_research_deep" %}
-Comprehensive movie research covering ratings from multiple sources, box office performance, full cast and crew, technical specifications, streaming availability, and cultural impact analysis.
+Comprehensive movie research covering ratings from multiple sources, box office
+performance, full cast and crew, technical specifications, streaming availability, and
+cultural impact analysis.
 {% /description %}
 
 {% group id="movie_input" title="Movie Identification" %}
@@ -51,7 +52,8 @@ Comprehensive movie research covering ratings from multiple sources, box office 
 {% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
 
 {% instructions ref="movie" %}
-Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson").
+Enter the movie title (add any details to help identify, like “Barbie 2023” or “the
+Batman movie with Robert Pattinson”).
 {% /instructions %}
 
 {% /group %}
@@ -63,7 +65,8 @@ Enter the movie title (add any details to help identify, like "Barbie 2023" or "
 {% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
 
 {% instructions ref="full_title" %}
-Official title including subtitle if any (e.g., "The Lord of the Rings: The Fellowship of the Ring").
+Official title including subtitle if any (e.g., “The Lord of the Rings: The Fellowship
+of the Ring”).
 {% /instructions %}
 
 {% field kind="number" id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /field %}
@@ -84,13 +87,13 @@ Format: https://www.imdb.com/title/tt0111161/
 {% field kind="url" id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /field %}
 
 {% instructions ref="rt_url" %}
-Direct link to the movie's Rotten Tomatoes page.
+Direct link to the movie’s Rotten Tomatoes page.
 {% /instructions %}
 
 {% field kind="url" id="metacritic_url" label="Metacritic URL" role="agent" %}{% /field %}
 
 {% instructions ref="metacritic_url" %}
-Direct link to the movie's Metacritic page.
+Direct link to the movie’s Metacritic page.
 {% /instructions %}
 
 {% /group %}
@@ -117,8 +120,8 @@ Alternative/supplementary box office data and profitability analysis.
 {% field kind="url" id="justwatch_url" label="JustWatch URL" role="agent" %}{% /field %}
 
 {% instructions ref="justwatch_url" %}
-Best source for current streaming availability. Use US region.
-Format: https://www.justwatch.com/us/movie/the-shawshank-redemption
+Best source for current streaming availability.
+Use US region. Format: https://www.justwatch.com/us/movie/the-shawshank-redemption
 {% /instructions %}
 
 {% /group %}
@@ -128,7 +131,8 @@ Format: https://www.justwatch.com/us/movie/the-shawshank-redemption
 {% field kind="url" id="letterboxd_url" label="Letterboxd URL" role="agent" %}{% /field %}
 
 {% instructions ref="letterboxd_url" %}
-Cinephile community ratings. Especially useful for art/indie/cult films.
+Cinephile community ratings.
+Especially useful for art/indie/cult films.
 {% /instructions %}
 
 {% field kind="url" id="wikipedia_url" label="Wikipedia URL" role="agent" %}{% /field %}
@@ -140,7 +144,7 @@ For production history, cultural impact, comprehensive awards list.
 {% field kind="url" id="official_site_url" label="Official Website" role="agent" %}{% /field %}
 
 {% instructions ref="official_site_url" %}
-Studio or film's official website, if still active.
+Studio or film’s official website, if still active.
 {% /instructions %}
 
 {% /group %}
@@ -152,21 +156,25 @@ Studio or film's official website, if still active.
 {% field kind="string_list" id="directors" label="Director(s)" role="agent" required=true %}{% /field %}
 
 {% instructions ref="directors" %}
-One director per line. Most films have one; some have two or more co-directors.
+One director per line.
+Most films have one; some have two or more co-directors.
 {% /instructions %}
 
 {% field kind="number" id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 %}{% /field %}
 
 {% field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" %}
+
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
 - [ ] PG-13 {% #pg_13 %}
 - [ ] R {% #r %}
 - [ ] NC-17 {% #nc_17 %}
 - [ ] NR/Unrated {% #nr %}
+
 {% /field %}
 
 {% field kind="multi_select" id="genres" label="Genres" role="agent" minSelections=1 maxSelections=5 %}
+
 - [ ] Action {% #action %}
 - [ ] Adventure {% #adventure %}
 - [ ] Animation {% #animation %}
@@ -189,6 +197,7 @@ One director per line. Most films have one; some have two or more co-directors.
 - [ ] Thriller {% #thriller %}
 - [ ] War {% #war %}
 - [ ] Western {% #western %}
+
 {% /field %}
 
 {% instructions ref="genres" %}
@@ -209,11 +218,11 @@ Production countries, one per line.
 
 {% group id="cast_crew" title="Cast & Crew" %}
 
-{% field kind="table" id="lead_cast" label="Lead Cast" role="agent" minRows=1 maxRows=10
-   columnIds=["actor_name", "character_name"]
-   columnTypes=["string", "string"] %}
+{% field kind="table" id="lead_cast" label="Lead Cast" role="agent" minRows=1 maxRows=10 columnIds=["actor_name", "character_name"] columnTypes=["string", "string"] %}
+
 | Actor Name | Character Name |
 |------------|----------------|
+
 {% /field %}
 
 {% instructions ref="lead_cast" %}
@@ -225,8 +234,7 @@ Example: Leonardo DiCaprio | Dom Cobb
 
 {% instructions ref="writers" %}
 Screenplay and story credits.
-Format: Name (credit type)
-Example: "Christopher Nolan (written by)"
+Format: Name (credit type) Example: “Christopher Nolan (written by)”
 {% /instructions %}
 
 {% field kind="string" id="cinematographer" label="Cinematographer" role="agent" %}{% /field %}
@@ -241,8 +249,7 @@ Film score composer (not soundtrack songs).
 
 {% instructions ref="producers" %}
 Key producers (limit to main credited producers).
-Format: Name (producer type)
-Example: "Emma Thomas (producer)"
+Format: Name (producer type) Example: “Emma Thomas (producer)”
 {% /instructions %}
 
 {% /group %}
@@ -251,11 +258,11 @@ Example: "Emma Thomas (producer)"
 
 {% group id="ratings" title="Ratings" %}
 
-{% field kind="table" id="ratings_table" label="Ratings" role="agent" required=true
-   columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"]
-   minRows=0 maxRows=6 %}
+{% field kind="table" id="ratings_table" label="Ratings" role="agent" required=true columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"] minRows=0 maxRows=6 %}
+
 | Source | Score | Votes |
 |--------|-------|-------|
+
 {% /field %}
 {% instructions ref="ratings_table" %}
 Fill in scores and vote/review counts from each source:
@@ -265,6 +272,7 @@ Fill in scores and vote/review counts from each source:
 - Metacritic: Metascore (0-100)
 - Letterboxd: Rating (0.5-5.0 scale)
 - CinemaScore: Grade (A+ to F), leave votes empty
+
 {% /instructions %}
 
 {% field kind="string" id="rt_consensus" label="Critics Consensus" role="agent" maxLength=500 %}{% /field %}
@@ -309,6 +317,7 @@ US opening weekend gross in millions USD.
 {% group id="technical_specs" title="Technical Specifications" %}
 
 {% field kind="single_select" id="aspect_ratio" label="Aspect Ratio" role="agent" %}
+
 - [ ] 1.33:1 (Academy) {% #ratio_133 %}
 - [ ] 1.66:1 {% #ratio_166 %}
 - [ ] 1.78:1 (16:9) {% #ratio_178 %}
@@ -321,24 +330,28 @@ US opening weekend gross in millions USD.
 - [ ] 1.43:1 (IMAX) {% #ratio_143 %}
 - [ ] 1.90:1 (IMAX Digital) {% #ratio_190 %}
 - [ ] Variable {% #ratio_variable %}
+
 {% /field %}
 
 {% field kind="single_select" id="color_format" label="Color" role="agent" %}
+
 - [ ] Color {% #color %}
 - [ ] Black & White {% #bw %}
 - [ ] Mixed/Partial Color {% #mixed %}
+
 {% /field %}
 
 {% field kind="string" id="sound_mix" label="Sound Mix" role="agent" %}{% /field %}
 
 {% instructions ref="sound_mix" %}
-Primary sound format (e.g., "Dolby Atmos", "DTS", "Dolby Digital").
+Primary sound format (e.g., “Dolby Atmos”, “DTS”, “Dolby Digital”).
 {% /instructions %}
 
 {% field kind="string" id="camera" label="Camera" role="agent" %}{% /field %}
 
 {% instructions ref="camera" %}
-Primary camera system used (e.g., "Arri Alexa 65", "IMAX 15-perf", "Panavision Panaflex").
+Primary camera system used (e.g., “Arri Alexa 65”, “IMAX 15-perf”, “Panavision
+Panaflex”).
 {% /instructions %}
 
 {% /group %}
@@ -348,6 +361,7 @@ Primary camera system used (e.g., "Arri Alexa 65", "IMAX 15-perf", "Panavision P
 {% group id="streaming_availability" title="Streaming Availability (US)" %}
 
 {% field kind="multi_select" id="streaming_subscription" label="Streaming (Subscription)" role="agent" %}
+
 - [ ] Netflix {% #netflix %}
 - [ ] Amazon Prime Video {% #prime %}
 - [ ] Disney+ {% #disney %}
@@ -361,17 +375,21 @@ Primary camera system used (e.g., "Arri Alexa 65", "IMAX 15-perf", "Panavision P
 - [ ] MUBI {% #mubi %}
 - [ ] Tubi (Free) {% #tubi %}
 - [ ] Pluto TV (Free) {% #pluto %}
+
 {% /field %}
 
 {% instructions ref="streaming_subscription" %}
-Select all platforms where this film is currently available to stream (subscription or free). Check JustWatch for current availability.
+Select all platforms where this film is currently available to stream (subscription or
+free). Check JustWatch for current availability.
 {% /instructions %}
 
 {% field kind="checkboxes" id="availability_flags" label="Other Availability" role="agent" checkboxMode="simple" %}
+
 - [ ] Available for digital rental {% #rental %}
 - [ ] Available for digital purchase {% #purchase %}
 - [ ] Physical media (Blu-ray/DVD) {% #physical %}
 - [ ] 4K UHD available {% #uhd_4k %}
+
 {% /field %}
 
 {% /group %}
@@ -381,6 +399,7 @@ Select all platforms where this film is currently available to stream (subscript
 {% group id="content_themes" title="Content & Themes" %}
 
 {% field kind="checkboxes" id="content_warnings" label="Content Warnings" role="agent" checkboxMode="simple" %}
+
 - [ ] Intense violence {% #violence %}
 - [ ] Gore/disturbing imagery {% #gore %}
 - [ ] Sexual content {% #sexual %}
@@ -389,16 +408,18 @@ Select all platforms where this film is currently available to stream (subscript
 - [ ] Drug/alcohol use {% #drugs %}
 - [ ] Frightening scenes {% #frightening %}
 - [ ] Flashing/strobe effects {% #flashing %}
+
 {% /field %}
 
 {% instructions ref="content_warnings" %}
-Check any content warnings that apply. Use IMDB Parents Guide as reference.
+Check any content warnings that apply.
+Use IMDB Parents Guide as reference.
 {% /instructions %}
 
 {% field kind="string_list" id="themes" label="Key Themes" role="agent" maxItems=5 %}{% /field %}
 
 {% instructions ref="themes" %}
-Major themes explored in the film (e.g., "redemption", "family", "identity", "war").
+Major themes explored in the film (e.g., “redemption”, “family”, “identity”, “war”).
 {% /instructions %}
 
 {% /group %}
@@ -413,23 +434,22 @@ Major themes explored in the film (e.g., "redemption", "family", "identity", "wa
 Brief plot summary in 1-2 sentences, no spoilers.
 {% /instructions %}
 
-{% field kind="table" id="notable_awards" label="Notable Awards" role="agent"
-   columnIds=["award", "category", "year"]
-   columnTypes=["string", "string", "year"] %}
+{% field kind="table" id="notable_awards" label="Notable Awards" role="agent" columnIds=["award", "category", "year"] columnTypes=["string", "string", "year"] %}
+
 | Award | Category | Year |
 |-------|----------|------|
+
 {% /field %}
 
 {% instructions ref="notable_awards" %}
-Major awards won.
-Example: Oscar | Best Picture | 1995
+Major awards won. Example: Oscar | Best Picture | 1995
 {% /instructions %}
 
-{% field kind="table" id="notable_quotes" label="Notable Critic Quotes" role="agent" maxRows=3
-   columnIds=["quote", "critic", "publication"]
-   columnTypes=["string", "string", "string"] %}
+{% field kind="table" id="notable_quotes" label="Notable Critic Quotes" role="agent" maxRows=3 columnIds=["quote", "critic", "publication"] columnTypes=["string", "string", "string"] %}
+
 | Quote | Critic | Publication |
 |-------|--------|-------------|
+
 {% /field %}
 
 {% instructions ref="notable_quotes" %}
@@ -443,14 +463,15 @@ Example: Oscar | Best Picture | 1995
 {% field kind="string" id="cultural_impact" label="Cultural Impact" role="agent" maxLength=500 %}{% /field %}
 
 {% instructions ref="cultural_impact" %}
-Brief description of the film's cultural significance, influence, or legacy (1-3 sentences).
-Leave empty for recent releases without established legacy.
+Brief description of the film’s cultural significance, influence, or legacy (1-3
+sentences). Leave empty for recent releases without established legacy.
 {% /instructions %}
 
 {% field kind="string_list" id="similar_films" label="Similar Films" role="agent" maxItems=5 %}{% /field %}
 
 {% instructions ref="similar_films" %}
-Films with similar themes, style, or appeal. One per line.
+Films with similar themes, style, or appeal.
+One per line.
 {% /instructions %}
 
 {% /group %}
