@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 
-import { getCommandContext, logError } from '../lib/shared.js';
+import { getCommandContext, logError, stripHtmlComments } from '../lib/shared.js';
 
 /**
  * Get the path to the markform-spec.md file.
@@ -134,7 +134,9 @@ export function registerSpecCommand(program: Command): void {
       const ctx = getCommandContext(cmd);
 
       try {
-        const spec = loadSpec();
+        const rawSpec = loadSpec();
+        // Strip HTML comments (license headers, etc.) for cleaner output
+        const spec = stripHtmlComments(rawSpec);
 
         // Determine if we should colorize
         const shouldColorize = !options.raw && isInteractive() && !ctx.quiet;

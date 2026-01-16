@@ -64,6 +64,34 @@ markform:
 Use `.form.md` for Markform files.
 They are Markdoc syntax, which is a superset of Markdown.
 
+### Alternative Syntax (HTML Comments)
+
+Markform supports **HTML comment syntax** as an alternative to Markdoc tags.
+This enables forms to render cleanly on GitHub and in standard Markdown editors.
+
+| Markdoc | HTML Comment | Notes |
+|---------|--------------|-------|
+| `{% form id="x" %}` | `<!-- f:form id="x" -->` | Tags use `f:` prefix |
+| `{% /form %}` | `<!-- /f:form -->` | Closing tags |
+| `{% #id %}` | `<!-- #id -->` | ID annotations |
+| `{% .class %}` | `<!-- .class -->` | Class annotations |
+
+**Example (HTML comment syntax):**
+
+```markdown
+<!-- f:form id="survey" -->
+<!-- f:group id="basics" -->
+<!-- f:field kind="string" id="name" label="Name" --><!-- /f:field -->
+<!-- f:field kind="single_select" id="rating" label="Rating" -->
+- [ ] Good <!-- #good -->
+- [ ] Bad <!-- #bad -->
+<!-- /f:field -->
+<!-- /f:group -->
+<!-- /f:form -->
+```
+
+Both syntaxes are always supported. Files preserve their original syntax on round-trip.
+
 ## Field Kinds
 
 Markform uses the term **field kind** to refer to the type of a field (e.g., `string`,

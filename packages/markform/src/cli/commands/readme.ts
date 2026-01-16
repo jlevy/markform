@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 
-import { getCommandContext, logError } from '../lib/shared.js';
+import { getCommandContext, logError, stripHtmlComments } from '../lib/shared.js';
 
 /**
  * Get the path to the README.md file.
@@ -134,7 +134,9 @@ export function registerReadmeCommand(program: Command): void {
       const ctx = getCommandContext(cmd);
 
       try {
-        const readme = loadReadme();
+        const rawReadme = loadReadme();
+        // Strip HTML comments (license headers, etc.) for cleaner output
+        const readme = stripHtmlComments(rawReadme);
 
         // Determine if we should colorize
         const shouldColorize = !options.raw && isInteractive() && !ctx.quiet;

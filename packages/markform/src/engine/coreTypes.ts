@@ -495,6 +495,13 @@ export interface IdIndexEntry {
   fieldId?: Id;
 }
 
+/**
+ * The syntax style used in a Markform document.
+ * - 'comments': HTML comment syntax with f: namespace (`<!-- f:tag -->`) - primary/default
+ * - 'tags': Traditional Markdoc Jinja-style syntax (`{% tag %}`)
+ */
+export type SyntaxStyle = 'comments' | 'tags';
+
 /** Canonical internal representation returned by parseForm() */
 export interface ParsedForm {
   schema: FormSchema;
@@ -504,6 +511,8 @@ export interface ParsedForm {
   orderIndex: Id[];
   idIndex: Map<Id, IdIndexEntry>;
   metadata?: FormMetadata; // optional for backward compat with forms without frontmatter
+  /** The syntax style detected in the original document (for round-trip serialization) */
+  syntaxStyle?: SyntaxStyle;
 }
 
 // =============================================================================

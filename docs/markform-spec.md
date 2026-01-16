@@ -1060,6 +1060,92 @@ Then configure:
 Here the serializer chose tildes (`~~~`) because the content contains backticks. The
 content includes multiple fenced code blocks that are preserved exactly as authored.
 
+#### Syntax Styles
+
+Markform supports two syntax styles for structural tags. Both are **always supported**
+with no configuration needed—implementations MUST accept either as input.
+
+**Comment syntax** (primary, recommended) uses HTML comments with the `f:` namespace:
+
+```md
+<!-- f:form id="survey" -->
+<!-- f:field kind="string" id="name" label="Name" -->
+<!-- /f:field -->
+<!-- /f:form -->
+```
+
+**Tag syntax** (alternative) uses standard Markdoc tag notation:
+
+```md
+{% form id="survey" %}
+{% field kind="string" id="name" label="Name" %}
+{% /field %}
+{% /form %}
+```
+
+**Why prefer comment syntax?**
+
+- Forms render cleanly on GitHub and standard Markdown editors (comments are hidden)
+- Only the content (checkboxes, text) is visible to readers
+- The `f:` prefix follows the WordPress Gutenberg pattern (e.g., `wp:`) for semantic
+  namespacing
+
+**Syntax mapping:**
+
+| Comment Syntax | Tag Syntax | Notes |
+| --- | --- | --- |
+| `<!-- f:tag attr="val" -->` | `{% tag attr="val" %}` | Tags use `f:` prefix |
+| `<!-- /f:tag -->` | `{% /tag %}` | Closing: slash before prefix |
+| `<!-- f:tag /-->` | `{% tag /%}` | Self-closing: `/` before `-->` |
+| `<!-- #id -->` | `{% #id %}` | Annotations: no prefix needed |
+| `<!-- .class -->` | `{% .class %}` | Annotations: naturally distinctive |
+
+**Behavioral rules:**
+
+- *required:* Both syntaxes are **always supported** with no configuration needed
+
+- *required:* Implementations MUST accept either syntax as input
+
+- *recommended:* Round-trip serialization SHOULD preserve the original syntax style
+
+- *recommended:* Use only one syntax per file for consistency
+
+**Syntax detection:**
+
+- A document using `<!-- f:...` or `<!-- #...` patterns is detected as `comments` style
+
+- A document using `{%...%}` patterns is detected as `tags` style
+
+- Mixed syntax within a document is supported but not recommended
+
+**Example (comment syntax):**
+
+```md
+---
+markform:
+  spec: MF/0.1
+---
+<!-- f:form id="survey" -->
+<!-- f:group id="ratings" -->
+
+<!-- f:field kind="single_select" id="quality" label="Quality Rating" -->
+- [ ] Excellent <!-- #excellent -->
+- [ ] Good <!-- #good -->
+- [ ] Fair <!-- #fair -->
+<!-- /f:field -->
+
+<!-- /f:group -->
+<!-- /f:form -->
+```
+
+On GitHub, all `<!-- ... -->` comments are hidden, leaving only the visible content:
+- [ ] Excellent
+- [ ] Good
+- [ ] Fair
+
+**Constraint:** Values containing the literal string `-->` require escaping or should
+use the tag syntax to avoid prematurely closing the comment.
+
 * * *
 
 ## Layer 2: Form Data Model
