@@ -36,8 +36,8 @@ importers:
         specifier: ^3.7.4
         version: 3.7.4
       tryscript:
-        specifier: 0.1.1
-        version: 0.1.1(c8@10.1.3(monocart-coverage-reports@2.12.9))
+        specifier: 0.1.6
+        version: 0.1.6(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9)
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -121,8 +121,8 @@ importers:
         specifier: ^0.3.16
         version: 0.3.16
       tryscript:
-        specifier: ^0.1.4
-        version: 0.1.4(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9)
+        specifier: ^0.1.6
+        version: 0.1.6(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9)
       tsdown:
         specifier: ^0.18.3
         version: 0.18.3(publint@0.3.16)(typescript@5.9.3)
@@ -1889,18 +1889,8 @@ packages:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
     hasBin: true
 
-  tryscript@0.1.1:
-    resolution: {integrity: sha512-j9AyTrjpmtJ81DKD/qUtqaVJh+FABsBGgQPRScCvpRk2mhMbgw5ZJ7jfmxKORUKdHh+o0N3JOxlDC2csCUi+bQ==}
-    engines: {node: '>=20'}
-    hasBin: true
-    peerDependencies:
-      c8: '>=8.0.0'
-    peerDependenciesMeta:
-      c8:
-        optional: true
-
-  tryscript@0.1.4:
-    resolution: {integrity: sha512-zInrUPQe8PpQXVTp0DPsIzhL+/yAobQU8ZLSe7/EDy+aF69TdwsRsUxu+leHZktIgbdlmFc4fdF09UGpu5WDtw==}
+  tryscript@0.1.6:
+    resolution: {integrity: sha512-H8EWv50Klh6s8ScZVXyUobQBESikf8zNVKM9hYf3G+O515AuUkREN7EUBBR6I9fXUuVNRnR26uE+ZSK4FnIuPg==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -3839,21 +3829,7 @@ snapshots:
 
   tree-kill@1.2.2: {}
 
-  tryscript@0.1.1(c8@10.1.3(monocart-coverage-reports@2.12.9)):
-    dependencies:
-      atomically: 2.1.0
-      commander: 14.0.2
-      diff: 8.0.2
-      fast-glob: 3.3.3
-      picocolors: 1.1.1
-      strip-ansi: 7.1.2
-      tree-kill: 1.2.2
-      yaml: 2.8.2
-      zod: 3.25.76
-    optionalDependencies:
-      c8: 10.1.3(monocart-coverage-reports@2.12.9)
-
-  tryscript@0.1.4(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9):
+  tryscript@0.1.6(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9):
     dependencies:
       atomically: 2.1.0
       commander: 14.0.2
