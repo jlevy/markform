@@ -401,6 +401,66 @@ Final notes.
   });
 
   describe('edge cases - Phase 4', () => {
+    it('skips form-like patterns inside code blocks when finding boundaries', () => {
+      // This test verifies the fix for PR review feedback:
+      // findFormBoundaries must skip form-like patterns inside fenced code blocks.
+      // We use HTML form tags and /form patterns that look like closing tags
+      // but won't be parsed as Markform tags.
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+# Documentation with Form Examples
+
+Here's some HTML form code:
+
+\`\`\`html
+<form id="example">
+  <input type="text" name="sample" />
+</form>
+\`\`\`
+
+And here's a tricky pattern with /form that could confuse naive regex:
+
+\`\`\`bash
+echo "Processing /form data..."
+# This has /form in it
+\`\`\`
+
+Now here's the actual Markform:
+
+{% form id="real" %}
+{% group id="main" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}
+
+## Notes
+
+Code blocks should be preserved.
+`;
+      const form = parseForm(markdown);
+      const output = serializeForm(form);
+
+      // The code blocks should be preserved unchanged
+      expect(output).toContain('```html');
+      expect(output).toContain('<form id="example">');
+      expect(output).toContain('</form>');
+      expect(output).toContain('```bash');
+      expect(output).toContain('/form');
+
+      // The actual form should be serialized correctly
+      expect(form.schema.id).toBe('real');
+      expect(output).toContain('{% form id="real"');
+      expect(output).toContain('{% field kind="string" id="name"');
+
+      // Content outside the actual form should be preserved
+      expect(output).toContain('# Documentation with Form Examples');
+      expect(output).toContain('## Notes');
+      expect(output).toContain('Code blocks should be preserved.');
+    });
+
     it('preserves code blocks with various content', () => {
       const markdown = `---
 markform:

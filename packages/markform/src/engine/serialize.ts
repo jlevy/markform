@@ -1489,40 +1489,192 @@ export function serializeForm(form: ParsedForm, opts?: SerializeOptions): string
 }
 
 /**
- * Find the form tag boundaries in rawSource using regex.
+ * Check if position is at the start of a line.
+ */
+function isAtLineStart(input: string, pos: number): boolean {
+  if (pos === 0) return true;
+  return input[pos - 1] === '\n';
+}
+
+/**
+ * Match a fenced code block opening at the given position.
+ * Returns fence info if found, null otherwise.
+ * Handles 0-3 leading spaces per CommonMark spec.
+ */
+function matchFenceOpening(
+  input: string,
+  pos: number,
+): { char: string; length: number; endPos: number } | null {
+  // Check for 0-3 leading spaces (4+ spaces = indented code block, not fence)
+  let indent = 0;
+  let i = pos;
+  while (i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // 4+ spaces means this is not a fenced code block per CommonMark
+  if (indent >= 4) {
+    return null;
+  }
+
+  // Check for fence character (` or ~)
+  const fenceChar = input[i];
+  if (fenceChar !== '`' && fenceChar !== '~') {
+    return null;
+  }
+
+  // Count consecutive fence characters (need at least 3)
+  let fenceLength = 0;
+  while (i + fenceLength < input.length && input[i + fenceLength] === fenceChar) {
+    fenceLength++;
+  }
+
+  if (fenceLength < 3) {
+    return null;
+  }
+
+  // Find end of line
+  let endOfLine = i + fenceLength;
+  while (endOfLine < input.length && input[endOfLine] !== '\n') {
+    endOfLine++;
+  }
+  if (endOfLine < input.length) {
+    endOfLine++; // Include the newline
+  }
+
+  return { char: fenceChar, length: fenceLength, endPos: endOfLine };
+}
+
+/**
+ * Check if position matches a closing fence for the given opening fence.
+ */
+function matchFenceClosing(
+  input: string,
+  pos: number,
+  fenceChar: string,
+  fenceLength: number,
+): number {
+  // Check for 0-3 leading spaces
+  let indent = 0;
+  let i = pos;
+  while (indent < 4 && i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // Check for matching fence character
+  if (input[i] !== fenceChar) {
+    return -1;
+  }
+
+  // Count consecutive fence characters (need at least fenceLength)
+  let closingLength = 0;
+  while (i + closingLength < input.length && input[i + closingLength] === fenceChar) {
+    closingLength++;
+  }
+
+  if (closingLength < fenceLength) {
+    return -1;
+  }
+
+  // Rest of line must be whitespace only (or end of string)
+  let afterFence = i + closingLength;
+  while (afterFence < input.length && input[afterFence] !== '\n') {
+    if (input[afterFence] !== ' ' && input[afterFence] !== '\t') {
+      return -1;
+    }
+    afterFence++;
+  }
+
+  // Return position after the closing fence line
+  if (afterFence < input.length) {
+    afterFence++; // Include the newline
+  }
+  return afterFence;
+}
+
+/**
+ * Find the form tag boundaries in rawSource, skipping code blocks.
  * Returns [startOffset, endOffset] where:
  * - startOffset: position where {% form (or <!-- form) starts
  * - endOffset: position just after {% /form %} (or <!-- /form -->)
  *
+ * Code blocks (fenced with ``` or ~~~) are skipped to avoid matching
+ * form tag examples in documentation or code samples.
+ *
  * Returns null if form boundaries cannot be found.
  */
 function findFormBoundaries(rawSource: string): [number, number] | null {
-  // Match opening form tag: {% form ... %} or <!-- form ... -->
-  const openPattern = /(?:{%\s*form\s|<!--\s*form\s)/;
-  const openMatch = openPattern.exec(rawSource);
-  if (!openMatch) {
-    return null;
-  }
-  const startOffset = openMatch.index;
-
-  // Match closing form tag: {% /form %} or <!-- /form -->
-  // Search from after the opening tag
+  const openPattern = /(?:{%\s*form\s|<!--\s*form\s)/g;
   const closePattern = /{%\s*\/form\s*%}|<!--\s*\/form\s*-->/g;
-  closePattern.lastIndex = startOffset;
 
-  let closeMatch: RegExpExecArray | null = null;
-  let lastMatch: RegExpExecArray | null = null;
+  let startOffset: number | null = null;
+  let endOffset: number | null = null;
 
-  // Find the last closing form tag (in case of nested patterns in comments)
-  while ((closeMatch = closePattern.exec(rawSource)) !== null) {
-    lastMatch = closeMatch;
+  let i = 0;
+  let inFencedCode = false;
+  let fenceChar = '';
+  let fenceLength = 0;
+
+  while (i < rawSource.length) {
+    // Check for fenced code block at line start
+    if (!inFencedCode && isAtLineStart(rawSource, i)) {
+      const fence = matchFenceOpening(rawSource, i);
+      if (fence) {
+        inFencedCode = true;
+        fenceChar = fence.char;
+        fenceLength = fence.length;
+        i = fence.endPos;
+        continue;
+      }
+    }
+
+    // Check for closing fence
+    if (inFencedCode && isAtLineStart(rawSource, i)) {
+      const closePos = matchFenceClosing(rawSource, i, fenceChar, fenceLength);
+      if (closePos !== -1) {
+        inFencedCode = false;
+        i = closePos;
+        continue;
+      }
+    }
+
+    // Skip if inside fenced code block
+    if (inFencedCode) {
+      // Move to next line
+      while (i < rawSource.length && rawSource[i] !== '\n') {
+        i++;
+      }
+      if (i < rawSource.length) {
+        i++; // Skip the newline
+      }
+      continue;
+    }
+
+    // Look for opening form tag (first one found)
+    if (startOffset === null) {
+      openPattern.lastIndex = i;
+      const openMatch = openPattern.exec(rawSource);
+      if (openMatch?.index === i) {
+        startOffset = i;
+      }
+    }
+
+    // Look for closing form tag (track the last one found)
+    closePattern.lastIndex = i;
+    const closeMatch = closePattern.exec(rawSource);
+    if (closeMatch?.index === i) {
+      endOffset = i + closeMatch[0].length;
+    }
+
+    i++;
   }
 
-  if (!lastMatch) {
+  if (startOffset === null || endOffset === null) {
     return null;
   }
 
-  const endOffset = lastMatch.index + lastMatch[0].length;
   return [startOffset, endOffset];
 }
 
