@@ -360,5 +360,228 @@ Introduction text.
       expect(output).toContain('Introduction text.');
       expect(output).toContain('## Footer');
     });
+
+    it('comment syntax round-trip produces stable output', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+# Comment Syntax Round-Trip
+
+Some introduction here.
+
+<!-- form id="test" -->
+<!-- group id="g1" -->
+<!-- field kind="string" id="name" label="Name" -->
+\`\`\`value
+Test Value
+\`\`\`
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->
+
+## Closing Section
+
+Final notes.
+`;
+      const form1 = parseForm(markdown);
+      const output1 = serializeForm(form1);
+
+      const form2 = parseForm(output1);
+      const output2 = serializeForm(form2);
+
+      // After two round-trips, output should be identical
+      expect(output2).toBe(output1);
+
+      // Content should be preserved
+      expect(output1).toContain('# Comment Syntax Round-Trip');
+      expect(output1).toContain('## Closing Section');
+    });
+  });
+
+  describe('edge cases - Phase 4', () => {
+    it('preserves code blocks with various content', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+# Example Documentation
+
+Here's some example code:
+
+\`\`\`typescript
+// Example showing form-like patterns in code
+const template = "<form id='example'>";
+const closeTag = "</form>";
+const markdocLike = "{ % form %}"; // spaced to avoid parsing
+\`\`\`
+
+{% form id="actual" %}
+{% group id="g1" %}
+{% field kind="string" id="real_field" label="Real Field" %}{% /field %}
+{% /group %}
+{% /form %}
+
+## Notes
+`;
+      const form = parseForm(markdown);
+      const output = serializeForm(form);
+
+      // Code block should be preserved
+      expect(output).toContain('```typescript');
+      expect(output).toContain('const template = "<form id=\'example\'>"');
+      expect(output).toContain('const markdocLike = "{ % form %}"');
+      // The actual form should be serialized correctly
+      expect(output).toContain('{% form id="actual"');
+      expect(output).toContain('{% field kind="string" id="real_field"');
+    });
+
+    it('preserves complex nested markdown outside form', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+# Complex Markdown Test
+
+## Tables
+
+| Column A | Column B |
+|----------|----------|
+| Value 1  | Value 2  |
+
+## Images and Links
+
+![Alt text](image.png)
+
+[Link text](https://example.com)
+
+## Nested Lists
+
+- Item 1
+  - Subitem 1.1
+  - Subitem 1.2
+- Item 2
+  1. Numbered subitem
+  2. Another numbered
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}
+
+---
+
+**Bold** and *italic* and \`inline code\`.
+`;
+      const form = parseForm(markdown);
+      const output = serializeForm(form);
+
+      // Complex markdown should be preserved
+      expect(output).toContain('| Column A | Column B |');
+      expect(output).toContain('![Alt text](image.png)');
+      expect(output).toContain('[Link text](https://example.com)');
+      expect(output).toContain('- Subitem 1.1');
+      expect(output).toContain('**Bold** and *italic*');
+    });
+
+    it('handles multiple code blocks with different fence styles', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+# Code Examples
+
+Backtick fence:
+
+\`\`\`javascript
+const form = parseForm(markdown);
+\`\`\`
+
+Tilde fence:
+
+~~~python
+def process():
+    pass
+~~~
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="code" label="Code" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const output = serializeForm(form);
+
+      // Both fence styles should be preserved
+      expect(output).toContain('```javascript');
+      expect(output).toContain('~~~python');
+    });
+
+    it('preserves HTML entities and special characters outside form', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+# Special Characters
+
+Entities: &amp; &lt; &gt; &quot;
+
+Unicode: émojis 🎉 and symbols ™ ® ©
+
+Math: 2 < 3 and 5 > 4
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const output = serializeForm(form);
+
+      // Special characters should be preserved
+      expect(output).toContain('&amp;');
+      expect(output).toContain('🎉');
+      expect(output).toContain('2 < 3');
+    });
+
+    it('preserves YAML-like content in regular markdown', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+# Configuration Example
+
+Here's a sample config:
+
+\`\`\`yaml
+markform:
+  spec: MF/0.1
+  options:
+    - one
+    - two
+\`\`\`
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="config" label="Config" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const output = serializeForm(form);
+
+      // YAML in code block should be preserved
+      expect(output).toContain('```yaml');
+      expect(output).toContain('  options:');
+    });
   });
 });
