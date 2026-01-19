@@ -111,6 +111,7 @@ canonical Markform tag formatting.
 - [ ] Round-trip produces parseable, valid Markform document
 - [ ] All existing tests continue passing
 - [ ] New tests verify content preservation
+- [ ] Golden tests validate round-trip fidelity
 
 **Out of Scope:**
 
@@ -126,26 +127,45 @@ canonical Markform tag formatting.
 | Parsing | Store raw source + position info | Incremental parsing |
 | Serialization | Splice-based content preservation | Full markdown serializer |
 | Data Model | Add optional fields to ParsedForm | Breaking interface changes |
-| Tests | Unit + integration for preservation | Performance benchmarks |
+| Tests | Unit + integration + golden for preservation | Performance benchmarks |
 | Specification | Already updated | N/A |
 
-### Key Questions to Resolve
+### Key Questions — RESOLVED
 
 1. **Granularity of preservation**: Should we preserve at form-level (before/after form)
    or at tag-level (between every tag)?
 
-   **Recommendation**: Tag-level for maximum fidelity. Store positions for all tags.
+   **Decision**: Tag-level for maximum fidelity. Store positions for all Markform tags.
 
 2. **Handling of tag modifications**: When a field is added/removed/reordered, how do we
    handle the surrounding content?
 
-   **Recommendation**: Content between tags is associated with preceding tag. New tags
+   **Decision**: Content between tags is associated with preceding tag. New tags
    get minimal spacing. Removed tags' trailing content attaches to previous tag.
+   Reordering falls back to regeneration mode.
 
 3. **Frontmatter handling**: Frontmatter is already handled specially - should it be
    part of raw slicing or remain separate?
 
-   **Recommendation**: Keep frontmatter handling separate (already works well).
+   **Decision**: Keep frontmatter handling separate (already works well). The
+   `rawSource` stores post-frontmatter content; frontmatter is managed independently.
+
+4. **Doc block content preservation**: Should content within `{% documentation %}` blocks
+   be preserved verbatim?
+
+   **Decision**: Yes. Doc blocks already store `bodyMarkdown` as raw text. The raw
+   slicing approach naturally preserves this since doc block regions are replaced
+   with their canonical serialization which includes the stored `bodyMarkdown`.
+
+5. **Programmatically created forms**: How to handle forms with no source?
+
+   **Decision**: Always regenerate. If `rawSource` is undefined, fall back to
+   current regeneration behavior. This is the existing behavior and remains correct.
+
+6. **CLI normalization option**: Should there be an option to force regeneration?
+
+   **Decision**: Yes. Add `--normalize` flag to relevant CLI commands that sets
+   `preserveContent: false`. Useful for standardizing form formatting.
 
 ## Stage 2: Architecture Stage
 
@@ -183,7 +203,7 @@ canonical Markform tag formatting.
 └─────────────┘      │  - Build schema  │      │  - responses           │
        │             │  - Store source  │      │  - notes, docs         │
        │             │  - Track positions│      │  - rawSource (NEW)    │
-       │             └──────────────────┘      │  - tagPositions (NEW)  │
+       │             └──────────────────┘      │  - tagRegions (NEW)    │
        │                                       └────────────────────────┘
        │                                                │
        │                                                ▼
@@ -218,26 +238,60 @@ export interface ParsedForm {
   syntaxStyle?: SyntaxStyle;
 
   // NEW: Raw source preservation
-  rawSource?: string;           // Original markdown source (post-preprocessing)
+  rawSource?: string;           // Original markdown source (post-frontmatter extraction)
   tagRegions?: TagRegion[];     // Positions of all Markform tags in source
 }
 
-/** Position of a Markform tag in the source */
+/**
+ * Tag types that can appear in Markform documents.
+ * Note: 'note' refers to the `<!-- note ... -->` inline tag.
+ */
+type TagType = 'form' | 'group' | 'field' | 'note' | 'documentation';
+
+/** Position of a Markform tag region in the source */
 interface TagRegion {
-  tagId: Id;                    // ID of the element (form, group, field, etc.)
-  tagType: 'form' | 'group' | 'field' | 'note' | 'doc';
-  startOffset: number;          // Start position in source (inclusive)
-  endOffset: number;            // End position in source (exclusive)
-  includesValue?: boolean;      // Whether region includes value fence
+  /** ID of the element (form, group, field ID, or note ID) */
+  tagId: Id;
+  /** Type of Markform tag */
+  tagType: TagType;
+  /** Start position in rawSource (inclusive, byte offset) */
+  startOffset: number;
+  /** End position in rawSource (exclusive, byte offset) */
+  endOffset: number;
+  /**
+   * For field tags: whether region includes value fence.
+   * True if field has a value block between open/close tags.
+   */
+  includesValue?: boolean;
+}
+```
+
+**New serialization options:**
+
+```typescript
+export interface SerializeOptions {
+  // Existing options...
+
+  /**
+   * Whether to preserve content outside Markform tags.
+   * - true (default): Use raw slicing to preserve outside content
+   * - false: Regenerate entire document from structured data
+   */
+  preserveContent?: boolean;
 }
 ```
 
 ### Serialization Algorithm
 
-```
+```typescript
 function serializeForm(form: ParsedForm, opts?: SerializeOptions): string {
-  // If no raw source or preservation disabled, use existing regeneration
+  // If no raw source, preservation disabled, or structural changes detected
   if (!form.rawSource || !form.tagRegions || opts?.preserveContent === false) {
+    return serializeFormFromScratch(form, opts);
+  }
+
+  // Detect structural changes that require full regeneration
+  if (hasStructuralChanges(form)) {
     return serializeFormFromScratch(form, opts);
   }
 
@@ -248,7 +302,7 @@ function serializeForm(form: ParsedForm, opts?: SerializeOptions): string {
 
   for (const region of regions) {
     // Serialize this tag to canonical format
-    const serialized = serializeTag(region.tagId, form);
+    const serialized = serializeTagRegion(region, form);
 
     // Splice into result
     result = result.slice(0, region.startOffset) +
@@ -256,19 +310,33 @@ function serializeForm(form: ParsedForm, opts?: SerializeOptions): string {
              result.slice(region.endOffset);
   }
 
-  // Handle frontmatter separately (already works)
+  // Handle frontmatter separately (recompute and prepend)
   result = updateFrontmatter(result, form);
 
   return result;
+}
+
+/**
+ * Detect changes that require full regeneration:
+ * - Tags added (no position in tagRegions)
+ * - Tags removed (position exists but ID not in schema)
+ * - Tags reordered (positions don't match schema order)
+ */
+function hasStructuralChanges(form: ParsedForm): boolean {
+  // Implementation checks for added/removed/reordered elements
+  // Returns true if splice-based approach won't work correctly
 }
 ```
 
 ### Edge Cases
 
-1. **New tags added**: No position in source - append at appropriate location
-2. **Tags removed**: Remove from source, preserve surrounding content
-3. **Tags reordered**: Reorder in source (complex - may need full regeneration)
-4. **Source not available**: Fall back to existing regeneration behavior
+1. **New tags added**: Detected by `hasStructuralChanges()` → fall back to regeneration
+2. **Tags removed**: Detected by `hasStructuralChanges()` → fall back to regeneration
+3. **Tags reordered**: Detected by `hasStructuralChanges()` → fall back to regeneration
+4. **Value-only changes**: Handled by splice - region includes value fence
+5. **Source not available**: Fall back to existing regeneration behavior
+6. **Comment syntax forms**: `rawSource` stores preprocessed (tag syntax) form;
+   `postprocessToCommentSyntax()` applied after splice serialization
 
 ## Stage 3: Refine Architecture
 
@@ -277,11 +345,12 @@ function serializeForm(form: ParsedForm, opts?: SerializeOptions): string {
 **Existing code to leverage:**
 
 1. **`detectSyntaxStyle()`** - Already tracks original syntax style
-2. **`preprocessCommentSyntax()`** - Transforms source, can track positions
+2. **`preprocessCommentSyntax()`** - Transforms source, need to track position mapping
 3. **`postprocessToCommentSyntax()`** - Reverse transform for output
-4. **Markdoc AST** - Already has position information via `node.location`
+4. **Markdoc AST** - Has position information via `node.location`
 
-**Key insight**: Markdoc's AST already contains `location` information for each node:
+**Key insight**: Markdoc's AST contains `location` information for each node:
+
 ```typescript
 interface Location {
   start: { line: number; character: number; offset?: number };
@@ -289,82 +358,282 @@ interface Location {
 }
 ```
 
-We can leverage this instead of custom position tracking.
+We leverage this for position tracking. The `offset` field provides byte positions
+directly usable for slicing.
 
-### Simplified Approach
+### Position Tracking Strategy
 
-Instead of custom position tracking, use Markdoc's AST locations:
+1. **Store preprocessed source**: `rawSource` contains the Markdoc tag-syntax version
+   (after `preprocessCommentSyntax()` for comment-syntax files)
 
-1. Store preprocessed source in `ParsedForm.rawSource`
-2. During parsing, extract `location` from each Markform tag node
-3. During serialization, use locations to identify splice regions
+2. **Extract positions during parsing**: As Markdoc AST is traversed, extract `location`
+   from each Markform tag node and store in `tagRegions`
 
-This reduces new code needed and leverages existing Markdoc infrastructure.
+3. **Handle comment syntax**: For comment-syntax files:
+   - Parse after preprocessing (tag syntax)
+   - Store preprocessed source as `rawSource`
+   - After splice serialization, apply `postprocessToCommentSyntax()`
 
 ### Performance Considerations
 
-- **Memory**: Storing raw source doubles memory per form (~2x for typical forms)
-- **CPU**: Splice-based serialization is O(n * m) where n = tags, m = source length
-- **Mitigation**: For very large forms, fall back to regeneration
+- **Memory**: Storing raw source adds ~1x memory per form (source text size)
+- **CPU**: Splice-based serialization is O(n × m) where n = tags, m = source length
+- **Mitigation**: For very large forms (>100KB), could add size threshold for fallback
 
-**Recommendation**: No performance concern for typical forms (<100KB). Add size threshold
-for fallback if needed later.
+**Decision**: No performance concern for typical forms. Defer optimization until needed.
 
 ## Stage 4: Implementation Plan
 
 ### Phase 1: Core Infrastructure
 
-**Goal**: Add raw source storage and position tracking without changing behavior.
+**Goal**: Add raw source storage and position tracking without changing serialization behavior.
 
-- [ ] Add `rawSource` field to `ParsedForm` interface
-- [ ] Add `tagRegions` field to `ParsedForm` interface
-- [ ] Modify `parseForm()` to store preprocessed source
-- [ ] Modify `parseForm()` to extract tag positions from AST
+**Tasks:**
+
+- [ ] Add `TagRegion` type to `coreTypes.ts`
+- [ ] Add `rawSource?: string` field to `ParsedForm` interface
+- [ ] Add `tagRegions?: TagRegion[]` field to `ParsedForm` interface
+- [ ] Modify `parseForm()` to store preprocessed source in `rawSource`
+- [ ] Modify `parseForm()` to extract tag positions from Markdoc AST `location` fields
 - [ ] Add unit tests for position tracking accuracy
-- [ ] Verify all existing tests pass
+- [ ] Verify all existing tests pass (no behavior change yet)
+
+**Estimated scope**: ~200 lines code, ~100 lines tests
 
 ### Phase 2: Splice-based Serialization
 
-**Goal**: Implement content-preserving serialization.
+**Goal**: Implement content-preserving serialization as the default.
 
-- [ ] Create `serializeFormWithPreservation()` internal function
-- [ ] Implement splice algorithm for tag replacement
-- [ ] Handle edge case: missing source (fall back to regeneration)
-- [ ] Handle edge case: mismatched positions (fall back to regeneration)
-- [ ] Update `serializeForm()` to use preservation by default
-- [ ] Add `preserveContent` option for opt-out
+**Tasks:**
+
+- [ ] Add `preserveContent` option to `SerializeOptions`
+- [ ] Create `serializeTagRegion()` helper function
+- [ ] Create `hasStructuralChanges()` detection function
+- [ ] Implement splice algorithm in `serializeForm()`
+- [ ] Handle edge case: missing `rawSource` (fall back to regeneration)
+- [ ] Handle edge case: structural changes detected (fall back to regeneration)
 - [ ] Add unit tests for content preservation
-- [ ] Add integration tests for round-trip fidelity
+- [ ] Add unit tests for fallback scenarios
 
-### Phase 3: Edge Cases and Polish
+**Estimated scope**: ~300 lines code, ~200 lines tests
 
-**Goal**: Handle all edge cases robustly.
+### Phase 3: Testing and Validation
 
-- [ ] Handle new tags added (no position)
-- [ ] Handle tags removed
-- [ ] Handle tags reordered
-- [ ] Handle value changes (within tag region)
-- [ ] Add comprehensive test suite for edge cases
+**Goal**: Comprehensive test coverage ensuring spec compliance.
+
+**Tasks:**
+
+- [ ] Create dedicated `serialize-preservation.test.ts` test file
+- [ ] Add round-trip fidelity tests (see Testing Strategy below)
+- [ ] Add golden test form with complex markdown content
+- [ ] Enhance existing golden tests to verify content preservation
+- [ ] Test with all example forms from `examples/`
+- [ ] Add CLI `--normalize` flag integration test
 - [ ] Update documentation
 
-### Phase 4: Validation
+**Estimated scope**: ~400 lines tests, ~50 lines docs
 
-**Goal**: Verify feature works correctly across all scenarios.
+### Phase 4: Polish and Edge Cases
 
-- [ ] Run full test suite
-- [ ] Test with real-world forms from examples/
-- [ ] Test with forms containing complex markdown (code blocks, lists, tables)
-- [ ] Verify spec compliance
-- [ ] Performance testing (optional)
+**Goal**: Handle remaining edge cases and polish.
 
-## Outstanding Questions
+**Tasks:**
 
-1. Should we preserve content within `{% documentation %}` blocks verbatim, or is the
-   current "raw text slice" approach sufficient?
+- [ ] Handle new notes added (assign ID, append to appropriate position)
+- [ ] Handle notes removed
+- [ ] Test forms with complex nested markdown (tables, blockquotes)
+- [ ] Test forms with code blocks containing Markform-like syntax
+- [ ] Verify comment-syntax round-trip preservation
+- [ ] Performance validation with large forms
 
-2. How should we handle forms created programmatically (no source)? Always regenerate?
+**Estimated scope**: ~100 lines code, ~150 lines tests
 
-3. Should there be a CLI option to force regeneration (for normalization use cases)?
+## Testing Strategy
+
+### Unit Tests: Position Tracking (`parse.test.ts` additions)
+
+```typescript
+describe('position tracking', () => {
+  it('tracks form tag positions', () => {
+    const md = `---\nmarkform:\n  spec: MF/0.1\n---\n\n{% form id="test" %}\n{% /form %}`;
+    const form = parseForm(md);
+    expect(form.tagRegions).toBeDefined();
+    expect(form.tagRegions?.find(r => r.tagType === 'form')).toBeDefined();
+  });
+
+  it('tracks field tag positions with values', () => {
+    // Test that field regions include value fences
+  });
+
+  it('tracks note tag positions', () => {
+    // Test inline note position tracking
+  });
+});
+```
+
+### Unit Tests: Round-trip Preservation (`serialize-preservation.test.ts`)
+
+```typescript
+describe('content preservation', () => {
+  it('preserves markdown headings before form', () => {
+    const md = `---
+markform:
+  spec: MF/0.1
+---
+
+# My Form Title
+
+Some intro text.
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+    const form = parseForm(md);
+    const output = serializeForm(form);
+    expect(output).toContain('# My Form Title');
+    expect(output).toContain('Some intro text.');
+  });
+
+  it('preserves markdown between groups', () => {
+    // Test content between groups survives round-trip
+  });
+
+  it('preserves markdown after form', () => {
+    // Test footer content survives round-trip
+  });
+
+  it('preserves code blocks outside form tags', () => {
+    // Test fenced code blocks in intro/outro
+  });
+
+  it('preserves lists and blockquotes', () => {
+    // Test complex markdown structures
+  });
+
+  it('falls back to regeneration when preserveContent=false', () => {
+    const md = `# Title\n\n{% form id="test" %}...`;
+    const form = parseForm(md);
+    const output = serializeForm(form, { preserveContent: false });
+    expect(output).not.toContain('# Title'); // Regenerated, no outside content
+  });
+
+  it('falls back to regeneration when rawSource missing', () => {
+    // Test programmatically created forms
+  });
+
+  it('handles value changes without losing outside content', () => {
+    // Modify a field value, verify surrounding content preserved
+  });
+});
+```
+
+### Golden Tests: Content Preservation
+
+**New golden test form**: `examples/content-preservation/content-preservation.form.md`
+
+```markdown
+---
+markform:
+  spec: MF/0.1
+---
+
+# Content Preservation Test Form
+
+This form tests that markdown content outside Markform tags is preserved
+through parse → serialize round-trips.
+
+## Introduction
+
+Here is some introductory content with various markdown features:
+
+- Bullet point 1
+- Bullet point 2
+- Bullet point 3
+
+> This is a blockquote that should be preserved.
+
+\`\`\`python
+# This code block should be preserved exactly
+def hello():
+    print("Hello, world!")
+\`\`\`
+
+{% form id="preservation_test" title="Preservation Test" %}
+
+## Section One
+
+Some text between the form tag and the first group.
+
+{% group id="section_one" title="Section One" %}
+{% field kind="string" id="question_one" label="Question One" %}{% /field %}
+{% /group %}
+
+## Section Two
+
+More markdown content between groups.
+
+| Column A | Column B |
+|----------|----------|
+| Value 1  | Value 2  |
+
+{% group id="section_two" title="Section Two" %}
+{% field kind="number" id="question_two" label="Question Two" %}{% /field %}
+{% /group %}
+
+{% /form %}
+
+## Appendix
+
+Footer content after the form tag.
+
+1. Numbered item 1
+2. Numbered item 2
+3. Numbered item 3
+
+---
+
+*Italic text* and **bold text** in the footer.
+```
+
+**Golden test enhancement**: Add assertion that round-tripped form matches original
+(excluding frontmatter which is recomputed):
+
+```typescript
+it('preserves all markdown content through round-trip', () => {
+  const original = readFileSync(formPath, 'utf-8');
+  const form = parseForm(original);
+  const serialized = serializeForm(form);
+  const reparsed = parseForm(serialized);
+  const reserialized = serializeForm(reparsed);
+
+  // After two round-trips, content should stabilize
+  expect(serialized).toBe(reserialized);
+
+  // Verify specific content is preserved
+  expect(serialized).toContain('# Content Preservation Test Form');
+  expect(serialized).toContain('def hello():');
+  expect(serialized).toContain('| Column A | Column B |');
+  expect(serialized).toContain('*Italic text*');
+});
+```
+
+### Integration Tests: CLI Normalization
+
+```typescript
+describe('CLI --normalize flag', () => {
+  it('regenerates form without preserving outside content', async () => {
+    // Test that `markform apply --normalize` produces clean output
+  });
+});
+```
+
+### Tryscript Tests: CLI Output
+
+Add tryscript test verifying `markform inspect` and `markform apply` work correctly
+with content-preserving forms.
 
 ## Appendix: Test Cases
 
@@ -418,3 +687,19 @@ Additional notes after the form.
 ```
 
 All markdown structure must be preserved through round-trip.
+
+**Edge case - code blocks with Markform-like content:**
+```markdown
+# Example
+
+\`\`\`markdown
+<!-- This looks like a Markform tag but is in a code block -->
+<!-- form id="fake" -->
+\`\`\`
+
+<!-- form id="real" -->
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
+<!-- /form -->
+```
+
+The code block content must be preserved verbatim; only the real form tags are processed.
