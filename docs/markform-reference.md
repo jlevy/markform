@@ -256,6 +256,47 @@ Stateful checklists with three modes.
 | `[y]` | yes | Explicit yes |
 | `[n]` | no | Explicit no |
 
+**Option Metadata:**
+
+Options can include arbitrary metadata attributes:
+
+```markdown
+- [ ] Ship v1.0 {% #ship pr="#203" issue="PROJ-106" %}
+- [ ] Security audit <!-- #audit assignee="alice" due="2026-02-01" -->
+```
+
+Metadata is preserved as `Record<string, string>` and does not affect validation.
+
+### Implicit Checkboxes (Plan Documents)
+
+Forms designed as task lists can omit explicit field wrappers. When a form has a
+`{% form %}` tag but no `{% field %}` tags, checkboxes are automatically wrapped in
+an implicit checkboxes field.
+
+```markdown
+---
+markform:
+  spec: MF/0.1
+---
+{% form id="plan" title="Project Plan" %}
+
+## Phase 1: Research
+- [ ] Literature review {% #lit_review %}
+- [ ] Competitive analysis {% #comp %}
+
+## Phase 2: Design
+- [x] Architecture doc {% #arch %}
+- [/] API design {% #api %}
+
+{% /form %}
+```
+
+**Requirements:**
+- Each checkbox MUST have an ID annotation (`{% #id %}`)
+- The implicit field uses ID `_checkboxes` (reserved)
+- Always uses `checkboxMode="multi"` (5-state)
+- Mixing explicit fields with checkboxes outside fields is an error
+
 ### URL Field
 
 Single URL with format validation.
