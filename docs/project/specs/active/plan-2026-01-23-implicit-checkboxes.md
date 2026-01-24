@@ -56,7 +56,9 @@ essentially one big task list.
 - `findAllCheckboxes()` function with enclosing heading info
 - `injectCheckboxIds()` with generator function and uniqueness validation
 - `injectHeaderIds()` with generator function and uniqueness validation
-- Spec updates for implicit checkboxes behavior
+- **Option metadata**: Parse and preserve extra attributes on checkbox/select options
+- **Nested field validation**: Error on field tags inside other field tags
+- Spec updates for implicit checkboxes behavior and option metadata
 - Golden tests for all new functionality
 
 **Not in scope:**
@@ -65,6 +67,17 @@ essentially one big task list.
 - Implicit checkboxes without `{% form %}` wrapper (still need form tag)
 - Simple or explicit checkbox modes for implicit field
 - Changes to existing explicit field behavior
+
+**Prerequisite validation fixes (discovered during analysis):**
+
+The following validation gaps exist in the current parser and should be fixed as part of
+this work or tracked separately:
+
+1. **Nested field tags**: Currently silently ignored. Should produce error:
+   `Field tags cannot be nested. Found '${innerFieldId}' inside '${outerFieldId}'`
+
+2. **Checkboxes outside fields (when explicit fields exist)**: Currently silently ignored.
+   Should produce error when implicit checkboxes feature is enabled.
 
 ### Acceptance Criteria
 
@@ -108,6 +121,7 @@ essentially one big task list.
 | Checkboxes outside fields when explicit fields exist | `Checkboxes found outside of field tags. Either wrap all checkboxes in fields or remove all explicit fields for implicit checkboxes mode.` |
 | Generated ID conflicts with existing | `Generated ID 'xxx' conflicts with existing ID at line N` |
 | Invalid generated ID format | `Invalid generated ID 'xxx': must start with letter or underscore` |
+| Nested field tags | `Field tags cannot be nested. Found 'inner_id' inside 'outer_id'` |
 
 ## Stage 2: Architecture Stage
 
@@ -119,6 +133,379 @@ packages/markform/src/
 │   └── markdownHeaders.ts      # Low-level heading utilities
 └── engine/
     └── injectIds.ts            # ID injection functions
+```
+
+### Specification Changes (`docs/markform-spec.md`)
+
+The following changes are required to the Markform specification:
+
+#### Change 1: Option Metadata (Layer 2 - Data Model)
+
+**Location:** After "Option" definition in Layer 2
+
+**Current spec:**
+```typescript
+interface Option {
+  id: Id;
+  label: string;
+}
+```
+
+**New spec:**
+```typescript
+interface Option {
+  id: Id;
+  label: string;
+  metadata?: Record<string, string>;
+}
+```
+
+**Add documentation:**
+
+> ##### Option Metadata
+>
+> Options in checkboxes, single-select, and multi-select fields may include arbitrary
+> metadata attributes. These are preserved during parsing and serialization but do not
+> affect validation or form behavior.
+>
+> **Syntax:**
+> ```markdown
+> - [ ] Ship v1.0 {% #ship pr="#203" issue="PROJ-106" %}
+> - [ ] Security audit <!-- #audit assignee="alice" due="2026-02-01" -->
+> ```
+>
+> **Parsed structure:**
+> ```json
+> {
+>   "id": "ship",
+>   "label": "Ship v1.0",
+>   "metadata": { "pr": "#203", "issue": "PROJ-106" }
+> }
+> ```
+>
+> **Rules:**
+> - Metadata keys MUST be valid identifiers (alphanumeric + underscore)
+> - Reserved keys (`id`, `class`) are not allowed as metadata
+> - Metadata values are always strings
+> - Empty metadata object MAY be omitted during serialization
+
+#### Change 2: Implicit Checkboxes (Layer 1 - Syntax)
+
+**Location:** After "Checkboxes Fields" section (~line 633)
+
+**Add new section:**
+
+> ##### Implicit Checkboxes (Plan Documents)
+>
+> Forms designed as task lists or plans can omit explicit field wrappers. When a form
+> contains:
+> - A `{% form %}` wrapper (or `<!-- form ... -->`)
+> - No explicit `{% field %}` tags
+> - Standard markdown checkboxes with ID annotations
+>
+> The parser automatically creates an implicit checkboxes field:
+>
+> | Property | Value |
+> | --- | --- |
+> | ID | `_checkboxes` (reserved) |
+> | Label | `Checkboxes` |
+> | Mode | `multi` (always) |
+> | Options | All checkboxes in document order |
+> | Implicit | `true` |
+>
+> **Example:**
+> ```markdown
+> ---
+> markform:
+>   spec: MF/0.1
+> ---
+> {% form id="plan" title="Project Plan" %}
+>
+> ## Phase 1: Research
+> - [ ] Literature review {% #lit_review %}
+> - [ ] Competitive analysis {% #comp %}
+>
+> ## Phase 2: Design
+> - [x] Architecture doc {% #arch %}
+> - [/] API design {% #api %}
+>
+> {% /form %}
+> ```
+>
+> **Requirements:**
+> - Each checkbox MUST have an ID annotation
+> - ID `_checkboxes` is reserved for implicit fields
+> - Nested checkboxes (indented list items) are collected as separate options
+>
+> **Error conditions:**
+> - Checkbox without ID: Parse error
+> - Mixed mode (explicit fields AND checkboxes outside fields): Parse error
+> - Explicit field with ID `_checkboxes`: Parse error
+
+#### Change 3: Nested Field Validation (Layer 1 - Syntax)
+
+**Location:** In "Field Tags" section, under error conditions
+
+**Add:**
+
+> **Nesting constraints:**
+> - Field tags MUST NOT be nested inside other field tags
+> - Nested field tags produce a parse error:
+>   `Field tags cannot be nested. Found 'inner_id' inside 'outer_id'`
+
+#### Change 4: Reserved IDs (Layer 2 - Data Model)
+
+**Location:** In "Identifiers" section
+
+**Add to reserved IDs list:**
+
+> | Reserved ID | Purpose |
+> | --- | --- |
+> | `_default` | Implicit group for ungrouped fields |
+> | `_checkboxes` | Implicit checkboxes field for plan documents |
+
+### Code Changes
+
+#### 1. Type Changes (`packages/markform/src/engine/coreTypes.ts`)
+
+**Change Option interface:**
+```typescript
+// Before
+export interface Option {
+  id: Id;
+  label: string;
+}
+
+// After
+export interface Option {
+  id: Id;
+  label: string;
+  metadata?: Record<string, string>;
+}
+```
+
+**Add to FieldBase (for implicit tracking):**
+```typescript
+export interface FieldBase {
+  // ... existing fields
+  implicit?: boolean;  // true for auto-generated implicit fields
+}
+```
+
+**Update OptionSchema:**
+```typescript
+export const OptionSchema = z.object({
+  id: IdSchema,
+  label: z.string(),
+  metadata: z.record(z.string()).optional(),
+});
+```
+
+#### 2. Parser Changes (`packages/markform/src/engine/parseFields.ts`)
+
+**Modify `parseOptions()` (~line 490):**
+```typescript
+function parseOptions(
+  node: Node,
+  fieldId: string,
+): { options: Option[]; selected: Record<string, CheckboxValue> } {
+  const items = extractOptionItems(node);
+  const options: Option[] = [];
+  const selected: Record<string, CheckboxValue> = {};
+  const seenIds = new Set<string>();
+
+  for (const item of items) {
+    const parsed = parseOptionText(item.text);
+    if (!parsed) continue;
+
+    if (!item.id) {
+      throw new MarkformParseError(
+        `Option in field '${fieldId}' missing ID annotation. Use {% #option_id %}`,
+      );
+    }
+
+    if (seenIds.has(item.id)) {
+      throw new MarkformParseError(`Duplicate option ID '${item.id}' in field '${fieldId}'`);
+    }
+    seenIds.add(item.id);
+
+    // NEW: Extract metadata from attributes (excluding reserved keys)
+    const metadata = extractOptionMetadata(item.attributes);
+
+    options.push({
+      id: item.id,
+      label: parsed.label,
+      ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+    });
+
+    const state = CHECKBOX_MARKERS[parsed.marker];
+    if (state !== undefined) {
+      selected[item.id] = state;
+    }
+  }
+
+  return { options, selected };
+}
+
+// NEW: Helper to extract metadata
+function extractOptionMetadata(
+  attributes: Record<string, unknown> | undefined
+): Record<string, string> {
+  if (!attributes) return {};
+
+  const reserved = new Set(['id', 'class']);
+  const metadata: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(attributes)) {
+    if (!reserved.has(key) && typeof value === 'string') {
+      metadata[key] = value;
+    }
+  }
+
+  return metadata;
+}
+```
+
+#### 3. Parser Helpers (`packages/markform/src/engine/parseHelpers.ts`)
+
+**Update ParsedOptionItem interface:**
+```typescript
+export interface ParsedOptionItem {
+  id: string | null;
+  text: string;
+  attributes?: Record<string, unknown>;  // NEW: all attributes from annotation
+}
+```
+
+**Update extractOptionItems() to capture all attributes:**
+```typescript
+// In the list item processing, capture all attributes
+if (typeof child.attributes?.id === 'string') {
+  id = child.attributes.id;
+  attributes = child.attributes;  // Capture all attributes
+}
+```
+
+#### 4. Form Parser Changes (`packages/markform/src/engine/parse.ts`)
+
+**Add nested field validation:**
+```typescript
+// After parsing fields, validate no nesting
+function validateNoNestedFields(node: Node, parentFieldId?: string): void {
+  if (isTagNode(node, 'field')) {
+    const fieldId = getStringAttr(node, 'id') ?? 'unknown';
+    if (parentFieldId) {
+      throw new MarkformParseError(
+        `Field tags cannot be nested. Found '${fieldId}' inside '${parentFieldId}'`
+      );
+    }
+    // Check children of this field for nested fields
+    if (node.children) {
+      for (const child of node.children) {
+        validateNoNestedFields(child, fieldId);
+      }
+    }
+  } else if (node.children) {
+    for (const child of node.children) {
+      validateNoNestedFields(child, parentFieldId);
+    }
+  }
+}
+```
+
+**Add implicit checkboxes detection:**
+```typescript
+// After parsing groups/fields, check for implicit checkboxes mode
+function detectImplicitCheckboxes(
+  formNode: Node,
+  groups: FieldGroup[],
+): FieldGroup[] {
+  const hasExplicitFields = groups.some(g => g.fields.length > 0);
+
+  if (hasExplicitFields) {
+    // Check for checkboxes outside fields - this is an error
+    const orphanCheckboxes = findCheckboxesOutsideFields(formNode);
+    if (orphanCheckboxes.length > 0) {
+      throw new MarkformParseError(
+        'Checkboxes found outside of field tags. Either wrap all checkboxes in ' +
+        'fields or remove all explicit fields for implicit checkboxes mode.'
+      );
+    }
+    return groups;
+  }
+
+  // No explicit fields - collect all checkboxes into implicit field
+  const checkboxes = findAllFormCheckboxes(formNode);
+  if (checkboxes.length === 0) {
+    return groups;  // No checkboxes, no implicit field needed
+  }
+
+  // Create implicit checkboxes field
+  const implicitField: CheckboxesField = {
+    kind: 'checkboxes',
+    id: '_checkboxes',
+    label: 'Checkboxes',
+    checkboxMode: 'multi',
+    implicit: true,
+    options: checkboxes.map(cb => ({
+      id: cb.id,
+      label: cb.label,
+      ...(cb.metadata ? { metadata: cb.metadata } : {}),
+    })),
+    required: false,
+    role: 'agent',
+    approvalMode: 'none',
+  };
+
+  // Add to default group
+  const defaultGroup = groups.find(g => g.id === '_default') ?? {
+    id: '_default',
+    label: 'Default',
+    implicit: true,
+    fields: [],
+  };
+
+  defaultGroup.fields.push(implicitField);
+
+  return groups.some(g => g.id === '_default')
+    ? groups
+    : [...groups, defaultGroup];
+}
+```
+
+#### 5. Serializer Changes (`packages/markform/src/engine/serialize.ts`)
+
+**Update option serialization to include metadata:**
+```typescript
+function serializeOption(option: Option, selected?: CheckboxValue): string {
+  const marker = getCheckboxMarker(selected);
+  const metadataAttrs = option.metadata
+    ? Object.entries(option.metadata)
+        .map(([k, v]) => `${k}="${escapeAttrValue(v)}"`)
+        .join(' ')
+    : '';
+
+  const annotation = metadataAttrs
+    ? `{% #${option.id} ${metadataAttrs} %}`
+    : `{% #${option.id} %}`;
+
+  return `- [${marker}] ${option.label} ${annotation}`;
+}
+```
+
+#### 6. Reserved ID Validation
+
+**Add to parse.ts or validate.ts:**
+```typescript
+const RESERVED_FIELD_IDS = new Set(['_checkboxes', '_default']);
+
+function validateFieldId(id: string): void {
+  if (RESERVED_FIELD_IDS.has(id)) {
+    throw new MarkformParseError(
+      `Field ID '${id}' is reserved for implicit fields`
+    );
+  }
+}
 ```
 
 ### API Design
@@ -328,6 +715,31 @@ export type {
 
 ## Stage 4: Implementation
 
+### Phase 0: Foundation (Option Metadata + Nested Validation)
+
+These changes are prerequisites that improve the core parsing before adding implicit
+checkboxes.
+
+**Tasks:**
+- [ ] Update `Option` interface in `coreTypes.ts` to include `metadata?: Record<string, string>`
+- [ ] Update `OptionSchema` in `coreTypes.ts`
+- [ ] Update `ParsedOptionItem` in `parseHelpers.ts` to include `attributes`
+- [ ] Update `extractOptionItems()` to capture all attributes from annotations
+- [ ] Add `extractOptionMetadata()` helper in `parseFields.ts`
+- [ ] Update `parseOptions()` to populate metadata from attributes
+- [ ] Add nested field validation in `parse.ts`
+- [ ] Add reserved ID validation (`_checkboxes`, `_default`)
+- [ ] Update serializer to output metadata attributes on options
+- [ ] Add unit tests for option metadata parsing
+- [ ] Add unit tests for nested field error
+- [ ] Add unit tests for reserved ID error
+
+**Golden tests:**
+- `option-metadata-basic`: Options with pr, issue, assignee attributes
+- `option-metadata-roundtrip`: Parse → serialize → parse produces same metadata
+- `nested-field-error`: Nested field tags produce error
+- `reserved-id-error`: Using `_checkboxes` as field ID produces error
+
 ### Phase 1: Markdown Headers Utility
 
 **Tasks:**
@@ -492,9 +904,16 @@ markform:
 grep -n "findAllHeadings\|findEnclosingHeadings\|findAllCheckboxes\|injectCheckboxIds\|injectHeaderIds" packages/markform/src/index.ts
 ```
 
-## Appendix: Issue Tracking
+## Appendix A: Issue Tracking
 
 **Epic:** mf-djfs - Implicit Checkboxes Feature
+
+**Phase 0 tasks (foundation - NEW):**
+- [ ] Add option metadata to Option type and schema
+- [ ] Update parseOptions() to extract metadata from annotations
+- [ ] Add nested field validation
+- [ ] Add reserved ID validation (_checkboxes, _default)
+- [ ] Update serializer to output metadata attributes
 
 **Spec tasks (ready):**
 - mf-rtp7: Define implicit checkboxes field behavior
@@ -516,8 +935,106 @@ grep -n "findAllHeadings\|findEnclosingHeadings\|findAllCheckboxes\|injectCheckb
 - mf-vp5c: Golden tests for injectCheckboxIds
 - mf-b1l4: Golden tests for injectHeaderIds
 - mf-02bp: Error case tests for ID uniqueness validation
+- [ ] Golden tests for option metadata parsing and roundtrip
+- [ ] Unit tests for nested field error
+- [ ] Unit tests for reserved ID error
 
 **Doc tasks:**
-- mf-b3sz: Update markform-spec.md with implicit checkboxes
+- mf-b3sz: Update markform-spec.md with implicit checkboxes and option metadata
 - mf-aex2: Update markform-reference.md with new APIs
 - mf-m8mu: Add examples for plan documents
+
+---
+
+## Appendix B: Future Considerations
+
+The following enhancements are out of scope for this feature but should be considered for
+future work. The current design should not preclude these extensions.
+
+### 1. Header Progress Aggregation
+
+**Concept:** Section headers could automatically display aggregate progress of their
+contained checkboxes.
+
+```markdown
+## Phase 1: Research [2/4 done]  <!-- computed from children -->
+- [x] Literature review {% #lit %}
+- [x] Competitive analysis {% #comp %}
+- [ ] User interviews {% #interviews %}
+- [ ] Market sizing {% #market %}
+```
+
+**Considerations:**
+- Could be computed during serialization
+- Could be display-only annotation (not stored)
+- Could be stored as header metadata
+
+### 2. Task Tables
+
+**Concept:** A specialized table field mode for tracking tasks with structured columns.
+
+```markdown
+{% field kind="table" id="tasks" label="Tasks" tableMode="tasks" %}
+| Task | Status | Due | Assignee |
+|------|--------|-----|----------|
+| Ship v1.0 | [ ] | 2026-02-01 | @alice |
+| Security audit | [/] | 2026-01-15 | @bob |
+{% /field %}
+```
+
+**Features:**
+- Checkbox column for status
+- Automatic progress computation
+- Row IDs for tracking
+
+### 3. Dependencies Between Tasks
+
+**Concept:** Allow expressing dependencies between checkbox options using metadata.
+
+```markdown
+- [ ] Security audit {% #audit %}
+- [ ] Ship v1.0 {% #ship depends="audit" %}  <!-- blocked until audit done -->
+```
+
+**Considerations:**
+- Uses option metadata (now supported in this feature)
+- Semantic validation: referenced IDs must exist
+- Could affect progress computation (blocked vs. ready)
+- Could add `blocked` state to checkbox progress
+
+---
+
+## Appendix C: Comment Handling Notes
+
+### Plain HTML Comments
+
+HTML comments that are NOT Markform directives pass through unchanged:
+
+```markdown
+<!-- This is a regular comment, preserved as-is -->
+- [ ] Task one {% #task1 %}
+<!-- Another comment -->
+```
+
+**Rules:**
+- Comments starting with `#` or `.` inside a form are treated as annotations
+- Comments starting with known tag names (`form`, `field`, `group`, etc.) are transformed
+- All other comments pass through unchanged
+- Comments outside `{% form %}` tags always pass through unchanged
+
+### Comments Within Lists
+
+**Caution:** HTML comments within checkbox lists may break list parsing due to
+Markdown/Markdoc behavior:
+
+```markdown
+{% field kind="checkboxes" id="tasks" label="Tasks" %}
+- [ ] Task one {% #task1 %}
+<!-- comment between items breaks the list -->
+- [x] Task two {% #task2 %}
+{% /field %}
+```
+
+The above may parse incorrectly. Recommend placing comments:
+- Before or after the field tag
+- Not between list items
