@@ -7,7 +7,7 @@
 
 import type { CheckboxValue, SourceRange } from './coreTypes.js';
 import { CHECKBOX_MARKERS } from './parseHelpers.js';
-import { findEnclosingHeadings } from '../markdown/markdownHeaders.js';
+import { findAllHeadings, findEnclosingHeadings } from '../markdown/markdownHeaders.js';
 import type { HeadingInfo } from '../markdown/markdownHeaders.js';
 import { MarkformParseError } from '../errors.js';
 
@@ -227,6 +227,155 @@ export function injectCheckboxIds(
     // Remove existing ID annotation if replacing
     let updatedLine = line;
     if (!onlyMissing || checkbox.id) {
+      // Remove existing Markdoc ID
+      updatedLine = updatedLine.replace(MARKDOC_ID_PATTERN, '').trim();
+      // Remove existing HTML comment ID
+      updatedLine = updatedLine.replace(HTML_COMMENT_ID_PATTERN, '').trim();
+    }
+
+    // Append new ID annotation
+    lines[lineIndex] = `${updatedLine} {% #${newId} %}`;
+  }
+
+  return {
+    markdown: lines.join('\n'),
+    injectedCount: needsId.length,
+    injectedIds: generatedIds,
+  };
+}
+
+/**
+ * Options for header ID injection.
+ */
+export interface InjectHeaderIdsOptions {
+  /**
+   * Generator function to create IDs for headings.
+   * Receives heading info and 0-based index of headings needing IDs.
+   */
+  generator: (info: HeadingInfo, index: number) => string;
+
+  /**
+   * If true (default), only inject IDs for headings missing them.
+   * If false, replace all IDs.
+   */
+  onlyMissing?: boolean;
+
+  /**
+   * Heading levels to process. Defaults to all levels [1, 2, 3, 4, 5, 6].
+   */
+  levels?: number[];
+}
+
+/**
+ * Extended HeadingInfo that includes existing ID if present.
+ */
+interface HeadingWithId extends HeadingInfo {
+  id?: string;
+}
+
+/**
+ * Find all headings with their existing IDs.
+ */
+function findAllHeadingsWithIds(markdown: string): HeadingWithId[] {
+  const headings = findAllHeadings(markdown);
+  const lines = markdown.split('\n');
+
+  return headings.map((heading) => {
+    const line = lines[heading.line - 1] ?? '';
+
+    // Check for existing ID annotation
+    let id: string | undefined;
+    const markdocMatch = MARKDOC_ID_PATTERN.exec(line);
+    if (markdocMatch) {
+      id = markdocMatch[1];
+    } else {
+      const htmlMatch = HTML_COMMENT_ID_PATTERN.exec(line);
+      if (htmlMatch) {
+        id = htmlMatch[1];
+      }
+    }
+
+    return { ...heading, id };
+  });
+}
+
+/**
+ * Inject IDs into headings in a markdown document.
+ *
+ * Uses a generator function to create unique IDs for each heading.
+ * Throws if duplicate IDs are generated or if generated IDs conflict
+ * with existing ones.
+ */
+export function injectHeaderIds(
+  markdown: string,
+  options: InjectHeaderIdsOptions,
+): InjectIdsResult {
+  const { generator, onlyMissing = true, levels = [1, 2, 3, 4, 5, 6] } = options;
+  const allHeadings = findAllHeadingsWithIds(markdown);
+
+  // Filter by levels
+  const levelSet = new Set(levels);
+  const headings = allHeadings.filter((h) => levelSet.has(h.level));
+
+  // Collect existing IDs (to check for conflicts)
+  const existingIds = new Set<string>();
+  for (const heading of headings) {
+    if (heading.id && onlyMissing) {
+      existingIds.add(heading.id);
+    }
+  }
+
+  // Determine which headings need IDs
+  const needsId = headings.filter((h) => (onlyMissing ? !h.id : true));
+
+  // Generate IDs and check for duplicates/conflicts
+  const generatedIds = new Map<string, string>(); // title -> id
+  const allGeneratedIds = new Set<string>();
+
+  for (let i = 0; i < needsId.length; i++) {
+    const heading = needsId[i]!;
+    const newId = generator(heading, i);
+
+    // Check for duplicate generated IDs
+    if (allGeneratedIds.has(newId)) {
+      throw new MarkformParseError(
+        `Duplicate generated ID '${newId}' for heading '${heading.title}'`,
+        { line: heading.line },
+      );
+    }
+
+    // Check for conflict with existing IDs (only when onlyMissing=true)
+    if (onlyMissing && existingIds.has(newId)) {
+      throw new MarkformParseError(`Generated ID '${newId}' conflicts with existing ID`, {
+        line: heading.line,
+      });
+    }
+
+    allGeneratedIds.add(newId);
+    generatedIds.set(heading.title, newId);
+  }
+
+  // If no changes needed, return original markdown
+  if (needsId.length === 0) {
+    return {
+      markdown,
+      injectedCount: 0,
+      injectedIds: new Map(),
+    };
+  }
+
+  // Apply changes to markdown (process in reverse order to preserve line numbers)
+  const lines = markdown.split('\n');
+  const sortedByLine = [...needsId].sort((a, b) => b.line - a.line);
+
+  for (const heading of sortedByLine) {
+    const lineIndex = heading.line - 1;
+    const line = lines[lineIndex]!;
+    const newId = generatedIds.get(heading.title)!;
+
+    // Remove existing ID annotation if replacing
+    let updatedLine = line;
+    if (!onlyMissing || heading.id) {
       // Remove existing Markdoc ID
       updatedLine = updatedLine.replace(MARKDOC_ID_PATTERN, '').trim();
       // Remove existing HTML comment ID

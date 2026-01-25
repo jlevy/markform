@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { findAllCheckboxes, injectCheckboxIds } from '../../../src/engine/injectIds.js';
+import {
+  findAllCheckboxes,
+  injectCheckboxIds,
+  injectHeaderIds,
+} from '../../../src/engine/injectIds.js';
 import { MarkformParseError } from '../../../src/errors.js';
 
 describe('engine/injectIds', () => {
@@ -288,6 +292,179 @@ Some text here.
 
       expect(result.injectedCount).toBe(0);
       expect(result.markdown).toBe(markdown);
+    });
+  });
+
+  describe('injectHeaderIds', () => {
+    it('injects IDs into headings without IDs', () => {
+      const markdown = `# Main Title
+
+## Section One
+
+Content here.
+
+## Section Two
+
+More content.
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: (info) => info.title.toLowerCase().replace(/\s+/g, '_'),
+      });
+
+      expect(result.injectedCount).toBe(3);
+      expect(result.markdown).toContain('# Main Title {% #main_title %}');
+      expect(result.markdown).toContain('## Section One {% #section_one %}');
+      expect(result.markdown).toContain('## Section Two {% #section_two %}');
+    });
+
+    it('preserves existing IDs by default (onlyMissing=true)', () => {
+      const markdown = `# Title {% #existing %}
+
+## New Section
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: (info, index) => `heading_${index + 1}`,
+      });
+
+      expect(result.injectedCount).toBe(1);
+      expect(result.markdown).toContain('{% #existing %}');
+      expect(result.markdown).toContain('## New Section {% #heading_1 %}');
+    });
+
+    it('replaces all IDs when onlyMissing=false', () => {
+      const markdown = `# Title {% #old_id %}
+
+## Section {% #another_old %}
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: (info, index) => `new_${index + 1}`,
+        onlyMissing: false,
+      });
+
+      expect(result.injectedCount).toBe(2);
+      expect(result.markdown).not.toContain('{% #old_id %}');
+      expect(result.markdown).not.toContain('{% #another_old %}');
+      expect(result.markdown).toContain('{% #new_1 %}');
+      expect(result.markdown).toContain('{% #new_2 %}');
+    });
+
+    it('filters by heading levels', () => {
+      const markdown = `# H1 Title
+
+## H2 Section
+
+### H3 Subsection
+
+#### H4 Detail
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: (info) => `level_${info.level}`,
+        levels: [1, 2],
+      });
+
+      expect(result.injectedCount).toBe(2);
+      expect(result.markdown).toContain('# H1 Title {% #level_1 %}');
+      expect(result.markdown).toContain('## H2 Section {% #level_2 %}');
+      expect(result.markdown).not.toContain('### H3 Subsection {% #level_3 %}');
+      expect(result.markdown).not.toContain('#### H4 Detail {% #level_4 %}');
+    });
+
+    it('throws on duplicate generated IDs', () => {
+      const markdown = `# Section A
+
+## Section B
+`;
+      expect(() =>
+        injectHeaderIds(markdown, {
+          generator: () => 'same_id',
+        }),
+      ).toThrow(MarkformParseError);
+      expect(() =>
+        injectHeaderIds(markdown, {
+          generator: () => 'same_id',
+        }),
+      ).toThrow(/duplicate/i);
+    });
+
+    it('throws when generated ID conflicts with existing', () => {
+      const markdown = `# Title {% #existing %}
+
+## New Section
+`;
+      expect(() =>
+        injectHeaderIds(markdown, {
+          generator: () => 'existing',
+        }),
+      ).toThrow(MarkformParseError);
+      expect(() =>
+        injectHeaderIds(markdown, {
+          generator: () => 'existing',
+        }),
+      ).toThrow(/conflict/i);
+    });
+
+    it('returns injected IDs map', () => {
+      const markdown = `# First Section
+
+## Second Section
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: (info) => info.title.toLowerCase().replace(/\s+/g, '_'),
+      });
+
+      expect(result.injectedIds.get('First Section')).toBe('first_section');
+      expect(result.injectedIds.get('Second Section')).toBe('second_section');
+    });
+
+    it('handles headings with no changes needed', () => {
+      const markdown = `# Already Has ID {% #existing %}
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: () => 'unused',
+      });
+
+      expect(result.injectedCount).toBe(0);
+      expect(result.markdown).toBe(markdown);
+    });
+
+    it('handles all six heading levels', () => {
+      const markdown = `# H1
+## H2
+### H3
+#### H4
+##### H5
+###### H6
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: (info) => `h${info.level}`,
+      });
+
+      expect(result.injectedCount).toBe(6);
+      expect(result.markdown).toContain('# H1 {% #h1 %}');
+      expect(result.markdown).toContain('## H2 {% #h2 %}');
+      expect(result.markdown).toContain('### H3 {% #h3 %}');
+      expect(result.markdown).toContain('#### H4 {% #h4 %}');
+      expect(result.markdown).toContain('##### H5 {% #h5 %}');
+      expect(result.markdown).toContain('###### H6 {% #h6 %}');
+    });
+
+    it('ignores headings in code blocks', () => {
+      const markdown = `# Real Heading
+
+\`\`\`markdown
+# Fake Heading in Code
+\`\`\`
+
+## Another Real Heading
+`;
+      const result = injectHeaderIds(markdown, {
+        generator: (info, index) => `heading_${index + 1}`,
+      });
+
+      expect(result.injectedCount).toBe(2);
+      expect(result.markdown).toContain('# Real Heading {% #heading_1 %}');
+      expect(result.markdown).toContain('## Another Real Heading {% #heading_2 %}');
+      expect(result.markdown).not.toContain('# Fake Heading in Code {% #');
     });
   });
 });
