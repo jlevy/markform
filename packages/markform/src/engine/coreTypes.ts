@@ -160,7 +160,7 @@ export interface FieldBase {
   placeholder?: string;
   /** Example values (text-entry fields only) */
   examples?: string[];
-  /** True for auto-generated implicit fields (e.g., _checkboxes) */
+  /** True for auto-generated implicit fields (e.g., 'checkboxes' for plan documents) */
   implicit?: boolean;
 }
 

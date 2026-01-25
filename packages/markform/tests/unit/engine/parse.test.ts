@@ -2062,7 +2062,8 @@ Rate your experience.
       expect(result.docs[0]?.ref).toBe('rating');
     });
 
-    it('rejects _default as user-defined ID when ungrouped fields exist', () => {
+    it('allows explicit default group ID and merges ungrouped fields into it', () => {
+      // 'default' is a special ID - when used explicitly, ungrouped fields merge into it
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -2070,7 +2071,7 @@ markform:
 
 {% form id="test" %}
 
-{% group id="_default" title="My Group" %}
+{% group id="default" title="My Group" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
 {% /group %}
 
@@ -2078,13 +2079,16 @@ markform:
 
 {% /form %}
 `;
-      expect(() => parseForm(markdown)).toThrow(
-        /ID '_default' is reserved for implicit field groups/,
-      );
+      const result = parseForm(markdown);
+      // Both fields should be in the 'default' group
+      const defaultGroup = result.schema.groups.find((g) => g.id === 'default');
+      expect(defaultGroup).toBeDefined();
+      expect(defaultGroup?.children?.length).toBe(2);
+      expect(defaultGroup?.children?.map((f) => f.id)).toContain('name');
+      expect(defaultGroup?.children?.map((f) => f.id)).toContain('ungrouped');
     });
 
-    it('allows _default as user-defined ID when no ungrouped fields', () => {
-      // _default is only reserved when there are ungrouped fields
+    it('allows explicit default group ID when no ungrouped fields', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -2092,14 +2096,14 @@ markform:
 
 {% form id="test" %}
 
-{% group id="_default" title="My Group" %}
+{% group id="default" title="My Group" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
 {% /group %}
 
 {% /form %}
 `;
       const result = parseForm(markdown);
-      expect(result.schema.groups[0]?.id).toBe('_default');
+      expect(result.schema.groups[0]?.id).toBe('default');
       expect(result.schema.groups[0]?.implicit).toBeUndefined();
     });
   });
@@ -2328,13 +2332,13 @@ markform:
       expect(result.schema.groups).toHaveLength(1);
 
       const group = result.schema.groups[0];
-      expect(group?.id).toBe('_default');
+      expect(group?.id).toBe('default');
       expect(group?.implicit).toBe(true);
       expect(group?.children).toHaveLength(1);
 
       const field = group?.children[0];
       expect(field?.kind).toBe('checkboxes');
-      expect(field?.id).toBe('_checkboxes');
+      expect(field?.id).toBe('checkboxes');
       if (field?.kind === 'checkboxes') {
         expect(field.implicit).toBe(true);
         expect(field.checkboxMode).toBe('multi');
@@ -2364,7 +2368,7 @@ markform:
       const group = result.schema.groups[0];
       const field = group?.children[0];
       expect(field?.kind).toBe('checkboxes');
-      expect(field?.id).toBe('_checkboxes');
+      expect(field?.id).toBe('checkboxes');
       if (field?.kind === 'checkboxes') {
         expect(field.options).toHaveLength(2);
         expect(field.options[0]?.id).toBe('task1');
@@ -2386,7 +2390,7 @@ markform:
 {% /form %}
 `;
       const result = parseForm(markdown);
-      const response = result.responsesByFieldId._checkboxes;
+      const response = result.responsesByFieldId.checkboxes;
 
       expect(response?.state).toBe('answered');
       if (response?.value?.kind === 'checkboxes') {
@@ -2428,17 +2432,24 @@ markform:
       expect(() => parseForm(markdown)).toThrow(/missing ID annotation/i);
     });
 
-    it('throws error when explicit field has reserved _checkboxes ID', () => {
+    it('allows explicit field with checkboxes ID (special name, not reserved)', () => {
+      // 'checkboxes' is a special name but can be used explicitly
       const markdown = `---
 markform:
   spec: MF/0.1
 ---
 {% form id="test" %}
-{% field kind="string" id="_checkboxes" label="Reserved" %}{% /field %}
+{% field kind="checkboxes" id="checkboxes" label="Tasks" %}
+- [ ] Task one {% #task1 %}
+- [x] Task two {% #task2 %}
+{% /field %}
 {% /form %}
 `;
-      expect(() => parseForm(markdown)).toThrow(ParseError);
-      expect(() => parseForm(markdown)).toThrow(/reserved/i);
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children?.find((f) => f.id === 'checkboxes');
+      expect(field).toBeDefined();
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.implicit).toBeUndefined(); // Explicitly defined, not implicit
     });
 
     it('throws error when form has explicit fields AND checkboxes outside fields', () => {

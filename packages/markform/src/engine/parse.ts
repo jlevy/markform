@@ -54,11 +54,6 @@ const VALID_FORM_TAGS = new Set([
   'documentation',
 ]);
 
-/**
- * Reserved field IDs for implicit fields.
- */
-const RESERVED_FIELD_IDS = new Set(['_checkboxes']);
-
 // =============================================================================
 // Frontmatter Parsing
 // =============================================================================
@@ -211,13 +206,6 @@ function parseFieldGroup(
         throw new MarkformParseError(`Duplicate ID '${result.field.id}'`);
       }
 
-      // Check for reserved field IDs
-      if (RESERVED_FIELD_IDS.has(result.field.id)) {
-        throw new MarkformParseError(
-          `Field ID '${result.field.id}' is reserved for implicit fields`,
-        );
-      }
-
       idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
       children.push(result.field);
       responsesByFieldId[result.field.id] = result.response;
@@ -313,13 +301,6 @@ function parseFormTag(
         throw new MarkformParseError(`Duplicate ID '${result.field.id}'`);
       }
 
-      // Check for reserved field IDs
-      if (RESERVED_FIELD_IDS.has(result.field.id)) {
-        throw new MarkformParseError(
-          `Field ID '${result.field.id}' is reserved for implicit fields`,
-        );
-      }
-
       idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
       ungroupedFields.push(result.field);
       responsesByFieldId[result.field.id] = result.response;
@@ -357,20 +338,22 @@ function parseFormTag(
   }
 
   // If there are ungrouped fields, create an implicit group to hold them
+  // The 'default' ID is a special name for implicit groups, but can also be used explicitly
   if (ungroupedFields.length > 0) {
-    const implicitGroupId = `_default`;
-    if (idIndex.has(implicitGroupId)) {
-      throw new MarkformParseError(
-        `ID '${implicitGroupId}' is reserved for implicit field groups. ` +
-          `Please use a different ID for your field or group.`,
-      );
+    const implicitGroupId = 'default';
+    // Check if 'default' was already used explicitly - if so, merge fields into it
+    const existingDefault = groups.find((g) => g.id === implicitGroupId);
+    if (existingDefault) {
+      // Merge ungrouped fields into the existing explicit 'default' group
+      existingDefault.children = [...(existingDefault.children ?? []), ...ungroupedFields];
+    } else {
+      idIndex.set(implicitGroupId, { nodeType: 'group', parentId: id });
+      groups.push({
+        id: implicitGroupId,
+        children: ungroupedFields,
+        implicit: true,
+      });
     }
-    idIndex.set(implicitGroupId, { nodeType: 'group', parentId: id });
-    groups.push({
-      id: implicitGroupId,
-      children: ungroupedFields,
-      implicit: true,
-    });
   }
 
   // Count all explicit fields
@@ -408,14 +391,14 @@ function parseFormTag(
       for (const checkbox of allCheckboxes) {
         if (!checkbox.id) {
           throw new MarkformParseError(
-            `Option in implicit field '_checkboxes' missing ID annotation. Use {% #option_id %}`,
+            `Option in implicit field 'checkboxes' missing ID annotation. Use {% #option_id %}`,
             { line: checkbox.line },
           );
         }
 
         if (seenIds.has(checkbox.id)) {
           throw new MarkformParseError(
-            `Duplicate option ID '${checkbox.id}' in field '_checkboxes'`,
+            `Duplicate option ID '${checkbox.id}' in field 'checkboxes'`,
             { line: checkbox.line },
           );
         }
@@ -429,9 +412,10 @@ function parseFormTag(
       }
 
       // Create implicit checkboxes field
+      // The 'checkboxes' ID is a special name for implicit checkboxes, but can also be used explicitly
       const implicitField: CheckboxesField = {
         kind: 'checkboxes',
-        id: '_checkboxes',
+        id: 'checkboxes',
         label: 'Checkboxes',
         checkboxMode: 'multi',
         implicit: true,
@@ -443,16 +427,16 @@ function parseFormTag(
       };
 
       // Add to idIndex
-      idIndex.set('_checkboxes', { nodeType: 'field', parentId: id });
-      orderIndex.push('_checkboxes');
+      idIndex.set('checkboxes', { nodeType: 'field', parentId: id });
+      orderIndex.push('checkboxes');
 
       // Add options to idIndex
       for (const opt of options) {
-        const qualifiedRef = `_checkboxes.${opt.id}`;
+        const qualifiedRef = `checkboxes.${opt.id}`;
         idIndex.set(qualifiedRef, {
           nodeType: 'option',
           parentId: id,
-          fieldId: '_checkboxes',
+          fieldId: 'checkboxes',
         });
       }
 
@@ -461,20 +445,20 @@ function parseFormTag(
         kind: 'checkboxes',
         values,
       };
-      responsesByFieldId._checkboxes = {
+      responsesByFieldId.checkboxes = {
         state: 'answered',
         value: checkboxesValue,
       };
 
       // Create or get default group for implicit field
-      let defaultGroup = groups.find((g) => g.id === '_default');
+      let defaultGroup = groups.find((g) => g.id === 'default');
       if (!defaultGroup) {
         defaultGroup = {
-          id: '_default',
+          id: 'default',
           children: [],
           implicit: true,
         };
-        idIndex.set('_default', { nodeType: 'group', parentId: id });
+        idIndex.set('default', { nodeType: 'group', parentId: id });
         groups.push(defaultGroup);
       }
       defaultGroup.children = defaultGroup.children || [];

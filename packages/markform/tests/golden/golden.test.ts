@@ -310,18 +310,18 @@ describe('Implicit Checkboxes Parsing', () => {
     expect(form.schema.title).toBe('Project Plan');
 
     // Verify implicit _checkboxes field was created
-    expect(form.responsesByFieldId._checkboxes).toBeDefined();
+    expect(form.responsesByFieldId.checkboxes).toBeDefined();
 
     // Verify field is in implicit group
     expect(form.schema.groups).toHaveLength(1);
     const defaultGroup = form.schema.groups[0];
-    expect(defaultGroup?.id).toBe('_default');
+    expect(defaultGroup?.id).toBe('default');
     expect(defaultGroup?.implicit).toBe(true);
 
     // Verify checkboxes field structure
     const checkboxesField = defaultGroup?.children[0];
     expect(checkboxesField?.kind).toBe('checkboxes');
-    expect(checkboxesField?.id).toBe('_checkboxes');
+    expect(checkboxesField?.id).toBe('checkboxes');
     if (checkboxesField?.kind === 'checkboxes') {
       expect(checkboxesField.implicit).toBe(true);
       expect(checkboxesField.checkboxMode).toBe('multi');
@@ -337,7 +337,7 @@ describe('Implicit Checkboxes Parsing', () => {
     }
 
     // Verify response values
-    const response = form.responsesByFieldId._checkboxes;
+    const response = form.responsesByFieldId.checkboxes;
     expect(response?.state).toBe('answered');
     if (response?.value?.kind === 'checkboxes') {
       // All should be 'todo' state (unchecked)
@@ -360,7 +360,7 @@ describe('Implicit Checkboxes Parsing', () => {
     expect(form.schema.id).toBe('project_plan');
 
     // Verify response values include completed items
-    const response = form.responsesByFieldId._checkboxes;
+    const response = form.responsesByFieldId.checkboxes;
     expect(response?.state).toBe('answered');
     if (response?.value?.kind === 'checkboxes') {
       // Phase 1 should be done
@@ -385,7 +385,7 @@ describe('Implicit Checkboxes Parsing', () => {
 
     // Verify form structure (different form ID in markdoc example)
     expect(form.schema.id).toBe('sprint_tasks');
-    expect(form.responsesByFieldId._checkboxes).toBeDefined();
+    expect(form.responsesByFieldId.checkboxes).toBeDefined();
 
     const checkboxesField = form.schema.groups[0]?.children[0];
     if (checkboxesField?.kind === 'checkboxes') {
@@ -407,8 +407,8 @@ describe('Implicit Checkboxes Parsing', () => {
     const values = toStructuredValues(form);
 
     // Verify _checkboxes field is exported with structured format
-    expect(values._checkboxes).toBeDefined();
-    const checkboxExport = values._checkboxes as { state: string; value: Record<string, string> };
+    expect(values.checkboxes).toBeDefined();
+    const checkboxExport = values.checkboxes as { state: string; value: Record<string, string> };
     expect(checkboxExport.state).toBe('answered');
     expect(checkboxExport.value).toBeDefined();
 

@@ -99,7 +99,7 @@ this work or tracked separately:
 ### Acceptance Criteria
 
 1. Form with `{% form %}` but no `{% field %}` tags and with checkboxes parses successfully
-2. All checkboxes become options in implicit `_checkboxes` field
+2. All checkboxes become options in implicit `checkboxes` field
 3. Checkboxes without ID annotations produce `MarkformParseError`
 4. Forms with explicit fields AND checkboxes outside fields produce `MarkformParseError`
 5. `findAllHeadings()` returns all headings in document order
@@ -122,7 +122,9 @@ this work or tracked separately:
    IDs must be unique within the field, and IDs must be valid identifiers.
    Use `injectCheckboxIds()` to add them programmatically.
 
-4. **Reserved field ID**: The implicit checkboxes field uses ID `_checkboxes` (reserved).
+4. **Special field ID**: The implicit checkboxes field uses ID `checkboxes`. This is a special
+   ID (like a keyword) that can also be used explicitly. When used explicitly, the implicit
+   field is not created (the explicit field takes its place).
 
 5. **Error on mixed mode**: Having explicit fields AND checkboxes outside fields is an error.
    Either use all explicit fields or no explicit fields.
@@ -134,9 +136,8 @@ this work or tracked separately:
 
 | Condition | Error Message |
 | --- | --- |
-| Checkbox without ID in implicit mode | `Option in implicit field '_checkboxes' missing ID annotation. Use {% #option_id %}` |
-| Duplicate checkbox ID | `Duplicate option ID 'xxx' in field '_checkboxes'` |
-| Explicit field with ID `_checkboxes` | `Field ID '_checkboxes' is reserved for implicit checkboxes` |
+| Checkbox without ID in implicit mode | `Option in implicit field 'checkboxes' missing ID annotation. Use {% #option_id %}` |
+| Duplicate checkbox ID | `Duplicate option ID 'xxx' in field 'checkboxes'` |
 | Checkboxes outside fields when explicit fields exist | `Checkboxes found outside of field tags. Either wrap all checkboxes in fields or remove all explicit fields for implicit checkboxes mode.` |
 | Generated ID conflicts with existing | `Generated ID 'xxx' conflicts with existing ID at line N` |
 | Invalid generated ID format | `Invalid generated ID 'xxx': must start with letter or underscore` |
@@ -176,7 +177,7 @@ The following changes are required to the Markform specification:
 >
 > | Property | Value |
 > | --- | --- |
-> | ID | `_checkboxes` (reserved) |
+> | ID | `checkboxes` (reserved) |
 > | Label | `Checkboxes` |
 > | Mode | `multi` (always) |
 > | Options | All checkboxes in document order |
@@ -203,13 +204,13 @@ The following changes are required to the Markform specification:
 >
 > **Requirements:**
 > - Each checkbox MUST have an ID annotation
-> - ID `_checkboxes` is reserved for implicit fields
+> - ID `checkboxes` is reserved for implicit fields
 > - Nested checkboxes (indented list items) are collected as separate options
 >
 > **Error conditions:**
 > - Checkbox without ID: Parse error
 > - Mixed mode (explicit fields AND checkboxes outside fields): Parse error
-> - Explicit field with ID `_checkboxes`: Parse error
+> - Explicit field with ID `checkboxes`: Parse error
 
 #### Change 2: Nested Field Validation (Layer 1 - Syntax)
 
@@ -230,8 +231,8 @@ The following changes are required to the Markform specification:
 
 > | Reserved ID | Purpose |
 > | --- | --- |
-> | `_default` | Implicit group for ungrouped fields |
-> | `_checkboxes` | Implicit checkboxes field for plan documents |
+> | `default` | Implicit group for ungrouped fields |
+> | `checkboxes` | Implicit checkboxes field for plan documents |
 
 ### Code Changes
 
@@ -302,7 +303,7 @@ function detectImplicitCheckboxes(
   // Create implicit checkboxes field
   const implicitField: CheckboxesField = {
     kind: 'checkboxes',
-    id: '_checkboxes',
+    id: 'checkboxes',
     label: 'Checkboxes',
     checkboxMode: 'multi',
     implicit: true,
@@ -317,8 +318,8 @@ function detectImplicitCheckboxes(
   };
 
   // Add to default group
-  const defaultGroup = groups.find(g => g.id === '_default') ?? {
-    id: '_default',
+  const defaultGroup = groups.find(g => g.id === 'default') ?? {
+    id: 'default',
     label: 'Default',
     implicit: true,
     fields: [],
@@ -326,7 +327,7 @@ function detectImplicitCheckboxes(
 
   defaultGroup.fields.push(implicitField);
 
-  return groups.some(g => g.id === '_default')
+  return groups.some(g => g.id === 'default')
     ? groups
     : [...groups, defaultGroup];
 }
@@ -336,7 +337,7 @@ function detectImplicitCheckboxes(
 
 **Add to parse.ts or validate.ts:**
 ```typescript
-const RESERVED_FIELD_IDS = new Set(['_checkboxes', '_default']);
+const RESERVED_FIELD_IDS = new Set(['checkboxes', 'default']);
 
 function validateFieldId(id: string): void {
   if (RESERVED_FIELD_IDS.has(id)) {
@@ -509,7 +510,7 @@ export function injectHeaderIds(
 Add detection of implicit checkboxes mode:
 1. After parsing, check if form has any explicit fields
 2. If no fields, scan for checkboxes in the document
-3. If checkboxes found, create implicit field with ID `_checkboxes`
+3. If checkboxes found, create implicit field with ID `checkboxes`
 4. Validate all checkboxes have ID annotations
 5. If explicit fields exist AND checkboxes outside fields, throw error
 
@@ -567,7 +568,7 @@ checkboxes.
 - [ ] Add `extractOptionMetadata()` helper in `parseFields.ts`
 - [ ] Update `parseOptions()` to populate metadata from attributes
 - [ ] Add nested field validation in `parse.ts`
-- [ ] Add reserved ID validation (`_checkboxes`, `_default`)
+- [ ] Add reserved ID validation (`checkboxes`, `default`)
 - [ ] Update serializer to output metadata attributes on options
 - [ ] Add unit tests for option metadata parsing
 - [ ] Add unit tests for nested field error
@@ -577,7 +578,7 @@ checkboxes.
 - `option-metadata-basic`: Options with pr, issue, assignee attributes
 - `option-metadata-roundtrip`: Parse → serialize → parse produces same metadata
 - `nested-field-error`: Nested field tags produce error
-- `reserved-id-error`: Using `_checkboxes` as field ID produces error
+- `reserved-id-error`: Using `checkboxes` as field ID produces error
 
 ### Phase 1: Markdown Headers Utility
 
@@ -628,11 +629,11 @@ checkboxes.
 
 **Tasks:**
 - [ ] Update `parse.ts` to detect implicit checkboxes mode
-- [ ] Create implicit field with ID `_checkboxes`, label `Checkboxes`
+- [ ] Create implicit field with ID `checkboxes`, label `Checkboxes`
 - [ ] Set `checkboxMode: 'multi'` and `implicit: true`
 - [ ] Validate all checkboxes have ID annotations
 - [ ] Add error for mixed explicit/implicit mode
-- [ ] Add reserved ID check for `_checkboxes`
+- [ ] Add reserved ID check for `checkboxes`
 - [ ] Add unit tests
 
 **Golden tests:**
@@ -665,7 +666,7 @@ contains:
 - Standard markdown checkboxes (`- [ ] Item {% #id %}`)
 
 The parser automatically creates an implicit checkboxes field:
-- ID: `_checkboxes` (reserved)
+- ID: `checkboxes` (reserved)
 - Label: `Checkboxes`
 - Mode: `multi` (always)
 - Options: All checkboxes in document order
@@ -692,10 +693,10 @@ markform:
 
 **Requirements:**
 - Each checkbox MUST have an ID annotation (`{% #id %}`)
-- ID `_checkboxes` is reserved and MUST NOT be used for explicit fields
+- ID `checkboxes` is reserved and MUST NOT be used for explicit fields
 
 **Errors:**
-- Missing checkbox ID: `Option in implicit field '_checkboxes' missing ID annotation`
+- Missing checkbox ID: `Option in implicit field 'checkboxes' missing ID annotation`
 - Mixed mode (explicit fields with checkboxes outside): Error, must choose one approach
 ```
 

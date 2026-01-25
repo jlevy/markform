@@ -653,7 +653,7 @@ The parser automatically creates an implicit checkboxes field:
 
 | Property | Value |
 | --- | --- |
-| ID | `_checkboxes` (reserved) |
+| ID | `checkboxes` (reserved) |
 | Label | `Checkboxes` |
 | Mode | `multi` (always) |
 | Options | All checkboxes in document order |
@@ -686,14 +686,14 @@ four options: `lit_review`, `comp`, `arch`, and `api`.
   - Each checkbox MUST have an ID annotation (`{% #id %}` or `<!-- #id -->`)
   - IDs MUST be unique within the implicit field
   - Recommended: use `snake_case` slugified from label
-- ID `_checkboxes` is reserved and MUST NOT be used for explicit fields
+- ID `checkboxes` is reserved and MUST NOT be used for explicit fields
 - Nested checkboxes (indented list items) are collected as separate options
 
 **Error conditions:**
 - Checkbox without ID annotation: Parse error (same as explicit checkboxes fields)
 - Duplicate checkbox ID: Parse error (same as explicit checkboxes fields)
 - Mixed mode (explicit fields AND checkboxes outside fields): Parse error
-- Explicit field with ID `_checkboxes`: Parse error (reserved ID)
+- Explicit field with ID `checkboxes`: Parse error (reserved ID)
 
 ##### String-List Fields
 
@@ -2027,12 +2027,15 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | `tag` | `DocumentationBlock` | `DocumentationTag` values | Identifies doc block type |
 | `nodeType` | `IdIndexEntry` | `'form' \| 'group' \| 'field'` | Identifies structural element type |
 
-**Reserved IDs:**
+**Special IDs:**
 
-| Reserved ID | Purpose |
-| --- | --- |
-| `_default` | Implicit group for ungrouped fields |
-| `_checkboxes` | Implicit checkboxes field for plan documents |
+These IDs have special meaning but can also be used explicitly. When used explicitly, uniqueness
+is still enforced (only one field or group with each ID).
+
+| Special ID | Purpose | Explicit Use |
+| --- | --- | --- |
+| `default` | Implicit group for ungrouped fields | When explicit, ungrouped fields merge into it |
+| `checkboxes` | Implicit checkboxes field for plan documents | When explicit, used instead of implicit creation |
 
 ##### Field Kind Mappings
 

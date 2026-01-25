@@ -47,9 +47,9 @@ All unit tests pass (1751 total tests).
 
 **Parser (`parse.test.ts`):**
 - Implicit checkboxes field created when no explicit fields
-- Implicit field has correct ID `_checkboxes`
+- Implicit field has correct ID `checkboxes`
 - Implicit field has `checkboxMode: 'multi'` and `implicit: true`
-- Reserved field ID `_checkboxes` validation
+- Reserved field ID `checkboxes` validation
 - Nested field validation (field tags inside field tags produce error)
 - Mixed mode error (checkboxes outside fields when explicit fields exist)
 - Missing checkbox ID validation
@@ -106,7 +106,7 @@ pnpm markform inspect /tmp/test-plan.md
 
 **Expected:** Should show a form with:
 - ID: `test_plan`
-- One field: `_checkboxes` (implicit)
+- One field: `checkboxes` (implicit)
 - 3 options: `task_a`, `task_b`, `task_c`
 - Checkbox states: unchecked, checked, partial
 

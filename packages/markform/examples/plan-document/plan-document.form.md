@@ -15,7 +15,7 @@ markform:
 <!-- description ref="project_plan" -->
 A project plan demonstrating Markform's implicit checkboxes feature.
 When a form has no explicit field tags, checkboxes are automatically
-collected into an implicit `_checkboxes` field.
+collected into an implicit `checkboxes` field.
 <!-- /description -->
 
 ## Phase 1: Research
