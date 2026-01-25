@@ -22,6 +22,18 @@ essentially one big task list.
 - `docs/markform-reference.md` — Quick reference
 - `docs/markform-apis.md` — API documentation
 
+**Syntax note:** This spec uses Markdoc tag syntax (`{% tag %}`) in examples, but all
+Markform syntax has equivalent HTML comment forms. Both are always supported:
+
+| Markdoc | HTML Comment |
+| --- | --- |
+| `{% form id="x" %}` | `<!-- form id="x" -->` |
+| `{% field kind="checkboxes" %}` | `<!-- field kind="checkboxes" -->` |
+| `{% #id %}` | `<!-- #id -->` |
+| `{% /form %}` | `<!-- /form -->` |
+
+All behavior described in this spec applies identically to both syntaxes.
+
 ## Summary of Task
 
 1. **Implicit checkboxes field**: Forms with no explicit fields but with checkboxes get
