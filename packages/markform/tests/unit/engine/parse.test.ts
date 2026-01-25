@@ -2264,6 +2264,38 @@ markform:
 `,
         /references unknown ID/i,
       ],
+      [
+        'nested field tags',
+        `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" title="Group" %}
+{% field kind="string" id="outer" label="Outer" %}
+{% field kind="string" id="inner" label="Inner" %}{% /field %}
+{% /field %}
+{% /group %}
+{% /form %}
+`,
+        /Field tags cannot be nested.*inner.*outer/i,
+      ],
+      [
+        'nested field tags (HTML comment syntax)',
+        `---
+markform:
+  spec: MF/0.1
+---
+<!-- form id="test" -->
+<!-- group id="g1" title="Group" -->
+<!-- field kind="string" id="outer_field" label="Outer" -->
+<!-- field kind="string" id="inner_field" label="Inner" --><!-- /field -->
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->
+`,
+        /Field tags cannot be nested.*inner_field.*outer_field/i,
+      ],
     ];
 
     it.each(ERROR_CASES)('throws on %s', (_, markdown, pattern) => {
