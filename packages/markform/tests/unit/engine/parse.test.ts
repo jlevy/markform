@@ -2303,4 +2303,217 @@ markform:
       expect(() => parseForm(markdown)).toThrow(pattern);
     });
   });
+
+  describe('implicit checkboxes', () => {
+    it('creates implicit _checkboxes field when form has checkboxes but no explicit fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="plan" title="Project Plan" %}
+
+## Phase 1: Research
+- [ ] Literature review {% #lit_review %}
+- [ ] Competitive analysis {% #comp %}
+
+## Phase 2: Design
+- [x] Architecture doc {% #arch %}
+- [/] API design {% #api %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.schema.id).toBe('plan');
+      expect(result.schema.groups).toHaveLength(1);
+
+      const group = result.schema.groups[0];
+      expect(group?.id).toBe('_default');
+      expect(group?.implicit).toBe(true);
+      expect(group?.children).toHaveLength(1);
+
+      const field = group?.children[0];
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.id).toBe('_checkboxes');
+      if (field?.kind === 'checkboxes') {
+        expect(field.implicit).toBe(true);
+        expect(field.checkboxMode).toBe('multi');
+        expect(field.options).toHaveLength(4);
+        expect(field.options[0]?.id).toBe('lit_review');
+        expect(field.options[0]?.label).toBe('Literature review');
+        expect(field.options[1]?.id).toBe('comp');
+        expect(field.options[2]?.id).toBe('arch');
+        expect(field.options[3]?.id).toBe('api');
+      }
+    });
+
+    it('creates implicit checkboxes with HTML comment syntax', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+<!-- form id="tasks" title="Tasks" -->
+
+- [ ] First task <!-- #task1 -->
+- [x] Second task <!-- #task2 -->
+
+<!-- /form -->
+`;
+      const result = parseForm(markdown);
+
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.id).toBe('_checkboxes');
+      if (field?.kind === 'checkboxes') {
+        expect(field.options).toHaveLength(2);
+        expect(field.options[0]?.id).toBe('task1');
+        expect(field.options[1]?.id).toBe('task2');
+      }
+    });
+
+    it('parses checkbox values correctly in implicit field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] Todo item {% #todo %}
+- [x] Done item {% #done %}
+- [/] Incomplete item {% #incomplete %}
+- [*] Active item {% #active %}
+- [-] NA item {% #na %}
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId._checkboxes;
+
+      expect(response?.state).toBe('answered');
+      if (response?.value?.kind === 'checkboxes') {
+        expect(response.value.values.todo).toBe('todo');
+        expect(response.value.values.done).toBe('done');
+        expect(response.value.values.incomplete).toBe('incomplete');
+        expect(response.value.values.active).toBe('active');
+        expect(response.value.values.na).toBe('na');
+      }
+    });
+
+    it('does not create implicit field when form has no checkboxes', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="empty" title="Empty Form" %}
+
+## Just some content
+
+No checkboxes here.
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      expect(result.schema.groups).toHaveLength(0);
+    });
+
+    it('throws error when checkbox is missing ID annotation', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] Task without ID
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/missing ID annotation/i);
+    });
+
+    it('throws error when explicit field has reserved _checkboxes ID', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field kind="string" id="_checkboxes" label="Reserved" %}{% /field %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/reserved/i);
+    });
+
+    it('throws error when form has explicit fields AND checkboxes outside fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+- [ ] Orphan checkbox {% #orphan %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/outside of field tags/i);
+    });
+
+    it('allows checkboxes inside explicit checkboxes field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" %}
+- [ ] Task one {% #task1 %}
+- [x] Task two {% #task2 %}
+{% /field %}
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.id).toBe('tasks');
+      if (field?.kind === 'checkboxes') {
+        expect(field.implicit).toBeUndefined();
+        expect(field.options).toHaveLength(2);
+      }
+    });
+
+    it('handles nested checkboxes (indented) in implicit field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] Parent task {% #parent %}
+  - [ ] Child task {% #child %}
+  - [x] Another child {% #child2 %}
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+      if (field?.kind === 'checkboxes') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('parent');
+        expect(field.options[1]?.id).toBe('child');
+        expect(field.options[2]?.id).toBe('child2');
+      }
+    });
+
+    it('throws error on duplicate checkbox IDs in implicit field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] First task {% #same_id %}
+- [ ] Second task {% #same_id %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/Duplicate.*same_id/i);
+    });
+  });
 });

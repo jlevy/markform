@@ -9,6 +9,8 @@ import type { Node } from '@markdoc/markdoc';
 import YAML from 'yaml';
 
 import type {
+  CheckboxesField,
+  CheckboxesValue,
   DocumentationBlock,
   DocumentationTag,
   FieldGroup,
@@ -24,11 +26,17 @@ import type {
   SyntaxStyle,
 } from './coreTypes.js';
 import { RunModeSchema } from './coreTypes.js';
-import { DEFAULT_ROLES, DEFAULT_ROLE_INSTRUCTIONS } from '../settings.js';
+import {
+  AGENT_ROLE,
+  DEFAULT_PRIORITY,
+  DEFAULT_ROLES,
+  DEFAULT_ROLE_INSTRUCTIONS,
+} from '../settings.js';
 import { parseField } from './parseFields.js';
 import { getBooleanAttr, getStringAttr, getValidateAttr, isTagNode } from './parseHelpers.js';
 import { MarkformParseError } from '../errors.js';
 import { detectSyntaxStyle, preprocessCommentSyntax } from './preprocess.js';
+import { findAllCheckboxes } from './injectIds.js';
 
 // Re-export ParseError for backward compatibility
 export { ParseError } from '../errors.js';
@@ -45,6 +53,11 @@ const VALID_FORM_TAGS = new Set([
   'instructions',
   'documentation',
 ]);
+
+/**
+ * Reserved field IDs for implicit fields.
+ */
+const RESERVED_FIELD_IDS = new Set(['_checkboxes']);
 
 // =============================================================================
 // Frontmatter Parsing
@@ -198,6 +211,13 @@ function parseFieldGroup(
         throw new MarkformParseError(`Duplicate ID '${result.field.id}'`);
       }
 
+      // Check for reserved field IDs
+      if (RESERVED_FIELD_IDS.has(result.field.id)) {
+        throw new MarkformParseError(
+          `Field ID '${result.field.id}' is reserved for implicit fields`,
+        );
+      }
+
       idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
       children.push(result.field);
       responsesByFieldId[result.field.id] = result.response;
@@ -244,12 +264,14 @@ function parseFieldGroup(
 /**
  * Parse a form tag.
  * Handles both explicit groups and fields placed directly under the form.
+ * Also handles implicit checkboxes when form has no explicit fields.
  */
 function parseFormTag(
   node: Node,
   responsesByFieldId: Record<Id, FieldResponse>,
   orderIndex: Id[],
   idIndex: Map<Id, IdIndexEntry>,
+  markdown: string,
 ): FormSchema {
   const id = getStringAttr(node, 'id');
   const title = getStringAttr(node, 'title');
@@ -289,6 +311,13 @@ function parseFormTag(
     if (result) {
       if (idIndex.has(result.field.id)) {
         throw new MarkformParseError(`Duplicate ID '${result.field.id}'`);
+      }
+
+      // Check for reserved field IDs
+      if (RESERVED_FIELD_IDS.has(result.field.id)) {
+        throw new MarkformParseError(
+          `Field ID '${result.field.id}' is reserved for implicit fields`,
+        );
       }
 
       idIndex.set(result.field.id, { nodeType: 'field', parentId: id });
@@ -342,6 +371,115 @@ function parseFormTag(
       children: ungroupedFields,
       implicit: true,
     });
+  }
+
+  // Count all explicit fields
+  const hasExplicitFields =
+    ungroupedFields.length > 0 || groups.some((g) => g.children && g.children.length > 0);
+
+  // Check if there are explicit fields that use checkbox syntax
+  // (checkboxes, single_select, multi_select all use checkbox-like list items)
+  const hasExplicitCheckboxStyleFields = groups.some((g) =>
+    g.children?.some(
+      (f) => f.kind === 'checkboxes' || f.kind === 'single_select' || f.kind === 'multi_select',
+    ),
+  );
+
+  // Find all checkboxes in the markdown
+  const allCheckboxes = findAllCheckboxes(markdown);
+
+  if (allCheckboxes.length > 0) {
+    if (hasExplicitFields) {
+      // If there are explicit fields that use checkbox syntax, checkboxes are inside them
+      // But if there are only non-checkbox-style fields, the checkboxes are orphans
+      if (!hasExplicitCheckboxStyleFields) {
+        throw new MarkformParseError(
+          'Checkboxes found outside of field tags. Either wrap all checkboxes in ' +
+            'fields or remove all explicit fields for implicit checkboxes mode.',
+        );
+      }
+      // If there are explicit checkboxes fields, the checkboxes are inside them (OK)
+    } else {
+      // No explicit fields - create implicit checkboxes field
+      const seenIds = new Set<string>();
+      const options: { id: string; label: string }[] = [];
+      const values: CheckboxesValue['values'] = {};
+
+      for (const checkbox of allCheckboxes) {
+        if (!checkbox.id) {
+          throw new MarkformParseError(
+            `Option in implicit field '_checkboxes' missing ID annotation. Use {% #option_id %}`,
+            { line: checkbox.line },
+          );
+        }
+
+        if (seenIds.has(checkbox.id)) {
+          throw new MarkformParseError(
+            `Duplicate option ID '${checkbox.id}' in field '_checkboxes'`,
+            { line: checkbox.line },
+          );
+        }
+
+        seenIds.add(checkbox.id);
+        options.push({
+          id: checkbox.id,
+          label: checkbox.label,
+        });
+        values[checkbox.id] = checkbox.state;
+      }
+
+      // Create implicit checkboxes field
+      const implicitField: CheckboxesField = {
+        kind: 'checkboxes',
+        id: '_checkboxes',
+        label: 'Checkboxes',
+        checkboxMode: 'multi',
+        implicit: true,
+        options,
+        required: false,
+        priority: DEFAULT_PRIORITY,
+        role: AGENT_ROLE,
+        approvalMode: 'none',
+      };
+
+      // Add to idIndex
+      idIndex.set('_checkboxes', { nodeType: 'field', parentId: id });
+      orderIndex.push('_checkboxes');
+
+      // Add options to idIndex
+      for (const opt of options) {
+        const qualifiedRef = `_checkboxes.${opt.id}`;
+        idIndex.set(qualifiedRef, {
+          nodeType: 'option',
+          parentId: id,
+          fieldId: '_checkboxes',
+        });
+      }
+
+      // Create response for the implicit field
+      const checkboxesValue: CheckboxesValue = {
+        kind: 'checkboxes',
+        values,
+      };
+      responsesByFieldId._checkboxes = {
+        state: 'answered',
+        value: checkboxesValue,
+      };
+
+      // Create or get default group for implicit field
+      let defaultGroup = groups.find((g) => g.id === '_default');
+      if (!defaultGroup) {
+        defaultGroup = {
+          id: '_default',
+          children: [],
+          implicit: true,
+        };
+        idIndex.set('_default', { nodeType: 'group', parentId: id });
+        groups.push(defaultGroup);
+      }
+      defaultGroup.children = defaultGroup.children || [];
+      defaultGroup.children.push(implicitField);
+    }
   }
 
   return { id, title, groups };
@@ -562,7 +700,7 @@ export function parseForm(markdown: string): ParsedForm {
       if (formSchema) {
         throw new MarkformParseError('Multiple form tags found - only one allowed');
       }
-      formSchema = parseFormTag(node, responsesByFieldId, orderIndex, idIndex);
+      formSchema = parseFormTag(node, responsesByFieldId, orderIndex, idIndex, preprocessed);
       return;
     }
 
