@@ -24,8 +24,9 @@ in one place.
   UI, agents fill via tool calls ([Vercel AI SDK](https://github.com/vercel/ai)
   integration included).
 
-- Changes are explicit patch operations (`{ "op": "set_string", "fieldId": "name",
-  "value": "Alice" }`) validated against a schema specified in the form.
+- Changes are explicit patch operations
+  (`{ "op": "set_string", "fieldId": "name", "value": "Alice" }`) validated against a
+  schema specified in the form.
   The agent sees validation errors and can self-correct.
 
 - The format extends Markdown with a
@@ -33,9 +34,8 @@ in one place.
   Export Markform syntax to JSON, YAML, JSON Schema, or plain Markdown reports.
 
 Markform syntax is a good source format: token-efficient text you can read, diff, and
-version control.
-Structure is defined with HTML comment tags (`<!-- field -->`) that render invisibly
-on GitHub, so forms look like regular Markdown.
+version control. Structure is defined with HTML comment tags (`<!-- field -->`) that
+render invisibly on GitHub, so forms look like regular Markdown.
 
 ## Why Do Agents Need Forms?
 
@@ -96,58 +96,8 @@ npm install markform
 
 A `.form.md` file combines YAML frontmatter with HTML comment tags that define structure.
 The text can be any Markdown.
-The tags define things like fields:
-
-```markdown
-<!-- field kind="string" id="movie" label="Movie" role="user"
-   required=true minLength=1 maxLength=300 --><!-- /field -->
-
-<!-- field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
-- [ ] G <!-- #g -->
-- [ ] PG <!-- #pg -->
-- [ ] PG-13 <!-- #pg_13 -->
-- [ ] R <!-- #r -->
-- [ ] NC-17 <!-- #nc_17 -->
-- [ ] NR/Unrated <!-- #nr -->
-<!-- /field -->
-```
-
-Fields have types defined by the attributes.
-Values are filled in incrementally, just like any form.
-Once filled in, values appear directly inside the tags, in Markdown format:
-
-````markdown
-<!-- field kind="string" id="movie" label="Movie" role="user"
-   required=true minLength=1 maxLength=300 -->
-```value
-The Shawshank Redemption
-```
-<!-- /field -->
-
-<!-- field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
-- [ ] G <!-- #g -->
-- [ ] PG <!-- #pg -->
-- [ ] PG-13 <!-- #pg_13 -->
-- [x] R <!-- #r -->
-- [ ] NC-17 <!-- #nc_17 -->
-- [ ] NR/Unrated <!-- #nr -->
-<!-- /field -->
-````
-
-Note fields can have a `role="user"` to indicate they are filled interactively by the
-user, or a `role="agent"` to indicate an agent should fill them in.
-
-There are also tags for user or agent instructions per field or at form level and
-grouping of forms.
-
-Checkboxes and tables as values are supported!
-Checkboxes can be single-select or multi-select.
-
-Here's a full example (using the alternative Markdoc tag syntax, which also works):
-
-<details>
-
-<summary>Markform for Movie Research Demo (click to expand)</summary>
+Here is the
+[movie-research-demo.form.md](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-demo.form.md):
 
 ```markdown
 ---
@@ -164,66 +114,106 @@ markform:
     agent: |
       Identify the movie with web searches and use imdb.com and rottentomatoes.com to fill in the ratings.
 ---
-{% form id="movie_research_demo" %}
-{% group id="movie_input" %}
+
+<!-- form id="movie_research_demo" -->
+<!-- group id="movie_input" -->
 
 ## What movie do you want to research?
 
-{% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
-{% instructions ref="movie" %}Enter the movie title (add year or details for disambiguation).{% /instructions %}
+<!-- field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 --><!-- /field -->
+<!-- instructions ref="movie" -->Enter the movie title (add year or details for disambiguation).<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="about_the_movie" title="About the Movie" %}
+<!-- group id="about_the_movie" title="About the Movie" -->
 
 ## Movie Ratings
 
 Here are the ratings for the movie:
 
-{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
-- [ ] G {% #g %}
-- [ ] PG {% #pg %}
-- [ ] PG-13 {% #pg_13 %}
-- [ ] R {% #r %}
-- [ ] NC-17 {% #nc_17 %}
-- [ ] NR/Unrated {% #nr %}
-{% /field %}
+<!-- field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
 
-{% field kind="table" id="ratings_table" role="agent"
-   label="Ratings" required=true
-   columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"]
-   minRows=0 maxRows=3 %}
+- [ ] G <!-- #g -->
+- [ ] PG <!-- #pg -->
+- [ ] PG-13 <!-- #pg_13 -->
+- [ ] R <!-- #r -->
+- [ ] NC-17 <!-- #nc_17 -->
+- [ ] NR/Unrated <!-- #nr -->
+
+<!-- /field -->
+
+<!-- field kind="table" id="ratings_table" role="agent" label="Ratings" required=true columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"] minRows=0 maxRows=3 -->
+
 | Source | Score | Votes |
 |--------|-------|-------|
-{% /field %}
 
-{% instructions ref="ratings_table" %}
+<!-- /field -->
+
+<!-- instructions ref="ratings_table" -->
 Fill in scores and vote counts from each source:
 - IMDB: Rating (1.0-10.0 scale), vote count
 - RT Critics: Tomatometer (0-100%), review count
 - RT Audience: Audience Score (0-100%), rating count
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
-{% /form %}
+<!-- /group -->
+<!-- /form -->
 ```
 
-</details>
+Fields have types defined by the attributes.
+A field can have `role="user"` (filled interactively) or `role="agent"` (filled by an agent).
+Values are filled in incrementally, just like any form.
 
-### Form Report Output
+### Filled Form
 
-Run `npx markform examples` to copy examples, then `npx markform run` and select `Movie
-Research Demo` to fill it.
+Once filled in, values appear directly inside the tags, in Markdown format:
 
-A form can be exported
+````markdown
+<!-- form id="movie_research_demo" -->
+<!-- group id="movie_input" -->
 
-- as the filled form (Markform format, just like the input)
+<!-- field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 -->
+```value
+The Shawshank Redemption
+```
+<!-- /field -->
 
-- as a report (plain Markdown)
+<!-- /group -->
 
-- as values (YAML or JSON)
+<!-- group id="about_the_movie" title="About the Movie" -->
 
-- as a JSON schema (just the structure)
+<!-- field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" -->
+
+- [ ] G <!-- #g -->
+- [ ] PG <!-- #pg -->
+- [ ] PG-13 <!-- #pg_13 -->
+- [x] R <!-- #r -->
+- [ ] NC-17 <!-- #nc_17 -->
+- [ ] NR/Unrated <!-- #nr -->
+
+<!-- /field -->
+
+<!-- field kind="table" id="ratings_table" role="agent" label="Ratings" required=true columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"] minRows=0 maxRows=3 -->
+
+| Source | Score | Votes |
+| --- | --- | --- |
+| IMDB | 9.3 | 3100000 |
+| RT Critics | 89 | 146 |
+| RT Audience | 98 | 250000 |
+
+<!-- /field -->
+
+<!-- /group -->
+<!-- /form -->
+````
+
+### Report Output
+
+Run `npx markform examples` to copy examples, then `npx markform run` and select
+`Movie Research Demo` to fill it.
+
+A form can be exported as the filled form (Markform), as a report (plain Markdown),
+as values (YAML or JSON), or as a JSON Schema (just the structure).
 
 The report output (using `gpt-5-mini` to fill it in) looks like:
 
@@ -243,63 +233,6 @@ Ratings:
 | RT Critics | 89 | 146 |
 | RT Audience | 98 | 250000 |
 ```
-
-Here is the schema and YAML values for the form above.
-
-<details> <summary>Filled Markform (click to expand)</summary>
-
-````jinja
-{% form id="movie_research_demo" %}
-
-{% group id="movie_input" %}
-
-{% field kind="string" id="movie" role="user" label="Movie" maxLength=300 minLength=1 required=true %}
-```value
-The Shawshank Redemption
-```
-{% /field %}
-
-{% instructions ref="movie" %}
-Enter the movie title (add year or details for disambiguation).
-{% /instructions %}
-
-{% /group %}
-
-{% group id="about_the_movie" title="About the Movie" %}
-
-{% field kind="single_select" id="mpaa_rating" label="MPAA Rating" %}
-- [ ] G {% #g %}
-- [ ] PG {% #pg %}
-- [ ] PG-13 {% #pg_13 %}
-- [x] R {% #r %}
-- [ ] NC-17 {% #nc_17 %}
-- [ ] NR/Unrated {% #nr %}
-{% /field %}
-
-{% field kind="table" id="ratings_table"
-  columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"]
-  columnTypes=["string", "number", "number"]
-  label="Ratings" maxRows=3 minRows=0 required=true %}
-| Source | Score | Votes |
-| --- | --- | --- |
-| IMDB | 9.3 | 3100000 |
-| RT Critics | 89 | 146 |
-| RT Audience | 98 | 250000 |
-{% /field %}
-
-{% instructions ref="ratings_table" %}
-Fill in scores and vote counts from each source:
-- IMDB: Rating (1.0-10.0 scale), vote count
-- RT Critics: Tomatometer (0-100%), review count
-- RT Audience: Audience Score (0-100%), rating count
-{% /instructions %}
-
-{% /group %}
-
-{% /form %}
-````
-
-</details>
 
 <details> <summary>YAML Export (click to expand)</summary>
 
@@ -583,8 +516,8 @@ markform --help
 
 ## API Key Setup
 
-Set the appropriate environment variable for your provider before running `markform
-fill`:
+Set the appropriate environment variable for your provider before running
+`markform fill`:
 
 | Provider | Env Variable | Native Web Search |
 | --- | --- | :---: |
@@ -659,19 +592,16 @@ const result = await generateText({
 
 ## Other Documentation
 
-- **[Quick
-  Reference](https://github.com/jlevy/markform/blob/main/docs/markform-reference.md)**
+- **[Quick Reference](https://github.com/jlevy/markform/blob/main/docs/markform-reference.md)**
   (or run `markform docs`) — Concise syntax reference (agent-friendly)
 
 - **[Markform Spec](https://github.com/jlevy/markform/blob/main/docs/markform-spec.md)**
   (or run `markform spec`) — Complete syntax and semantics
 
-- **[API
-  Documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)**
+- **[API Documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)**
   (or run `markform apis`) — TypeScript and AI SDK APIs
 
-- **[Design
-  Doc](https://github.com/jlevy/markform/blob/main/docs/project/architecture/current/arch-markform-design.md)**
+- **[Design Doc](https://github.com/jlevy/markform/blob/main/docs/project/architecture/current/arch-markform-design.md)**
   — Technical design and roadmap
 
 - **[Development](https://github.com/jlevy/markform/blob/main/docs/development.md)** —
@@ -732,9 +662,9 @@ But it’s not slop. It is written via a strongly spec-driven process, using rul
 See
 [my post](https://github.com/jlevy/speculate/blob/main/about/lessons_in_spec_coding.md)
 for more thoughts on how this works.
-And see [the complete history of
-specs](https://github.com/jlevy/markform/tree/main/docs/project/specs/done) for examples
-of how everything is done with specs.
+And see
+[the complete history of specs](https://github.com/jlevy/markform/tree/main/docs/project/specs/done)
+for examples of how everything is done with specs.
 
 Although I didn’t write much code, there was a *lot* of management, review, and
 iteration on design decisions.
@@ -824,12 +754,12 @@ This project uses a dual licensing approach:
 
 - **Markform Specification** ([`docs/markform-spec.md`](docs/markform-spec.md),
   [`docs/markform-reference.md`](docs/markform-reference.md)):
-  [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
-  You may freely implement this specification in your own software under any license.
+  [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/). You may freely implement
+  this specification in your own software under any license.
 
 - **Reference Implementation** (all code in this repository):
-  [AGPL-3.0-or-later](./LICENSE).
-  [Contact me](https://github.com/jlevy) for commercial licensing options.
+  [AGPL-3.0-or-later](./LICENSE). [Contact me](https://github.com/jlevy) for commercial
+  licensing options.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution terms.
 
