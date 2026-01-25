@@ -269,6 +269,25 @@ export { parseSession, serializeSession } from './engine/session.js';
 export { applyPatches } from './engine/apply.js';
 
 // =============================================================================
+// Markdown Utilities
+// =============================================================================
+
+export { findAllHeadings, findEnclosingHeadings } from './markdown/markdownHeaders.js';
+export type { HeadingInfo } from './markdown/markdownHeaders.js';
+
+// =============================================================================
+// ID Injection
+// =============================================================================
+
+export { findAllCheckboxes, injectCheckboxIds, injectHeaderIds } from './engine/injectIds.js';
+export type {
+  CheckboxInfo,
+  InjectCheckboxIdsOptions,
+  InjectHeaderIdsOptions,
+  InjectIdsResult,
+} from './engine/injectIds.js';
+
+// =============================================================================
 // JSON Schema Export
 // =============================================================================
 
