@@ -117,7 +117,9 @@ this work or tracked separately:
 2. **Form wrapper required**: A `{% form %}` tag is still required for implicit checkboxes.
    This maintains the clear boundary of "this is a Markform."
 
-3. **ID annotations required**: Checkboxes in implicit mode must have `{% #id %}` annotations.
+3. **Standard option ID rules apply**: Checkboxes in implicit mode follow the same ID
+   rules as explicit checkboxes fields—each must have an ID annotation (`{% #id %}`),
+   IDs must be unique within the field, and IDs must be valid identifiers.
    Use `injectCheckboxIds()` to add them programmatically.
 
 4. **Reserved field ID**: The implicit checkboxes field uses ID `_checkboxes` (reserved).

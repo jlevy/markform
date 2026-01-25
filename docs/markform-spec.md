@@ -682,12 +682,16 @@ The above form parses to a schema with a single implicit checkboxes field contai
 four options: `lit_review`, `comp`, `arch`, and `api`.
 
 **Requirements:**
-- Each checkbox MUST have an ID annotation (`{% #id %}` or `<!-- #id -->`)
+- Standard option ID rules apply (see [Identifiers](#identifiers)):
+  - Each checkbox MUST have an ID annotation (`{% #id %}` or `<!-- #id -->`)
+  - IDs MUST be unique within the implicit field
+  - Recommended: use `snake_case` slugified from label
 - ID `_checkboxes` is reserved and MUST NOT be used for explicit fields
 - Nested checkboxes (indented list items) are collected as separate options
 
 **Error conditions:**
-- Checkbox without ID annotation: `Option in implicit field '_checkboxes' missing ID annotation`
+- Checkbox without ID annotation: Parse error (same as explicit checkboxes fields)
+- Duplicate checkbox ID: Parse error (same as explicit checkboxes fields)
 - Mixed mode (explicit fields AND checkboxes outside fields): Parse error
 - Explicit field with ID `_checkboxes`: Parse error (reserved ID)
 

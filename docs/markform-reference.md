@@ -281,7 +281,8 @@ markform:
 ```
 
 **Requirements:**
-- Each checkbox MUST have an ID annotation (`{% #id %}`)
+- Each checkbox MUST have an ID annotation (`{% #id %}` or `<!-- #id -->`)
+- IDs must be unique (same rules as explicit checkboxes fields)
 - The implicit field uses ID `_checkboxes` (reserved)
 - Always uses `checkboxMode="multi"` (5-state)
 - Mixing explicit fields with checkboxes outside fields is an error
