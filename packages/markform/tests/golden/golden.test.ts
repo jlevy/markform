@@ -286,3 +286,132 @@ describe('Export Files Golden Tests', () => {
     });
   }
 });
+
+// =============================================================================
+// Implicit Checkboxes Parsing Tests
+// =============================================================================
+
+describe('Implicit Checkboxes Parsing', () => {
+  it('parses plan-document.form.md with implicit checkboxes field', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+
+    // Verify form structure
+    expect(form.schema.id).toBe('project_plan');
+    expect(form.schema.title).toBe('Project Plan');
+
+    // Verify implicit _checkboxes field was created
+    expect(form.responsesByFieldId._checkboxes).toBeDefined();
+
+    // Verify field is in implicit group
+    expect(form.schema.groups).toHaveLength(1);
+    const defaultGroup = form.schema.groups[0];
+    expect(defaultGroup?.id).toBe('_default');
+    expect(defaultGroup?.implicit).toBe(true);
+
+    // Verify checkboxes field structure
+    const checkboxesField = defaultGroup?.children[0];
+    expect(checkboxesField?.kind).toBe('checkboxes');
+    expect(checkboxesField?.id).toBe('_checkboxes');
+    if (checkboxesField?.kind === 'checkboxes') {
+      expect(checkboxesField.implicit).toBe(true);
+      expect(checkboxesField.checkboxMode).toBe('multi');
+      // 14 tasks total: 3 + 3 + 4 + 4
+      expect(checkboxesField.options).toHaveLength(14);
+
+      // Verify specific option IDs exist
+      const optionIds = checkboxesField.options.map((o) => o.id);
+      expect(optionIds).toContain('review_docs');
+      expect(optionIds).toContain('arch_doc');
+      expect(optionIds).toContain('unit_tests');
+      expect(optionIds).toContain('prod_deploy');
+    }
+
+    // Verify response values
+    const response = form.responsesByFieldId._checkboxes;
+    expect(response?.state).toBe('answered');
+    if (response?.value?.kind === 'checkboxes') {
+      // All should be 'todo' state (unchecked)
+      expect(response.value.values.review_docs).toBe('todo');
+      expect(response.value.values.prod_deploy).toBe('todo');
+    }
+  });
+
+  it('parses plan-document-progress.form.md with partial completion', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document-progress.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document-progress.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+
+    expect(form.schema.id).toBe('project_plan');
+
+    // Verify response values include completed items
+    const response = form.responsesByFieldId._checkboxes;
+    expect(response?.state).toBe('answered');
+    if (response?.value?.kind === 'checkboxes') {
+      // Phase 1 should be done
+      expect(response.value.values.review_docs).toBe('done');
+      expect(response.value.values.competitor_analysis).toBe('done');
+      // Phase 3/4 should still be todo
+      expect(response.value.values.unit_tests).toBe('todo');
+      expect(response.value.values.prod_deploy).toBe('todo');
+    }
+  });
+
+  it('parses plan-document-markdoc.form.md with Markdoc syntax', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document-markdoc.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document-markdoc.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+
+    // Verify form structure (different form ID in markdoc example)
+    expect(form.schema.id).toBe('sprint_tasks');
+    expect(form.responsesByFieldId._checkboxes).toBeDefined();
+
+    const checkboxesField = form.schema.groups[0]?.children[0];
+    if (checkboxesField?.kind === 'checkboxes') {
+      expect(checkboxesField.implicit).toBe(true);
+      expect(checkboxesField.options.length).toBe(8); // 3 + 3 + 2
+    }
+  });
+
+  it('exports structured values correctly for plan documents', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+    const values = toStructuredValues(form);
+
+    // Verify _checkboxes field is exported with structured format
+    expect(values._checkboxes).toBeDefined();
+    const checkboxExport = values._checkboxes as { state: string; value: Record<string, string> };
+    expect(checkboxExport.state).toBe('answered');
+    expect(checkboxExport.value).toBeDefined();
+
+    // Verify checkbox values
+    expect(checkboxExport.value.review_docs).toBe('todo');
+    expect(checkboxExport.value.prod_deploy).toBe('todo');
+  });
+});
