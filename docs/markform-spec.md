@@ -1474,34 +1474,8 @@ interface StringListField extends FieldBase {
 interface Option {
   id: Id;
   label: string;
-  metadata?: Record<string, string>;
 }
 ```
-
-**Option metadata:** Options in checkboxes, single-select, and multi-select fields may
-include arbitrary metadata attributes. These are preserved during parsing and
-serialization but do not affect validation or form behavior.
-
-Syntax:
-```markdown
-- [ ] Ship v1.0 {% #ship pr="#203" issue="PROJ-106" %}
-- [ ] Security audit <!-- #audit assignee="alice" due="2026-02-01" -->
-```
-
-Parsed structure:
-```json
-{
-  "id": "ship",
-  "label": "Ship v1.0",
-  "metadata": { "pr": "#203", "issue": "PROJ-106" }
-}
-```
-
-Rules:
-- Metadata keys MUST be valid identifiers (alphanumeric + underscore)
-- Reserved keys (`id`, `class`) MUST NOT be used as metadata keys
-- Metadata values are always strings
-- Empty metadata object MAY be omitted during serialization
 
 ```typescript
 type CheckboxMode = 'multi' | 'simple' | 'explicit';

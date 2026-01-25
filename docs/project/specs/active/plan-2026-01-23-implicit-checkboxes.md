@@ -56,9 +56,8 @@ essentially one big task list.
 - `findAllCheckboxes()` function with enclosing heading info
 - `injectCheckboxIds()` with generator function and uniqueness validation
 - `injectHeaderIds()` with generator function and uniqueness validation
-- **Option metadata**: Parse and preserve extra attributes on checkbox/select options
 - **Nested field validation**: Error on field tags inside other field tags
-- Spec updates for implicit checkboxes behavior and option metadata
+- Spec updates for implicit checkboxes behavior
 - Golden tests for all new functionality
 
 **Not in scope:**
@@ -67,6 +66,12 @@ essentially one big task list.
 - Implicit checkboxes without `{% form %}` wrapper (still need form tag)
 - Simple or explicit checkbox modes for implicit field
 - Changes to existing explicit field behavior
+
+**Future possibilities:**
+
+- **Option metadata**: Parse and preserve extra attributes on checkbox/select options
+  (e.g., `{% #id pr="#203" issue="PROJ-106" %}`). Would add `metadata?: Record<string, string>`
+  to the Option type for tracking PRs, issues, assignees, due dates, etc.
 
 **Prerequisite validation fixes (discovered during analysis):**
 
@@ -139,57 +144,7 @@ packages/markform/src/
 
 The following changes are required to the Markform specification:
 
-#### Change 1: Option Metadata (Layer 2 - Data Model)
-
-**Location:** After "Option" definition in Layer 2
-
-**Current spec:**
-```typescript
-interface Option {
-  id: Id;
-  label: string;
-}
-```
-
-**New spec:**
-```typescript
-interface Option {
-  id: Id;
-  label: string;
-  metadata?: Record<string, string>;
-}
-```
-
-**Add documentation:**
-
-> ##### Option Metadata
->
-> Options in checkboxes, single-select, and multi-select fields may include arbitrary
-> metadata attributes. These are preserved during parsing and serialization but do not
-> affect validation or form behavior.
->
-> **Syntax:**
-> ```markdown
-> - [ ] Ship v1.0 {% #ship pr="#203" issue="PROJ-106" %}
-> - [ ] Security audit <!-- #audit assignee="alice" due="2026-02-01" -->
-> ```
->
-> **Parsed structure:**
-> ```json
-> {
->   "id": "ship",
->   "label": "Ship v1.0",
->   "metadata": { "pr": "#203", "issue": "PROJ-106" }
-> }
-> ```
->
-> **Rules:**
-> - Metadata keys MUST be valid identifiers (alphanumeric + underscore)
-> - Reserved keys (`id`, `class`) are not allowed as metadata
-> - Metadata values are always strings
-> - Empty metadata object MAY be omitted during serialization
-
-#### Change 2: Implicit Checkboxes (Layer 1 - Syntax)
+#### Change 1: Implicit Checkboxes (Layer 1 - Syntax)
 
 **Location:** After "Checkboxes Fields" section (~line 633)
 
@@ -242,7 +197,7 @@ interface Option {
 > - Mixed mode (explicit fields AND checkboxes outside fields): Parse error
 > - Explicit field with ID `_checkboxes`: Parse error
 
-#### Change 3: Nested Field Validation (Layer 1 - Syntax)
+#### Change 2: Nested Field Validation (Layer 1 - Syntax)
 
 **Location:** In "Field Tags" section, under error conditions
 
@@ -253,7 +208,7 @@ interface Option {
 > - Nested field tags produce a parse error:
 >   `Field tags cannot be nested. Found 'inner_id' inside 'outer_id'`
 
-#### Change 4: Reserved IDs (Layer 2 - Data Model)
+#### Change 3: Reserved IDs (Layer 2 - Data Model)
 
 **Location:** In "Identifiers" section
 
@@ -268,22 +223,6 @@ interface Option {
 
 #### 1. Type Changes (`packages/markform/src/engine/coreTypes.ts`)
 
-**Change Option interface:**
-```typescript
-// Before
-export interface Option {
-  id: Id;
-  label: string;
-}
-
-// After
-export interface Option {
-  id: Id;
-  label: string;
-  metadata?: Record<string, string>;
-}
-```
-
 **Add to FieldBase (for implicit tracking):**
 ```typescript
 export interface FieldBase {
@@ -292,101 +231,7 @@ export interface FieldBase {
 }
 ```
 
-**Update OptionSchema:**
-```typescript
-export const OptionSchema = z.object({
-  id: IdSchema,
-  label: z.string(),
-  metadata: z.record(z.string()).optional(),
-});
-```
-
-#### 2. Parser Changes (`packages/markform/src/engine/parseFields.ts`)
-
-**Modify `parseOptions()` (~line 490):**
-```typescript
-function parseOptions(
-  node: Node,
-  fieldId: string,
-): { options: Option[]; selected: Record<string, CheckboxValue> } {
-  const items = extractOptionItems(node);
-  const options: Option[] = [];
-  const selected: Record<string, CheckboxValue> = {};
-  const seenIds = new Set<string>();
-
-  for (const item of items) {
-    const parsed = parseOptionText(item.text);
-    if (!parsed) continue;
-
-    if (!item.id) {
-      throw new MarkformParseError(
-        `Option in field '${fieldId}' missing ID annotation. Use {% #option_id %}`,
-      );
-    }
-
-    if (seenIds.has(item.id)) {
-      throw new MarkformParseError(`Duplicate option ID '${item.id}' in field '${fieldId}'`);
-    }
-    seenIds.add(item.id);
-
-    // NEW: Extract metadata from attributes (excluding reserved keys)
-    const metadata = extractOptionMetadata(item.attributes);
-
-    options.push({
-      id: item.id,
-      label: parsed.label,
-      ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
-    });
-
-    const state = CHECKBOX_MARKERS[parsed.marker];
-    if (state !== undefined) {
-      selected[item.id] = state;
-    }
-  }
-
-  return { options, selected };
-}
-
-// NEW: Helper to extract metadata
-function extractOptionMetadata(
-  attributes: Record<string, unknown> | undefined
-): Record<string, string> {
-  if (!attributes) return {};
-
-  const reserved = new Set(['id', 'class']);
-  const metadata: Record<string, string> = {};
-
-  for (const [key, value] of Object.entries(attributes)) {
-    if (!reserved.has(key) && typeof value === 'string') {
-      metadata[key] = value;
-    }
-  }
-
-  return metadata;
-}
-```
-
-#### 3. Parser Helpers (`packages/markform/src/engine/parseHelpers.ts`)
-
-**Update ParsedOptionItem interface:**
-```typescript
-export interface ParsedOptionItem {
-  id: string | null;
-  text: string;
-  attributes?: Record<string, unknown>;  // NEW: all attributes from annotation
-}
-```
-
-**Update extractOptionItems() to capture all attributes:**
-```typescript
-// In the list item processing, capture all attributes
-if (typeof child.attributes?.id === 'string') {
-  id = child.attributes.id;
-  attributes = child.attributes;  // Capture all attributes
-}
-```
-
-#### 4. Form Parser Changes (`packages/markform/src/engine/parse.ts`)
+#### 2. Form Parser Changes (`packages/markform/src/engine/parse.ts`)
 
 **Add nested field validation:**
 ```typescript
@@ -473,27 +318,7 @@ function detectImplicitCheckboxes(
 }
 ```
 
-#### 5. Serializer Changes (`packages/markform/src/engine/serialize.ts`)
-
-**Update option serialization to include metadata:**
-```typescript
-function serializeOption(option: Option, selected?: CheckboxValue): string {
-  const marker = getCheckboxMarker(selected);
-  const metadataAttrs = option.metadata
-    ? Object.entries(option.metadata)
-        .map(([k, v]) => `${k}="${escapeAttrValue(v)}"`)
-        .join(' ')
-    : '';
-
-  const annotation = metadataAttrs
-    ? `{% #${option.id} ${metadataAttrs} %}`
-    : `{% #${option.id} %}`;
-
-  return `- [${marker}] ${option.label} ${annotation}`;
-}
-```
-
-#### 6. Reserved ID Validation
+#### 3. Reserved ID Validation
 
 **Add to parse.ts or validate.ts:**
 ```typescript

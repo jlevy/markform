@@ -256,17 +256,6 @@ Stateful checklists with three modes.
 | `[y]` | yes | Explicit yes |
 | `[n]` | no | Explicit no |
 
-**Option Metadata:**
-
-Options can include arbitrary metadata attributes:
-
-```markdown
-- [ ] Ship v1.0 {% #ship pr="#203" issue="PROJ-106" %}
-- [ ] Security audit <!-- #audit assignee="alice" due="2026-02-01" -->
-```
-
-Metadata is preserved as `Record<string, string>` and does not affect validation.
-
 ### Implicit Checkboxes (Plan Documents)
 
 Forms designed as task lists can omit explicit field wrappers. When a form has a
