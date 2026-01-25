@@ -9,6 +9,7 @@ import type { CheckboxValue, SourceRange } from './coreTypes.js';
 import { CHECKBOX_MARKERS } from './parseHelpers.js';
 import { findEnclosingHeadings } from '../markdown/markdownHeaders.js';
 import type { HeadingInfo } from '../markdown/markdownHeaders.js';
+import { MarkformParseError } from '../errors.js';
 
 // Re-export HeadingInfo for convenience
 export type { HeadingInfo };
@@ -120,4 +121,125 @@ export function findAllCheckboxes(markdown: string): CheckboxInfo[] {
   }
 
   return checkboxes;
+}
+
+/**
+ * Options for ID injection.
+ */
+export interface InjectCheckboxIdsOptions {
+  /**
+   * Generator function to create IDs for checkboxes.
+   * Receives checkbox info and 0-based index of checkboxes needing IDs.
+   */
+  generator: (info: CheckboxInfo, index: number) => string;
+
+  /**
+   * If true (default), only inject IDs for checkboxes missing them.
+   * If false, replace all IDs.
+   */
+  onlyMissing?: boolean;
+}
+
+/**
+ * Result of ID injection.
+ */
+export interface InjectIdsResult {
+  /** Updated markdown with injected IDs */
+  markdown: string;
+
+  /** Number of IDs that were injected */
+  injectedCount: number;
+
+  /** Map of checkbox label to injected ID */
+  injectedIds: Map<string, string>;
+}
+
+/**
+ * Inject IDs into checkboxes in a markdown document.
+ *
+ * Uses a generator function to create unique IDs for each checkbox.
+ * Throws if duplicate IDs are generated or if generated IDs conflict
+ * with existing ones.
+ */
+export function injectCheckboxIds(
+  markdown: string,
+  options: InjectCheckboxIdsOptions,
+): InjectIdsResult {
+  const { generator, onlyMissing = true } = options;
+  const checkboxes = findAllCheckboxes(markdown);
+
+  // Collect existing IDs (to check for conflicts)
+  const existingIds = new Set<string>();
+  for (const checkbox of checkboxes) {
+    if (checkbox.id && onlyMissing) {
+      existingIds.add(checkbox.id);
+    }
+  }
+
+  // Determine which checkboxes need IDs
+  const needsId = checkboxes.filter((cb) => (onlyMissing ? !cb.id : true));
+
+  // Generate IDs and check for duplicates/conflicts
+  const generatedIds = new Map<string, string>(); // label -> id
+  const allGeneratedIds = new Set<string>();
+
+  for (let i = 0; i < needsId.length; i++) {
+    const checkbox = needsId[i]!;
+    const newId = generator(checkbox, i);
+
+    // Check for duplicate generated IDs
+    if (allGeneratedIds.has(newId)) {
+      throw new MarkformParseError(
+        `Duplicate generated ID '${newId}' for checkbox '${checkbox.label}'`,
+        { line: checkbox.line },
+      );
+    }
+
+    // Check for conflict with existing IDs (only when onlyMissing=true)
+    if (onlyMissing && existingIds.has(newId)) {
+      throw new MarkformParseError(`Generated ID '${newId}' conflicts with existing ID`, {
+        line: checkbox.line,
+      });
+    }
+
+    allGeneratedIds.add(newId);
+    generatedIds.set(checkbox.label, newId);
+  }
+
+  // If no changes needed, return original markdown
+  if (needsId.length === 0) {
+    return {
+      markdown,
+      injectedCount: 0,
+      injectedIds: new Map(),
+    };
+  }
+
+  // Apply changes to markdown (process in reverse order to preserve line numbers)
+  const lines = markdown.split('\n');
+  const sortedByLine = [...needsId].sort((a, b) => b.line - a.line);
+
+  for (const checkbox of sortedByLine) {
+    const lineIndex = checkbox.line - 1;
+    const line = lines[lineIndex]!;
+    const newId = generatedIds.get(checkbox.label)!;
+
+    // Remove existing ID annotation if replacing
+    let updatedLine = line;
+    if (!onlyMissing || checkbox.id) {
+      // Remove existing Markdoc ID
+      updatedLine = updatedLine.replace(MARKDOC_ID_PATTERN, '').trim();
+      // Remove existing HTML comment ID
+      updatedLine = updatedLine.replace(HTML_COMMENT_ID_PATTERN, '').trim();
+    }
+
+    // Append new ID annotation
+    lines[lineIndex] = `${updatedLine} {% #${newId} %}`;
+  }
+
+  return {
+    markdown: lines.join('\n'),
+    injectedCount: needsId.length,
+    injectedIds: generatedIds,
+  };
 }

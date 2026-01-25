@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { findAllCheckboxes } from '../../../src/engine/injectIds.js';
+import { findAllCheckboxes, injectCheckboxIds } from '../../../src/engine/injectIds.js';
+import { MarkformParseError } from '../../../src/errors.js';
 
 describe('engine/injectIds', () => {
   describe('findAllCheckboxes', () => {
@@ -163,6 +164,130 @@ Some text here.
       expect(checkboxes[0]?.label).toBe('First');
       expect(checkboxes[1]?.label).toBe('Second');
       expect(checkboxes[2]?.label).toBe('Third');
+    });
+  });
+
+  describe('injectCheckboxIds', () => {
+    it('injects IDs into checkboxes without IDs', () => {
+      const markdown = `- [ ] Task one
+- [ ] Task two
+`;
+      const result = injectCheckboxIds(markdown, {
+        generator: (_info, index) => `task_${index + 1}`,
+      });
+
+      expect(result.injectedCount).toBe(2);
+      expect(result.markdown).toContain('Task one {% #task_1 %}');
+      expect(result.markdown).toContain('Task two {% #task_2 %}');
+    });
+
+    it('preserves existing IDs by default (onlyMissing=true)', () => {
+      const markdown = `- [ ] Task one {% #existing %}
+- [ ] Task two
+`;
+      const result = injectCheckboxIds(markdown, {
+        generator: (_info, index) => `task_${index + 1}`,
+      });
+
+      expect(result.injectedCount).toBe(1);
+      expect(result.markdown).toContain('{% #existing %}');
+      expect(result.markdown).toContain('Task two {% #task_1 %}');
+    });
+
+    it('replaces all IDs when onlyMissing=false', () => {
+      const markdown = `- [ ] Task one {% #old_id %}
+- [ ] Task two
+`;
+      const result = injectCheckboxIds(markdown, {
+        generator: (_info, index) => `new_${index + 1}`,
+        onlyMissing: false,
+      });
+
+      expect(result.injectedCount).toBe(2);
+      expect(result.markdown).not.toContain('{% #old_id %}');
+      expect(result.markdown).toContain('{% #new_1 %}');
+      expect(result.markdown).toContain('{% #new_2 %}');
+    });
+
+    it('throws on duplicate generated IDs', () => {
+      const markdown = `- [ ] Task one
+- [ ] Task two
+`;
+      expect(() =>
+        injectCheckboxIds(markdown, {
+          generator: () => 'same_id',
+        }),
+      ).toThrow(MarkformParseError);
+      expect(() =>
+        injectCheckboxIds(markdown, {
+          generator: () => 'same_id',
+        }),
+      ).toThrow(/duplicate/i);
+    });
+
+    it('throws when generated ID conflicts with existing', () => {
+      const markdown = `- [ ] Task one {% #task_1 %}
+- [ ] Task two
+`;
+      expect(() =>
+        injectCheckboxIds(markdown, {
+          generator: () => 'task_1',
+        }),
+      ).toThrow(MarkformParseError);
+      expect(() =>
+        injectCheckboxIds(markdown, {
+          generator: () => 'task_1',
+        }),
+      ).toThrow(/conflict/i);
+    });
+
+    it('returns injected IDs map', () => {
+      const markdown = `- [ ] First task
+- [ ] Second task
+`;
+      const result = injectCheckboxIds(markdown, {
+        generator: (info) => info.label.toLowerCase().replace(/\s+/g, '_'),
+      });
+
+      expect(result.injectedIds.get('First task')).toBe('first_task');
+      expect(result.injectedIds.get('Second task')).toBe('second_task');
+    });
+
+    it('uses generator with enclosing headings context', () => {
+      const markdown = `# Project
+
+## Phase 1
+
+- [ ] Research
+- [ ] Design
+
+## Phase 2
+
+- [ ] Build
+`;
+      const result = injectCheckboxIds(markdown, {
+        generator: (info) => {
+          const section =
+            info.enclosingHeadings[0]?.title.toLowerCase().replace(/\s+/g, '_') ?? 'default';
+          const task = info.label.toLowerCase();
+          return `${section}_${task}`;
+        },
+      });
+
+      expect(result.markdown).toContain('{% #phase_1_research %}');
+      expect(result.markdown).toContain('{% #phase_1_design %}');
+      expect(result.markdown).toContain('{% #phase_2_build %}');
+    });
+
+    it('handles checkboxes with no changes needed', () => {
+      const markdown = `- [ ] Task {% #already_has %}
+`;
+      const result = injectCheckboxIds(markdown, {
+        generator: () => 'unused',
+      });
+
+      expect(result.injectedCount).toBe(0);
+      expect(result.markdown).toBe(markdown);
     });
   });
 });
