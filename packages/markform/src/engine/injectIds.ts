@@ -275,6 +275,7 @@ interface HeadingWithId extends HeadingInfo {
 
 /**
  * Find all headings with their existing IDs.
+ * Strips ID annotations from title for clean generator input.
  */
 function findAllHeadingsWithIds(markdown: string): HeadingWithId[] {
   const headings = findAllHeadings(markdown);
@@ -285,17 +286,23 @@ function findAllHeadingsWithIds(markdown: string): HeadingWithId[] {
 
     // Check for existing ID annotation
     let id: string | undefined;
+    let cleanTitle = heading.title;
+
     const markdocMatch = MARKDOC_ID_PATTERN.exec(line);
     if (markdocMatch) {
       id = markdocMatch[1];
+      // Strip ID annotation from title
+      cleanTitle = heading.title.replace(MARKDOC_ID_PATTERN, '').trim();
     } else {
       const htmlMatch = HTML_COMMENT_ID_PATTERN.exec(line);
       if (htmlMatch) {
         id = htmlMatch[1];
+        // Strip ID annotation from title
+        cleanTitle = heading.title.replace(HTML_COMMENT_ID_PATTERN, '').trim();
       }
     }
 
-    return { ...heading, id };
+    return { ...heading, title: cleanTitle, id };
   });
 }
 
