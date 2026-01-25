@@ -19,6 +19,7 @@ import { parseForm } from '../../src/engine/parse.js';
 import { serializeReport } from '../../src/engine/serialize.js';
 import { formToJsonSchema } from '../../src/engine/jsonSchema.js';
 import { injectCheckboxIds, injectHeaderIds } from '../../src/engine/injectIds.js';
+import { MarkformParseError } from '../../src/errors.js';
 import { toStructuredValues, toNotesArray } from '../../src/cli/lib/exportHelpers.js';
 import { findSessionFiles, normalizeSession, regenerateSession } from './helpers.js';
 
@@ -615,6 +616,142 @@ Content here.
 
       expect(result.markdown).toBe(expected);
       expect(result.injectedCount).toBe(2);
+    });
+  });
+
+  describe('ID Uniqueness Error Cases', () => {
+    describe('injectCheckboxIds errors', () => {
+      it('throws error with line number on duplicate generated IDs', () => {
+        const input = `- [ ] First task
+- [ ] Second task
+- [ ] Third task
+`;
+
+        expect(() =>
+          injectCheckboxIds(input, {
+            generator: () => 'duplicate_id',
+          }),
+        ).toThrow(/duplicate.*'duplicate_id'.*'Second task'/i);
+
+        try {
+          injectCheckboxIds(input, {
+            generator: () => 'duplicate_id',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(2);
+        }
+      });
+
+      it('throws error with line number when generated ID conflicts with existing', () => {
+        const input = `- [ ] Task one {% #existing_id %}
+- [ ] Task two
+`;
+
+        expect(() =>
+          injectCheckboxIds(input, {
+            generator: () => 'existing_id',
+          }),
+        ).toThrow(/conflict/i);
+
+        try {
+          injectCheckboxIds(input, {
+            generator: () => 'existing_id',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(2);
+        }
+      });
+
+      it('includes checkbox label in error message', () => {
+        const input = `- [ ] Alpha task
+- [ ] Beta task
+`;
+
+        expect(() =>
+          injectCheckboxIds(input, {
+            generator: () => 'same',
+          }),
+        ).toThrow(/Beta task/);
+      });
+    });
+
+    describe('injectHeaderIds errors', () => {
+      it('throws error with line number on duplicate generated IDs', () => {
+        const input = `# First Section
+
+## Second Section
+
+### Third Section
+`;
+
+        expect(() =>
+          injectHeaderIds(input, {
+            generator: () => 'duplicate_id',
+          }),
+        ).toThrow(/duplicate.*'duplicate_id'.*'Second Section'/i);
+
+        try {
+          injectHeaderIds(input, {
+            generator: () => 'duplicate_id',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(3);
+        }
+      });
+
+      it('throws error with line number when generated ID conflicts with existing', () => {
+        const input = `# First {% #taken %}
+
+## Second
+`;
+
+        expect(() =>
+          injectHeaderIds(input, {
+            generator: () => 'taken',
+          }),
+        ).toThrow(/conflict/i);
+
+        try {
+          injectHeaderIds(input, {
+            generator: () => 'taken',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(3);
+        }
+      });
+
+      it('includes heading title in error message', () => {
+        const input = `# Alpha Heading
+
+## Beta Heading
+`;
+
+        expect(() =>
+          injectHeaderIds(input, {
+            generator: () => 'same',
+          }),
+        ).toThrow(/Beta Heading/);
+      });
+
+      it('respects level filtering when checking for conflicts', () => {
+        const input = `# H1 Title {% #shared %}
+
+## H2 Section
+`;
+
+        // When only processing H2 level, the H1 existing ID shouldn't conflict
+        const result = injectHeaderIds(input, {
+          generator: () => 'shared',
+          levels: [2],
+        });
+
+        expect(result.injectedCount).toBe(1);
+        expect(result.markdown).toContain('## H2 Section {% #shared %}');
+      });
     });
   });
 });
