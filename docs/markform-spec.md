@@ -270,6 +270,11 @@ These attributes are only valid on text-entry field kinds.
 Using them on chooser fields (single-select, multi-select, checkboxes) will result in a
 parse error.
 
+**Nesting constraints:**
+- Field tags MUST NOT be nested inside other field tags
+- Nested field tags produce a parse error:
+  `Field tags cannot be nested. Found 'inner_id' inside 'outer_id'`
+
 **Example with placeholder and examples:**
 ```md
 {% field kind="string" id="company_name" label="Company name" placeholder="Enter company name" examples=["ACME Corp", "Globex Inc"] %}{% /field %}
@@ -635,6 +640,60 @@ For explicit yes/no checkboxes (requires answer for each):
 In this example, `risk_factors.currency` is unfilled (`[ ]`) and will fail validation
 because `checkboxMode="explicit"` requires all options to have explicit `[y]` or `[n]`
 answers.
+
+##### Implicit Checkboxes (Plan Documents)
+
+Forms designed as task lists or plans can omit explicit field wrappers. When a form
+contains:
+- A `{% form %}` wrapper (or `<!-- form ... -->`)
+- No explicit `{% field %}` tags
+- Standard markdown checkboxes with ID annotations
+
+The parser automatically creates an implicit checkboxes field:
+
+| Property | Value |
+| --- | --- |
+| ID | `checkboxes` (reserved) |
+| Label | `Checkboxes` |
+| Mode | `multi` (always) |
+| Options | All checkboxes in document order |
+| Implicit | `true` |
+
+**Example:**
+```md
+---
+markform:
+  spec: MF/0.1
+---
+{% form id="plan" title="Project Plan" %}
+
+## Phase 1: Research
+- [ ] Literature review {% #lit_review %}
+- [ ] Competitive analysis {% #comp %}
+
+## Phase 2: Design
+- [x] Architecture doc {% #arch %}
+- [/] API design {% #api %}
+
+{% /form %}
+```
+
+The above form parses to a schema with a single implicit checkboxes field containing
+four options: `lit_review`, `comp`, `arch`, and `api`.
+
+**Requirements:**
+- Standard option ID rules apply (see [Identifiers](#identifiers)):
+  - Each checkbox MUST have an ID annotation (`{% #id %}` or `<!-- #id -->`)
+  - IDs MUST be unique within the implicit field
+  - Recommended: use `snake_case` slugified from label
+- ID `checkboxes` is reserved and MUST NOT be used for explicit fields
+- Nested checkboxes (indented list items) are collected as separate options
+
+**Error conditions:**
+- Checkbox without ID annotation: Parse error (same as explicit checkboxes fields)
+- Duplicate checkbox ID: Parse error (same as explicit checkboxes fields)
+- Mixed mode (explicit fields AND checkboxes outside fields): Parse error
+- Explicit field with ID `checkboxes`: Parse error (reserved ID)
 
 ##### String-List Fields
 
@@ -1420,7 +1479,9 @@ interface Option {
   id: Id;
   label: string;
 }
+```
 
+```typescript
 type CheckboxMode = 'multi' | 'simple' | 'explicit';
 
 interface CheckboxesField extends FieldBase {
@@ -1965,6 +2026,16 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | `kind` | `Field`, `FieldValue` | `FieldKind` values | Reserved for field kind discrimination only |
 | `tag` | `DocumentationBlock` | `DocumentationTag` values | Identifies doc block type |
 | `nodeType` | `IdIndexEntry` | `'form' \| 'group' \| 'field'` | Identifies structural element type |
+
+**Special IDs:**
+
+These IDs have special meaning but can also be used explicitly. When used explicitly, uniqueness
+is still enforced (only one field or group with each ID).
+
+| Special ID | Purpose | Explicit Use |
+| --- | --- | --- |
+| `default` | Implicit group for ungrouped fields | When explicit, ungrouped fields merge into it |
+| `checkboxes` | Implicit checkboxes field for plan documents | When explicit, used instead of implicit creation |
 
 ##### Field Kind Mappings
 
