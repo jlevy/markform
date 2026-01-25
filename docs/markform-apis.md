@@ -355,6 +355,85 @@ Run a research session on a research-type form.
 
 See [runResearch.ts](../packages/markform/src/research/runResearch.ts) for full details.
 
+## Markdown Utilities
+
+Utilities for working with markdown content, particularly for plan documents with
+implicit checkboxes.
+
+```typescript
+import {
+  findAllHeadings,
+  findEnclosingHeadings,
+  findAllCheckboxes,
+  injectCheckboxIds,
+  injectHeaderIds,
+} from 'markform';
+```
+
+### findAllHeadings(markdown: string): HeadingInfo[]
+
+Find all headings in a markdown document, returned in document order.
+
+```typescript
+interface HeadingInfo {
+  level: number;        // 1-6 for h1-h6
+  title: string;        // Heading text (without # prefix)
+  line: number;         // Line number (1-indexed)
+  position: SourceRange;
+}
+```
+
+### findEnclosingHeadings(markdown: string, line: number): HeadingInfo[]
+
+Find all headings that enclose a given line position. Returns headings from innermost
+(most specific) to outermost (least specific).
+
+A heading "encloses" a line if the heading appears before the line and no heading of
+equal or higher level appears between them.
+
+### findAllCheckboxes(markdown: string): CheckboxInfo[]
+
+Find all checkboxes in a markdown document with their enclosing heading context.
+
+```typescript
+interface CheckboxInfo {
+  id?: string;                    // Existing ID from annotation
+  label: string;                  // Checkbox label text
+  state: CheckboxValue;           // Current state (todo, done, etc.)
+  position: SourceRange;          // Source position
+  enclosingHeadings: HeadingInfo[]; // Innermost first
+}
+```
+
+### injectCheckboxIds(markdown: string, options): InjectIdsResult
+
+Inject ID annotations into checkboxes that lack them.
+
+```typescript
+interface InjectCheckboxIdsOptions {
+  generator: (info: CheckboxInfo, index: number) => string;
+  onlyMissing?: boolean;  // Default: true
+}
+
+interface InjectIdsResult {
+  markdown: string;              // Modified markdown
+  injectedCount: number;         // Number of IDs added
+  injectedIds: Map<string, string>; // label -> generated ID
+}
+```
+
+### injectHeaderIds(markdown: string, options): InjectIdsResult
+
+Inject ID annotations into markdown headings.
+
+```typescript
+interface InjectHeaderIdsOptions {
+  generator: (info: HeadingInfo, index: number) => string;
+  onlyMissing?: boolean;  // Default: true
+  levels?: number[];      // Default: [1, 2, 3, 4, 5, 6]
+}
+```
+
 ## Type Exports
 
 All Zod schemas and TypeScript types are exported from the main package:
