@@ -1,3 +1,14 @@
+<!--
+SPDX-License-Identifier: CC-BY-4.0
+
+Markform Specification - Licensed under Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+
+You may freely implement this specification in your own software under any license.
+The reference implementation at https://github.com/jlevy/markform is separately
+licensed under AGPL-3.0-or-later. Contact the author for commercial licensing options.
+-->
+
 # Markform Specification
 
 **Version:** MF/0.1 (draft)
@@ -258,6 +269,11 @@ to different actors.
 These attributes are only valid on text-entry field kinds.
 Using them on chooser fields (single-select, multi-select, checkboxes) will result in a
 parse error.
+
+**Nesting constraints:**
+- Field tags MUST NOT be nested inside other field tags
+- Nested field tags produce a parse error:
+  `Field tags cannot be nested. Found 'inner_id' inside 'outer_id'`
 
 **Example with placeholder and examples:**
 ```md
@@ -625,6 +641,60 @@ In this example, `risk_factors.currency` is unfilled (`[ ]`) and will fail valid
 because `checkboxMode="explicit"` requires all options to have explicit `[y]` or `[n]`
 answers.
 
+##### Implicit Checkboxes (Plan Documents)
+
+Forms designed as task lists or plans can omit explicit field wrappers. When a form
+contains:
+- A `{% form %}` wrapper (or `<!-- form ... -->`)
+- No explicit `{% field %}` tags
+- Standard markdown checkboxes with ID annotations
+
+The parser automatically creates an implicit checkboxes field:
+
+| Property | Value |
+| --- | --- |
+| ID | `checkboxes` (reserved) |
+| Label | `Checkboxes` |
+| Mode | `multi` (always) |
+| Options | All checkboxes in document order |
+| Implicit | `true` |
+
+**Example:**
+```md
+---
+markform:
+  spec: MF/0.1
+---
+{% form id="plan" title="Project Plan" %}
+
+## Phase 1: Research
+- [ ] Literature review {% #lit_review %}
+- [ ] Competitive analysis {% #comp %}
+
+## Phase 2: Design
+- [x] Architecture doc {% #arch %}
+- [/] API design {% #api %}
+
+{% /form %}
+```
+
+The above form parses to a schema with a single implicit checkboxes field containing
+four options: `lit_review`, `comp`, `arch`, and `api`.
+
+**Requirements:**
+- Standard option ID rules apply (see [Identifiers](#identifiers)):
+  - Each checkbox MUST have an ID annotation (`{% #id %}` or `<!-- #id -->`)
+  - IDs MUST be unique within the implicit field
+  - Recommended: use `snake_case` slugified from label
+- ID `checkboxes` is reserved and MUST NOT be used for explicit fields
+- Nested checkboxes (indented list items) are collected as separate options
+
+**Error conditions:**
+- Checkbox without ID annotation: Parse error (same as explicit checkboxes fields)
+- Duplicate checkbox ID: Parse error (same as explicit checkboxes fields)
+- Mixed mode (explicit fields AND checkboxes outside fields): Parse error
+- Explicit field with ID `checkboxes`: Parse error (reserved ID)
+
 ##### String-List Fields
 
 String-list fields represent open-ended arrays of user-provided strings.
@@ -963,17 +1033,24 @@ Markform files may contain content outside of Markform tags. This content is han
 
 | Content Type | Policy |
 |--------------|--------|
-| HTML comments (`
+| Markdown content (headings, paragraphs, lists, etc.) | Preserved; structure must be equivalent after round-trip |
+| HTML comments (`<!-- ... -->`) | Preserved verbatim on round-trip |
+| Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored (not preserved) |
 
-<!-- ... -->
+**Content preservation semantics (*required*):**
 
-`) | Allowed, preserved verbatim on round-trip |
-| Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
-| Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
+- *required:* All markdown content outside of Markform tags MUST be preserved on
+  canonical serialization
 
-**MF/0.1 scope:** Only HTML comments are guaranteed to be preserved. Do not rely on
-non-Markform content surviving serialization. Future versions may support full
-content preservation via raw slicing.
+- *required:* The markdown structure MUST be equivalent after round-trip (same headings,
+  paragraphs, lists, code blocks, etc.)
+
+- *recommended:* Visual appearance SHOULD be preserved (same rendering output)
+
+- Superficial adjustments are permitted: line wrapping, whitespace normalization,
+  stylistic conventions for Markform tag formatting (attribute ordering, spacing)
+
+- The semantic content and document structure must remain intact
 
 #### Serialization Strategy
 
@@ -982,7 +1059,9 @@ requirements beyond what it provides—see [Formatting][markdoc-format]):
 
 **MF/0.1 content restrictions for canonical serialization (*required*):**
 
-To ensure deterministic round-tripping without building a full markdown serializer:
+The following restrictions apply to content *within* Markform elements to ensure
+deterministic parsing and validation. General markdown content outside of Markform
+tags is preserved via raw slicing (retaining the original text):
 
 | Content type | Restriction |
 |--------------|-------------|
@@ -1048,6 +1127,137 @@ Then configure:
 
 Here the serializer chose tildes (`~~~`) because the content contains backticks. The
 content includes multiple fenced code blocks that are preserved exactly as authored.
+
+#### Syntax Styles
+
+Markform supports two syntax styles for structural tags. Both are **always supported**
+with no configuration needed—implementations MUST accept either as input.
+
+**Comment syntax** (primary, recommended) uses HTML comments:
+
+```md
+<!-- form id="survey" -->
+<!-- field kind="string" id="name" label="Name" -->
+<!-- /field -->
+<!-- /form -->
+```
+
+**Tag syntax** (alternative) uses standard Markdoc tag notation:
+
+```md
+{% form id="survey" %}
+{% field kind="string" id="name" label="Name" %}
+{% /field %}
+{% /form %}
+```
+
+**Why prefer comment syntax?**
+
+- Forms render cleanly on GitHub and standard Markdown editors (comments are hidden)
+- Only the content (checkboxes, text) is visible to readers
+- Tag names match the Markdoc tags directly (e.g., `form`, `field`, `group`)
+
+**Syntax mapping:**
+
+| Comment Syntax | Tag Syntax | Notes |
+| --- | --- | --- |
+| `<!-- tag attr="val" -->` | `{% tag attr="val" %}` | Same tag name in both |
+| `<!-- /tag -->` | `{% /tag %}` | Closing tags |
+| `<!-- tag /-->` | `{% tag /%}` | Self-closing: `/` before `-->` |
+| `<!-- #id -->` | `{% #id %}` | ID annotations |
+| `<!-- .class -->` | `{% .class %}` | Class annotations |
+
+**Behavioral rules:**
+
+- *required:* Both syntaxes are **always supported** with no configuration needed
+
+- *required:* Implementations MUST accept either syntax as input
+
+- *required:* Whitespace after `<!--` is flexible—both `<!-- form` and `<!--form` MUST be
+  accepted as valid input
+
+- *recommended:* Output SHOULD use consistent spacing with a space after `<!--`
+  (e.g., `<!-- form -->` not `<!--form -->`)
+
+- *recommended:* Round-trip serialization SHOULD preserve the original syntax style
+
+- *recommended:* Use only one syntax per file for consistency
+
+**Markform document identification:**
+
+A document is identified as a Markform document when it contains a **form tag** that:
+
+1. Uses either comment syntax (`<!-- form ... -->`) or tag syntax (`{% form ... %}`)
+2. Contains well-formed attributes (i.e., has at least one `=` character)
+3. Includes an `id` attribute (not necessarily as the first attribute)
+
+Examples of valid form tags that identify a Markform document:
+
+```md
+<!-- form id="survey" -->                           ✓ valid
+<!-- form id="survey" spec="MF/0.1" -->             ✓ valid (spec optional)
+{% form id="survey" %}                              ✓ valid (tag syntax)
+<!-- form spec="MF/0.1" id="survey" title="..." --> ✓ valid (id not first)
+```
+
+Examples that do NOT identify a Markform document:
+
+```md
+<!-- form -->                     ✗ no attributes
+<!-- form follows -->             ✗ no = (not attributes)
+<!-- form notes for meeting -->   ✗ no = (just text)
+```
+
+**Tag transformation scope:**
+
+- *required:* Comment-to-tag transformation MUST only occur **within** the form tag
+  boundaries (between the opening `<!-- form ... -->` and closing `<!-- /form -->`)
+
+- *required:* HTML comments outside the form tag MUST pass through unchanged, even if
+  they match Markform tag names (e.g., `<!-- field notes -->` before the form tag)
+
+- *required:* The form tag itself is always recognized to establish document boundaries
+
+This scoping rule prevents collisions with regular HTML comments in documents that
+happen to contain words like "form", "field", or "group".
+
+**Syntax detection:**
+
+- A document is detected as `comments` style when the form tag uses comment syntax
+  (`<!-- form id="..." -->`)
+
+- A document is detected as `tags` style when the form tag uses tag syntax
+  (`{% form id="..." %}`) or when no valid form tag is found
+
+- Mixed syntax within a document is supported but not recommended
+
+**Example (comment syntax):**
+
+```md
+---
+markform:
+  spec: MF/0.1
+---
+<!-- form id="survey" -->
+<!-- group id="ratings" -->
+
+<!-- field kind="single_select" id="quality" label="Quality Rating" -->
+- [ ] Excellent <!-- #excellent -->
+- [ ] Good <!-- #good -->
+- [ ] Fair <!-- #fair -->
+<!-- /field -->
+
+<!-- /group -->
+<!-- /form -->
+```
+
+On GitHub, all `<!-- ... -->` comments are hidden, leaving only the visible content:
+- [ ] Excellent
+- [ ] Good
+- [ ] Fair
+
+**Constraint:** Values containing the literal string `-->` require escaping or should
+use the tag syntax to avoid prematurely closing the comment.
 
 * * *
 
@@ -1278,7 +1488,9 @@ interface Option {
   id: Id;
   label: string;
 }
+```
 
+```typescript
 type CheckboxMode = 'multi' | 'simple' | 'explicit';
 
 interface CheckboxesField extends FieldBase {
@@ -1823,6 +2035,16 @@ YAML keys use snake_case for readability and consistency with common YAML conven
 | `kind` | `Field`, `FieldValue` | `FieldKind` values | Reserved for field kind discrimination only |
 | `tag` | `DocumentationBlock` | `DocumentationTag` values | Identifies doc block type |
 | `nodeType` | `IdIndexEntry` | `'form' \| 'group' \| 'field'` | Identifies structural element type |
+
+**Special IDs:**
+
+These IDs have special meaning but can also be used explicitly. When used explicitly, uniqueness
+is still enforced (only one field or group with each ID).
+
+| Special ID | Purpose | Explicit Use |
+| --- | --- | --- |
+| `default` | Implicit group for ungrouped fields | When explicit, ungrouped fields merge into it |
+| `checkboxes` | Implicit checkboxes field for plan documents | When explicit, used instead of implicit creation |
 
 ##### Field Kind Mappings
 

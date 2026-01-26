@@ -6,22 +6,20 @@ markform:
   roles:
     - agent
 ---
-
 {% form id="rejection_test" title="Rejection Test Form" %}
 
 {% description ref="rejection_test" %}
-A form to test patch rejection scenarios - verifies that type mismatch
-errors are properly recorded and recovery works.
+A form to test patch rejection scenarios - verifies that type mismatch errors are
+properly recorded and recovery works.
 {% /description %}
 
 {% group id="fields" title="Test Fields" %}
 
-{% field kind="table" id="ratings" label="Ratings" required=true minRows=1 maxRows=5
-   columnIds=["source", "score", "votes"]
-   columnLabels=["Source", "Score", "Votes"]
-   columnTypes=["string", "number", "number"] %}
+{% field kind="table" id="ratings" label="Ratings" required=true minRows=1 maxRows=5 columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] %}
+
 | Source | Score | Votes |
 |--------|-------|-------|
+
 {% /field %}
 
 {% instructions ref="ratings" %}

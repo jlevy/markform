@@ -160,6 +160,8 @@ export interface FieldBase {
   placeholder?: string;
   /** Example values (text-entry fields only) */
   examples?: string[];
+  /** True for auto-generated implicit fields (e.g., 'checkboxes' for plan documents) */
+  implicit?: boolean;
 }
 
 // =============================================================================
@@ -495,6 +497,43 @@ export interface IdIndexEntry {
   fieldId?: Id;
 }
 
+/**
+ * The syntax style used in a Markform document.
+ * - 'comments': HTML comment syntax with f: namespace (`<!-- f:tag -->`) - primary/default
+ * - 'tags': Traditional Markdoc Jinja-style syntax (`{% tag %}`)
+ */
+export type SyntaxStyle = 'comments' | 'tags';
+
+/**
+ * Tag types that can appear in Markform documents for position tracking.
+ * - 'form': The root form tag
+ * - 'group': Field group tags
+ * - 'field': Individual field tags (may include value fence)
+ * - 'note': Inline note tags (`{% note %}`)
+ * - 'documentation': Documentation block tags (instructions, description, etc.)
+ */
+export type TagType = 'form' | 'group' | 'field' | 'note' | 'documentation';
+
+/**
+ * Position of a Markform tag region in the source document.
+ * Used for splice-based serialization to preserve content outside tags.
+ */
+export interface TagRegion {
+  /** ID of the element (form, group, field ID, or note ID) */
+  tagId: Id;
+  /** Type of Markform tag */
+  tagType: TagType;
+  /** Start position in rawSource (inclusive, byte offset) */
+  startOffset: number;
+  /** End position in rawSource (exclusive, byte offset) */
+  endOffset: number;
+  /**
+   * For field tags: whether region includes value fence.
+   * True if field has a value block between open/close tags.
+   */
+  includesValue?: boolean;
+}
+
 /** Canonical internal representation returned by parseForm() */
 export interface ParsedForm {
   schema: FormSchema;
@@ -504,6 +543,20 @@ export interface ParsedForm {
   orderIndex: Id[];
   idIndex: Map<Id, IdIndexEntry>;
   metadata?: FormMetadata; // optional for backward compat with forms without frontmatter
+  /** The syntax style detected in the original document (for round-trip serialization) */
+  syntaxStyle?: SyntaxStyle;
+
+  // Raw source preservation for content-preserving serialization
+  /**
+   * Original markdown source (post-frontmatter, post-preprocessing for comment syntax).
+   * Used for splice-based serialization to preserve content outside Markform tags.
+   */
+  rawSource?: string;
+  /**
+   * Positions of all Markform tags in rawSource.
+   * Sorted by startOffset in document order.
+   */
+  tagRegions?: TagRegion[];
 }
 
 // =============================================================================

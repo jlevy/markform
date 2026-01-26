@@ -1067,6 +1067,27 @@ const LEGACY_TAG_TO_KIND: Record<string, FieldKind> = {
 };
 
 /**
+ * Recursively check if any children of a node are field tags.
+ * Throws MarkformParseError if a nested field is found.
+ */
+function validateNoNestedFields(node: Node, outerFieldId: string): void {
+  if (!node.children || !Array.isArray(node.children)) {
+    return;
+  }
+
+  for (const child of node.children) {
+    if (isTagNode(child, 'field')) {
+      const innerId = getStringAttr(child, 'id') ?? 'unknown';
+      throw new MarkformParseError(
+        `Field tags cannot be nested. Found '${innerId}' inside '${outerFieldId}'`,
+      );
+    }
+    // Recursively check grandchildren
+    validateNoNestedFields(child, outerFieldId);
+  }
+}
+
+/**
  * Parse a unified field tag: {% field kind="..." ... %}
  */
 function parseUnifiedField(node: Node): { field: Field; response: FieldResponse } {
@@ -1075,6 +1096,10 @@ function parseUnifiedField(node: Node): { field: Field; response: FieldResponse 
   if (!kind) {
     throw new MarkformParseError("field tag missing required 'kind' attribute");
   }
+
+  // Validate no nested field tags before processing
+  const fieldId = getStringAttr(node, 'id') ?? 'unknown';
+  validateNoNestedFields(node, fieldId);
 
   // Validate kind is a known field kind
   if (!FIELD_KINDS.includes(kind as FieldKind)) {

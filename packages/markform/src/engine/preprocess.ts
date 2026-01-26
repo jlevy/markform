@@ -1,0 +1,707 @@
+/**
+ * Preprocessor for HTML comment syntax in Markform files.
+ *
+ * Transforms HTML comment-style directives (`<!-- tag -->`) to Markdoc syntax (`{% tag %}`)
+ * before parsing. This enables forms to render cleanly on GitHub and standard Markdown editors.
+ *
+ * Key rules:
+ * - A document is identified as Markform by a form tag with `id=` attribute
+ * - Tag transformation only occurs WITHIN the form tag boundaries
+ * - Comments outside the form pass through unchanged (prevents collisions)
+ */
+
+import type { SyntaxStyle } from './coreTypes.js';
+
+// Re-export for convenience
+export type { SyntaxStyle } from './coreTypes.js';
+
+// Known Markform tag names that trigger comment-to-tag transformation (when inside form)
+const MARKFORM_TAGS = new Set(['form', 'field', 'group', 'note', 'instructions', 'description']);
+
+/**
+ * Check if a string starts with a known Markform tag name.
+ * Returns the tag name if found, null otherwise.
+ */
+function startsWithMarkformTag(content: string): string | null {
+  const trimmed = content.trim();
+  for (const tag of MARKFORM_TAGS) {
+    // Check for exact tag name followed by space, end, or attribute
+    if (trimmed === tag || trimmed.startsWith(tag + ' ') || trimmed.startsWith(tag + '/')) {
+      return tag;
+    }
+  }
+  return null;
+}
+
+/**
+ * Check if content represents a valid form tag with id= attribute.
+ * A valid form tag must:
+ * - Start with "form " (the tag name followed by space for attributes)
+ * - Include an `id=` attribute in any valid Markdoc syntax:
+ *   - Double quotes: id="value"
+ *   - Single quotes: id='value'
+ *   - Unquoted: id=value
+ *   - Expression: id={variable}
+ *   - With spaces: id = "value"
+ */
+function isValidFormTag(content: string): boolean {
+  const trimmed = content.trim();
+  // Must start with "form" followed by space (to have attributes)
+  if (!trimmed.startsWith('form ')) {
+    return false;
+  }
+  // Must contain = (has attributes) and id= specifically
+  // \b ensures word boundary so "valid=" doesn't match "id" in "valid"
+  return trimmed.includes('=') && /\bid\s*=/.test(trimmed);
+}
+
+// =============================================================================
+// State Machine for Code Block Detection
+// =============================================================================
+
+/** Parser state for tracking code blocks */
+const enum State {
+  NORMAL = 0,
+  FENCED_CODE = 1,
+}
+
+/**
+ * Check if position is at the start of a line (or at position 0).
+ */
+function isAtLineStart(input: string, pos: number): boolean {
+  return pos === 0 || input[pos - 1] === '\n';
+}
+
+/**
+ * Check if position is in leading whitespace of a line.
+ * Returns true if all characters between the last newline (or start) and pos are spaces.
+ */
+export function isInLeadingWhitespace(input: string, pos: number): boolean {
+  let j = pos - 1;
+  while (j >= 0 && input[j] !== '\n') {
+    if (input[j] !== ' ' && input[j] !== '\t') {
+      return false;
+    }
+    j--;
+  }
+  return true;
+}
+
+/**
+ * Match a fenced code block opening at the given position.
+ * Returns fence info if found, null otherwise.
+ * Handles 0-3 leading spaces per CommonMark spec.
+ */
+function matchFenceOpening(
+  input: string,
+  pos: number,
+): { char: string; length: number; fullMatch: string } | null {
+  // Check for 0-3 leading spaces (4+ spaces = indented code block, not fence)
+  let indent = 0;
+  let i = pos;
+  while (i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // 4+ spaces means this is not a fenced code block per CommonMark
+  if (indent >= 4) {
+    return null;
+  }
+
+  // Check for fence character (` or ~)
+  const fenceChar = input[i];
+  if (fenceChar !== '`' && fenceChar !== '~') {
+    return null;
+  }
+
+  // Count consecutive fence characters (need at least 3)
+  let fenceLength = 0;
+  while (i + fenceLength < input.length && input[i + fenceLength] === fenceChar) {
+    fenceLength++;
+  }
+
+  if (fenceLength < 3) {
+    return null;
+  }
+
+  // Find end of line to get full match
+  let endOfLine = i + fenceLength;
+  while (endOfLine < input.length && input[endOfLine] !== '\n') {
+    endOfLine++;
+  }
+  // Include the newline if present
+  if (endOfLine < input.length) {
+    endOfLine++;
+  }
+
+  return {
+    char: fenceChar,
+    length: fenceLength,
+    fullMatch: input.slice(pos, endOfLine),
+  };
+}
+
+/**
+ * Check if position matches a closing fence for the given opening fence.
+ */
+function matchFenceClosing(
+  input: string,
+  pos: number,
+  fenceChar: string,
+  fenceLength: number,
+): boolean {
+  // Check for 0-3 leading spaces
+  let indent = 0;
+  let i = pos;
+  while (indent < 4 && i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // Check for matching fence character
+  if (input[i] !== fenceChar) {
+    return false;
+  }
+
+  // Count consecutive fence characters (need at least fenceLength)
+  let closingLength = 0;
+  while (i + closingLength < input.length && input[i + closingLength] === fenceChar) {
+    closingLength++;
+  }
+
+  if (closingLength < fenceLength) {
+    return false;
+  }
+
+  // Rest of line must be whitespace only (or end of string)
+  let afterFence = i + closingLength;
+  while (afterFence < input.length && input[afterFence] !== '\n') {
+    if (input[afterFence] !== ' ' && input[afterFence] !== '\t') {
+      return false;
+    }
+    afterFence++;
+  }
+
+  return true;
+}
+
+/**
+ * Find the end of an inline code span starting at the given position.
+ * Returns the position after the closing backticks, or -1 if not a valid span.
+ */
+export function findInlineCodeEnd(input: string, pos: number): number {
+  // Count opening backticks
+  let openCount = 0;
+  let i = pos;
+  while (i < input.length && input[i] === '`') {
+    openCount++;
+    i++;
+  }
+
+  if (openCount === 0) {
+    return -1;
+  }
+
+  // Look for matching closing backticks
+  while (i < input.length) {
+    if (input[i] === '`') {
+      let closeCount = 0;
+      while (i < input.length && input[i] === '`') {
+        closeCount++;
+        i++;
+      }
+      if (closeCount === openCount) {
+        return i;
+      }
+      // Not a match, continue searching
+    } else if (input[i] === '\n') {
+      // Inline code can span lines but not across blank lines
+      i++;
+    } else {
+      i++;
+    }
+  }
+
+  return -1;
+}
+
+// =============================================================================
+// Preprocessor
+// =============================================================================
+
+/**
+ * Transform HTML comment syntax to Markdoc syntax.
+ *
+ * Transformation rules:
+ * - The form tag with `id=` is always transformed (establishes Markform document)
+ * - Other tags are ONLY transformed when inside the form tag boundaries
+ * - Comments outside the form pass through unchanged (prevents collisions)
+ *
+ * Patterns transformed (when inside form):
+ * - `<!-- tagname ... -->` → `{% tagname ... %}`
+ * - `<!-- /tagname -->` → `{% /tagname %}`
+ * - `<!-- tagname ... /-->` → `{% tagname ... /%}`
+ * - `<!-- #id -->` → `{% #id %}`
+ * - `<!-- .class -->` → `{% .class %}`
+ *
+ * Code blocks (fenced and inline) are preserved unchanged.
+ *
+ * @param input - The markdown content
+ * @returns The preprocessed content with Markdoc syntax
+ */
+export function preprocessCommentSyntax(input: string): string {
+  let output = '';
+  let state: State = State.NORMAL;
+  let fenceChar = '';
+  let fenceLength = 0;
+  let i = 0;
+  // Track whether we're inside a form tag (for scoped transformation)
+  let insideForm = false;
+
+  while (i < input.length) {
+    switch (state) {
+      case State.NORMAL: {
+        // Check for fenced code block at line start
+        if (isAtLineStart(input, i)) {
+          const fence = matchFenceOpening(input, i);
+          if (fence) {
+            state = State.FENCED_CODE;
+            fenceChar = fence.char;
+            fenceLength = fence.length;
+            output += fence.fullMatch;
+            i += fence.fullMatch.length;
+            continue;
+          }
+        }
+
+        // Check for inline code (skip it entirely to preserve content)
+        // For 3+ backticks at line start, skip - they might be fence-like patterns
+        // For 1-2 backticks, always treat as inline code regardless of position
+        if (input[i] === '`') {
+          let backtickCount = 0;
+          let j = i;
+          while (j < input.length && input[j] === '`') {
+            backtickCount++;
+            j++;
+          }
+          const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+          if (!skipInlineCode) {
+            const end = findInlineCodeEnd(input, i);
+            if (end !== -1) {
+              output += input.slice(i, end);
+              i = end;
+              continue;
+            }
+          }
+        }
+
+        // Check for HTML comment directive
+        if (input.slice(i, i + 4) === '<!--') {
+          const endComment = input.indexOf('-->', i + 4);
+          if (endComment !== -1) {
+            const interior = input.slice(i + 4, endComment).trim();
+
+            // Check for form tag with id= (always transform - establishes document)
+            if (isValidFormTag(interior)) {
+              if (interior.endsWith('/')) {
+                // Self-closing form (unusual but valid)
+                output += '{% ' + interior.slice(0, -1).trim() + ' /%}';
+              } else {
+                output += '{% ' + interior + ' %}';
+                insideForm = true; // Now inside form, enable other transformations
+              }
+              i = endComment + 3;
+              continue;
+            }
+
+            // Check for closing form tag
+            if (interior === '/form' || interior.startsWith('/form ')) {
+              output += '{% ' + interior + ' %}';
+              insideForm = false; // Leaving form
+              i = endComment + 3;
+              continue;
+            }
+
+            // All other transformations only happen inside the form
+            if (insideForm) {
+              // Check for known Markform tag (opening tags, excluding form)
+              const tagName = startsWithMarkformTag(interior);
+              if (tagName && tagName !== 'form') {
+                if (interior.endsWith('/')) {
+                  // Self-closing: <!-- tag /--> → {% tag /%}
+                  output += '{% ' + interior.slice(0, -1).trim() + ' /%}';
+                } else {
+                  output += '{% ' + interior + ' %}';
+                }
+                i = endComment + 3;
+                continue;
+              }
+
+              // Check for closing tag: <!-- /tagname -->
+              if (interior.startsWith('/')) {
+                const closingTagName = startsWithMarkformTag(interior.slice(1));
+                if (closingTagName) {
+                  output += '{% ' + interior + ' %}';
+                  i = endComment + 3;
+                  continue;
+                }
+              }
+
+              // Check for #id or .class annotations
+              if (interior.startsWith('#') || interior.startsWith('.')) {
+                output += '{% ' + interior + ' %}';
+                i = endComment + 3;
+                continue;
+              }
+            }
+
+            // Not a Markform directive (or outside form) - pass through unchanged
+          }
+        }
+
+        output += input[i];
+        i++;
+        break;
+      }
+
+      case State.FENCED_CODE: {
+        // Check for fence close at line start
+        if (isAtLineStart(input, i) && matchFenceClosing(input, i, fenceChar, fenceLength)) {
+          // Find end of closing fence line
+          let endLine = i;
+          while (endLine < input.length && input[endLine] !== '\n') {
+            endLine++;
+          }
+          if (endLine < input.length) {
+            endLine++; // Include newline
+          }
+          output += input.slice(i, endLine);
+          i = endLine;
+          state = State.NORMAL;
+          fenceChar = '';
+          fenceLength = 0;
+          continue;
+        }
+
+        output += input[i];
+        i++;
+        break;
+      }
+    }
+  }
+
+  return output;
+}
+
+// =============================================================================
+// Syntax Detection
+// =============================================================================
+
+/**
+ * Detect which syntax style is used in a document.
+ *
+ * Detection is based on the FORM TAG only:
+ * - `<!-- form ... id="..." -->` → 'comments' style
+ * - `{% form ... id="..." %}` → 'tags' style
+ *
+ * The form tag must have `id=` attribute to be recognized as a valid Markform document.
+ * Other patterns (field, group, #id, .class) do not trigger detection by themselves.
+ *
+ * Code blocks (fenced and inline) are skipped to avoid false positives from examples.
+ *
+ * @param input - The markdown content
+ * @returns The detected syntax style, defaults to 'tags' if no valid form tag found
+ */
+export function detectSyntaxStyle(input: string): SyntaxStyle {
+  let state: State = State.NORMAL;
+  let fenceChar = '';
+  let fenceLength = 0;
+  let i = 0;
+
+  while (i < input.length) {
+    switch (state) {
+      case State.NORMAL: {
+        // Check for fenced code block at line start
+        if (isAtLineStart(input, i)) {
+          const fence = matchFenceOpening(input, i);
+          if (fence) {
+            state = State.FENCED_CODE;
+            fenceChar = fence.char;
+            fenceLength = fence.length;
+            i += fence.fullMatch.length;
+            continue;
+          }
+        }
+
+        // Check for inline code (skip it entirely)
+        // For 3+ backticks at line start, skip - they might be fence-like patterns
+        if (input[i] === '`') {
+          let backtickCount = 0;
+          let j = i;
+          while (j < input.length && input[j] === '`') {
+            backtickCount++;
+            j++;
+          }
+          const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+          if (!skipInlineCode) {
+            const end = findInlineCodeEnd(input, i);
+            if (end !== -1) {
+              i = end;
+              continue;
+            }
+          }
+        }
+
+        // Check for HTML comment form tag with id=
+        if (input.slice(i, i + 4) === '<!--') {
+          const endComment = input.indexOf('-->', i + 4);
+          if (endComment !== -1) {
+            const interior = input.slice(i + 4, endComment).trim();
+            // Only the form tag with id= determines syntax style
+            if (isValidFormTag(interior)) {
+              return 'comments';
+            }
+          }
+        }
+
+        // Check for Markdoc form tag with id=
+        if (input.slice(i, i + 2) === '{%') {
+          const endTag = input.indexOf('%}', i + 2);
+          if (endTag !== -1) {
+            const interior = input.slice(i + 2, endTag).trim();
+            // Check if this is a form tag with id=
+            if (isValidFormTag(interior)) {
+              return 'tags';
+            }
+          }
+        }
+
+        i++;
+        break;
+      }
+
+      case State.FENCED_CODE: {
+        // Check for fence close at line start
+        if (isAtLineStart(input, i) && matchFenceClosing(input, i, fenceChar, fenceLength)) {
+          // Find end of closing fence line
+          let endLine = i;
+          while (endLine < input.length && input[endLine] !== '\n') {
+            endLine++;
+          }
+          if (endLine < input.length) {
+            endLine++; // Include newline
+          }
+          i = endLine;
+          state = State.NORMAL;
+          fenceChar = '';
+          fenceLength = 0;
+          continue;
+        }
+
+        i++;
+        break;
+      }
+    }
+  }
+
+  // No syntax markers found, default to tags
+  return 'tags';
+}
+
+// =============================================================================
+// Syntax Consistency Validation
+// =============================================================================
+
+/**
+ * A violation found when validating syntax consistency.
+ */
+export interface SyntaxViolation {
+  /** 1-indexed line number where the violation was found */
+  line: number;
+  /** The pattern that violated the expected syntax */
+  pattern: string;
+  /** The syntax style that was found (opposite of expected) */
+  foundSyntax: SyntaxStyle;
+}
+
+/**
+ * Validate that a document uses only the specified syntax style.
+ *
+ * Scans the document for patterns of the "wrong" syntax and returns violations.
+ * Only checks within form tag boundaries (comments outside form are ignored).
+ * Code blocks (fenced and inline) are skipped.
+ *
+ * @param input - The markdown content
+ * @param expectedSyntax - The syntax style that should be used
+ * @returns Array of violations (empty if document is consistent)
+ */
+export function validateSyntaxConsistency(
+  input: string,
+  expectedSyntax: SyntaxStyle,
+): SyntaxViolation[] {
+  const violations: SyntaxViolation[] = [];
+  let state: State = State.NORMAL;
+  let fenceChar = '';
+  let fenceLength = 0;
+  let i = 0;
+  let lineNumber = 1;
+  // Track whether we're inside a form tag (only validate within form)
+  let insideForm = false;
+
+  while (i < input.length) {
+    // Track line numbers
+    if (input[i] === '\n') {
+      lineNumber++;
+    }
+
+    switch (state) {
+      case State.NORMAL: {
+        // Check for fenced code block at line start
+        if (isAtLineStart(input, i)) {
+          const fence = matchFenceOpening(input, i);
+          if (fence) {
+            state = State.FENCED_CODE;
+            fenceChar = fence.char;
+            fenceLength = fence.length;
+            // Count newlines in the fence line
+            for (const ch of fence.fullMatch) {
+              if (ch === '\n') lineNumber++;
+            }
+            i += fence.fullMatch.length;
+            continue;
+          }
+        }
+
+        // Check for inline code (skip it entirely)
+        // For 3+ backticks at line start, skip - they might be fence-like patterns
+        if (input[i] === '`') {
+          let backtickCount = 0;
+          let k = i;
+          while (k < input.length && input[k] === '`') {
+            backtickCount++;
+            k++;
+          }
+          const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+          if (!skipInlineCode) {
+            const end = findInlineCodeEnd(input, i);
+            if (end !== -1) {
+              // Count newlines in the inline code
+              for (let m = i; m < end; m++) {
+                if (input[m] === '\n') lineNumber++;
+              }
+              i = end;
+              continue;
+            }
+          }
+        }
+
+        // Track form boundaries for both syntaxes
+        if (input.slice(i, i + 4) === '<!--') {
+          const endComment = input.indexOf('-->', i + 4);
+          if (endComment !== -1) {
+            const interior = input.slice(i + 4, endComment).trim();
+            if (isValidFormTag(interior)) {
+              insideForm = true;
+            } else if (interior === '/form' || interior.startsWith('/form ')) {
+              insideForm = false;
+            }
+          }
+        }
+        if (input.slice(i, i + 2) === '{%') {
+          const endTag = input.indexOf('%}', i + 2);
+          if (endTag !== -1) {
+            const interior = input.slice(i + 2, endTag).trim();
+            if (isValidFormTag(interior)) {
+              insideForm = true;
+            } else if (interior === '/form' || interior.startsWith('/form ')) {
+              insideForm = false;
+            }
+          }
+        }
+
+        // Check for violations based on expected syntax (only inside form)
+        if (insideForm) {
+          if (expectedSyntax === 'comments') {
+            // Looking for Markdoc syntax violations
+            if (input.slice(i, i + 2) === '{%') {
+              // Find the end of this tag to get the pattern
+              const endTag = input.indexOf('%}', i + 2);
+              if (endTag !== -1) {
+                const pattern = input.slice(i, endTag + 2);
+                violations.push({
+                  line: lineNumber,
+                  pattern,
+                  foundSyntax: 'tags',
+                });
+              }
+            }
+          } else {
+            // expectedSyntax === 'tags'
+            // Looking for HTML comment syntax violations (known Markform tags)
+            if (input.slice(i, i + 4) === '<!--') {
+              const endComment = input.indexOf('-->', i + 4);
+              if (endComment !== -1) {
+                const interior = input.slice(i + 4, endComment).trim();
+                const pattern = input.slice(i, endComment + 3);
+
+                // Check for known Markform tag (or valid form tag)
+                if (startsWithMarkformTag(interior) || isValidFormTag(interior)) {
+                  violations.push({
+                    line: lineNumber,
+                    pattern,
+                    foundSyntax: 'comments',
+                  });
+                }
+                // Check for closing tag: <!-- /tagname -->
+                else if (interior.startsWith('/') && startsWithMarkformTag(interior.slice(1))) {
+                  violations.push({
+                    line: lineNumber,
+                    pattern,
+                    foundSyntax: 'comments',
+                  });
+                }
+                // Check for #id or .class annotations
+                else if (/^[#.][a-zA-Z_-]/.test(interior)) {
+                  violations.push({
+                    line: lineNumber,
+                    pattern,
+                    foundSyntax: 'comments',
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        i++;
+        break;
+      }
+
+      case State.FENCED_CODE: {
+        // Check for fence close at line start
+        if (isAtLineStart(input, i) && matchFenceClosing(input, i, fenceChar, fenceLength)) {
+          // Find end of closing fence line
+          let endLine = i;
+          while (endLine < input.length && input[endLine] !== '\n') {
+            endLine++;
+          }
+          if (endLine < input.length) {
+            endLine++; // Include newline
+            lineNumber++;
+          }
+          i = endLine;
+          state = State.NORMAL;
+          fenceChar = '';
+          fenceLength = 0;
+          continue;
+        }
+
+        i++;
+        break;
+      }
+    }
+  }
+
+  return violations;
+}

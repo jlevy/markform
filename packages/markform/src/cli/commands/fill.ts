@@ -169,6 +169,7 @@ export function registerFillCommand(program: Command): void {
       '-i, --interactive',
       'Interactive mode: prompt user for field values (defaults to user role)',
     )
+    .option('--normalize', 'Regenerate form without preserving external content')
     .action(
       async (
         file: string,
@@ -188,6 +189,7 @@ export function registerFillCommand(program: Command): void {
           prompt?: string;
           instructions?: string;
           interactive?: boolean;
+          normalize?: boolean;
         },
         cmd: Command,
       ) => {
@@ -605,7 +607,9 @@ export function registerFillCommand(program: Command): void {
             await ensureFormsDir(formsDir);
             outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
           }
-          const formMarkdown = serializeForm(harness.getForm());
+          const formMarkdown = serializeForm(harness.getForm(), {
+            preserveContent: !options.normalize,
+          });
 
           if (ctx.dryRun) {
             logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);

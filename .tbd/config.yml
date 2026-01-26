@@ -1,0 +1,8 @@
+display:
+  id_prefix: mf
+settings:
+  auto_sync: false
+sync:
+  branch: tbd-sync
+  remote: origin
+tbd_version: 0.1.5-dev.0.c40a6ec-dirty

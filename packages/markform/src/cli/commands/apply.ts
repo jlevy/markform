@@ -103,10 +103,11 @@ export function registerApplyCommand(program: Command): void {
     .option('--patch <json>', 'JSON array of patches to apply')
     .option('-o, --output <file>', 'Output file (defaults to stdout)')
     .option('--report', 'Output apply result report instead of modified form')
+    .option('--normalize', 'Regenerate form without preserving external content')
     .action(
       async (
         file: string,
-        options: { patch?: string; output?: string; report?: boolean },
+        options: { patch?: string; output?: string; report?: boolean; normalize?: boolean },
         cmd: Command,
       ) => {
         const ctx = getCommandContext(cmd);
@@ -202,7 +203,10 @@ export function registerApplyCommand(program: Command): void {
             }
           } else {
             // Output modified form (always markdown)
-            const output = serializeForm(form);
+            // --normalize disables content preservation (regenerates from scratch)
+            const output = serializeForm(form, {
+              preserveContent: !options.normalize,
+            });
             if (options.output) {
               await writeFile(options.output, output);
               logSuccess(ctx, `Modified form written to ${options.output}`);

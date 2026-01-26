@@ -9,6 +9,8 @@ import type { Node } from '@markdoc/markdoc';
 import YAML from 'yaml';
 
 import type {
+  CheckboxesField,
+  CheckboxesValue,
   DocumentationBlock,
   DocumentationTag,
   FieldGroup,
@@ -21,12 +23,22 @@ import type {
   Note,
   ParsedForm,
   RunMode,
+  SyntaxStyle,
+  TagRegion,
+  TagType,
 } from './coreTypes.js';
 import { RunModeSchema } from './coreTypes.js';
-import { DEFAULT_ROLES, DEFAULT_ROLE_INSTRUCTIONS } from '../settings.js';
+import {
+  AGENT_ROLE,
+  DEFAULT_PRIORITY,
+  DEFAULT_ROLES,
+  DEFAULT_ROLE_INSTRUCTIONS,
+} from '../settings.js';
 import { parseField } from './parseFields.js';
 import { getBooleanAttr, getStringAttr, getValidateAttr, isTagNode } from './parseHelpers.js';
 import { MarkformParseError } from '../errors.js';
+import { detectSyntaxStyle, preprocessCommentSyntax } from './preprocess.js';
+import { findAllCheckboxes } from './injectIds.js';
 
 // Re-export ParseError for backward compatibility
 export { ParseError } from '../errors.js';
@@ -147,6 +159,210 @@ function extractFrontmatter(ast: Node): FrontmatterResult {
   }
 }
 
+/**
+ * Extract the raw source content minus frontmatter.
+ * This is the content that will be used for splice-based serialization.
+ */
+function extractRawSource(preprocessed: string): string {
+  // YAML frontmatter is delimited by --- at start and end
+  const frontmatterRegex = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
+  const frontmatterMatch = frontmatterRegex.exec(preprocessed);
+  if (frontmatterMatch) {
+    return preprocessed.slice(frontmatterMatch[0].length);
+  }
+  return preprocessed;
+}
+
+/**
+ * Build a line-to-offset mapping for converting Markdoc line numbers to byte offsets.
+ * Returns an array where lineOffsets[lineNumber] = byte offset of line start.
+ * Line numbers are 0-indexed (Markdoc uses 0-indexed lines).
+ */
+function buildLineOffsets(source: string): number[] {
+  const offsets: number[] = [0]; // Line 0 starts at offset 0
+  for (let i = 0; i < source.length; i++) {
+    if (source[i] === '\n') {
+      offsets.push(i + 1); // Next line starts after the newline
+    }
+  }
+  return offsets;
+}
+
+/**
+ * Extract tag region from a Markdoc AST node.
+ * Uses the node's location property (line numbers) and converts to byte offsets.
+ */
+function extractTagRegion(
+  node: Node,
+  tagType: TagType,
+  tagId: Id,
+  lineOffsets: number[],
+  frontmatterLineCount: number,
+  sourceLength: number,
+  hasValue?: boolean,
+): TagRegion | null {
+  // Markdoc nodes have location with start/end line numbers (0-indexed)
+  const location = node.location;
+  if (!location?.start || !location?.end) {
+    return null;
+  }
+
+  // Adjust line numbers for frontmatter removal
+  // rawSource starts after frontmatter, so we need to adjust the line numbers
+  const startLine = location.start.line - frontmatterLineCount;
+  const endLine = location.end.line - frontmatterLineCount;
+
+  // Skip if the tag is in the frontmatter area (shouldn't happen, but be safe)
+  if (startLine < 0 || endLine < 0) {
+    return null;
+  }
+
+  // Convert line numbers to byte offsets
+  // Markdoc's end line is the line containing the closing tag
+  // We need to find the end of that line
+  const startOffset = lineOffsets[startLine] ?? 0;
+  let endOffset: number;
+
+  // For end offset, we want the end of the end line (start of next line or end of source)
+  if (endLine + 1 < lineOffsets.length) {
+    endOffset = lineOffsets[endLine + 1] ?? sourceLength;
+  } else {
+    endOffset = sourceLength;
+  }
+
+  // Sanity check: make sure offsets are valid
+  if (startOffset >= endOffset || startOffset < 0 || endOffset > sourceLength) {
+    return null;
+  }
+
+  return {
+    tagId,
+    tagType,
+    startOffset,
+    endOffset,
+    ...(hasValue !== undefined && { includesValue: hasValue }),
+  };
+}
+
+/**
+ * Collect all tag regions from the AST for content preservation.
+ * Traverses the AST and extracts positions of all Markform tags.
+ */
+function collectTagRegions(
+  ast: Node,
+  rawSource: string,
+  frontmatterLineCount: number,
+  responsesByFieldId: Record<Id, FieldResponse>,
+): TagRegion[] {
+  const regions: TagRegion[] = [];
+  const lineOffsets = buildLineOffsets(rawSource);
+  const sourceLength = rawSource.length;
+
+  function traverse(node: Node): void {
+    if (!node || typeof node !== 'object') {
+      return;
+    }
+
+    // Check for form tag
+    if (isTagNode(node, 'form')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        const region = extractTagRegion(
+          node,
+          'form',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for group tag
+    if (isTagNode(node, 'group')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        const region = extractTagRegion(
+          node,
+          'group',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for field tag
+    if (isTagNode(node, 'field')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        // Check if field has a value by looking at responsesByFieldId
+        const hasValue = responsesByFieldId[id]?.value !== undefined;
+        const region = extractTagRegion(
+          node,
+          'field',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+          hasValue,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for note tag
+    if (isTagNode(node, 'note')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        const region = extractTagRegion(
+          node,
+          'note',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for documentation tags (instructions, description, etc.)
+    const DOC_TAGS = ['instructions', 'description', 'documentation'];
+    if (node.type === 'tag' && node.tag && DOC_TAGS.includes(node.tag)) {
+      const ref = getStringAttr(node, 'ref');
+      // Use ref as the ID for doc blocks, or generate one
+      const docId = ref ?? `doc_${regions.length}`;
+      const region = extractTagRegion(
+        node,
+        'documentation',
+        docId,
+        lineOffsets,
+        frontmatterLineCount,
+        sourceLength,
+      );
+      if (region) regions.push(region);
+    }
+
+    // Recurse into children
+    if (node.children && Array.isArray(node.children)) {
+      for (const child of node.children) {
+        traverse(child);
+      }
+    }
+  }
+
+  traverse(ast);
+
+  // Sort by startOffset to ensure document order
+  regions.sort((a, b) => a.startOffset - b.startOffset);
+
+  return regions;
+}
+
 // =============================================================================
 // Group and Form Parsing
 // =============================================================================
@@ -242,12 +458,14 @@ function parseFieldGroup(
 /**
  * Parse a form tag.
  * Handles both explicit groups and fields placed directly under the form.
+ * Also handles implicit checkboxes when form has no explicit fields.
  */
 function parseFormTag(
   node: Node,
   responsesByFieldId: Record<Id, FieldResponse>,
   orderIndex: Id[],
   idIndex: Map<Id, IdIndexEntry>,
+  markdown: string,
 ): FormSchema {
   const id = getStringAttr(node, 'id');
   const title = getStringAttr(node, 'title');
@@ -326,20 +544,132 @@ function parseFormTag(
   }
 
   // If there are ungrouped fields, create an implicit group to hold them
+  // The 'default' ID is a special name for implicit groups, but can also be used explicitly
   if (ungroupedFields.length > 0) {
-    const implicitGroupId = `_default`;
-    if (idIndex.has(implicitGroupId)) {
-      throw new MarkformParseError(
-        `ID '${implicitGroupId}' is reserved for implicit field groups. ` +
-          `Please use a different ID for your field or group.`,
-      );
+    const implicitGroupId = 'default';
+    // Check if 'default' was already used explicitly - if so, merge fields into it
+    const existingDefault = groups.find((g) => g.id === implicitGroupId);
+    if (existingDefault) {
+      // Merge ungrouped fields into the existing explicit 'default' group
+      existingDefault.children = [...(existingDefault.children ?? []), ...ungroupedFields];
+    } else {
+      idIndex.set(implicitGroupId, { nodeType: 'group', parentId: id });
+      groups.push({
+        id: implicitGroupId,
+        children: ungroupedFields,
+        implicit: true,
+      });
     }
-    idIndex.set(implicitGroupId, { nodeType: 'group', parentId: id });
-    groups.push({
-      id: implicitGroupId,
-      children: ungroupedFields,
-      implicit: true,
-    });
+  }
+
+  // Count all explicit fields
+  const hasExplicitFields =
+    ungroupedFields.length > 0 || groups.some((g) => g.children && g.children.length > 0);
+
+  // Check if there are explicit fields that use checkbox syntax
+  // (checkboxes, single_select, multi_select all use checkbox-like list items)
+  const hasExplicitCheckboxStyleFields = groups.some((g) =>
+    g.children?.some(
+      (f) => f.kind === 'checkboxes' || f.kind === 'single_select' || f.kind === 'multi_select',
+    ),
+  );
+
+  // Find all checkboxes in the markdown
+  const allCheckboxes = findAllCheckboxes(markdown);
+
+  if (allCheckboxes.length > 0) {
+    if (hasExplicitFields) {
+      // If there are explicit fields that use checkbox syntax, checkboxes are inside them
+      // But if there are only non-checkbox-style fields, the checkboxes are orphans
+      if (!hasExplicitCheckboxStyleFields) {
+        throw new MarkformParseError(
+          'Checkboxes found outside of field tags. Either wrap all checkboxes in ' +
+            'fields or remove all explicit fields for implicit checkboxes mode.',
+        );
+      }
+      // If there are explicit checkboxes fields, the checkboxes are inside them (OK)
+    } else {
+      // No explicit fields - create implicit checkboxes field
+      const seenIds = new Set<string>();
+      const options: { id: string; label: string }[] = [];
+      const values: CheckboxesValue['values'] = {};
+
+      for (const checkbox of allCheckboxes) {
+        if (!checkbox.id) {
+          throw new MarkformParseError(
+            `Option in implicit field 'checkboxes' missing ID annotation. Use {% #option_id %}`,
+            { line: checkbox.line },
+          );
+        }
+
+        if (seenIds.has(checkbox.id)) {
+          throw new MarkformParseError(
+            `Duplicate option ID '${checkbox.id}' in field 'checkboxes'`,
+            { line: checkbox.line },
+          );
+        }
+
+        seenIds.add(checkbox.id);
+        options.push({
+          id: checkbox.id,
+          label: checkbox.label,
+        });
+        values[checkbox.id] = checkbox.state;
+      }
+
+      // Create implicit checkboxes field
+      // The 'checkboxes' ID is a special name for implicit checkboxes, but can also be used explicitly
+      const implicitField: CheckboxesField = {
+        kind: 'checkboxes',
+        id: 'checkboxes',
+        label: 'Checkboxes',
+        checkboxMode: 'multi',
+        implicit: true,
+        options,
+        required: false,
+        priority: DEFAULT_PRIORITY,
+        role: AGENT_ROLE,
+        approvalMode: 'none',
+      };
+
+      // Add to idIndex
+      idIndex.set('checkboxes', { nodeType: 'field', parentId: id });
+      orderIndex.push('checkboxes');
+
+      // Add options to idIndex
+      for (const opt of options) {
+        const qualifiedRef = `checkboxes.${opt.id}`;
+        idIndex.set(qualifiedRef, {
+          nodeType: 'option',
+          parentId: id,
+          fieldId: 'checkboxes',
+        });
+      }
+
+      // Create response for the implicit field
+      const checkboxesValue: CheckboxesValue = {
+        kind: 'checkboxes',
+        values,
+      };
+      responsesByFieldId.checkboxes = {
+        state: 'answered',
+        value: checkboxesValue,
+      };
+
+      // Create or get default group for implicit field
+      let defaultGroup = groups.find((g) => g.id === 'default');
+      if (!defaultGroup) {
+        defaultGroup = {
+          id: 'default',
+          children: [],
+          implicit: true,
+        };
+        idIndex.set('default', { nodeType: 'group', parentId: id });
+        groups.push(defaultGroup);
+      }
+      defaultGroup.children = defaultGroup.children || [];
+      defaultGroup.children.push(implicitField);
+    }
   }
 
   return { id, title, groups };
@@ -526,14 +856,27 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
 /**
  * Parse a Markform .form.md document.
  *
+ * Supports both Markdoc syntax (`{% tag %}`) and HTML comment syntax (`<!-- f:tag -->`).
+ * The original syntax style is detected and preserved for round-trip serialization.
+ *
  * @param markdown - The full markdown content including frontmatter
  * @returns The parsed form representation
  * @throws ParseError if the document is invalid
  */
 export function parseForm(markdown: string): ParsedForm {
+  // Step 0: Detect syntax style and preprocess HTML comment syntax to Markdoc
+  const syntaxStyle: SyntaxStyle = detectSyntaxStyle(markdown);
+  const preprocessed = preprocessCommentSyntax(markdown);
+
+  // Step 0.5: Extract raw source (content minus frontmatter) for content preservation
+  const rawSource = extractRawSource(preprocessed);
+  // Calculate the number of lines in frontmatter for line number adjustment
+  const frontmatter = preprocessed.slice(0, preprocessed.length - rawSource.length);
+  const frontmatterLineCount = (frontmatter.match(/\n/g) ?? []).length;
+
   // Step 1: Parse Markdoc AST (raw AST, not transformed)
   // Markdoc natively handles frontmatter extraction and stores it in ast.attributes.frontmatter
-  const ast = Markdoc.parse(markdown);
+  const ast = Markdoc.parse(preprocessed);
 
   // Step 2: Extract frontmatter and metadata from AST
   const { metadata, description } = extractFrontmatter(ast);
@@ -553,7 +896,7 @@ export function parseForm(markdown: string): ParsedForm {
       if (formSchema) {
         throw new MarkformParseError('Multiple form tags found - only one allowed');
       }
-      formSchema = parseFormTag(node, responsesByFieldId, orderIndex, idIndex);
+      formSchema = parseFormTag(node, responsesByFieldId, orderIndex, idIndex, preprocessed);
       return;
     }
 
@@ -584,6 +927,9 @@ export function parseForm(markdown: string): ParsedForm {
   // Step 5: Extract doc blocks (needs idIndex to validate refs)
   const docs = extractDocBlocks(ast, idIndex);
 
+  // Step 6: Collect tag regions for content preservation
+  const tagRegions = collectTagRegions(ast, rawSource, frontmatterLineCount, responsesByFieldId);
+
   return {
     schema,
     responsesByFieldId,
@@ -592,5 +938,8 @@ export function parseForm(markdown: string): ParsedForm {
     orderIndex,
     idIndex,
     ...(metadata && { metadata }),
+    syntaxStyle,
+    rawSource,
+    tagRegions,
   };
 }

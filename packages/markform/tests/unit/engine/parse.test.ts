@@ -423,6 +423,173 @@ markform:
     });
   });
 
+  describe('loose list parsing (blank lines between items)', () => {
+    // Loose lists (with blank lines between items) are valid Markdown and should be supported.
+    // Markdoc places ID annotations in different AST locations for tight vs loose lists:
+    // - Tight list: item.attributes.id
+    // - Loose list: item.children[0].attributes.id
+
+    it('parses single-select with loose list', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="single_select" id="priority" label="Priority" %}
+
+- [ ] Low {% #low %}
+
+- [x] Medium {% #medium %}
+
+- [ ] High {% #high %}
+
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('single_select');
+      if (field?.kind === 'single_select') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('low');
+        expect(field.options[1]?.id).toBe('medium');
+        expect(field.options[2]?.id).toBe('high');
+      }
+
+      const value = result.responsesByFieldId.priority?.value;
+      expect(value?.kind).toBe('single_select');
+      if (value?.kind === 'single_select') {
+        expect(value.selected).toBe('medium');
+      }
+    });
+
+    it('parses multi-select with loose list', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="multi_select" id="categories" label="Categories" %}
+
+- [x] Frontend {% #frontend %}
+
+- [ ] Backend {% #backend %}
+
+- [x] Database {% #database %}
+
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('multi_select');
+      if (field?.kind === 'multi_select') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('frontend');
+        expect(field.options[1]?.id).toBe('backend');
+        expect(field.options[2]?.id).toBe('database');
+      }
+
+      const value = result.responsesByFieldId.categories?.value;
+      expect(value?.kind).toBe('multi_select');
+      if (value?.kind === 'multi_select') {
+        expect(value.selected).toContain('frontend');
+        expect(value.selected).toContain('database');
+        expect(value.selected).not.toContain('backend');
+      }
+    });
+
+    it('parses checkboxes with loose list', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="multi" %}
+
+- [x] Research {% #research %}
+
+- [ ] Design {% #design %}
+
+- [/] Implement {% #implement %}
+
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('checkboxes');
+      if (field?.kind === 'checkboxes') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('research');
+        expect(field.options[1]?.id).toBe('design');
+        expect(field.options[2]?.id).toBe('implement');
+      }
+
+      const value = result.responsesByFieldId.tasks?.value;
+      expect(value?.kind).toBe('checkboxes');
+      if (value?.kind === 'checkboxes') {
+        expect(value.values.research).toBe('done');
+        expect(value.values.design).toBe('todo');
+        expect(value.values.implement).toBe('incomplete');
+      }
+    });
+
+    it('parses mixed tight and loose list items', () => {
+      // Some items have blank lines before/after, others don't
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" title="G1" %}
+{% field kind="single_select" id="rating" label="Rating" %}
+- [ ] Poor {% #poor %}
+
+- [x] Good {% #good %}
+- [ ] Excellent {% #excellent %}
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+
+      expect(field?.kind).toBe('single_select');
+      if (field?.kind === 'single_select') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('poor');
+        expect(field.options[1]?.id).toBe('good');
+        expect(field.options[2]?.id).toBe('excellent');
+      }
+    });
+  });
+
   describe('parseForm with simple.form.md', () => {
     it('parses the simple test form', async () => {
       const formPath = join(import.meta.dirname, '../../../examples/simple/simple.form.md');
@@ -1895,7 +2062,8 @@ Rate your experience.
       expect(result.docs[0]?.ref).toBe('rating');
     });
 
-    it('rejects _default as user-defined ID when ungrouped fields exist', () => {
+    it('allows explicit default group ID and merges ungrouped fields into it', () => {
+      // 'default' is a special ID - when used explicitly, ungrouped fields merge into it
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1903,7 +2071,7 @@ markform:
 
 {% form id="test" %}
 
-{% group id="_default" title="My Group" %}
+{% group id="default" title="My Group" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
 {% /group %}
 
@@ -1911,13 +2079,16 @@ markform:
 
 {% /form %}
 `;
-      expect(() => parseForm(markdown)).toThrow(
-        /ID '_default' is reserved for implicit field groups/,
-      );
+      const result = parseForm(markdown);
+      // Both fields should be in the 'default' group
+      const defaultGroup = result.schema.groups.find((g) => g.id === 'default');
+      expect(defaultGroup).toBeDefined();
+      expect(defaultGroup?.children?.length).toBe(2);
+      expect(defaultGroup?.children?.map((f) => f.id)).toContain('name');
+      expect(defaultGroup?.children?.map((f) => f.id)).toContain('ungrouped');
     });
 
-    it('allows _default as user-defined ID when no ungrouped fields', () => {
-      // _default is only reserved when there are ungrouped fields
+    it('allows explicit default group ID when no ungrouped fields', () => {
       const markdown = `---
 markform:
   spec: MF/0.1
@@ -1925,14 +2096,14 @@ markform:
 
 {% form id="test" %}
 
-{% group id="_default" title="My Group" %}
+{% group id="default" title="My Group" %}
 {% field kind="string" id="name" label="Name" %}{% /field %}
 {% /group %}
 
 {% /form %}
 `;
       const result = parseForm(markdown);
-      expect(result.schema.groups[0]?.id).toBe('_default');
+      expect(result.schema.groups[0]?.id).toBe('default');
       expect(result.schema.groups[0]?.implicit).toBeUndefined();
     });
   });
@@ -2097,11 +2268,263 @@ markform:
 `,
         /references unknown ID/i,
       ],
+      [
+        'nested field tags',
+        `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" title="Group" %}
+{% field kind="string" id="outer" label="Outer" %}
+{% field kind="string" id="inner" label="Inner" %}{% /field %}
+{% /field %}
+{% /group %}
+{% /form %}
+`,
+        /Field tags cannot be nested.*inner.*outer/i,
+      ],
+      [
+        'nested field tags (HTML comment syntax)',
+        `---
+markform:
+  spec: MF/0.1
+---
+<!-- form id="test" -->
+<!-- group id="g1" title="Group" -->
+<!-- field kind="string" id="outer_field" label="Outer" -->
+<!-- field kind="string" id="inner_field" label="Inner" --><!-- /field -->
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->
+`,
+        /Field tags cannot be nested.*inner_field.*outer_field/i,
+      ],
     ];
 
     it.each(ERROR_CASES)('throws on %s', (_, markdown, pattern) => {
       expect(() => parseForm(markdown)).toThrow(ParseError);
       expect(() => parseForm(markdown)).toThrow(pattern);
+    });
+  });
+
+  describe('implicit checkboxes', () => {
+    it('creates implicit _checkboxes field when form has checkboxes but no explicit fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="plan" title="Project Plan" %}
+
+## Phase 1: Research
+- [ ] Literature review {% #lit_review %}
+- [ ] Competitive analysis {% #comp %}
+
+## Phase 2: Design
+- [x] Architecture doc {% #arch %}
+- [/] API design {% #api %}
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      expect(result.schema.id).toBe('plan');
+      expect(result.schema.groups).toHaveLength(1);
+
+      const group = result.schema.groups[0];
+      expect(group?.id).toBe('default');
+      expect(group?.implicit).toBe(true);
+      expect(group?.children).toHaveLength(1);
+
+      const field = group?.children[0];
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.id).toBe('checkboxes');
+      if (field?.kind === 'checkboxes') {
+        expect(field.implicit).toBe(true);
+        expect(field.checkboxMode).toBe('multi');
+        expect(field.options).toHaveLength(4);
+        expect(field.options[0]?.id).toBe('lit_review');
+        expect(field.options[0]?.label).toBe('Literature review');
+        expect(field.options[1]?.id).toBe('comp');
+        expect(field.options[2]?.id).toBe('arch');
+        expect(field.options[3]?.id).toBe('api');
+      }
+    });
+
+    it('creates implicit checkboxes with HTML comment syntax', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+<!-- form id="tasks" title="Tasks" -->
+
+- [ ] First task <!-- #task1 -->
+- [x] Second task <!-- #task2 -->
+
+<!-- /form -->
+`;
+      const result = parseForm(markdown);
+
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.id).toBe('checkboxes');
+      if (field?.kind === 'checkboxes') {
+        expect(field.options).toHaveLength(2);
+        expect(field.options[0]?.id).toBe('task1');
+        expect(field.options[1]?.id).toBe('task2');
+      }
+    });
+
+    it('parses checkbox values correctly in implicit field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] Todo item {% #todo %}
+- [x] Done item {% #done %}
+- [/] Incomplete item {% #incomplete %}
+- [*] Active item {% #active %}
+- [-] NA item {% #na %}
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const response = result.responsesByFieldId.checkboxes;
+
+      expect(response?.state).toBe('answered');
+      if (response?.value?.kind === 'checkboxes') {
+        expect(response.value.values.todo).toBe('todo');
+        expect(response.value.values.done).toBe('done');
+        expect(response.value.values.incomplete).toBe('incomplete');
+        expect(response.value.values.active).toBe('active');
+        expect(response.value.values.na).toBe('na');
+      }
+    });
+
+    it('does not create implicit field when form has no checkboxes', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="empty" title="Empty Form" %}
+
+## Just some content
+
+No checkboxes here.
+
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      expect(result.schema.groups).toHaveLength(0);
+    });
+
+    it('throws error when checkbox is missing ID annotation', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] Task without ID
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/missing ID annotation/i);
+    });
+
+    it('allows explicit field with checkboxes ID (special name, not reserved)', () => {
+      // 'checkboxes' is a special name but can be used explicitly
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field kind="checkboxes" id="checkboxes" label="Tasks" %}
+- [ ] Task one {% #task1 %}
+- [x] Task two {% #task2 %}
+{% /field %}
+{% /form %}
+`;
+      const result = parseForm(markdown);
+      const field = result.schema.groups[0]?.children?.find((f) => f.id === 'checkboxes');
+      expect(field).toBeDefined();
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.implicit).toBeUndefined(); // Explicitly defined, not implicit
+    });
+
+    it('throws error when form has explicit fields AND checkboxes outside fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+- [ ] Orphan checkbox {% #orphan %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/outside of field tags/i);
+    });
+
+    it('allows checkboxes inside explicit checkboxes field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" %}
+- [ ] Task one {% #task1 %}
+- [x] Task two {% #task2 %}
+{% /field %}
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+      expect(field?.kind).toBe('checkboxes');
+      expect(field?.id).toBe('tasks');
+      if (field?.kind === 'checkboxes') {
+        expect(field.implicit).toBeUndefined();
+        expect(field.options).toHaveLength(2);
+      }
+    });
+
+    it('handles nested checkboxes (indented) in implicit field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] Parent task {% #parent %}
+  - [ ] Child task {% #child %}
+  - [x] Another child {% #child2 %}
+{% /form %}
+`;
+      const result = parseForm(markdown);
+
+      const group = result.schema.groups[0];
+      const field = group?.children[0];
+      if (field?.kind === 'checkboxes') {
+        expect(field.options).toHaveLength(3);
+        expect(field.options[0]?.id).toBe('parent');
+        expect(field.options[1]?.id).toBe('child');
+        expect(field.options[2]?.id).toBe('child2');
+      }
+    });
+
+    it('throws error on duplicate checkbox IDs in implicit field', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+- [ ] First task {% #same_id %}
+- [ ] Second task {% #same_id %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(ParseError);
+      expect(() => parseForm(markdown)).toThrow(/Duplicate.*same_id/i);
     });
   });
 });

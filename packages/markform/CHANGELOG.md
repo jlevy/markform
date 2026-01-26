@@ -1,5 +1,23 @@
 # markform
 
+## 0.1.17
+
+### Patch Changes
+
+- 56d1cc2: Add implicit checkboxes feature and content preservation
+
+## 0.1.16
+
+### Patch Changes
+
+- 97390e0: Add HTML comment syntax as a cleaner alternative to Markdoc tags, making forms render as valid Markdown on GitHub while maintaining full backward compatibility with existing tag syntax
+
+## 0.1.15
+
+### Patch Changes
+
+- 34fd531: Unified test coverage, URL formatting improvements, and documentation updates
+
 ## 0.1.14
 
 ### Patch Changes

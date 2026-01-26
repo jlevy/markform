@@ -46,7 +46,7 @@ turns:
             - votes
     after:
       required_issue_count: 1
-      markdown_sha256: 6dea4cae87738069d3c212e817ac7a59a77fcd3c78d7fac506adf4f5b36caf27
+      markdown_sha256: b24578a1abb357a8f215de6fe006fa4a15b6388b3bb277526b1f3afd918a46e6
       answered_field_count: 1
       skipped_field_count: 0
     context:
@@ -122,8 +122,8 @@ turns:
         {% form id="rejection_test" title="Rejection Test Form" %}
 
         {% description ref="rejection_test" %}
-        A form to test patch rejection scenarios - verifies that type mismatch
-        errors are properly recorded and recovery works.
+        A form to test patch rejection scenarios - verifies that type mismatch errors are
+        properly recorded and recovery works.
         {% /description %}
 
         {% group id="fields" title="Test Fields" %}
@@ -238,8 +238,8 @@ turns:
           {% form id="rejection_test" title="Rejection Test Form" %}
 
           {% description ref="rejection_test" %}
-          A form to test patch rejection scenarios - verifies that type mismatch
-          errors are properly recorded and recovery works.
+          A form to test patch rejection scenarios - verifies that type mismatch errors are
+          properly recorded and recovery works.
           {% /description %}
 
           {% group id="fields" title="Test Fields" %}
@@ -335,7 +335,7 @@ turns:
               votes: 450
     after:
       required_issue_count: 0
-      markdown_sha256: f45e7cd87b036d57564e3340dec33c1dc5c2094d880e52b903f64da19b3b8ec0
+      markdown_sha256: eabdf7aef8cbd52893d7bc0b03fd3c0b2a21eebf9e16f98af6884509b5101e34
       answered_field_count: 2
       skipped_field_count: 0
     context:
@@ -419,8 +419,8 @@ turns:
         {% form id="rejection_test" title="Rejection Test Form" %}
 
         {% description ref="rejection_test" %}
-        A form to test patch rejection scenarios - verifies that type mismatch
-        errors are properly recorded and recovery works.
+        A form to test patch rejection scenarios - verifies that type mismatch errors are
+        properly recorded and recovery works.
         {% /description %}
 
         {% group id="fields" title="Test Fields" %}
@@ -541,8 +541,8 @@ turns:
           {% form id="rejection_test" title="Rejection Test Form" %}
 
           {% description ref="rejection_test" %}
-          A form to test patch rejection scenarios - verifies that type mismatch
-          errors are properly recorded and recovery works.
+          A form to test patch rejection scenarios - verifies that type mismatch errors are
+          properly recorded and recovery works.
           {% /description %}
 
           {% group id="fields" title="Test Fields" %}

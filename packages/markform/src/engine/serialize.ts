@@ -36,6 +36,7 @@ import type {
   StringListField,
   StringListValue,
   StringValue,
+  SyntaxStyle,
   TableColumn,
   TableField,
   TableRowResponse,
@@ -49,6 +50,8 @@ import type {
 } from './coreTypes.js';
 import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
 import { priorityKeyComparator } from '../utils/keySort.js';
+import { formatUrlAsMarkdownLink } from '../utils/urlFormat.js';
+import { findInlineCodeEnd, isInLeadingWhitespace } from './preprocess.js';
 
 // =============================================================================
 // Smart Fence Selection Helpers
@@ -122,6 +125,189 @@ export function pickFence(value: string): FenceChoice {
 }
 
 // =============================================================================
+// Postprocessor for HTML Comment Syntax
+// =============================================================================
+
+/**
+ * Transform Markdoc syntax to HTML comment syntax.
+ *
+ * Patterns transformed:
+ * - `{% tagname ... %}` → `<!-- tagname ... -->`
+ * - `{% /tagname %}` → `<!-- /tagname -->`
+ * - `{% tagname ... /%}` → `<!-- tagname ... /-->`
+ * - `{% #id %}` → `<!-- #id -->`
+ * - `{% .class %}` → `<!-- .class -->`
+ *
+ * Code blocks (fenced) are preserved unchanged.
+ *
+ * @param input - The Markdoc content
+ * @returns The content with HTML comment syntax
+ */
+export function postprocessToCommentSyntax(input: string): string {
+  let output = '';
+  let inFencedCode = false;
+  let fenceChar = '';
+  let fenceLength = 0;
+  let i = 0;
+
+  while (i < input.length) {
+    // Check for fenced code block at line start
+    if (!inFencedCode && (i === 0 || input[i - 1] === '\n')) {
+      // Check for 0-3 leading spaces followed by fence
+      let indent = 0;
+      let j = i;
+      while (j < input.length && input[j] === ' ' && indent < 4) {
+        indent++;
+        j++;
+      }
+
+      if (indent < 4 && (input[j] === '`' || input[j] === '~')) {
+        const fc = input[j]!; // Guaranteed by condition above
+        let len = 0;
+        while (j + len < input.length && input[j + len] === fc) {
+          len++;
+        }
+        if (len >= 3) {
+          // Entering fenced code block
+          inFencedCode = true;
+          fenceChar = fc;
+          fenceLength = len;
+          // Copy up to end of line
+          let endLine = j + len;
+          while (endLine < input.length && input[endLine] !== '\n') {
+            endLine++;
+          }
+          if (endLine < input.length) {
+            endLine++; // Include newline
+          }
+          output += input.slice(i, endLine);
+          i = endLine;
+          continue;
+        }
+      }
+    }
+
+    // Check for closing fence in fenced code block
+    if (inFencedCode && (i === 0 || input[i - 1] === '\n')) {
+      let indent = 0;
+      let j = i;
+      while (j < input.length && input[j] === ' ' && indent < 4) {
+        indent++;
+        j++;
+      }
+
+      if (input[j] === fenceChar) {
+        let len = 0;
+        while (j + len < input.length && input[j + len] === fenceChar) {
+          len++;
+        }
+        if (len >= fenceLength) {
+          // Check rest of line is whitespace
+          let afterFence = j + len;
+          let isClosing = true;
+          while (afterFence < input.length && input[afterFence] !== '\n') {
+            if (input[afterFence] !== ' ' && input[afterFence] !== '\t') {
+              isClosing = false;
+              break;
+            }
+            afterFence++;
+          }
+          if (isClosing) {
+            // Exiting fenced code block
+            if (afterFence < input.length) {
+              afterFence++; // Include newline
+            }
+            output += input.slice(i, afterFence);
+            i = afterFence;
+            inFencedCode = false;
+            fenceChar = '';
+            fenceLength = 0;
+            continue;
+          }
+        }
+      }
+    }
+
+    // Inside fenced code, pass through unchanged
+    if (inFencedCode) {
+      output += input[i];
+      i++;
+      continue;
+    }
+
+    // Check for inline code (skip it entirely to preserve content)
+    // For 3+ backticks at line start, skip - they might be fence-like patterns
+    // (e.g., indented code blocks that look like fences but aren't valid fences)
+    // For 1-2 backticks, always treat as inline code regardless of position
+    if (input[i] === '`') {
+      let backtickCount = 0;
+      let j = i;
+      while (j < input.length && input[j] === '`') {
+        backtickCount++;
+        j++;
+      }
+      // Skip fence-like patterns (3+ backticks) at line start
+      const skipInlineCode = backtickCount >= 3 && isInLeadingWhitespace(input, i);
+      if (!skipInlineCode) {
+        const end = findInlineCodeEnd(input, i);
+        if (end !== -1) {
+          output += input.slice(i, end);
+          i = end;
+          continue;
+        }
+      }
+    }
+
+    // Check for Markdoc tag
+    if (input.slice(i, i + 2) === '{%') {
+      const endTag = input.indexOf('%}', i + 2);
+      if (endTag !== -1) {
+        const interior = input.slice(i + 2, endTag).trim();
+
+        // Check for self-closing tag: {% tagname ... /%}
+        if (interior.endsWith('/')) {
+          const tagContent = interior.slice(0, -1).trim();
+          // Check if it's an annotation (#id or .class)
+          if (tagContent.startsWith('#') || tagContent.startsWith('.')) {
+            // Annotations don't have self-closing form, but handle gracefully
+            output += '<!-- ' + tagContent + ' /-->';
+          } else {
+            output += '<!-- ' + tagContent + ' /-->';
+          }
+          i = endTag + 2;
+          continue;
+        }
+
+        // Check for closing tag: {% /tagname %}
+        if (interior.startsWith('/')) {
+          const tagName = interior.slice(1).trim();
+          output += '<!-- /' + tagName + ' -->';
+          i = endTag + 2;
+          continue;
+        }
+
+        // Check for annotation (#id or .class)
+        if (interior.startsWith('#') || interior.startsWith('.')) {
+          output += '<!-- ' + interior + ' -->';
+          i = endTag + 2;
+          continue;
+        }
+
+        // Regular opening tag: {% tagname ... %}
+        output += '<!-- ' + interior + ' -->';
+        i = endTag + 2;
+        continue;
+      }
+    }
+
+    output += input[i];
+    i++;
+  }
+
+  return output;
+}
+
+// =============================================================================
 // Sentinel Value Helpers
 // =============================================================================
 
@@ -157,6 +343,25 @@ function getSentinelContent(response: FieldResponse | undefined): string {
 export interface SerializeOptions {
   /** Markform spec version to use in frontmatter. Defaults to MF_SPEC_VERSION. */
   specVersion?: string;
+  /**
+   * Syntax style to use for output.
+   * - 'comments': Use HTML comment syntax (<!-- tag -->) - primary/default
+   * - 'tags': Use Markdoc syntax ({% tag %})
+   * If not specified, uses the form's detected syntax style (form.syntaxStyle),
+   * defaulting to 'tags' if not detected.
+   */
+  syntaxStyle?: SyntaxStyle;
+  /**
+   * Whether to preserve content outside Markform tags during serialization.
+   * - true (default): Use splice-based serialization to preserve markdown content
+   *   outside Markform tags (headings, paragraphs, code blocks, etc.)
+   * - false: Regenerate entire document from structured data
+   *
+   * When true and rawSource/tagRegions are available, content preservation uses
+   * "raw slicing" - keeping original text and only replacing Markform tag regions.
+   * Falls back to regeneration if rawSource is unavailable.
+   */
+  preserveContent?: boolean;
 }
 
 // =============================================================================
@@ -837,8 +1042,9 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
 
 /**
  * Serialize a cell value for table output.
+ * URL-typed columns are formatted as markdown links with domain as display text.
  */
-function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): string {
+function serializeCellValue(cell: CellResponse, columnType: ColumnTypeName): string {
   if (cell.state === 'skipped') {
     return cell.reason ? `%SKIP:${cell.reason}%` : '%SKIP%';
   }
@@ -851,6 +1057,10 @@ function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): st
   // Convert value to string based on type
   if (typeof cell.value === 'number') {
     return String(cell.value);
+  }
+  // Format URL columns as markdown links
+  if (columnType === 'url') {
+    return formatUrlAsMarkdownLink(cell.value);
   }
   return cell.value;
 }
@@ -1243,20 +1453,317 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
 /**
  * Serialize a ParsedForm to canonical Markdoc markdown format.
  *
+ * Supports two modes:
+ * 1. Content-preserving (default): When rawSource is available, preserves markdown
+ *    content outside Markform tags using splice-based serialization.
+ * 2. Regeneration: Builds entire document from structured data.
+ *
  * @param form - The parsed form to serialize
  * @param opts - Serialization options
  * @returns The canonical markdown string
  */
 export function serializeForm(form: ParsedForm, opts?: SerializeOptions): string {
   const specVersion = opts?.specVersion ?? MF_SPEC_VERSION;
+  const preserveContent = opts?.preserveContent ?? true;
 
+  // Determine output syntax style:
+  // 1. Use explicit option if provided
+  // 2. Fall back to form's detected syntax style
+  // 3. Default to 'tags'
+  const syntaxStyle = opts?.syntaxStyle ?? form.syntaxStyle ?? 'tags';
+
+  // Try content-preserving serialization if:
+  // - preserveContent is enabled (default)
+  // - rawSource is available
+  // - tagRegions are available
+  if (preserveContent && form.rawSource && form.tagRegions) {
+    const preserved = serializeWithContentPreservation(form, specVersion, syntaxStyle);
+    if (preserved !== null) {
+      return preserved;
+    }
+    // Fall through to regeneration if preservation failed
+  }
+
+  // Regeneration mode: build from structured data
+  return serializeFromScratch(form, specVersion, syntaxStyle);
+}
+
+/**
+ * Check if position is at the start of a line.
+ */
+function isAtLineStart(input: string, pos: number): boolean {
+  if (pos === 0) return true;
+  return input[pos - 1] === '\n';
+}
+
+/**
+ * Match a fenced code block opening at the given position.
+ * Returns fence info if found, null otherwise.
+ * Handles 0-3 leading spaces per CommonMark spec.
+ */
+function matchFenceOpening(
+  input: string,
+  pos: number,
+): { char: string; length: number; endPos: number } | null {
+  // Check for 0-3 leading spaces (4+ spaces = indented code block, not fence)
+  let indent = 0;
+  let i = pos;
+  while (i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // 4+ spaces means this is not a fenced code block per CommonMark
+  if (indent >= 4) {
+    return null;
+  }
+
+  // Check for fence character (` or ~)
+  const fenceChar = input[i];
+  if (fenceChar !== '`' && fenceChar !== '~') {
+    return null;
+  }
+
+  // Count consecutive fence characters (need at least 3)
+  let fenceLength = 0;
+  while (i + fenceLength < input.length && input[i + fenceLength] === fenceChar) {
+    fenceLength++;
+  }
+
+  if (fenceLength < 3) {
+    return null;
+  }
+
+  // Find end of line
+  let endOfLine = i + fenceLength;
+  while (endOfLine < input.length && input[endOfLine] !== '\n') {
+    endOfLine++;
+  }
+  if (endOfLine < input.length) {
+    endOfLine++; // Include the newline
+  }
+
+  return { char: fenceChar, length: fenceLength, endPos: endOfLine };
+}
+
+/**
+ * Check if position matches a closing fence for the given opening fence.
+ */
+function matchFenceClosing(
+  input: string,
+  pos: number,
+  fenceChar: string,
+  fenceLength: number,
+): number {
+  // Check for 0-3 leading spaces
+  let indent = 0;
+  let i = pos;
+  while (indent < 4 && i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // Check for matching fence character
+  if (input[i] !== fenceChar) {
+    return -1;
+  }
+
+  // Count consecutive fence characters (need at least fenceLength)
+  let closingLength = 0;
+  while (i + closingLength < input.length && input[i + closingLength] === fenceChar) {
+    closingLength++;
+  }
+
+  if (closingLength < fenceLength) {
+    return -1;
+  }
+
+  // Rest of line must be whitespace only (or end of string)
+  let afterFence = i + closingLength;
+  while (afterFence < input.length && input[afterFence] !== '\n') {
+    if (input[afterFence] !== ' ' && input[afterFence] !== '\t') {
+      return -1;
+    }
+    afterFence++;
+  }
+
+  // Return position after the closing fence line
+  if (afterFence < input.length) {
+    afterFence++; // Include the newline
+  }
+  return afterFence;
+}
+
+/**
+ * Find the form tag boundaries in rawSource, skipping code blocks.
+ * Returns [startOffset, endOffset] where:
+ * - startOffset: position where {% form (or <!-- form) starts
+ * - endOffset: position just after {% /form %} (or <!-- /form -->)
+ *
+ * Code blocks (fenced with ``` or ~~~) are skipped to avoid matching
+ * form tag examples in documentation or code samples.
+ *
+ * Returns null if form boundaries cannot be found.
+ */
+function findFormBoundaries(rawSource: string): [number, number] | null {
+  const openPattern = /(?:{%\s*form\s|<!--\s*form\s)/g;
+  const closePattern = /{%\s*\/form\s*%}|<!--\s*\/form\s*-->/g;
+
+  let startOffset: number | null = null;
+  let endOffset: number | null = null;
+
+  let i = 0;
+  let inFencedCode = false;
+  let fenceChar = '';
+  let fenceLength = 0;
+
+  while (i < rawSource.length) {
+    // Check for fenced code block at line start
+    if (!inFencedCode && isAtLineStart(rawSource, i)) {
+      const fence = matchFenceOpening(rawSource, i);
+      if (fence) {
+        inFencedCode = true;
+        fenceChar = fence.char;
+        fenceLength = fence.length;
+        i = fence.endPos;
+        continue;
+      }
+    }
+
+    // Check for closing fence
+    if (inFencedCode && isAtLineStart(rawSource, i)) {
+      const closePos = matchFenceClosing(rawSource, i, fenceChar, fenceLength);
+      if (closePos !== -1) {
+        inFencedCode = false;
+        i = closePos;
+        continue;
+      }
+    }
+
+    // Skip if inside fenced code block
+    if (inFencedCode) {
+      // Move to next line
+      while (i < rawSource.length && rawSource[i] !== '\n') {
+        i++;
+      }
+      if (i < rawSource.length) {
+        i++; // Skip the newline
+      }
+      continue;
+    }
+
+    // Look for opening form tag (first one found)
+    if (startOffset === null) {
+      openPattern.lastIndex = i;
+      const openMatch = openPattern.exec(rawSource);
+      if (openMatch?.index === i) {
+        startOffset = i;
+      }
+    }
+
+    // Look for closing form tag (track the last one found)
+    closePattern.lastIndex = i;
+    const closeMatch = closePattern.exec(rawSource);
+    if (closeMatch?.index === i) {
+      endOffset = i + closeMatch[0].length;
+    }
+
+    i++;
+  }
+
+  if (startOffset === null || endOffset === null) {
+    return null;
+  }
+
+  return [startOffset, endOffset];
+}
+
+/**
+ * Serialize using content-preserving (splice-based) approach.
+ *
+ * Strategy:
+ * 1. Preserve content BEFORE the form tag (intro markdown)
+ * 2. Regenerate the form tag and its contents (canonical format)
+ * 3. Preserve content AFTER the form tag (footer markdown)
+ *
+ * This approach:
+ * - Preserves markdown content outside Markform tags (headings, paragraphs, etc.)
+ * - Ensures Markform tags are in canonical format (normalization)
+ * - Handles value changes correctly (regenerated content reflects current state)
+ *
+ * Returns null if preservation is not possible.
+ */
+function serializeWithContentPreservation(
+  form: ParsedForm,
+  specVersion: string,
+  syntaxStyle: SyntaxStyle,
+): string | null {
+  if (!form.rawSource) {
+    return null;
+  }
+
+  // Find actual form boundaries using regex (more reliable than AST locations)
+  const boundaries = findFormBoundaries(form.rawSource);
+  if (!boundaries) {
+    return null;
+  }
+
+  const [formStart, formEnd] = boundaries;
+
+  // Build fresh frontmatter (always regenerated with current metadata)
+  const frontmatter = buildFrontmatter(form.metadata, specVersion);
+
+  // Extract content before and after the form tag
+  const contentBefore = form.rawSource.slice(0, formStart);
+  const contentAfter = form.rawSource.slice(formEnd);
+
+  // Serialize the form body in canonical format
+  const formBody = serializeFormSchema(form.schema, form.responsesByFieldId, form.docs, form.notes);
+
+  // Combine: frontmatter + preserved before + regenerated form + preserved after
+  // Ensure there's always a blank line after frontmatter for consistency with scratch mode
+  let result = frontmatter + '\n';
+  if (!contentBefore.startsWith('\n')) {
+    result += '\n'; // Add blank line if original didn't have one
+  }
+  result += contentBefore + formBody + contentAfter;
+
+  // Ensure trailing newline
+  if (!result.endsWith('\n')) {
+    result += '\n';
+  }
+
+  // Transform to HTML comment syntax if requested
+  if (syntaxStyle === 'comments') {
+    result = postprocessToCommentSyntax(result);
+  }
+
+  return result;
+}
+
+/**
+ * Serialize form from scratch (regeneration mode).
+ * Used when content preservation is disabled or not possible.
+ */
+function serializeFromScratch(
+  form: ParsedForm,
+  specVersion: string,
+  syntaxStyle: SyntaxStyle,
+): string {
   // Build frontmatter from metadata (preserves roles, instructions, harness config, run_mode)
   const frontmatter = buildFrontmatter(form.metadata, specVersion);
 
   // Serialize form body
   const body = serializeFormSchema(form.schema, form.responsesByFieldId, form.docs, form.notes);
 
-  return `${frontmatter}\n\n${body}\n`;
+  let result = `${frontmatter}\n\n${body}\n`;
+
+  // Transform to HTML comment syntax if requested
+  if (syntaxStyle === 'comments') {
+    result = postprocessToCommentSyntax(result);
+  }
+
+  return result;
 }
 
 // =============================================================================
@@ -1285,6 +1792,8 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
   const lines: string[] = [];
 
   lines.push(`**${field.label}:**`);
+  // Blank line after label to ensure new paragraph (and prevent Flowmark merging)
+  lines.push('');
 
   // Extract value from response if state is "answered"
   const value = response?.state === 'answered' ? response.value : undefined;
@@ -1351,7 +1860,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
     case 'url': {
       const urlValue = value as UrlValue | undefined;
       if (urlValue?.value) {
-        lines.push(urlValue.value);
+        lines.push(formatUrlAsMarkdownLink(urlValue.value));
       } else {
         lines.push('_(empty)_');
       }
@@ -1361,7 +1870,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       const urlListValue = value as UrlListValue | undefined;
       if (urlListValue?.items && urlListValue.items.length > 0) {
         for (const item of urlListValue.items) {
-          lines.push(`- ${item}`);
+          lines.push(`- ${formatUrlAsMarkdownLink(item)}`);
         }
       } else {
         lines.push('_(empty)_');

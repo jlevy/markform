@@ -17,13 +17,14 @@ markform:
       6. Leave unknown fields empty - Don't guess or fabricate information
       7. Keep descriptions concise - Aim for 100-200 words max
 ---
-
 {% form id="startup_research" title="Startup Research Form" %}
 
 {% description ref="startup_research" %}
-A comprehensive research form for startup companies. This form demonstrates URL field types
-for capturing company websites, funding sources, press coverage, and other web references.
-The user provides the company name, and the agent researches and fills all remaining fields.
+A comprehensive research form for startup companies.
+This form demonstrates URL field types for capturing company websites, funding sources,
+press coverage, and other web references.
+The user provides the company name, and the agent researches and fills all remaining
+fields.
 {% /description %}
 
 {% documentation ref="startup_research" %}
@@ -39,6 +40,7 @@ The user provides the company name, and the agent researches and fills all remai
 - Press releases
 - LinkedIn company pages
 - Tech news publications
+
 {% /documentation %}
 
 {% group id="basic_info" title="Company Information" %}
@@ -50,7 +52,8 @@ Anthropic
 {% /field %}
 
 {% instructions ref="company_name" %}
-Enter the official name of the startup company you want to research (e.g., "Stripe", "OpenAI").
+Enter the official name of the startup company you want to research (e.g., “Stripe”,
+“OpenAI”).
 {% /instructions %}
 
 {% field kind="url" id="company_website" label="Company Website" required=true %}
@@ -90,7 +93,7 @@ San Francisco, California
 {% /field %}
 
 {% instructions ref="headquarters" %}
-Format: City, State/Country (e.g., "San Francisco, California")
+Format: City, State/Country (e.g., “San Francisco, California”)
 {% /instructions %}
 
 {% field kind="string" id="company_description" label="Company Description" multiline=true maxLength=1000 %}
@@ -100,7 +103,8 @@ Anthropic is an AI safety company focused on building reliable, interpretable, a
 {% /field %}
 
 {% instructions ref="company_description" %}
-Brief description of what the company does. 100-200 words max.
+Brief description of what the company does.
+100-200 words max.
 {% /instructions %}
 
 {% /group %}
@@ -114,7 +118,7 @@ $7.6B
 {% /field %}
 
 {% instructions ref="total_funding" %}
-Format: $X.XB, $XXM, or $XXK (e.g., "$1.5B", "$50M", "$500K")
+Format: $X.XB, $XXM, or $XXK (e.g., “$1.5B”, “$50M”, “$500K”)
 {% /instructions %}
 
 {% field kind="string" id="latest_valuation" label="Latest Valuation" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" %}
@@ -124,10 +128,11 @@ $18.4B
 {% /field %}
 
 {% instructions ref="latest_valuation" %}
-Format: $X.XB, $XXM, or $XXK (e.g., "$10B")
+Format: $X.XB, $XXM, or $XXK (e.g., “$10B”)
 {% /instructions %}
 
 {% field kind="single_select" id="funding_stage" label="Funding Stage" %}
+
 - [ ] Pre-seed {% #pre_seed %}
 - [ ] Seed {% #seed %}
 - [ ] Series A {% #series_a %}
@@ -135,6 +140,7 @@ Format: $X.XB, $XXM, or $XXK (e.g., "$10B")
 - [ ] Series C {% #series_c %}
 - [x] Series D+ {% #series_d_plus %}
 - [ ] Public {% #public %}
+
 {% /field %}
 
 {% field kind="string_list" id="key_investors" label="Key Investors" maxItems=10 %}
@@ -215,6 +221,7 @@ Approximate number of employees.
 {% group id="market_info" title="Market & Industry" %}
 
 {% field kind="multi_select" id="industry_sectors" label="Industry Sectors" minSelections=1 maxSelections=5 %}
+
 - [x] AI/ML {% #ai_ml %}
 - [ ] FinTech {% #fintech %}
 - [ ] HealthTech {% #healthtech %}
@@ -225,6 +232,7 @@ Approximate number of employees.
 - [x] Developer Tools {% #devtools %}
 - [ ] Climate Tech {% #climatetech %}
 - [ ] Other {% #other %}
+
 {% /field %}
 
 {% field kind="string_list" id="competitors" label="Competitors" maxItems=5 %}
@@ -299,7 +307,8 @@ https://en.wikipedia.org/wiki/Anthropic
 {% /field %}
 
 {% instructions ref="sources" %}
-List all source URLs used for this research. Include Crunchbase, company website, and any additional sources consulted.
+List all source URLs used for this research.
+Include Crunchbase, company website, and any additional sources consulted.
 {% /instructions %}
 
 {% /group %}

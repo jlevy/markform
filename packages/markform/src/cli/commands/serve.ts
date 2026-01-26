@@ -53,6 +53,7 @@ import {
   writeFile,
 } from '../lib/shared.js';
 import { generateVersionedPath } from '../lib/versioning.js';
+import { friendlyUrlAbbrev } from '../../utils/urlFormat.js';
 
 /**
  * Open a URL in the default browser (cross-platform).
@@ -682,6 +683,57 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .markdown-content a { color: #0366d6; text-decoration: none; }
     .markdown-content a:hover { text-decoration: underline; }
     .markdown-content strong { font-weight: 600; }
+    /* URL link with hover copy */
+    .url-link {
+      color: #0366d6;
+      text-decoration: none;
+      position: relative;
+    }
+    .url-link:hover {
+      text-decoration: underline;
+    }
+    .url-copy-tooltip {
+      position: fixed;
+      padding: 0.25rem 0.5rem;
+      background: #6c757d;
+      color: white;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.2s ease, visibility 0.2s ease, background 0.2s ease, transform 0.15s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      z-index: 10000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .url-copy-tooltip.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .url-copy-tooltip:hover {
+      background: #343a40;
+      transform: translateY(-50%) scale(1.02);
+    }
+    .url-copy-tooltip svg {
+      width: 12px;
+      height: 12px;
+      transition: opacity 0.15s ease;
+    }
+    .url-copy-tooltip.copied {
+      background: #28a745;
+    }
+    .url-copy-tooltip.copied:hover {
+      background: #218838;
+    }
+    .url-copy-tooltip.transitioning {
+      opacity: 0.7;
+    }
     /* Checkbox and state styles */
     .checkbox { font-size: 1.1em; margin-right: 0.25em; }
     .checkbox.checked { color: #28a745; }
@@ -871,6 +923,43 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     .data-table tbody tr:hover {
       background: #f8f9fa;
     }
+    /* Print styles */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+      h1 {
+        margin-top: 0;
+        padding-top: 0;
+      }
+      .tab-bar {
+        display: none !important;
+      }
+      .tab-content {
+        display: none !important;
+      }
+      .tab-content.active {
+        display: block !important;
+      }
+      .group {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .url-link {
+        color: #0d6efd;
+        text-decoration: none;
+      }
+      .url-copy-tooltip {
+        display: none !important;
+      }
+      a[href]:after {
+        content: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1028,6 +1117,108 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
 
     // Load View tab on page load (it's the default tab)
     showTab('view');
+
+    // URL copy tooltip functionality - initialize once
+    (function initUrlCopyTooltip() {
+      // Feather copy icon SVG (inline to avoid external dependency)
+      const copyIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+
+      // Shared state
+      let activeLink = null;
+      let hideTimeout = null;
+
+      // Create tooltip element
+      const tooltip = document.createElement('span');
+      tooltip.id = 'url-copy-tooltip';
+      tooltip.className = 'url-copy-tooltip';
+      tooltip.innerHTML = copyIconSvg + ' Copy';
+      document.body.appendChild(tooltip);
+
+      function showTooltip(link) {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+        activeLink = link;
+        const rect = link.getBoundingClientRect();
+        tooltip.style.left = (rect.right + 6) + 'px';
+        tooltip.style.top = (rect.top + rect.height / 2) + 'px';
+        tooltip.style.transform = 'translateY(-50%)';
+        tooltip.classList.add('visible');
+      }
+
+      function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+          tooltip.classList.remove('visible');
+          activeLink = null;
+        }, 100);
+      }
+
+      // Tooltip hover keeps it visible
+      tooltip.addEventListener('mouseenter', () => {
+        if (hideTimeout) {
+          clearTimeout(hideTimeout);
+          hideTimeout = null;
+        }
+      });
+
+      tooltip.addEventListener('mouseleave', () => {
+        hideTooltip();
+      });
+
+      // Handle click on tooltip
+      tooltip.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!activeLink) return;
+        const url = activeLink.getAttribute('data-url') || activeLink.getAttribute('href');
+        if (!url) return;
+        try {
+          await navigator.clipboard.writeText(url);
+          // Transition to copied state
+          tooltip.classList.add('transitioning');
+          setTimeout(() => {
+            tooltip.innerHTML = 'Copied!';
+            tooltip.classList.add('copied');
+            tooltip.classList.remove('transitioning');
+          }, 100);
+          // Reset after delay
+          setTimeout(() => {
+            tooltip.classList.add('transitioning');
+            setTimeout(() => {
+              tooltip.innerHTML = copyIconSvg + ' Copy';
+              tooltip.classList.remove('copied');
+              tooltip.classList.remove('transitioning');
+            }, 100);
+          }, 1500);
+        } catch (err) {
+          tooltip.innerHTML = 'Failed';
+          setTimeout(() => {
+            tooltip.innerHTML = copyIconSvg + ' Copy';
+          }, 1500);
+        }
+      });
+
+      // Function to attach hover listeners to new links
+      function attachLinkListeners() {
+        document.querySelectorAll('.url-link').forEach(link => {
+          if (link.hasAttribute('data-tooltip-setup')) return;
+          link.setAttribute('data-tooltip-setup', 'true');
+          link.addEventListener('mouseenter', () => showTooltip(link));
+          link.addEventListener('mouseleave', () => hideTooltip());
+        });
+      }
+
+      // Attach to links after tab content loads
+      const originalShowTab = showTab;
+      showTab = async function(tabId) {
+        await originalShowTab(tabId);
+        attachLinkListeners();
+      };
+
+      // Initial setup
+      setTimeout(attachLinkListeners, 100);
+    })();
   </script>
 </body>
 </html>`;
@@ -1885,14 +2076,20 @@ function renderViewFieldValue(
       if (v === null || v === '') {
         return '<div class="view-field-empty">(not filled)</div>';
       }
-      return `<div class="view-field-value"><a href="${escapeHtml(v)}" target="_blank">${escapeHtml(v)}</a></div>`;
+      const domain = friendlyUrlAbbrev(v);
+      return `<div class="view-field-value"><a href="${escapeHtml(v)}" target="_blank" class="url-link" data-url="${escapeHtml(v)}">${escapeHtml(domain)}</a></div>`;
     }
     case 'url_list': {
       const items = value.kind === 'url_list' ? value.items : [];
       if (items.length === 0) {
         return '<div class="view-field-empty">(not filled)</div>';
       }
-      return `<div class="view-field-value"><ul>${items.map((u) => `<li><a href="${escapeHtml(u)}" target="_blank">${escapeHtml(u)}</a></li>`).join('')}</ul></div>`;
+      return `<div class="view-field-value"><ul>${items
+        .map((u) => {
+          const domain = friendlyUrlAbbrev(u);
+          return `<li><a href="${escapeHtml(u)}" target="_blank" class="url-link" data-url="${escapeHtml(u)}">${escapeHtml(domain)}</a></li>`;
+        })
+        .join('')}</ul></div>`;
     }
     case 'date': {
       const v = value.kind === 'date' ? value.value : null;
@@ -1924,10 +2121,18 @@ function renderViewFieldValue(
         for (const col of field.columns) {
           const cell = row[col.id];
           let cellValue = '';
+          let cellHtml = '';
           if (cell?.state === 'answered' && cell.value !== undefined && cell.value !== null) {
             cellValue = String(cell.value);
+            // Format URL columns as domain links
+            if (col.type === 'url' && cellValue) {
+              const domain = friendlyUrlAbbrev(cellValue);
+              cellHtml = `<a href="${escapeHtml(cellValue)}" target="_blank" class="url-link" data-url="${escapeHtml(cellValue)}">${escapeHtml(domain)}</a>`;
+            } else {
+              cellHtml = escapeHtml(cellValue);
+            }
           }
-          tableHtml += `<td>${escapeHtml(cellValue)}</td>`;
+          tableHtml += `<td>${cellHtml}</td>`;
         }
         tableHtml += '</tr>';
       }
@@ -2227,10 +2432,13 @@ function formatInlineMarkdown(text: string): string {
   // Italic
   result = result.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   // Links - need to unescape the URL first
+  // Add url-link class and data-url for copy tooltip support
   result = result.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    (_: string, linkText: string, url: string) =>
-      `<a href="${url.replace(/&amp;/g, '&')}" target="_blank">${linkText}</a>`,
+    (_: string, linkText: string, url: string) => {
+      const cleanUrl = url.replace(/&amp;/g, '&');
+      return `<a href="${cleanUrl}" target="_blank" class="url-link" data-url="${cleanUrl}">${linkText}</a>`;
+    },
   );
   return result;
 }

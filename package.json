@@ -24,10 +24,11 @@
     "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
     "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
     "precommit": "pnpm format && pnpm lint:check && pnpm test",
-    "markform": "npx tsx packages/markform/src/cli/bin.ts",
+    "markform": "tsx packages/markform/src/cli/bin.ts",
     "markform:bin": "node packages/markform/dist/bin.mjs",
     "changeset": "changeset",
-    "changeset:add": "npx tsx scripts/create-changeset.ts",
+    "changeset:add": "tsx scripts/create-changeset.ts",
+    "release:changes": "./scripts/release-notes.sh",
     "version-packages": "changeset version",
     "release": "pnpm build && pnpm publint && changeset publish"
   },
@@ -41,7 +42,8 @@
     "eslint-config-prettier": "^10.1.8",
     "lefthook": "^2.0.13",
     "prettier": "^3.7.4",
-    "tryscript": "0.1.1",
+    "tryscript": "0.1.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.51.0"
   }

@@ -306,73 +306,51 @@ seamlessly in local dev and in remote environments.
   - `QUIET_MODE` - suppress non-essential output
 
 - **Make scripts composable:** Design scripts to work well in pipelines and automation.
-  Consider how they'll be used in CI/CD and shell scripts.
+  Consider how they’ll be used in CI/CD and shell scripts.
 
 ## Library/CLI Hybrid Packages
 
-When building a package that functions as both a library and a CLI tool, **isolate all
-Node.js dependencies to CLI-only code**. This allows the core library to be used in
-non-Node environments (browsers, edge runtimes, Cloudflare Workers, Convex, etc.).
+When building a package that functions as both a library and a CLI tool, isolate all
+Node.js dependencies to CLI-only code.
+This allows the core library to be used in non-Node environments (browsers, edge
+runtimes, Cloudflare Workers, etc.).
 
-### Why This Matters
+**Key rules:**
 
-Node.js-specific imports like `node:path`, `node:fs`, or `node:module` will cause bundler
-errors or runtime failures in non-Node environments. Even if only the CLI uses these
-imports, if they're in shared code, the entire library becomes Node-dependent.
+- Core library entry point (`index.ts`) must have no `node:` imports
 
-### Directory Structure for Isolation
+- All `node:` imports must be in `cli/` directory only
 
-Keep CLI code in a dedicated subdirectory:
+- Configuration constants go in node-free files
 
-```
-src/
-├── index.ts           # Library entry point (NO node: imports)
-├── settings.ts        # Configuration constants (NO node: imports)
-├── engine/            # Core library code (NO node: imports)
-├── cli/               # CLI-only code (node: imports OK here)
-│   ├── cli.ts         # CLI entry point
-│   ├── commands/      # Command implementations
-│   └── lib/           # CLI utilities (path resolution, etc.)
-└── integrations/      # Optional integrations (NO node: imports)
-```
+- Build-time values use bundler `define` injection
 
-### Pattern: Move Node.js Utilities to CLI
+- Add guard tests to prevent future regressions
 
-```ts
-// BAD: Node.js import in shared settings
-// src/settings.ts
-import { resolve } from 'node:path';
+For detailed patterns, directory structure, and implementation examples, see
+[Modern TypeScript Monorepo Patterns](../research/current/research-modern-typescript-monorepo-patterns.md#13-librarycli-hybrid-packages).
 
-export const DEFAULT_OUTPUT_DIR = './output';
+## CLI Architecture Patterns
 
-export function getOutputDir(override?: string): string {
-  return resolve(process.cwd(), override ?? DEFAULT_OUTPUT_DIR);
-}
+For architectural patterns when building CLI applications, see
+[Modern TypeScript CLI Patterns](../research/current/research-modern-typescript-cli-patterns.md).
 
-// GOOD: Constant in settings, function in CLI
-// src/settings.ts (node-free)
-export const DEFAULT_OUTPUT_DIR = './output';
+**Key patterns covered:**
 
-// src/cli/lib/paths.ts (node: imports OK)
-import { resolve } from 'node:path';
-import { DEFAULT_OUTPUT_DIR } from '../../settings.js';
+- **Base Command Pattern** — Eliminate boilerplate with a base class
 
-export { DEFAULT_OUTPUT_DIR };  // Re-export for CLI convenience
+- **Dual Output Mode** — Support both text and JSON output via OutputManager
 
-export function getOutputDir(override?: string): string {
-  return resolve(process.cwd(), override ?? DEFAULT_OUTPUT_DIR);
-}
-```
+- **Handler + Command Structure** — Separate definitions from implementation
 
-### Pattern: Build-Time Constants
+- **Formatter Pattern** — Pair text and JSON formatters for each domain
 
-For values that need Node.js at build time (like reading `package.json`), use bundler
-`define` options to inject them as compile-time constants:
+- **Version Handling** — Git-based dynamic versioning (`X.Y.Z-dev.N.hash`)
 
-```ts
-// tsdown.config.ts / esbuild / rollup config
-import pkg from './package.json' with { type: 'json' };
+- **Global Options** — Define `--dry-run`, `--verbose`, `--quiet`, `--format` at program
+  level
 
+<<<<<<< before updating
 export default {
   define: {
     __VERSION__: JSON.stringify(pkg.version),
@@ -910,3 +888,7 @@ const docsCommand = new Command('docs')
     await showInPager(output);
   });
 ```
+=======
+- **Stdout/Stderr Separation** — Data to stdout, errors to stderr for pipeline
+  compatibility
+>>>>>>> after updating

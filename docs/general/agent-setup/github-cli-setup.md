@@ -1,4 +1,7 @@
-# GitHub CLI Setup for Agents
+# GitHub CLI Setup
+
+The GitHub CLI (`gh`) is essential for agent-based development workflows including
+creating pull requests, managing issues, and interacting with GitHub’s API.
 
 ## Quick Check
 
@@ -6,75 +9,111 @@
 gh --version && gh auth status
 ```
 
-If `gh` is available and authenticated, you’re done.
+If `gh` is available and authenticated, you’re ready to go.
 
-## Installation (if `gh` is missing or blocked)
+## Installation
 
-Install to `~/.local/bin/gh` and add to PATH:
+**Installation is automatic.** The `ensure-gh-cli.sh` hook runs on Claude Code session
+start and installs `gh` to `~/.local/bin` if missing.
+No manual installation required.
 
-```bash
-# Get latest version (with fallback if API fails)
-VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest 2>/dev/null \
-  | grep -o '"tag_name": *"v[^"]*"' | head -1 | sed 's/.*"v\([^"]*\)".*/\1/')
-VERSION=${VERSION:-2.83.1}
+For manual installation or troubleshooting, see the
+[GitHub CLI installation docs](https://github.com/cli/cli#installation).
 
-# Download and install
-curl -fsSL -o /tmp/gh.tar.gz "https://github.com/cli/cli/releases/download/v${VERSION}/gh_${VERSION}_linux_amd64.tar.gz"
-tar -xzf /tmp/gh.tar.gz -C /tmp
-mkdir -p ~/.local/bin
-cp "/tmp/gh_${VERSION}_linux_amd64/bin/gh" ~/.local/bin/gh
-chmod +x ~/.local/bin/gh
-rm -rf "/tmp/gh_${VERSION}_linux_amd64" /tmp/gh.tar.gz
+## Setting Up GH_TOKEN
 
-# Add to PATH for current session
-export PATH="$HOME/.local/bin:$PATH"
+Authentication requires the `GH_TOKEN` environment variable.
+This must be set **before** starting your agent session.
+
+### Step 1: Create a Personal Access Token
+
+Go to [GitHub Settings > Tokens](https://github.com/settings/tokens) and create a token:
+
+**Option A: Fine-Grained Token (Recommended for security)**
+- Click “Generate new token” > “Fine-grained token”
+- Set an expiration date
+- Select specific repositories (or all)
+- Grant permissions:
+  - **Contents**: Read and write (for pushing code)
+  - **Pull requests**: Read and write (for creating PRs)
+  - **Issues**: Read and write (optional, for issue management)
+  - **Workflows**: Read and write (optional, for CI/CD)
+
+**Option B: Classic Token (Required for GraphQL API / cross-org access)**
+- Click “Generate new token” > “Classic”
+- Select scopes: `repo`, `workflow`, `read:org`
+
+**When to use which:**
+- Fine-grained tokens are more secure but don’t support GraphQL API
+- Use classic tokens if you need cross-organization access or GraphQL operations
+
+### Step 2: Set Environment Variables
+
+Set these variables in your environment:
+
+```
+GH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+GH_PROMPT_DISABLED=1
 ```
 
-Verify:
+**Where to set them depends on your environment:**
+
+| Environment | Where to Configure |
+| --- | --- |
+| **Claude Code Cloud** | Project settings > Environment variables in the web UI |
+| **Claude Code CLI (local)** | Shell profile: `~/.zshrc`, `~/.bashrc`, or `~/.profile` |
+| **Other agents** | Their respective environment configuration |
+
+**Example for shell profile (~~/.zshrc or ~~/.bashrc):**
 
 ```bash
-gh --version
-gh auth status
+# GitHub CLI for agent workflows
+export GH_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+export GH_PROMPT_DISABLED=1
 ```
+
+Then reload: `source ~/.zshrc`
 
 ## Usage
 
-**Important**: Always specify `-R owner/repo` since git remotes may use a proxy.
-(This is needed for example by Claude Code Web.)
+**Important**: Always specify `-R owner/repo` since git remotes may use a proxy (needed
+for Claude Code Cloud).
 
 ```bash
 # List PRs
 gh pr list -R owner/repo --json number,title,state
+
 # View/update PR
 gh pr view 123 -R owner/repo
 gh pr comment 123 -R owner/repo --body "Comment text"
+
+# Create PR
+gh pr create -R owner/repo --title "Title" --body "Description"
+
 # Issues
 gh issue list -R owner/repo
 gh issue create -R owner/repo --title "Title" --body "Body"
+
 # API (for advanced operations)
 gh api repos/owner/repo/pulls/123/comments
 ```
 
-## Notes
+## Troubleshooting
 
-- Authentication must be provided via `GH_TOKEN` environment variable (pre-configured).
-  If this is not available, you may suggest the user set this up.
+**“gh: command not found”**
+- The session hook should auto-install `gh`. If it didn’t run, check
+  `.claude/settings.json`
+- Ensure `~/.local/bin` is in your PATH
 
-## GitHub Access Token Setup (For User Only)
+**“GH_TOKEN not set”**
+- Set the environment variable as described above
+- For Claude Code Cloud, check project environment settings
 
-To set up permissions so agents (like Claude Code Web) may edit GitHub issues and check
-workflows using `gh`, create an access token at https://github.com/settings/tokens
+**“Bad credentials” or authentication failed**
+- Token may be expired - generate a new one
+- Token may lack required permissions - check scopes
+- For fine-grained tokens, ensure the repository is included
 
-- For simplicity: Classic PAT with repo and workflow scope.
-
-- For security: Fine-grained PAT scoped to this repo with Contents + Pull requests
-  permissions.
-
-- Typical token scopes recommended for PAT: `repo`, `workflow` (and possibly `read:org`
-  to avoid sometimes confusing warnings from `gh`)
-
-Then add env vars to agent setup:
-```
-GH_TOKEN="github_pat_xxxxx"
-GH_PROMPT_DISABLED=1
-```
+**“Resource not accessible by personal access token”**
+- Fine-grained tokens can’t access GraphQL API - use a classic token
+- Fine-grained tokens must explicitly include each repository
