@@ -18,6 +18,8 @@ import YAML from 'yaml';
 import { parseForm } from '../../src/engine/parse.js';
 import { serializeReport } from '../../src/engine/serialize.js';
 import { formToJsonSchema } from '../../src/engine/jsonSchema.js';
+import { injectCheckboxIds, injectHeaderIds } from '../../src/engine/injectIds.js';
+import { MarkformParseError } from '../../src/errors.js';
 import { toStructuredValues, toNotesArray } from '../../src/cli/lib/exportHelpers.js';
 import { findSessionFiles, normalizeSession, regenerateSession } from './helpers.js';
 
@@ -285,4 +287,471 @@ describe('Export Files Golden Tests', () => {
       });
     });
   }
+});
+
+// =============================================================================
+// Implicit Checkboxes Parsing Tests
+// =============================================================================
+
+describe('Implicit Checkboxes Parsing', () => {
+  it('parses plan-document.form.md with implicit checkboxes field', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+
+    // Verify form structure
+    expect(form.schema.id).toBe('project_plan');
+    expect(form.schema.title).toBe('Project Plan');
+
+    // Verify implicit _checkboxes field was created
+    expect(form.responsesByFieldId.checkboxes).toBeDefined();
+
+    // Verify field is in implicit group
+    expect(form.schema.groups).toHaveLength(1);
+    const defaultGroup = form.schema.groups[0];
+    expect(defaultGroup?.id).toBe('default');
+    expect(defaultGroup?.implicit).toBe(true);
+
+    // Verify checkboxes field structure
+    const checkboxesField = defaultGroup?.children[0];
+    expect(checkboxesField?.kind).toBe('checkboxes');
+    expect(checkboxesField?.id).toBe('checkboxes');
+    if (checkboxesField?.kind === 'checkboxes') {
+      expect(checkboxesField.implicit).toBe(true);
+      expect(checkboxesField.checkboxMode).toBe('multi');
+      // 14 tasks total: 3 + 3 + 4 + 4
+      expect(checkboxesField.options).toHaveLength(14);
+
+      // Verify specific option IDs exist
+      const optionIds = checkboxesField.options.map((o) => o.id);
+      expect(optionIds).toContain('review_docs');
+      expect(optionIds).toContain('arch_doc');
+      expect(optionIds).toContain('unit_tests');
+      expect(optionIds).toContain('prod_deploy');
+    }
+
+    // Verify response values
+    const response = form.responsesByFieldId.checkboxes;
+    expect(response?.state).toBe('answered');
+    if (response?.value?.kind === 'checkboxes') {
+      // All should be 'todo' state (unchecked)
+      expect(response.value.values.review_docs).toBe('todo');
+      expect(response.value.values.prod_deploy).toBe('todo');
+    }
+  });
+
+  it('parses plan-document-progress.form.md with partial completion', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document-progress.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document-progress.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+
+    expect(form.schema.id).toBe('project_plan');
+
+    // Verify response values include completed items
+    const response = form.responsesByFieldId.checkboxes;
+    expect(response?.state).toBe('answered');
+    if (response?.value?.kind === 'checkboxes') {
+      // Phase 1 should be done
+      expect(response.value.values.review_docs).toBe('done');
+      expect(response.value.values.competitor_analysis).toBe('done');
+      // Phase 3/4 should still be todo
+      expect(response.value.values.unit_tests).toBe('todo');
+      expect(response.value.values.prod_deploy).toBe('todo');
+    }
+  });
+
+  it('parses plan-document-markdoc.form.md with Markdoc syntax', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document-markdoc.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document-markdoc.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+
+    // Verify form structure (different form ID in markdoc example)
+    expect(form.schema.id).toBe('sprint_tasks');
+    expect(form.responsesByFieldId.checkboxes).toBeDefined();
+
+    const checkboxesField = form.schema.groups[0]?.children[0];
+    if (checkboxesField?.kind === 'checkboxes') {
+      expect(checkboxesField.implicit).toBe(true);
+      expect(checkboxesField.options.length).toBe(8); // 3 + 3 + 2
+    }
+  });
+
+  it('exports structured values correctly for plan documents', () => {
+    const formPath = join(EXAMPLES_DIR, 'plan-document/plan-document.form.md');
+
+    if (!existsSync(formPath)) {
+      console.log('Skipping: plan-document.form.md not found');
+      return;
+    }
+
+    const formContent = readFileSync(formPath, 'utf-8');
+    const form = parseForm(formContent);
+    const values = toStructuredValues(form);
+
+    // Verify _checkboxes field is exported with structured format
+    expect(values.checkboxes).toBeDefined();
+    const checkboxExport = values.checkboxes as { state: string; value: Record<string, string> };
+    expect(checkboxExport.state).toBe('answered');
+    expect(checkboxExport.value).toBeDefined();
+
+    // Verify checkbox values
+    expect(checkboxExport.value.review_docs).toBe('todo');
+    expect(checkboxExport.value.prod_deploy).toBe('todo');
+  });
+});
+
+// =============================================================================
+// ID Injection Golden Tests
+// =============================================================================
+
+describe('ID Injection Golden Tests', () => {
+  describe('injectCheckboxIds', () => {
+    it('injects IDs using label-based generator', () => {
+      const input = `# Tasks
+
+- [ ] Review documentation
+- [ ] Write tests
+- [ ] Deploy to production
+`;
+
+      const expected = `# Tasks
+
+- [ ] Review documentation {% #review_documentation %}
+- [ ] Write tests {% #write_tests %}
+- [ ] Deploy to production {% #deploy_to_production %}
+`;
+
+      const result = injectCheckboxIds(input, {
+        generator: (info) =>
+          info.label
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, ''),
+      });
+
+      expect(result.markdown).toBe(expected);
+      expect(result.injectedCount).toBe(3);
+    });
+
+    it('injects IDs using heading-prefixed generator', () => {
+      const input = `# Project Plan
+
+## Phase 1
+- [ ] Research
+
+## Phase 2
+- [ ] Design
+`;
+
+      const expected = `# Project Plan
+
+## Phase 1
+- [ ] Research {% #phase_1_research %}
+
+## Phase 2
+- [ ] Design {% #phase_2_design %}
+`;
+
+      const result = injectCheckboxIds(input, {
+        generator: (info) => {
+          const section =
+            info.enclosingHeadings[0]?.title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '_')
+              .replace(/^_+|_+$/g, '') ?? 'default';
+          const task = info.label
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+          return `${section}_${task}`;
+        },
+      });
+
+      expect(result.markdown).toBe(expected);
+      expect(result.injectedCount).toBe(2);
+    });
+
+    it('preserves existing IDs and only adds missing ones', () => {
+      const input = `- [ ] Task with ID {% #existing_id %}
+- [ ] Task without ID
+`;
+
+      const expected = `- [ ] Task with ID {% #existing_id %}
+- [ ] Task without ID {% #task_1 %}
+`;
+
+      const result = injectCheckboxIds(input, {
+        generator: (_info, index) => `task_${index + 1}`,
+      });
+
+      expect(result.markdown).toBe(expected);
+      expect(result.injectedCount).toBe(1);
+    });
+  });
+
+  describe('injectHeaderIds', () => {
+    it('injects IDs into headings using slug generator', () => {
+      const input = `# Main Title
+
+## Getting Started
+
+Some content here.
+
+## Advanced Usage
+
+More content.
+`;
+
+      const expected = `# Main Title {% #main_title %}
+
+## Getting Started {% #getting_started %}
+
+Some content here.
+
+## Advanced Usage {% #advanced_usage %}
+
+More content.
+`;
+
+      const result = injectHeaderIds(input, {
+        generator: (info) =>
+          info.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, ''),
+      });
+
+      expect(result.markdown).toBe(expected);
+      expect(result.injectedCount).toBe(3);
+    });
+
+    it('filters by heading level', () => {
+      const input = `# H1 Title
+
+## H2 Section
+
+### H3 Subsection
+
+Content here.
+`;
+
+      const expected = `# H1 Title {% #h1 %}
+
+## H2 Section {% #h2 %}
+
+### H3 Subsection
+
+Content here.
+`;
+
+      const result = injectHeaderIds(input, {
+        generator: (info) => `h${info.level}`,
+        levels: [1, 2],
+      });
+
+      expect(result.markdown).toBe(expected);
+      expect(result.injectedCount).toBe(2);
+    });
+
+    it('preserves existing IDs', () => {
+      const input = `# Title With ID {% #existing %}
+
+## New Section
+`;
+
+      const expected = `# Title With ID {% #existing %}
+
+## New Section {% #new_section %}
+`;
+
+      const result = injectHeaderIds(input, {
+        generator: (info) =>
+          info.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, ''),
+      });
+
+      expect(result.markdown).toBe(expected);
+      expect(result.injectedCount).toBe(1);
+    });
+
+    it('replaces all IDs when onlyMissing=false', () => {
+      const input = `# Old Title {% #old_id %}
+
+## Another {% #another_old %}
+`;
+
+      const expected = `# Old Title {% #old_title %}
+
+## Another {% #another %}
+`;
+
+      const result = injectHeaderIds(input, {
+        generator: (info) =>
+          info.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, ''),
+        onlyMissing: false,
+      });
+
+      expect(result.markdown).toBe(expected);
+      expect(result.injectedCount).toBe(2);
+    });
+  });
+
+  describe('ID Uniqueness Error Cases', () => {
+    describe('injectCheckboxIds errors', () => {
+      it('throws error with line number on duplicate generated IDs', () => {
+        const input = `- [ ] First task
+- [ ] Second task
+- [ ] Third task
+`;
+
+        expect(() =>
+          injectCheckboxIds(input, {
+            generator: () => 'duplicate_id',
+          }),
+        ).toThrow(/duplicate.*'duplicate_id'.*'Second task'/i);
+
+        try {
+          injectCheckboxIds(input, {
+            generator: () => 'duplicate_id',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(2);
+        }
+      });
+
+      it('throws error with line number when generated ID conflicts with existing', () => {
+        const input = `- [ ] Task one {% #existing_id %}
+- [ ] Task two
+`;
+
+        expect(() =>
+          injectCheckboxIds(input, {
+            generator: () => 'existing_id',
+          }),
+        ).toThrow(/conflict/i);
+
+        try {
+          injectCheckboxIds(input, {
+            generator: () => 'existing_id',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(2);
+        }
+      });
+
+      it('includes checkbox label in error message', () => {
+        const input = `- [ ] Alpha task
+- [ ] Beta task
+`;
+
+        expect(() =>
+          injectCheckboxIds(input, {
+            generator: () => 'same',
+          }),
+        ).toThrow(/Beta task/);
+      });
+    });
+
+    describe('injectHeaderIds errors', () => {
+      it('throws error with line number on duplicate generated IDs', () => {
+        const input = `# First Section
+
+## Second Section
+
+### Third Section
+`;
+
+        expect(() =>
+          injectHeaderIds(input, {
+            generator: () => 'duplicate_id',
+          }),
+        ).toThrow(/duplicate.*'duplicate_id'.*'Second Section'/i);
+
+        try {
+          injectHeaderIds(input, {
+            generator: () => 'duplicate_id',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(3);
+        }
+      });
+
+      it('throws error with line number when generated ID conflicts with existing', () => {
+        const input = `# First {% #taken %}
+
+## Second
+`;
+
+        expect(() =>
+          injectHeaderIds(input, {
+            generator: () => 'taken',
+          }),
+        ).toThrow(/conflict/i);
+
+        try {
+          injectHeaderIds(input, {
+            generator: () => 'taken',
+          });
+        } catch (error) {
+          expect(error).toBeInstanceOf(MarkformParseError);
+          expect((error as MarkformParseError).line).toBe(3);
+        }
+      });
+
+      it('includes heading title in error message', () => {
+        const input = `# Alpha Heading
+
+## Beta Heading
+`;
+
+        expect(() =>
+          injectHeaderIds(input, {
+            generator: () => 'same',
+          }),
+        ).toThrow(/Beta Heading/);
+      });
+
+      it('respects level filtering when checking for conflicts', () => {
+        const input = `# H1 Title {% #shared %}
+
+## H2 Section
+`;
+
+        // When only processing H2 level, the H1 existing ID shouldn't conflict
+        const result = injectHeaderIds(input, {
+          generator: () => 'shared',
+          levels: [2],
+        });
+
+        expect(result.injectedCount).toBe(1);
+        expect(result.markdown).toContain('## H2 Section {% #shared %}');
+      });
+    });
+  });
 });
