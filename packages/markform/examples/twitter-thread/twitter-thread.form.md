@@ -2,226 +2,342 @@
 markform:
   spec: MF/0.1
   title: Content to Twitter Thread
-  description: Transform raw content (transcript, blog, notes) into an engaging Twitter/X thread.
+  description: Transform raw content into an engaging Twitter/X thread through structured analysis, prioritization, and iterative refinement.
   run_mode: fill
   roles:
     - user
     - agent
   role_instructions:
-    user: "Paste your raw content - a transcript, blog post, notes, or any text you want to turn into a Twitter thread."
+    user: |
+      Provide your raw content and any context about your audience and goals.
+      The content can be a transcript, blog draft, notes, or any text.
     agent: |
-      Transform the input content into an engaging Twitter/X thread. Work through each stage in order:
+      Transform the input into a compelling Twitter thread. Work through each stage in order—do not skip stages.
 
-      1. CLEANUP: Edit the raw content into clean, readable prose. Fix transcription errors, remove filler words, improve flow.
+      STAGE 1 - CLEANUP: Edit raw content into clean prose. Fix errors, remove filler.
 
-      2. ANALYSIS: Identify the key points, main themes, and what makes this content valuable to readers. Consider the hook (what grabs attention) and the payoff (what readers learn).
+      STAGE 2 - EXTRACT INSIGHTS: Identify every key insight, claim, or idea worth sharing.
+      Use the insights table to capture each one with why it matters.
 
-      3. STRUCTURE: Plan the thread flow. Each tweet should have one clear point. First tweet is the hook, last tweet is the call-to-action or summary.
+      STAGE 3 - PRIORITIZE: Rank insights by impact. Identify which works as the hook,
+      which are supporting points, which are examples. Not everything needs to be included.
 
-      4. DRAFT: Write each tweet. Stay under 280 characters per tweet. Use thread numbering (1/, 2/, etc.). Make each tweet standalone but connected.
+      STAGE 4 - STRUCTURE: Plan the thread flow. Map ranked insights to tweet positions.
+      Consider: hook → context → main points → examples → conclusion/CTA.
 
-      5. FORMAT: Produce the final thread in copy-paste ready format.
+      STAGE 5 - DRAFT: Write each tweet with character count. Stay under 280 chars.
+      Include thread numbering (1/, 2/, etc.).
 
-      Guidelines:
-      - Hooks matter: The first tweet determines if people read the rest
-      - One idea per tweet: Don't cram multiple points into one tweet
-      - Use line breaks within tweets for readability
-      - End with value: Summary, call-to-action, or invitation to discuss
+      STAGE 6 - REVIEW: Compare drafts against structure plan. Check each tweet for:
+      - Character limit compliance
+      - Clarity and punch
+      - Flow from previous tweet
+      - Standalone readability
+
+      STAGE 7 - FINAL: Produce polished, copy-paste ready output. Verify all checks pass.
+
+      Key principles:
+      - The hook determines if anyone reads the rest
+      - One idea per tweet—don't cram
+      - Each tweet should make sense if quoted alone
+      - End with value (summary, CTA, or invitation to discuss)
   harness_config:
     max_issues_per_turn: 5
-    max_patches_per_turn: 12
+    max_patches_per_turn: 15
 ---
+<!-- form id="twitter_thread" title="Content to Twitter Thread" -->
 
-{% form id="twitter_thread" title="Content to Twitter Thread" %}
+<!-- description ref="twitter_thread" -->
+A rigorous content transformation workflow: raw text → insights → prioritization → structure → drafts → review → final thread. Each stage enforces quality through structured tables and validation.
+<!-- /description -->
 
-{% description ref="twitter_thread" %}
-A content transformation workflow that converts raw text (transcripts, blog posts, notes, dictation) into a polished Twitter/X thread. Demonstrates multi-stage processing with validation at each step.
-{% /description %}
+<!-- group id="input" title="Input: Raw Content" -->
 
-{% group id="input" title="Raw Content Input" %}
+## Source Content
 
-{% field kind="string" id="raw_content" label="Raw Content" role="user" required=true minLength=200 %}{% /field %}
+<!-- field kind="string" id="raw_content" label="Raw Content" role="user" required=true minLength=200 --><!-- /field -->
 
-{% instructions ref="raw_content" %}
-Paste your raw content here. This can be:
-- A rough transcript from a talk or podcast
+<!-- instructions ref="raw_content" -->
+Paste your raw content. This can be:
+- A rough transcript (talk, podcast, voice memo)
 - A blog post or article draft
-- Meeting notes or brainstorm
-- Voice memo transcription
-- Any text you want to transform into a thread
+- Meeting notes, brainstorm, or research notes
+- Any text you want to transform
 
-The more content you provide, the richer the thread can be. Aim for at least a few paragraphs.
-{% /instructions %}
+Aim for at least a few paragraphs. More content = richer thread options.
+<!-- /instructions -->
 
-{% field kind="string" id="target_audience" label="Target Audience" role="user" maxLength=200 %}{% /field %}
+<!-- field kind="string" id="target_audience" label="Target Audience" role="user" maxLength=200 --><!-- /field -->
 
-{% instructions ref="target_audience" %}
-Optional: Who is this thread for? (e.g., "startup founders", "developers learning React", "product managers"). Helps tailor the tone and focus.
-{% /instructions %}
+<!-- instructions ref="target_audience" -->
+Who is this thread for? Examples:
+- "Startup founders building AI products"
+- "Developers learning system design"
+- "Product managers in B2B SaaS"
 
-{% field kind="string" id="thread_goal" label="Thread Goal" role="user" maxLength=200 %}{% /field %}
+Helps tailor tone, examples, and assumed knowledge level.
+<!-- /instructions -->
 
-{% instructions ref="thread_goal" %}
-Optional: What should readers take away? (e.g., "understand why forms matter for AI agents", "learn 5 key principles of good API design").
-{% /instructions %}
+<!-- field kind="string" id="thread_goal" label="Thread Goal" role="user" maxLength=300 --><!-- /field -->
 
-{% /group %}
+<!-- instructions ref="thread_goal" -->
+What should readers take away? Examples:
+- "Understand why structured forms improve AI agent reliability"
+- "Learn the 5 key principles of good API design"
+- "See why this approach to X is underrated"
+<!-- /instructions -->
 
-{% group id="cleanup" title="Stage 1: Content Cleanup" %}
+<!-- field kind="number" id="target_length" label="Target Thread Length" role="user" min=5 max=20 integer=true --><!-- /field -->
 
-{% description ref="cleanup" %}
-Clean up the raw content into readable prose before extracting insights.
-{% /description %}
+<!-- instructions ref="target_length" -->
+Desired number of tweets (5-20). Typical threads:
+- 5-7 tweets: Quick insight or single concept
+- 8-12 tweets: Moderate depth, multiple points
+- 12-20 tweets: Deep dive, comprehensive coverage
+<!-- /instructions -->
 
-{% field kind="string" id="cleaned_content" label="Cleaned Content" role="agent" required=true minLength=100 %}{% /field %}
+<!-- /group -->
 
-{% instructions ref="cleaned_content" %}
+<!-- group id="cleanup" title="Stage 1: Content Cleanup" -->
+
+## Cleaned Content
+
+<!-- field kind="string" id="cleaned_content" label="Cleaned Content" role="agent" required=true minLength=100 --><!-- /field -->
+
+<!-- instructions ref="cleaned_content" -->
 Edit the raw content into clean, readable prose:
-- Fix obvious transcription errors or typos
-- Remove filler words (um, uh, like, you know)
+- Fix transcription errors, typos, and grammatical issues
+- Remove filler words (um, uh, like, you know, basically)
 - Improve sentence flow and clarity
-- Keep the author's voice and key phrases
-- Don't add new ideas—just clean up what's there
-{% /instructions %}
+- Preserve the author's voice and distinctive phrases
+- Don't add new ideas—just clean what's there
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="analysis" title="Stage 2: Content Analysis" %}
+<!-- group id="insights" title="Stage 2: Extract Insights" -->
 
-{% description ref="analysis" %}
-Analyze the cleaned content to identify what makes it valuable and how to structure the thread.
-{% /description %}
+## Key Insights
 
-{% field kind="string" id="core_thesis" label="Core Thesis" role="agent" required=true maxLength=280 %}{% /field %}
+Extract every insight, claim, or idea worth sharing.
 
-{% instructions ref="core_thesis" %}
-What's the single most important point? This often becomes the hook or summary. Write it in ≤280 characters (tweet-length).
-{% /instructions %}
+<!-- field kind="table" id="insights_table" label="Insights" role="agent" required=true
+   columnIds=["insight", "why_matters", "type"]
+   columnLabels=["Insight/Claim", "Why It Matters", "Type"]
+   columnTypes=["string", "string", "string"]
+   minRows=5 maxRows=20 -->
 
-{% field kind="string_list" id="key_points" label="Key Points" role="agent" required=true minItems=3 maxItems=12 %}{% /field %}
+| Insight/Claim | Why It Matters | Type |
+|---------------|----------------|------|
 
-{% instructions ref="key_points" %}
-List the key points to cover in the thread. One point per line. These will roughly map to individual tweets. Order them for narrative flow.
-{% /instructions %}
+<!-- /field -->
 
-{% field kind="string" id="hook_angle" label="Hook Angle" role="agent" required=true maxLength=300 %}{% /field %}
+<!-- instructions ref="insights_table" -->
+For each insight from the cleaned content:
+- **Insight/Claim**: The core idea in one sentence
+- **Why It Matters**: Why should readers care? What's the payoff?
+- **Type**: categorize as one of:
+  - `thesis` - central argument
+  - `supporting` - backs up the thesis
+  - `example` - concrete illustration
+  - `context` - background/setup
+  - `contrarian` - challenges assumptions
+  - `actionable` - something readers can do
 
-{% instructions ref="hook_angle" %}
-What's the hook? What will make someone stop scrolling? Options:
-- Contrarian take: "Most people think X, but actually Y"
-- Promise of value: "Here's how to do X in 5 steps"
-- Story opener: "Last week I learned something that changed how I think about X"
-- Bold claim: "X is the most underrated skill in Y"
-{% /instructions %}
+Be thorough—extract MORE than you'll use. You'll prioritize in the next stage.
+<!-- /instructions -->
 
-{% field kind="string" id="call_to_action" label="Call to Action" role="agent" maxLength=200 %}{% /field %}
+<!-- /group -->
 
-{% instructions ref="call_to_action" %}
-How should the thread end? Options:
-- Invite discussion: "What's your experience with X?"
-- Offer more: "Follow for more on Y" or "Full post linked below"
-- Summarize: Restate the core insight
-- Challenge: "Try this and let me know what happens"
-{% /instructions %}
+<!-- group id="prioritize" title="Stage 3: Prioritize & Rank" -->
 
-{% /group %}
+## Prioritization
 
-{% group id="structure" title="Stage 3: Thread Structure" %}
+Not every insight makes the thread. Rank by impact and assign roles.
 
-{% description ref="structure" %}
-Plan the thread structure before writing individual tweets.
-{% /description %}
+<!-- field kind="table" id="priority_table" label="Ranked Insights" role="agent" required=true
+   columnIds=["rank", "insight_summary", "role", "include"]
+   columnLabels=["Rank", "Insight (summary)", "Thread Role", "Include?"]
+   columnTypes=["number", "string", "string", "string"]
+   minRows=5 maxRows=15 -->
 
-{% field kind="table" id="thread_outline" label="Thread Outline" role="agent" required=true
-   columnIds=["tweet_num", "purpose", "key_content"]
-   columnLabels=["#", "Purpose", "Key Content/Point"]
-   columnTypes=["number", "string", "string"]
-   minRows=4 maxRows=15 %}
-| # | Purpose | Key Content/Point |
-|---|---------|-------------------|
-{% /field %}
+| Rank | Insight (summary) | Thread Role | Include? |
+|------|-------------------|-------------|----------|
 
-{% instructions ref="thread_outline" %}
-Plan each tweet before writing. Include:
-- Tweet number (1, 2, 3...)
-- Purpose: What role does this tweet play? (hook, context, point, example, summary, CTA)
-- Key content: The main point or content for this tweet
+<!-- /field -->
 
-Example:
-| 1 | Hook | Contrarian opener about forms and AI |
-| 2 | Context | Why this matters now |
-| 3 | Point 1 | Forms have worked for humans for centuries |
-| ... | ... | ... |
-{% /instructions %}
+<!-- instructions ref="priority_table" -->
+Take insights from Stage 2 and prioritize:
+- **Rank**: 1 = highest impact, most compelling
+- **Insight**: Brief summary (reference the insight)
+- **Thread Role**: Where it fits in the thread:
+  - `hook` - attention-grabbing opener (need exactly 1)
+  - `context` - setup/background
+  - `main_point` - core argument support
+  - `example` - concrete illustration
+  - `pivot` - transition or "but here's the thing"
+  - `summary` - ties it together
+  - `cta` - call to action (need exactly 1)
+- **Include?**: `yes` or `no` (cut ruthlessly—not everything fits)
 
-{% /group %}
+Total "yes" should roughly match target thread length.
+<!-- /instructions -->
 
-{% group id="drafts" title="Stage 4: Tweet Drafts" %}
+<!-- field kind="string" id="hook_strategy" label="Hook Strategy" role="agent" required=true maxLength=400 --><!-- /field -->
 
-{% description ref="drafts" %}
-Write each tweet. The table enforces the character limit constraint.
-{% /description %}
+<!-- instructions ref="hook_strategy" -->
+What's the hook strategy? Choose one:
+- **Contrarian**: "Most people think X, but actually Y"
+- **Promise**: "Here's how to do X in N steps"
+- **Story**: "Last week I learned something that changed how I think about X"
+- **Bold claim**: "X is the most underrated skill in Y"
+- **Question**: "Why do most X fail at Y?"
 
-{% field kind="table" id="tweets" label="Tweet Drafts" role="agent" required=true
-   columnIds=["tweet_num", "content", "char_count"]
-   columnLabels=["#", "Tweet Content", "Chars"]
-   columnTypes=["number", "string", "number"]
-   minRows=4 maxRows=15 %}
-| # | Tweet Content | Chars |
-|---|---------------|-------|
-{% /field %}
+Write out your specific hook angle for this thread.
+<!-- /instructions -->
 
-{% instructions ref="tweets" %}
-Write each tweet. Rules:
-- Each tweet MUST be ≤280 characters (the Chars column helps you track)
-- Include the thread number prefix (1/, 2/, etc.) in the content
-- Use line breaks within tweets for readability when helpful
-- Each tweet should make sense on its own (people may see it quoted)
-- But also connect to form a narrative
+<!-- /group -->
 
-Example row:
-| 1 | 1/ Most AI agents fail not because they're not smart enough, but because they lack structure.
+<!-- group id="structure" title="Stage 4: Thread Structure" -->
 
-Here's why forms are the missing piece: | 142 |
-{% /instructions %}
+## Thread Plan
 
-{% /group %}
+Map the prioritized insights into a tweet-by-tweet structure.
 
-{% group id="output" title="Stage 5: Final Thread" %}
+<!-- field kind="table" id="structure_table" label="Thread Structure" role="agent" required=true
+   columnIds=["tweet_num", "role", "content_plan", "source_insight"]
+   columnLabels=["#", "Role", "Content Plan", "From Insight"]
+   columnTypes=["number", "string", "string", "string"]
+   minRows=5 maxRows=20 -->
 
-{% description ref="output" %}
+| # | Role | Content Plan | From Insight |
+|---|------|--------------|--------------|
+
+<!-- /field -->
+
+<!-- instructions ref="structure_table" -->
+Plan each tweet position:
+- **#**: Tweet number (1, 2, 3...)
+- **Role**: hook, context, main_point, example, pivot, summary, cta
+- **Content Plan**: What this tweet will say (not the final text, just the plan)
+- **From Insight**: Which insight from the priority table this uses (or "new" if synthesized)
+
+This is your blueprint. Drafting should follow this plan.
+<!-- /instructions -->
+
+<!-- /group -->
+
+<!-- group id="drafts" title="Stage 5: Draft Tweets" -->
+
+## Tweet Drafts
+
+Write each tweet following the structure plan.
+
+<!-- field kind="table" id="drafts_table" label="Tweet Drafts" role="agent" required=true
+   columnIds=["tweet_num", "draft_content", "char_count", "issues"]
+   columnLabels=["#", "Draft Content", "Chars", "Issues"]
+   columnTypes=["number", "string", "number", "string"]
+   minRows=5 maxRows=20 -->
+
+| # | Draft Content | Chars | Issues |
+|---|---------------|-------|--------|
+
+<!-- /field -->
+
+<!-- instructions ref="drafts_table" -->
+Write each tweet:
+- **#**: Tweet number, must include "N/" prefix in the content
+- **Draft Content**: The tweet text (must be ≤280 characters)
+- **Chars**: Character count (be accurate!)
+- **Issues**: Note any problems: "too long", "weak hook", "unclear", "missing link to previous"
+
+Rules:
+- Hard limit: 280 characters per tweet
+- Include thread number prefix (1/, 2/, etc.)
+- Each tweet should make sense if quoted alone
+- Line breaks within tweets are fine for readability
+<!-- /instructions -->
+
+<!-- /group -->
+
+<!-- group id="review" title="Stage 6: Review & Refine" -->
+
+## Review Checklist
+
+Verify each tweet against quality criteria.
+
+<!-- field kind="table" id="review_table" label="Tweet Review" role="agent" required=true
+   columnIds=["tweet_num", "under_280", "clear", "flows", "standalone", "revision_needed"]
+   columnLabels=["#", "≤280?", "Clear?", "Flows?", "Standalone?", "Revision"]
+   columnTypes=["number", "string", "string", "string", "string", "string"]
+   minRows=5 maxRows=20 -->
+
+| # | ≤280? | Clear? | Flows? | Standalone? | Revision |
+|---|-------|--------|--------|-------------|----------|
+
+<!-- /field -->
+
+<!-- instructions ref="review_table" -->
+Review each tweet:
+- **≤280?**: Is it under 280 characters? (yes/no)
+- **Clear?**: Is the point immediately clear? (yes/no)
+- **Flows?**: Does it connect naturally from the previous tweet? (yes/no/na for #1)
+- **Standalone?**: Would it make sense if someone only saw this tweet? (yes/no)
+- **Revision**: What needs fixing? Leave blank if good, otherwise note the issue.
+
+If any issues exist, address them before finalizing.
+<!-- /instructions -->
+
+<!-- field kind="string" id="revision_notes" label="Revision Notes" role="agent" maxLength=500 --><!-- /field -->
+
+<!-- instructions ref="revision_notes" -->
+If any tweets needed revision based on the review, note what you changed.
+Leave blank if no revisions were needed.
+<!-- /instructions -->
+
+<!-- /group -->
+
+<!-- group id="final" title="Stage 7: Final Thread" -->
+
+## Final Output
+
 The polished, copy-paste ready thread.
-{% /description %}
 
-{% field kind="string" id="final_thread" label="Formatted Thread" role="agent" required=true %}{% /field %}
+<!-- field kind="string" id="final_thread" label="Final Thread" role="agent" required=true --><!-- /field -->
 
-{% instructions ref="final_thread" %}
-Produce the final thread in copy-paste format. Format as:
+<!-- instructions ref="final_thread" -->
+Produce the final thread in copy-paste format:
 
-1/ [First tweet text]
+1/ [First tweet]
 
-2/ [Second tweet text]
+2/ [Second tweet]
 
-3/ [Third tweet text]
+3/ [Third tweet]
 
 ...
 
-(Double line breaks between tweets for easy copying)
-{% /instructions %}
+(Double line break between each tweet for easy copying)
+<!-- /instructions -->
 
-{% field kind="number" id="total_tweets" label="Total Tweet Count" role="agent" required=true min=3 max=25 integer=true %}{% /field %}
+<!-- field kind="number" id="total_tweets" label="Total Tweet Count" role="agent" required=true min=5 max=20 integer=true --><!-- /field -->
 
-{% field kind="checkboxes" id="quality_checks" label="Quality Checks" role="agent" checkboxMode="simple" required=true %}
-- [ ] Hook is compelling and specific {% #hook_check %}
-- [ ] Each tweet is under 280 characters {% #char_check %}
-- [ ] Thread has clear narrative flow {% #flow_check %}
-- [ ] Ends with clear CTA or summary {% #ending_check %}
-{% /field %}
+<!-- field kind="checkboxes" id="final_checklist" label="Final Quality Checklist" role="agent" checkboxMode="simple" required=true -->
 
-{% instructions ref="quality_checks" %}
-Verify the thread meets quality standards before completing.
-{% /instructions %}
+- [ ] Hook grabs attention and is specific to the content <!-- #hook_quality -->
+- [ ] Every tweet is under 280 characters <!-- #char_limit -->
+- [ ] Thread has clear narrative arc (setup → points → conclusion) <!-- #narrative_arc -->
+- [ ] Each tweet flows naturally from the previous one <!-- #flow_quality -->
+- [ ] Each tweet makes sense if read in isolation <!-- #standalone -->
+- [ ] Ends with clear CTA or memorable summary <!-- #ending_quality -->
+- [ ] No filler tweets—every tweet adds value <!-- #no_filler -->
 
-{% /group %}
+<!-- /field -->
 
-{% /form %}
+<!-- instructions ref="final_checklist" -->
+Verify ALL quality criteria are met before marking complete.
+Do not check a box unless you've verified it's true.
+<!-- /instructions -->
+
+<!-- /group -->
+
+<!-- /form -->
