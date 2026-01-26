@@ -37,65 +37,12 @@ Markform syntax is a good source format: token-efficient text you can read, diff
 version control. Structure is defined with HTML comment tags (`<!-- field -->`) that
 render invisibly on GitHub, so forms look like regular Markdown.
 
-## Why Do Agents Need Forms?
-
-For centuries, humans have used paper forms and
-[checklists](https://en.wikipedia.org/wiki/The_Checklist_Manifesto) to systematize
-complex processes. A form with instructions, field definitions, and validations is a
-concise way to share context: goals, background knowledge, process rules, and state
-(memory). I don’t think AI changes this essential aspect of knowledge work.
-
-Most agent frameworks focus on *prompts* and *flow* (the how) over the *structure* of
-results (the what).
-But for deep research or other multi-step workflows, you need precise
-control over intermediate states and final output.
-You don’t want that structure in a GUI (not token-friendly), in code (hard to update),
-or dependent on model whims (changes unpredictably with model updates).
-
-Forms solve this. Forms codify operational excellence.
-They’re easy to read, easy to edit, and enforce standards.
-Because LLMs handle Markdown well, agents can also help create and improve the forms
-themselves—closing the meta-loop.
-
-It’s time to bring bureaucracy to the agents!
-See [the FAQ](#faq) for more on the design.
-
-## Quick Start
-
-```bash
-# Copy example forms to ./forms/ and run one interactively.
-# Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env) for research examples
-npx markform@latest examples
-
-# Read the docs (tell your agents to run these; they are agent-friendly!)
-npx markform  # CLI help
-npx markform readme   # This file
-npx markform docs  # Quick reference for writing Markforms
-npx markform spec  # Read the full spec
-```
-
-The `markform examples` command copies some sample forms to `./forms` and prompts you to
-fill in a form interactively and then optionally have an agent complete it.
-Pick `movie-research-demo.form.md` for a quick example.
-
-## Installation
-
-Requires Node.js 20+.
-
-```bash
-# As a global CLI
-npm install -g markform
-
-# Or as a project dependency
-npm install markform
-```
-
-## Example: Research a Movie
+## Simple Example: Research a Movie
 
 ### Form Definition
 
-A `.form.md` file combines YAML frontmatter with HTML comment tags that define structure.
-The text can be any Markdown.
+A `.form.md` file combines YAML frontmatter with HTML comment tags that define
+structure. The text can be any Markdown.
 Here is the
 [movie-research-demo.form.md](https://github.com/jlevy/markform/blob/main/packages/markform/examples/movie-research/movie-research-demo.form.md):
 
@@ -154,6 +101,7 @@ Fill in scores and vote counts from each source:
 - IMDB: Rating (1.0-10.0 scale), vote count
 - RT Critics: Tomatometer (0-100%), review count
 - RT Audience: Audience Score (0-100%), rating count
+
 <!-- /instructions -->
 
 <!-- /group -->
@@ -161,10 +109,19 @@ Fill in scores and vote counts from each source:
 ```
 
 Fields have types defined by the attributes.
-A field can have `role="user"` (filled interactively) or `role="agent"` (filled by an agent).
-Values are filled in incrementally, just like any form.
+A field can have `role="user"` (filled interactively) or `role="agent"` (filled by an
+agent). Values are filled in incrementally, just like any form.
 
 ### Filled Form
+
+The key point is that with this structure **a Markdown file automatically gets a schema
+and a tool API.**
+
+Agents or users can fill in values using a TypeScript API or via agent tool calls.
+
+And agents find this format **highly context efficient**. All information needed to fill
+in the form is right there, not in long conversation history.
+And it can be done incrementally, a few fields at a time.
 
 Once filled in, values appear directly inside the tags, in Markdown format:
 
@@ -212,8 +169,8 @@ The Shawshank Redemption
 Run `npx markform examples` to copy examples, then `npx markform run` and select
 `Movie Research Demo` to fill it.
 
-A form can be exported as the filled form (Markform), as a report (plain Markdown),
-as values (YAML or JSON), or as a JSON Schema (just the structure).
+A form can be exported as the filled form (Markform), as a report (plain Markdown), as
+values (YAML or JSON), or as a JSON Schema (just the structure).
 
 The report output (using `gpt-5-mini` to fill it in) looks like:
 
@@ -299,6 +256,59 @@ values:
 ```
 
 </details>
+
+## Why Do Agents Need Forms?
+
+For centuries, humans have used paper forms and
+[checklists](https://en.wikipedia.org/wiki/The_Checklist_Manifesto) to systematize
+complex processes. A form with instructions, field definitions, and validations is a
+concise way to share context: goals, background knowledge, process rules, and state
+(memory). I don’t think AI changes this essential aspect of knowledge work.
+
+Most agent frameworks focus on *prompts* and *flow* (the how) over the *structure* of
+results (the what).
+But for deep research or other multi-step workflows, you need precise
+control over intermediate states and final output.
+You don’t want that structure in a GUI (not token-friendly), in code (hard to update),
+or dependent on model whims (changes unpredictably with model updates).
+
+Forms solve this. Forms codify operational excellence.
+They’re easy to read, easy to edit, and enforce standards.
+Because LLMs handle Markdown well, agents can also help create and improve the forms
+themselves—closing the meta-loop.
+
+It’s time to bring bureaucracy to the agents!
+See [the FAQ](#faq) for more on the design.
+
+## Quick Start
+
+```bash
+# Copy example forms to ./forms/ and run one interactively.
+# Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env) for research examples
+npx markform@latest examples
+
+# Read the docs (tell your agents to run these; they are agent-friendly!)
+npx markform  # CLI help
+npx markform readme   # This file
+npx markform docs  # Quick reference for writing Markforms
+npx markform spec  # Read the full spec
+```
+
+The `markform examples` command copies some sample forms to `./forms` and prompts you to
+fill in a form interactively and then optionally have an agent complete it.
+Pick `movie-research-demo.form.md` for a quick example.
+
+## Installation
+
+Requires Node.js 20+.
+
+```bash
+# As a global CLI
+npm install -g markform
+
+# Or as a project dependency
+npm install markform
+```
 
 ### More Example Forms
 
