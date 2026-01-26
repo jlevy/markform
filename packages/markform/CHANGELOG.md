@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.17
+
+### Patch Changes
+
+- 56d1cc2: Add implicit checkboxes feature and content preservation
+
 ## 0.1.16
 
 ### Patch Changes
