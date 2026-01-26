@@ -24,6 +24,8 @@ import type {
   ParsedForm,
   RunMode,
   SyntaxStyle,
+  TagRegion,
+  TagType,
 } from './coreTypes.js';
 import { RunModeSchema } from './coreTypes.js';
 import {
@@ -155,6 +157,210 @@ function extractFrontmatter(ast: Node): FrontmatterResult {
     }
     throw new MarkformParseError('Failed to parse frontmatter YAML');
   }
+}
+
+/**
+ * Extract the raw source content minus frontmatter.
+ * This is the content that will be used for splice-based serialization.
+ */
+function extractRawSource(preprocessed: string): string {
+  // YAML frontmatter is delimited by --- at start and end
+  const frontmatterRegex = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
+  const frontmatterMatch = frontmatterRegex.exec(preprocessed);
+  if (frontmatterMatch) {
+    return preprocessed.slice(frontmatterMatch[0].length);
+  }
+  return preprocessed;
+}
+
+/**
+ * Build a line-to-offset mapping for converting Markdoc line numbers to byte offsets.
+ * Returns an array where lineOffsets[lineNumber] = byte offset of line start.
+ * Line numbers are 0-indexed (Markdoc uses 0-indexed lines).
+ */
+function buildLineOffsets(source: string): number[] {
+  const offsets: number[] = [0]; // Line 0 starts at offset 0
+  for (let i = 0; i < source.length; i++) {
+    if (source[i] === '\n') {
+      offsets.push(i + 1); // Next line starts after the newline
+    }
+  }
+  return offsets;
+}
+
+/**
+ * Extract tag region from a Markdoc AST node.
+ * Uses the node's location property (line numbers) and converts to byte offsets.
+ */
+function extractTagRegion(
+  node: Node,
+  tagType: TagType,
+  tagId: Id,
+  lineOffsets: number[],
+  frontmatterLineCount: number,
+  sourceLength: number,
+  hasValue?: boolean,
+): TagRegion | null {
+  // Markdoc nodes have location with start/end line numbers (0-indexed)
+  const location = node.location;
+  if (!location?.start || !location?.end) {
+    return null;
+  }
+
+  // Adjust line numbers for frontmatter removal
+  // rawSource starts after frontmatter, so we need to adjust the line numbers
+  const startLine = location.start.line - frontmatterLineCount;
+  const endLine = location.end.line - frontmatterLineCount;
+
+  // Skip if the tag is in the frontmatter area (shouldn't happen, but be safe)
+  if (startLine < 0 || endLine < 0) {
+    return null;
+  }
+
+  // Convert line numbers to byte offsets
+  // Markdoc's end line is the line containing the closing tag
+  // We need to find the end of that line
+  const startOffset = lineOffsets[startLine] ?? 0;
+  let endOffset: number;
+
+  // For end offset, we want the end of the end line (start of next line or end of source)
+  if (endLine + 1 < lineOffsets.length) {
+    endOffset = lineOffsets[endLine + 1] ?? sourceLength;
+  } else {
+    endOffset = sourceLength;
+  }
+
+  // Sanity check: make sure offsets are valid
+  if (startOffset >= endOffset || startOffset < 0 || endOffset > sourceLength) {
+    return null;
+  }
+
+  return {
+    tagId,
+    tagType,
+    startOffset,
+    endOffset,
+    ...(hasValue !== undefined && { includesValue: hasValue }),
+  };
+}
+
+/**
+ * Collect all tag regions from the AST for content preservation.
+ * Traverses the AST and extracts positions of all Markform tags.
+ */
+function collectTagRegions(
+  ast: Node,
+  rawSource: string,
+  frontmatterLineCount: number,
+  responsesByFieldId: Record<Id, FieldResponse>,
+): TagRegion[] {
+  const regions: TagRegion[] = [];
+  const lineOffsets = buildLineOffsets(rawSource);
+  const sourceLength = rawSource.length;
+
+  function traverse(node: Node): void {
+    if (!node || typeof node !== 'object') {
+      return;
+    }
+
+    // Check for form tag
+    if (isTagNode(node, 'form')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        const region = extractTagRegion(
+          node,
+          'form',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for group tag
+    if (isTagNode(node, 'group')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        const region = extractTagRegion(
+          node,
+          'group',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for field tag
+    if (isTagNode(node, 'field')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        // Check if field has a value by looking at responsesByFieldId
+        const hasValue = responsesByFieldId[id]?.value !== undefined;
+        const region = extractTagRegion(
+          node,
+          'field',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+          hasValue,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for note tag
+    if (isTagNode(node, 'note')) {
+      const id = getStringAttr(node, 'id');
+      if (id) {
+        const region = extractTagRegion(
+          node,
+          'note',
+          id,
+          lineOffsets,
+          frontmatterLineCount,
+          sourceLength,
+        );
+        if (region) regions.push(region);
+      }
+    }
+
+    // Check for documentation tags (instructions, description, etc.)
+    const DOC_TAGS = ['instructions', 'description', 'documentation'];
+    if (node.type === 'tag' && node.tag && DOC_TAGS.includes(node.tag)) {
+      const ref = getStringAttr(node, 'ref');
+      // Use ref as the ID for doc blocks, or generate one
+      const docId = ref ?? `doc_${regions.length}`;
+      const region = extractTagRegion(
+        node,
+        'documentation',
+        docId,
+        lineOffsets,
+        frontmatterLineCount,
+        sourceLength,
+      );
+      if (region) regions.push(region);
+    }
+
+    // Recurse into children
+    if (node.children && Array.isArray(node.children)) {
+      for (const child of node.children) {
+        traverse(child);
+      }
+    }
+  }
+
+  traverse(ast);
+
+  // Sort by startOffset to ensure document order
+  regions.sort((a, b) => a.startOffset - b.startOffset);
+
+  return regions;
 }
 
 // =============================================================================
@@ -662,6 +868,12 @@ export function parseForm(markdown: string): ParsedForm {
   const syntaxStyle: SyntaxStyle = detectSyntaxStyle(markdown);
   const preprocessed = preprocessCommentSyntax(markdown);
 
+  // Step 0.5: Extract raw source (content minus frontmatter) for content preservation
+  const rawSource = extractRawSource(preprocessed);
+  // Calculate the number of lines in frontmatter for line number adjustment
+  const frontmatter = preprocessed.slice(0, preprocessed.length - rawSource.length);
+  const frontmatterLineCount = (frontmatter.match(/\n/g) ?? []).length;
+
   // Step 1: Parse Markdoc AST (raw AST, not transformed)
   // Markdoc natively handles frontmatter extraction and stores it in ast.attributes.frontmatter
   const ast = Markdoc.parse(preprocessed);
@@ -715,6 +927,9 @@ export function parseForm(markdown: string): ParsedForm {
   // Step 5: Extract doc blocks (needs idIndex to validate refs)
   const docs = extractDocBlocks(ast, idIndex);
 
+  // Step 6: Collect tag regions for content preservation
+  const tagRegions = collectTagRegions(ast, rawSource, frontmatterLineCount, responsesByFieldId);
+
   return {
     schema,
     responsesByFieldId,
@@ -724,5 +939,7 @@ export function parseForm(markdown: string): ParsedForm {
     idIndex,
     ...(metadata && { metadata }),
     syntaxStyle,
+    rawSource,
+    tagRegions,
   };
 }

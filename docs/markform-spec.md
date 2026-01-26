@@ -1033,17 +1033,24 @@ Markform files may contain content outside of Markform tags. This content is han
 
 | Content Type | Policy |
 |--------------|--------|
-| HTML comments (`
+| Markdown content (headings, paragraphs, lists, etc.) | Preserved; structure must be equivalent after round-trip |
+| HTML comments (`<!-- ... -->`) | Preserved verbatim on round-trip |
+| Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored (not preserved) |
 
-<!-- ... -->
+**Content preservation semantics (*required*):**
 
-`) | Allowed, preserved verbatim on round-trip |
-| Markdown headings/text between groups | Allowed, but NOT preserved on canonical serialize |
-| Arbitrary Markdoc tags (non-Markform) | Parse warning, ignored |
+- *required:* All markdown content outside of Markform tags MUST be preserved on
+  canonical serialization
 
-**MF/0.1 scope:** Only HTML comments are guaranteed to be preserved. Do not rely on
-non-Markform content surviving serialization. Future versions may support full
-content preservation via raw slicing.
+- *required:* The markdown structure MUST be equivalent after round-trip (same headings,
+  paragraphs, lists, code blocks, etc.)
+
+- *recommended:* Visual appearance SHOULD be preserved (same rendering output)
+
+- Superficial adjustments are permitted: line wrapping, whitespace normalization,
+  stylistic conventions for Markform tag formatting (attribute ordering, spacing)
+
+- The semantic content and document structure must remain intact
 
 #### Serialization Strategy
 
@@ -1052,7 +1059,9 @@ requirements beyond what it provides—see [Formatting][markdoc-format]):
 
 **MF/0.1 content restrictions for canonical serialization (*required*):**
 
-To ensure deterministic round-tripping without building a full markdown serializer:
+The following restrictions apply to content *within* Markform elements to ensure
+deterministic parsing and validation. General markdown content outside of Markform
+tags is preserved via raw slicing (retaining the original text):
 
 | Content type | Restriction |
 |--------------|-------------|

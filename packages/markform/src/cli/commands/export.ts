@@ -60,101 +60,106 @@ export function registerExportCommand(program: Command): void {
       'Export form as markform (default), markdown (readable), or json/yaml for structured data',
     )
     .option('--compact', 'Output compact JSON (no formatting, only for JSON format)')
-    .action(async (file: string, options: { compact?: boolean }, cmd: Command) => {
-      const ctx = getCommandContext(cmd);
+    .option('--normalize', 'Regenerate form without preserving external content')
+    .action(
+      async (file: string, options: { compact?: boolean; normalize?: boolean }, cmd: Command) => {
+        const ctx = getCommandContext(cmd);
 
-      // Determine format: map global format to export format
-      // json/yaml from global --format work for export
-      // console/plaintext from global map to markform (export's default)
-      let format: ExportFormat = 'markform';
-      if (ctx.format === 'json') {
-        format = 'json';
-      } else if (ctx.format === 'yaml') {
-        format = 'yaml';
-      } else if (ctx.format === 'markdown') {
-        format = 'markdown';
-      } else if (ctx.format === 'markform') {
-        format = 'markform';
-      }
-      // "console" and "plaintext" default to "markform" for export
-
-      try {
-        logVerbose(ctx, `Reading file: ${file}`);
-        const content = await readFile(file);
-
-        logVerbose(ctx, 'Parsing form...');
-        const form = parseForm(content);
-
-        // For markform format, output canonical markdoc markdown
-        if (format === 'markform') {
-          console.log(serializeForm(form));
-          return;
+        // Determine format: map global format to export format
+        // json/yaml from global --format work for export
+        // console/plaintext from global map to markform (export's default)
+        let format: ExportFormat = 'markform';
+        if (ctx.format === 'json') {
+          format = 'json';
+        } else if (ctx.format === 'yaml') {
+          format = 'yaml';
+        } else if (ctx.format === 'markdown') {
+          format = 'markdown';
+        } else if (ctx.format === 'markform') {
+          format = 'markform';
         }
+        // "console" and "plaintext" default to "markform" for export
 
-        // For markdown format, output plain readable markdown
-        if (format === 'markdown') {
-          console.log(serializeRawMarkdown(form));
-          return;
-        }
+        try {
+          logVerbose(ctx, `Reading file: ${file}`);
+          const content = await readFile(file);
 
-        // For JSON/YAML, build the full structured output
-        const schema: ExportSchema = {
-          id: form.schema.id,
-          title: form.schema.title,
-          groups: form.schema.groups.map((group) => ({
-            id: group.id,
-            title: group.title,
-            children: group.children.map((field) => ({
-              id: field.id,
-              kind: field.kind,
-              label: field.label,
-              required: field.required,
-              ...(field.kind === 'single_select' ||
-              field.kind === 'multi_select' ||
-              field.kind === 'checkboxes'
-                ? {
-                    options: field.options.map((opt) => ({
-                      id: opt.id,
-                      label: opt.label,
-                    })),
-                  }
-                : {}),
-              ...(field.placeholder ? { placeholder: field.placeholder } : {}),
-              ...(field.examples && field.examples.length > 0 ? { examples: field.examples } : {}),
+          logVerbose(ctx, 'Parsing form...');
+          const form = parseForm(content);
+
+          // For markform format, output canonical markdoc markdown
+          if (format === 'markform') {
+            console.log(serializeForm(form, { preserveContent: !options.normalize }));
+            return;
+          }
+
+          // For markdown format, output plain readable markdown
+          if (format === 'markdown') {
+            console.log(serializeRawMarkdown(form));
+            return;
+          }
+
+          // For JSON/YAML, build the full structured output
+          const schema: ExportSchema = {
+            id: form.schema.id,
+            title: form.schema.title,
+            groups: form.schema.groups.map((group) => ({
+              id: group.id,
+              title: group.title,
+              children: group.children.map((field) => ({
+                id: field.id,
+                kind: field.kind,
+                label: field.label,
+                required: field.required,
+                ...(field.kind === 'single_select' ||
+                field.kind === 'multi_select' ||
+                field.kind === 'checkboxes'
+                  ? {
+                      options: field.options.map((opt) => ({
+                        id: opt.id,
+                        label: opt.label,
+                      })),
+                    }
+                  : {}),
+                ...(field.placeholder ? { placeholder: field.placeholder } : {}),
+                ...(field.examples && field.examples.length > 0
+                  ? { examples: field.examples }
+                  : {}),
+              })),
             })),
-          })),
-        };
+          };
 
-        // Extract values from responses for export
-        const values: Record<string, FieldValue> = {};
-        for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
-          if (response.state === 'answered' && response.value) {
-            values[fieldId] = response.value;
+          // Extract values from responses for export
+          const values: Record<string, FieldValue> = {};
+          for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
+            if (response.state === 'answered' && response.value) {
+              values[fieldId] = response.value;
+            }
           }
-        }
 
-        const output: ExportOutput = {
-          schema,
-          values,
-          notes: form.notes,
-          markdown: serializeForm(form),
-        };
+          const output: ExportOutput = {
+            schema,
+            values,
+            notes: form.notes,
+            markdown: serializeForm(form, { preserveContent: !options.normalize }),
+          };
 
-        // Output in JSON or YAML format
-        if (format === 'json') {
-          if (options.compact) {
-            console.log(JSON.stringify(output));
+          // Output in JSON or YAML format
+          if (format === 'json') {
+            if (options.compact) {
+              console.log(JSON.stringify(output));
+            } else {
+              console.log(JSON.stringify(output, null, 2));
+            }
           } else {
-            console.log(JSON.stringify(output, null, 2));
+            // YAML format
+            console.log(YAML.stringify(output));
           }
-        } else {
-          // YAML format
-          console.log(YAML.stringify(output));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          logError(message);
+          process.exit(1);
         }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(message);
-        process.exit(1);
-      }
-    });
+      },
+    );
 }

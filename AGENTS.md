@@ -35,7 +35,7 @@ Work is NOT complete until `git push` succeeds.
 
 - NEVER stop before pushing - that leaves work stranded locally
 
-- NEVER say “ready to push when you are” - YOU must push
+- NEVER say "ready to push when you are" - YOU must push
 
 - If push fails, resolve and retry until it succeeds
 
@@ -67,7 +67,7 @@ just lightweight issues managed from the CLI.
 
 # SESSION CLOSING PROTOCOL
 
-**CRITICAL**: Before saying “done” or “complete”, you MUST run this checklist:
+**CRITICAL**: Before saying "done" or "complete", you MUST run this checklist:
 
 ```
 [ ] 1. Stage and commit: git add + git commit
@@ -84,7 +84,7 @@ just lightweight issues managed from the CLI.
 ### CI: Wait for `--watch` to finish
 
 The `--watch` flag blocks until ALL checks complete.
-Do NOT see “passing” in early output and move on—wait for the **final summary** showing
+Do NOT see "passing" in early output and move on—wait for the **final summary** showing
 all checks passed.
 
 ### tbd: Update issues and sync
@@ -128,7 +128,7 @@ Every session must end with tbd in a clean state:
 
 - `tbd dep add <issue> <depends-on>` - Add dependency (issue depends on depends-on)
 - `tbd blocked` - Show all blocked issues
-- `tbd show <id>` - See what’s blocking/blocked by this issue
+- `tbd show <id>` - See what's blocking/blocked by this issue
 
 ### Sync & Collaboration
 

@@ -351,6 +351,17 @@ export interface SerializeOptions {
    * defaulting to 'tags' if not detected.
    */
   syntaxStyle?: SyntaxStyle;
+  /**
+   * Whether to preserve content outside Markform tags during serialization.
+   * - true (default): Use splice-based serialization to preserve markdown content
+   *   outside Markform tags (headings, paragraphs, code blocks, etc.)
+   * - false: Regenerate entire document from structured data
+   *
+   * When true and rawSource/tagRegions are available, content preservation uses
+   * "raw slicing" - keeping original text and only replacing Markform tag regions.
+   * Falls back to regeneration if rawSource is unavailable.
+   */
+  preserveContent?: boolean;
 }
 
 // =============================================================================
@@ -1442,13 +1453,303 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
 /**
  * Serialize a ParsedForm to canonical Markdoc markdown format.
  *
+ * Supports two modes:
+ * 1. Content-preserving (default): When rawSource is available, preserves markdown
+ *    content outside Markform tags using splice-based serialization.
+ * 2. Regeneration: Builds entire document from structured data.
+ *
  * @param form - The parsed form to serialize
  * @param opts - Serialization options
  * @returns The canonical markdown string
  */
 export function serializeForm(form: ParsedForm, opts?: SerializeOptions): string {
   const specVersion = opts?.specVersion ?? MF_SPEC_VERSION;
+  const preserveContent = opts?.preserveContent ?? true;
 
+  // Determine output syntax style:
+  // 1. Use explicit option if provided
+  // 2. Fall back to form's detected syntax style
+  // 3. Default to 'tags'
+  const syntaxStyle = opts?.syntaxStyle ?? form.syntaxStyle ?? 'tags';
+
+  // Try content-preserving serialization if:
+  // - preserveContent is enabled (default)
+  // - rawSource is available
+  // - tagRegions are available
+  if (preserveContent && form.rawSource && form.tagRegions) {
+    const preserved = serializeWithContentPreservation(form, specVersion, syntaxStyle);
+    if (preserved !== null) {
+      return preserved;
+    }
+    // Fall through to regeneration if preservation failed
+  }
+
+  // Regeneration mode: build from structured data
+  return serializeFromScratch(form, specVersion, syntaxStyle);
+}
+
+/**
+ * Check if position is at the start of a line.
+ */
+function isAtLineStart(input: string, pos: number): boolean {
+  if (pos === 0) return true;
+  return input[pos - 1] === '\n';
+}
+
+/**
+ * Match a fenced code block opening at the given position.
+ * Returns fence info if found, null otherwise.
+ * Handles 0-3 leading spaces per CommonMark spec.
+ */
+function matchFenceOpening(
+  input: string,
+  pos: number,
+): { char: string; length: number; endPos: number } | null {
+  // Check for 0-3 leading spaces (4+ spaces = indented code block, not fence)
+  let indent = 0;
+  let i = pos;
+  while (i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // 4+ spaces means this is not a fenced code block per CommonMark
+  if (indent >= 4) {
+    return null;
+  }
+
+  // Check for fence character (` or ~)
+  const fenceChar = input[i];
+  if (fenceChar !== '`' && fenceChar !== '~') {
+    return null;
+  }
+
+  // Count consecutive fence characters (need at least 3)
+  let fenceLength = 0;
+  while (i + fenceLength < input.length && input[i + fenceLength] === fenceChar) {
+    fenceLength++;
+  }
+
+  if (fenceLength < 3) {
+    return null;
+  }
+
+  // Find end of line
+  let endOfLine = i + fenceLength;
+  while (endOfLine < input.length && input[endOfLine] !== '\n') {
+    endOfLine++;
+  }
+  if (endOfLine < input.length) {
+    endOfLine++; // Include the newline
+  }
+
+  return { char: fenceChar, length: fenceLength, endPos: endOfLine };
+}
+
+/**
+ * Check if position matches a closing fence for the given opening fence.
+ */
+function matchFenceClosing(
+  input: string,
+  pos: number,
+  fenceChar: string,
+  fenceLength: number,
+): number {
+  // Check for 0-3 leading spaces
+  let indent = 0;
+  let i = pos;
+  while (indent < 4 && i < input.length && input[i] === ' ') {
+    indent++;
+    i++;
+  }
+
+  // Check for matching fence character
+  if (input[i] !== fenceChar) {
+    return -1;
+  }
+
+  // Count consecutive fence characters (need at least fenceLength)
+  let closingLength = 0;
+  while (i + closingLength < input.length && input[i + closingLength] === fenceChar) {
+    closingLength++;
+  }
+
+  if (closingLength < fenceLength) {
+    return -1;
+  }
+
+  // Rest of line must be whitespace only (or end of string)
+  let afterFence = i + closingLength;
+  while (afterFence < input.length && input[afterFence] !== '\n') {
+    if (input[afterFence] !== ' ' && input[afterFence] !== '\t') {
+      return -1;
+    }
+    afterFence++;
+  }
+
+  // Return position after the closing fence line
+  if (afterFence < input.length) {
+    afterFence++; // Include the newline
+  }
+  return afterFence;
+}
+
+/**
+ * Find the form tag boundaries in rawSource, skipping code blocks.
+ * Returns [startOffset, endOffset] where:
+ * - startOffset: position where {% form (or <!-- form) starts
+ * - endOffset: position just after {% /form %} (or <!-- /form -->)
+ *
+ * Code blocks (fenced with ``` or ~~~) are skipped to avoid matching
+ * form tag examples in documentation or code samples.
+ *
+ * Returns null if form boundaries cannot be found.
+ */
+function findFormBoundaries(rawSource: string): [number, number] | null {
+  const openPattern = /(?:{%\s*form\s|<!--\s*form\s)/g;
+  const closePattern = /{%\s*\/form\s*%}|<!--\s*\/form\s*-->/g;
+
+  let startOffset: number | null = null;
+  let endOffset: number | null = null;
+
+  let i = 0;
+  let inFencedCode = false;
+  let fenceChar = '';
+  let fenceLength = 0;
+
+  while (i < rawSource.length) {
+    // Check for fenced code block at line start
+    if (!inFencedCode && isAtLineStart(rawSource, i)) {
+      const fence = matchFenceOpening(rawSource, i);
+      if (fence) {
+        inFencedCode = true;
+        fenceChar = fence.char;
+        fenceLength = fence.length;
+        i = fence.endPos;
+        continue;
+      }
+    }
+
+    // Check for closing fence
+    if (inFencedCode && isAtLineStart(rawSource, i)) {
+      const closePos = matchFenceClosing(rawSource, i, fenceChar, fenceLength);
+      if (closePos !== -1) {
+        inFencedCode = false;
+        i = closePos;
+        continue;
+      }
+    }
+
+    // Skip if inside fenced code block
+    if (inFencedCode) {
+      // Move to next line
+      while (i < rawSource.length && rawSource[i] !== '\n') {
+        i++;
+      }
+      if (i < rawSource.length) {
+        i++; // Skip the newline
+      }
+      continue;
+    }
+
+    // Look for opening form tag (first one found)
+    if (startOffset === null) {
+      openPattern.lastIndex = i;
+      const openMatch = openPattern.exec(rawSource);
+      if (openMatch?.index === i) {
+        startOffset = i;
+      }
+    }
+
+    // Look for closing form tag (track the last one found)
+    closePattern.lastIndex = i;
+    const closeMatch = closePattern.exec(rawSource);
+    if (closeMatch?.index === i) {
+      endOffset = i + closeMatch[0].length;
+    }
+
+    i++;
+  }
+
+  if (startOffset === null || endOffset === null) {
+    return null;
+  }
+
+  return [startOffset, endOffset];
+}
+
+/**
+ * Serialize using content-preserving (splice-based) approach.
+ *
+ * Strategy:
+ * 1. Preserve content BEFORE the form tag (intro markdown)
+ * 2. Regenerate the form tag and its contents (canonical format)
+ * 3. Preserve content AFTER the form tag (footer markdown)
+ *
+ * This approach:
+ * - Preserves markdown content outside Markform tags (headings, paragraphs, etc.)
+ * - Ensures Markform tags are in canonical format (normalization)
+ * - Handles value changes correctly (regenerated content reflects current state)
+ *
+ * Returns null if preservation is not possible.
+ */
+function serializeWithContentPreservation(
+  form: ParsedForm,
+  specVersion: string,
+  syntaxStyle: SyntaxStyle,
+): string | null {
+  if (!form.rawSource) {
+    return null;
+  }
+
+  // Find actual form boundaries using regex (more reliable than AST locations)
+  const boundaries = findFormBoundaries(form.rawSource);
+  if (!boundaries) {
+    return null;
+  }
+
+  const [formStart, formEnd] = boundaries;
+
+  // Build fresh frontmatter (always regenerated with current metadata)
+  const frontmatter = buildFrontmatter(form.metadata, specVersion);
+
+  // Extract content before and after the form tag
+  const contentBefore = form.rawSource.slice(0, formStart);
+  const contentAfter = form.rawSource.slice(formEnd);
+
+  // Serialize the form body in canonical format
+  const formBody = serializeFormSchema(form.schema, form.responsesByFieldId, form.docs, form.notes);
+
+  // Combine: frontmatter + preserved before + regenerated form + preserved after
+  // Ensure there's always a blank line after frontmatter for consistency with scratch mode
+  let result = frontmatter + '\n';
+  if (!contentBefore.startsWith('\n')) {
+    result += '\n'; // Add blank line if original didn't have one
+  }
+  result += contentBefore + formBody + contentAfter;
+
+  // Ensure trailing newline
+  if (!result.endsWith('\n')) {
+    result += '\n';
+  }
+
+  // Transform to HTML comment syntax if requested
+  if (syntaxStyle === 'comments') {
+    result = postprocessToCommentSyntax(result);
+  }
+
+  return result;
+}
+
+/**
+ * Serialize form from scratch (regeneration mode).
+ * Used when content preservation is disabled or not possible.
+ */
+function serializeFromScratch(
+  form: ParsedForm,
+  specVersion: string,
+  syntaxStyle: SyntaxStyle,
+): string {
   // Build frontmatter from metadata (preserves roles, instructions, harness config, run_mode)
   const frontmatter = buildFrontmatter(form.metadata, specVersion);
 
@@ -1456,12 +1757,6 @@ export function serializeForm(form: ParsedForm, opts?: SerializeOptions): string
   const body = serializeFormSchema(form.schema, form.responsesByFieldId, form.docs, form.notes);
 
   let result = `${frontmatter}\n\n${body}\n`;
-
-  // Determine output syntax style:
-  // 1. Use explicit option if provided
-  // 2. Fall back to form's detected syntax style
-  // 3. Default to 'tags'
-  const syntaxStyle = opts?.syntaxStyle ?? form.syntaxStyle ?? 'tags';
 
   // Transform to HTML comment syntax if requested
   if (syntaxStyle === 'comments') {
