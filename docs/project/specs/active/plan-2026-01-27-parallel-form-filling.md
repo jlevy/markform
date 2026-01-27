@@ -112,9 +112,42 @@ This is a three-phase effort:
 
 ### Design: The `parallel` Attribute
 
-Add a `parallel` attribute to **both fields and groups**. Items sharing the same
-`parallel` value can be executed concurrently. Items without `parallel` are sequential
-by default (depend on all prior items completing).
+Add a `parallel` attribute to **top-level fields and groups** (items directly under the
+form tag). Items sharing the same `parallel` value can be executed concurrently by
+separate agents. Items without `parallel` remain in "loose serial" mode — filled by a
+single agent in whatever order it chooses.
+
+#### Current Model: Loose Serial
+
+Today, all forms operate in what we call **loose serial** mode: a single agent sees all
+fields and fills them in whatever order it deems appropriate. There is no enforced
+ordering — the agent may fill field 10 before field 3 if it wants. Dependencies between
+fields are implicit (the agent uses its judgment).
+
+This mode is preserved exactly as-is. The `parallel` attribute does not change the
+behavior of any non-annotated items. It only adds the *option* for a parallel-aware
+harness to spawn concurrent agents for annotated items.
+
+#### What `parallel` Means
+
+`parallel` is a **pure concurrency hint**. It tells the harness: "these items are
+independent and can be worked on by separate agents at the same time." That is the entire
+semantic — no barriers, no ordering constraints, no implicit dependencies.
+
+Specifically:
+- Items **with** `parallel` may be assigned to separate concurrent agents, one per item
+  (or per batch member).
+- Items **without** `parallel` remain in the default loose-serial pool, filled by the
+  primary agent in whatever order it chooses.
+- There is **no barrier** between parallel batches and serial items. The harness does not
+  wait for parallel items to finish before the primary agent continues with serial items,
+  nor vice versa.
+- When all agents (primary + parallel) finish, their patches are merged into the form.
+  Patches target disjoint fields by construction (each parallel agent is scoped to its
+  items).
+
+A harness that does not support parallelism simply ignores the attribute and fills
+everything in loose-serial mode. All forms remain valid.
 
 #### Syntax
 
@@ -148,56 +181,70 @@ by default (depend on all prior items completing).
 <!-- /form -->
 ```
 
-#### Execution Order
+#### Execution Model
 
-1. **`overview` group** runs first (no `parallel` — sequential default).
-2. **`financials` group, `team` field, `market` group** all run concurrently (same
-   `parallel="deep_research"` value).
-3. **`synthesis` group** runs after all three complete (no `parallel` — sequential,
-   waits for all prior items).
+In this example, a parallel-aware harness would:
+
+1. **Primary agent** starts filling the form in loose-serial mode. It handles `overview`,
+   `synthesis`, and any other untagged items in whatever order it chooses.
+2. **Parallel agents** are spawned for the `deep_research` batch. Each agent is scoped
+   to one item: one fills `financials`, one fills `team`, one fills `market`. They run
+   concurrently with each other and with the primary agent.
+3. When all agents finish, patches are merged. Each agent wrote to disjoint fields, so
+   no conflicts occur.
+
+There are no barriers. The primary agent does not wait for parallel agents (or vice
+versa). If the primary agent reaches `synthesis` before the parallel agents finish the
+research fields, that's fine — it fills what it can with the context available, just as
+it would in today's loose-serial mode.
 
 #### Semantics
 
 1. **Parallel batches.** Items with the same `parallel` value form a *parallel batch*.
-   All items in a batch MAY be executed concurrently.
+   All items in a batch MAY be executed concurrently by separate agents.
 
-2. **Sequential default.** Items without `parallel` are sequential — they implicitly
-   depend on all prior items (including any preceding parallel batch) completing before
-   they begin.
+2. **Loose serial default.** Items without `parallel` are filled by the primary agent in
+   loose-serial mode — no enforced ordering, no barriers. This is identical to today's
+   behavior.
 
-3. **Batch boundaries.** A sequential item appearing after a parallel batch waits for
-   the entire batch. A sequential item appearing before a parallel batch must complete
-   before the batch starts.
+3. **No barriers.** There is no implicit dependency between parallel and non-parallel
+   items. The `parallel` attribute says "this can run concurrently," not "this must
+   complete before the next thing starts." If a harness wants barrier semantics, that
+   would be expressed via a future `dependsOn` attribute (see Future Directions).
 
-4. **Multiple batches.** Multiple distinct `parallel` values can coexist. They execute
-   in document order relative to sequential items between them. Example:
+4. **Multiple batches.** Multiple distinct `parallel` values can coexist. Each batch is
+   a separate set of concurrent agents. Example:
 
    ```markdown
-   <!-- field id="a" label="A" --><!-- /field -->                    <!-- sequential: runs first -->
-   <!-- field id="b" label="B" parallel="batch_1" --><!-- /field -->  <!-- batch_1 -->
-   <!-- field id="c" label="C" parallel="batch_1" --><!-- /field -->  <!-- batch_1 -->
-   <!-- field id="d" label="D" --><!-- /field -->                    <!-- sequential: waits for batch_1 -->
-   <!-- field id="e" label="E" parallel="batch_2" --><!-- /field -->  <!-- batch_2: waits for d -->
-   <!-- field id="f" label="F" parallel="batch_2" --><!-- /field -->  <!-- batch_2 -->
+   <!-- field id="a" label="A" --><!-- /field -->                    <!-- loose serial -->
+   <!-- field id="b" label="B" parallel="batch_1" --><!-- /field -->  <!-- batch_1 agent -->
+   <!-- field id="c" label="C" parallel="batch_1" --><!-- /field -->  <!-- batch_1 agent -->
+   <!-- field id="d" label="D" --><!-- /field -->                    <!-- loose serial -->
+   <!-- field id="e" label="E" parallel="batch_2" --><!-- /field -->  <!-- batch_2 agent -->
+   <!-- field id="f" label="F" parallel="batch_2" --><!-- /field -->  <!-- batch_2 agent -->
    ```
 
-   Execution: `a` → `{b, c}` → `d` → `{e, f}`
+   The primary agent handles `{a, d}` in loose-serial mode. Batch 1 agents handle
+   `{b, c}` concurrently. Batch 2 agents handle `{e, f}` concurrently. All run
+   simultaneously — no ordering between batches or between batches and serial items.
 
-5. **Group inheritance.** Within a group that has `parallel`, all child fields belong to
-   that parallel batch. Individual fields inside such a group do not need their own
-   `parallel` attribute. A field inside a `parallel` group MUST NOT have a different
-   `parallel` value (parse error).
+5. **Top-level only.** `parallel` applies to top-level items: fields directly under the
+   form tag, and groups directly under the form tag. A group with `parallel` is the
+   execution unit — all its child fields are filled by one agent as a unit. Fields
+   *inside* a group MUST NOT have a `parallel` attribute (parse error). If you want
+   field-level parallelism, place those fields at the top level or in separate
+   single-field groups.
 
-6. **Parallel is a hint.** The attribute expresses *permission* for concurrency, not a
-   requirement. A sequential harness MAY ignore `parallel` and fill everything in
-   document order. A parallel-aware harness SHOULD use it to optimize.
+6. **Hint, not mandate.** The attribute expresses *permission* for concurrency, not a
+   requirement. A harness that doesn't support parallelism ignores it and fills
+   everything in loose-serial mode.
 
-7. **Disjoint writes.** Each field is assigned to exactly one execution unit. No two
+7. **Disjoint writes.** Each parallel item is assigned to exactly one agent. No two
    concurrent agents write to the same field.
 
 8. **Deferred validation.** Cross-field validators (group-level `validate`) that
-   reference fields in a parallel batch are evaluated after the entire batch completes,
-   not incrementally.
+   reference fields across parallel items are evaluated after all agents complete, not
+   incrementally.
 
 #### Attribute Rules
 
@@ -205,17 +252,17 @@ by default (depend on all prior items completing).
 | --- | --- |
 | Attribute name | `parallel` |
 | Value type | String (arbitrary identifier, recommended `snake_case`) |
-| Applies to | `field` tags and `group` tags |
-| Default | Absent (sequential) |
+| Applies to | Top-level `field` tags and `group` tags (directly under `form`) |
+| Default | Absent (loose serial) |
 | Uniqueness | Not unique — same value used on multiple items to form a batch |
-| Nesting | Field inside a `parallel` group inherits; conflicting value is an error |
+| Nesting | NOT allowed on fields inside groups (parse error) |
 
 #### Error Conditions
 
 | Condition | Error |
 | --- | --- |
-| Field has `parallel` that conflicts with its parent group's `parallel` | `Field '${fieldId}' has parallel='${fieldVal}' but is inside group '${groupId}' with parallel='${groupVal}'. Fields inherit their group's parallel value.` |
-| Same `parallel` value used in non-contiguous positions (interleaved with sequential items or different batches) | `Parallel batch '${value}' is not contiguous. All items with the same parallel value must be adjacent.` |
+| Field inside a group has `parallel` attribute | `Field '${fieldId}' has parallel='${fieldVal}' but is inside group '${groupId}'. The parallel attribute is only allowed on top-level fields and groups.` |
+| Same `parallel` value used in non-contiguous positions (interleaved with items that have a different or no `parallel` value) | `Parallel batch '${value}' is not contiguous. All items with the same parallel value must be adjacent.` |
 
 ### Scope
 
@@ -243,11 +290,11 @@ by default (depend on all prior items completing).
 2. `parallel` attribute is parsed from both HTML comment and Markdoc tag syntax
 3. `parallel` is round-tripped through parse → serialize
 4. `parallel` appears on `FieldBase` and `FieldGroup` types as `parallel?: string`
-5. Execution plan computation correctly identifies sequential items and parallel batches
-6. Error on conflicting `parallel` between field and parent group
+5. Execution plan correctly identifies loose-serial items and parallel batches
+6. Error on `parallel` attribute on a field inside a group
 7. Error on non-contiguous parallel batch
-8. Parallel harness can spawn concurrent agent instances per batch item
-9. Parallel harness correctly merges results and proceeds to next execution unit
+8. Parallel harness can spawn concurrent agents per batch item
+9. Parallel harness correctly merges patches from all agents
 
 ### Design Decisions
 
@@ -256,14 +303,24 @@ by default (depend on all prior items completing).
    support "parallel or not" without distinguishing batches.
 
 2. **Contiguity requirement.** Items in the same parallel batch must be adjacent in the
-   document. This prevents confusing interleaving like
-   `parallel="a"`, sequential, `parallel="a"` which would have ambiguous execution order.
+   document. This prevents confusing interleaving and keeps the form readable.
 
-3. **Sequential default.** Safest choice — existing forms and new forms without
-   annotation work correctly. Authors opt in to parallelism explicitly.
+3. **Loose serial default.** Safest choice — existing forms and new forms without
+   annotation work exactly as they do today. Authors opt in to parallelism explicitly.
 
 4. **Hint, not mandate.** A harness that doesn't support parallelism simply ignores the
    attribute. This keeps the attribute purely additive.
+
+5. **No barriers.** The `parallel` attribute is purely about concurrency, not ordering.
+   We deliberately avoid implicit dependency semantics (e.g., "serial items before a
+   batch must complete first") because the current model has no enforced ordering either.
+   Barriers and dependencies are a separate concern, reserved for a future `dependsOn`
+   attribute.
+
+6. **Top-level only.** Restricting `parallel` to top-level items (not fields inside
+   groups) keeps the execution model simple: each top-level item is either in the
+   loose-serial pool or in a parallel batch. Sub-parallelism within groups is a future
+   enhancement.
 
 ## Stage 2: Architecture Stage
 
@@ -290,8 +347,8 @@ Update the Markform specification documents to define `parallel`.
 
 > ##### Parallel Execution Hints
 >
-> Fields and groups MAY include a `parallel` attribute to indicate that they can be
-> filled concurrently with other items sharing the same value.
+> Top-level fields and groups MAY include a `parallel` attribute to indicate that they
+> can be filled concurrently with other items sharing the same value.
 >
 > ```markdown
 > <!-- field kind="string" id="a" label="A" parallel="batch_1" --><!-- /field -->
@@ -301,43 +358,52 @@ Update the Markform specification documents to define `parallel`.
 > **Rules:**
 > - `parallel` value is an arbitrary string identifier (recommended: `snake_case`)
 > - Items with the same `parallel` value form a *parallel batch*
-> - Items without `parallel` are sequential (depend on all prior items completing)
+> - Items without `parallel` remain in loose-serial mode (single agent, no enforced
+>   ordering) — identical to current behavior
 > - Items in a parallel batch MUST be contiguous in document order
-> - A field inside a group with `parallel` inherits the group's value; specifying a
->   different value is a parse error
-> - `parallel` is a hint — sequential execution is always valid
+> - `parallel` MUST NOT appear on fields inside groups (parse error) — only on
+>   top-level fields and groups
+> - `parallel` is a hint — a harness MAY ignore it and fill everything in
+>   loose-serial mode
 >
 > **Execution model:**
 > ```
-> Form items are processed in document order as a sequence of execution units:
+> Without parallel: All items filled by one agent in loose-serial mode (current behavior).
 >
-> 1. Sequential item: single field or group, depends on all prior units completing
-> 2. Parallel batch: set of adjacent items with same `parallel` value, all may
->    execute concurrently. The batch as a whole depends on all prior units.
+> With parallel: Items are partitioned into two pools:
+>   1. Loose-serial pool: items without `parallel`, filled by primary agent
+>   2. Parallel batches: items with `parallel`, each item filled by a separate agent
+> All agents (primary + parallel) run concurrently. No barriers between them.
 > ```
 
 #### Layer 3 addition: Execution Plan
 
 > ##### Execution Plan
 >
-> An **execution plan** is an ordered list of **execution units** derived from the form's
-> fields and groups:
+> An **execution plan** partitions top-level form items into a loose-serial pool and
+> zero or more parallel batches:
 >
 > ```typescript
-> type ExecutionUnit =
->   | { kind: 'sequential'; itemId: Id; itemType: 'field' | 'group' }
->   | { kind: 'parallel'; batchId: string; items: Array<{ itemId: Id; itemType: 'field' | 'group' }> }
+> interface ExecutionPlan {
+>   /** Items without `parallel` — filled by primary agent in loose-serial mode */
+>   looseSerial: Array<{ itemId: Id; itemType: 'field' | 'group' }>;
+>
+>   /** Parallel batches — each item filled by a separate concurrent agent */
+>   parallelBatches: Array<{
+>     batchId: string;
+>     items: Array<{ itemId: Id; itemType: 'field' | 'group' }>;
+>   }>;
+> }
 > ```
 >
 > **Computation:** Walk top-level items (fields and groups) in document order:
-> - If item has no `parallel`: emit a sequential unit
-> - If item has `parallel`: accumulate into current batch (same value) or start new batch
-> - When a different `parallel` value or sequential item is encountered, close the current
->   batch and emit it
+> - If item has no `parallel`: add to the loose-serial pool
+> - If item has `parallel`: add to the batch with that ID (create batch if new)
+> - Validate contiguity: items in the same batch must be adjacent
 >
-> **Execution:** Process units in order. For sequential units, fill the item then proceed.
-> For parallel batches, fill all items concurrently, wait for all to complete, then
-> proceed to the next unit.
+> **Execution:** The primary agent fills loose-serial items. For each parallel batch,
+> one agent per item is spawned. All agents (primary + batch agents) run concurrently.
+> When all complete, patches are merged and validation runs.
 
 ### Phase 2: TypeScript API Changes
 
@@ -350,11 +416,11 @@ Parse, validate, serialize, and expose `parallel` through the engine.
 - [ ] Add `parallel` to `FieldBaseSchema` and `FieldGroupSchema` Zod schemas
 - [ ] Update parser (`parse.ts` / `parseFields.ts`) to extract `parallel` attribute
   from field and group tags
-- [ ] Add validation: conflicting `parallel` between field and parent group
+- [ ] Add validation: `parallel` on field inside group is a parse error
 - [ ] Add validation: non-contiguous parallel batch
 - [ ] Update serializer to emit `parallel` attribute on field and group tags
 - [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionUnit[]` function
-- [ ] Export `ExecutionUnit` type and `computeExecutionPlan` from public API
+- [ ] Export `ExecutionPlan` type and `computeExecutionPlan` from public API
 - [ ] Update `InspectResult` to include execution plan (optional, for tooling)
 - [ ] Add unit tests for parsing `parallel` (both syntaxes)
 - [ ] Add unit tests for validation errors
@@ -376,22 +442,23 @@ interface FieldGroup {
 }
 
 // New: Execution plan types
-interface SequentialUnit {
-  kind: 'sequential';
+interface ExecutionPlanItem {
   itemId: Id;
   itemType: 'field' | 'group';
 }
 
 interface ParallelBatch {
-  kind: 'parallel';
   batchId: string;
-  items: Array<{ itemId: Id; itemType: 'field' | 'group' }>;
+  items: ExecutionPlanItem[];
 }
 
-type ExecutionUnit = SequentialUnit | ParallelBatch;
+interface ExecutionPlan {
+  looseSerial: ExecutionPlanItem[];
+  parallelBatches: ParallelBatch[];
+}
 
 // New function
-function computeExecutionPlan(form: ParsedForm): ExecutionUnit[];
+function computeExecutionPlan(form: ParsedForm): ExecutionPlan;
 ```
 
 **Parser changes (`parseFields.ts`):**
@@ -403,13 +470,13 @@ const parallel = getStringAttr(node, 'parallel');
 
 // In group parsing:
 const groupParallel = getStringAttr(groupNode, 'parallel');
-// Validate children don't conflict
+// Validate no field inside a group has parallel
 for (const field of group.children) {
-  if (field.parallel && field.parallel !== groupParallel) {
+  if (field.parallel) {
     throw new MarkformParseError(
       `Field '${field.id}' has parallel='${field.parallel}' but is inside ` +
-      `group '${group.id}' with parallel='${groupParallel}'. ` +
-      `Fields inherit their group's parallel value.`
+      `group '${group.id}'. The parallel attribute is only allowed on ` +
+      `top-level fields and groups.`
     );
   }
 }
@@ -486,18 +553,16 @@ interface ScopedFillRequest {
 **Parallel execution flow:**
 
 ```
-1. computeExecutionPlan(form) → [unit1, unit2, ...]
-2. For each unit in order:
-   a. If sequential:
-      - Run single agent on that field/group (existing harness logic)
-   b. If parallel batch:
-      - For each item in batch, create ScopedFillRequest
-      - Spawn agents concurrently (up to maxParallelAgents)
-      - Await all agents
-      - Merge patches (all target disjoint fields)
-      - Apply merged patches
-      - Run deferred validators for the batch
-3. Final validation pass on complete form
+1. computeExecutionPlan(form) → { looseSerial, parallelBatches }
+2. Start all agents concurrently:
+   a. Primary agent: runs existing harness loop on looseSerial items
+   b. For each parallel batch, for each item:
+      - Create ScopedFillRequest
+      - Spawn agent (up to maxParallelAgents total)
+3. Await all agents
+4. Merge patches from all agents (disjoint fields by construction)
+5. Apply merged patches
+6. Run full validation pass on complete form
 ```
 
 **AI SDK integration (`liveAgent.ts`):**
@@ -560,7 +625,7 @@ Do NOT provide patches for any other fields.
 - [ ] All existing tests pass (no regressions)
 - [ ] `parallel` attribute parses correctly in both syntaxes
 - [ ] `parallel` round-trips through parse → serialize
-- [ ] Conflicting field/group parallel values produce errors
+- [ ] `parallel` on field inside group produces parse error
 - [ ] Non-contiguous batches produce errors
 - [ ] `computeExecutionPlan` returns correct execution units
 - [ ] Parallel harness spawns concurrent agents correctly
@@ -590,7 +655,7 @@ markform:
 <!-- /form -->' | pnpm markform inspect -
 
 # Verify parallel appears in serialized output
-# Verify execution plan shows: sequential(a) → parallel(b,c) → sequential(d)
+# Verify execution plan shows: looseSerial=[a,d], parallelBatches=[{batch: [b,c]}]
 ```
 
 ---
@@ -632,6 +697,14 @@ content.
 Analyze the form to infer which groups have no shared validators or cross-references and
 could safely run in parallel without explicit annotation. Would reduce authoring burden
 but risks incorrect parallelization when implicit dependencies exist in field content.
+
+### Sub-Parallelism Within Groups
+
+Allow `parallel` on fields inside groups to enable hierarchical parallelism. A group
+with `parallel="research"` would run as a unit in the research batch, but internally
+its fields could be further parallelized with `parallel="financial_detail"`. This would
+require agents to spawn sub-agents, adding scheduling complexity. Deferred to keep the
+initial model simple: a group is an atomic execution unit.
 
 ### Inter-Batch Context Sharing
 
