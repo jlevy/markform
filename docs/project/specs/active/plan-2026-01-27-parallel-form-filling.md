@@ -93,44 +93,59 @@ implementation.
 
 ## Design Options
 
-### Option A: Parallelism Groups via Group Attribute
+### Option A: Parallel Attribute on Fields and Groups (Recommended Starting Point)
 
-Add a `parallel` attribute to field groups. Groups sharing the same parallel group ID can
-be executed concurrently.
+Add a `parallel` attribute to **both fields and groups**. Items sharing the same
+`parallel` value can be executed concurrently. Items without `parallel` are sequential
+by default (depend on all prior items).
 
-**Syntax:**
+This works at both granularity levels because the attribute is on existing elements —
+no new structural tags or configuration sections are needed.
+
+**Syntax (mixed field and group level):**
 
 ```markdown
-<!-- group id="financials" title="Financial Data" parallel="section_a" -->
-  <!-- field kind="string" id="revenue" label="Revenue" -->...<!-- /field -->
-  <!-- field kind="string" id="margins" label="Margins" -->...<!-- /field -->
+<!-- field kind="string" id="overview" label="Company Overview" -->...<!-- /field -->
+
+<!-- field kind="string" id="revenue" label="Revenue" parallel="research" -->...<!-- /field -->
+<!-- field kind="string" id="team" label="Team" parallel="research" -->...<!-- /field -->
+<!-- group id="market" title="Market Analysis" parallel="research" -->
+  <!-- field kind="string" id="tam" label="TAM" -->...<!-- /field -->
+  <!-- field kind="string" id="competitors" label="Competitors" -->...<!-- /field -->
 <!-- /group -->
 
-<!-- group id="team" title="Team & Leadership" parallel="section_a" -->
-  <!-- field kind="string" id="founders" label="Founders" -->...<!-- /field -->
-<!-- /group -->
-
-<!-- group id="synthesis" title="Synthesis" -->
-  <!-- field kind="string" id="overall_assessment" label="Overall Assessment" -->...<!-- /field -->
-<!-- /group -->
+<!-- field kind="string" id="synthesis" label="Synthesis" -->...<!-- /field -->
 ```
 
+**Execution order:**
+1. `overview` runs first (no `parallel` tag — sequential default).
+2. `revenue`, `team`, and the `market` group all run concurrently (same `parallel` tag).
+3. `synthesis` runs after all three complete (no tag — sequential, waits for prior items).
+
 **Semantics:**
-- Groups with the same `parallel` value MAY be executed concurrently.
-- Groups without `parallel` are sequential (default) — they depend on all prior groups.
-- The `synthesis` group above implicitly depends on both `financials` and `team` because
-  it appears after them and has no `parallel` attribute.
+- Items with the same `parallel` value MAY be executed concurrently.
+- Items without `parallel` are sequential — they implicitly depend on all prior items
+  completing.
+- A sequential item appearing after a parallel batch waits for the entire batch.
+- Multiple distinct `parallel` values can coexist (e.g., `parallel="batch_1"` and
+  `parallel="batch_2"` are independent batches that execute in document order relative
+  to sequential items between them).
+- Within a group that has `parallel`, all child fields belong to that parallel batch.
+  Individual fields inside such a group do not need their own `parallel` attribute.
 
 **Pros:**
-- Simple, declarative. The form author annotates which groups are independent.
-- Groups already exist as an organizational primitive — this adds execution semantics.
-- No new structural elements needed.
+- Simple, declarative. The form author annotates which items are independent.
+- Works at both field and group level using the same mechanism.
+- No new structural elements — reuses existing fields and groups.
+- Safe default: untagged items are sequential, preserving backward compatibility.
+- Easy to understand: "tag things that can run together with the same label."
 
 **Cons:**
-- Only group-level granularity. Cannot express "these 3 fields within one group are
-  independent from these 2 fields in the same group."
-- Implicit ordering rules (sequential unless annotated) may be surprising.
-- Does not express dependencies between parallel groups.
+- Cannot express dependencies *between* parallel batches (e.g., "batch B depends on
+  batch A but not on the sequential item before A"). For this, Option B's `dependsOn`
+  would be needed.
+- Implicit ordering rules (sequential unless annotated) require understanding the
+  convention, though it matches natural reading order.
 
 ### Option B: Explicit Dependency Graph via `dependsOn`
 
@@ -312,37 +327,38 @@ markform:
 
 ## Comparison Matrix
 
-| Criterion | A: Group Attr | B: DependsOn | C: Phases | D: Parallel Block | E: Harness Config |
+| Criterion | A: Parallel Attr | B: DependsOn | C: Phases | D: Parallel Block | E: Harness Config |
 |---|---|---|---|---|---|
 | Schema changes | Minimal | Moderate | Moderate | Moderate | None |
-| Expressiveness | Low | High | Medium | Medium | Low |
+| Expressiveness | Medium | High | Medium | Medium | Low |
 | Authoring complexity | Low | High | Low | Low | Low |
 | Default safety | Good | Depends | Good | Good | Good |
-| Granularity | Group | Field or Group | Group | Group | Group |
+| Granularity | Field + Group | Field or Group | Group | Group | Group |
 | Visual clarity | Medium | Low | Medium | High | Low |
 | Backward compatible | Yes | Yes | Yes | Yes | Yes |
 | Implementation complexity | Low | High | Medium | Medium | Low |
 
 ## Recommendation
 
-No single option is clearly best. However, a few observations:
+**Option A (parallel attribute on fields and groups)** is the strongest starting point:
 
-1. **Option C (Phases)** and **Option D (Parallel Block)** seem like the strongest
-   candidates for a first implementation. They balance expressiveness with simplicity
-   and have the safest defaults.
+- It works at both field and group granularity with a single, simple attribute.
+- The sequential-by-default behavior is safe and backward compatible.
+- No new structural elements — it extends existing fields and groups.
+- It covers the most common case: "these sections are independent, run them together."
 
-2. **Option B (DependsOn)** is the most powerful but likely over-engineered for the
-   common case. It could be added later as an advanced feature if phase/block-level
-   parallelism proves insufficient.
+**Option B (dependsOn)** could be added later as an orthogonal enhancement if users need
+fine-grained inter-batch dependencies. The two attributes compose naturally: `parallel`
+for grouping concurrent work, `dependsOn` for expressing specific prerequisites.
 
-3. **Option E (Harness Config)** is the fastest to implement and requires no schema
-   changes, making it a good candidate for an initial prototype to validate the concept
-   before committing to schema-level changes.
+**Option E (harness config)** remains useful as a prototyping vehicle — the harness can
+interpret `parallel` attributes, but the config could also override or extend them at
+runtime without schema changes.
 
-4. **A phased approach** might work well:
-   - **Phase 1:** Option E (harness config) for prototyping and validation.
-   - **Phase 2:** Option C or D for schema-level support based on learnings.
-   - **Phase 3:** Option B (dependsOn) if fine-grained dependencies are needed.
+**Suggested phased approach:**
+- **Phase 1:** Implement Option A (`parallel` attribute) in schema + harness.
+- **Phase 2:** Add Option B (`dependsOn`) if DAG-level control is needed.
+- **Phase 3:** Consider Option E (harness config overrides) for runtime tuning.
 
 ## Open Questions
 
