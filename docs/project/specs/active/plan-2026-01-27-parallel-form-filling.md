@@ -2,14 +2,19 @@
 
 ## Purpose
 
-Explore design options for parallel execution of form filling, where independent fields
-or groups of fields can be processed concurrently by multiple agent instances. This is
-increasingly important as Markform forms scale to dozens or hundreds of fields for
-large-scale research and analysis tasks.
+Define how Markform forms can express parallelism — which fields or groups of fields are
+independent and can be filled concurrently. This is entirely optional: forms without
+parallelism annotations behave exactly as they do today (sequential). Authors who want
+faster filling of large forms can add `parallel` attributes to indicate independent work.
 
-This document is currently at the **exploration/design options stage** — it lays out the
-problem, summarizes relevant current behavior, and presents several candidate approaches
-for further discussion.
+**Related docs:**
+- `docs/markform-spec.md` — Main specification (Layers 1–4)
+- `docs/markform-reference.md` — Quick reference
+- `docs/markform-apis.md` — API documentation
+- `docs/project/architecture/current/arch-markform-design.md` — Architecture
+
+**Syntax note:** This spec uses HTML comment syntax (`<!-- tag -->`) in examples, but all
+Markform syntax has equivalent Markdoc tag forms. Both are always supported.
 
 ## Background
 
@@ -23,8 +28,7 @@ INIT → STEP → {WAIT ↔ APPLY} → COMPLETE
 
 Each **turn** follows: inspect → recommend → apply patches → validate. The agent receives
 the full serialized form markdown plus a filtered list of outstanding issues, and responds
-with an array of patches. The form markdown itself is the single source of truth — there
-is no accumulated conversation history.
+with an array of patches. The form markdown itself is the single source of truth.
 
 **Key current characteristics:**
 
@@ -36,18 +40,17 @@ is no accumulated conversation history.
    This encourages depth-first focus but is not a dependency or parallelism mechanism.
 
 3. **Field groups are organizational only.** Groups contain fields and can have
-   group-level validators, but they carry no execution semantics — no ordering, no
+   group-level validators, but carry no execution semantics — no ordering, no
    dependencies, no parallelism hints.
 
 4. **Implicit sequential dependency.** In practice, many form fields have implicit
-   dependencies: later fields may reference or depend on answers to earlier fields. For
-   example, a "company overview" field should be filled before "competitive analysis"
-   because the latter depends on knowing which company. The current model handles this
-   naturally because fields are filled sequentially.
+   dependencies: later fields may reference or depend on answers to earlier fields (e.g.,
+   "company overview" should be filled before "competitive analysis"). The current model
+   handles this naturally through sequential execution.
 
 5. **Blocking checkboxes** are the only existing dependency primitive. A checkbox field
-   with `approvalMode: "blocking"` prevents subsequent fields from being filled until the
-   checkbox is complete. This is a limited, linear blocking mechanism.
+   with `approvalMode: "blocking"` prevents subsequent fields from being filled until
+   the checkbox is complete.
 
 ### Why Parallelism Matters
 
@@ -63,337 +66,590 @@ These sections are largely independent — an agent filling "team & leadership" 
 need to wait for "financial data" to complete. Parallelizing across sections could
 reduce wall-clock time proportionally to the number of independent sections.
 
-### Constraints and Considerations
+### Key Constraints
 
-1. **Default should be sequential.** Most fields in a form have implicit dependencies on
-   prior context. Parallelism should be opt-in, not the default. An execution harness
-   should assume fields depend on prior fields unless told otherwise.
+1. **Default must be sequential.** Most fields have implicit dependencies on prior
+   context. Parallelism is opt-in. An execution harness should assume fields depend on
+   prior fields unless told otherwise.
 
-2. **Form-as-state architecture.** The current model has one form document as the single
-   source of truth. Parallel filling means multiple agents writing to the same document,
-   which requires either partitioning (each agent owns disjoint fields) or merging
-   (reconcile concurrent edits).
+2. **Form-as-state architecture.** Parallel filling means multiple agents writing to the
+   same document, requiring partitioning — each agent owns disjoint fields.
 
 3. **Cross-field validation.** Group-level validators can reference multiple fields. If
-   those fields are filled in parallel, validation must be deferred until all contributing
-   fields are complete.
+   those fields are filled in parallel, validation must be deferred until all
+   contributing fields are complete.
 
-4. **Patch conflicts.** Two agents should never write to the same field. The design must
-   ensure disjoint write sets.
-
-5. **Context sharing.** Some parallel branches may benefit from seeing results of other
-   branches (e.g., "market analysis" might be better if it knows the company's revenue
-   scale). Full isolation vs. partial sharing is a design choice.
+4. **Patch conflicts.** Two agents must never write to the same field. The design
+   ensures disjoint write sets by assigning each field to exactly one execution unit.
 
 ## Summary of Task
 
-Explore and document design options for expressing and executing parallel form filling in
-Markform. The goal is a spec-level design that can be discussed and refined before
-implementation.
+Add a `parallel` attribute to the Markform specification that can be applied to both
+fields and groups. Items sharing the same `parallel` value are independent and may be
+executed concurrently by a parallel-aware harness. Items without `parallel` are
+sequential by default.
 
-## Design Options
+This is a three-phase effort:
 
-### Option A: Parallel Attribute on Fields and Groups (Recommended Starting Point)
+- **Phase 1 — Spec & Design:** Define the `parallel` attribute semantics, update the
+  Markform specification, and document the execution model.
+- **Phase 2 — TypeScript API:** Parse, validate, serialize, and expose `parallel` in the
+  engine types and APIs.
+- **Phase 3 — Harness & AI SDK:** Implement parallel execution in the harness and the
+  AI SDK live agent integration.
+
+## Backward Compatibility
+
+**BACKWARD COMPATIBILITY REQUIREMENTS:**
+
+- **Code types, methods, and function signatures**: MAINTAIN — `parallel` is additive
+- **Library APIs**: MAINTAIN — existing forms without `parallel` behave identically
+- **File formats**: MAINTAIN — `parallel` attribute is optional; existing forms unchanged
+- **Server APIs**: N/A
+- **Database schemas**: N/A
+
+## Stage 1: Planning Stage
+
+### Design: The `parallel` Attribute
 
 Add a `parallel` attribute to **both fields and groups**. Items sharing the same
 `parallel` value can be executed concurrently. Items without `parallel` are sequential
-by default (depend on all prior items).
+by default (depend on all prior items completing).
 
-This works at both granularity levels because the attribute is on existing elements —
-no new structural tags or configuration sections are needed.
-
-**Syntax (mixed field and group level):**
+#### Syntax
 
 ```markdown
-<!-- field kind="string" id="overview" label="Company Overview" -->...<!-- /field -->
+<!-- form id="company_research" title="Company Research" -->
 
-<!-- field kind="string" id="revenue" label="Revenue" parallel="research" -->...<!-- /field -->
-<!-- field kind="string" id="team" label="Team" parallel="research" -->...<!-- /field -->
-<!-- group id="market" title="Market Analysis" parallel="research" -->
-  <!-- field kind="string" id="tam" label="TAM" -->...<!-- /field -->
-  <!-- field kind="string" id="competitors" label="Competitors" -->...<!-- /field -->
+<!-- group id="overview" title="Context" -->
+  <!-- field kind="string" id="company_name" label="Company Name" required=true -->
+  <!-- /field -->
+  <!-- field kind="string" id="company_overview" label="Company Overview" -->
+  <!-- /field -->
 <!-- /group -->
 
-<!-- field kind="string" id="synthesis" label="Synthesis" -->...<!-- /field -->
+<!-- group id="financials" title="Financial Data" parallel="deep_research" -->
+  <!-- field kind="number" id="revenue" label="Annual Revenue ($M)" --><!-- /field -->
+  <!-- field kind="string" id="margins" label="Margin Analysis" --><!-- /field -->
+<!-- /group -->
+
+<!-- field kind="string" id="team" label="Team & Leadership" parallel="deep_research" -->
+<!-- /field -->
+
+<!-- group id="market" title="Market Analysis" parallel="deep_research" -->
+  <!-- field kind="string" id="tam" label="TAM" --><!-- /field -->
+  <!-- field kind="string" id="competitors" label="Competitors" --><!-- /field -->
+<!-- /group -->
+
+<!-- group id="synthesis" title="Synthesis" -->
+  <!-- field kind="string" id="overall" label="Overall Assessment" --><!-- /field -->
+<!-- /group -->
+
+<!-- /form -->
 ```
 
-**Execution order:**
-1. `overview` runs first (no `parallel` tag — sequential default).
-2. `revenue`, `team`, and the `market` group all run concurrently (same `parallel` tag).
-3. `synthesis` runs after all three complete (no tag — sequential, waits for prior items).
+#### Execution Order
 
-**Semantics:**
-- Items with the same `parallel` value MAY be executed concurrently.
-- Items without `parallel` are sequential — they implicitly depend on all prior items
-  completing.
-- A sequential item appearing after a parallel batch waits for the entire batch.
-- Multiple distinct `parallel` values can coexist (e.g., `parallel="batch_1"` and
-  `parallel="batch_2"` are independent batches that execute in document order relative
-  to sequential items between them).
-- Within a group that has `parallel`, all child fields belong to that parallel batch.
-  Individual fields inside such a group do not need their own `parallel` attribute.
+1. **`overview` group** runs first (no `parallel` — sequential default).
+2. **`financials` group, `team` field, `market` group** all run concurrently (same
+   `parallel="deep_research"` value).
+3. **`synthesis` group** runs after all three complete (no `parallel` — sequential,
+   waits for all prior items).
 
-**Pros:**
-- Simple, declarative. The form author annotates which items are independent.
-- Works at both field and group level using the same mechanism.
-- No new structural elements — reuses existing fields and groups.
-- Safe default: untagged items are sequential, preserving backward compatibility.
-- Easy to understand: "tag things that can run together with the same label."
+#### Semantics
 
-**Cons:**
-- Cannot express dependencies *between* parallel batches (e.g., "batch B depends on
-  batch A but not on the sequential item before A"). For this, Option B's `dependsOn`
-  would be needed.
-- Implicit ordering rules (sequential unless annotated) require understanding the
-  convention, though it matches natural reading order.
+1. **Parallel batches.** Items with the same `parallel` value form a *parallel batch*.
+   All items in a batch MAY be executed concurrently.
 
-### Option B: Explicit Dependency Graph via `dependsOn`
+2. **Sequential default.** Items without `parallel` are sequential — they implicitly
+   depend on all prior items (including any preceding parallel batch) completing before
+   they begin.
 
-Add a `dependsOn` attribute to fields and/or groups, referencing IDs of fields or groups
-that must be completed first. No `dependsOn` means the field/group is independent and
-can start immediately.
+3. **Batch boundaries.** A sequential item appearing after a parallel batch waits for
+   the entire batch. A sequential item appearing before a parallel batch must complete
+   before the batch starts.
 
-**Syntax (field-level):**
+4. **Multiple batches.** Multiple distinct `parallel` values can coexist. They execute
+   in document order relative to sequential items between them. Example:
 
-```markdown
-<!-- field kind="string" id="company_overview" label="Company Overview" -->...<!-- /field -->
-<!-- field kind="string" id="financials" label="Financial Data" dependsOn="company_overview" -->...<!-- /field -->
-<!-- field kind="string" id="team" label="Team" dependsOn="company_overview" -->...<!-- /field -->
-<!-- field kind="string" id="synthesis" label="Synthesis" dependsOn="financials,team" -->...<!-- /field -->
+   ```markdown
+   <!-- field id="a" label="A" --><!-- /field -->                    <!-- sequential: runs first -->
+   <!-- field id="b" label="B" parallel="batch_1" --><!-- /field -->  <!-- batch_1 -->
+   <!-- field id="c" label="C" parallel="batch_1" --><!-- /field -->  <!-- batch_1 -->
+   <!-- field id="d" label="D" --><!-- /field -->                    <!-- sequential: waits for batch_1 -->
+   <!-- field id="e" label="E" parallel="batch_2" --><!-- /field -->  <!-- batch_2: waits for d -->
+   <!-- field id="f" label="F" parallel="batch_2" --><!-- /field -->  <!-- batch_2 -->
+   ```
+
+   Execution: `a` → `{b, c}` → `d` → `{e, f}`
+
+5. **Group inheritance.** Within a group that has `parallel`, all child fields belong to
+   that parallel batch. Individual fields inside such a group do not need their own
+   `parallel` attribute. A field inside a `parallel` group MUST NOT have a different
+   `parallel` value (parse error).
+
+6. **Parallel is a hint.** The attribute expresses *permission* for concurrency, not a
+   requirement. A sequential harness MAY ignore `parallel` and fill everything in
+   document order. A parallel-aware harness SHOULD use it to optimize.
+
+7. **Disjoint writes.** Each field is assigned to exactly one execution unit. No two
+   concurrent agents write to the same field.
+
+8. **Deferred validation.** Cross-field validators (group-level `validate`) that
+   reference fields in a parallel batch are evaluated after the entire batch completes,
+   not incrementally.
+
+#### Attribute Rules
+
+| Rule | Detail |
+| --- | --- |
+| Attribute name | `parallel` |
+| Value type | String (arbitrary identifier, recommended `snake_case`) |
+| Applies to | `field` tags and `group` tags |
+| Default | Absent (sequential) |
+| Uniqueness | Not unique — same value used on multiple items to form a batch |
+| Nesting | Field inside a `parallel` group inherits; conflicting value is an error |
+
+#### Error Conditions
+
+| Condition | Error |
+| --- | --- |
+| Field has `parallel` that conflicts with its parent group's `parallel` | `Field '${fieldId}' has parallel='${fieldVal}' but is inside group '${groupId}' with parallel='${groupVal}'. Fields inherit their group's parallel value.` |
+| Same `parallel` value used in non-contiguous positions (interleaved with sequential items or different batches) | `Parallel batch '${value}' is not contiguous. All items with the same parallel value must be adjacent.` |
+
+### Scope
+
+**In scope:**
+
+- `parallel` attribute on `field` and `group` tags
+- Parse, validate, and serialize `parallel`
+- Expose `parallel` on `FieldBase` and `FieldGroup` TypeScript types
+- Execution plan computation: given a parsed form, compute the ordered list of
+  execution units (sequential items and parallel batches)
+- Parallel harness that spawns concurrent agent instances for each batch item
+- AI SDK integration for parallel agent execution
+
+**Not in scope:**
+
+- Dependency DAG (`dependsOn`) — future enhancement
+- Auto-detection of independent fields — future enhancement
+- Nested groups — not yet supported in MF/0.1
+- Inter-batch context sharing (each parallel agent sees the form state as of batch
+  start; they do not see each other's partial results)
+
+### Acceptance Criteria
+
+1. Forms without `parallel` behave identically to today (all existing tests pass)
+2. `parallel` attribute is parsed from both HTML comment and Markdoc tag syntax
+3. `parallel` is round-tripped through parse → serialize
+4. `parallel` appears on `FieldBase` and `FieldGroup` types as `parallel?: string`
+5. Execution plan computation correctly identifies sequential items and parallel batches
+6. Error on conflicting `parallel` between field and parent group
+7. Error on non-contiguous parallel batch
+8. Parallel harness can spawn concurrent agent instances per batch item
+9. Parallel harness correctly merges results and proceeds to next execution unit
+
+### Design Decisions
+
+1. **String value, not boolean.** Using a string (batch name) rather than `parallel=true`
+   allows multiple independent parallel batches in the same form. A boolean would only
+   support "parallel or not" without distinguishing batches.
+
+2. **Contiguity requirement.** Items in the same parallel batch must be adjacent in the
+   document. This prevents confusing interleaving like
+   `parallel="a"`, sequential, `parallel="a"` which would have ambiguous execution order.
+
+3. **Sequential default.** Safest choice — existing forms and new forms without
+   annotation work correctly. Authors opt in to parallelism explicitly.
+
+4. **Hint, not mandate.** A harness that doesn't support parallelism simply ignores the
+   attribute. This keeps the attribute purely additive.
+
+## Stage 2: Architecture Stage
+
+### Phase 1: Spec & Design
+
+Update the Markform specification documents to define `parallel`.
+
+**Tasks:**
+
+- [ ] Add `parallel` attribute to Layer 1 (Syntax) in `docs/markform-spec.md`
+  - Add to field tag attribute table
+  - Add to group tag attribute table
+  - Add new subsection "Parallel Execution Hints"
+- [ ] Add execution plan semantics to Layer 3 (Validation & Form Filling)
+  - Define "execution unit" (sequential item or parallel batch)
+  - Define execution plan computation algorithm
+  - Define deferred validation for cross-batch validators
+- [ ] Update `docs/markform-reference.md` with `parallel` attribute
+- [ ] Add examples showing parallel forms to examples directory
+
+**Spec additions to `docs/markform-spec.md`:**
+
+#### Layer 1 addition: Parallel Execution Hints
+
+> ##### Parallel Execution Hints
+>
+> Fields and groups MAY include a `parallel` attribute to indicate that they can be
+> filled concurrently with other items sharing the same value.
+>
+> ```markdown
+> <!-- field kind="string" id="a" label="A" parallel="batch_1" --><!-- /field -->
+> <!-- field kind="string" id="b" label="B" parallel="batch_1" --><!-- /field -->
+> ```
+>
+> **Rules:**
+> - `parallel` value is an arbitrary string identifier (recommended: `snake_case`)
+> - Items with the same `parallel` value form a *parallel batch*
+> - Items without `parallel` are sequential (depend on all prior items completing)
+> - Items in a parallel batch MUST be contiguous in document order
+> - A field inside a group with `parallel` inherits the group's value; specifying a
+>   different value is a parse error
+> - `parallel` is a hint — sequential execution is always valid
+>
+> **Execution model:**
+> ```
+> Form items are processed in document order as a sequence of execution units:
+>
+> 1. Sequential item: single field or group, depends on all prior units completing
+> 2. Parallel batch: set of adjacent items with same `parallel` value, all may
+>    execute concurrently. The batch as a whole depends on all prior units.
+> ```
+
+#### Layer 3 addition: Execution Plan
+
+> ##### Execution Plan
+>
+> An **execution plan** is an ordered list of **execution units** derived from the form's
+> fields and groups:
+>
+> ```typescript
+> type ExecutionUnit =
+>   | { kind: 'sequential'; itemId: Id; itemType: 'field' | 'group' }
+>   | { kind: 'parallel'; batchId: string; items: Array<{ itemId: Id; itemType: 'field' | 'group' }> }
+> ```
+>
+> **Computation:** Walk top-level items (fields and groups) in document order:
+> - If item has no `parallel`: emit a sequential unit
+> - If item has `parallel`: accumulate into current batch (same value) or start new batch
+> - When a different `parallel` value or sequential item is encountered, close the current
+>   batch and emit it
+>
+> **Execution:** Process units in order. For sequential units, fill the item then proceed.
+> For parallel batches, fill all items concurrently, wait for all to complete, then
+> proceed to the next unit.
+
+### Phase 2: TypeScript API Changes
+
+Parse, validate, serialize, and expose `parallel` through the engine.
+
+**Tasks:**
+
+- [ ] Add `parallel?: string` to `FieldBase` interface in `coreTypes.ts`
+- [ ] Add `parallel?: string` to `FieldGroup` interface in `coreTypes.ts`
+- [ ] Add `parallel` to `FieldBaseSchema` and `FieldGroupSchema` Zod schemas
+- [ ] Update parser (`parse.ts` / `parseFields.ts`) to extract `parallel` attribute
+  from field and group tags
+- [ ] Add validation: conflicting `parallel` between field and parent group
+- [ ] Add validation: non-contiguous parallel batch
+- [ ] Update serializer to emit `parallel` attribute on field and group tags
+- [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionUnit[]` function
+- [ ] Export `ExecutionUnit` type and `computeExecutionPlan` from public API
+- [ ] Update `InspectResult` to include execution plan (optional, for tooling)
+- [ ] Add unit tests for parsing `parallel` (both syntaxes)
+- [ ] Add unit tests for validation errors
+- [ ] Add unit tests for `computeExecutionPlan`
+- [ ] Add golden tests for round-trip with `parallel`
+
+**Key type changes:**
+
+```typescript
+// coreTypes.ts
+interface FieldBase {
+  // ... existing fields
+  parallel?: string;  // Parallel batch identifier
+}
+
+interface FieldGroup {
+  // ... existing fields
+  parallel?: string;  // Parallel batch identifier
+}
+
+// New: Execution plan types
+interface SequentialUnit {
+  kind: 'sequential';
+  itemId: Id;
+  itemType: 'field' | 'group';
+}
+
+interface ParallelBatch {
+  kind: 'parallel';
+  batchId: string;
+  items: Array<{ itemId: Id; itemType: 'field' | 'group' }>;
+}
+
+type ExecutionUnit = SequentialUnit | ParallelBatch;
+
+// New function
+function computeExecutionPlan(form: ParsedForm): ExecutionUnit[];
 ```
 
-**Syntax (group-level):**
+**Parser changes (`parseFields.ts`):**
 
-```markdown
-<!-- group id="overview" title="Overview" -->...<!-- /group -->
-<!-- group id="financials" title="Financials" dependsOn="overview" -->...<!-- /group -->
-<!-- group id="team" title="Team" dependsOn="overview" -->...<!-- /group -->
-<!-- group id="synthesis" title="Synthesis" dependsOn="financials,team" -->...<!-- /group -->
+```typescript
+// In parseField():
+const parallel = getStringAttr(node, 'parallel');
+// Add to field object: parallel
+
+// In group parsing:
+const groupParallel = getStringAttr(groupNode, 'parallel');
+// Validate children don't conflict
+for (const field of group.children) {
+  if (field.parallel && field.parallel !== groupParallel) {
+    throw new MarkformParseError(
+      `Field '${field.id}' has parallel='${field.parallel}' but is inside ` +
+      `group '${group.id}' with parallel='${groupParallel}'. ` +
+      `Fields inherit their group's parallel value.`
+    );
+  }
+}
 ```
 
-**Semantics:**
-- A field/group with `dependsOn` cannot begin until all referenced IDs are in `answered`
-  state.
-- Fields/groups with no `dependsOn` and no prior sequential context are immediately
-  available.
-- The execution harness builds a DAG and schedules concurrently where possible.
+**Validation for contiguity (`validate.ts` or `computeExecutionPlan`):**
 
-**Pros:**
-- Maximum expressiveness. Can represent any dependency structure.
-- Works at both field and group level.
-- Explicit — no implicit ordering assumptions beyond what's declared.
+```typescript
+function validateParallelContiguity(items: Array<{ id: Id; parallel?: string }>): void {
+  const seen = new Map<string, number>(); // batchId → last index seen
+  for (let i = 0; i < items.length; i++) {
+    const p = items[i].parallel;
+    if (!p) {
+      continue;
+    }
+    if (seen.has(p)) {
+      const lastIdx = seen.get(p)!;
+      // Check all items between lastIdx and i also have the same parallel value
+      for (let j = lastIdx + 1; j < i; j++) {
+        if (items[j].parallel !== p) {
+          throw new MarkformParseError(
+            `Parallel batch '${p}' is not contiguous. ` +
+            `All items with the same parallel value must be adjacent.`
+          );
+        }
+      }
+    }
+    seen.set(p, i);
+  }
+}
+```
 
-**Cons:**
-- Verbose for large forms. Every independent field needs explicit `dependsOn` or the
-  absence of it must be meaningful.
-- Requires form authors to think about the full dependency graph, which is nontrivial.
-- **The default-independence problem:** If no `dependsOn` is specified, is the field
-  independent (can run in parallel) or sequential (depends on all prior)? Both defaults
-  have problems:
-  - Default-independent: Breaks most forms where fields are implicitly ordered.
-  - Default-sequential: Requires explicit opt-in for every parallel field, which is
-    verbose.
+### Phase 3: Harness & AI SDK Implementation
 
-### Option C: Execution Phases (Ordered Layers)
+Implement parallel execution in the harness and live agent.
 
-Divide the form into ordered **phases** (or "waves"). All fields/groups within a phase
-can execute in parallel. Phases execute sequentially — phase 2 starts only after phase 1
-is complete.
+**Tasks:**
 
-**Syntax (frontmatter-based):**
+- [ ] Add `ParallelHarness` class (or extend `FormHarness`) that uses execution plan
+- [ ] Implement concurrent agent spawning for parallel batches
+- [ ] Each parallel agent receives:
+  - Full form markdown (read-only context for all fields)
+  - Instructions to fill only its assigned fields/groups
+  - The filtered issue list scoped to its assigned fields
+- [ ] Implement patch merge: collect patches from all parallel agents, validate disjoint
+  field sets, apply all patches in one `applyPatches` call
+- [ ] Implement deferred validation: run cross-batch validators after batch completes
+- [ ] Add `maxParallelAgents?: number` to `HarnessConfig` (default: unbounded / batch size)
+- [ ] Update `LiveAgent` to support scoped filling (fill only specified fields)
+- [ ] Update `fillForm()` API to use parallel harness when execution plan has batches
+- [ ] Add `parallel` support to `FillCallbacks` (e.g., `onBatchStart`, `onBatchComplete`)
+- [ ] Add session transcript support for parallel turns (multiple agents per step)
+- [ ] Add integration tests with mock agents
+- [ ] Add golden test for parallel fill session
 
-```yaml
----
+**Key harness changes:**
+
+```typescript
+// New harness config options
+interface HarnessConfig {
+  // ... existing fields
+  maxParallelAgents?: number;  // Max concurrent agents (default: batch size)
+}
+
+// Scoped agent invocation
+interface ScopedFillRequest {
+  form: ParsedForm;           // Full form for context
+  targetFieldIds: Id[];       // Fields this agent should fill
+  targetGroupIds: Id[];       // Groups this agent should fill
+  issues: InspectIssue[];     // Issues scoped to target fields
+}
+```
+
+**Parallel execution flow:**
+
+```
+1. computeExecutionPlan(form) → [unit1, unit2, ...]
+2. For each unit in order:
+   a. If sequential:
+      - Run single agent on that field/group (existing harness logic)
+   b. If parallel batch:
+      - For each item in batch, create ScopedFillRequest
+      - Spawn agents concurrently (up to maxParallelAgents)
+      - Await all agents
+      - Merge patches (all target disjoint fields)
+      - Apply merged patches
+      - Run deferred validators for the batch
+3. Final validation pass on complete form
+```
+
+**AI SDK integration (`liveAgent.ts`):**
+
+```typescript
+// Add scope parameter to fillFormTool
+fillFormTool(
+  issues: InspectIssue[],
+  form: ParsedForm,
+  maxPatches: number,
+  previousRejections?: PatchRejection[],
+  scope?: { fieldIds: Id[]; groupIds: Id[] }  // NEW: limit agent's focus
+): Promise<AgentResponse>
+```
+
+The system prompt would include scope instructions:
+
+```
+You are filling a subset of this form. Focus ONLY on the following fields:
+- revenue (Annual Revenue)
+- margins (Margin Analysis)
+
+Do NOT provide patches for any other fields.
+```
+
+## Stage 3: Refine Architecture
+
+### Reusable Components
+
+- **Existing `FormHarness`**: The sequential harness loop is reused for each execution
+  unit. Parallel execution is orchestration *around* the existing step/apply loop, not a
+  replacement.
+
+- **Existing `LiveAgent`**: The agent already receives a form + issues and returns
+  patches. Adding a scope filter to the issue list and system prompt is a small change.
+
+- **Existing `applyPatches`**: Patches from parallel agents are merged into a single
+  array and applied in one call. No changes to apply semantics needed.
+
+- **Existing scope filtering**: `maxFieldsPerTurn` and `maxGroupsPerTurn` already
+  filter issues by scope. The parallel harness uses a similar mechanism to scope each
+  agent.
+
+### Simplifications
+
+- **No merge conflicts by construction.** Each field is assigned to exactly one agent.
+  Patches from different agents target disjoint fields, so no conflict resolution is
+  needed.
+
+- **No new state machine.** The parallel harness orchestrates sequential units and
+  parallel batches. Each individual agent still uses the existing step/apply loop.
+
+- **Progressive enhancement.** A harness that doesn't understand `parallel` simply
+  ignores it. All forms remain valid and fillable sequentially.
+
+## Stage 4: Validation
+
+### Final Checklist
+
+- [ ] All existing tests pass (no regressions)
+- [ ] `parallel` attribute parses correctly in both syntaxes
+- [ ] `parallel` round-trips through parse → serialize
+- [ ] Conflicting field/group parallel values produce errors
+- [ ] Non-contiguous batches produce errors
+- [ ] `computeExecutionPlan` returns correct execution units
+- [ ] Parallel harness spawns concurrent agents correctly
+- [ ] Patches from parallel agents merge without conflicts
+- [ ] Cross-batch validators execute after batch completes
+- [ ] Session transcripts record parallel execution
+- [ ] Spec documentation complete in `markform-spec.md`
+- [ ] API reference complete in `markform-apis.md`
+- [ ] `pnpm precommit` passes
+
+### Verification Commands
+
+```bash
+# Run all tests
+pnpm precommit
+
+# Test parallel attribute parsing
+echo '---
 markform:
   spec: MF/0.1
-  execution:
-    phases:
-      - id: context
-        groups: [overview]
-      - id: research
-        groups: [financials, team, market, product]
-      - id: synthesis
-        groups: [synthesis, recommendations]
 ---
+<!-- form id="test" title="Test" -->
+<!-- field kind="string" id="a" label="A" --><!-- /field -->
+<!-- field kind="string" id="b" label="B" parallel="batch" --><!-- /field -->
+<!-- field kind="string" id="c" label="C" parallel="batch" --><!-- /field -->
+<!-- field kind="string" id="d" label="D" --><!-- /field -->
+<!-- /form -->' | pnpm markform inspect -
+
+# Verify parallel appears in serialized output
+# Verify execution plan shows: sequential(a) → parallel(b,c) → sequential(d)
 ```
 
-**Alternative syntax (inline attribute):**
+---
+
+## Future Directions
+
+The following approaches were considered during design and are documented here as
+potential future enhancements. The `parallel` attribute (Option A) was chosen as the
+initial design for its simplicity and safe defaults.
+
+### Explicit Dependency Graph (`dependsOn`)
+
+Add `dependsOn` attribute referencing IDs of prerequisite fields/groups. This enables
+full DAG scheduling but is verbose and requires form authors to reason about the
+complete dependency graph. Could compose with `parallel`: use `parallel` for batch
+grouping and `dependsOn` for fine-grained inter-batch prerequisites.
 
 ```markdown
-<!-- group id="overview" title="Overview" phase="1" -->...<!-- /group -->
-<!-- group id="financials" title="Financials" phase="2" -->...<!-- /group -->
-<!-- group id="team" title="Team" phase="2" -->...<!-- /group -->
-<!-- group id="synthesis" title="Synthesis" phase="3" -->...<!-- /group -->
+<!-- field kind="string" id="overview" label="Overview" --><!-- /field -->
+<!-- field kind="string" id="financials" label="Financials" dependsOn="overview" --><!-- /field -->
+<!-- field kind="string" id="team" label="Team" dependsOn="overview" --><!-- /field -->
+<!-- field kind="string" id="synthesis" label="Synthesis" dependsOn="financials,team" --><!-- /field -->
 ```
 
-**Semantics:**
-- Phases are ordered numerically or by declaration order.
-- All groups/fields within a phase are independent and can run concurrently.
-- Phase N+1 begins only when all fields in phase N are complete.
-- Fields not assigned to a phase default to a final sequential phase.
+### Execution Phases
 
-**Pros:**
-- Simple mental model — "layers" or "waves" of work.
-- Easy to reason about: everything in a phase is independent, phases are ordered.
-- Natural fit for research forms that have "gather context → deep research → synthesize"
-  structure.
-- No complex DAG reasoning required from form authors.
+Divide the form into numbered phases/waves. All items in a phase run concurrently;
+phases execute sequentially. Simpler than DAG but less flexible than `parallel` batches
+(strict phase boundaries mean one slow field blocks the entire next phase).
 
-**Cons:**
-- Less expressive than full DAG. Cannot express "field X in phase 2 depends specifically
-  on field Y in phase 1 but not field Z in phase 1."
-- Phase boundaries are strict — if one field in a phase is slow, all of phase N+1 waits.
-- Somewhat redundant with groups (phases are essentially meta-groups).
+### Harness Config Overrides
 
-### Option D: Hybrid — Default Sequential with Parallel Annotation
+Specify parallelism in `harness_config` frontmatter rather than on individual fields.
+Useful for runtime tuning without modifying form structure, but separates intent from
+content.
 
-Keep the default assumption that fields are sequential (depend on all prior fields), but
-allow explicit `parallel` annotations to mark groups of fields that can execute
-concurrently. This combines the safety of Option A with the simplicity of not requiring
-a full dependency graph.
+### Auto-Detection of Independence
 
-**Syntax:**
+Analyze the form to infer which groups have no shared validators or cross-references and
+could safely run in parallel without explicit annotation. Would reduce authoring burden
+but risks incorrect parallelization when implicit dependencies exist in field content.
 
-```markdown
-<!-- group id="overview" title="Overview" -->...<!-- /group -->
+### Inter-Batch Context Sharing
 
-<!-- parallel -->
-  <!-- group id="financials" title="Financials" -->...<!-- /group -->
-  <!-- group id="team" title="Team" -->...<!-- /group -->
-  <!-- group id="market" title="Market" -->...<!-- /group -->
-<!-- /parallel -->
+Allow parallel agents to see partial results from other agents in the same batch. This
+would improve quality (e.g., market analysis benefits from knowing revenue) but adds
+complexity to the merge model.
 
-<!-- group id="synthesis" title="Synthesis" -->...<!-- /group -->
-```
-
-**Semantics:**
-- By default, groups/fields are sequential (top-to-bottom ordering implies dependency).
-- `<!-- parallel -->` blocks explicitly mark enclosed groups as concurrently executable.
-- Everything before a parallel block must complete before the block starts.
-- Everything after a parallel block waits for all items within it to complete.
-- Parallel blocks can be nested (for sub-parallelism within a branch).
-
-**Pros:**
-- Safe default (sequential). No existing forms break.
-- Explicit and visually clear — the parallel block is a structural element in the
-  markdown.
-- No need for dependency IDs or phase numbers.
-- Composable — parallel blocks can appear anywhere in the form.
-
-**Cons:**
-- New structural element (`parallel` tag) adds complexity to the syntax.
-- Cannot express partial dependencies within a parallel block (e.g., "A and B are
-  parallel, but C depends only on A").
-- May not compose well with nested groups (future feature).
-
-### Option E: Harness-Level Parallelism (No Schema Changes)
-
-Rather than adding parallelism to the form schema, add it to the **harness
-configuration**. The harness would analyze the form and determine parallelism
-automatically or via config hints.
-
-**Syntax (harness config in frontmatter):**
-
-```yaml
 ---
-markform:
-  spec: MF/0.1
-  harness_config:
-    parallel_groups:
-      - [financials, team, market]
-      - [product, tech_stack]
-    max_parallel_agents: 4
----
-```
-
-**Semantics:**
-- The form schema is unchanged — no new attributes on fields or groups.
-- The harness config specifies which groups can run in parallel.
-- The harness spawns multiple agent instances, each given a subset of the form.
-- Each agent sees the full form context but is instructed to fill only its assigned
-  groups/fields.
-
-**Pros:**
-- No schema changes. Existing forms and parsers are unaffected.
-- Parallelism is a runtime concern, not a structural one.
-- Easy to experiment with different parallelism strategies without changing the form.
-- Harness config is already an established concept.
-
-**Cons:**
-- Parallelism intent is separated from the form content, reducing readability.
-- Form authors must maintain two things (form structure + harness config) that must agree.
-- Less portable — a different harness implementation might not honor the config.
-- Cannot express field-level parallelism, only group-level.
-
-## Comparison Matrix
-
-| Criterion | A: Parallel Attr | B: DependsOn | C: Phases | D: Parallel Block | E: Harness Config |
-|---|---|---|---|---|---|
-| Schema changes | Minimal | Moderate | Moderate | Moderate | None |
-| Expressiveness | Medium | High | Medium | Medium | Low |
-| Authoring complexity | Low | High | Low | Low | Low |
-| Default safety | Good | Depends | Good | Good | Good |
-| Granularity | Field + Group | Field or Group | Group | Group | Group |
-| Visual clarity | Medium | Low | Medium | High | Low |
-| Backward compatible | Yes | Yes | Yes | Yes | Yes |
-| Implementation complexity | Low | High | Medium | Medium | Low |
-
-## Recommendation
-
-**Option A (parallel attribute on fields and groups)** is the strongest starting point:
-
-- It works at both field and group granularity with a single, simple attribute.
-- The sequential-by-default behavior is safe and backward compatible.
-- No new structural elements — it extends existing fields and groups.
-- It covers the most common case: "these sections are independent, run them together."
-
-**Option B (dependsOn)** could be added later as an orthogonal enhancement if users need
-fine-grained inter-batch dependencies. The two attributes compose naturally: `parallel`
-for grouping concurrent work, `dependsOn` for expressing specific prerequisites.
-
-**Option E (harness config)** remains useful as a prototyping vehicle — the harness can
-interpret `parallel` attributes, but the config could also override or extend them at
-runtime without schema changes.
-
-**Suggested phased approach:**
-- **Phase 1:** Implement Option A (`parallel` attribute) in schema + harness.
-- **Phase 2:** Add Option B (`dependsOn`) if DAG-level control is needed.
-- **Phase 3:** Consider Option E (harness config overrides) for runtime tuning.
 
 ## Open Questions
 
 - [ ] Should parallel agents see each other's partial results, or work in full isolation
   until merge?
 - [ ] How should cross-group validators work when their constituent fields are filled in
-  parallel? (Likely: defer validation until all contributing fields complete.)
+  parallel? (Current proposal: defer validation until batch completes.)
 - [ ] Should the form author or the harness decide the degree of parallelism
   (max agents)?
-- [ ] Can we auto-detect independence? (e.g., groups with no shared validator references
-  are independent.) This could reduce annotation burden.
 - [ ] How does parallelism interact with the `role` system? (e.g., user-role fields
   filled interactively while agent-role fields fill in parallel.)
-- [ ] What is the merge strategy when parallel agents complete? Simple field-disjoint
-  merge (each agent owns disjoint fields) seems safest.
-- [ ] Should we support field-level parallelism within a group, or is group-level
-  sufficient for the foreseeable use cases?
-
-## Appendix: Execution Model Sketch
-
-Regardless of which schema option is chosen, the parallel harness execution would
-roughly work as:
-
-```
-1. Parse form, identify parallelizable units (groups/fields)
-2. Build execution graph (DAG of units with dependencies)
-3. Identify "ready" units (no unmet dependencies)
-4. For each ready unit, spawn an agent instance:
-   a. Agent receives: full form markdown + instructions to fill only assigned fields
-   b. Agent returns: patches for its assigned fields only
-5. Apply patches from completed agents (disjoint fields, no conflicts)
-6. Re-validate form
-7. Identify newly ready units (dependencies now met)
-8. Repeat 4-7 until all units complete or max turns exceeded
-```
-
-**Key constraint:** Each field is assigned to exactly one agent. No two agents write to
-the same field. This eliminates merge conflicts by construction.
+- [ ] What should happen if a parallel agent aborts a field? Should the entire batch
+  fail, or should other agents in the batch continue?
