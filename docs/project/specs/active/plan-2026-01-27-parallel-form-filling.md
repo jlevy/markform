@@ -680,6 +680,73 @@ grouping and `dependsOn` for fine-grained inter-batch prerequisites.
 <!-- field kind="string" id="synthesis" label="Synthesis" dependsOn="financials,team" --><!-- /field -->
 ```
 
+### Fill-Order Hints (`fillAfter`)
+
+A common need is expressing "fill this field last" (e.g., executive summaries, synthesis
+sections) or "fill this after that specific field." This is distinct from parallelism —
+it's about guiding the agent's order within the loose-serial pool.
+
+**The problem:** In loose-serial mode, the agent chooses its own order. For synthesis
+fields that should incorporate answers from other fields, the form author wants to hint
+"do this one after the others." Without hints, the agent may fill a summary before the
+detail fields it should summarize.
+
+**Design options considered:**
+
+**A. `fillAfter` with special values:**
+
+```markdown
+<!-- field id="summary" label="Executive Summary" fillAfter="all" --><!-- /field -->
+<!-- field id="details" label="Details" fillAfter="overview" --><!-- /field -->
+```
+
+`fillAfter="all"` means "after everything else." `fillAfter="some_id"` means "after
+that specific item." This handles the 80% case ("fill last") cleanly with one keyword.
+For a single specific dependency, it's concise. For multiple dependencies, a
+comma-separated list (`fillAfter="financials,team"`) would work but starts to resemble
+`dependsOn`.
+
+**B. Sequence number (`order`):**
+
+```markdown
+<!-- field id="summary" label="Executive Summary" order=99 --><!-- /field -->
+<!-- field id="revenue" label="Revenue" order=1 --><!-- /field -->
+```
+
+Familiar pattern (CSS z-index, priority queues) but arbitrary numbers are hard to
+maintain. Doesn't express *why* something is ordered. Also risks confusion with the
+existing `priority` attribute (which is about importance, not ordering).
+
+**C. Named stages (`fillOrder="first"` / `fillOrder="last"`):**
+
+```markdown
+<!-- field id="overview" label="Overview" fillOrder="first" --><!-- /field -->
+<!-- field id="summary" label="Summary" fillOrder="last" --><!-- /field -->
+```
+
+Extremely simple for the two most common cases but doesn't generalize beyond two
+positions.
+
+**D. Full `dependsOn` (see above):**
+
+Handles all cases but is verbose for the common "fill last" pattern — a synthesis field
+that depends on "everything else" would need to list every other field ID, and adding a
+new field means updating the dependency list.
+
+**Recommendation:** `fillAfter` (Option A) is the best fit as a near-term enhancement.
+It covers the common cases concisely:
+- `fillAfter="all"` for synthesis/summary fields (the 80% case)
+- `fillAfter="some_id"` for specific ordering (the 15% case)
+- Like `parallel`, it's a hint — the agent can still fill in any order
+
+It composes naturally with `parallel`: a loose-serial item with `fillAfter="all"` would
+be deferred by the primary agent until other loose-serial items (and parallel batches)
+complete. A parallel item with `fillAfter` would be deferred within its batch.
+
+`fillAfter` is also a strict subset of `dependsOn` — if full DAG dependencies are added
+later, `fillAfter="x"` is equivalent to `dependsOn="x"`, and `fillAfter="all"` is
+syntactic sugar for "depends on everything else."
+
 ### Execution Phases
 
 Divide the form into numbered phases/waves. All items in a phase run concurrently;
