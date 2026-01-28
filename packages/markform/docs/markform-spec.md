@@ -159,45 +159,6 @@ markform:
 See [StructureSummary and ProgressSummary](#structuresummary-and-progresssummary) in the
 Data Model section for complete type definitions.
 
-#### Harness Configuration
-
-The optional `harness` section in frontmatter provides defaults for the fill harness.
-All keys MUST use `snake_case`. Unrecognized keys are a parse error.
-
-```yaml
----
-markform:
-  spec: MF/0.1
-  harness:
-    max_turns: 10
-    max_patches_per_turn: 5
-    max_issues_per_turn: 3
-    max_parallel_agents: 4
----
-```
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `max_turns` | number | 20 | Maximum harness loop iterations |
-| `max_patches_per_turn` | number | 20 | Maximum patches per turn |
-| `max_issues_per_turn` | number | 5 | Maximum issues surfaced per turn |
-| `max_parallel_agents` | number | 4 | Maximum concurrent agents for parallel batches |
-
-**Rules:**
-
-- *required:* All values MUST be numbers. Non-numeric values are a parse error.
-- *required:* Only the keys listed above are valid. Unrecognized keys are a parse error.
-- *required:* YAML keys use `snake_case`. The engine converts to camelCase internally
-  (e.g., `max_turns` → `maxTurns`).
-- API-provided options (`FillOptions`) override frontmatter values, which override
-  global defaults.
-
-**Precedence (highest to lowest):**
-
-1. API options (`FillOptions` parameter)
-2. Frontmatter `harness` section
-3. Global defaults (constants in `settings.ts`)
-
 #### ID Conventions
 
 IDs are organized into **two scoping levels** with different uniqueness requirements:

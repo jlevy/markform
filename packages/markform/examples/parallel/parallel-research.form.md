@@ -7,6 +7,9 @@ markform:
     - agent
   role_instructions:
     agent: "Research the company and fill in all fields."
+  harness:
+    max_turns: 10
+    max_parallel_agents: 4
 ---
 {% form id="company_research" title="Company Research (Parallel)" %}
 

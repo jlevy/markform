@@ -323,6 +323,14 @@ export interface FillOptions {
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
   fillMode?: FillMode;
+  /**
+   * Enable parallel execution for forms with `parallel` batches.
+   * When false (default), parallel attributes are ignored and everything runs serially.
+   * When true, batch items run concurrently up to `maxParallelAgents`.
+   *
+   * @default false
+   */
+  enableParallel?: boolean;
   /** Max concurrent agents for parallel batches (default: 4) */
   maxParallelAgents?: number;
   /** Callbacks for observing form-filling execution */

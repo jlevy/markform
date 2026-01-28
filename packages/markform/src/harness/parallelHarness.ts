@@ -90,7 +90,7 @@ export interface ParallelHarnessConfig {
 /**
  * Get field IDs that belong to an execution plan item.
  */
-function getFieldIdsForItem(form: ParsedForm, item: ExecutionPlanItem): string[] {
+export function getFieldIdsForItem(form: ParsedForm, item: ExecutionPlanItem): string[] {
   if (item.itemType === 'field') {
     return [item.itemId];
   }
@@ -289,7 +289,7 @@ export class ParallelHarness {
  * Run promises with a concurrency limit.
  * Returns results in the same order as input.
  */
-async function runWithConcurrency<T>(
+export async function runWithConcurrency<T>(
   promises: Promise<T>[],
   maxConcurrent: number,
 ): Promise<PromiseSettledResult<T>[]> {

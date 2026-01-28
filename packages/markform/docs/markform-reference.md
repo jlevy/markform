@@ -59,33 +59,6 @@ markform:
 <!-- /form -->
 ```
 
-## Harness Configuration
-
-Control harness behavior via the `harness` section in YAML frontmatter.
-All keys use `snake_case`. Unrecognized keys cause a parse error.
-
-```yaml
----
-markform:
-  spec: MF/0.1
-  harness:
-    max_turns: 10
-    max_patches_per_turn: 5
-    max_issues_per_turn: 3
-    max_parallel_agents: 4
----
-```
-
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `max_turns` | number | 20 | Maximum harness loop iterations before stopping |
-| `max_patches_per_turn` | number | 20 | Maximum field patches the agent can apply per turn |
-| `max_issues_per_turn` | number | 5 | Maximum issues surfaced to the agent per turn |
-| `max_parallel_agents` | number | 4 | Maximum concurrent agents for parallel batch execution |
-
-These values can also be overridden programmatically via `FillOptions` (see
-[API Documentation](markform-apis.md)).
-
 ## Conventions
 
 Use `.form.md` for Markform files.
@@ -552,7 +525,7 @@ markform:
          - Metacritic (metacritic.com) for Metascore
       3. Use the EXACT numeric scores from each source - don't average or interpret
       4. Skip fields if any scores are unavailable (older films may lack some metrics)
-  harness:
+  harness_config:
     max_issues_per_turn: 3
     max_patches_per_turn: 8
 ---

@@ -1019,23 +1019,23 @@ primary agent, just with different scope instructions.
 
 #### Tasks
 
-- [ ] Add `enableParallel?: boolean` to `FillOptions` (default: `false`)
-- [ ] In `fillForm()`, after parse + model resolve + input context:
+- [x] Add `enableParallel?: boolean` to `FillOptions` (default: `false`)
+- [x] In `fillForm()`, after parse + model resolve + input context:
   - If `!enableParallel`: existing serial path (unchanged)
   - If `enableParallel`: compute execution plan, dispatch to parallel path
-- [ ] Implement parallel path in `fillForm()`:
+- [x] Implement parallel path in `fillForm()`:
   - Order-level loop (for each order level, ascending)
   - Serial items: existing multi-turn harness loop
   - Parallel batch items: spawn agents, multi-turn per agent, merge patches
-- [ ] Multi-turn loop for parallel agents:
+- [x] Multi-turn loop for parallel agents:
   - Each parallel agent gets its own turn loop (scoped to its fields)
   - Retry with rejection feedback (same as serial)
   - Respect `maxTurnsThisCall` and `AbortSignal`
-- [ ] Agent factory inside `fillForm()`:
+- [x] Agent factory inside `fillForm()`:
   - Reuse resolved model + provider
   - Create `LiveAgent` with scoped system prompt
   - Pass through `enableWebSearch`, `additionalTools`, `callbacks`
-- [ ] Unified callbacks:
+- [x] Unified callbacks:
   - `FillCallbacks.onBatchStart/Complete` fire during parallel batches
   - `FillCallbacks.onOrderLevelStart/Complete` fire at level transitions
   - `onTurnStart/Complete` fire for each agent's turns (serial and parallel)
@@ -1043,17 +1043,17 @@ primary agent, just with different scope instructions.
 - [ ] `FillResult` includes parallel execution metadata (optional):
   - Number of parallel agents used
   - Per-level breakdown of serial vs parallel patches
-- [ ] Tests:
-  - [ ] `fillForm({ enableParallel: false })` ignores parallel attributes (serial)
-  - [ ] `fillForm({ enableParallel: true })` with parallel form → concurrent execution
-  - [ ] `fillForm({ enableParallel: true })` with serial form → falls back to serial
+- [x] Tests:
+  - [x] `fillForm({ enableParallel: false })` ignores parallel attributes (serial)
+  - [x] `fillForm({ enableParallel: true })` with parallel form → concurrent execution
+  - [x] `fillForm({ enableParallel: true })` with serial form → falls back to serial
   - [ ] Multi-turn retry works for parallel agents (rejected patches → retry)
   - [ ] `maxParallelAgents` limits concurrency through `fillForm()`
-  - [ ] `AbortSignal` cancels parallel agents
-  - [ ] Callbacks fire correctly in parallel mode
-  - [ ] `FillResult` shape is identical for serial and parallel
-- [ ] Integration test: mock agents, parallel form, verify complete fill
-- [ ] Update `docs/markform-apis.md` with `enableParallel` documentation
+  - [x] `AbortSignal` cancels parallel agents
+  - [x] Callbacks fire correctly in parallel mode
+  - [x] `FillResult` shape is identical for serial and parallel
+- [x] Integration test: mock agents, parallel form, verify complete fill
+- [x] Update `docs/markform-apis.md` with `enableParallel` documentation
 
 #### Design Decisions
 
