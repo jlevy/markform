@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveHarnessConfig } from '../../../src/harness/harnessConfigResolver.js';
 import {
   DEFAULT_MAX_ISSUES_PER_TURN,
+  DEFAULT_MAX_PARALLEL_AGENTS,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
 } from '../../../src/settings.js';
@@ -118,6 +119,34 @@ describe('harnessConfigResolver', () => {
       const config = resolveHarnessConfig(form as unknown as ParsedForm);
 
       expect(config.maxTurns).toBe(DEFAULT_MAX_TURNS);
+    });
+
+    it('uses default maxParallelAgents when not specified', () => {
+      const form = createMockForm();
+      const config = resolveHarnessConfig(form);
+
+      expect(config.maxParallelAgents).toBe(DEFAULT_MAX_PARALLEL_AGENTS);
+    });
+
+    it('uses frontmatter maxParallelAgents over default', () => {
+      const form = createMockForm({
+        maxParallelAgents: 8,
+      });
+      const config = resolveHarnessConfig(form);
+
+      expect(config.maxParallelAgents).toBe(8);
+    });
+
+    it('uses options maxParallelAgents over frontmatter', () => {
+      const form = createMockForm({
+        maxParallelAgents: 8,
+      });
+      const options = {
+        maxParallelAgents: 2,
+      };
+      const config = resolveHarnessConfig(form, options);
+
+      expect(config.maxParallelAgents).toBe(2);
     });
   });
 });

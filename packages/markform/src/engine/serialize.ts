@@ -1420,6 +1420,9 @@ function buildHarnessConfig(config: FrontmatterHarnessConfig): Record<string, nu
   if (config.maxIssuesPerTurn !== undefined) {
     result.max_issues_per_turn = config.maxIssuesPerTurn;
   }
+  if (config.maxParallelAgents !== undefined) {
+    result.max_parallel_agents = config.maxParallelAgents;
+  }
   return result;
 }
 

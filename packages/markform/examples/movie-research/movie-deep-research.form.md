@@ -35,7 +35,7 @@ markform:
       - Skip fields if data unavailable (older films may lack some metrics)
       - For box office, use millions (e.g., 100.5 for $100.5M)
       - Add notes for any missing, confusing, or unclear information
-  harness_config:
+  harness:
     max_issues_per_turn: 5
     max_patches_per_turn: 15
 ---

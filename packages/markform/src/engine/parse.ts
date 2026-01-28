@@ -75,7 +75,8 @@ interface FrontmatterResult {
 
 /**
  * Parse harness configuration from frontmatter.
- * Converts snake_case keys to camelCase.
+ * YAML keys must be snake_case; they are mapped to camelCase internally.
+ * Unrecognized keys produce a parse error.
  */
 function parseHarnessConfig(raw: unknown): FrontmatterHarnessConfig | undefined {
   if (!raw || typeof raw !== 'object') {
@@ -85,21 +86,27 @@ function parseHarnessConfig(raw: unknown): FrontmatterHarnessConfig | undefined 
   const config = raw as Record<string, unknown>;
   const result: FrontmatterHarnessConfig = {};
 
-  // Map snake_case to camelCase
+  // Map snake_case YAML keys to camelCase TypeScript keys
   const keyMap: Record<string, keyof FrontmatterHarnessConfig> = {
     max_turns: 'maxTurns',
-    maxTurns: 'maxTurns',
     max_patches_per_turn: 'maxPatchesPerTurn',
-    maxPatchesPerTurn: 'maxPatchesPerTurn',
     max_issues_per_turn: 'maxIssuesPerTurn',
-    maxIssuesPerTurn: 'maxIssuesPerTurn',
+    max_parallel_agents: 'maxParallelAgents',
   };
 
   for (const [key, value] of Object.entries(config)) {
     const camelKey = keyMap[key];
-    if (camelKey && typeof value === 'number') {
-      result[camelKey] = value;
+    if (!camelKey) {
+      throw new MarkformParseError(
+        `Unknown harness config key '${key}'. Valid keys: ${Object.keys(keyMap).join(', ')}`,
+      );
     }
+    if (typeof value !== 'number') {
+      throw new MarkformParseError(
+        `Harness config key '${key}' must be a number, got ${typeof value}`,
+      );
+    }
+    result[camelKey] = value;
   }
 
   return Object.keys(result).length > 0 ? result : undefined;

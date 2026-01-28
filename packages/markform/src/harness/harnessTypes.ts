@@ -323,6 +323,8 @@ export interface FillOptions {
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
   fillMode?: FillMode;
+  /** Max concurrent agents for parallel batches (default: 4) */
+  maxParallelAgents?: number;
   /** Callbacks for observing form-filling execution */
   callbacks?: FillCallbacks;
   /** AbortSignal for cancellation */

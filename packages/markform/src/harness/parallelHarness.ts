@@ -15,6 +15,7 @@ import type {
 } from '../engine/coreTypes.js';
 import { computeExecutionPlan } from '../engine/executionPlan.js';
 import { inspect } from '../engine/inspect.js';
+import { DEFAULT_MAX_PARALLEL_AGENTS } from '../settings.js';
 import type { Agent, AgentResponse } from './harnessTypes.js';
 
 // =============================================================================
@@ -64,7 +65,7 @@ export interface ParallelRunResult {
  * Configuration for the parallel harness.
  */
 export interface ParallelHarnessConfig {
-  /** Maximum concurrent agents for parallel batches (default: batch size) */
+  /** Maximum concurrent agents for parallel batches (default: DEFAULT_MAX_PARALLEL_AGENTS) */
   maxParallelAgents?: number;
   /** Factory to create scoped agents for parallel batch items */
   agentFactory?: (request: ScopedFillRequest) => Agent;
@@ -194,7 +195,7 @@ export class ParallelHarness {
       const batchInspect = inspect(this.form);
       const batchIssues = batchInspect.issues;
 
-      const maxConcurrent = this.config.maxParallelAgents ?? batchItems.length;
+      const maxConcurrent = this.config.maxParallelAgents ?? DEFAULT_MAX_PARALLEL_AGENTS;
 
       // Create promises for each batch item (limited concurrency)
       const agentPromises: Promise<AgentResponse>[] = [];

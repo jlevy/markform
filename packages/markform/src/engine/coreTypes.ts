@@ -495,6 +495,7 @@ export interface FrontmatterHarnessConfig {
   maxTurns?: number;
   maxPatchesPerTurn?: number;
   maxIssuesPerTurn?: number;
+  maxParallelAgents?: number;
 }
 
 /**
@@ -1008,7 +1009,7 @@ export interface HarnessConfig {
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
   fillMode?: FillMode;
-  /** Max concurrent agents for parallel batches (default: batch size) */
+  /** Max concurrent agents for parallel batches (default: 4) */
   maxParallelAgents?: number;
 }
 
@@ -1883,6 +1884,7 @@ export const HarnessConfigSchema = z.object({
   maxGroupsPerTurn: z.number().int().positive().optional(),
   targetRoles: z.array(z.string()).optional(),
   fillMode: FillModeSchema.optional(),
+  maxParallelAgents: z.number().int().positive().optional(),
 });
 
 export const SessionTurnStatsSchema = z.object({
