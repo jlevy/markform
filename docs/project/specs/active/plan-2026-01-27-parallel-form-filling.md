@@ -276,6 +276,7 @@ it would in today's loose-serial mode.
 | --- | --- |
 | Field inside a group has `parallel` attribute | `Field '${fieldId}' has parallel='${fieldVal}' but is inside group '${groupId}'. The parallel attribute is only allowed on top-level fields and groups.` |
 | Same `parallel` value used in non-contiguous positions (interleaved with items that have a different or no `parallel` value) | `Parallel batch '${value}' is not contiguous. All items with the same parallel value must be adjacent.` |
+| Items in a parallel batch have different effective `order` values | `Parallel batch '${batchId}' has items with different order values (${orderValues}). All items in a parallel batch must have the same order.` |
 
 ### Scope
 
@@ -315,8 +316,9 @@ it would in today's loose-serial mode.
 11. Harness only surfaces issues for the current (lowest incomplete) order level
 12. Fields at different order levels are always filled in separate turns
 13. Error on field inside a group specifying a different `order` than the group
-14. Parallel harness can spawn concurrent agents per batch item
-15. Parallel harness correctly merges patches from all agents
+14. Error on parallel batch items with different effective `order` values
+15. Parallel harness can spawn concurrent agents per batch item
+16. Parallel harness correctly merges patches from all agents
 
 ### Design Decisions
 
@@ -343,6 +345,12 @@ it would in today's loose-serial mode.
    groups) keeps the execution model simple: each top-level item is either in the
    loose-serial pool or in a parallel batch. Sub-parallelism within groups is a future
    enhancement.
+
+7. **`parallel` and `order` are orthogonal.** `parallel` controls *concurrency* (can
+   these items run at the same time?). `order` controls *sequencing* (which items are
+   presented first?). They compose but serve different purposes. A parallel batch runs
+   at a single order level; `order` determines *when* the batch runs relative to other
+   items, while `parallel` determines that batch items run *concurrently*.
 
 ### Design: The `order` Attribute
 
@@ -406,10 +414,11 @@ already contain the filled-in values for all the other fields.
    in separate groups. This is consistent with `parallel` — both attributes are set on
    the execution unit (field or group) with no child-level overrides.
 
-6. **Composes with `parallel`.** A parallel batch can contain items with different `order`
-   values. Within each parallel agent, the agent fills its assigned fields respecting
-   order levels. Alternatively, the form author can set `order` on entire parallel groups
-   to control when the batch runs relative to loose-serial items.
+6. **Composes with `parallel`.** All items in a parallel batch MUST have the same
+   effective `order` value (parse error otherwise). Since unset defaults to `0`, a batch
+   where no item specifies `order` is valid (all at `0`). This keeps the execution model
+   simple: a batch runs at a single order level, and the harness doesn't need to
+   sequence items within a batch.
 
 7. **Implemented via issue filtering.** The harness already filters issues per turn
    (`maxFieldsPerTurn`, `maxGroupsPerTurn`, `maxIssuesPerTurn`). The `order` attribute
@@ -554,8 +563,8 @@ Update the Markform specification documents to define `parallel` and `order`.
 > - Fields at different order levels are always filled in separate agent turns.
 > - A field inside a group with `order` MUST NOT specify a different `order`
 >   (parse error). Use separate groups for different order levels.
-> - `order` composes with `parallel`: parallel batch items can have different order
->   levels.
+> - `order` composes with `parallel`: all items in a parallel batch MUST have the
+>   same effective `order` value (parse error otherwise).
 
 #### Layer 3 addition: Execution Plan
 
@@ -602,6 +611,7 @@ Parse, validate, serialize, and expose `parallel` and `order` through the engine
 - [ ] Add validation: field inside a group with `order` must not specify a different `order`
 - [ ] Add validation: `parallel` on field inside group is a parse error
 - [ ] Add validation: non-contiguous parallel batch
+- [ ] Add validation: parallel batch items with differing `order` values
 - [ ] Update serializer to emit `parallel` and `order` attributes on field and group tags
 - [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionPlan` function
 - [ ] Add `getEffectiveOrder(field, group): number` helper (use group's order if field is in a group, else field's own, default 0)
