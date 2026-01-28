@@ -128,22 +128,25 @@ describe('urlFormat', () => {
       expect(result).toContain('<a href="https://www.example.com"');
     });
 
-    it('preserves markdown links without modification', () => {
+    it('converts markdown links to HTML links with original text', () => {
       const input = 'See [docs](https://example.com/docs) for more';
       const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
-      // Markdown link should be preserved as-is
-      expect(result).toContain('[docs](https://example.com/docs)');
-      // Should not create an <a> tag from the markdown link URL
-      expect(result).not.toContain('<a href="https://example.com/docs"');
+      // Markdown link converted to <a> tag with original link text
+      expect(result).toContain('<a href="https://example.com/docs"');
+      expect(result).toContain('>docs</a>');
+      // Should not have raw markdown syntax
+      expect(result).not.toContain('[docs]');
     });
 
     it('handles text with both markdown and bare URLs', () => {
       const input = 'See [docs](https://example.com/docs) and also https://other.com/page';
       const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
-      // Markdown link preserved
-      expect(result).toContain('[docs](https://example.com/docs)');
-      // Bare URL converted
+      // Markdown link converted to HTML
+      expect(result).toContain('<a href="https://example.com/docs"');
+      expect(result).toContain('>docs</a>');
+      // Bare URL also converted with abbreviated display
       expect(result).toContain('<a href="https://other.com/page"');
+      expect(result).toContain('>other.com/page</a>');
     });
 
     it('handles multiple bare URLs', () => {
@@ -173,6 +176,33 @@ describe('urlFormat', () => {
       expect(result).toContain('href="https://example.com/very/long/path/to/resource"');
       // Abbreviated display
       expect(result).toContain('>example.com/very/long/pa…</a>');
+    });
+
+    it('escapes HTML in non-URL text to prevent XSS', () => {
+      const input = '<script>alert("xss")</script> https://example.com';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Script tag should be escaped
+      expect(result).toContain('&lt;script&gt;');
+      expect(result).not.toContain('<script>');
+      // URL should still be converted to link
+      expect(result).toContain('<a href="https://example.com"');
+    });
+
+    it('escapes HTML in text with img onerror XSS vector', () => {
+      const input = '<img onerror=alert(1) src=x> See https://example.com';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Img tag should be escaped
+      expect(result).toContain('&lt;img');
+      expect(result).not.toContain('<img');
+      // URL should still be converted
+      expect(result).toContain('<a href="https://example.com"');
+    });
+
+    it('handles URLs with query parameters containing &', () => {
+      const input = 'See https://example.com/search?a=1&b=2';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // URL in href should have proper escaping
+      expect(result).toContain('href="https://example.com/search?a=1&amp;b=2"');
     });
   });
 });
