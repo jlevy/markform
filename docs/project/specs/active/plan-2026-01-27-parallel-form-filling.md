@@ -275,7 +275,6 @@ it would in today's loose-serial mode.
 | Condition | Error |
 | --- | --- |
 | Field inside a group has `parallel` attribute | `Field '${fieldId}' has parallel='${fieldVal}' but is inside group '${groupId}'. The parallel attribute is only allowed on top-level fields and groups.` |
-| Same `parallel` value used in non-contiguous positions (interleaved with items that have a different or no `parallel` value) | `Parallel batch '${value}' is not contiguous. All items with the same parallel value must be adjacent.` |
 | Items in a parallel batch have different effective `order` values | `Parallel batch '${batchId}' has items with different order values (${orderValues}). All items in a parallel batch must have the same order.` |
 
 ### Scope
@@ -309,7 +308,6 @@ it would in today's loose-serial mode.
 4. `parallel` appears on `FieldBase` and `FieldGroup` types as `parallel?: string`
 5. Execution plan correctly identifies loose-serial items and parallel batches
 6. Error on `parallel` attribute on a field inside a group
-7. Error on non-contiguous parallel batch
 8. `order` attribute is parsed from both syntaxes; defaults to `0` when absent
 9. `order` is round-tripped through parse → serialize
 10. `order` appears on `FieldBase` and `FieldGroup` types as `order?: number`
@@ -326,27 +324,24 @@ it would in today's loose-serial mode.
    allows multiple independent parallel batches in the same form. A boolean would only
    support "parallel or not" without distinguishing batches.
 
-2. **Contiguity requirement.** Items in the same parallel batch must be adjacent in the
-   document. This prevents confusing interleaving and keeps the form readable.
-
-3. **Loose serial default.** Safest choice — existing forms and new forms without
+2. **Loose serial default.** Safest choice — existing forms and new forms without
    annotation work exactly as they do today. Authors opt in to parallelism explicitly.
 
-4. **Hint, not mandate.** A harness that doesn't support parallelism simply ignores the
+3. **Hint, not mandate.** A harness that doesn't support parallelism simply ignores the
    attribute. This keeps the attribute purely additive.
 
-5. **No barriers.** The `parallel` attribute is purely about concurrency, not ordering.
+4. **No barriers.** The `parallel` attribute is purely about concurrency, not ordering.
    We deliberately avoid implicit dependency semantics (e.g., "serial items before a
    batch must complete first") because the current model has no enforced ordering either.
    Barriers and dependencies are a separate concern, reserved for a future `dependsOn`
    attribute.
 
-6. **Top-level only.** Restricting `parallel` to top-level items (not fields inside
+5. **Top-level only.** Restricting `parallel` to top-level items (not fields inside
    groups) keeps the execution model simple: each top-level item is either in the
    loose-serial pool or in a parallel batch. Sub-parallelism within groups is a future
    enhancement.
 
-7. **`parallel` and `order` are orthogonal.** `parallel` controls *concurrency* (can
+6. **`parallel` and `order` are orthogonal.** `parallel` controls *concurrency* (can
    these items run at the same time?). `order` controls *sequencing* (which items are
    presented first?). They compose but serve different purposes. A parallel batch runs
    at a single order level; `order` determines *when* the batch runs relative to other
@@ -526,7 +521,6 @@ Update the Markform specification documents to define `parallel` and `order`.
 > - Items with the same `parallel` value form a *parallel batch*
 > - Items without `parallel` remain in loose-serial mode (single agent, no enforced
 >   ordering) — identical to current behavior
-> - Items in a parallel batch MUST be contiguous in document order
 > - `parallel` MUST NOT appear on fields inside groups (parse error) — only on
 >   top-level fields and groups
 > - `parallel` is a hint — a harness MAY ignore it and fill everything in
@@ -589,7 +583,6 @@ Update the Markform specification documents to define `parallel` and `order`.
 > **Computation:** Walk top-level items (fields and groups) in document order:
 > - If item has no `parallel`: add to the loose-serial pool
 > - If item has `parallel`: add to the batch with that ID (create batch if new)
-> - Validate contiguity: items in the same batch must be adjacent
 >
 > **Execution:** The primary agent fills loose-serial items. For each parallel batch,
 > one agent per item is spawned. All agents (primary + batch agents) run concurrently.
@@ -610,7 +603,6 @@ Parse, validate, serialize, and expose `parallel` and `order` through the engine
   attributes from field and group tags
 - [ ] Add validation: field inside a group with `order` must not specify a different `order`
 - [ ] Add validation: `parallel` on field inside group is a parse error
-- [ ] Add validation: non-contiguous parallel batch
 - [ ] Add validation: parallel batch items with differing `order` values
 - [ ] Update serializer to emit `parallel` and `order` attributes on field and group tags
 - [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionPlan` function
@@ -683,32 +675,6 @@ for (const field of group.children) {
 }
 ```
 
-**Validation for contiguity (`validate.ts` or `computeExecutionPlan`):**
-
-```typescript
-function validateParallelContiguity(items: Array<{ id: Id; parallel?: string }>): void {
-  const seen = new Map<string, number>(); // batchId → last index seen
-  for (let i = 0; i < items.length; i++) {
-    const p = items[i].parallel;
-    if (!p) {
-      continue;
-    }
-    if (seen.has(p)) {
-      const lastIdx = seen.get(p)!;
-      // Check all items between lastIdx and i also have the same parallel value
-      for (let j = lastIdx + 1; j < i; j++) {
-        if (items[j].parallel !== p) {
-          throw new MarkformParseError(
-            `Parallel batch '${p}' is not contiguous. ` +
-            `All items with the same parallel value must be adjacent.`
-          );
-        }
-      }
-    }
-    seen.set(p, i);
-  }
-}
-```
 
 ### Phase 3: Harness & AI SDK Implementation
 
@@ -833,7 +799,6 @@ Do NOT provide patches for any other fields.
 - [ ] `parallel` attribute parses correctly in both syntaxes
 - [ ] `parallel` round-trips through parse → serialize
 - [ ] `parallel` on field inside group produces parse error
-- [ ] Non-contiguous batches produce errors
 - [ ] `order` attribute parses correctly in both syntaxes
 - [ ] `order` round-trips through parse → serialize
 - [ ] `order` defaults to `0` when absent
