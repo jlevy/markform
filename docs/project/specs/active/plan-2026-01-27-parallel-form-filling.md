@@ -1039,16 +1039,16 @@ primary agent, just with different scope instructions.
   - `FillCallbacks.onBatchStart/Complete` fire during parallel batches
   - `FillCallbacks.onOrderLevelStart/Complete` fire at level transitions
   - `onTurnStart/Complete` fire for each agent's turns (serial and parallel)
-- [ ] Session transcript support for parallel turns
-- [ ] `FillResult` includes parallel execution metadata (optional):
+- [ ] Session transcript support for parallel turns (follow-up: mf-04p6)
+- [ ] `FillResult` includes parallel execution metadata (follow-up: mf-quxk):
   - Number of parallel agents used
   - Per-level breakdown of serial vs parallel patches
 - [x] Tests:
   - [x] `fillForm({ enableParallel: false })` ignores parallel attributes (serial)
   - [x] `fillForm({ enableParallel: true })` with parallel form → concurrent execution
   - [x] `fillForm({ enableParallel: true })` with serial form → falls back to serial
-  - [ ] Multi-turn retry works for parallel agents (rejected patches → retry)
-  - [ ] `maxParallelAgents` limits concurrency through `fillForm()`
+  - [ ] Multi-turn retry works for parallel agents (rejected patches → retry) (follow-up: mf-1l3y)
+  - [ ] `maxParallelAgents` limits concurrency through `fillForm()` (follow-up: mf-cocf)
   - [x] `AbortSignal` cancels parallel agents
   - [x] Callbacks fire correctly in parallel mode
   - [x] `FillResult` shape is identical for serial and parallel

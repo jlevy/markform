@@ -144,6 +144,30 @@ markform:
   When omitted, tools may infer from field roles or require explicit selection.
   This is a hint for tooling, not enforced by the engine.
 
+- `harness` (*optional*): A map of harness configuration hints that suggest execution
+  parameters to harness implementations. These are suggestions — a harness MAY ignore
+  them or override them via API options.
+
+  Supported keys (all values must be numbers, all keys must be `snake_case`):
+
+  | Key | Description |
+  | --- | --- |
+  | `max_turns` | Suggested maximum turns before stopping |
+  | `max_patches_per_turn` | Suggested maximum patches per turn |
+  | `max_issues_per_turn` | Suggested maximum issues surfaced per turn |
+  | `max_parallel_agents` | Suggested maximum concurrent agents for parallel execution |
+
+  Unrecognized keys or non-numeric values are parse errors.
+
+  Example:
+  ```yaml
+  markform:
+    spec: MF/0.1
+    harness:
+      max_turns: 50
+      max_parallel_agents: 4
+  ```
+
 **Behavioral rules (*required*):**
 
 - *required:* `form_summary`, `form_progress`, and `form_state` are derived,
