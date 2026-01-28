@@ -405,9 +405,12 @@ already contain the filled-in values for all the other fields.
 
 5. **Applies to fields and groups.** When `order` is on a group, all fields in that group
    are at the group's order level. A field inside a group MUST NOT specify a different
-   `order` value (parse error). If you need fields at different order levels, place them
-   in separate groups. This is consistent with `parallel` — both attributes are set on
-   the execution unit (field or group) with no child-level overrides.
+   `order` value (parse error). For this rule, an unset `order` is equivalent to
+   `order=0` — so a field with no `order` inside a group with `order=0` (or no `order`)
+   is valid, but a field with no `order` inside a group with `order=5` is an error. If
+   you need fields at different order levels, place them in separate groups. This is
+   consistent with `parallel` — both attributes are set on the execution unit (field or
+   group) with no child-level overrides.
 
 6. **Composes with `parallel`.** All items in a parallel batch MUST have the same
    effective `order` value (parse error otherwise). Since unset defaults to `0`, a batch
@@ -606,7 +609,6 @@ Parse, validate, serialize, and expose `parallel` and `order` through the engine
 - [ ] Add validation: parallel batch items with differing `order` values
 - [ ] Update serializer to emit `parallel` and `order` attributes on field and group tags
 - [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionPlan` function
-- [ ] Add `getEffectiveOrder(field, group): number` helper (use group's order if field is in a group, else field's own, default 0)
 - [ ] Export `ExecutionPlan` type and `computeExecutionPlan` from public API
 - [ ] Update `InspectResult` to include execution plan (optional, for tooling)
 - [ ] Add unit tests for parsing `parallel` and `order` (both syntaxes)
@@ -628,7 +630,7 @@ interface FieldBase {
 interface FieldGroup {
   // ... existing fields
   parallel?: string;  // Parallel batch identifier
-  order?: number;     // Fill order (default: 0). Inherited by child fields.
+  order?: number;     // Fill order (default: 0). Applies to all child fields.
 }
 
 // New: Execution plan types
@@ -649,9 +651,9 @@ interface ExecutionPlan {
   orderLevels: number[];
 }
 
-// New functions
+// New function
 function computeExecutionPlan(form: ParsedForm): ExecutionPlan;
-function getEffectiveOrder(field: Field, group?: FieldGroup): number;
+// Note: effective order is simply `item.order ?? 0` — no helper needed.
 ```
 
 **Parser changes (`parseFields.ts`):**
@@ -683,11 +685,15 @@ Implement parallel execution in the harness and live agent.
 **Tasks:**
 
 - [ ] Implement order-based issue filtering in `FormHarness`:
-  - Compute effective order for each field (group's `order` if in a group, else field's own `order`, default 0)
+  - Effective order for a top-level item is `item.order ?? 0` (fields inside groups
+    use the group's order; child overrides are already a parse error)
   - In `filterIssuesByScope()`, only include issues for fields at the current
     (lowest incomplete) order level
   - "Complete" for order gating means: all fields at that level are answered, skipped,
     or aborted
+  - Note: since all items in a parallel batch share the same order, order-gating
+    operates at the batch level — a batch either runs or waits. There is no
+    order-gating *within* a single parallel agent (each agent fills one item).
 - [ ] Add `ParallelHarness` class (or extend `FormHarness`) that uses execution plan
 - [ ] Implement concurrent agent spawning for parallel batches
 - [ ] Each parallel agent receives:
