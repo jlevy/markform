@@ -616,6 +616,15 @@ Parse, validate, serialize, and expose `parallel` and `order` through the engine
 - [ ] Add unit tests for validation errors
 - [ ] Add unit tests for `computeExecutionPlan`
 - [ ] Add golden tests for round-trip with `parallel` and `order`
+- [ ] Implement order-based issue filtering in `filterIssuesByScope()`:
+  - Effective order for a top-level item is `item.order ?? 0` (fields inside groups
+    use the group's order; child overrides are already a parse error)
+  - Only include issues for fields at the current (lowest incomplete) order level
+  - "Complete" for order gating means: all fields at that level are answered, skipped,
+    or aborted
+- [ ] Implement `markform plan` CLI command (see below)
+- [ ] Add sample forms with `parallel` and `order` to examples directory
+- [ ] Add session tests that run `markform plan` on sample forms and validate output
 
 **Key type changes:**
 
@@ -677,6 +686,95 @@ for (const field of group.children) {
 }
 ```
 
+**`markform plan` CLI command:**
+
+A new command that simulates the harness execution plan without actually filling
+anything. It walks through the form as the harness would — computing order levels,
+parallel batches, and issue assignments per turn — and prints a human-readable summary
+of what each turn would look like. This is valuable for:
+
+- **Debugging** `parallel` and `order` attributes during form authoring
+- **Validating** plan logic in Phase 2 before wiring up parallel execution in Phase 3
+- **Session tests** that assert the plan output matches expectations for sample forms
+
+```
+markform plan <file> [options]
+  --format <format>    Output format: console (default), json
+  --roles <roles>      Target roles (default: agent)
+  --max-fields <n>     maxFieldsPerTurn override
+  --max-groups <n>     maxGroupsPerTurn override
+```
+
+**Example output (console format):**
+
+```
+Plan: company_research (Company Research)
+
+Order level 0 (4 items):
+  Loose serial (primary agent):
+    - overview [group: Context]
+        company_name (Company Name) — required, unanswered
+        company_overview (Company Overview) — unanswered
+  Parallel batch "deep_research" (3 items, 3 agents):
+    - financials [group: Financial Data]
+        revenue (Annual Revenue) — unanswered
+        margins (Margin Analysis) — unanswered
+    - team (Team & Leadership) — unanswered
+    - market [group: Market Analysis]
+        tam (TAM) — unanswered
+        competitors (Competitors) — unanswered
+
+Order level 10 (1 item):
+  Loose serial (primary agent):
+    - synthesis [group: Synthesis]
+        overall (Overall Assessment) — unanswered
+
+Summary: 2 order levels, 1 parallel batch, 5 turns minimum
+```
+
+**Example output (json format):**
+
+```json
+{
+  "formId": "company_research",
+  "orderLevels": [
+    {
+      "order": 0,
+      "looseSerial": [
+        { "itemId": "overview", "itemType": "group", "fields": ["company_name", "company_overview"] }
+      ],
+      "parallelBatches": [
+        {
+          "batchId": "deep_research",
+          "items": [
+            { "itemId": "financials", "itemType": "group", "fields": ["revenue", "margins"] },
+            { "itemId": "team", "itemType": "field" },
+            { "itemId": "market", "itemType": "group", "fields": ["tam", "competitors"] }
+          ]
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "looseSerial": [
+        { "itemId": "synthesis", "itemType": "group", "fields": ["overall"] }
+      ],
+      "parallelBatches": []
+    }
+  ]
+}
+```
+
+**Implementation:** The command parses the form, calls `computeExecutionPlan()`, then
+groups items by order level and renders the plan. It also runs `inspect()` to show issue
+state per field (unanswered, answered, etc.) so authors can see what would be surfaced.
+No agents are invoked — this is pure computation.
+
+**Session tests:** Add sample forms to `examples/` that exercise `parallel` and `order`
+(e.g., `examples/parallel/parallel-research.md`). Session tests run `markform plan` on
+each sample form and snapshot the JSON output, similar to how `sessionReplay.test.ts`
+snapshots fill sessions. This validates the plan logic end-to-end without needing mock
+agents.
 
 ### Phase 3: Harness & AI SDK Implementation
 
@@ -684,17 +782,10 @@ Implement parallel execution in the harness and live agent.
 
 **Tasks:**
 
-- [ ] Implement order-based issue filtering in `FormHarness`:
-  - Effective order for a top-level item is `item.order ?? 0` (fields inside groups
-    use the group's order; child overrides are already a parse error)
-  - In `filterIssuesByScope()`, only include issues for fields at the current
-    (lowest incomplete) order level
-  - "Complete" for order gating means: all fields at that level are answered, skipped,
-    or aborted
-  - Note: since all items in a parallel batch share the same order, order-gating
-    operates at the batch level — a batch either runs or waits. There is no
-    order-gating *within* a single parallel agent (each agent fills one item).
 - [ ] Add `ParallelHarness` class (or extend `FormHarness`) that uses execution plan
+  - Note: order-based issue filtering is implemented in Phase 2; since all items in a
+    parallel batch share the same order, order-gating operates at the batch level —
+    a batch either runs or waits
 - [ ] Implement concurrent agent spawning for parallel batches
 - [ ] Each parallel agent receives:
   - Full form markdown (read-only context for all fields)
