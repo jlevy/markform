@@ -596,6 +596,10 @@ Update the Markform specification documents to define `parallel` and `order`.
 > - If item has no `parallel`: add to the loose-serial pool
 > - If item has `parallel`: add to the batch with that ID (create batch if new)
 >
+> Note: `parallel` is only valid on top-level fields and groups. A field inside a
+> group that sets `parallel` produces a parse error (see validation rules below),
+> so the planner only needs to inspect top-level items.
+>
 > **Execution:** The primary agent fills loose-serial items. For each parallel batch,
 > one agent per item is spawned. All agents (primary + batch agents) run concurrently.
 > When all complete, patches are merged and validation runs.
