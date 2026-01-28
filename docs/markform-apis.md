@@ -202,9 +202,40 @@ const result = await fillForm({
 | `maxStepsPerTurn` | `number` | `20` | Maximum AI SDK steps (tool call rounds) per turn |
 | `targetRoles` | `string[]` | `['agent']` | Roles to fill |
 | `fillMode` | `FillMode` | `'continue'` | `'continue'` or `'overwrite'` |
+| `enableParallel` | `boolean` | `false` | Enable parallel execution for forms with `parallel` batches |
+| `maxParallelAgents` | `number` | `4` | Max concurrent agents for parallel batches |
 | `callbacks` | `FillCallbacks` | `undefined` | Progress callbacks |
 | `signal` | `AbortSignal` | `undefined` | Cancellation signal |
 | `additionalTools` | `Record<string, Tool>` | `undefined` | Custom tools for agent |
+
+### Parallel Execution
+
+When a form uses `parallel` attributes on groups, you can enable concurrent execution:
+
+```typescript
+const result = await fillForm({
+  form: formMarkdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: true,
+  captureWireFormat: false,
+  enableParallel: true,
+  maxParallelAgents: 4,
+  callbacks: {
+    onOrderLevelStart: ({ order }) => console.log(`Order ${order} starting`),
+    onBatchStart: ({ batchId }) => console.log(`Batch ${batchId} starting`),
+    onBatchComplete: ({ batchId, patchesApplied }) =>
+      console.log(`Batch ${batchId}: ${patchesApplied} patches`),
+  },
+});
+```
+
+**Behavior:**
+- `enableParallel: false` (default): All fields filled serially, `parallel` attributes
+  ignored. The `order` attribute still controls issue filtering.
+- `enableParallel: true`: Batch items run concurrently (up to `maxParallelAgents`).
+  Each agent runs a multi-turn loop with rejection feedback, same as the serial path.
+- If the form has no `parallel` batches, falls back to serial automatically.
+- `FillResult` shape is identical regardless of serial or parallel execution.
 
 ### FillStatus
 
