@@ -8,9 +8,8 @@
 import type { LanguageModel } from 'ai';
 
 import { applyPatches } from '../engine/apply.js';
-import { parseForm } from '../engine/parse.js';
-import { serializeForm } from '../engine/serialize.js';
 import type {
+  ExecutionPlanItem,
   FieldValue,
   InspectIssue,
   ParsedForm,
@@ -18,16 +17,22 @@ import type {
   SessionTurnContext,
   SessionTurnStats,
 } from '../engine/coreTypes.js';
+import { computeExecutionPlan } from '../engine/executionPlan.js';
+import { inspect } from '../engine/inspect.js';
+import { parseForm } from '../engine/parse.js';
+import { serializeForm } from '../engine/serialize.js';
 import { coerceInputContext } from '../engine/valueCoercion.js';
 import {
   AGENT_ROLE,
   DEFAULT_MAX_ISSUES_PER_TURN,
+  DEFAULT_MAX_PARALLEL_AGENTS,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
 } from '../settings.js';
 import { createHarness } from './harness.js';
 import { createLiveAgent } from './liveAgent.js';
 import { resolveModel } from './modelResolver.js';
+import { runWithConcurrency, scopeIssuesForItem } from './parallelHarness.js';
 import type { Agent, FillOptions, FillResult, FillStatus } from './harnessTypes.js';
 
 // Re-export types for backwards compatibility
@@ -209,7 +214,16 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     inputContextWarnings = coercionResult.warnings;
   }
 
-  // 4. Create harness + agent
+  // 4. Check for parallel execution path
+  if (options.enableParallel) {
+    const plan = computeExecutionPlan(form);
+    if (plan.parallelBatches.length > 0) {
+      return fillFormParallel(form, model, provider, options, totalPatches, inputContextWarnings);
+    }
+    // No parallel batches — fall through to serial path
+  }
+
+  // 5. Create harness + agent (serial path)
   const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
   const startingTurnNumber = options.startingTurnNumber ?? 0;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
@@ -240,7 +254,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       maxStepsPerTurn: options.maxStepsPerTurn,
     });
 
-  // 5. Run harness loop
+  // 6. Run harness loop
   let turnCount = startingTurnNumber;
   let turnsThisCall = 0;
   let stepResult = harness.step();
@@ -392,7 +406,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
   }
 
-  // 6. Determine final status
+  // 7. Determine final status
   if (stepResult.isComplete) {
     return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
   }
@@ -406,4 +420,316 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     inputContextWarnings,
     stepResult.issues,
   );
+}
+
+// =============================================================================
+// Parallel Execution Path
+// =============================================================================
+
+/**
+ * Fill a form using parallel execution.
+ *
+ * For each order level, runs serial items with the primary agent (multi-turn),
+ * then runs parallel batch items concurrently (multi-turn per agent).
+ */
+async function fillFormParallel(
+  form: ParsedForm,
+  model: LanguageModel | undefined,
+  provider: string | undefined,
+  options: FillOptions,
+  initialPatches: number,
+  inputContextWarnings: string[],
+): Promise<FillResult> {
+  const plan = computeExecutionPlan(form);
+  const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
+  const startingTurnNumber = options.startingTurnNumber ?? 0;
+  const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
+  const maxIssuesPerTurn = options.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN;
+  const maxParallelAgents = options.maxParallelAgents ?? DEFAULT_MAX_PARALLEL_AGENTS;
+  const targetRoles = options.targetRoles ?? [AGENT_ROLE];
+
+  let totalPatches = initialPatches;
+  let turnCount = startingTurnNumber;
+
+  // Create primary agent for serial items
+  const primaryAgent: Agent =
+    options._testAgent ??
+    createLiveAgent({
+      model: model!,
+      systemPromptAddition: options.systemPromptAddition,
+      targetRole: targetRoles[0] ?? AGENT_ROLE,
+      provider,
+      enableWebSearch: options.enableWebSearch,
+      additionalTools: options.additionalTools,
+      callbacks: options.callbacks,
+      maxStepsPerTurn: options.maxStepsPerTurn,
+    });
+
+  for (const order of plan.orderLevels) {
+    // Check cancellation
+    if (options.signal?.aborted) {
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        { ok: false, reason: 'cancelled' },
+        inputContextWarnings,
+      );
+    }
+
+    // Check turn limit
+    if (turnCount >= maxTurnsTotal) {
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        {
+          ok: false,
+          reason: 'max_turns',
+          message: `Reached maximum total turns (${maxTurnsTotal})`,
+        },
+        inputContextWarnings,
+      );
+    }
+
+    // Fire order level callback
+    try {
+      options.callbacks?.onOrderLevelStart?.({ order });
+    } catch {
+      /* ignore */
+    }
+
+    // --- Serial items at this order level (multi-turn) ---
+    const serialItems = plan.looseSerial.filter((i) => i.order === order);
+    if (serialItems.length > 0) {
+      const result = await runMultiTurnForItems(
+        form,
+        primaryAgent,
+        serialItems,
+        targetRoles,
+        maxPatchesPerTurn,
+        maxIssuesPerTurn,
+        maxTurnsTotal,
+        turnCount,
+        options,
+      );
+      totalPatches += result.patchesApplied;
+      turnCount += result.turnsUsed;
+
+      if (result.aborted) {
+        return buildResult(form, turnCount, totalPatches, result.status!, inputContextWarnings);
+      }
+    }
+
+    // --- Parallel batch items at this order level ---
+    for (const batch of plan.parallelBatches) {
+      const batchItems = batch.items.filter((i) => i.order === order);
+      if (batchItems.length === 0) continue;
+
+      try {
+        options.callbacks?.onBatchStart?.({ batchId: batch.batchId, itemCount: batchItems.length });
+      } catch {
+        /* ignore */
+      }
+
+      // Run each batch item with its own multi-turn loop, concurrently
+      const itemPromises = batchItems.map((item) => {
+        // Create a scoped agent for this batch item (or reuse test agent)
+        const scopedAgent: Agent =
+          options._testAgent ??
+          createLiveAgent({
+            model: model!,
+            systemPromptAddition: options.systemPromptAddition,
+            targetRole: targetRoles[0] ?? AGENT_ROLE,
+            provider,
+            enableWebSearch: options.enableWebSearch,
+            additionalTools: options.additionalTools,
+            callbacks: options.callbacks,
+            maxStepsPerTurn: options.maxStepsPerTurn,
+          });
+
+        return runMultiTurnForItems(
+          form,
+          scopedAgent,
+          [item],
+          targetRoles,
+          maxPatchesPerTurn,
+          maxIssuesPerTurn,
+          maxTurnsTotal,
+          turnCount,
+          options,
+        );
+      });
+
+      // Limit concurrency
+      const results = await runWithConcurrency(
+        itemPromises.map((p) => p),
+        maxParallelAgents,
+      );
+
+      let batchPatches = 0;
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          totalPatches += result.value.patchesApplied;
+          batchPatches += result.value.patchesApplied;
+          turnCount += result.value.turnsUsed;
+        }
+      }
+
+      try {
+        options.callbacks?.onBatchComplete?.({
+          batchId: batch.batchId,
+          patchesApplied: batchPatches,
+        });
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Fire order level complete callback
+    const levelInspect = inspect(form);
+    try {
+      options.callbacks?.onOrderLevelComplete?.({ order, patchesApplied: totalPatches });
+    } catch {
+      /* ignore */
+    }
+
+    // If form is already complete, stop early
+    if (levelInspect.isComplete) {
+      return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
+    }
+  }
+
+  // Check final form state
+  const finalInspect = inspect(form);
+  if (finalInspect.isComplete) {
+    return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
+  }
+
+  return buildResult(
+    form,
+    turnCount,
+    totalPatches,
+    { ok: false, reason: 'max_turns', message: `Reached maximum total turns (${maxTurnsTotal})` },
+    inputContextWarnings,
+    finalInspect.issues,
+  );
+}
+
+/**
+ * Result from a multi-turn run for a set of items.
+ */
+interface MultiTurnResult {
+  patchesApplied: number;
+  turnsUsed: number;
+  aborted: boolean;
+  status?: FillStatus;
+}
+
+/**
+ * Run a multi-turn loop for a set of execution plan items.
+ * Scoped issues are filtered to only the target items' fields.
+ * Retries with rejection feedback, same as the serial fillForm path.
+ */
+async function runMultiTurnForItems(
+  form: ParsedForm,
+  agent: Agent,
+  items: ExecutionPlanItem[],
+  targetRoles: string[],
+  maxPatchesPerTurn: number,
+  _maxIssuesPerTurn: number,
+  maxTurnsTotal: number,
+  startTurn: number,
+  options: FillOptions,
+): Promise<MultiTurnResult> {
+  let turnsUsed = 0;
+  let patchesApplied = 0;
+  let previousRejections: PatchRejection[] | undefined;
+  const maxTurnsForItems = Math.min(
+    maxTurnsTotal - startTurn,
+    options.maxTurnsThisCall ?? Infinity,
+  );
+
+  for (let turn = 0; turn < maxTurnsForItems; turn++) {
+    // Check cancellation
+    if (options.signal?.aborted) {
+      return {
+        patchesApplied,
+        turnsUsed,
+        aborted: true,
+        status: { ok: false, reason: 'cancelled' },
+      };
+    }
+
+    // Inspect form to get current issues, scoped to our items
+    const inspectResult = inspect(form, { targetRoles });
+    const allIssues = inspectResult.issues;
+
+    // Scope issues to our items
+    let scopedIssues: InspectIssue[] = [];
+    for (const item of items) {
+      scopedIssues.push(...scopeIssuesForItem(form, item, allIssues));
+    }
+
+    // Deduplicate issues (same issue could appear via multiple items)
+    const seen = new Set<string>();
+    scopedIssues = scopedIssues.filter((issue) => {
+      const key = `${issue.scope}:${issue.ref}:${issue.message}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (scopedIssues.length === 0) break; // All items filled
+
+    // Fire turn callback
+    try {
+      options.callbacks?.onTurnStart?.({
+        turnNumber: startTurn + turnsUsed + 1,
+        issuesCount: scopedIssues.length,
+      });
+    } catch {
+      /* ignore */
+    }
+
+    // Call agent
+    const response = await agent.fillFormTool(
+      scopedIssues,
+      form,
+      maxPatchesPerTurn,
+      previousRejections,
+    );
+
+    // Apply patches
+    if (response.patches.length > 0) {
+      const applyResult = applyPatches(form, response.patches);
+      patchesApplied += applyResult.appliedPatches.length;
+      previousRejections = applyResult.rejectedPatches;
+    } else {
+      previousRejections = undefined;
+    }
+
+    turnsUsed++;
+
+    // Fire turn complete callback
+    try {
+      const postInspect = inspect(form, { targetRoles });
+      const requiredIssues = postInspect.issues.filter((i) => i.severity === 'required');
+      options.callbacks?.onTurnComplete?.({
+        turnNumber: startTurn + turnsUsed,
+        issuesShown: scopedIssues.length,
+        patchesApplied: response.patches.length,
+        requiredIssuesRemaining: requiredIssues.length,
+        isComplete: postInspect.isComplete,
+        stats: response.stats,
+        issues: scopedIssues,
+        patches: response.patches,
+        rejectedPatches: previousRejections ?? [],
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return { patchesApplied, turnsUsed, aborted: false };
 }

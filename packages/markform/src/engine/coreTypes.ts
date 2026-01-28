@@ -162,6 +162,10 @@ export interface FieldBase {
   examples?: string[];
   /** True for auto-generated implicit fields (e.g., 'checkboxes' for plan documents) */
   implicit?: boolean;
+  /** Parallel batch identifier. Top-level fields only. */
+  parallel?: string;
+  /** Fill order. Lower values filled first. Default: 0. */
+  order?: number;
 }
 
 // =============================================================================
@@ -316,6 +320,35 @@ export interface FieldGroup {
    * Implicit groups are serialized without group wrapper tags.
    */
   implicit?: boolean;
+  /** Parallel batch identifier. */
+  parallel?: string;
+  /** Fill order. Lower values filled first. Default: 0. */
+  order?: number;
+}
+
+// =============================================================================
+// Execution Plan Types
+// =============================================================================
+
+/** An item in an execution plan (a top-level field or group). */
+export interface ExecutionPlanItem {
+  itemId: Id;
+  itemType: 'field' | 'group';
+  order: number;
+}
+
+/** A parallel batch: items that can execute concurrently. */
+export interface ParallelBatch {
+  batchId: string;
+  items: ExecutionPlanItem[];
+}
+
+/** Execution plan: partitions form into loose-serial pool + parallel batches. */
+export interface ExecutionPlan {
+  looseSerial: ExecutionPlanItem[];
+  parallelBatches: ParallelBatch[];
+  /** Distinct order levels found in the form, sorted ascending. */
+  orderLevels: number[];
 }
 
 /** Form schema - root container with groups */
@@ -462,6 +495,7 @@ export interface FrontmatterHarnessConfig {
   maxTurns?: number;
   maxPatchesPerTurn?: number;
   maxIssuesPerTurn?: number;
+  maxParallelAgents?: number;
 }
 
 /**
@@ -975,6 +1009,8 @@ export interface HarnessConfig {
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
   fillMode?: FillMode;
+  /** Max concurrent agents for parallel batches (default: 4) */
+  maxParallelAgents?: number;
 }
 
 /** LLM stats for a turn (from live agent) */
@@ -1293,6 +1329,8 @@ const FieldBaseSchemaPartial = {
   report: z.boolean().optional(),
   placeholder: z.string().optional(),
   examples: z.array(z.string()).optional(),
+  parallel: z.string().optional(),
+  order: z.number().optional(),
 };
 
 // Field schemas
@@ -1402,6 +1440,8 @@ export const FieldGroupSchema = z.object({
   title: z.string().optional(),
   validate: z.array(ValidatorRefSchema).optional(),
   children: z.array(FieldSchema),
+  parallel: z.string().optional(),
+  order: z.number().optional(),
 });
 
 // Form schema
@@ -1844,6 +1884,7 @@ export const HarnessConfigSchema = z.object({
   maxGroupsPerTurn: z.number().int().positive().optional(),
   targetRoles: z.array(z.string()).optional(),
   fillMode: FillModeSchema.optional(),
+  maxParallelAgents: z.number().int().positive().optional(),
 });
 
 export const SessionTurnStatsSchema = z.object({

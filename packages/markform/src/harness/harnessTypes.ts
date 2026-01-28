@@ -253,6 +253,18 @@ export interface FillCallbacks {
 
   /** Called after an LLM response */
   onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+
+  /** Called when a parallel batch starts execution */
+  onBatchStart?(info: { batchId: string; itemCount: number }): void;
+
+  /** Called when a parallel batch completes */
+  onBatchComplete?(info: { batchId: string; patchesApplied: number }): void;
+
+  /** Called when an order level starts processing */
+  onOrderLevelStart?(info: { order: number }): void;
+
+  /** Called when an order level completes */
+  onOrderLevelComplete?(info: { order: number; patchesApplied: number }): void;
 }
 
 // =============================================================================
@@ -311,6 +323,16 @@ export interface FillOptions {
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
   fillMode?: FillMode;
+  /**
+   * Enable parallel execution for forms with `parallel` batches.
+   * When false (default), parallel attributes are ignored and everything runs serially.
+   * When true, batch items run concurrently up to `maxParallelAgents`.
+   *
+   * @default false
+   */
+  enableParallel?: boolean;
+  /** Max concurrent agents for parallel batches (default: 4) */
+  maxParallelAgents?: number;
   /** Callbacks for observing form-filling execution */
   callbacks?: FillCallbacks;
   /** AbortSignal for cancellation */

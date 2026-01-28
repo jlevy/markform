@@ -141,6 +141,12 @@ export const DEFAULT_MAX_PATCHES_PER_TURN = 20;
 export const DEFAULT_MAX_ISSUES_PER_TURN = 10;
 
 /**
+ * Default maximum concurrent agents for parallel batches.
+ * When parallel batches are executed, this limits how many agents run simultaneously.
+ */
+export const DEFAULT_MAX_PARALLEL_AGENTS = 4;
+
+/**
  * Default maximum AI SDK steps (tool call rounds) per harness turn.
  * Matches AI SDK's ToolLoopAgent default of 20.
  * @see https://ai-sdk.dev/docs/agents/loop-control

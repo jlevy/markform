@@ -2527,4 +2527,118 @@ markform:
       expect(() => parseForm(markdown)).toThrow(/Duplicate.*same_id/i);
     });
   });
+
+  describe('harness config parsing', () => {
+    it('parses snake_case harness config from frontmatter', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  harness:
+    max_turns: 5
+    max_patches_per_turn: 10
+    max_issues_per_turn: 3
+    max_parallel_agents: 8
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="f1" label="F1" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.metadata?.harnessConfig).toEqual({
+        maxTurns: 5,
+        maxPatchesPerTurn: 10,
+        maxIssuesPerTurn: 3,
+        maxParallelAgents: 8,
+      });
+    });
+
+    it('parses max_parallel_agents independently', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  harness:
+    max_parallel_agents: 2
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="f1" label="F1" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.metadata?.harnessConfig?.maxParallelAgents).toBe(2);
+    });
+
+    it('errors on unrecognized harness config key', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  harness:
+    max_turns: 5
+    bogus_key: 10
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="f1" label="F1" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(/Unknown harness config key 'bogus_key'/);
+    });
+
+    it('errors on camelCase harness config key (must use snake_case)', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  harness:
+    maxTurns: 5
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="f1" label="F1" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(/Unknown harness config key 'maxTurns'/);
+    });
+
+    it('errors on non-numeric harness config value', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  harness:
+    max_turns: "five"
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="f1" label="F1" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(/must be a number/);
+    });
+
+    it('returns no harness config when harness section is absent', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="f1" label="F1" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      expect(form.metadata?.harnessConfig).toBeUndefined();
+    });
+  });
 });
