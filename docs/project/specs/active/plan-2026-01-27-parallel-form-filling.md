@@ -2,10 +2,16 @@
 
 ## Purpose
 
-Define how Markform forms can express parallelism — which fields or groups of fields are
-independent and can be filled concurrently. This is entirely optional: forms without
-parallelism annotations behave exactly as they do today (sequential). Authors who want
-faster filling of large forms can add `parallel` attributes to indicate independent work.
+Define how Markform forms can express parallelism and fill ordering. Two new optional
+attributes:
+
+- **`parallel`** — indicates which fields or groups are independent and can be filled
+  concurrently by separate agents.
+- **`order`** — controls the sequence in which the harness presents fields, ensuring
+  synthesis fields are filled after the fields they depend on.
+
+Both are entirely optional: forms without these annotations behave exactly as they do
+today (loose-serial mode).
 
 **Related docs:**
 - `docs/markform-spec.md` — Main specification (Layers 1–4)
@@ -109,9 +115,9 @@ This is a three-phase effort:
 
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
-- **Code types, methods, and function signatures**: MAINTAIN — `parallel` is additive
-- **Library APIs**: MAINTAIN — existing forms without `parallel` behave identically
-- **File formats**: MAINTAIN — `parallel` attribute is optional; existing forms unchanged
+- **Code types, methods, and function signatures**: MAINTAIN — both attributes are additive
+- **Library APIs**: MAINTAIN — existing forms without new attributes behave identically
+- **File formats**: MAINTAIN — both attributes are optional; existing forms unchanged
 - **Server APIs**: N/A
 - **Database schemas**: N/A
 
@@ -395,9 +401,9 @@ already contain the filled-in values for all the other fields.
    loose-serial mode — the agent chooses the order within that level.
 
 5. **Applies to fields and groups.** When `order` is on a group, all fields in that group
-   inherit the group's order value (same inheritance as `parallel` — group sets the value
-   for its children). A field inside a group MAY have its own `order` that overrides the
-   group's value.
+   inherit the group's order value. A field inside a group MAY have its own `order` that
+   overrides the group's value. (Note: unlike `parallel`, which is top-level only,
+   `order` supports inheritance — a group's `order` propagates to its child fields.)
 
 6. **Composes with `parallel`.** A parallel batch can contain items with different `order`
    values. Within each parallel agent, the agent fills its assigned fields respecting
@@ -472,7 +478,7 @@ Order: `context` (-10) → `main` (0) → `summary` (10).
 
 ### Phase 1: Spec & Design
 
-Update the Markform specification documents to define `parallel`.
+Update the Markform specification documents to define `parallel` and `order`.
 
 **Tasks:**
 
@@ -581,7 +587,7 @@ Update the Markform specification documents to define `parallel`.
 
 ### Phase 2: TypeScript API Changes
 
-Parse, validate, serialize, and expose `parallel` through the engine.
+Parse, validate, serialize, and expose `parallel` and `order` through the engine.
 
 **Tasks:**
 
@@ -860,8 +866,9 @@ markform:
 ## Future Directions
 
 The following approaches were considered during design and are documented here as
-potential future enhancements. The `parallel` attribute (Option A) was chosen as the
-initial design for its simplicity and safe defaults.
+potential future enhancements. The `parallel` attribute was chosen for concurrency and
+the `order` attribute for fill sequencing; the alternatives below remain available if
+more advanced scheduling is needed.
 
 ### Explicit Dependency Graph (`dependsOn`)
 
