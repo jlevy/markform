@@ -314,7 +314,7 @@ it would in today's loose-serial mode.
 10. `order` appears on `FieldBase` and `FieldGroup` types as `order?: number`
 11. Harness only surfaces issues for the current (lowest incomplete) order level
 12. Fields at different order levels are always filled in separate turns
-13. Fields inside a group inherit the group's `order`; field-level `order` overrides
+13. Error on field inside a group specifying a different `order` than the group
 14. Parallel harness can spawn concurrent agents per batch item
 15. Parallel harness correctly merges patches from all agents
 
@@ -401,9 +401,10 @@ already contain the filled-in values for all the other fields.
    loose-serial mode — the agent chooses the order within that level.
 
 5. **Applies to fields and groups.** When `order` is on a group, all fields in that group
-   inherit the group's order value. A field inside a group MAY have its own `order` that
-   overrides the group's value. (Note: unlike `parallel`, which is top-level only,
-   `order` supports inheritance — a group's `order` propagates to its child fields.)
+   are at the group's order level. A field inside a group MUST NOT specify a different
+   `order` value (parse error). If you need fields at different order levels, place them
+   in separate groups. This is consistent with `parallel` — both attributes are set on
+   the execution unit (field or group) with no child-level overrides.
 
 6. **Composes with `parallel`.** A parallel batch can contain items with different `order`
    values. Within each parallel agent, the agent fills its assigned fields respecting
@@ -424,7 +425,7 @@ already contain the filled-in values for all the other fields.
 | Value type | Number (integer or float) |
 | Applies to | `field` tags and `group` tags |
 | Default | `0` |
-| Inheritance | Field inside a group inherits group's `order`; field's own `order` overrides |
+| Nesting | Field inside a group with `order` MUST NOT specify a different `order` (parse error) |
 
 #### Examples
 
@@ -551,8 +552,8 @@ Update the Markform specification documents to define `parallel` and `order`.
 > - The harness MUST NOT surface issues for `order=N` fields until all fields at
 >   `order<N` are complete (answered, skipped, or aborted).
 > - Fields at different order levels are always filled in separate agent turns.
-> - A field inside a group inherits the group's `order` unless the field specifies
->   its own.
+> - A field inside a group with `order` MUST NOT specify a different `order`
+>   (parse error). Use separate groups for different order levels.
 > - `order` composes with `parallel`: parallel batch items can have different order
 >   levels.
 
@@ -598,17 +599,16 @@ Parse, validate, serialize, and expose `parallel` and `order` through the engine
 - [ ] Add `parallel` and `order` to `FieldBaseSchema` and `FieldGroupSchema` Zod schemas
 - [ ] Update parser (`parse.ts` / `parseFields.ts`) to extract `parallel` and `order`
   attributes from field and group tags
-- [ ] Implement `order` inheritance: fields inside a group inherit the group's `order`
-  unless the field specifies its own
+- [ ] Add validation: field inside a group with `order` must not specify a different `order`
 - [ ] Add validation: `parallel` on field inside group is a parse error
 - [ ] Add validation: non-contiguous parallel batch
 - [ ] Update serializer to emit `parallel` and `order` attributes on field and group tags
 - [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionPlan` function
-- [ ] Add `getEffectiveOrder(field, group): number` helper (resolve inheritance, default 0)
+- [ ] Add `getEffectiveOrder(field, group): number` helper (use group's order if field is in a group, else field's own, default 0)
 - [ ] Export `ExecutionPlan` type and `computeExecutionPlan` from public API
 - [ ] Update `InspectResult` to include execution plan (optional, for tooling)
 - [ ] Add unit tests for parsing `parallel` and `order` (both syntaxes)
-- [ ] Add unit tests for `order` inheritance (group → field, field override)
+- [ ] Add unit tests for `order` on groups and conflicting field `order` error
 - [ ] Add unit tests for validation errors
 - [ ] Add unit tests for `computeExecutionPlan`
 - [ ] Add golden tests for round-trip with `parallel` and `order`
@@ -707,7 +707,7 @@ Implement parallel execution in the harness and live agent.
 **Tasks:**
 
 - [ ] Implement order-based issue filtering in `FormHarness`:
-  - Compute effective order for each field (field's own `order` ?? group's `order` ?? 0)
+  - Compute effective order for each field (group's `order` if in a group, else field's own `order`, default 0)
   - In `filterIssuesByScope()`, only include issues for fields at the current
     (lowest incomplete) order level
   - "Complete" for order gating means: all fields at that level are answered, skipped,
@@ -827,7 +827,7 @@ Do NOT provide patches for any other fields.
 - [ ] `order` attribute parses correctly in both syntaxes
 - [ ] `order` round-trips through parse → serialize
 - [ ] `order` defaults to `0` when absent
-- [ ] `order` inheritance: field inherits group's order; field's own order overrides
+- [ ] `order` on field inside group with different value produces parse error
 - [ ] Harness only surfaces issues for current (lowest incomplete) order level
 - [ ] Fields at different order levels always filled in separate turns
 - [ ] `computeExecutionPlan` returns correct plan
