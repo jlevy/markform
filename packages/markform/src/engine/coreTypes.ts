@@ -1008,6 +1008,8 @@ export interface HarnessConfig {
   targetRoles?: string[];
   /** Fill mode: 'continue' (skip filled) or 'overwrite' (re-fill) */
   fillMode?: FillMode;
+  /** Max concurrent agents for parallel batches (default: batch size) */
+  maxParallelAgents?: number;
 }
 
 /** LLM stats for a turn (from live agent) */

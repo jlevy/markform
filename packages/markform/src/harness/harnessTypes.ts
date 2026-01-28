@@ -253,6 +253,18 @@ export interface FillCallbacks {
 
   /** Called after an LLM response */
   onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+
+  /** Called when a parallel batch starts execution */
+  onBatchStart?(info: { batchId: string; itemCount: number }): void;
+
+  /** Called when a parallel batch completes */
+  onBatchComplete?(info: { batchId: string; patchesApplied: number }): void;
+
+  /** Called when an order level starts processing */
+  onOrderLevelStart?(info: { order: number }): void;
+
+  /** Called when an order level completes */
+  onOrderLevelComplete?(info: { order: number; patchesApplied: number }): void;
 }
 
 // =============================================================================

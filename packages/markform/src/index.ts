@@ -347,6 +347,17 @@ export { FormHarness, createHarness } from './harness/harness.js';
 export { MockAgent, createMockAgent } from './harness/mockAgent.js';
 export { fillForm } from './harness/programmaticFill.js';
 export { resolveHarnessConfig } from './harness/harnessConfigResolver.js';
+export {
+  ParallelHarness,
+  createParallelHarness,
+  scopeIssuesForItem,
+} from './harness/parallelHarness.js';
+export type {
+  ScopedFillRequest,
+  ParallelHarnessConfig,
+  ParallelStepResult,
+  ParallelRunResult,
+} from './harness/parallelHarness.js';
 export type {
   FillCallbacks,
   FillOptions,
