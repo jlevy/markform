@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-28
 **Author:** Claude
-**Status:** Draft
+**Status:** Approved
 
 ## Overview
 
@@ -17,6 +17,9 @@ XSS safety and properly handling markdown links.
 - Handle markdown-style links `[text](url)` properly (don't double-process)
 - Ensure XSS safety by properly escaping all user content
 - Be consistent across all text rendering contexts (string fields, string lists, table cells, markdown content)
+- **All rendered URLs must have consistent copy-link tooltip behavior** (same as URL fields)
+- Implement using proper Markdown parser mechanisms where possible
+- Keep URL detection logic in a **single, clean, standalone function**
 - Implement in a testable, maintainable way
 
 ## Non-Goals
@@ -24,6 +27,7 @@ XSS safety and properly handling markdown links.
 - Full markdown rendering (bold, italic, etc.) - only URL handling
 - Changing how Markdoc parses form structure
 - Email address auto-linking (mailto:)
+- FTP or other URL schemes - **only http://, https://, www.** supported
 
 ## Background
 
@@ -104,29 +108,36 @@ Current issues identified:
 
 ## Recommended Approach
 
-**Approach 1 (Regex-based)** is recommended because:
-1. It's already partially implemented and working
-2. No new dependencies needed
-3. Matches existing codebase patterns
-4. Sufficient for the limited scope (just links)
+**Hybrid Approach using Markdoc for links + regex for bare URLs:**
 
-The key is to implement it correctly with proper test coverage.
+1. Use Markdoc's AST to properly identify markdown links (leveraging existing dependency)
+2. For bare URL detection, use regex on text nodes (Markdoc doesn't auto-link bare URLs)
+3. Keep all URL processing logic in a **single standalone module** (`urlFormat.ts`)
+
+Key requirements:
+- Single clean function for URL processing
+- XSS safety via HTML escaping before URL detection
+- All URLs get `url-link` class and `data-url` attribute for copy-link tooltip
+- Only http://, https://, www. URLs supported
 
 ## Implementation Plan
 
-### Phase 1: Core URL Auto-Linking Function
+### Phase 1: Core URL Processing Module (`urlFormat.ts`)
 
-- [ ] Implement `formatBareUrlsAsHtmlLinks` with proper XSS escaping
-- [ ] Handle markdown links first, then bare URLs
-- [ ] Use negative lookbehind to skip already-processed URLs
-- [ ] Handle edge cases: URLs with query params, trailing punctuation, etc.
+- [ ] Create single `formatTextWithUrls(text, escapeHtml)` function
+- [ ] Escape all HTML first for XSS safety
+- [ ] Convert markdown links `[text](url)` to `<a>` tags with `url-link` class
+- [ ] Detect bare URLs (http://, https://, www. only) and convert to `<a>` tags
+- [ ] All `<a>` tags get `data-url` attribute for copy-link tooltip
+- [ ] Handle edge cases: query params, trailing punctuation, etc.
 
-### Phase 2: Integration Points
+### Phase 2: Consistent URL Rendering in serve.ts
 
-- [ ] String field rendering in serve.ts
-- [ ] String list item rendering
-- [ ] Table cell rendering (non-URL columns)
-- [ ] Ensure consistency with `formatInlineMarkdown`
+- [ ] String field rendering uses `formatTextWithUrls`
+- [ ] String list item rendering uses `formatTextWithUrls`
+- [ ] Table cell rendering (non-URL columns) uses `formatTextWithUrls`
+- [ ] `formatInlineMarkdown` uses same bare URL detection
+- [ ] All URLs render with consistent styling and copy-link behavior
 
 ### Phase 3: Table URL Column Parsing Fix
 
@@ -183,11 +194,15 @@ Create a comprehensive test document with various URL formats:
 - Test full form rendering with tables containing URL columns
 - Verify links in rendered view point to correct destinations
 
+## Decisions Made
+
+1. **URL schemes**: Only http://, https://, www. supported (no ftp://, mailto:)
+2. **Copy URL tooltip**: YES - all auto-linked URLs get copy-link tooltip behavior, consistent with URL fields
+3. **Implementation**: Single standalone function in `urlFormat.ts` for clean, testable code
+
 ## Open Questions
 
-1. Should we support other URL schemes (ftp://, mailto:)?
-2. Should URL abbreviation length be configurable?
-3. Should we add a "copy URL" tooltip for all auto-linked URLs (like URL fields have)?
+1. Should URL abbreviation length be configurable? (Current default: 12 chars for path)
 
 ## References
 
