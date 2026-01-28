@@ -255,7 +255,13 @@ it would in today's loose-serial mode.
 7. **Disjoint writes.** Each parallel item is assigned to exactly one agent. No two
    concurrent agents write to the same field.
 
-8. **Deferred validation.** Cross-field validators (group-level `validate`) that
+8. **Same role.** All items in a parallel batch MUST have the same effective `role`
+   (parse error otherwise). For this rule, an unset `role` is equivalent to the default
+   `"agent"` role. This ensures all items in a batch are filled by the same type of
+   actor — mixing user-role and agent-role items in a single concurrent batch would be
+   incoherent.
+
+9. **Deferred validation.** Cross-field validators (group-level `validate`) that
    reference fields across parallel items are evaluated after all agents complete, not
    incrementally.
 
@@ -276,6 +282,7 @@ it would in today's loose-serial mode.
 | --- | --- |
 | Field inside a group has `parallel` attribute | `Field '${fieldId}' has parallel='${fieldVal}' but is inside group '${groupId}'. The parallel attribute is only allowed on top-level fields and groups.` |
 | Items in a parallel batch have different effective `order` values | `Parallel batch '${batchId}' has items with different order values (${orderValues}). All items in a parallel batch must have the same order.` |
+| Items in a parallel batch have different effective `role` values | `Parallel batch '${batchId}' has items with different roles (${roles}). All items in a parallel batch must have the same role.` |
 
 ### Scope
 
@@ -315,8 +322,9 @@ it would in today's loose-serial mode.
 12. Fields at different order levels are always filled in separate turns
 13. Error on field inside a group specifying a different `order` than the group
 14. Error on parallel batch items with different effective `order` values
-15. Parallel harness can spawn concurrent agents per batch item
-16. Parallel harness correctly merges patches from all agents
+15. Error on parallel batch items with different effective `role` values
+16. Parallel harness can spawn concurrent agents per batch item
+17. Parallel harness correctly merges patches from all agents
 
 ### Design Decisions
 
@@ -526,6 +534,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 >   ordering) — identical to current behavior
 > - `parallel` MUST NOT appear on fields inside groups (parse error) — only on
 >   top-level fields and groups
+> - All items in a parallel batch MUST have the same effective `role` (parse error)
 > - `parallel` is a hint — a harness MAY ignore it and fill everything in
 >   loose-serial mode
 >
@@ -607,6 +616,7 @@ Parse, validate, serialize, and expose `parallel` and `order` through the engine
 - [ ] Add validation: field inside a group with `order` must not specify a different `order`
 - [ ] Add validation: `parallel` on field inside group is a parse error
 - [ ] Add validation: parallel batch items with differing `order` values
+- [ ] Add validation: parallel batch items with differing `role` values
 - [ ] Update serializer to emit `parallel` and `order` attributes on field and group tags
 - [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionPlan` function
 - [ ] Export `ExecutionPlan` type and `computeExecutionPlan` from public API
@@ -688,10 +698,12 @@ for (const field of group.children) {
 
 **`markform plan` CLI command:**
 
-A new command that simulates the harness execution plan without actually filling
-anything. It walks through the form as the harness would — computing order levels,
-parallel batches, and issue assignments per turn — and prints a human-readable summary
-of what each turn would look like. This is valuable for:
+A new command that computes the **idealized execution plan** — the most efficient
+schedule given the form's `parallel`, `order`, and `role` constraints — without actually
+filling anything. It shows what the harness *would* do if agents filled fields in
+exactly the order requested. In practice, an agent may fill fewer fields per turn or
+choose a different order within a level, but the plan represents the optimal expected
+sequence. This is valuable for:
 
 - **Debugging** `parallel` and `order` attributes during form authoring
 - **Validating** plan logic in Phase 2 before wiring up parallel execution in Phase 3
@@ -907,6 +919,7 @@ Do NOT provide patches for any other fields.
 - [ ] `order` on field inside group with different value produces parse error
 - [ ] Harness only surfaces issues for current (lowest incomplete) order level
 - [ ] Fields at different order levels always filled in separate turns
+- [ ] Parallel batch with mixed roles produces parse error
 - [ ] `computeExecutionPlan` returns correct plan
 - [ ] Parallel harness spawns concurrent agents correctly
 - [ ] Patches from parallel agents merge without conflicts
