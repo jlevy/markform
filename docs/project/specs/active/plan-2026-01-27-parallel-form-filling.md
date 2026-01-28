@@ -84,17 +84,24 @@ reduce wall-clock time proportionally to the number of independent sections.
 
 ## Summary of Task
 
-Add a `parallel` attribute to the Markform specification that can be applied to both
-fields and groups. Items sharing the same `parallel` value are independent and may be
-executed concurrently by a parallel-aware harness. Items without `parallel` are
-sequential by default.
+Add two new attributes to the Markform specification:
+
+1. **`parallel`** — applied to top-level fields and groups. Items sharing the same
+   `parallel` value are independent and may be executed concurrently by separate agents.
+   Items without `parallel` are filled in loose-serial mode (as today).
+
+2. **`order`** — applied to fields and groups. Controls fill sequence: lower values are
+   filled first. The harness guarantees fields at different order levels are filled in
+   separate turns, so higher-order fields always see completed lower-order field values.
+   Default is `0`.
 
 This is a three-phase effort:
 
-- **Phase 1 — Spec & Design:** Define the `parallel` attribute semantics, update the
-  Markform specification, and document the execution model.
-- **Phase 2 — TypeScript API:** Parse, validate, serialize, and expose `parallel` in the
-  engine types and APIs.
+- **Phase 1 — Spec & Design:** Define `parallel` and `order` attribute semantics, update
+  the Markform specification, and document the execution model.
+- **Phase 2 — TypeScript API:** Parse, validate, serialize, and expose both attributes in
+  the engine types and APIs. Implement order-based issue filtering and execution plan
+  computation.
 - **Phase 3 — Harness & AI SDK:** Implement parallel execution in the harness and the
   AI SDK live agent integration.
 
@@ -268,11 +275,14 @@ it would in today's loose-serial mode.
 
 **In scope:**
 
-- `parallel` attribute on `field` and `group` tags
-- Parse, validate, and serialize `parallel`
-- Expose `parallel` on `FieldBase` and `FieldGroup` TypeScript types
-- Execution plan computation: given a parsed form, compute the ordered list of
-  execution units (sequential items and parallel batches)
+- `parallel` attribute on top-level `field` and `group` tags
+- `order` attribute on `field` and `group` tags
+- Parse, validate, and serialize both attributes
+- Expose `parallel` and `order` on `FieldBase` and `FieldGroup` TypeScript types
+- Execution plan computation: given a parsed form, compute loose-serial pool and
+  parallel batches
+- Order-based issue filtering in the harness: only surface issues for the current
+  (lowest incomplete) order level
 - Parallel harness that spawns concurrent agent instances for each batch item
 - AI SDK integration for parallel agent execution
 
@@ -286,15 +296,21 @@ it would in today's loose-serial mode.
 
 ### Acceptance Criteria
 
-1. Forms without `parallel` behave identically to today (all existing tests pass)
+1. Forms without `parallel` or `order` behave identically to today (all existing tests pass)
 2. `parallel` attribute is parsed from both HTML comment and Markdoc tag syntax
 3. `parallel` is round-tripped through parse → serialize
 4. `parallel` appears on `FieldBase` and `FieldGroup` types as `parallel?: string`
 5. Execution plan correctly identifies loose-serial items and parallel batches
 6. Error on `parallel` attribute on a field inside a group
 7. Error on non-contiguous parallel batch
-8. Parallel harness can spawn concurrent agents per batch item
-9. Parallel harness correctly merges patches from all agents
+8. `order` attribute is parsed from both syntaxes; defaults to `0` when absent
+9. `order` is round-tripped through parse → serialize
+10. `order` appears on `FieldBase` and `FieldGroup` types as `order?: number`
+11. Harness only surfaces issues for the current (lowest incomplete) order level
+12. Fields at different order levels are always filled in separate turns
+13. Fields inside a group inherit the group's `order`; field-level `order` overrides
+14. Parallel harness can spawn concurrent agents per batch item
+15. Parallel harness correctly merges patches from all agents
 
 ### Design Decisions
 
@@ -322,6 +338,136 @@ it would in today's loose-serial mode.
    loose-serial pool or in a parallel batch. Sub-parallelism within groups is a future
    enhancement.
 
+### Design: The `order` Attribute
+
+Add an `order` attribute to fields and groups that controls the **fill sequence** —
+which fields the harness presents to the agent first. This addresses the common need
+for synthesis/summary fields that should be filled after other fields provide context.
+
+#### What `order` Means
+
+`order` is a **numeric attribute** that controls issue prioritization in the harness.
+Fields with lower `order` values are surfaced to the agent before fields with higher
+values. The harness **guarantees** that fields at different order levels are filled in
+separate turns, so the agent filling higher-order fields always sees the completed
+values of lower-order fields in the form markdown.
+
+#### Syntax
+
+```markdown
+<!-- form id="company_research" title="Company Research" -->
+
+<!-- field kind="string" id="company_name" label="Company Name" required=true -->
+<!-- /field -->
+
+<!-- field kind="string" id="revenue" label="Revenue" -->
+<!-- /field -->
+
+<!-- field kind="string" id="team" label="Team & Leadership" -->
+<!-- /field -->
+
+<!-- field kind="string" id="executive_summary" label="Executive Summary" order=99 -->
+<!-- /field -->
+
+<!-- /form -->
+```
+
+Here `company_name`, `revenue`, and `team` all have the default `order=0`. They are
+filled in whatever order the agent chooses (loose serial). The `executive_summary` has
+`order=99`, so the harness will not surface its issues until all `order=0` fields are
+complete. When the agent finally sees `executive_summary`, the form markdown will
+already contain the filled-in values for all the other fields.
+
+#### Semantics
+
+1. **Numeric value.** `order` accepts any numeric value (integer or float). Lower values
+   are filled first.
+
+2. **Default is `0`.** Fields and groups without `order` default to `0`. This means all
+   existing forms are unaffected — everything is at the same level, filled in loose-serial
+   order as today.
+
+3. **Turn separation guarantee.** The harness MUST NOT surface issues for fields at
+   `order=N` until all fields at `order<N` are complete (answered, skipped, or aborted).
+   This means fields at different order levels are always filled in separate agent turns.
+
+4. **Loose serial within a level.** Fields sharing the same `order` value are filled in
+   loose-serial mode — the agent chooses the order within that level.
+
+5. **Applies to fields and groups.** When `order` is on a group, all fields in that group
+   inherit the group's order value (same inheritance as `parallel` — group sets the value
+   for its children). A field inside a group MAY have its own `order` that overrides the
+   group's value.
+
+6. **Composes with `parallel`.** A parallel batch can contain items with different `order`
+   values. Within each parallel agent, the agent fills its assigned fields respecting
+   order levels. Alternatively, the form author can set `order` on entire parallel groups
+   to control when the batch runs relative to loose-serial items.
+
+7. **Implemented via issue filtering.** The harness already filters issues per turn
+   (`maxFieldsPerTurn`, `maxGroupsPerTurn`, `maxIssuesPerTurn`). The `order` attribute
+   adds one more filter: only surface issues for the current (lowest incomplete) order
+   level. This requires no new execution machinery — it works within the existing
+   step/apply harness loop.
+
+#### Attribute Rules
+
+| Rule | Detail |
+| --- | --- |
+| Attribute name | `order` |
+| Value type | Number (integer or float) |
+| Applies to | `field` tags and `group` tags |
+| Default | `0` |
+| Inheritance | Field inside a group inherits group's `order`; field's own `order` overrides |
+
+#### Examples
+
+**Simple "fill last":**
+
+```markdown
+<!-- field kind="string" id="details" label="Detailed Analysis" --><!-- /field -->
+<!-- field kind="string" id="summary" label="Executive Summary" order=99 --><!-- /field -->
+```
+
+`details` (order=0) is filled first. `summary` (order=99) is filled in a later turn
+after `details` is complete.
+
+**Three-phase research form:**
+
+```markdown
+<!-- group id="context" title="Context" order=-1 -->
+  <!-- field kind="string" id="company" label="Company Name" required=true --><!-- /field -->
+  <!-- field kind="string" id="overview" label="Overview" --><!-- /field -->
+<!-- /group -->
+
+<!-- group id="financials" title="Financials" parallel="research" -->
+  <!-- field kind="number" id="revenue" label="Revenue" --><!-- /field -->
+<!-- /group -->
+
+<!-- group id="team" title="Team" parallel="research" -->
+  <!-- field kind="string" id="founders" label="Founders" --><!-- /field -->
+<!-- /group -->
+
+<!-- group id="synthesis" title="Synthesis" order=10 -->
+  <!-- field kind="string" id="assessment" label="Overall Assessment" --><!-- /field -->
+<!-- /group -->
+```
+
+Execution:
+1. `context` group (order=-1) is filled first — the agent gets company name and overview.
+2. `financials` and `team` groups (order=0, parallel="research") run concurrently.
+3. `synthesis` group (order=10) is filled last — the agent sees all prior fields completed.
+
+**Negative values for "fill first":**
+
+```markdown
+<!-- field kind="string" id="context" label="Context" order=-10 --><!-- /field -->
+<!-- field kind="string" id="main" label="Main Content" --><!-- /field -->
+<!-- field kind="string" id="summary" label="Summary" order=10 --><!-- /field -->
+```
+
+Order: `context` (-10) → `main` (0) → `summary` (10).
+
 ## Stage 2: Architecture Stage
 
 ### Phase 1: Spec & Design
@@ -334,12 +480,16 @@ Update the Markform specification documents to define `parallel`.
   - Add to field tag attribute table
   - Add to group tag attribute table
   - Add new subsection "Parallel Execution Hints"
+- [ ] Add `order` attribute to Layer 1 (Syntax) in `docs/markform-spec.md`
+  - Add to field tag attribute table
+  - Add to group tag attribute table
+  - Add new subsection "Fill Order"
 - [ ] Add execution plan semantics to Layer 3 (Validation & Form Filling)
-  - Define "execution unit" (sequential item or parallel batch)
-  - Define execution plan computation algorithm
+  - Define execution plan (loose-serial pool + parallel batches)
+  - Define order-based issue filtering
   - Define deferred validation for cross-batch validators
-- [ ] Update `docs/markform-reference.md` with `parallel` attribute
-- [ ] Add examples showing parallel forms to examples directory
+- [ ] Update `docs/markform-reference.md` with `parallel` and `order` attributes
+- [ ] Add examples showing parallel and ordered forms to examples directory
 
 **Spec additions to `docs/markform-spec.md`:**
 
@@ -375,6 +525,30 @@ Update the Markform specification documents to define `parallel`.
 >   2. Parallel batches: items with `parallel`, each item filled by a separate agent
 > All agents (primary + parallel) run concurrently. No barriers between them.
 > ```
+
+#### Layer 1 addition: Fill Order
+
+> ##### Fill Order
+>
+> Fields and groups MAY include an `order` attribute (numeric) that controls the
+> sequence in which the harness presents fields to the agent.
+>
+> ```markdown
+> <!-- field kind="string" id="details" label="Details" --><!-- /field -->
+> <!-- field kind="string" id="summary" label="Summary" order=99 --><!-- /field -->
+> ```
+>
+> **Rules:**
+> - `order` is a number (integer or float). Default: `0`.
+> - Lower `order` values are filled first. Fields at the same order level are
+>   filled in loose-serial order (agent chooses).
+> - The harness MUST NOT surface issues for `order=N` fields until all fields at
+>   `order<N` are complete (answered, skipped, or aborted).
+> - Fields at different order levels are always filled in separate agent turns.
+> - A field inside a group inherits the group's `order` unless the field specifies
+>   its own.
+> - `order` composes with `parallel`: parallel batch items can have different order
+>   levels.
 
 #### Layer 3 addition: Execution Plan
 
@@ -413,19 +587,25 @@ Parse, validate, serialize, and expose `parallel` through the engine.
 
 - [ ] Add `parallel?: string` to `FieldBase` interface in `coreTypes.ts`
 - [ ] Add `parallel?: string` to `FieldGroup` interface in `coreTypes.ts`
-- [ ] Add `parallel` to `FieldBaseSchema` and `FieldGroupSchema` Zod schemas
-- [ ] Update parser (`parse.ts` / `parseFields.ts`) to extract `parallel` attribute
-  from field and group tags
+- [ ] Add `order?: number` to `FieldBase` interface in `coreTypes.ts`
+- [ ] Add `order?: number` to `FieldGroup` interface in `coreTypes.ts`
+- [ ] Add `parallel` and `order` to `FieldBaseSchema` and `FieldGroupSchema` Zod schemas
+- [ ] Update parser (`parse.ts` / `parseFields.ts`) to extract `parallel` and `order`
+  attributes from field and group tags
+- [ ] Implement `order` inheritance: fields inside a group inherit the group's `order`
+  unless the field specifies its own
 - [ ] Add validation: `parallel` on field inside group is a parse error
 - [ ] Add validation: non-contiguous parallel batch
-- [ ] Update serializer to emit `parallel` attribute on field and group tags
-- [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionUnit[]` function
+- [ ] Update serializer to emit `parallel` and `order` attributes on field and group tags
+- [ ] Add `computeExecutionPlan(form: ParsedForm): ExecutionPlan` function
+- [ ] Add `getEffectiveOrder(field, group): number` helper (resolve inheritance, default 0)
 - [ ] Export `ExecutionPlan` type and `computeExecutionPlan` from public API
 - [ ] Update `InspectResult` to include execution plan (optional, for tooling)
-- [ ] Add unit tests for parsing `parallel` (both syntaxes)
+- [ ] Add unit tests for parsing `parallel` and `order` (both syntaxes)
+- [ ] Add unit tests for `order` inheritance (group → field, field override)
 - [ ] Add unit tests for validation errors
 - [ ] Add unit tests for `computeExecutionPlan`
-- [ ] Add golden tests for round-trip with `parallel`
+- [ ] Add golden tests for round-trip with `parallel` and `order`
 
 **Key type changes:**
 
@@ -433,12 +613,14 @@ Parse, validate, serialize, and expose `parallel` through the engine.
 // coreTypes.ts
 interface FieldBase {
   // ... existing fields
-  parallel?: string;  // Parallel batch identifier
+  parallel?: string;  // Parallel batch identifier (top-level only)
+  order?: number;     // Fill order (default: 0). Lower = filled first.
 }
 
 interface FieldGroup {
   // ... existing fields
   parallel?: string;  // Parallel batch identifier
+  order?: number;     // Fill order (default: 0). Inherited by child fields.
 }
 
 // New: Execution plan types
@@ -455,10 +637,13 @@ interface ParallelBatch {
 interface ExecutionPlan {
   looseSerial: ExecutionPlanItem[];
   parallelBatches: ParallelBatch[];
+  /** Distinct order levels found in the form, sorted ascending */
+  orderLevels: number[];
 }
 
-// New function
+// New functions
 function computeExecutionPlan(form: ParsedForm): ExecutionPlan;
+function getEffectiveOrder(field: Field, group?: FieldGroup): number;
 ```
 
 **Parser changes (`parseFields.ts`):**
@@ -515,6 +700,12 @@ Implement parallel execution in the harness and live agent.
 
 **Tasks:**
 
+- [ ] Implement order-based issue filtering in `FormHarness`:
+  - Compute effective order for each field (field's own `order` ?? group's `order` ?? 0)
+  - In `filterIssuesByScope()`, only include issues for fields at the current
+    (lowest incomplete) order level
+  - "Complete" for order gating means: all fields at that level are answered, skipped,
+    or aborted
 - [ ] Add `ParallelHarness` class (or extend `FormHarness`) that uses execution plan
 - [ ] Implement concurrent agent spawning for parallel batches
 - [ ] Each parallel agent receives:
@@ -627,10 +818,16 @@ Do NOT provide patches for any other fields.
 - [ ] `parallel` round-trips through parse → serialize
 - [ ] `parallel` on field inside group produces parse error
 - [ ] Non-contiguous batches produce errors
-- [ ] `computeExecutionPlan` returns correct execution units
+- [ ] `order` attribute parses correctly in both syntaxes
+- [ ] `order` round-trips through parse → serialize
+- [ ] `order` defaults to `0` when absent
+- [ ] `order` inheritance: field inherits group's order; field's own order overrides
+- [ ] Harness only surfaces issues for current (lowest incomplete) order level
+- [ ] Fields at different order levels always filled in separate turns
+- [ ] `computeExecutionPlan` returns correct plan
 - [ ] Parallel harness spawns concurrent agents correctly
 - [ ] Patches from parallel agents merge without conflicts
-- [ ] Cross-batch validators execute after batch completes
+- [ ] Cross-batch validators execute after all agents complete
 - [ ] Session transcripts record parallel execution
 - [ ] Spec documentation complete in `markform-spec.md`
 - [ ] API reference complete in `markform-apis.md`
@@ -682,68 +879,16 @@ grouping and `dependsOn` for fine-grained inter-batch prerequisites.
 
 ### Fill-Order Hints (`fillAfter`)
 
-A common need is expressing "fill this field last" (e.g., executive summaries, synthesis
-sections) or "fill this after that specific field." This is distinct from parallelism —
-it's about guiding the agent's order within the loose-serial pool.
+**Note:** This section documents the `fillAfter` option that was considered but replaced
+by the `order` attribute design (see main spec above). Kept for historical context.
 
-**The problem:** In loose-serial mode, the agent chooses its own order. For synthesis
-fields that should incorporate answers from other fields, the form author wants to hint
-"do this one after the others." Without hints, the agent may fill a summary before the
-detail fields it should summarize.
+A `fillAfter` attribute with special values like `fillAfter="all"` (fill last) and
+`fillAfter="some_id"` (fill after that item). Concise for the common "fill last" case
+but less flexible than numeric ordering — cannot express "fill second" or "fill before
+this other thing." Also introduces a special keyword (`"all"`) that doesn't compose as
+cleanly as a numeric system.
 
-**Design options considered:**
-
-**A. `fillAfter` with special values:**
-
-```markdown
-<!-- field id="summary" label="Executive Summary" fillAfter="all" --><!-- /field -->
-<!-- field id="details" label="Details" fillAfter="overview" --><!-- /field -->
-```
-
-`fillAfter="all"` means "after everything else." `fillAfter="some_id"` means "after
-that specific item." This handles the 80% case ("fill last") cleanly with one keyword.
-For a single specific dependency, it's concise. For multiple dependencies, a
-comma-separated list (`fillAfter="financials,team"`) would work but starts to resemble
-`dependsOn`.
-
-**B. Sequence number (`order`):**
-
-```markdown
-<!-- field id="summary" label="Executive Summary" order=99 --><!-- /field -->
-<!-- field id="revenue" label="Revenue" order=1 --><!-- /field -->
-```
-
-Familiar pattern (CSS z-index, priority queues) but arbitrary numbers are hard to
-maintain. Doesn't express *why* something is ordered. Also risks confusion with the
-existing `priority` attribute (which is about importance, not ordering).
-
-**C. Named stages (`fillOrder="first"` / `fillOrder="last"`):**
-
-```markdown
-<!-- field id="overview" label="Overview" fillOrder="first" --><!-- /field -->
-<!-- field id="summary" label="Summary" fillOrder="last" --><!-- /field -->
-```
-
-Extremely simple for the two most common cases but doesn't generalize beyond two
-positions.
-
-**D. Full `dependsOn` (see above):**
-
-Handles all cases but is verbose for the common "fill last" pattern — a synthesis field
-that depends on "everything else" would need to list every other field ID, and adding a
-new field means updating the dependency list.
-
-**Recommendation:** `fillAfter` (Option A) is the best fit as a near-term enhancement.
-It covers the common cases concisely:
-- `fillAfter="all"` for synthesis/summary fields (the 80% case)
-- `fillAfter="some_id"` for specific ordering (the 15% case)
-- Like `parallel`, it's a hint — the agent can still fill in any order
-
-It composes naturally with `parallel`: a loose-serial item with `fillAfter="all"` would
-be deferred by the primary agent until other loose-serial items (and parallel batches)
-complete. A parallel item with `fillAfter` would be deferred within its batch.
-
-`fillAfter` is also a strict subset of `dependsOn` — if full DAG dependencies are added
+`fillAfter` is a strict subset of `dependsOn` — if full DAG dependencies are added
 later, `fillAfter="x"` is equivalent to `dependsOn="x"`, and `fillAfter="all"` is
 syntactic sugar for "depends on everything else."
 
