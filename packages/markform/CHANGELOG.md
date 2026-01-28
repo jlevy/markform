@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.18
+
+### Patch Changes
+
+- 28696dc: Add parallel form filling with plan command, ParallelHarness, and order/parallel attributes
+
 ## 0.1.17
 
 ### Patch Changes
