@@ -220,10 +220,12 @@ interface CommonFieldAttrs {
   role: string;
   validate?: ValidatorRef[];
   report?: boolean;
+  parallel?: string;
+  order?: number;
 }
 
 /**
- * Get common field attributes (priority, role, validate, report).
+ * Get common field attributes (priority, role, validate, report, parallel, order).
  */
 function getCommonFieldAttrs(node: Node): CommonFieldAttrs {
   return {
@@ -231,6 +233,8 @@ function getCommonFieldAttrs(node: Node): CommonFieldAttrs {
     role: getStringAttr(node, 'role') ?? AGENT_ROLE,
     validate: getValidateAttr(node),
     report: getBooleanAttr(node, 'report'),
+    parallel: getStringAttr(node, 'parallel'),
+    order: getNumberAttr(node, 'order'),
   };
 }
 

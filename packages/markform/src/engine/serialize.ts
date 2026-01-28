@@ -17,6 +17,7 @@ import type {
   DateValue,
   DocumentationBlock,
   Field,
+  FieldBase,
   FieldGroup,
   FieldResponse,
   FormMetadata,
@@ -459,6 +460,18 @@ function getMarker(state: CheckboxValue): string {
 // =============================================================================
 
 /**
+ * Add parallel and order attributes to a field's attrs object if defined.
+ */
+function addParallelOrderAttrs(attrs: Record<string, unknown>, field: FieldBase): void {
+  if (field.parallel !== undefined) {
+    attrs.parallel = field.parallel;
+  }
+  if (field.order !== undefined) {
+    attrs.order = field.order;
+  }
+}
+
+/**
  * Serialize a string field.
  */
 function serializeStringField(field: StringField, response: FieldResponse | undefined): string {
@@ -490,6 +503,7 @@ function serializeStringField(field: StringField, response: FieldResponse | unde
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
   if (field.placeholder) {
     attrs.placeholder = field.placeholder;
   }
@@ -551,6 +565,7 @@ function serializeNumberField(field: NumberField, response: FieldResponse | unde
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
   if (field.placeholder) {
     attrs.placeholder = field.placeholder;
   }
@@ -621,6 +636,7 @@ function serializeStringListField(
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
   if (field.placeholder) {
     attrs.placeholder = field.placeholder;
   }
@@ -695,6 +711,7 @@ function serializeSingleSelectField(
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -748,6 +765,7 @@ function serializeMultiSelectField(
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -805,6 +823,7 @@ function serializeCheckboxesField(
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
 
   // Add state attribute for skipped/aborted (markform-216)
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -843,6 +862,7 @@ function serializeUrlField(field: UrlField, response: FieldResponse | undefined)
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
   if (field.placeholder) {
     attrs.placeholder = field.placeholder;
   }
@@ -904,6 +924,7 @@ function serializeUrlListField(field: UrlListField, response: FieldResponse | un
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
   if (field.placeholder) {
     attrs.placeholder = field.placeholder;
   }
@@ -962,6 +983,7 @@ function serializeDateField(field: DateField, response: FieldResponse | undefine
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
 
   // Add state attribute for skipped/aborted
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -1014,6 +1036,7 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
 
   // Add state attribute for skipped/aborted
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -1139,6 +1162,7 @@ function serializeTableField(field: TableField, response: FieldResponse | undefi
   if (field.report !== undefined) {
     attrs.report = field.report;
   }
+  addParallelOrderAttrs(attrs, field);
 
   // Add state attribute for skipped/aborted
   if (response?.state === 'skipped' || response?.state === 'aborted') {
@@ -1283,6 +1307,12 @@ function serializeFieldGroup(
     }
     if (group.report !== undefined) {
       attrs.report = group.report;
+    }
+    if (group.parallel !== undefined) {
+      attrs.parallel = group.parallel;
+    }
+    if (group.order !== undefined) {
+      attrs.order = group.order;
     }
 
     const attrStr = serializeAttrs(attrs);
