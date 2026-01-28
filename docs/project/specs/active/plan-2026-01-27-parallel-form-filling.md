@@ -765,10 +765,15 @@ Summary: 2 order levels, 1 parallel batch, 5 turns minimum
 }
 ```
 
-**Implementation:** The command parses the form, calls `computeExecutionPlan()`, then
-groups items by order level and renders the plan. It also runs `inspect()` to show issue
-state per field (unanswered, answered, etc.) so authors can see what would be surfaced.
-No agents are invoked — this is pure computation.
+**Implementation:** The command parses the form and validates it — if the form has parse
+or validation errors, `plan` exits with an error (the form must be structurally valid
+before planning). The form may be empty or partially filled; the plan reflects the
+*remaining* work — only unanswered/incomplete fields appear in the plan output. A fully
+filled form produces an empty plan.
+
+After validation, the command calls `computeExecutionPlan()` and runs `inspect()` to
+determine which fields still need work. It groups remaining items by order level and
+renders the plan. No agents are invoked — this is pure computation.
 
 **Session tests:** Add sample forms to `examples/` that exercise `parallel` and `order`
 (e.g., `examples/parallel/parallel-research.md`). Session tests run `markform plan` on
