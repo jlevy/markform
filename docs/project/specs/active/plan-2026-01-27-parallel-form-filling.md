@@ -101,15 +101,18 @@ Add two new attributes to the Markform specification:
    separate turns, so higher-order fields always see completed lower-order field values.
    Default is `0`.
 
-This is a three-phase effort:
+This is a four-phase effort:
 
 - **Phase 1 — Spec & Design:** Define `parallel` and `order` attribute semantics, update
   the Markform specification, and document the execution model.
 - **Phase 2 — TypeScript API:** Parse, validate, serialize, and expose both attributes in
   the engine types and APIs. Implement order-based issue filtering and execution plan
   computation.
-- **Phase 3 — Harness & AI SDK:** Implement parallel execution in the harness and the
-  AI SDK live agent integration.
+- **Phase 3 — ParallelHarness (low-level):** Implement `ParallelHarness` class for
+  concurrent agent orchestration — scoped filling, patch merge, concurrency limits.
+- **Phase 4 — Unified fillForm() (high-level):** Integrate parallel execution into the
+  existing `fillForm()` entry point as an opt-in feature, so consumers get parallel
+  execution by adding `enableParallel: true` without changing their call structure.
 
 ## Backward Compatibility
 
@@ -879,6 +882,206 @@ You are filling a subset of this form. Focus ONLY on the following fields:
 Do NOT provide patches for any other fields.
 ```
 
+### Phase 4: Unified fillForm() with Parallel Execution
+
+Integrate parallel execution into the existing `fillForm()` high-level API so consumers
+get parallel execution by adding a single flag — no rewiring required.
+
+**Design principle: serial by default, parallel opt-in.** Parallel execution is
+significantly more complex than serial (multiple agents, concurrent state, error
+handling). The `parallel` attribute in the form markup only declares *permission* for
+parallelism — the harness must still be explicitly told to use it. This keeps the default
+behavior predictable and avoids surprising consumers.
+
+#### The Problem
+
+After Phase 3, two separate code paths exist:
+
+| | `fillForm()` (serial) | `ParallelHarness` (parallel) |
+|---|---|---|
+| **Abstraction** | High (markdown in → result out) | Low (parsed form + agent) |
+| **Model resolution** | Built-in | Manual |
+| **Input context** | Built-in | Manual |
+| **Turn loop** | Multi-turn with retry | Single-pass per order level |
+| **Rejection feedback** | Yes (`previousRejections`) | No |
+| **AbortSignal** | Yes | No |
+| **Session transcript** | Full (stats, wire format) | No |
+| **Callbacks** | `FillCallbacks` | `ParallelHarnessConfig` (partial overlap) |
+| **Result type** | `FillResult` | `ParallelRunResult` (different shape) |
+
+A consumer using `fillForm()` gets everything for free. Switching to `ParallelHarness`
+means reimplementing model resolution, input context, agent creation, and session capture.
+
+#### Solution: Unified fillForm()
+
+`fillForm()` gains a single new option:
+
+```typescript
+const result = await fillForm({
+  form: markdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableParallel: true,          // NEW: opt-in to parallel execution
+  maxParallelAgents: 8,          // optional (default: 4, from harness config)
+  callbacks: {
+    // existing callbacks still work
+    onTurnStart, onTurnComplete,
+    // parallel callbacks also work
+    onBatchStart, onBatchComplete,
+    onOrderLevelStart, onOrderLevelComplete,
+  },
+});
+```
+
+When `enableParallel: false` (default), `fillForm()` behaves exactly as today — even
+if the form has `parallel` attributes, they are ignored and everything runs in serial.
+The `order` attribute still applies (it affects issue filtering, which is Phase 2 logic
+already active in the serial path).
+
+When `enableParallel: true`, `fillForm()` checks `computeExecutionPlan()`. If the plan
+has parallel batches, it uses the parallel execution path internally. If no parallel
+batches exist (all loose serial), it falls back to the serial path automatically.
+
+#### Execution Flow (enableParallel: true)
+
+```
+fillForm(options)
+  1. Parse form (same as today)
+  2. Resolve model (same as today)
+  3. Apply input context (same as today)
+  4. Check plan = computeExecutionPlan(form)
+     - If no parallel batches: serial path (same as today, unchanged)
+     - If parallel batches: parallel path (below)
+
+Parallel path:
+  for each orderLevel (sorted ascending):
+    a. Serial items at this level:
+       - Run existing multi-turn harness loop (step → agent → apply → retry)
+       - Uses primaryAgent with rejection feedback, maxTurns, etc.
+       - Loop until all serial items at this level are complete or maxTurns hit
+    b. Parallel batch items at this level:
+       - Spawn one agent per batch item (up to maxParallelAgents)
+       - Each agent gets scoped issues + full form context
+       - Each agent runs a multi-turn loop for its scoped fields
+       - Collect patches from all agents, merge, apply in one call
+       - Retry incomplete items up to configured turn limit
+    c. After all serial + parallel items at this level complete:
+       - Re-inspect form, advance to next order level
+  5. Return FillResult (same shape as serial — consumer doesn't know the difference)
+```
+
+**Key difference from Phase 3 `ParallelHarness`:** Each batch item runs a *multi-turn
+loop*, not a single agent call. If an agent doesn't fill all its fields on the first try
+(or produces rejected patches), it retries — same as the serial path does today. Phase 3's
+`ParallelHarness.runOrderLevel()` did one agent call per item with no retry; Phase 4
+wraps that in the same multi-turn discipline as `fillForm()`.
+
+#### API Changes
+
+```typescript
+// FillOptions additions
+interface FillOptions {
+  // ... existing fields unchanged
+
+  /** Enable parallel execution for forms with parallel batches (default: false) */
+  enableParallel?: boolean;
+
+  /** Max concurrent agents for parallel batches (default: 4, from harness config) */
+  maxParallelAgents?: number;  // already added in Phase 3 config work
+}
+```
+
+No new types. No new entry points. `FillResult` shape is unchanged.
+
+#### Agent Creation for Parallel Items
+
+When `enableParallel` is true and the plan has parallel batches, `fillForm()` needs to
+create multiple `LiveAgent` instances — one per concurrent batch item. Each agent:
+
+1. Uses the same model (resolved once, shared)
+2. Gets a scoped system prompt addition: "Focus on these fields: [field list]"
+3. Receives scoped issues (only issues for its assigned fields)
+4. Runs the same multi-turn loop as the serial path
+
+The `agentFactory` from `ParallelHarnessConfig` becomes an internal implementation detail.
+`fillForm()` creates agents using the same `createLiveAgent()` it already uses for the
+primary agent, just with different scope instructions.
+
+#### What Stays Internal vs Public
+
+| Component | Visibility | Rationale |
+|---|---|---|
+| `fillForm({ enableParallel })` | **Public API** | The entry point consumers use |
+| `ParallelHarness` | **Public, advanced** | For custom orchestration (SDK users who need full control) |
+| `computeExecutionPlan()` | **Public** | For tooling, `markform plan`, debugging |
+| `scopeIssuesForItem()` | **Public** | Useful for custom harness implementations |
+| Agent creation/scoping | **Internal** | Handled by `fillForm()` automatically |
+| `runWithConcurrency()` | **Internal** | Implementation detail |
+
+#### Tasks
+
+- [ ] Add `enableParallel?: boolean` to `FillOptions` (default: `false`)
+- [ ] In `fillForm()`, after parse + model resolve + input context:
+  - If `!enableParallel`: existing serial path (unchanged)
+  - If `enableParallel`: compute execution plan, dispatch to parallel path
+- [ ] Implement parallel path in `fillForm()`:
+  - Order-level loop (for each order level, ascending)
+  - Serial items: existing multi-turn harness loop
+  - Parallel batch items: spawn agents, multi-turn per agent, merge patches
+- [ ] Multi-turn loop for parallel agents:
+  - Each parallel agent gets its own turn loop (scoped to its fields)
+  - Retry with rejection feedback (same as serial)
+  - Respect `maxTurnsThisCall` and `AbortSignal`
+- [ ] Agent factory inside `fillForm()`:
+  - Reuse resolved model + provider
+  - Create `LiveAgent` with scoped system prompt
+  - Pass through `enableWebSearch`, `additionalTools`, `callbacks`
+- [ ] Unified callbacks:
+  - `FillCallbacks.onBatchStart/Complete` fire during parallel batches
+  - `FillCallbacks.onOrderLevelStart/Complete` fire at level transitions
+  - `onTurnStart/Complete` fire for each agent's turns (serial and parallel)
+- [ ] Session transcript support for parallel turns
+- [ ] `FillResult` includes parallel execution metadata (optional):
+  - Number of parallel agents used
+  - Per-level breakdown of serial vs parallel patches
+- [ ] Tests:
+  - [ ] `fillForm({ enableParallel: false })` ignores parallel attributes (serial)
+  - [ ] `fillForm({ enableParallel: true })` with parallel form → concurrent execution
+  - [ ] `fillForm({ enableParallel: true })` with serial form → falls back to serial
+  - [ ] Multi-turn retry works for parallel agents (rejected patches → retry)
+  - [ ] `maxParallelAgents` limits concurrency through `fillForm()`
+  - [ ] `AbortSignal` cancels parallel agents
+  - [ ] Callbacks fire correctly in parallel mode
+  - [ ] `FillResult` shape is identical for serial and parallel
+- [ ] Integration test: mock agents, parallel form, verify complete fill
+- [ ] Update `docs/markform-apis.md` with `enableParallel` documentation
+
+#### Design Decisions
+
+1. **`enableParallel: false` by default.** Parallel execution is complex — multiple
+   agents, concurrent state, harder debugging. Serial is predictable, well-tested, and
+   sufficient for most forms. Consumers opt in when they need the performance.
+
+2. **Same `FillResult` shape.** The consumer doesn't need to know whether parallel
+   execution was used. The result is the same: a filled form, turn count, patch count,
+   status. This means switching between serial and parallel is a one-line change.
+
+3. **`order` still applies in serial mode.** Even without `enableParallel`, the `order`
+   attribute controls issue filtering — synthesis fields still wait for earlier fields.
+   This is Phase 2 logic, orthogonal to parallelism.
+
+4. **Multi-turn retry per batch item.** Phase 3's single-call-per-item was a simplification.
+   Real agents need retries — they may produce rejected patches, miss fields, or hit
+   context limits. Each parallel agent runs the same robust turn loop as the serial path.
+
+5. **Model resolved once, shared.** All agents (primary + parallel) use the same model.
+   We resolve it once and create multiple `LiveAgent` instances from the same
+   `LanguageModel`. This avoids redundant API calls and keeps costs predictable.
+
+6. **`ParallelHarness` stays public for advanced use.** The low-level harness is still
+   useful for SDK consumers who need custom orchestration (e.g., different models per
+   batch, custom agent factories, non-standard turn loops). `fillForm()` is the
+   recommended path; `ParallelHarness` is the escape hatch.
+
 ## Stage 3: Refine Architecture
 
 ### Reusable Components
@@ -929,6 +1132,14 @@ Do NOT provide patches for any other fields.
 - [ ] Patches from parallel agents merge without conflicts
 - [ ] Cross-batch validators execute after all agents complete
 - [ ] Session transcripts record parallel execution
+- [ ] `fillForm({ enableParallel: false })` ignores parallel attributes (serial default)
+- [ ] `fillForm({ enableParallel: true })` with parallel form → concurrent execution
+- [ ] `fillForm({ enableParallel: true })` with serial form → falls back to serial
+- [ ] Multi-turn retry works for parallel agents (rejection → retry)
+- [ ] `maxParallelAgents` limits concurrency through `fillForm()`
+- [ ] `AbortSignal` cancels parallel agents
+- [ ] `FillResult` shape identical for serial and parallel paths
+- [ ] Harness config `max_parallel_agents` YAML key works end-to-end
 - [ ] Spec documentation complete in `markform-spec.md`
 - [ ] API reference complete in `markform-apis.md`
 - [ ] `pnpm precommit` passes
