@@ -427,6 +427,129 @@ markform:
     });
   });
 
+  describe('order-based issue filtering', () => {
+    const ORDER_FORM = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="phase1" order=1 %}
+
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
+
+{% field kind="string" id="title" label="Title" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="phase2" order=2 %}
+
+{% field kind="string" id="bio" label="Bio" required=true %}{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    const ORDER_FORM_THREE_LEVELS = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test_form" %}
+
+{% group id="level0" %}
+
+{% field kind="string" id="first" label="First" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="level1" order=1 %}
+
+{% field kind="string" id="second" label="Second" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="level2" order=2 %}
+
+{% field kind="string" id="third" label="Third" required=true %}{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    it('only surfaces issues for the lowest incomplete order level', () => {
+      const form = parseForm(ORDER_FORM);
+      const harness = createHarness(form);
+
+      const result = harness.step();
+
+      // Should only show order=1 issues (name, title), not order=2 (bio)
+      const fieldRefs = result.issues.filter((i) => i.scope === 'field').map((i) => i.ref);
+      expect(fieldRefs).toContain('name');
+      expect(fieldRefs).toContain('title');
+      expect(fieldRefs).not.toContain('bio');
+    });
+
+    it('surfaces next order level after current level is complete', () => {
+      const form = parseForm(ORDER_FORM);
+      const harness = createHarness(form);
+
+      // Step 1: get order=1 issues
+      let result = harness.step();
+
+      // Fill order=1 fields
+      result = harness.apply(
+        [
+          { op: 'set_string', fieldId: 'name', value: 'Alice' },
+          { op: 'set_string', fieldId: 'title', value: 'Engineer' },
+        ],
+        result.issues,
+      );
+
+      // Now order=2 issues should appear
+      const fieldRefs = result.issues.filter((i) => i.scope === 'field').map((i) => i.ref);
+      expect(fieldRefs).toContain('bio');
+    });
+
+    it('shows all issues when all fields are at the same order', () => {
+      const form = parseForm(SIMPLE_FORM);
+      const harness = createHarness(form);
+
+      const result = harness.step();
+
+      // Both name and age at default order=0, so both should appear
+      const fieldRefs = result.issues.filter((i) => i.scope === 'field').map((i) => i.ref);
+      expect(fieldRefs).toContain('name');
+      expect(fieldRefs).toContain('age');
+    });
+
+    it('filters correctly with three order levels', () => {
+      const form = parseForm(ORDER_FORM_THREE_LEVELS);
+      const harness = createHarness(form);
+
+      // Step 1: only order=0 issues
+      let result = harness.step();
+      let fieldRefs = result.issues.filter((i) => i.scope === 'field').map((i) => i.ref);
+      expect(fieldRefs).toContain('first');
+      expect(fieldRefs).not.toContain('second');
+      expect(fieldRefs).not.toContain('third');
+
+      // Fill order=0
+      result = harness.apply(
+        [{ op: 'set_string', fieldId: 'first', value: 'done' }],
+        result.issues,
+      );
+
+      // Now order=1
+      fieldRefs = result.issues.filter((i) => i.scope === 'field').map((i) => i.ref);
+      expect(fieldRefs).toContain('second');
+      expect(fieldRefs).not.toContain('third');
+    });
+  });
+
   describe('option-level issue handling', () => {
     // Form with checkbox options for testing option-scoped issues
     const CHECKBOX_FORM = `---

@@ -416,6 +416,8 @@ All fields support these attributes:
 | `required` | boolean | false | Must be filled for completion |
 | `role` | string | - | Target actor (`user`, `agent`) |
 | `priority` | string | medium | `high`, `medium`, `low` |
+| `order` | number | `0` | Fill order. Lower values filled first. Different order levels are filled in separate turns. |
+| `parallel` | string | - | Parallel batch identifier. Items with the same value may execute concurrently. Top-level only. |
 
 **Text-entry fields only** (string, number, string-list, url, url-list):
 
