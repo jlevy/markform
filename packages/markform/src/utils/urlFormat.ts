@@ -101,3 +101,52 @@ export function isUrl(str: string): boolean {
   }
   return false;
 }
+
+/**
+ * Pattern to match bare URLs in text.
+ * Matches http://, https://, and www. prefixed URLs.
+ * Captures the URL until whitespace or end of string.
+ * Excludes trailing punctuation that's likely not part of the URL.
+ */
+const BARE_URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>[\]()]+(?<![.,;:!?'")])/g;
+
+/**
+ * Format bare URLs in text as HTML links with abbreviated display text.
+ * Preserves existing markdown links and only converts bare URLs.
+ *
+ * @param text - The text containing bare URLs (already HTML-escaped)
+ * @param escapeHtml - Function to escape HTML entities
+ * @returns Text with bare URLs converted to <a> tags
+ */
+export function formatBareUrlsAsHtmlLinks(text: string, escapeHtml: (s: string) => string): string {
+  // First, protect existing markdown links by temporarily replacing them
+  // Use a placeholder that won't appear in normal text
+  const LINK_PLACEHOLDER = '<<<MDLINK:';
+  const LINK_END = ':MDLINK>>>';
+  const markdownLinks: string[] = [];
+  let protectedText = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, ...args) => {
+    const linkText = args[0] as string;
+    const url = args[1] as string;
+    markdownLinks.push(`[${linkText}](${url})`);
+    return `${LINK_PLACEHOLDER}${markdownLinks.length - 1}${LINK_END}`;
+  });
+
+  // Now replace bare URLs with HTML links
+  protectedText = protectedText.replace(BARE_URL_PATTERN, (url: string) => {
+    // Normalize www. URLs to have https://
+    const fullUrl = url.startsWith('www.') ? `https://${url}` : url;
+    const display = friendlyUrlAbbrev(fullUrl);
+    return `<a href="${escapeHtml(fullUrl)}" target="_blank" class="url-link" data-url="${escapeHtml(fullUrl)}">${escapeHtml(display)}</a>`;
+  });
+
+  // Restore markdown links
+  const placeholderPattern = new RegExp(
+    `${LINK_PLACEHOLDER.replace(/[<>]/g, '\\$&')}(\\d+)${LINK_END.replace(/[<>]/g, '\\$&')}`,
+    'g',
+  );
+  protectedText = protectedText.replace(placeholderPattern, (_match, index: string) => {
+    return markdownLinks[parseInt(index, 10)]!;
+  });
+
+  return protectedText;
+}

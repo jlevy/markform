@@ -38,8 +38,16 @@ describe('parseTable', () => {
       ['-10', 'number', 'answered', -10],
       ['not a number', 'number', 'answered', 'not a number'], // Invalid stored as string
 
-      // URL values
+      // URL values - raw URL
       ['https://example.com', 'url', 'answered', 'https://example.com'],
+      // URL values - markdown link format (extracts URL from [text](url))
+      ['[example.com](https://example.com)', 'url', 'answered', 'https://example.com'],
+      [
+        '[sec.gov/Archives/edg…](https://www.sec.gov/Archives/edgar/data/12345)',
+        'url',
+        'answered',
+        'https://www.sec.gov/Archives/edgar/data/12345',
+      ],
 
       // Date values
       ['2024-01-15', 'date', 'answered', '2024-01-15'],

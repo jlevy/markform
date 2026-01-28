@@ -53,7 +53,7 @@ import {
   writeFile,
 } from '../lib/shared.js';
 import { generateVersionedPath } from '../lib/versioning.js';
-import { friendlyUrlAbbrev } from '../../utils/urlFormat.js';
+import { friendlyUrlAbbrev, formatBareUrlsAsHtmlLinks } from '../../utils/urlFormat.js';
 
 /**
  * Open a URL in the default browser (cross-platform).
@@ -2015,7 +2015,9 @@ function renderViewFieldValue(
       if (v === null || v === '') {
         return '<div class="view-field-empty">(not filled)</div>';
       }
-      return `<div class="view-field-value">${escapeHtml(v)}</div>`;
+      // Auto-link bare URLs in string content for consistency with URL fields
+      const formatted = formatBareUrlsAsHtmlLinks(v, escapeHtml);
+      return `<div class="view-field-value">${formatted}</div>`;
     }
     case 'number': {
       const v = value.kind === 'number' ? value.value : null;
@@ -2029,7 +2031,8 @@ function renderViewFieldValue(
       if (items.length === 0) {
         return '<div class="view-field-empty">(not filled)</div>';
       }
-      return `<div class="view-field-value"><ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`;
+      // Auto-link bare URLs in string list items
+      return `<div class="view-field-value"><ul>${items.map((i) => `<li>${formatBareUrlsAsHtmlLinks(i, escapeHtml)}</li>`).join('')}</ul></div>`;
     }
     case 'single_select': {
       const selected = value.kind === 'single_select' ? value.selected : null;
@@ -2129,7 +2132,8 @@ function renderViewFieldValue(
               const domain = friendlyUrlAbbrev(cellValue);
               cellHtml = `<a href="${escapeHtml(cellValue)}" target="_blank" class="url-link" data-url="${escapeHtml(cellValue)}">${escapeHtml(domain)}</a>`;
             } else {
-              cellHtml = escapeHtml(cellValue);
+              // Auto-link bare URLs in non-URL columns for consistency
+              cellHtml = formatBareUrlsAsHtmlLinks(cellValue, escapeHtml);
             }
           }
           tableHtml += `<td>${cellHtml}</td>`;
@@ -2417,6 +2421,7 @@ export function renderMarkdownContent(content: string): string {
 
 /**
  * Format inline markdown (bold, italic, code, links, checkboxes).
+ * Also auto-links bare URLs for consistency.
  */
 function formatInlineMarkdown(text: string): string {
   let result = escapeHtml(text);
@@ -2438,6 +2443,18 @@ function formatInlineMarkdown(text: string): string {
     (_: string, linkText: string, url: string) => {
       const cleanUrl = url.replace(/&amp;/g, '&');
       return `<a href="${cleanUrl}" target="_blank" class="url-link" data-url="${cleanUrl}">${linkText}</a>`;
+    },
+  );
+  // Auto-link bare URLs (not already in <a> tags or markdown links)
+  // Pattern matches http://, https://, www. URLs not preceded by href=" or ](
+  result = result.replace(
+    /(?<!href="|data-url="|\]\()(?:https?:\/\/|www\.)[^\s<>"]+(?<![.,;:!?'")])/g,
+    (url: string) => {
+      // Unescape &amp; back to & for the URL
+      const cleanUrl = url.replace(/&amp;/g, '&');
+      const fullUrl = cleanUrl.startsWith('www.') ? `https://${cleanUrl}` : cleanUrl;
+      const display = friendlyUrlAbbrev(fullUrl);
+      return `<a href="${escapeHtml(fullUrl)}" target="_blank" class="url-link" data-url="${escapeHtml(fullUrl)}">${escapeHtml(display)}</a>`;
     },
   );
   return result;
