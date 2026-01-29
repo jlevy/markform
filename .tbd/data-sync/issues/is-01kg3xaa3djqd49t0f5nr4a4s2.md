@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: Coverage config properly excludes node_modules via include pattern (src/**/*.ts) and explicit exclude list in vitest.config.ts:11-35
+closed_at: 2026-01-29T06:34:50.809Z
 created_at: 2026-01-06T17:57:38.174Z
 deferred_until: null
 dependencies: []
@@ -14,10 +14,10 @@ kind: bug
 labels: []
 parent_id: null
 priority: 0
-status: open
+status: closed
 title: Fix coverage configuration (exclude node_modules)
 type: is
-updated_at: 2026-01-06T17:57:38.174Z
-version: 1
+updated_at: 2026-01-29T06:34:50.810Z
+version: 2
 ---
 The c8 configuration includes '--include dist/**' which pulls in transpiled node_modules. This inflates reported coverage by ~7,400 lines. Fix by excluding node_modules or switching to vitest's built-in coverage.

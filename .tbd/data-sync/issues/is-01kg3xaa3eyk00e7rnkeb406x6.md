@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: --syntax option implemented in validate.ts:215 with enforcement logic at line 231
+closed_at: 2026-01-29T06:35:27.881Z
 created_at: 2026-01-12T05:42:34.437Z
 deferred_until: null
 dependencies: []
@@ -14,11 +14,11 @@ kind: task
 labels: []
 parent_id: null
 priority: 3
-status: open
+status: closed
 title: Add tryscript tests for --syntax option (optional)
 type: is
-updated_at: 2026-01-12T06:20:51.218Z
-version: 1
+updated_at: 2026-01-29T06:35:27.882Z
+version: 2
 ---
 ## Task
 Add tryscript tests for the `--syntax` CLI option:

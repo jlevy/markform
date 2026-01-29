@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: Coverage exclusions updated in vitest.config.ts:28-32 to exclude browse.ts, run.ts, research.ts with comment explaining extraction to *Helpers.ts
+closed_at: 2026-01-29T06:35:26.879Z
 created_at: 2026-01-06T17:58:17.115Z
 deferred_until: null
 dependencies: []
@@ -14,10 +14,10 @@ kind: task
 labels: []
 parent_id: null
 priority: 1
-status: open
+status: closed
 title: Update coverage exclusions for interactive wrappers
 type: is
-updated_at: 2026-01-06T17:58:17.115Z
-version: 1
+updated_at: 2026-01-29T06:35:26.879Z
+version: 2
 ---
 Update vitest.config.ts to exclude only the thin interactive command wrappers (browse.ts, run.ts, research.ts) after refactoring. The extracted helpers will be fully tested.

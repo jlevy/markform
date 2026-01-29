@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: Tests exist at programmaticFill.test.ts:616 - describe('resumable fills') with comprehensive test coverage
+closed_at: 2026-01-29T06:34:47.262Z
 created_at: 2026-01-02T23:43:06.571Z
 deferred_until: null
 dependencies: []
@@ -14,10 +14,10 @@ kind: task
 labels: []
 parent_id: null
 priority: 2
-status: in_progress
+status: closed
 title: Add resumable fills unit tests
 type: is
-updated_at: 2026-01-03T00:01:45.657Z
-version: 1
+updated_at: 2026-01-29T06:34:47.268Z
+version: 2
 ---
 Add describe('resumable fills') block with 3 tests: batch_limit on maxTurnsThisCall, checkpoint/resume flow, form already complete returns ok. File: packages/markform/tests/unit/harness/programmaticFill.test.ts

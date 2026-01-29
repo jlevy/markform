@@ -14,9 +14,9 @@ kind: task
 labels: []
 parent_id: null
 priority: 4
-status: in_progress
+status: open
 title: Add coercion warnings to session file format
 type: is
-updated_at: 2026-01-03T06:50:22.064Z
-version: 1
+updated_at: 2026-01-29T06:36:02.810Z
+version: 2
 ---
