@@ -295,6 +295,10 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         options.callbacks.onTurnStart({
           turnNumber: turnCount + 1,
           issuesCount: stepResult.issues.length,
+          // Default to order 0, serial execution for non-parallel fills
+          // Parallel harness will override these values
+          order: 0,
+          executionId: '0-serial',
         });
       } catch {
         // Ignore callback errors
@@ -512,6 +516,8 @@ async function fillFormParallel(
         maxTurnsTotal,
         turnCount,
         options,
+        order,
+        `${order}-serial`,
       );
       totalPatches += result.patchesApplied;
       turnCount += result.turnsUsed;
@@ -533,7 +539,7 @@ async function fillFormParallel(
       }
 
       // Run each batch item with its own multi-turn loop, concurrently
-      const itemPromises = batchItems.map((item) => {
+      const itemPromises = batchItems.map((item, itemIndex) => {
         // Create a scoped agent for this batch item (or reuse test agent)
         const scopedAgent: Agent =
           options._testAgent ??
@@ -558,6 +564,8 @@ async function fillFormParallel(
           maxTurnsTotal,
           turnCount,
           options,
+          order,
+          `${order}-batch-${batch.batchId}-${itemIndex}`,
         );
       });
 
@@ -641,6 +649,8 @@ async function runMultiTurnForItems(
   maxTurnsTotal: number,
   startTurn: number,
   options: FillOptions,
+  order: number,
+  executionId: string,
 ): Promise<MultiTurnResult> {
   let turnsUsed = 0;
   let patchesApplied = 0;
@@ -687,6 +697,8 @@ async function runMultiTurnForItems(
       options.callbacks?.onTurnStart?.({
         turnNumber: startTurn + turnsUsed + 1,
         issuesCount: scopedIssues.length,
+        order,
+        executionId,
       });
     } catch {
       /* ignore */

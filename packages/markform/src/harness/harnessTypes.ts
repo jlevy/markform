@@ -231,7 +231,14 @@ export interface ProviderInfo {
  */
 export interface FillCallbacks {
   /** Called when a turn begins */
-  onTurnStart?(turn: { turnNumber: number; issuesCount: number }): void;
+  onTurnStart?(turn: {
+    turnNumber: number;
+    issuesCount: number;
+    /** Order level (0, 1, 2, etc.) - for parallel execution tracking */
+    order: number;
+    /** Execution thread ID (e.g., "0-serial", "1-batch-contacts-0") */
+    executionId: string;
+  }): void;
 
   /** Called after inspect identifies issues for this turn (before agent generates patches) */
   onIssuesIdentified?(info: { turnNumber: number; issues: InspectIssue[] }): void;
@@ -243,16 +250,38 @@ export interface FillCallbacks {
   onTurnComplete?(progress: TurnProgress): void;
 
   /** Called before a tool executes */
-  onToolStart?(call: { name: string; input: unknown }): void;
+  onToolStart?(call: {
+    name: string;
+    input: unknown;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called after a tool completes */
-  onToolEnd?(call: { name: string; output: unknown; durationMs: number; error?: string }): void;
+  onToolEnd?(call: {
+    name: string;
+    output: unknown;
+    durationMs: number;
+    error?: string;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called before an LLM request */
-  onLlmCallStart?(call: { model: string }): void;
+  onLlmCallStart?(call: {
+    model: string;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called after an LLM response */
-  onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+  onLlmCallEnd?(call: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called when a parallel batch starts execution */
   onBatchStart?(info: { batchId: string; itemCount: number }): void;
