@@ -260,9 +260,22 @@ export const FillRecordSchema = z.object({
   // Same structure for serial and parallel execution
   timeline: z.array(z.object({
     turnNumber: z.number().int().positive(),
-    // Execution thread identifier (e.g., "main", "batch-1-item-0", "batch-1-item-1")
-    // Allows debugging/visibility into parallel execution
+
+    // Order level this turn belongs to (0, 1, 2, etc.)
+    // Order levels execute sequentially; within each level, items may run in parallel
+    // For serial execution, all turns are order=0
+    order: z.number().int().nonnegative(),
+
+    // Execution thread identifier - uniquely identifies the execution context
+    // Pattern: "{order}-{context}" where context is:
+    //   - "serial" for loose serial items (run by primary agent)
+    //   - "batch-{batchId}-{itemIndex}" for parallel batch items
+    // Examples:
+    //   - "0-serial" (order 0, serial execution)
+    //   - "1-batch-contact-0" (order 1, batch "contact", item 0)
+    //   - "1-batch-contact-1" (order 1, batch "contact", item 1 - runs in parallel with above)
     executionId: z.string(),
+
     // Timestamps for precise timing (totals calculated from these)
     startedAt: z.string().datetime(),
     completedAt: z.string().datetime(),
@@ -300,6 +313,8 @@ export const FillRecordSchema = z.object({
     totalTurns: z.number().int().nonnegative(),
     parallelEnabled: z.boolean(),
     maxParallelAgents: z.number().int().positive().optional(),
+    // Order levels processed (e.g., [0, 1, 2])
+    orderLevels: z.array(z.number().int().nonnegative()),
     // Unique execution threads seen (derived from timeline executionIds)
     executionThreads: z.array(z.string()),
   }),
@@ -438,6 +453,67 @@ This enables quick insights:
 - "web_search p95 is 2.8s - might need to optimize slow queries"
 - "25% of web searches returned 0 results"
 - "55% of time spent in LLM calls, 41% in tools"
+
+### Timeline Execution Order Example
+
+The timeline captures the execution order with `order` and `executionId` fields:
+
+```json
+{
+  "timeline": [
+    // Order 0: Serial execution (header fields)
+    {
+      "turnNumber": 1,
+      "order": 0,
+      "executionId": "0-serial",
+      "startedAt": "2026-01-29T10:30:00.000Z",
+      "completedAt": "2026-01-29T10:30:05.000Z",
+      "durationMs": 5000
+    },
+
+    // Order 1: Parallel batch execution (contact info)
+    // Note: turns 2 and 3 have overlapping timestamps - they ran in parallel
+    {
+      "turnNumber": 2,
+      "order": 1,
+      "executionId": "1-batch-contacts-0",
+      "startedAt": "2026-01-29T10:30:05.100Z",
+      "completedAt": "2026-01-29T10:30:08.500Z",
+      "durationMs": 3400
+    },
+    {
+      "turnNumber": 3,
+      "order": 1,
+      "executionId": "1-batch-contacts-1",
+      "startedAt": "2026-01-29T10:30:05.100Z",
+      "completedAt": "2026-01-29T10:30:09.200Z",
+      "durationMs": 4100
+    },
+
+    // Order 2: Back to serial (summary fields)
+    {
+      "turnNumber": 4,
+      "order": 2,
+      "executionId": "2-serial",
+      "startedAt": "2026-01-29T10:30:09.300Z",
+      "completedAt": "2026-01-29T10:30:12.000Z",
+      "durationMs": 2700
+    }
+  ],
+  "execution": {
+    "totalTurns": 4,
+    "parallelEnabled": true,
+    "maxParallelAgents": 4,
+    "orderLevels": [0, 1, 2],
+    "executionThreads": ["0-serial", "1-batch-contacts-0", "1-batch-contacts-1", "2-serial"]
+  }
+}
+```
+
+**Identifying parallel execution:**
+- Turns with the same `order` value and overlapping `startedAt`/`completedAt` ran in parallel
+- The `executionId` pattern shows the batch context: `"{order}-batch-{batchId}-{itemIndex}"`
+- Serial turns use `"{order}-serial"`
 
 ### FillRecordCollector
 
