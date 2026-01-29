@@ -235,7 +235,7 @@ export interface FillCallbacks {
   onTurnStart?(turn: {
     turnNumber: number;
     issuesCount: number;
-    /** Order level (0, 1, 2, etc.) - for parallel execution tracking */
+    /** Field ordering level for parallel execution (can be negative) */
     order: number;
     /** Execution thread ID (e.g., "0-serial", "1-batch-contacts-0") */
     executionId: string;
@@ -406,7 +406,7 @@ export interface FillOptions {
   /**
    * Collect a complete FillRecord capturing all execution details.
    *
-   * When enabled, the FillResult will include a `record` field containing:
+   * When true, the FillResult will include a `record` field containing:
    * - Turn-by-turn timeline with token usage
    * - Tool calls with timing and results
    * - Aggregated statistics with percentiles
@@ -417,10 +417,8 @@ export interface FillOptions {
    * - Debugging and troubleshooting
    * - Analytics and optimization
    * - Audit trails and provenance
-   *
-   * @default false
    */
-  recordFill?: boolean;
+  recordFill: boolean;
 }
 
 /**

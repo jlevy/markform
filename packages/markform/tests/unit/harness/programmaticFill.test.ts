@@ -75,6 +75,7 @@ describe('fillForm', () => {
         model: 'mock/model', // ignored when _testAgent provided
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' }, // Pre-fill user field
         targetRoles: ['user', 'agent'], // Target both roles
         _testAgent: mockAgent,
@@ -94,6 +95,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -111,6 +113,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -130,6 +133,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -148,6 +152,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -167,6 +172,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'Pre-filled Name' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -185,6 +191,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { nonexistent: 'value' },
         _testAgent: mockAgent,
       });
@@ -205,6 +212,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: { complex: 'object' } },
         _testAgent: mockAgent,
       });
@@ -225,6 +233,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 123, // number will be coerced to string with warning
         },
@@ -251,6 +260,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -276,6 +286,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -300,6 +311,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -326,6 +338,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -351,6 +364,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -380,6 +394,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -403,6 +418,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         // No callbacks option at all
@@ -425,6 +441,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -448,6 +465,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'Pre-filled' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -479,6 +497,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: cancellingAgent,
         signal: controller.signal,
@@ -515,6 +534,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         maxTurnsTotal: 2,
         _testAgent: emptyMockAgent,
       });
@@ -538,6 +558,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         maxTurnsTotal: 1,
         _testAgent: emptyMockAgent,
       });
@@ -555,6 +576,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -572,6 +594,7 @@ describe('fillForm', () => {
         model: 'invalid/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -602,6 +625,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         fillMode: 'continue',
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -624,6 +648,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         maxTurnsThisCall: 1,
@@ -652,6 +677,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         maxTurnsThisCall: 1,
@@ -670,6 +696,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         targetRoles: ['user', 'agent'],
         startingTurnNumber: r1.turns,
         _testAgent: mockAgent,
@@ -693,6 +720,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         targetRoles: ['user', 'agent'],
         maxTurnsThisCall: 5,
         _testAgent: mockAgent,
@@ -714,6 +742,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         startingTurnNumber: 10, // Simulating resume from turn 10
@@ -829,6 +858,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: true,
         _testAgent: mockAgent,
       });
@@ -850,6 +880,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: false,
         _testAgent: mockAgent,
       });
@@ -870,6 +901,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: true,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
@@ -889,6 +921,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: false,
         _testAgent: mockAgent,
       });
@@ -899,6 +932,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: true,
         _testAgent: mockAgent2,
       });
@@ -926,6 +960,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: true,
         _testAgent: mockAgent,
         callbacks: {
@@ -950,6 +985,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: true,
         _testAgent: mockAgent,
         callbacks: {
@@ -974,6 +1010,7 @@ Strong company
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         enableParallel: true,
         signal: controller.signal,
         _testAgent: mockAgent,

@@ -20,6 +20,7 @@ import type {
   TimingBreakdownItem,
   ExecutionMetadata,
 } from './fillRecord.js';
+import { currentTime, generateSessionId } from './timeUtils.js';
 
 // =============================================================================
 // Internal Event Types
@@ -143,8 +144,8 @@ export class FillRecordCollector implements FillCallbacks {
   private pendingLlmCalls = new Map<string, LlmCallStartEvent>();
 
   constructor(options: FillRecordCollectorOptions) {
-    this.startedAt = new Date().toISOString();
-    this.sessionId = crypto.randomUUID();
+    this.startedAt = currentTime();
+    this.sessionId = generateSessionId();
     this.form = options.form;
     this.provider = options.provider;
     this.model = options.model;
@@ -165,7 +166,7 @@ export class FillRecordCollector implements FillCallbacks {
   }): void {
     this.events.push({
       type: 'turn_start',
-      timestamp: new Date().toISOString(),
+      timestamp: currentTime(),
       turnNumber: turn.turnNumber,
       issuesCount: turn.issuesCount,
       order: turn.order,
@@ -176,7 +177,7 @@ export class FillRecordCollector implements FillCallbacks {
   onTurnComplete(progress: TurnProgress): void {
     this.events.push({
       type: 'turn_complete',
-      timestamp: new Date().toISOString(),
+      timestamp: currentTime(),
       turnNumber: progress.turnNumber,
       patchesApplied: progress.patchesApplied,
       patchesRejected: progress.rejectedPatches?.length ?? 0,
@@ -187,7 +188,7 @@ export class FillRecordCollector implements FillCallbacks {
   onLlmCallStart(call: { model: string; executionId: string }): void {
     const event: LlmCallStartEvent = {
       type: 'llm_call_start',
-      timestamp: new Date().toISOString(),
+      timestamp: currentTime(),
       model: call.model,
       executionId: call.executionId,
     };
@@ -203,7 +204,7 @@ export class FillRecordCollector implements FillCallbacks {
   }): void {
     this.events.push({
       type: 'llm_call_end',
-      timestamp: new Date().toISOString(),
+      timestamp: currentTime(),
       model: call.model,
       inputTokens: call.inputTokens,
       outputTokens: call.outputTokens,
@@ -215,7 +216,7 @@ export class FillRecordCollector implements FillCallbacks {
   onToolStart(call: { name: string; input: unknown; executionId: string }): void {
     const event: ToolStartEvent = {
       type: 'tool_start',
-      timestamp: new Date().toISOString(),
+      timestamp: currentTime(),
       name: call.name,
       input: call.input,
       executionId: call.executionId,
@@ -235,7 +236,7 @@ export class FillRecordCollector implements FillCallbacks {
   }): void {
     this.events.push({
       type: 'tool_end',
-      timestamp: new Date().toISOString(),
+      timestamp: currentTime(),
       name: call.name,
       output: call.output,
       durationMs: call.durationMs,
@@ -269,7 +270,7 @@ export class FillRecordCollector implements FillCallbacks {
    * Assemble the complete FillRecord from collected events.
    */
   getRecord(formProgress: ProgressCounts): FillRecord {
-    const completedAt = new Date().toISOString();
+    const completedAt = currentTime();
     const durationMs = new Date(completedAt).getTime() - new Date(this.startedAt).getTime();
 
     // Build timeline from events

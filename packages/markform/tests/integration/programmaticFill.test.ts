@@ -44,6 +44,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           // Pre-fill user fields that MockAgent won't fill
           name: 'Alice Johnson',
@@ -94,6 +95,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -137,6 +139,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -177,6 +180,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -194,6 +198,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'nonexistent/provider-model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -214,6 +219,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           nonexistent_field: 'some value',
         },
@@ -250,6 +256,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -306,6 +313,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -459,10 +467,8 @@ describe('programmatic fill API - integration tests', () => {
       expect(result.record).toBeDefined();
       const record = result.record!;
 
-      // Session ID should be a valid UUID
-      expect(record.sessionId).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-      );
+      // Session ID should be a valid ULID (26 characters, Crockford base32)
+      expect(record.sessionId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/i);
 
       // Timestamps should be valid ISO strings within the test window
       const startedAt = new Date(record.startedAt);
