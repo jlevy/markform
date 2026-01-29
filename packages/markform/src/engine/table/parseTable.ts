@@ -37,6 +37,21 @@ const SKIP_PATTERN = /^%SKIP(?:[:(](.*))?[)]?%$/i;
 /** Sentinel pattern: %ABORT% or %ABORT:reason% or %ABORT(reason)% */
 const ABORT_PATTERN = /^%ABORT(?:[:(](.*))?[)]?%$/i;
 
+/** Markdown link pattern: [text](url) */
+const MARKDOWN_LINK_PATTERN = /^\[([^\]]*)\]\(([^)]+)\)$/;
+
+/**
+ * Extract URL from markdown link format if present.
+ * Returns the URL part from [text](url) format, or the original value if not a markdown link.
+ */
+function extractUrlFromMarkdownLink(value: string): string {
+  const match = MARKDOWN_LINK_PATTERN.exec(value);
+  if (match) {
+    return match[2]!; // Return the URL part
+  }
+  return value;
+}
+
 /**
  * Detect if a cell value is a sentinel.
  */
@@ -95,9 +110,12 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
       return { state: 'answered', value: num };
     }
 
-    case 'url':
-      // Basic URL validation - more thorough validation happens in validate.ts
-      return { state: 'answered', value: trimmed };
+    case 'url': {
+      // Extract URL from markdown link format if present (e.g., [text](url) -> url)
+      // This handles round-trip where URLs are serialized as markdown links
+      const url = extractUrlFromMarkdownLink(trimmed);
+      return { state: 'answered', value: url };
+    }
 
     case 'date':
       // Date format validation - more thorough validation happens in validate.ts

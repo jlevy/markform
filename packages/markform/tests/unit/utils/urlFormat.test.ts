@@ -7,6 +7,7 @@ import {
   extractDomain,
   friendlyUrlAbbrev,
   formatUrlAsMarkdownLink,
+  formatBareUrlsAsHtmlLinks,
   isUrl,
 } from '../../../src/utils/urlFormat.js';
 
@@ -97,6 +98,122 @@ describe('urlFormat', () => {
 
     it.each(cases)('isUrl(%s) → %s', (input, expected) => {
       expect(isUrl(input)).toBe(expected);
+    });
+  });
+
+  describe('formatBareUrlsAsHtmlLinks', () => {
+    // Simple escapeHtml for testing
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    it('converts bare https URL to link', () => {
+      const input = 'Check out https://example.com/docs for more info';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      expect(result).toContain('<a href="https://example.com/docs"');
+      expect(result).toContain('target="_blank"');
+      expect(result).toContain('class="url-link"');
+      expect(result).toContain('data-url="https://example.com/docs"');
+      expect(result).toContain('>example.com/docs</a>');
+    });
+
+    it('converts bare http URL to link', () => {
+      const input = 'See http://example.com/page';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      expect(result).toContain('<a href="http://example.com/page"');
+    });
+
+    it('converts www. URL to link with https:// prefix', () => {
+      const input = 'Visit www.example.com for details';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      expect(result).toContain('<a href="https://www.example.com"');
+    });
+
+    it('converts markdown links to HTML links with original text', () => {
+      const input = 'See [docs](https://example.com/docs) for more';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Markdown link converted to <a> tag with original link text
+      expect(result).toContain('<a href="https://example.com/docs"');
+      expect(result).toContain('>docs</a>');
+      // Should not have raw markdown syntax
+      expect(result).not.toContain('[docs]');
+    });
+
+    it('handles text with both markdown and bare URLs', () => {
+      const input = 'See [docs](https://example.com/docs) and also https://other.com/page';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Markdown link converted to HTML
+      expect(result).toContain('<a href="https://example.com/docs"');
+      expect(result).toContain('>docs</a>');
+      // Bare URL also converted with abbreviated display
+      expect(result).toContain('<a href="https://other.com/page"');
+      expect(result).toContain('>other.com/page</a>');
+    });
+
+    it('handles multiple bare URLs', () => {
+      const input = 'https://a.com and https://b.com';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      expect(result).toContain('<a href="https://a.com"');
+      expect(result).toContain('<a href="https://b.com"');
+    });
+
+    it('excludes trailing punctuation from URL', () => {
+      const input = 'See https://example.com/page.';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      expect(result).toContain('href="https://example.com/page"');
+      expect(result).toContain('</a>.');
+    });
+
+    it('handles text without any URLs', () => {
+      const input = 'Just plain text here';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      expect(result).toBe('Just plain text here');
+    });
+
+    it('abbreviates long URLs in display text', () => {
+      const input = 'See https://example.com/very/long/path/to/resource';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Full URL in href
+      expect(result).toContain('href="https://example.com/very/long/path/to/resource"');
+      // Abbreviated display
+      expect(result).toContain('>example.com/very/long/pa…</a>');
+    });
+
+    it('escapes HTML in non-URL text to prevent XSS', () => {
+      const input = '<script>alert("xss")</script> https://example.com';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Script tag should be escaped
+      expect(result).toContain('&lt;script&gt;');
+      expect(result).not.toContain('<script>');
+      // URL should still be converted to link
+      expect(result).toContain('<a href="https://example.com"');
+    });
+
+    it('escapes HTML in text with img onerror XSS vector', () => {
+      const input = '<img onerror=alert(1) src=x> See https://example.com';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Img tag should be escaped
+      expect(result).toContain('&lt;img');
+      expect(result).not.toContain('<img');
+      // URL should still be converted
+      expect(result).toContain('<a href="https://example.com"');
+    });
+
+    it('handles URLs with query parameters containing &', () => {
+      const input = 'See https://example.com/search?a=1&b=2';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // URL in href should have proper escaping
+      expect(result).toContain('href="https://example.com/search?a=1&amp;b=2"');
+    });
+
+    it('does not create nested anchors when markdown link text is a URL', () => {
+      const input = '[https://example.com](https://example.com)';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Should only have one <a> tag, not nested
+      const anchorCount = (result.match(/<a /g) ?? []).length;
+      expect(anchorCount).toBe(1);
+      // The link text (the URL) should not be wrapped in another anchor
+      expect(result).toContain('>https://example.com</a>');
+      expect(result).not.toContain('<a href="https://example.com"><a');
     });
   });
 });
