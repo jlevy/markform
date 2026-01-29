@@ -300,9 +300,47 @@ interface CollectorEvent {
 
 ### Integration with fillForm
 
-Two integration approaches:
+**TypeScript API:**
 
-**Approach 1: Explicit collector (recommended)**
+The `recordFill` option enables fill record collection. When enabled, the complete
+`FillRecord` is returned in `FillResult.record`.
+
+```typescript
+import { fillForm } from 'markform';
+
+const result = await fillForm({
+  form: markdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: true,
+  recordFill: true, // Defaults to false
+  captureWireFormat: false,
+});
+
+// FillRecord is available when recordFill: true
+if (result.record) {
+  console.log(result.record.llm.inputTokens);
+  console.log(result.record.timeline.length);
+}
+```
+
+**FillResult type extension:**
+
+```typescript
+export interface FillResult {
+  // ... existing fields ...
+
+  /**
+   * Complete fill record when recordFill: true.
+   * Contains timeline, token usage, tool calls, and execution metadata.
+   */
+  record?: FillRecord;
+}
+```
+
+**Alternative: Explicit collector for advanced use**
+
+For clients who need to process events in real-time or customize collection:
+
 ```typescript
 import { fillForm, FillRecordCollector } from 'markform';
 
@@ -317,21 +355,6 @@ const result = await fillForm({
 });
 
 const record = collector.getRecord();
-// record.llm.inputTokens, record.llm.outputTokens for cost calculation
-// record.timeline[n].tokens for per-turn breakdown
-```
-
-**Approach 2: Built into FillResult (optional)**
-```typescript
-const result = await fillForm({
-  form: markdown,
-  model: 'anthropic/claude-sonnet-4-5',
-  enableWebSearch: true,
-  collectRecord: true, // New option
-  captureWireFormat: false,
-});
-
-console.log(result.record); // FillRecord included in result
 ```
 
 ### Web Search Query Capture
@@ -357,35 +380,44 @@ interface FillCallbacks {
 }
 ```
 
-### Record Attachment to Documents
+### CLI Integration
 
-Two options for attaching the record to completed forms:
+The CLI provides a `--record-fill` flag that writes a sidecar file alongside the output.
 
-**Option 1: YAML frontmatter**
-```yaml
----
-fillRecord:
-  sessionId: "abc-123"
-  completedAt: "2026-01-29T10:30:00Z"
-  llm:
-    model: "claude-sonnet-4-5"
-    inputTokens: 5000
-    outputTokens: 2000
-  # ... abbreviated
----
+```bash
+# Fill a form and write the fill record
+markform fill input.form.md -o output.form.md --record-fill
+
+# Output files:
+#   output.form.md      # The filled form
+#   output.fill.json    # The FillRecord (JSON)
 ```
 
-**Option 2: Sidecar file**
-```
-document.md           # The filled form
-document.fill.json    # The FillRecord
-```
+**CLI naming convention:**
 
-Recommend **Option 2** (sidecar) because:
-- Keeps form content clean
+The fill record file is derived from the output form path:
+- Output: `path/to/some-name.form.md` → Record: `path/to/some-name.fill.json`
+- Output: `path/to/document.md` → Record: `path/to/document.fill.json`
+
+The pattern is: replace the file extension with `.fill.json`.
+
+**CLI defaults:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--record-fill` | `false` | Write fill record alongside output |
+
+**Note:** This sidecar file convention is a CLI-only behavior. The TypeScript API returns
+the `FillRecord` in `result.record` — it's up to the caller to decide how to persist it.
+
+### Why Sidecar Files (CLI)
+
+The CLI uses sidecar files rather than embedding in YAML frontmatter because:
+- Keeps form content clean and readable
 - Record can be large (especially timeline with many turns)
-- Easy to include/exclude from version control
+- Easy to include/exclude from version control (`.gitignore *.fill.json`)
 - Standard JSON is more portable than embedded YAML
+- Separation of concerns: form content vs. execution metadata
 
 ## Implementation Plan
 
@@ -393,30 +425,40 @@ Recommend **Option 2** (sidecar) because:
 
 - [ ] Define `FillRecordSchema` and related types in new file
       `packages/markform/src/harness/fillRecord.ts`
-- [ ] Implement `FillRecordCollector` class
+- [ ] Implement `FillRecordCollector` class (thread-safe, append-only)
 - [ ] Add `onWebSearch` callback to `FillCallbacks` interface
 - [ ] Export from package entry point
 - [ ] Unit tests for collector
 
-### Phase 2: Integration & Web Search
+### Phase 2: TypeScript API Integration
 
+- [ ] Add `recordFill` option to `FillOptions` (defaults to `false`)
+- [ ] Add `record?: FillRecord` to `FillResult`
+- [ ] Wire up `FillRecordCollector` internally when `recordFill: true`
 - [ ] Wire up web search query capture in liveAgent for Anthropic provider
-- [ ] Add `collectRecord` option to `FillOptions` (optional convenience)
-- [ ] Include record in `FillResult` when requested
 - [ ] Integration tests with real fills
 
-### Phase 3: Documentation & Examples
+### Phase 3: CLI Integration
 
-- [ ] Document FillRecord in API docs
-- [ ] Add example showing summary collection and storage
-- [ ] Add example showing sidecar file generation
+- [ ] Add `--record-fill` flag to `fill` command (defaults to `false`)
+- [ ] Implement sidecar file naming: `{basename}.fill.json`
+- [ ] Write JSON fill record when flag is set
+- [ ] CLI tests for record file generation
+
+### Phase 4: Documentation & Examples
+
+- [ ] Document `recordFill` option in TypeScript API docs
+- [ ] Document `--record-fill` flag in CLI help and docs
+- [ ] Add example showing programmatic record access
+- [ ] Add example showing CLI sidecar file usage
 
 ## Backward Compatibility
 
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
 - **Code types, methods, and function signatures**: MAINTAIN — all additions are optional
-- **Library APIs**: MAINTAIN — new `collectRecord` option defaults to false
+- **TypeScript API**: MAINTAIN — new `recordFill` option defaults to `false`
+- **CLI**: MAINTAIN — new `--record-fill` flag defaults to `false`
 - **File formats**: MAINTAIN — sidecar files are opt-in, form format unchanged
 - **FillCallbacks**: EXTEND — new `onWebSearch` callback is optional
 
