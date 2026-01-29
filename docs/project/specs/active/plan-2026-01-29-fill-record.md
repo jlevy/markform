@@ -142,7 +142,53 @@ This gives clients the "it just works" experience while preserving flexibility.
 ### FillRecord Schema
 
 ```typescript
-// Core summary returned from fillForm
+/**
+ * Per-tool statistics with timing percentiles.
+ * Enables analysis like "web_search p95 is 2.5s" or "fill_form has 98% success rate"
+ */
+export const ToolStatsSchema = z.object({
+  /** Tool name identifier (e.g., "web_search", "fill_form") */
+  toolName: z.string(),
+
+  /** Number of times this tool was called */
+  callCount: z.number().int().nonnegative(),
+  /** Number of successful calls */
+  successCount: z.number().int().nonnegative(),
+  /** Number of failed calls */
+  failureCount: z.number().int().nonnegative(),
+  /** Success rate as percentage (0-100) */
+  successRate: z.number().nonnegative(),
+
+  /** For tools that return results (web_search), track result counts */
+  results: z.object({
+    /** Total results returned across all calls */
+    totalResults: z.number().int().nonnegative(),
+    /** Average results per call */
+    avgResultsPerCall: z.number().nonnegative(),
+    /** Calls that returned zero results */
+    zeroResultCalls: z.number().int().nonnegative(),
+  }).optional(),
+
+  /** Timing statistics (all values in milliseconds) */
+  timing: z.object({
+    /** Total time spent in this tool */
+    totalMs: z.number().int().nonnegative(),
+    /** Average call duration */
+    avgMs: z.number().nonnegative(),
+    /** Minimum call duration */
+    minMs: z.number().int().nonnegative(),
+    /** Maximum call duration */
+    maxMs: z.number().int().nonnegative(),
+    /** 50th percentile (median) */
+    p50Ms: z.number().int().nonnegative(),
+    /** 95th percentile - useful for identifying slow outliers */
+    p95Ms: z.number().int().nonnegative(),
+  }),
+});
+
+export type ToolStats = z.infer<typeof ToolStatsSchema>;
+
+// Core record returned from fillForm
 export const FillRecordSchema = z.object({
   // Identity
   sessionId: z.string().uuid(),
@@ -173,28 +219,42 @@ export const FillRecordSchema = z.object({
     outputTokens: z.number().int().nonnegative(),
   }),
 
-  // Tool usage totals
-  tools: z.object({
+  // Tool usage summary (aggregated stats for quick analysis)
+  // Individual tool calls are in timeline[].toolCalls
+  toolSummary: z.object({
+    /** Total tool calls across all turns */
     totalCalls: z.number().int().nonnegative(),
+    /** Successful tool calls */
+    successfulCalls: z.number().int().nonnegative(),
+    /** Failed tool calls */
+    failedCalls: z.number().int().nonnegative(),
+    /** Success rate as percentage (0-100) */
+    successRate: z.number().nonnegative(),
+    /** Total time spent in tool execution (ms) */
     totalDurationMs: z.number().int().nonnegative(),
-    byTool: z.record(z.string(), z.object({
-      calls: z.number().int().nonnegative(),
-      durationMs: z.number().int().nonnegative(),
-      errors: z.number().int().nonnegative(),
-    })),
+
+    /** Per-tool statistics */
+    byTool: z.array(ToolStatsSchema),
   }),
 
-  // Web search specifics (if enabled)
-  webSearch: z.object({
-    enabled: z.boolean(),
-    totalQueries: z.number().int().nonnegative(),
-    totalResults: z.number().int().nonnegative(),
-    queries: z.array(z.object({
-      query: z.string(),
-      resultCount: z.number().int().nonnegative(),
-      turnNumber: z.number().int().positive(),
+  // Timing breakdown showing where time was spent
+  timingBreakdown: z.object({
+    /** Total wall-clock time for the fill (ms) */
+    totalMs: z.number().int().nonnegative(),
+    /** Time spent in LLM API calls (ms) */
+    llmTimeMs: z.number().int().nonnegative(),
+    /** Time spent executing tools (ms) */
+    toolTimeMs: z.number().int().nonnegative(),
+    /** Overhead time (total - llm - tools) */
+    overheadMs: z.number().int().nonnegative(),
+    /** Percentage breakdown for visualization */
+    breakdown: z.array(z.object({
+      category: z.enum(['llm', 'tools', 'overhead']),
+      label: z.string(),
+      ms: z.number().int().nonnegative(),
+      percentage: z.number().nonnegative(), // 0-100
     })),
-  }).optional(),
+  }),
 
   // Turn-by-turn timeline (no size limits - full history always captured)
   // Same structure for serial and parallel execution
@@ -309,6 +369,75 @@ This data enables analysis like:
 - "What % of web searches returned 0 results?"
 - "Which queries took longest?"
 - "How many tool errors occurred?"
+
+### Aggregated Tool Stats Example
+
+The `toolSummary.byTool` array provides per-tool rollups:
+
+```json
+{
+  "toolSummary": {
+    "totalCalls": 15,
+    "successfulCalls": 14,
+    "failedCalls": 1,
+    "successRate": 93.3,
+    "totalDurationMs": 18500,
+    "byTool": [
+      {
+        "toolName": "web_search",
+        "callCount": 8,
+        "successCount": 7,
+        "failureCount": 1,
+        "successRate": 87.5,
+        "results": {
+          "totalResults": 42,
+          "avgResultsPerCall": 6.0,
+          "zeroResultCalls": 2
+        },
+        "timing": {
+          "totalMs": 12000,
+          "avgMs": 1500,
+          "minMs": 800,
+          "maxMs": 3200,
+          "p50Ms": 1200,
+          "p95Ms": 2800
+        }
+      },
+      {
+        "toolName": "fill_form",
+        "callCount": 7,
+        "successCount": 7,
+        "failureCount": 0,
+        "successRate": 100,
+        "timing": {
+          "totalMs": 350,
+          "avgMs": 50,
+          "minMs": 30,
+          "maxMs": 80,
+          "p50Ms": 45,
+          "p95Ms": 75
+        }
+      }
+    ]
+  },
+  "timingBreakdown": {
+    "totalMs": 45000,
+    "llmTimeMs": 25000,
+    "toolTimeMs": 18500,
+    "overheadMs": 1500,
+    "breakdown": [
+      { "category": "llm", "label": "LLM API calls", "ms": 25000, "percentage": 55.6 },
+      { "category": "tools", "label": "Tool execution", "ms": 18500, "percentage": 41.1 },
+      { "category": "overhead", "label": "Overhead", "ms": 1500, "percentage": 3.3 }
+    ]
+  }
+}
+```
+
+This enables quick insights:
+- "web_search p95 is 2.8s - might need to optimize slow queries"
+- "25% of web searches returned 0 results"
+- "55% of time spent in LLM calls, 41% in tools"
 
 ### FillRecordCollector
 
