@@ -149,3 +149,41 @@ $ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/
 Fill record written to: /tmp/test-fill-record.fill.json
 ? 0
 ```
+
+# Test: fill summary shows complete format structure
+
+This test demonstrates the full FillRecord summary output format including
+status, tokens, tools, and progress metrics.
+
+```console
+$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --output /tmp/test-fill-full-summary.form.md
+Filling form: [..]
+Agent: mock
+Turn 1: 0 issues
+Form completed in 1 turn(s)
+⏰ Fill time: [..]
+Form written to: /tmp/test-fill-full-summary.form.md
+
+Fill completed in [..] (0 turns)
+
+Tokens:  0 input / 0 output (mock/mock)
+Tools:   0 calls
+
+Progress: 0/21 fields filled (0%)
+Session Transcript
+
+Form: [..]
+Mode: mock
+Version: [..]
+
+Harness Config:
+  Max turns: 100
+  Max patches/turn: 20
+  Max issues/turn: 10
+
+Turns (0):
+
+Expected: ✓ complete
+Completed form: [..]
+? 0
+```
