@@ -696,7 +696,9 @@ The pattern is: replace the file extension with `.fill.json`.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--record-fill` | `false` | Write fill record alongside output |
+| `--record-fill` | `true`* | Write fill record alongside output |
+
+*Note: Default changes from `false` to `true` in Phase 5. Use `--no-record-fill` to disable.
 
 **Note:** This sidecar file convention is a CLI-only behavior. The TypeScript API returns
 the `FillRecord` in `result.record` — it's up to the caller to decide how to persist it.
@@ -742,6 +744,63 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 - [ ] Document `--record-fill` flag in CLI help and docs
 - [ ] Add example showing programmatic record access
 - [ ] Add example showing CLI sidecar file usage
+
+### Phase 5: Text Summary Formatting & CLI Default
+
+The final phase enables users to easily see what happened during a fill operation:
+
+- [ ] Implement `formatFillRecordSummary(record: FillRecord): string` function
+- [ ] CLI enables `recordFill` by default (change from `false` to `true`)
+- [ ] CLI prints summary to stderr at end of fill (can be silenced with `--quiet`)
+- [ ] Export formatting function for TypeScript clients
+- [ ] Add summary formatting to Golden tests in TryScript
+
+**Summary format design:**
+
+The summary should be concise but informative, showing key metrics at a glance:
+
+```
+Fill completed in 12.4s (5 turns)
+
+Tokens:  2,450 input / 890 output (anthropic/claude-sonnet-4-5)
+Tools:   12 calls (11 succeeded, 1 failed)
+         - web_search: 5 calls, avg 1.2s, p95 2.1s
+         - fill_form: 7 calls, avg 45ms
+
+Timing:  55% LLM (6.8s) | 41% tools (5.1s) | 4% overhead (0.5s)
+
+Progress: 18/20 fields filled (90%)
+```
+
+**TypeScript API:**
+
+```typescript
+import { formatFillRecordSummary } from 'markform';
+
+const result = await fillForm({ form, model, recordFill: true });
+if (result.record) {
+  console.log(formatFillRecordSummary(result.record));
+}
+```
+
+**CLI behavior:**
+
+By default, the CLI will:
+1. Enable `recordFill` automatically
+2. Print the summary to stderr after the fill completes
+3. Write the sidecar `.fill.json` file
+
+To suppress output:
+- `--quiet` or `-q`: Suppress summary output (still writes sidecar file)
+- `--no-record-fill`: Disable recording entirely (no sidecar, no summary)
+
+**Golden test integration:**
+
+For TryScript golden tests, the formatted summary provides a stable, human-readable
+view of execution that can be included in test fixtures. This helps validate:
+- Expected turn counts
+- Tool call patterns
+- Performance characteristics
 
 ## Backward Compatibility
 
