@@ -666,4 +666,52 @@ describe('FillRecordCollector', () => {
       expect(record.statusDetail).toBe('API error occurred');
     });
   });
+
+  describe('onWebSearch', () => {
+    it('accepts web search events', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      // Should not throw
+      collector.onWebSearch({
+        query: 'test query',
+        resultCount: 5,
+        provider: 'anthropic',
+        executionId: '0-serial',
+      });
+
+      // Verify the collector still works
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.sessionId).toBeDefined();
+    });
+
+    it('captures multiple web search events', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onWebSearch({
+        query: 'first query',
+        resultCount: 3,
+        provider: 'anthropic',
+        executionId: '0-serial',
+      });
+
+      collector.onWebSearch({
+        query: 'second query',
+        resultCount: 0,
+        provider: 'anthropic',
+        executionId: '0-serial',
+      });
+
+      // Verify the collector completes without error
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.sessionId).toBeDefined();
+    });
+  });
 });

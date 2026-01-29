@@ -157,7 +157,7 @@ export class LiveAgent implements Agent {
     };
 
     // Wrap tools with callbacks for observability
-    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks);
+    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks, this.provider);
 
     // Get model ID for callbacks (may not be available on all model types)
     const modelId = (this.model as { modelId?: string }).modelId ?? 'unknown';
@@ -583,9 +583,10 @@ function findField(form: ParsedForm, fieldId: string) {
 function wrapToolsWithCallbacks(
   tools: Record<string, Tool>,
   callbacks?: FillCallbacks,
+  provider?: string,
 ): Record<string, Tool> {
   // Skip wrapping if no tool callbacks
-  if (!callbacks?.onToolStart && !callbacks?.onToolEnd) {
+  if (!callbacks?.onToolStart && !callbacks?.onToolEnd && !callbacks?.onWebSearch) {
     return tools;
   }
 
@@ -596,7 +597,7 @@ function wrapToolsWithCallbacks(
     const execute = (tool as any).execute;
     if (typeof execute === 'function') {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      wrapped[name] = wrapTool(name, tool, execute, callbacks);
+      wrapped[name] = wrapTool(name, tool, execute, callbacks, provider);
     } else {
       // Pass through declarative tools unchanged
       wrapped[name] = tool;
@@ -613,6 +614,7 @@ function wrapTool(
   tool: Tool,
   originalExecute: (input: unknown) => Promise<unknown>,
   callbacks: FillCallbacks,
+  provider?: string,
 ): Tool {
   return {
     ...tool,
@@ -649,6 +651,18 @@ function wrapTool(
           }
         }
 
+        // Check if this is a web search tool and call onWebSearch
+        if (callbacks.onWebSearch && isWebSearchTool(name)) {
+          try {
+            const webSearchInfo = extractWebSearchInfo(input, output, provider ?? 'unknown');
+            if (webSearchInfo) {
+              callbacks.onWebSearch({ ...webSearchInfo, executionId });
+            }
+          } catch {
+            // Ignore callback errors
+          }
+        }
+
         return output;
       } catch (error) {
         // Call onToolEnd on error (errors don't abort)
@@ -669,6 +683,56 @@ function wrapTool(
       }
     },
   };
+}
+
+/**
+ * Check if a tool name indicates a web search tool.
+ */
+function isWebSearchTool(name: string): boolean {
+  return name === 'web_search' || name === 'google_search' || name.includes('search');
+}
+
+/**
+ * Extract web search info from tool input/output.
+ * Different providers may have different structures.
+ */
+function extractWebSearchInfo(
+  input: unknown,
+  output: unknown,
+  provider: string,
+): { query: string; resultCount: number; provider: string } | undefined {
+  // Try to extract query from input
+  let query: string | undefined;
+  if (input && typeof input === 'object') {
+    const inputObj = input as Record<string, unknown>;
+    if (typeof inputObj.query === 'string') {
+      query = inputObj.query;
+    } else if (typeof inputObj.q === 'string') {
+      query = inputObj.q;
+    }
+  }
+
+  if (!query) {
+    return undefined;
+  }
+
+  // Try to extract result count from output
+  let resultCount = 0;
+  if (output && typeof output === 'object') {
+    const outputObj = output as Record<string, unknown>;
+    // Common patterns for result count
+    if (Array.isArray(outputObj.results)) {
+      resultCount = outputObj.results.length;
+    } else if (Array.isArray(outputObj.searchResults)) {
+      resultCount = outputObj.searchResults.length;
+    } else if (typeof outputObj.resultCount === 'number') {
+      resultCount = outputObj.resultCount;
+    } else if (typeof outputObj.totalResults === 'number') {
+      resultCount = outputObj.totalResults;
+    }
+  }
+
+  return { query, resultCount, provider };
 }
 
 // =============================================================================

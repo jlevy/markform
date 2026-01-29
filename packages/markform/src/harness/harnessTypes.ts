@@ -295,6 +295,23 @@ export interface FillCallbacks {
 
   /** Called when an order level completes */
   onOrderLevelComplete?(info: { order: number; patchesApplied: number }): void;
+
+  /**
+   * Called when a web search is performed.
+   *
+   * This provides access to the search query and result count for analytics and debugging.
+   * Note: Not all providers expose the exact query. When available, this is called.
+   */
+  onWebSearch?(info: {
+    /** The search query that was executed */
+    query: string;
+    /** Number of results returned (0 if none) */
+    resultCount: number;
+    /** Provider that performed the search (e.g., "anthropic", "openai") */
+    provider: string;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 }
 
 // =============================================================================

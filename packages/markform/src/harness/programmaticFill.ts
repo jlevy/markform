@@ -191,6 +191,19 @@ function mergeCallbacks(
     onBatchComplete: userCallbacks.onBatchComplete
       ? (info) => userCallbacks.onBatchComplete?.(info)
       : undefined,
+    // Forward onWebSearch to both collector and user
+    onWebSearch: (info) => {
+      try {
+        collector.onWebSearch(info);
+      } catch {
+        /* ignore */
+      }
+      try {
+        userCallbacks.onWebSearch?.(info);
+      } catch {
+        /* ignore */
+      }
+    },
   };
 }
 

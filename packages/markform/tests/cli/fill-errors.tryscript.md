@@ -121,3 +121,31 @@ $ $CLI fill examples/simple/simple.form.md --mock --mock-source /nonexistent/moc
 Error: ENOENT: no such file or directory, open '/nonexistent/mock.form.md'
 ? 1
 ```
+
+---
+
+## FillRecord Summary Tests
+
+# Test: fill shows summary by default
+
+```console
+$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --output /tmp/test-fill-summary.form.md 2>&1 | grep -E "Fill (completed|partial)"
+Fill completed in ...
+? 0
+```
+
+# Test: fill --quiet suppresses summary
+
+```console
+$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --output /tmp/test-fill-quiet.form.md --quiet 2>&1 | grep "Fill completed" | wc -l
+0
+? 0
+```
+
+# Test: fill --record-fill creates sidecar file
+
+```console
+$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --output /tmp/test-fill-record.form.md --record-fill 2>&1 | grep "Fill record written"
+Fill record written to: /tmp/test-fill-record.fill.json
+? 0
+```

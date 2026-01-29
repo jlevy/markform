@@ -78,13 +78,23 @@ interface ToolEndEvent {
   executionId: string;
 }
 
+interface WebSearchEvent {
+  type: 'web_search';
+  timestamp: string;
+  query: string;
+  resultCount: number;
+  provider: string;
+  executionId: string;
+}
+
 type CollectorEvent =
   | TurnStartEvent
   | TurnCompleteEvent
   | LlmCallStartEvent
   | LlmCallEndEvent
   | ToolStartEvent
-  | ToolEndEvent;
+  | ToolEndEvent
+  | WebSearchEvent;
 
 // =============================================================================
 // Options Interface
@@ -245,6 +255,22 @@ export class FillRecordCollector implements FillCallbacks {
     });
     const key = `${call.executionId}:${call.name}`;
     this.pendingToolCalls.delete(key);
+  }
+
+  onWebSearch(info: {
+    query: string;
+    resultCount: number;
+    provider: string;
+    executionId: string;
+  }): void {
+    this.events.push({
+      type: 'web_search',
+      timestamp: currentTime(),
+      query: info.query,
+      resultCount: info.resultCount,
+      provider: info.provider,
+      executionId: info.executionId,
+    });
   }
 
   // ===========================================================================

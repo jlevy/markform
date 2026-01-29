@@ -14,3 +14,5 @@ data-sync/
 
 # Backups created by tbd doctor --fix
 backups/
+
+*.temp
