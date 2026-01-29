@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: HTML Comment Syntax feature complete. Phases 1-4 implemented. See epic mf-67kf and validation spec.
+closed_at: 2026-01-29T04:33:50.185Z
 created_at: 2026-01-12T05:39:58.819Z
 deferred_until: null
 dependencies: []
@@ -14,11 +14,12 @@ kind: feature
 labels: []
 parent_id: null
 priority: 1
-status: open
+spec_path: docs/project/specs/active/plan-2026-01-12-html-comment-syntax-support.md
+status: closed
 title: "HTML Comment Syntax Support (f: namespace)"
 type: is
-updated_at: 2026-01-12T05:39:58.819Z
-version: 1
+updated_at: 2026-01-29T04:33:50.186Z
+version: 3
 ---
 ## Summary
 Implement HTML comment syntax (`<!-- f:tag -->`) as an alternative to Markdoc's Jinja-style tags (`{% tag %}`). This enables Markform files to render cleanly on GitHub and standard Markdown editors.

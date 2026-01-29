@@ -1,4 +1,6 @@
 ---
+close_reason: markform-spec.md updated with implicit checkboxes.
+closed_at: 2026-01-29T04:33:38.009Z
 created_at: 2026-01-29T04:29:22.934Z
 dependencies: []
 id: is-01kg406p3ppf2ez2h4ewq5kknb
@@ -7,9 +9,9 @@ labels: []
 parent_id: is-01kg3xzxzt7e8gh04fwaga2xn0
 priority: 2
 spec_path: docs/project/specs/active/plan-2026-01-23-implicit-checkboxes.md
-status: open
+status: closed
 title: Update markform-spec.md with implicit checkboxes and option metadata
 type: is
-updated_at: 2026-01-29T04:29:22.934Z
-version: 1
+updated_at: 2026-01-29T04:33:38.010Z
+version: 2
 ---
