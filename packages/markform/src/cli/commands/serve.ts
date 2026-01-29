@@ -2446,9 +2446,12 @@ function formatInlineMarkdown(text: string): string {
     },
   );
   // Auto-link bare URLs (not already in <a> tags or markdown links)
-  // Pattern matches http://, https://, www. URLs not preceded by href=" or ](
+  // Uses negative lookbehind to skip URLs that are:
+  // - Inside href="" or data-url="" attributes
+  // - Inside anchor tag content (preceded by ">)
+  // - Part of markdown link syntax ](
   result = result.replace(
-    /(?<!href="|data-url="|\]\()(?:https?:\/\/|www\.)[^\s<>"]+(?<![.,;:!?'")])/g,
+    /(?<!href="|data-url="|">|\]\()(?:https?:\/\/|www\.)[^\s<>"]+(?<![.,;:!?'")])/g,
     (url: string) => {
       // Unescape &amp; back to & for the URL
       const cleanUrl = url.replace(/&amp;/g, '&');

@@ -204,5 +204,16 @@ describe('urlFormat', () => {
       // URL in href should have proper escaping
       expect(result).toContain('href="https://example.com/search?a=1&amp;b=2"');
     });
+
+    it('does not create nested anchors when markdown link text is a URL', () => {
+      const input = '[https://example.com](https://example.com)';
+      const result = formatBareUrlsAsHtmlLinks(input, escapeHtml);
+      // Should only have one <a> tag, not nested
+      const anchorCount = (result.match(/<a /g) ?? []).length;
+      expect(anchorCount).toBe(1);
+      // The link text (the URL) should not be wrapped in another anchor
+      expect(result).toContain('>https://example.com</a>');
+      expect(result).not.toContain('<a href="https://example.com"><a');
+    });
   });
 });

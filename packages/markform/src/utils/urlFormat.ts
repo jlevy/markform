@@ -127,10 +127,12 @@ export function formatBareUrlsAsHtmlLinks(text: string, escapeHtml: (s: string) 
   });
 
   // Convert bare URLs to <a> tags with abbreviated display
-  // Uses negative lookbehind to skip URLs already inside href="" or data-url=""
-  // Pattern matches http://, https://, www. URLs not preceded by link attributes
+  // Uses negative lookbehind to skip URLs that are:
+  // - Inside href="" or data-url="" attributes
+  // - Inside anchor tag content (preceded by ">)
+  // Pattern matches http://, https://, www. URLs
   result = result.replace(
-    /(?<!href="|data-url=")(?:https?:\/\/|www\.)[^\s<>"]+(?<![.,;:!?'")])/g,
+    /(?<!href="|data-url="|">)(?:https?:\/\/|www\.)[^\s<>"]+(?<![.,;:!?'")])/g,
     (url: string) => {
       // Unescape &amp; back to & for the actual URL
       const cleanUrl = url.replace(/&amp;/g, '&');
