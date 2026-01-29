@@ -44,6 +44,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           // Pre-fill user fields that MockAgent won't fill
           name: 'Alice Johnson',
@@ -94,6 +95,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -137,6 +139,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -177,6 +180,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -194,6 +198,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'nonexistent/provider-model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -214,6 +219,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           nonexistent_field: 'some value',
         },
@@ -250,6 +256,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -306,6 +313,7 @@ describe('programmatic fill API - integration tests', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 'Test User',
           email: 'test@example.com',
@@ -344,6 +352,455 @@ describe('programmatic fill API - integration tests', () => {
       // With all fields pre-filled (including empty table fields), at most one turn needed
       expect(progressUpdates.length).toBeLessThanOrEqual(1);
       expect(result.turns).toBeLessThanOrEqual(1);
+    });
+  });
+
+  describe('FillRecord integration', () => {
+    it('returns FillRecord when recordFill is true', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.record).toBeDefined();
+    });
+
+    it('FillRecord is undefined when recordFill is false or omitted', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.record).toBeUndefined();
+    });
+
+    it('FillRecord contains valid session metadata', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const beforeFill = new Date();
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      const afterFill = new Date();
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Session ID should be a valid ULID (26 characters, Crockford base32)
+      expect(record.sessionId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/i);
+
+      // Timestamps should be valid ISO strings within the test window
+      const startedAt = new Date(record.startedAt);
+      const completedAt = new Date(record.completedAt);
+      expect(startedAt.getTime()).toBeGreaterThanOrEqual(beforeFill.getTime());
+      expect(completedAt.getTime()).toBeLessThanOrEqual(afterFill.getTime());
+      expect(completedAt.getTime()).toBeGreaterThanOrEqual(startedAt.getTime());
+
+      // Duration should be non-negative
+      expect(record.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('FillRecord contains form metadata', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Form ID should match the parsed form
+      expect(record.form.id).toBe('simple_test');
+
+      // Structure summary should contain field counts
+      expect(record.form.structure.fieldCount).toBeGreaterThan(0);
+      expect(record.form.structure.groupCount).toBeGreaterThan(0);
+    });
+
+    it('FillRecord tracks LLM usage', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // LLM usage should have provider and model
+      expect(record.llm.provider).toBe('mock');
+      expect(record.llm.model).toBe('mock/model'); // Full model string as passed
+
+      // Token counts should be non-negative
+      expect(record.llm.totalCalls).toBeGreaterThanOrEqual(0);
+      expect(record.llm.inputTokens).toBeGreaterThanOrEqual(0);
+      expect(record.llm.outputTokens).toBeGreaterThanOrEqual(0);
+    });
+
+    it('FillRecord has completed status on successful fill', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+          // Pre-fill agent fields too
+          score: 87.5,
+          notes: 'Pre-filled note',
+          related_url: 'https://related.com',
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.record).toBeDefined();
+      expect(result.record!.status).toBe('completed');
+    });
+
+    it('FillRecord timeline matches turn count', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Timeline length should match turns
+      expect(record.timeline.length).toBe(result.turns);
+      expect(record.execution.totalTurns).toBe(result.turns);
+
+      // Each timeline entry should have sequential turn numbers
+      record.timeline.forEach((entry, index) => {
+        expect(entry.turnNumber).toBe(index + 1);
+        expect(entry.durationMs).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it('FillRecord toolSummary structure is valid', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Tool summary should exist with valid structure
+      expect(record.toolSummary).toBeDefined();
+      expect(record.toolSummary.totalCalls).toBeGreaterThanOrEqual(0);
+      expect(record.toolSummary.successfulCalls).toBeGreaterThanOrEqual(0);
+      expect(record.toolSummary.failedCalls).toBeGreaterThanOrEqual(0);
+      expect(record.toolSummary.totalDurationMs).toBeGreaterThanOrEqual(0);
+      expect(Array.isArray(record.toolSummary.byTool)).toBe(true);
+
+      // Note: MockAgent bypasses liveAgent so tool callbacks aren't triggered.
+      // Tool call tracking is tested in unit tests for FillRecordCollector.
+      // With real agents, fill_form calls would appear in byTool.
+    });
+
+    it('FillRecord has valid timing breakdown', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Timing breakdown should exist
+      expect(record.timingBreakdown).toBeDefined();
+
+      // All timing values should be non-negative
+      expect(record.timingBreakdown.totalMs).toBeGreaterThanOrEqual(0);
+      expect(record.timingBreakdown.llmTimeMs).toBeGreaterThanOrEqual(0);
+      expect(record.timingBreakdown.toolTimeMs).toBeGreaterThanOrEqual(0);
+      expect(record.timingBreakdown.overheadMs).toBeGreaterThanOrEqual(0);
+
+      // Breakdown should have the three categories
+      expect(record.timingBreakdown.breakdown.length).toBe(3);
+      const categories = record.timingBreakdown.breakdown.map((b) => b.category);
+      expect(categories).toContain('llm');
+      expect(categories).toContain('tools');
+      expect(categories).toContain('overhead');
+    });
+
+    it('FillRecord formProgress matches final form state', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Form progress should have valid counts
+      expect(record.formProgress.totalFields).toBeGreaterThan(0);
+
+      // Answered + unanswered + skipped + aborted should equal total
+      const sum =
+        record.formProgress.answeredFields +
+        record.formProgress.unansweredFields +
+        record.formProgress.skippedFields +
+        record.formProgress.abortedFields;
+      expect(sum).toBe(record.formProgress.totalFields);
     });
   });
 });

@@ -165,7 +165,12 @@ export class LiveAgent implements Agent {
     // Call onLlmCallStart callback (errors don't abort)
     if (this.callbacks?.onLlmCallStart) {
       try {
-        this.callbacks.onLlmCallStart({ model: modelId });
+        this.callbacks.onLlmCallStart({
+          model: modelId,
+          // Default executionId for serial execution
+          // Parallel harness will provide proper context
+          executionId: '0-serial',
+        });
       } catch {
         // Ignore callback errors
       }
@@ -187,6 +192,8 @@ export class LiveAgent implements Agent {
           model: modelId,
           inputTokens: result.usage?.inputTokens ?? 0,
           outputTokens: result.usage?.outputTokens ?? 0,
+          // Default executionId for serial execution
+          executionId: '0-serial',
         });
       } catch {
         // Ignore callback errors
@@ -612,10 +619,14 @@ function wrapTool(
     execute: async (input: unknown) => {
       const startTime = Date.now();
 
+      // Default executionId for serial execution
+      // Parallel harness will provide proper context
+      const executionId = '0-serial';
+
       // Call onToolStart (errors don't abort)
       if (callbacks.onToolStart) {
         try {
-          callbacks.onToolStart({ name, input });
+          callbacks.onToolStart({ name, input, executionId });
         } catch {
           // Ignore callback errors
         }
@@ -631,6 +642,7 @@ function wrapTool(
               name,
               output,
               durationMs: Date.now() - startTime,
+              executionId,
             });
           } catch {
             // Ignore callback errors
@@ -647,6 +659,7 @@ function wrapTool(
               output: null,
               durationMs: Date.now() - startTime,
               error: error instanceof Error ? error.message : String(error),
+              executionId,
             });
           } catch {
             // Ignore callback errors

@@ -247,6 +247,7 @@ async function runAgentFillWorkflow(
     fillMode: overwrite ? 'overwrite' : 'continue',
     enableWebSearch: isResearch,
     captureWireFormat: false,
+    recordFill: false,
     callbacks,
   });
 

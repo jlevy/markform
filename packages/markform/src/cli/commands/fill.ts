@@ -12,9 +12,12 @@ import { resolve } from 'node:path';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
 
+import { writeFileSync } from 'node:fs';
+
 import { parseForm } from '../../engine/parse.js';
 import { serializeForm } from '../../engine/serialize.js';
 import { serializeSession } from '../../engine/session.js';
+import { computeProgressSummary, computeStructureSummary } from '../../engine/summaries.js';
 import type {
   FillMode,
   HarnessConfig,
@@ -26,6 +29,8 @@ import type {
   SessionTurnStats,
   WireFormat,
 } from '../../engine/coreTypes.js';
+import { FillRecordCollector } from '../../harness/fillRecordCollector.js';
+import { formatFillRecordSummary } from '../../harness/formatFillRecordSummary.js';
 import { createHarness } from '../../harness/harness.js';
 import { resolveHarnessConfig } from '../../harness/harnessConfigResolver.js';
 import { createLiveAgent, buildMockWireFormat } from '../../harness/liveAgent.js';
@@ -170,6 +175,7 @@ export function registerFillCommand(program: Command): void {
       'Interactive mode: prompt user for field values (defaults to user role)',
     )
     .option('--normalize', 'Regenerate form without preserving external content')
+    .option('--record-fill', 'Write fill record to sidecar .fill.json file')
     .action(
       async (
         file: string,
@@ -190,6 +196,7 @@ export function registerFillCommand(program: Command): void {
           instructions?: string;
           interactive?: boolean;
           normalize?: boolean;
+          recordFill?: boolean;
         },
         cmd: Command,
       ) => {
@@ -351,6 +358,9 @@ export function registerFillCommand(program: Command): void {
           // Create harness
           const harness = createHarness(form, harnessConfig);
 
+          // FillRecordCollector will be created after model resolution
+          let collector: FillRecordCollector | undefined;
+
           // Create agent based on type
           let agent: Agent;
           let mockPath: string | undefined;
@@ -369,6 +379,20 @@ export function registerFillCommand(program: Command): void {
             const mockContent = await readFile(mockPath);
             const mockForm = parseForm(mockContent);
             agent = createMockAgent(mockForm);
+
+            // Always create collector for summary output
+            const structureSummary = computeStructureSummary(form.schema);
+            collector = new FillRecordCollector({
+              form: {
+                id: form.schema.id,
+                title: form.schema.title,
+                description: form.schema.description,
+                structure: structureSummary,
+              },
+              provider: 'mock',
+              model: 'mock',
+              parallelEnabled: false,
+            });
           } else {
             // Live agent uses LLM (model is required, validated above)
             const modelIdString = options.model!;
@@ -378,6 +402,20 @@ export function registerFillCommand(program: Command): void {
             // Store provider and model name for spinner display
             agentProvider = provider;
             agentModelName = modelId;
+
+            // Always create collector for summary output
+            const structureSummary = computeStructureSummary(form.schema);
+            collector = new FillRecordCollector({
+              form: {
+                id: form.schema.id,
+                title: form.schema.title,
+                description: form.schema.description,
+                structure: structureSummary,
+              },
+              provider,
+              model: modelIdString,
+              parallelEnabled: false,
+            });
 
             // Determine system prompt: --instructions > --prompt > default
             let systemPrompt: string | undefined;
@@ -392,7 +430,7 @@ export function registerFillCommand(program: Command): void {
 
             // Create callbacks that reference the mutable spinner
             // Callbacks update spinner during tool execution (especially web search)
-            const callbacks = createCliToolCallbacks(
+            const cliCallbacks = createCliToolCallbacks(
               {
                 // Proxy to current spinner (may be null between turns)
                 message: (msg) => currentSpinner?.message(msg),
@@ -403,6 +441,37 @@ export function registerFillCommand(program: Command): void {
               },
               ctx,
             );
+
+            // Merge CLI callbacks with collector callbacks
+            // Collector is always defined at this point (created above)
+            const liveCollector = collector;
+            const callbacks = {
+              onToolStart: (call: { name: string; input: unknown; executionId: string }) => {
+                cliCallbacks.onToolStart?.(call);
+                liveCollector.onToolStart(call);
+              },
+              onToolEnd: (call: {
+                name: string;
+                output: unknown;
+                durationMs: number;
+                error?: string;
+                executionId: string;
+              }) => {
+                cliCallbacks.onToolEnd?.(call);
+                liveCollector.onToolEnd(call);
+              },
+              onLlmCallStart: (call: { model: string; executionId: string }) => {
+                liveCollector.onLlmCallStart(call);
+              },
+              onLlmCallEnd: (call: {
+                model: string;
+                inputTokens: number;
+                outputTokens: number;
+                executionId: string;
+              }) => {
+                liveCollector.onLlmCallEnd(call);
+              },
+            };
 
             // Pass first target role to agent (for instruction lookup)
             targetRole = targetRoles[0] === '*' ? AGENT_ROLE : (targetRoles[0] ?? AGENT_ROLE);
@@ -616,6 +685,43 @@ export function registerFillCommand(program: Command): void {
           } else {
             await writeFile(outputPath, formMarkdown);
             logSuccess(ctx, `Form written to: ${outputPath}`);
+          }
+
+          // Always compute FillRecord for summary output
+          // Get final form progress
+          const finalInspect = inspect(harness.getForm(), { targetRoles });
+          const progressSummary = computeProgressSummary(
+            form.schema,
+            harness.getForm().responsesByFieldId,
+            harness.getForm().notes,
+            finalInspect.issues,
+          );
+
+          // Set status and get record
+          collector.setStatus(
+            stepResult.isComplete ? 'completed' : 'partial',
+            stepResult.isComplete ? undefined : 'max_turns',
+          );
+          const fillRecord = collector.getRecord(progressSummary.counts);
+
+          // Print summary to stderr (unless quiet)
+          if (!ctx.quiet) {
+            console.log('');
+            const summary = formatFillRecordSummary(fillRecord, { verbose: ctx.verbose });
+            console.error(summary);
+          }
+
+          // Write FillRecord sidecar file if recordFill is enabled
+          if (options.recordFill) {
+            // Derive sidecar path from output path (replace extension with .fill.json)
+            const sidecarPath = outputPath.replace(/\.(form\.)?md$/, '.fill.json');
+
+            if (ctx.dryRun) {
+              logInfo(ctx, `[DRY RUN] Would write fill record to: ${sidecarPath}`);
+            } else {
+              writeFileSync(sidecarPath, JSON.stringify(fillRecord, null, 2));
+              logSuccess(ctx, `Fill record written to: ${sidecarPath}`);
+            }
           }
 
           // Build session transcript
