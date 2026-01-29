@@ -221,6 +221,17 @@ export const FillRecordSchema = z.object({
       completedAt: z.string().datetime(),
       durationMs: z.number().int().nonnegative(),
       success: z.boolean(),
+      // Tool input parameters (what was sent to the tool)
+      // For web_search: { query: string }
+      // For fill_form: { patches: Patch[] } (or patch count)
+      input: z.record(z.string(), z.unknown()),
+      // Result summary (not full output, just key metrics)
+      result: z.object({
+        // Number of results returned (e.g., web search results, patches applied)
+        resultCount: z.number().int().nonnegative().optional(),
+        // Error message if success=false
+        error: z.string().optional(),
+      }).optional(),
     })),
   })),
 
@@ -239,6 +250,65 @@ export const FillRecordSchema = z.object({
 
 export type FillRecord = z.infer<typeof FillRecordSchema>;
 ```
+
+### Tool Call Examples
+
+**Web search tool call:**
+```json
+{
+  "tool": "web_search",
+  "startedAt": "2026-01-29T10:30:15.123Z",
+  "completedAt": "2026-01-29T10:30:16.456Z",
+  "durationMs": 1333,
+  "success": true,
+  "input": { "query": "current CEO of Acme Corp 2026" },
+  "result": { "resultCount": 8 }
+}
+```
+
+**Web search with no results:**
+```json
+{
+  "tool": "web_search",
+  "startedAt": "2026-01-29T10:30:17.000Z",
+  "completedAt": "2026-01-29T10:30:18.200Z",
+  "durationMs": 1200,
+  "success": true,
+  "input": { "query": "xyzzy corporation founding date" },
+  "result": { "resultCount": 0 }
+}
+```
+
+**fill_form tool call:**
+```json
+{
+  "tool": "fill_form",
+  "startedAt": "2026-01-29T10:30:20.000Z",
+  "completedAt": "2026-01-29T10:30:20.050Z",
+  "durationMs": 50,
+  "success": true,
+  "input": { "patchCount": 3 },
+  "result": { "resultCount": 3 }
+}
+```
+
+**Tool call with error:**
+```json
+{
+  "tool": "web_search",
+  "startedAt": "2026-01-29T10:30:25.000Z",
+  "completedAt": "2026-01-29T10:30:26.500Z",
+  "durationMs": 1500,
+  "success": false,
+  "input": { "query": "some query" },
+  "result": { "error": "Rate limit exceeded" }
+}
+```
+
+This data enables analysis like:
+- "What % of web searches returned 0 results?"
+- "Which queries took longest?"
+- "How many tool errors occurred?"
 
 ### FillRecordCollector
 
