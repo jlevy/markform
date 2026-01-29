@@ -1,0 +1,23 @@
+---
+close_reason: null
+closed_at: 2026-01-01T01:54:24.184Z
+created_at: 2026-01-01T01:47:25.693Z
+deferred_until: null
+dependencies: []
+due_date: null
+extensions:
+  beads:
+    imported_at: 2026-01-29T03:34:05.324Z
+    original_id: markform-489
+id: is-01kg3x1bvarw3fbrj9c4qt632p
+kind: task
+labels: []
+parent_id: null
+priority: 2
+status: closed
+title: "Phase 2: Update consumers and tests"
+type: is
+updated_at: 2026-01-01T01:54:24.184Z
+version: 1
+---
+Update programmaticFill.ts, runResearch.ts, fill.ts, shared.ts, regen-golden-sessions.ts, and all test files
