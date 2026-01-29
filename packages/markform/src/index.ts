@@ -369,6 +369,35 @@ export type {
 } from './harness/harnessTypes.js';
 
 // =============================================================================
+// FillRecord Exports
+// =============================================================================
+
+export { FillRecordCollector } from './harness/fillRecordCollector.js';
+export type { FillRecordCollectorOptions } from './harness/fillRecordCollector.js';
+export type {
+  FillRecord,
+  FillRecordStatus,
+  TimelineEntry,
+  ToolCallRecord,
+  ToolStats,
+  ToolSummary,
+  TimingBreakdown,
+  TimingBreakdownItem,
+  ExecutionMetadata,
+} from './harness/fillRecord.js';
+export {
+  FillRecordSchema,
+  FillRecordStatusSchema,
+  TimelineEntrySchema,
+  ToolCallRecordSchema,
+  ToolStatsSchema,
+  ToolSummarySchema,
+  TimingBreakdownSchema,
+  TimingBreakdownItemSchema,
+  ExecutionMetadataSchema,
+} from './harness/fillRecord.js';
+
+// =============================================================================
 // Research Exports
 // =============================================================================
 

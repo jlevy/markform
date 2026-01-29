@@ -10,6 +10,7 @@
 
 import type { LanguageModel, Tool } from 'ai';
 
+import type { FillRecord } from './fillRecord.js';
 import type {
   FillMode,
   FieldValue,
@@ -401,6 +402,25 @@ export interface FillOptions {
    * per multi-turn session). Set to false for production use.
    */
   captureWireFormat: boolean;
+
+  /**
+   * Collect a complete FillRecord capturing all execution details.
+   *
+   * When enabled, the FillResult will include a `record` field containing:
+   * - Turn-by-turn timeline with token usage
+   * - Tool calls with timing and results
+   * - Aggregated statistics with percentiles
+   * - Execution metadata for parallel fills
+   *
+   * Useful for:
+   * - Cost analysis and billing
+   * - Debugging and troubleshooting
+   * - Analytics and optimization
+   * - Audit trails and provenance
+   *
+   * @default false
+   */
+  recordFill?: boolean;
 }
 
 /**
@@ -461,4 +481,11 @@ export interface FillResult {
     severity: 'required' | 'recommended';
     priority: number;
   }[];
+  /**
+   * Complete fill record when recordFill option is enabled.
+   *
+   * Contains timeline, token usage, tool calls, and execution metadata.
+   * Useful for cost analysis, debugging, and analytics.
+   */
+  record?: FillRecord;
 }
