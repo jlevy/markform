@@ -714,45 +714,45 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 
 ### Phase 1: Core Schema & Collector
 
-- [ ] Define `FillRecordSchema` and related types in new file
+- [x] Define `FillRecordSchema` and related types in new file
       `packages/markform/src/harness/fillRecord.ts`
-- [ ] Implement `FillRecordCollector` class (thread-safe, append-only)
-- [ ] Add `onWebSearch` callback to `FillCallbacks` interface
-- [ ] Export from package entry point
-- [ ] Unit tests for collector
+- [x] Implement `FillRecordCollector` class (thread-safe, append-only)
+- [x] Add `onWebSearch` callback to `FillCallbacks` interface
+- [x] Export from package entry point
+- [x] Unit tests for collector
 
 ### Phase 2: TypeScript API Integration
 
-- [ ] Add `recordFill` option to `FillOptions` (defaults to `false`)
-- [ ] Add `record?: FillRecord` to `FillResult`
-- [ ] Wire up `FillRecordCollector` internally when `recordFill: true`
-- [ ] Wire up web search query capture in liveAgent for Anthropic provider
-- [ ] Integration tests with real fills
+- [x] Add `recordFill` option to `FillOptions` (defaults to `false`)
+- [x] Add `record?: FillRecord` to `FillResult`
+- [x] Wire up `FillRecordCollector` internally when `recordFill: true`
+- [x] Wire up web search query capture in liveAgent for Anthropic provider
+- [x] Integration tests with real fills
 
 ### Phase 3: CLI Integration
 
-- [ ] Add `--record-fill` flag to `fill` command (defaults to `false`)
-- [ ] Implement sidecar file naming: `{basename}.fill.json`
-- [ ] Write JSON fill record when flag is set
-- [ ] CLI tests for record file generation
+- [x] Add `--record-fill` flag to `fill` command (defaults to `false`)
+- [x] Implement sidecar file naming: `{basename}.fill.json`
+- [x] Write JSON fill record when flag is set
+- [x] CLI tests for record file generation
 
 ### Phase 4: Documentation & Examples
 
-- [ ] Document `recordFill` option in TypeScript API docs
-- [ ] Document `--record-fill` flag in CLI help and docs
-- [ ] Add example showing programmatic record access
-- [ ] Add example showing CLI sidecar file usage
+- [x] Document `recordFill` option in TypeScript API docs
+- [x] Document `--record-fill` flag in CLI help and docs
+- [x] Add example showing programmatic record access
+- [x] Add example showing CLI sidecar file usage
 
 ### Phase 5: Text Summary Formatting & CLI Default
 
 The final phase enables users to easily see what happened during a fill operation:
 
-- [ ] Implement `formatFillRecordSummary(record: FillRecord, options?): string` function
-- [ ] CLI always collects FillRecord internally (regardless of --record-fill flag)
-- [ ] CLI always prints summary to stderr at end of fill (can be silenced with `--quiet`)
-- [ ] More detailed summary with `--verbose` or `--debug` flags
-- [ ] Export formatting function for TypeScript clients
-- [ ] Add summary formatting to Golden tests in TryScript
+- [x] Implement `formatFillRecordSummary(record: FillRecord, options?): string` function
+- [x] CLI always collects FillRecord internally (regardless of --record-fill flag)
+- [x] CLI always prints summary to stderr at end of fill (can be silenced with `--quiet`)
+- [x] More detailed summary with `--verbose` or `--debug` flags
+- [x] Export formatting function for TypeScript clients
+- [x] Add summary formatting to Golden tests in TryScript
 
 **Summary format design:**
 
