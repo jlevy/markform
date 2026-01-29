@@ -374,6 +374,8 @@ export type {
 
 export { FillRecordCollector } from './harness/fillRecordCollector.js';
 export type { FillRecordCollectorOptions } from './harness/fillRecordCollector.js';
+export { formatFillRecordSummary } from './harness/formatFillRecordSummary.js';
+export type { FormatFillRecordSummaryOptions } from './harness/formatFillRecordSummary.js';
 export type {
   FillRecord,
   FillRecordStatus,

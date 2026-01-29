@@ -349,6 +349,9 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       const message = error instanceof Error ? error.message : String(error);
       return buildErrorResult(form, [`Model resolution error: ${message}`], []);
     }
+  } else if (typeof options.model === 'string' && options.model.includes('/')) {
+    // For test agent, extract provider from model string (e.g., "mock/model" -> "mock")
+    provider = options.model.split('/')[0];
   }
 
   // 3. Create collector if recordFill is enabled

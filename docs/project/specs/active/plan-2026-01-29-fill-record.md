@@ -696,9 +696,7 @@ The pattern is: replace the file extension with `.fill.json`.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--record-fill` | `true`* | Write fill record alongside output |
-
-*Note: Default changes from `false` to `true` in Phase 5. Use `--no-record-fill` to disable.
+| `--record-fill` | `false` | Write fill record to sidecar `.fill.json` file |
 
 **Note:** This sidecar file convention is a CLI-only behavior. The TypeScript API returns
 the `FillRecord` in `result.record` — it's up to the caller to decide how to persist it.
@@ -749,9 +747,10 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 
 The final phase enables users to easily see what happened during a fill operation:
 
-- [ ] Implement `formatFillRecordSummary(record: FillRecord): string` function
-- [ ] CLI enables `recordFill` by default (change from `false` to `true`)
-- [ ] CLI prints summary to stderr at end of fill (can be silenced with `--quiet`)
+- [ ] Implement `formatFillRecordSummary(record: FillRecord, options?): string` function
+- [ ] CLI always collects FillRecord internally (regardless of --record-fill flag)
+- [ ] CLI always prints summary to stderr at end of fill (can be silenced with `--quiet`)
+- [ ] More detailed summary with `--verbose` or `--debug` flags
 - [ ] Export formatting function for TypeScript clients
 - [ ] Add summary formatting to Golden tests in TryScript
 
@@ -772,6 +771,8 @@ Timing:  55% LLM (6.8s) | 41% tools (5.1s) | 4% overhead (0.5s)
 Progress: 18/20 fields filled (90%)
 ```
 
+With `--verbose`, additional details like per-turn breakdown, individual tool calls, etc.
+
 **TypeScript API:**
 
 ```typescript
@@ -779,20 +780,25 @@ import { formatFillRecordSummary } from 'markform';
 
 const result = await fillForm({ form, model, recordFill: true });
 if (result.record) {
+  // Basic summary
   console.log(formatFillRecordSummary(result.record));
+
+  // Verbose summary
+  console.log(formatFillRecordSummary(result.record, { verbose: true }));
 }
 ```
 
 **CLI behavior:**
 
-By default, the CLI will:
-1. Enable `recordFill` automatically
-2. Print the summary to stderr after the fill completes
-3. Write the sidecar `.fill.json` file
+The CLI **always** collects FillRecord internally and prints a summary at the end:
+1. Summary is printed to stderr after every fill (use `--quiet` to suppress)
+2. `--verbose` shows more detailed summary
+3. `--record-fill` writes the full JSON to a sidecar file (independent of summary)
 
-To suppress output:
-- `--quiet` or `-q`: Suppress summary output (still writes sidecar file)
-- `--no-record-fill`: Disable recording entirely (no sidecar, no summary)
+Flags:
+- `--quiet` or `-q`: Suppress summary output
+- `--verbose` or `-v`: Show detailed summary
+- `--record-fill`: Write sidecar `.fill.json` file (defaults to false)
 
 **Golden test integration:**
 
