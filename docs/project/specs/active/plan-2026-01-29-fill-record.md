@@ -1,14 +1,21 @@
-# Plan Spec: FillSummary — Agent Actions Recap
+# Plan Spec: FillRecord — Agent Actions Recap
 
 ## Purpose
 
-Define a first-class `FillSummary` data structure (Zod schema) that captures a complete
+Define a first-class `FillRecord` data structure (Zod schema) that captures a complete
 record of everything that happened during a form fill operation. This enables:
 
 - **Corroboration**: Attach to completed documents as provenance metadata
 - **Cost analysis**: Track LLM tokens, API calls, web search usage
 - **Debugging**: Detailed transcript of each turn's actions
 - **Integration**: Clients can use structured data for billing, audits, analytics
+
+### Naming Convention
+
+- **`FillRecord`**: The complete, detailed record of everything that happened during a
+  fill operation. Includes full timeline, per-turn tokens, all tool calls with timestamps.
+- **`FillSummary`** (future): Reserved for briefer/aggregated versions that might omit
+  timeline detail or collapse tool calls. Not implemented in this spec.
 
 **Related docs:**
 - `packages/markform/src/harness/harnessTypes.ts` — Current harness types (FillCallbacks,
@@ -48,7 +55,7 @@ What's **missing** is a unified, client-facing summary object that:
 
 ### Use Cases
 
-1. **Provenance attachment**: Store `FillSummary` alongside completed form as metadata
+1. **Provenance attachment**: Store `FillRecord` alongside completed form as metadata
 2. **Billing/cost tracking**: Sum up LLM tokens and API calls for invoicing
 3. **Analytics**: Analyze fill patterns, success rates, tool usage
 4. **Audit trail**: Complete record of what actions were taken and why
@@ -56,21 +63,21 @@ What's **missing** is a unified, client-facing summary object that:
 
 ## Summary of Task
 
-Design and implement a `FillSummary` Zod schema and collection mechanism that:
+Design and implement a `FillRecord` Zod schema and collection mechanism that:
 
-1. Captures all LLM calls with token counts and costs
-2. Records tool invocations (web search, fill_form, custom tools)
-3. Tracks web search queries, result counts, and relevance
-4. Provides a turn-by-turn transcript of actions
+1. Captures all LLM calls with token counts (per-turn and totals)
+2. Records tool invocations by type (web search, fill_form, custom tools)
+3. Tracks web search queries and result counts
+4. Provides a turn-by-turn timeline of actions with per-turn token usage
 5. Includes form-level metadata (fields filled, skipped, validation results)
 6. Supports client-defined custom metadata
-7. Is compact enough for storage but detailed enough for analysis
+7. No artificial size limits — if a form fill is long, the summary can be too
 
 ## Design Approaches
 
-### Option A: Built-in FillSummary Collector
+### Option A: Built-in FillRecord Collector
 
-Markform provides a `FillSummaryCollector` that implements `FillCallbacks` and assembles
+Markform provides a `FillRecordCollector` that implements `FillCallbacks` and assembles
 the summary internally.
 
 **Pros:**
@@ -132,11 +139,11 @@ This gives clients the "it just works" experience while preserving flexibility.
 
 ## Detailed Design
 
-### FillSummary Schema
+### FillRecord Schema
 
 ```typescript
 // Core summary returned from fillForm
-export const FillSummarySchema = z.object({
+export const FillRecordSchema = z.object({
   // Identity
   sessionId: z.string().uuid(),
   startedAt: z.string().datetime(),
@@ -157,15 +164,13 @@ export const FillSummarySchema = z.object({
     validationsFailed: z.number().int().nonnegative(),
   }),
 
-  // LLM usage totals
+  // LLM usage totals (tokens only - clients can calculate costs from these)
   llm: z.object({
     provider: z.string(),
     model: z.string(),
     totalCalls: z.number().int().nonnegative(),
     inputTokens: z.number().int().nonnegative(),
     outputTokens: z.number().int().nonnegative(),
-    // Optional cost if client provides rate
-    estimatedCostUsd: z.number().nonnegative().optional(),
   }),
 
   // Tool usage totals
@@ -191,25 +196,32 @@ export const FillSummarySchema = z.object({
     })),
   }).optional(),
 
-  // Turn-by-turn timeline
+  // Turn-by-turn timeline (no size limits - full history always captured)
+  // Same structure for serial and parallel execution
   timeline: z.array(z.object({
     turnNumber: z.number().int().positive(),
+    // Execution thread identifier (e.g., "main", "batch-1-item-0", "batch-1-item-1")
+    // Allows debugging/visibility into parallel execution
+    executionId: z.string(),
+    // Timestamps for precise timing (totals calculated from these)
     startedAt: z.string().datetime(),
+    completedAt: z.string().datetime(),
     durationMs: z.number().int().nonnegative(),
     issuesAddressed: z.number().int().nonnegative(),
     patchesApplied: z.number().int().nonnegative(),
     patchesRejected: z.number().int().nonnegative(),
-    llm: z.object({
-      inputTokens: z.number().int().nonnegative(),
-      outputTokens: z.number().int().nonnegative(),
-    }).optional(),
+    // Per-turn token usage (from AI SDK result.usage)
+    tokens: z.object({
+      input: z.number().int().nonnegative(),
+      output: z.number().int().nonnegative(),
+    }),
     toolCalls: z.array(z.object({
       tool: z.string(),
+      startedAt: z.string().datetime(),
+      completedAt: z.string().datetime(),
       durationMs: z.number().int().nonnegative(),
       success: z.boolean(),
     })),
-    // Brief description of what happened
-    summary: z.string().optional(),
   })),
 
   // Execution metadata
@@ -217,51 +229,72 @@ export const FillSummarySchema = z.object({
     totalTurns: z.number().int().nonnegative(),
     parallelEnabled: z.boolean(),
     maxParallelAgents: z.number().int().positive().optional(),
-    batchesExecuted: z.number().int().nonnegative().optional(),
+    // Unique execution threads seen (derived from timeline executionIds)
+    executionThreads: z.array(z.string()),
   }),
 
   // Client-defined custom data
   customData: z.record(z.string(), z.unknown()).optional(),
 });
 
-export type FillSummary = z.infer<typeof FillSummarySchema>;
+export type FillRecord = z.infer<typeof FillRecordSchema>;
 ```
 
-### FillSummaryCollector
+### FillRecordCollector
 
 ```typescript
-export interface FillSummaryCollectorOptions {
-  // Token cost rates for estimation (per 1M tokens)
-  tokenCostRates?: {
-    input: number;
-    output: number;
-  };
+export interface FillRecordCollectorOptions {
   // Include detailed tool inputs/outputs in timeline (can be large)
   includeToolDetails?: boolean;
   // Custom data to include in summary
   customData?: Record<string, unknown>;
-  // Callback to generate turn summaries (optional, for natural language descriptions)
-  generateTurnSummary?: (turn: TurnProgress) => string;
 }
 
-export class FillSummaryCollector implements FillCallbacks {
-  constructor(options?: FillSummaryCollectorOptions);
+export class FillRecordCollector implements FillCallbacks {
+  constructor(options?: FillRecordCollectorOptions);
 
-  // FillCallbacks implementation
-  onTurnStart(turn: { turnNumber: number; issuesCount: number }): void;
+  // FillCallbacks implementation (all methods are thread-safe)
+  onTurnStart(turn: { turnNumber: number; issuesCount: number; executionId: string }): void;
   onTurnComplete(progress: TurnProgress): void;
-  onToolStart(call: { name: string; input: unknown }): void;
+  onToolStart(call: { name: string; input: unknown; executionId: string }): void;
   onToolEnd(call: { name: string; output: unknown; durationMs: number; error?: string }): void;
-  onLlmCallStart(call: { model: string }): void;
+  onLlmCallStart(call: { model: string; executionId: string }): void;
   onLlmCallEnd(call: { model: string; inputTokens: number; outputTokens: number }): void;
   onBatchStart(info: { batchId: string; itemCount: number }): void;
   onBatchComplete(info: { batchId: string; patchesApplied: number }): void;
 
-  // Get the assembled summary
-  getSummary(): FillSummary;
+  // Get the assembled record
+  getRecord(): FillRecord;
 
   // Add custom data during execution
   addCustomData(key: string, value: unknown): void;
+}
+```
+
+### Thread-Safety Requirements
+
+The `FillRecordCollector` must be thread-safe for parallel execution:
+
+1. **Concurrent callback invocation**: Multiple execution threads may call callbacks
+   simultaneously during parallel batch processing.
+
+2. **Implementation approach**: Use an array-based append-only pattern. Each callback
+   appends a timestamped event; `getSummary()` aggregates at read time.
+
+3. **Execution ID tracking**: Callbacks receive an `executionId` parameter to identify
+   which thread generated the event. For serial execution, this is always `"main"`.
+   For parallel execution, it follows the pattern `"batch-{batchId}-item-{index}"`.
+
+4. **Timestamp-based ordering**: Events are ordered by timestamp in the final summary,
+   allowing clients to see interleaved parallel execution.
+
+```typescript
+// Internal event structure (not exposed in public API)
+interface CollectorEvent {
+  type: 'turn_start' | 'turn_complete' | 'tool_start' | 'tool_end' | 'llm_call';
+  timestamp: string; // ISO datetime
+  executionId: string;
+  data: unknown;
 }
 ```
 
@@ -271,11 +304,9 @@ Two integration approaches:
 
 **Approach 1: Explicit collector (recommended)**
 ```typescript
-import { fillForm, FillSummaryCollector } from 'markform';
+import { fillForm, FillRecordCollector } from 'markform';
 
-const collector = new FillSummaryCollector({
-  tokenCostRates: { input: 3.00, output: 15.00 }, // Claude pricing
-});
+const collector = new FillRecordCollector();
 
 const result = await fillForm({
   form: markdown,
@@ -285,8 +316,9 @@ const result = await fillForm({
   captureWireFormat: false,
 });
 
-const summary = collector.getSummary();
-// Attach to document, store in database, etc.
+const record = collector.getRecord();
+// record.llm.inputTokens, record.llm.outputTokens for cost calculation
+// record.timeline[n].tokens for per-turn breakdown
 ```
 
 **Approach 2: Built into FillResult (optional)**
@@ -295,11 +327,11 @@ const result = await fillForm({
   form: markdown,
   model: 'anthropic/claude-sonnet-4-5',
   enableWebSearch: true,
-  collectSummary: true, // New option
+  collectRecord: true, // New option
   captureWireFormat: false,
 });
 
-console.log(result.summary); // FillSummary included in result
+console.log(result.record); // FillRecord included in result
 ```
 
 ### Web Search Query Capture
@@ -325,14 +357,14 @@ interface FillCallbacks {
 }
 ```
 
-### Summary Attachment to Documents
+### Record Attachment to Documents
 
-Two options for attaching summary to completed forms:
+Two options for attaching the record to completed forms:
 
 **Option 1: YAML frontmatter**
 ```yaml
 ---
-fillSummary:
+fillRecord:
   sessionId: "abc-123"
   completedAt: "2026-01-29T10:30:00Z"
   llm:
@@ -346,12 +378,12 @@ fillSummary:
 **Option 2: Sidecar file**
 ```
 document.md           # The filled form
-document.fill.json    # The FillSummary
+document.fill.json    # The FillRecord
 ```
 
 Recommend **Option 2** (sidecar) because:
 - Keeps form content clean
-- Summary can be large (especially timeline)
+- Record can be large (especially timeline with many turns)
 - Easy to include/exclude from version control
 - Standard JSON is more portable than embedded YAML
 
@@ -359,9 +391,9 @@ Recommend **Option 2** (sidecar) because:
 
 ### Phase 1: Core Schema & Collector
 
-- [ ] Define `FillSummarySchema` and related types in new file
-      `packages/markform/src/harness/fillSummary.ts`
-- [ ] Implement `FillSummaryCollector` class
+- [ ] Define `FillRecordSchema` and related types in new file
+      `packages/markform/src/harness/fillRecord.ts`
+- [ ] Implement `FillRecordCollector` class
 - [ ] Add `onWebSearch` callback to `FillCallbacks` interface
 - [ ] Export from package entry point
 - [ ] Unit tests for collector
@@ -369,13 +401,13 @@ Recommend **Option 2** (sidecar) because:
 ### Phase 2: Integration & Web Search
 
 - [ ] Wire up web search query capture in liveAgent for Anthropic provider
-- [ ] Add `collectSummary` option to `FillOptions` (optional convenience)
-- [ ] Include summary in `FillResult` when requested
+- [ ] Add `collectRecord` option to `FillOptions` (optional convenience)
+- [ ] Include record in `FillResult` when requested
 - [ ] Integration tests with real fills
 
 ### Phase 3: Documentation & Examples
 
-- [ ] Document FillSummary in API docs
+- [ ] Document FillRecord in API docs
 - [ ] Add example showing summary collection and storage
 - [ ] Add example showing sidecar file generation
 
@@ -384,23 +416,30 @@ Recommend **Option 2** (sidecar) because:
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
 - **Code types, methods, and function signatures**: MAINTAIN — all additions are optional
-- **Library APIs**: MAINTAIN — new `collectSummary` option defaults to false
+- **Library APIs**: MAINTAIN — new `collectRecord` option defaults to false
 - **File formats**: MAINTAIN — sidecar files are opt-in, form format unchanged
 - **FillCallbacks**: EXTEND — new `onWebSearch` callback is optional
 
-## Open Questions
+## Design Decisions
 
-1. **Turn summary generation**: Should we include AI-generated natural language summaries
-   of each turn? This would require an extra LLM call or client-provided function.
+These questions were resolved during spec review:
 
-2. **Summary size limits**: Should we cap timeline detail for very long fills (100+
-   turns)? Could offer `timelineDepth: 'full' | 'last10' | 'totalsOnly'`.
+1. **Turn summary generation**: **No** — Not worth the extra LLM calls or complexity.
+   Clients who need natural language summaries can generate them from the structured
+   data.
 
-3. **Cost estimation**: Include cost estimation in core, or leave to clients? Rates
-   change frequently.
+2. **Summary size limits**: **No caps** — If a form fill is long (100+ turns), the
+   summary can be correspondingly long. Full history is always captured.
 
-4. **Parallel execution detail**: How much detail for parallel fills? Per-batch
-   summaries or just aggregate?
+3. **Cost estimation**: **Tokens only, no costs** — The AI SDK provides `inputTokens`
+   and `outputTokens` via `result.usage`. We track these totals and per-turn. Clients
+   can calculate costs from tokens using their own rate tables (which change frequently).
+
+4. **Parallel execution detail**: **Same structure, with execution IDs** — No
+   difference between serial and parallel in capture structure. Each turn/call includes
+   an `executionId` field (e.g., `"main"`, `"batch-1-item-0"`) for debugging and
+   visibility. Timestamps on everything allow calculating totals and understanding
+   parallel execution patterns.
 
 ## References
 
