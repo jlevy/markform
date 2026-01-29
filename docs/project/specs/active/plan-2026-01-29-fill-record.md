@@ -154,15 +154,15 @@ export const FillRecordSchema = z.object({
   status: z.enum(['completed', 'partial', 'failed', 'cancelled']),
   statusDetail: z.string().optional(),
 
-  // Form metadata
-  form: z.object({
-    fieldsTotal: z.number().int().nonnegative(),
-    fieldsFilled: z.number().int().nonnegative(),
-    fieldsSkipped: z.number().int().nonnegative(),
-    fieldsRemaining: z.number().int().nonnegative(),
-    validationsPassed: z.number().int().nonnegative(),
-    validationsFailed: z.number().int().nonnegative(),
-  }),
+  // Form progress at completion - reuses existing ProgressCounts from coreTypes.ts
+  // This ensures alignment with inspect/apply results and frontmatter
+  formProgress: ProgressCountsSchema,
+  // ProgressCounts includes:
+  //   totalFields, requiredFields
+  //   AnswerState: unansweredFields, answeredFields, skippedFields, abortedFields
+  //   Validity: validFields, invalidFields
+  //   Value presence: emptyFields, filledFields
+  //   totalNotes
 
   // LLM usage totals (tokens only - clients can calculate costs from these)
   llm: z.object({
