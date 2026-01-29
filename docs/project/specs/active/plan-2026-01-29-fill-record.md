@@ -190,11 +190,27 @@ export type ToolStats = z.infer<typeof ToolStatsSchema>;
 
 // Core record returned from fillForm
 export const FillRecordSchema = z.object({
-  // Identity
+  // Session identity
   sessionId: z.string().uuid(),
   startedAt: z.string().datetime(),
   completedAt: z.string().datetime(),
   durationMs: z.number().int().nonnegative(),
+
+  // Form metadata - identifies and describes the form that was filled
+  form: z.object({
+    /** Form ID from the form schema (e.g., "customer-intake") */
+    id: z.string(),
+    /** Form title if specified */
+    title: z.string().optional(),
+    /** Form description if specified */
+    description: z.string().optional(),
+    /** Structure summary - reuses existing StructureSummary from coreTypes.ts */
+    structure: StructureSummarySchema,
+    // StructureSummary includes:
+    //   groupCount, fieldCount, optionCount, columnCount
+    //   fieldCountByKind (e.g., { text: 5, checkbox: 3, select: 2 })
+    //   groupsById, fieldsById, optionsById
+  }),
 
   // Outcome
   status: z.enum(['completed', 'partial', 'failed', 'cancelled']),
