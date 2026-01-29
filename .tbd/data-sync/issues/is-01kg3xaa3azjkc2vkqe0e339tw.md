@@ -1,0 +1,23 @@
+---
+close_reason: null
+closed_at: 2025-12-29T00:58:25.845Z
+created_at: 2025-12-28T11:01:34.618Z
+deferred_until: null
+dependencies: []
+due_date: null
+extensions:
+  beads:
+    imported_at: 2026-01-29T03:38:57.965Z
+    original_id: markform-381
+id: is-01kg3xaa3azjkc2vkqe0e339tw
+kind: task
+labels: []
+parent_id: null
+priority: 1
+status: closed
+title: Add 'table' to FIELD_KINDS and FieldTypeMap in fieldRegistry.ts
+type: is
+updated_at: 2025-12-29T00:58:25.845Z
+version: 1
+---
+Per spec Phase 1: Add table to FIELD_KINDS tuple and add corresponding entry to FieldTypeMap with field, value, patch, emptyValue properties.

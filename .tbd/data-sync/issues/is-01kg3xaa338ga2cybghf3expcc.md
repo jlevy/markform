@@ -1,0 +1,42 @@
+---
+close_reason: null
+closed_at: 2025-12-23T23:08:46.410Z
+created_at: 2025-12-23T23:02:16.004Z
+deferred_until: null
+dependencies: []
+due_date: null
+extensions:
+  beads:
+    imported_at: 2026-01-29T03:38:56.168Z
+    original_id: markform-129
+id: is-01kg3xaa338ga2cybghf3expcc
+kind: bug
+labels: []
+parent_id: null
+priority: 1
+status: closed
+title: "ROLE-001: Overwrite mode safety - prevent deadlock and approval destruction"
+type: is
+updated_at: 2025-12-23T23:08:46.410Z
+version: 1
+---
+## Problem
+The overwrite mode (`--mode=overwrite`) can accidentally destroy human approvals and deadlock the form. With `roles=*` or poorly chosen roles, we could clear a user-approval checkpoint and then block all subsequent fields in the same run.
+
+## Why It Matters
+- Safety critical: silently undoing human signoffs is catastrophic for compliance workflows
+- Self-deadlock: clearing a checkpoint then trying to fill blocked fields in the same run
+- Data loss: overwriting roles outside the target role set
+
+## Recommended Fix
+1. Overwrite must only clear values for fields whose `role` is in targetRoles (never clear other roles)
+2. Compute blocking checkpoint against pre-clear state, then perform clears/fills only for returned target field set
+3. Add protective guard: if targetRoles excludes the role of the first incomplete blocking checkpoint, do not clear that checkpoint even if `roles=*` unless `--force-overwrite-blocking` flag is set
+4. Add tests for:
+   - Overwrite on agent-only when first checkpoint is user
+   - Overwrite with `roles=*` and blocking checkpoint
+   - Overwrite that does not regress completion
+
+## Files to Update
+- docs/project/specs/active/plan-2025-12-23-role-system.md (add safety semantics)
+- Implementation: getFieldsToFill() and related helpers
