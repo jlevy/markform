@@ -67,6 +67,8 @@ export default defineConfig({
   sourcemap: true,
   dts: true,
   clean: true,
+  // tsdown 0.20+ treats inlined dependencies as errors by default; suppress with false
+  inlineOnly: false,
   banner: ({ fileName }) => (fileName.includes('bin') ? '#!/usr/bin/env node\n' : ''),
   define: {
     __MARKFORM_VERSION__: JSON.stringify(version),

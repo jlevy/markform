@@ -130,16 +130,16 @@ async function promptForString(ctx: FieldPromptContext): Promise<Patch | null> {
     placeholder: placeholderText,
     initialValue: currentVal ?? '',
     validate: (value) => {
-      if (field.required && !value.trim()) {
+      if (field.required && !value?.trim()) {
         return 'This field is required';
       }
-      if (field.minLength && value.length < field.minLength) {
+      if (field.minLength && (value?.length ?? 0) < field.minLength) {
         return `Minimum ${field.minLength} characters required`;
       }
-      if (field.maxLength && value.length > field.maxLength) {
+      if (field.maxLength && (value?.length ?? 0) > field.maxLength) {
         return `Maximum ${field.maxLength} characters allowed`;
       }
-      if (field.pattern && !new RegExp(field.pattern).test(value)) {
+      if (field.pattern && value && !new RegExp(field.pattern).test(value)) {
         return `Must match pattern: ${field.pattern}`;
       }
       return undefined;
@@ -158,7 +158,7 @@ async function promptForString(ctx: FieldPromptContext): Promise<Patch | null> {
   return {
     op: 'set_string',
     fieldId: field.id,
-    value: result || null,
+    value: result ?? null,
   };
 }
 
@@ -178,10 +178,10 @@ async function promptForNumber(ctx: FieldPromptContext): Promise<Patch | null> {
     placeholder: placeholderText,
     initialValue: currentVal !== null ? String(currentVal) : '',
     validate: (value) => {
-      if (field.required && !value.trim()) {
+      if (field.required && !value?.trim()) {
         return 'This field is required';
       }
-      if (!value.trim()) {
+      if (!value?.trim()) {
         return undefined; // Allow empty for optional
       }
       const num = Number(value);
@@ -239,7 +239,7 @@ async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | nul
     placeholder: hint,
     initialValue: currentItems.join('\n'),
     validate: (value) => {
-      const items = value
+      const items = (value ?? '')
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
@@ -260,7 +260,7 @@ async function promptForStringList(ctx: FieldPromptContext): Promise<Patch | nul
     return null;
   }
 
-  const items = result
+  const items = (result ?? '')
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
@@ -467,10 +467,10 @@ async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
     placeholder: placeholderText,
     initialValue: currentVal ?? '',
     validate: (value) => {
-      if (field.required && !value.trim()) {
+      if (field.required && !value?.trim()) {
         return 'This field is required';
       }
-      if (!value.trim()) {
+      if (!value?.trim()) {
         return undefined; // Allow empty for optional
       }
       // Basic URL validation
@@ -495,7 +495,7 @@ async function promptForUrl(ctx: FieldPromptContext): Promise<Patch | null> {
   return {
     op: 'set_url',
     fieldId: field.id,
-    value: result || null,
+    value: result ?? null,
   };
 }
 
@@ -536,10 +536,10 @@ async function promptForDate(ctx: FieldPromptContext): Promise<Patch | null> {
     placeholder: currentVal ?? `YYYY-MM-DD${formatHint}`,
     initialValue: currentVal ?? '',
     validate: (value) => {
-      if (field.required && !value.trim()) {
+      if (field.required && !value?.trim()) {
         return 'This field is required';
       }
-      if (!value.trim()) {
+      if (!value?.trim()) {
         return undefined; // Allow empty for optional
       }
       // Date format validation
@@ -569,7 +569,7 @@ async function promptForDate(ctx: FieldPromptContext): Promise<Patch | null> {
   return {
     op: 'set_date',
     fieldId: field.id,
-    value: result || null,
+    value: result ?? null,
   };
 }
 
@@ -593,10 +593,10 @@ async function promptForYear(ctx: FieldPromptContext): Promise<Patch | null> {
     placeholder: currentVal !== null ? String(currentVal) : `Year (${minYear}-${maxYear})`,
     initialValue: currentVal !== null ? String(currentVal) : '',
     validate: (value) => {
-      if (field.required && !value.trim()) {
+      if (field.required && !value?.trim()) {
         return 'This field is required';
       }
-      if (!value.trim()) {
+      if (!value?.trim()) {
         return undefined; // Allow empty for optional
       }
       // Year must be an integer
@@ -653,7 +653,7 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
     placeholder: hint,
     initialValue: currentItems.join('\n'),
     validate: (value) => {
-      const items = value
+      const items = (value ?? '')
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
@@ -682,7 +682,7 @@ async function promptForUrlList(ctx: FieldPromptContext): Promise<Patch | null> 
     return null;
   }
 
-  const items = result
+  const items = (result ?? '')
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
