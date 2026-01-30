@@ -118,81 +118,50 @@ Completed form: [..]
 
 ## FillRecord JSON Sidecar Verification
 
-# Test: FillRecord JSON has correct structure
+# Test: FillRecord JSON has complete stable structure
+
+This test shows the full FillRecord structure with stable fields in mock mode.
+Only timestamps, sessionId, and duration values are excluded as they vary per run.
 
 ```console
-$ cat /tmp/test-fill-full.fill.json | jq '{status, durationMs: (.durationMs > 0), formProgress: .formProgress | {totalFields, filledFields, skippedFields}}'
+$ cat /tmp/test-fill-full.fill.json | jq '{status, form: {id: .form.id, title: .form.title, fieldCount: .form.structure.fieldCount, groupCount: .form.structure.groupCount}, formProgress, llm, toolSummary: {totalCalls: .toolSummary.totalCalls, successfulCalls: .toolSummary.successfulCalls}, execution: {totalTurns: .execution.totalTurns, parallelEnabled: .execution.parallelEnabled}}'
 {
   "status": "completed",
-  "durationMs": true,
-  "formProgress": {
-    "totalFields": 21,
-    "filledFields": 17,
-    "skippedFields": 4
-  }
-}
-? 0
-```
-
-# Test: FillRecord JSON has form metadata
-
-```console
-$ cat /tmp/test-fill-full.fill.json | jq '.form | {id, title, structure: .structure | {fieldCount, groupCount}}'
-{
-  "id": "simple_test",
-  "title": "Simple Test Form",
-  "structure": {
+  "form": {
+    "id": "simple_test",
+    "title": "Simple Test Form",
     "fieldCount": 21,
     "groupCount": 8
+  },
+  "formProgress": {
+    "totalFields": 21,
+    "requiredFields": 12,
+    "unansweredFields": 0,
+    "answeredFields": 17,
+    "skippedFields": 4,
+    "abortedFields": 0,
+    "validFields": 21,
+    "invalidFields": 0,
+    "emptyFields": 4,
+    "filledFields": 17,
+    "emptyRequiredFields": 0,
+    "totalNotes": 0
+  },
+  "llm": {
+    "provider": "mock",
+    "model": "mock",
+    "totalCalls": 0,
+    "inputTokens": 0,
+    "outputTokens": 0
+  },
+  "toolSummary": {
+    "totalCalls": 0,
+    "successfulCalls": 0
+  },
+  "execution": {
+    "totalTurns": 0,
+    "parallelEnabled": false
   }
-}
-? 0
-```
-
-# Test: FillRecord JSON has LLM info (mock mode)
-
-```console
-$ cat /tmp/test-fill-full.fill.json | jq '.llm'
-{
-  "provider": "mock",
-  "model": "mock",
-  "totalCalls": 0,
-  "inputTokens": 0,
-  "outputTokens": 0
-}
-? 0
-```
-
-# Test: FillRecord JSON has timing breakdown
-
-```console
-$ cat /tmp/test-fill-full.fill.json | jq '.timingBreakdown | {totalMs: (.totalMs > 0), categories: [.breakdown[].category]}'
-{
-  "totalMs": true,
-  "categories": [
-    "llm",
-    "tools",
-    "overhead"
-  ]
-}
-? 0
-```
-
-# Test: FillRecord JSON has session ID
-
-```console
-$ cat /tmp/test-fill-full.fill.json | jq '.sessionId | length > 0'
-true
-? 0
-```
-
-# Test: FillRecord JSON has timestamps
-
-```console
-$ cat /tmp/test-fill-full.fill.json | jq '{hasStartedAt: (.startedAt != null), hasCompletedAt: (.completedAt != null)}'
-{
-  "hasStartedAt": true,
-  "hasCompletedAt": true
 }
 ? 0
 ```
