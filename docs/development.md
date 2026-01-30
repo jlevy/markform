@@ -287,10 +287,11 @@ These tests verify the complete form filling pipeline including FillRecord captu
    # Or: ANTHROPIC_API_KEY=sk-ant-...
    ```
 
-2. Run tests from `tests/manual/live-fill-e2e.md`:
+2. Run tests from `tests/manual/live-fill-manual-test.md`:
    ```bash
    ./dist/bin.mjs fill examples/simple/simple.form.md \
-     --model openai/gpt-4o-mini \
+     --model openai/gpt-5-mini \
+     --roles "*" \
      --output /tmp/test-fill.form.md \
      --record-fill
    ```
