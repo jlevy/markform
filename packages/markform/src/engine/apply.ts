@@ -26,6 +26,7 @@ import type {
   TableRowResponse,
   TableValue,
 } from './coreTypes.js';
+import { parseSentinel } from './parseSentinels.js';
 import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
 import { validate } from './validate.js';
 
@@ -255,6 +256,55 @@ function typeMismatchError(index: number, op: string, field: Field): PatchError 
 }
 
 /**
+ * Check if a string value contains an embedded sentinel (%SKIP% or %ABORT%).
+ * This detects sentinel patterns that should be rejected in patch values -
+ * agents should use skip_field/abort_field instead.
+ *
+ * Uses case-insensitive matching since LLMs may generate lowercase sentinels.
+ * First tries exact case using parseSentinel, then falls back to case-insensitive check.
+ *
+ * @param value - The string value to check
+ * @returns The detected sentinel type ('skip' | 'abort') or null if no sentinel found
+ */
+function detectEmbeddedSentinel(value: string | null | undefined): 'skip' | 'abort' | null {
+  if (value == null) return null;
+
+  // First try exact case match using parseSentinel (canonical format)
+  const sentinel = parseSentinel(value);
+  if (sentinel) {
+    return sentinel.type;
+  }
+
+  // Fall back to case-insensitive check for LLM-generated lowercase variants
+  const trimmed = value.trim().toUpperCase();
+  if (trimmed.startsWith('%SKIP%')) {
+    return 'skip';
+  }
+  if (trimmed.startsWith('%ABORT%')) {
+    return 'abort';
+  }
+
+  return null;
+}
+
+/**
+ * Create an error for embedded sentinel in patch value.
+ */
+function embeddedSentinelError(
+  index: number,
+  fieldId: string,
+  sentinelType: 'skip' | 'abort',
+): PatchError {
+  const operation = sentinelType === 'skip' ? 'skip_field' : 'abort_field';
+  const sentinel = sentinelType === 'skip' ? '%SKIP%' : '%ABORT%';
+  return {
+    patchIndex: index,
+    message: `Value contains ${sentinel} sentinel for field "${fieldId}". Use ${operation} operation instead of embedding sentinel in value.`,
+    fieldId,
+  };
+}
+
+/**
  * Validate a single patch against the form schema.
  */
 function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchError | null {
@@ -286,6 +336,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     return typeMismatchError(index, patch.op, field);
   }
 
+  // Check for embedded sentinels in string values (issue #119)
+  // Agents should use skip_field/abort_field operations instead of embedding sentinels
+  if (patch.op === 'set_string' || patch.op === 'set_url' || patch.op === 'set_date') {
+    const sentinelType = detectEmbeddedSentinel(patch.value);
+    if (sentinelType) {
+      return embeddedSentinelError(index, field.id, sentinelType);
+    }
+  }
+
   // Additional validation for container types, select/checkbox options, and table columns
   if (patch.op === 'set_string_list' && field.kind === 'string_list') {
     // Validate value is a non-null array
@@ -296,6 +355,13 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         fieldId: field.id,
         fieldKind: field.kind,
       };
+    }
+    // Check for embedded sentinels in list items (issue #119)
+    for (const item of patch.value) {
+      const sentinelType = detectEmbeddedSentinel(item);
+      if (sentinelType) {
+        return embeddedSentinelError(index, field.id, sentinelType);
+      }
     }
   } else if (patch.op === 'set_single_select' && field.kind === 'single_select') {
     if (patch.value !== null) {
@@ -348,6 +414,13 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         fieldId: field.id,
         fieldKind: field.kind,
       };
+    }
+    // Check for embedded sentinels in list items (issue #119)
+    for (const item of patch.value) {
+      const sentinelType = detectEmbeddedSentinel(item);
+      if (sentinelType) {
+        return embeddedSentinelError(index, field.id, sentinelType);
+      }
     }
   } else if (patch.op === 'set_table' && field.kind === 'table') {
     // Validate value is a non-null array
