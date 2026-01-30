@@ -92,6 +92,9 @@ importers:
       ulid:
         specifier: ^3.0.2
         version: 3.0.2
+      undici:
+        specifier: ^7.19.2
+        version: 7.19.2
       yaml:
         specifier: ^2.8.2
         version: 2.8.2
@@ -2000,6 +2003,10 @@ packages:
 
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
+  undici@7.19.2:
+    resolution: {integrity: sha512-4VQSpGEGsWzk0VYxyB/wVX/Q7qf9t5znLRgs0dzszr9w9Fej/8RVNQ+S20vdXSAyra/bJ7ZQfGv6ZMj7UEbzSg==}
+    engines: {node: '>=20.18.1'}
 
   universalify@0.1.2:
     resolution: {integrity: sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg==}
@@ -3967,6 +3974,8 @@ snapshots:
       quansync: 1.0.0
 
   undici-types@7.16.0: {}
+
+  undici@7.19.2: {}
 
   universalify@0.1.2: {}
 
