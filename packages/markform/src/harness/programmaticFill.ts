@@ -29,6 +29,10 @@ import {
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
 } from '../settings.js';
+import { computeProgressSummary, computeStructureSummary } from '../engine/summaries.js';
+import type { ProgressCounts } from '../engine/coreTypes.js';
+import type { FillRecord } from './fillRecord.js';
+import { FillRecordCollector } from './fillRecordCollector.js';
 import { createHarness } from './harness.js';
 import { createLiveAgent } from './liveAgent.js';
 import { resolveModel } from './modelResolver.js';
@@ -41,6 +45,187 @@ export type { FillOptions, FillResult, FillStatus, TurnProgress } from './harnes
 // =============================================================================
 // Helper Functions
 // =============================================================================
+
+/**
+ * Get current progress counts for a form.
+ * Runs inspect to get issues, then computes progress summary.
+ */
+function getProgressCounts(form: ParsedForm, targetRoles?: string[]): ProgressCounts {
+  const inspectResult = inspect(form, { targetRoles });
+  const progressSummary = computeProgressSummary(
+    form.schema,
+    form.responsesByFieldId,
+    form.notes,
+    inspectResult.issues,
+  );
+  return progressSummary.counts;
+}
+
+/**
+ * Create a FillRecordCollector if recordFill is enabled.
+ */
+function createCollectorIfNeeded(
+  options: FillOptions,
+  form: ParsedForm,
+  provider: string,
+  model: string,
+): FillRecordCollector | undefined {
+  if (!options.recordFill) return undefined;
+
+  const structureSummary = computeStructureSummary(form.schema);
+  return new FillRecordCollector({
+    form: {
+      id: form.schema.id,
+      title: form.schema.title,
+      description: form.schema.description,
+      structure: structureSummary,
+    },
+    provider,
+    model,
+    parallelEnabled: options.enableParallel,
+    maxParallelAgents: options.maxParallelAgents,
+  });
+}
+
+/**
+ * Log a warning when a user callback throws.
+ */
+function warnCallbackError(name: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(`[markform] User callback ${name} threw: ${message}`);
+}
+
+/**
+ * Merge user callbacks with collector callbacks.
+ * Returns a new callbacks object that forwards to both.
+ *
+ * Error handling:
+ * - Collector callbacks: errors propagate (bugs in our code should surface)
+ * - User callbacks: errors are caught and logged as warnings
+ */
+function mergeCallbacks(
+  userCallbacks: FillOptions['callbacks'],
+  collector: FillRecordCollector | undefined,
+): FillOptions['callbacks'] {
+  if (!collector) return userCallbacks;
+  if (!userCallbacks) return collector;
+
+  // Create wrapper that forwards to both collector (directly) and user (safely)
+  return {
+    onTurnStart: (turn) => {
+      collector.onTurnStart(turn);
+      try {
+        userCallbacks.onTurnStart?.(turn);
+      } catch (e) {
+        warnCallbackError('onTurnStart', e);
+      }
+    },
+    onTurnComplete: (progress) => {
+      collector.onTurnComplete(progress);
+      try {
+        userCallbacks.onTurnComplete?.(progress);
+      } catch (e) {
+        warnCallbackError('onTurnComplete', e);
+      }
+    },
+    onLlmCallStart: (call) => {
+      collector.onLlmCallStart(call);
+      try {
+        userCallbacks.onLlmCallStart?.(call);
+      } catch (e) {
+        warnCallbackError('onLlmCallStart', e);
+      }
+    },
+    onLlmCallEnd: (call) => {
+      collector.onLlmCallEnd(call);
+      try {
+        userCallbacks.onLlmCallEnd?.(call);
+      } catch (e) {
+        warnCallbackError('onLlmCallEnd', e);
+      }
+    },
+    onToolStart: (call) => {
+      collector.onToolStart(call);
+      try {
+        userCallbacks.onToolStart?.(call);
+      } catch (e) {
+        warnCallbackError('onToolStart', e);
+      }
+    },
+    onToolEnd: (call) => {
+      collector.onToolEnd(call);
+      try {
+        userCallbacks.onToolEnd?.(call);
+      } catch (e) {
+        warnCallbackError('onToolEnd', e);
+      }
+    },
+    // Forward other callbacks to user only (collector doesn't handle these)
+    onIssuesIdentified: userCallbacks.onIssuesIdentified
+      ? (info) => {
+          try {
+            userCallbacks.onIssuesIdentified?.(info);
+          } catch (e) {
+            warnCallbackError('onIssuesIdentified', e);
+          }
+        }
+      : undefined,
+    onPatchesGenerated: userCallbacks.onPatchesGenerated
+      ? (info) => {
+          try {
+            userCallbacks.onPatchesGenerated?.(info);
+          } catch (e) {
+            warnCallbackError('onPatchesGenerated', e);
+          }
+        }
+      : undefined,
+    onOrderLevelStart: userCallbacks.onOrderLevelStart
+      ? (info) => {
+          try {
+            userCallbacks.onOrderLevelStart?.(info);
+          } catch (e) {
+            warnCallbackError('onOrderLevelStart', e);
+          }
+        }
+      : undefined,
+    onOrderLevelComplete: userCallbacks.onOrderLevelComplete
+      ? (info) => {
+          try {
+            userCallbacks.onOrderLevelComplete?.(info);
+          } catch (e) {
+            warnCallbackError('onOrderLevelComplete', e);
+          }
+        }
+      : undefined,
+    onBatchStart: userCallbacks.onBatchStart
+      ? (info) => {
+          try {
+            userCallbacks.onBatchStart?.(info);
+          } catch (e) {
+            warnCallbackError('onBatchStart', e);
+          }
+        }
+      : undefined,
+    onBatchComplete: userCallbacks.onBatchComplete
+      ? (info) => {
+          try {
+            userCallbacks.onBatchComplete?.(info);
+          } catch (e) {
+            warnCallbackError('onBatchComplete', e);
+          }
+        }
+      : undefined,
+    // Forward onWebSearch to both collector (directly) and user (safely)
+    onWebSearch: (info) => {
+      collector.onWebSearch(info);
+      try {
+        userCallbacks.onWebSearch?.(info);
+      } catch (e) {
+        warnCallbackError('onWebSearch', e);
+      }
+    },
+  };
+}
 
 function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]): FillResult {
   // Extract values from responses
@@ -73,6 +258,7 @@ function buildResult(
   status: FillStatus,
   inputContextWarnings?: string[],
   remainingIssues?: InspectIssue[],
+  record?: FillRecord,
 ): FillResult {
   // Extract values from responses
   const values: Record<string, FieldValue> = {};
@@ -102,6 +288,10 @@ function buildResult(
       severity: issue.severity,
       priority: issue.priority,
     }));
+  }
+
+  if (record) {
+    result.record = record;
   }
 
   return result;
@@ -192,9 +382,21 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       const message = error instanceof Error ? error.message : String(error);
       return buildErrorResult(form, [`Model resolution error: ${message}`], []);
     }
+  } else if (typeof options.model === 'string' && options.model.includes('/')) {
+    // For test agent, extract provider from model string (e.g., "mock/model" -> "mock")
+    provider = options.model.split('/')[0];
   }
 
-  // 3. Apply input context using coercion layer
+  // 3. Create collector if recordFill is enabled
+  const collector = createCollectorIfNeeded(
+    options,
+    form,
+    provider ?? 'unknown',
+    typeof options.model === 'string' ? options.model : 'custom',
+  );
+  const mergedCallbacks = mergeCallbacks(options.callbacks, collector);
+
+  // 4. Apply input context using coercion layer
   let totalPatches = 0;
   let inputContextWarnings: string[] = [];
 
@@ -214,16 +416,25 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     inputContextWarnings = coercionResult.warnings;
   }
 
-  // 4. Check for parallel execution path
+  // 5. Check for parallel execution path
   if (options.enableParallel) {
     const plan = computeExecutionPlan(form);
     if (plan.parallelBatches.length > 0) {
-      return fillFormParallel(form, model, provider, options, totalPatches, inputContextWarnings);
+      return fillFormParallel(
+        form,
+        model,
+        provider,
+        options,
+        totalPatches,
+        inputContextWarnings,
+        collector,
+        mergedCallbacks,
+      );
     }
     // No parallel batches — fall through to serial path
   }
 
-  // 5. Create harness + agent (serial path)
+  // 6. Create harness + agent (serial path)
   const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
   const startingTurnNumber = options.startingTurnNumber ?? 0;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
@@ -250,11 +461,11 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       provider,
       enableWebSearch: options.enableWebSearch,
       additionalTools: options.additionalTools,
-      callbacks: options.callbacks,
+      callbacks: mergedCallbacks,
       maxStepsPerTurn: options.maxStepsPerTurn,
     });
 
-  // 6. Run harness loop
+  // 7. Run harness loop
   let turnCount = startingTurnNumber;
   let turnsThisCall = 0;
   let stepResult = harness.step();
@@ -290,11 +501,15 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
 
     // Call turn start callback (errors don't abort fill)
-    if (options.callbacks?.onTurnStart) {
+    if (mergedCallbacks?.onTurnStart) {
       try {
-        options.callbacks.onTurnStart({
+        mergedCallbacks.onTurnStart({
           turnNumber: turnCount + 1,
           issuesCount: stepResult.issues.length,
+          // Default to order 0, serial execution for non-parallel fills
+          // Parallel harness will override these values
+          order: 0,
+          executionId: '0-serial',
         });
       } catch {
         // Ignore callback errors
@@ -305,9 +520,9 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     const turnIssues = stepResult.issues;
 
     // Call onIssuesIdentified callback (before agent generates patches)
-    if (options.callbacks?.onIssuesIdentified) {
+    if (mergedCallbacks?.onIssuesIdentified) {
       try {
-        options.callbacks.onIssuesIdentified({
+        mergedCallbacks.onIssuesIdentified({
           turnNumber: turnCount + 1,
           issues: turnIssues,
         });
@@ -326,9 +541,9 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     const { patches, stats } = response;
 
     // Call onPatchesGenerated callback (after agent, before applying)
-    if (options.callbacks?.onPatchesGenerated) {
+    if (mergedCallbacks?.onPatchesGenerated) {
       try {
-        options.callbacks.onPatchesGenerated({
+        mergedCallbacks.onPatchesGenerated({
           turnNumber: turnCount + 1,
           patches,
           stats,
@@ -381,10 +596,10 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     previousRejections = stepResult.rejectedPatches;
 
     // Call progress callback (errors don't abort fill)
-    if (options.callbacks?.onTurnComplete) {
+    if (mergedCallbacks?.onTurnComplete) {
       try {
         const requiredIssues = stepResult.issues.filter((i) => i.severity === 'required');
-        options.callbacks.onTurnComplete({
+        mergedCallbacks.onTurnComplete({
           turnNumber: turnCount,
           issuesShown: turnIssues.length,
           patchesApplied: actualPatchesApplied,
@@ -406,12 +621,32 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
   }
 
-  // 7. Determine final status
+  // 8. Determine final status and finalize record
+  const finalProgressCounts = getProgressCounts(form, targetRoles);
+
   if (stepResult.isComplete) {
-    return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
+    let record: FillRecord | undefined;
+    if (collector) {
+      collector.setStatus('completed');
+      record = collector.getRecord(finalProgressCounts);
+    }
+    return buildResult(
+      form,
+      turnCount,
+      totalPatches,
+      { ok: true },
+      inputContextWarnings,
+      undefined,
+      record,
+    );
   }
 
   // Hit max turns without completing
+  let record: FillRecord | undefined;
+  if (collector) {
+    collector.setStatus('partial', 'max_turns');
+    record = collector.getRecord(finalProgressCounts);
+  }
   return buildResult(
     form,
     turnCount,
@@ -419,6 +654,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     { ok: false, reason: 'max_turns', message: `Reached maximum total turns (${maxTurnsTotal})` },
     inputContextWarnings,
     stepResult.issues,
+    record,
   );
 }
 
@@ -439,6 +675,8 @@ async function fillFormParallel(
   options: FillOptions,
   initialPatches: number,
   inputContextWarnings: string[],
+  collector: FillRecordCollector | undefined,
+  mergedCallbacks: FillOptions['callbacks'],
 ): Promise<FillResult> {
   const plan = computeExecutionPlan(form);
   const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
@@ -461,24 +699,36 @@ async function fillFormParallel(
       provider,
       enableWebSearch: options.enableWebSearch,
       additionalTools: options.additionalTools,
-      callbacks: options.callbacks,
+      callbacks: mergedCallbacks,
       maxStepsPerTurn: options.maxStepsPerTurn,
     });
 
   for (const order of plan.orderLevels) {
     // Check cancellation
     if (options.signal?.aborted) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('cancelled');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
         totalPatches,
         { ok: false, reason: 'cancelled' },
         inputContextWarnings,
+        undefined,
+        record,
       );
     }
 
     // Check turn limit
     if (turnCount >= maxTurnsTotal) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('partial', 'max_turns');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
@@ -489,12 +739,14 @@ async function fillFormParallel(
           message: `Reached maximum total turns (${maxTurnsTotal})`,
         },
         inputContextWarnings,
+        undefined,
+        record,
       );
     }
 
     // Fire order level callback
     try {
-      options.callbacks?.onOrderLevelStart?.({ order });
+      mergedCallbacks?.onOrderLevelStart?.({ order });
     } catch {
       /* ignore */
     }
@@ -512,6 +764,9 @@ async function fillFormParallel(
         maxTurnsTotal,
         turnCount,
         options,
+        order,
+        `${order}-serial`,
+        mergedCallbacks,
       );
       totalPatches += result.patchesApplied;
       turnCount += result.turnsUsed;
@@ -527,13 +782,13 @@ async function fillFormParallel(
       if (batchItems.length === 0) continue;
 
       try {
-        options.callbacks?.onBatchStart?.({ batchId: batch.batchId, itemCount: batchItems.length });
+        mergedCallbacks?.onBatchStart?.({ batchId: batch.batchId, itemCount: batchItems.length });
       } catch {
         /* ignore */
       }
 
       // Run each batch item with its own multi-turn loop, concurrently
-      const itemPromises = batchItems.map((item) => {
+      const itemPromises = batchItems.map((item, itemIndex) => {
         // Create a scoped agent for this batch item (or reuse test agent)
         const scopedAgent: Agent =
           options._testAgent ??
@@ -544,7 +799,7 @@ async function fillFormParallel(
             provider,
             enableWebSearch: options.enableWebSearch,
             additionalTools: options.additionalTools,
-            callbacks: options.callbacks,
+            callbacks: mergedCallbacks,
             maxStepsPerTurn: options.maxStepsPerTurn,
           });
 
@@ -558,6 +813,9 @@ async function fillFormParallel(
           maxTurnsTotal,
           turnCount,
           options,
+          order,
+          `${order}-batch-${batch.batchId}-${itemIndex}`,
+          mergedCallbacks,
         );
       });
 
@@ -577,7 +835,7 @@ async function fillFormParallel(
       }
 
       try {
-        options.callbacks?.onBatchComplete?.({
+        mergedCallbacks?.onBatchComplete?.({
           batchId: batch.batchId,
           patchesApplied: batchPatches,
         });
@@ -589,23 +847,56 @@ async function fillFormParallel(
     // Fire order level complete callback
     const levelInspect = inspect(form);
     try {
-      options.callbacks?.onOrderLevelComplete?.({ order, patchesApplied: totalPatches });
+      mergedCallbacks?.onOrderLevelComplete?.({ order, patchesApplied: totalPatches });
     } catch {
       /* ignore */
     }
 
     // If form is already complete, stop early
     if (levelInspect.isComplete) {
-      return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('completed');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        { ok: true },
+        inputContextWarnings,
+        undefined,
+        record,
+      );
     }
   }
 
   // Check final form state
   const finalInspect = inspect(form);
+  const finalProgressCounts = getProgressCounts(form, targetRoles);
+
   if (finalInspect.isComplete) {
-    return buildResult(form, turnCount, totalPatches, { ok: true }, inputContextWarnings);
+    let record: FillRecord | undefined;
+    if (collector) {
+      collector.setStatus('completed');
+      record = collector.getRecord(finalProgressCounts);
+    }
+    return buildResult(
+      form,
+      turnCount,
+      totalPatches,
+      { ok: true },
+      inputContextWarnings,
+      undefined,
+      record,
+    );
   }
 
+  let record: FillRecord | undefined;
+  if (collector) {
+    collector.setStatus('partial', 'max_turns');
+    record = collector.getRecord(finalProgressCounts);
+  }
   return buildResult(
     form,
     turnCount,
@@ -613,6 +904,7 @@ async function fillFormParallel(
     { ok: false, reason: 'max_turns', message: `Reached maximum total turns (${maxTurnsTotal})` },
     inputContextWarnings,
     finalInspect.issues,
+    record,
   );
 }
 
@@ -641,6 +933,9 @@ async function runMultiTurnForItems(
   maxTurnsTotal: number,
   startTurn: number,
   options: FillOptions,
+  order: number,
+  executionId: string,
+  mergedCallbacks: FillOptions['callbacks'],
 ): Promise<MultiTurnResult> {
   let turnsUsed = 0;
   let patchesApplied = 0;
@@ -684,9 +979,11 @@ async function runMultiTurnForItems(
 
     // Fire turn callback
     try {
-      options.callbacks?.onTurnStart?.({
+      mergedCallbacks?.onTurnStart?.({
         turnNumber: startTurn + turnsUsed + 1,
         issuesCount: scopedIssues.length,
+        order,
+        executionId,
       });
     } catch {
       /* ignore */
@@ -715,7 +1012,7 @@ async function runMultiTurnForItems(
     try {
       const postInspect = inspect(form, { targetRoles });
       const requiredIssues = postInspect.issues.filter((i) => i.severity === 'required');
-      options.callbacks?.onTurnComplete?.({
+      mergedCallbacks?.onTurnComplete?.({
         turnNumber: startTurn + turnsUsed,
         issuesShown: scopedIssues.length,
         patchesApplied: response.patches.length,

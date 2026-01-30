@@ -11,3 +11,8 @@ data-sync/
 
 # Temporary files
 *.tmp
+
+# Backups created by tbd doctor --fix
+backups/
+
+*.temp

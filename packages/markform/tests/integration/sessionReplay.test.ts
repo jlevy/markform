@@ -113,6 +113,7 @@ describe('Session Replay Integration', () => {
         targetRoles: ['*'],
         fillMode: 'continue',
         captureWireFormat: false,
+        recordFill: false,
       });
 
       // Verify results

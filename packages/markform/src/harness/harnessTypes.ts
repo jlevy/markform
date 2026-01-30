@@ -10,6 +10,7 @@
 
 import type { LanguageModel, Tool } from 'ai';
 
+import type { FillRecord } from './fillRecord.js';
 import type {
   FillMode,
   FieldValue,
@@ -231,7 +232,14 @@ export interface ProviderInfo {
  */
 export interface FillCallbacks {
   /** Called when a turn begins */
-  onTurnStart?(turn: { turnNumber: number; issuesCount: number }): void;
+  onTurnStart?(turn: {
+    turnNumber: number;
+    issuesCount: number;
+    /** Field ordering level for parallel execution (can be negative) */
+    order: number;
+    /** Execution thread ID (e.g., "0-serial", "1-batch-contacts-0") */
+    executionId: string;
+  }): void;
 
   /** Called after inspect identifies issues for this turn (before agent generates patches) */
   onIssuesIdentified?(info: { turnNumber: number; issues: InspectIssue[] }): void;
@@ -243,16 +251,38 @@ export interface FillCallbacks {
   onTurnComplete?(progress: TurnProgress): void;
 
   /** Called before a tool executes */
-  onToolStart?(call: { name: string; input: unknown }): void;
+  onToolStart?(call: {
+    name: string;
+    input: unknown;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called after a tool completes */
-  onToolEnd?(call: { name: string; output: unknown; durationMs: number; error?: string }): void;
+  onToolEnd?(call: {
+    name: string;
+    output: unknown;
+    durationMs: number;
+    error?: string;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called before an LLM request */
-  onLlmCallStart?(call: { model: string }): void;
+  onLlmCallStart?(call: {
+    model: string;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called after an LLM response */
-  onLlmCallEnd?(call: { model: string; inputTokens: number; outputTokens: number }): void;
+  onLlmCallEnd?(call: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 
   /** Called when a parallel batch starts execution */
   onBatchStart?(info: { batchId: string; itemCount: number }): void;
@@ -265,6 +295,23 @@ export interface FillCallbacks {
 
   /** Called when an order level completes */
   onOrderLevelComplete?(info: { order: number; patchesApplied: number }): void;
+
+  /**
+   * Called when a web search is performed.
+   *
+   * This provides access to the search query and result count for analytics and debugging.
+   * Note: Not all providers expose the exact query. When available, this is called.
+   */
+  onWebSearch?(info: {
+    /** The search query that was executed */
+    query: string;
+    /** Number of results returned (0 if none) */
+    resultCount: number;
+    /** Provider that performed the search (e.g., "anthropic", "openai") */
+    provider: string;
+    /** Execution thread ID for parallel tracking */
+    executionId: string;
+  }): void;
 }
 
 // =============================================================================
@@ -372,6 +419,23 @@ export interface FillOptions {
    * per multi-turn session). Set to false for production use.
    */
   captureWireFormat: boolean;
+
+  /**
+   * Collect a complete FillRecord capturing all execution details.
+   *
+   * When true, the FillResult will include a `record` field containing:
+   * - Turn-by-turn timeline with token usage
+   * - Tool calls with timing and results
+   * - Aggregated statistics with percentiles
+   * - Execution metadata for parallel fills
+   *
+   * Useful for:
+   * - Cost analysis and billing
+   * - Debugging and troubleshooting
+   * - Analytics and optimization
+   * - Audit trails and provenance
+   */
+  recordFill: boolean;
 }
 
 /**
@@ -432,4 +496,11 @@ export interface FillResult {
     severity: 'required' | 'recommended';
     priority: number;
   }[];
+  /**
+   * Complete fill record when recordFill option is enabled.
+   *
+   * Contains timeline, token usage, tool calls, and execution metadata.
+   * Useful for cost analysis, debugging, and analytics.
+   */
+  record?: FillRecord;
 }

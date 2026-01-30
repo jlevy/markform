@@ -264,6 +264,53 @@ git add packages/markform/tests/cli/
 git commit -m "Update CLI test files after output change"
 ```
 
+### Manual End-to-End Tests
+
+For final QA validation before releases, run manual end-to-end tests with live API keys.
+These tests verify the complete form filling pipeline including FillRecord capture.
+
+```bash
+# Location: packages/markform/tests/manual/live-fill-manual-test.md
+```
+
+**Why manual tests?**
+
+- Live API tests are non-deterministic and require paid API keys
+- FillRecord output structure should be manually reviewed for regressions
+- Token costs make automated runs impractical for CI
+
+**Workflow:**
+
+1. Set up API keys in `.env`:
+   ```bash
+   OPENAI_API_KEY=sk-...
+   # Or: ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+2. Run tests from `tests/manual/live-fill-manual-test.md`:
+   ```bash
+   ./dist/bin.mjs fill examples/simple/simple.form.md \
+     --model openai/gpt-5-mini \
+     --roles "*" \
+     --output /tmp/test-fill.form.md \
+     --record-fill
+   ```
+
+3. Review output against expected structure documented in the test file
+
+4. Check FillRecord sidecar for complete data:
+   ```bash
+   cat /tmp/test-fill.fill.json | jq .
+   ```
+
+**When to run manual tests:**
+
+- Before releases
+- After changes to FillRecord, harness, or agent code
+- When adding new provider integrations
+
+See `packages/markform/tests/manual/live-fill-manual-test.md` for the complete test suite.
+
 ### Regenerating Golden Tests
 
 When format changes (like frontmatter updates) cause golden tests to fail with hash
