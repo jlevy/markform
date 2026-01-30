@@ -88,8 +88,20 @@ function createCollectorIfNeeded(
 }
 
 /**
+ * Log a warning when a user callback throws.
+ */
+function warnCallbackError(name: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(`[markform] User callback ${name} threw: ${message}`);
+}
+
+/**
  * Merge user callbacks with collector callbacks.
  * Returns a new callbacks object that forwards to both.
+ *
+ * Error handling:
+ * - Collector callbacks: errors propagate (bugs in our code should surface)
+ * - User callbacks: errors are caught and logged as warnings
  */
 function mergeCallbacks(
   userCallbacks: FillOptions['callbacks'],
@@ -98,110 +110,118 @@ function mergeCallbacks(
   if (!collector) return userCallbacks;
   if (!userCallbacks) return collector;
 
-  // Create wrapper that forwards to both
+  // Create wrapper that forwards to both collector (directly) and user (safely)
   return {
     onTurnStart: (turn) => {
-      try {
-        collector.onTurnStart(turn);
-      } catch {
-        /* ignore */
-      }
+      collector.onTurnStart(turn);
       try {
         userCallbacks.onTurnStart?.(turn);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnCallbackError('onTurnStart', e);
       }
     },
     onTurnComplete: (progress) => {
-      try {
-        collector.onTurnComplete(progress);
-      } catch {
-        /* ignore */
-      }
+      collector.onTurnComplete(progress);
       try {
         userCallbacks.onTurnComplete?.(progress);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnCallbackError('onTurnComplete', e);
       }
     },
     onLlmCallStart: (call) => {
-      try {
-        collector.onLlmCallStart(call);
-      } catch {
-        /* ignore */
-      }
+      collector.onLlmCallStart(call);
       try {
         userCallbacks.onLlmCallStart?.(call);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnCallbackError('onLlmCallStart', e);
       }
     },
     onLlmCallEnd: (call) => {
-      try {
-        collector.onLlmCallEnd(call);
-      } catch {
-        /* ignore */
-      }
+      collector.onLlmCallEnd(call);
       try {
         userCallbacks.onLlmCallEnd?.(call);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnCallbackError('onLlmCallEnd', e);
       }
     },
     onToolStart: (call) => {
-      try {
-        collector.onToolStart(call);
-      } catch {
-        /* ignore */
-      }
+      collector.onToolStart(call);
       try {
         userCallbacks.onToolStart?.(call);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnCallbackError('onToolStart', e);
       }
     },
     onToolEnd: (call) => {
-      try {
-        collector.onToolEnd(call);
-      } catch {
-        /* ignore */
-      }
+      collector.onToolEnd(call);
       try {
         userCallbacks.onToolEnd?.(call);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnCallbackError('onToolEnd', e);
       }
     },
-    // Forward other callbacks to user only (wrap to avoid unbound method issues)
+    // Forward other callbacks to user only (collector doesn't handle these)
     onIssuesIdentified: userCallbacks.onIssuesIdentified
-      ? (info) => userCallbacks.onIssuesIdentified?.(info)
+      ? (info) => {
+          try {
+            userCallbacks.onIssuesIdentified?.(info);
+          } catch (e) {
+            warnCallbackError('onIssuesIdentified', e);
+          }
+        }
       : undefined,
     onPatchesGenerated: userCallbacks.onPatchesGenerated
-      ? (info) => userCallbacks.onPatchesGenerated?.(info)
+      ? (info) => {
+          try {
+            userCallbacks.onPatchesGenerated?.(info);
+          } catch (e) {
+            warnCallbackError('onPatchesGenerated', e);
+          }
+        }
       : undefined,
     onOrderLevelStart: userCallbacks.onOrderLevelStart
-      ? (info) => userCallbacks.onOrderLevelStart?.(info)
+      ? (info) => {
+          try {
+            userCallbacks.onOrderLevelStart?.(info);
+          } catch (e) {
+            warnCallbackError('onOrderLevelStart', e);
+          }
+        }
       : undefined,
     onOrderLevelComplete: userCallbacks.onOrderLevelComplete
-      ? (info) => userCallbacks.onOrderLevelComplete?.(info)
+      ? (info) => {
+          try {
+            userCallbacks.onOrderLevelComplete?.(info);
+          } catch (e) {
+            warnCallbackError('onOrderLevelComplete', e);
+          }
+        }
       : undefined,
     onBatchStart: userCallbacks.onBatchStart
-      ? (info) => userCallbacks.onBatchStart?.(info)
+      ? (info) => {
+          try {
+            userCallbacks.onBatchStart?.(info);
+          } catch (e) {
+            warnCallbackError('onBatchStart', e);
+          }
+        }
       : undefined,
     onBatchComplete: userCallbacks.onBatchComplete
-      ? (info) => userCallbacks.onBatchComplete?.(info)
+      ? (info) => {
+          try {
+            userCallbacks.onBatchComplete?.(info);
+          } catch (e) {
+            warnCallbackError('onBatchComplete', e);
+          }
+        }
       : undefined,
-    // Forward onWebSearch to both collector and user
+    // Forward onWebSearch to both collector (directly) and user (safely)
     onWebSearch: (info) => {
-      try {
-        collector.onWebSearch(info);
-      } catch {
-        /* ignore */
-      }
+      collector.onWebSearch(info);
       try {
         userCallbacks.onWebSearch?.(info);
-      } catch {
-        /* ignore */
+      } catch (e) {
+        warnCallbackError('onWebSearch', e);
       }
     },
   };
