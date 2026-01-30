@@ -4,6 +4,9 @@
 > These tests capture complete FillRecord output for manual review.
 >
 > **NOT automated** - Run manually before releases to verify end-to-end behavior.
+>
+> **Environment**: Must be run locally with direct network access to API providers.
+> Proxy-restricted environments (like Claude Code remote) cannot reach external APIs.
 
 ---
 

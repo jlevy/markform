@@ -270,7 +270,7 @@ For final QA validation before releases, run manual end-to-end tests with live A
 These tests verify the complete form filling pipeline including FillRecord capture.
 
 ```bash
-# Location: packages/markform/tests/manual/live-fill-e2e.md
+# Location: packages/markform/tests/manual/live-fill-manual-test.md
 ```
 
 **Why manual tests?**
@@ -308,7 +308,7 @@ These tests verify the complete form filling pipeline including FillRecord captu
 - After changes to FillRecord, harness, or agent code
 - When adding new provider integrations
 
-See `packages/markform/tests/manual/live-fill-e2e.md` for the complete test suite.
+See `packages/markform/tests/manual/live-fill-manual-test.md` for the complete test suite.
 
 ### Regenerating Golden Tests
 
