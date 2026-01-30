@@ -5,8 +5,8 @@
 >
 > **NOT automated** - Run manually before releases to verify end-to-end behavior.
 >
-> **Environment**: Must be run locally with direct network access to API providers.
-> Proxy-restricted environments (like Claude Code remote) cannot reach external APIs.
+> **Environment**: Works with both direct network access and proxy environments.
+> The CLI automatically configures proxy support via undici when HTTP_PROXY is set.
 
 ---
 
@@ -34,36 +34,67 @@
 ## Test 1: Simple Form Fill (OpenAI)
 
 Fill the simple form with basic field types using GPT-4o-mini.
+Uses `--roles "*"` to fill all fields (the simple form has user-role fields by default).
 
 ### Command
 
 ```bash
 ./dist/bin.mjs fill examples/simple/simple.form.md \
   --model openai/gpt-4o-mini \
+  --roles "*" \
   --output /tmp/markform-manual-tests/simple-filled.form.md \
-  --record-fill
+  --record-fill \
+  --instructions "Fill this form with realistic sample data."
 ```
 
 ### Expected Output Structure
 
 ```
+⚠️  Warning: Filling all roles including user-designated fields
+Available tools: fill_form, web_search
 Filling form: .../examples/simple/simple.form.md
-Agent: openai/gpt-4o-mini
-Turn 1: X issues
-Turn 2: X issues
-...
-Form completed in N turn(s)
-⏰ Fill time: X.Xs
+Agent: live (openai/gpt-4o-mini)
+Turn 1: 10 issue(s): age (missing), categories (missing), ...
+  → 10 patches (tokens: ↓XXXX ↑XXX):
+    age (number) = 42
+    categories (multi_select) = [frontend, backend]
+    ...
+Turn 2: 10 issue(s): ...
+  → 10 patches (tokens: ↓XXXX ↑XXX):
+    ...
+Turn 3: 1 issue(s): team_members (unanswered)
+  → 1 patches (tokens: ↓XXXX ↑XX):
+    team_members (table) = [2 rows]
+  ✓ Complete
+Form completed in 3 turn(s)
+⏰ Fill time: 16.2s
 Form written to: /tmp/markform-manual-tests/simple-filled.form.md
 
-Fill completed in Xms (N turns)
+Fill completed in 16.2s (0 turns)
 
-Tokens:  XXXX input / XXXX output (openai/gpt-4o-mini)
-Tools:   N calls (N succeeded)
+Tokens:  12,295 input / 519 output (openai/openai/gpt-4o-mini)
+Tools:   0 calls
 
-Progress: X/21 fields filled (XX%)
+Progress: 21/21 fields filled (100%)
+Fill record written to: /tmp/markform-manual-tests/simple-filled.fill.json
 Session Transcript
-...
+
+Form: .../examples/simple/simple.form.md
+Mode: live
+Version: 0.1.0
+
+Harness Config:
+  Max turns: 100
+  Max patches/turn: 20
+  Max issues/turn: 10
+
+Turns (3):
+  Turn 1: 10 issues → 10 patches → 2 remaining
+  Turn 2: 10 issues → 10 patches → 0 remaining
+  Turn 3: 1 issues → 1 patches → 0 remaining
+
+Expected: ✓ complete
+Completed form: /tmp/markform-manual-tests/simple-filled.form.md
 ```
 
 ### Verification Checklist
