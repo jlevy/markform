@@ -118,34 +118,41 @@ Completed form: [..]
 
 ## FillRecord JSON Sidecar Verification
 
-# Test: FillRecord JSON has complete stable structure
+# Test: --record-fill-stable creates deterministic sidecar
 
-This test shows the full FillRecord structure with stable fields in mock mode.
-Only timestamps, sessionId, and duration values are excluded as they vary per run.
+The `--record-fill-stable` flag outputs a FillRecord with all unstable fields
+(timestamps, durations, sessionId, timeline) stripped for golden test comparisons.
 
 ```console
-$ cat /tmp/test-fill-full.fill.json | jq '{status, form: {id: .form.id, title: .form.title, fieldCount: .form.structure.fieldCount, groupCount: .form.structure.groupCount}, formProgress, llm, toolSummary: {totalCalls: .toolSummary.totalCalls, successfulCalls: .toolSummary.successfulCalls}, execution: {totalTurns: .execution.totalTurns, parallelEnabled: .execution.parallelEnabled}}'
+$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --roles "*" --output /tmp/test-fill-stable.form.md --record-fill-stable 2>&1 | grep "Fill record written"
+Fill record written to: /tmp/test-fill-stable.fill.json
+? 0
+```
+
+# Test: Stable FillRecord JSON has complete deterministic structure
+
+This test verifies the stable FillRecord structure (without timing/timestamp fields).
+Uses jq to show key fields and structure counts - the full JSON includes detailed
+field/group/option/column maps that would make the test fragile.
+
+```console
+$ cat /tmp/test-fill-stable.fill.json | jq '{status, form: {id: .form.id, title: .form.title, structure: {fieldCount: .form.structure.fieldCount, groupCount: .form.structure.groupCount, optionCount: .form.structure.optionCount, columnCount: .form.structure.columnCount}}, formProgress: {totalFields: .formProgress.totalFields, filledFields: .formProgress.filledFields, skippedFields: .formProgress.skippedFields}, llm, toolSummary, execution}'
 {
   "status": "completed",
   "form": {
     "id": "simple_test",
     "title": "Simple Test Form",
-    "fieldCount": 21,
-    "groupCount": 8
+    "structure": {
+      "fieldCount": 21,
+      "groupCount": 8,
+      "optionCount": 15,
+      "columnCount": 6
+    }
   },
   "formProgress": {
     "totalFields": 21,
-    "requiredFields": 12,
-    "unansweredFields": 0,
-    "answeredFields": 17,
-    "skippedFields": 4,
-    "abortedFields": 0,
-    "validFields": 21,
-    "invalidFields": 0,
-    "emptyFields": 4,
     "filledFields": 17,
-    "emptyRequiredFields": 0,
-    "totalNotes": 0
+    "skippedFields": 4
   },
   "llm": {
     "provider": "mock",
@@ -156,13 +163,35 @@ $ cat /tmp/test-fill-full.fill.json | jq '{status, form: {id: .form.id, title: .
   },
   "toolSummary": {
     "totalCalls": 0,
-    "successfulCalls": 0
+    "successfulCalls": 0,
+    "failedCalls": 0,
+    "successRate": 0,
+    "byTool": []
   },
   "execution": {
     "totalTurns": 0,
-    "parallelEnabled": false
+    "parallelEnabled": false,
+    "orderLevels": [],
+    "executionThreads": []
   }
 }
+? 0
+```
+
+# Test: Stable FillRecord has no unstable fields
+
+Verify that sessionId, timestamps, durations, timeline, and timingBreakdown are stripped.
+
+```console
+$ cat /tmp/test-fill-stable.fill.json | jq 'keys'
+[
+  "execution",
+  "form",
+  "formProgress",
+  "llm",
+  "status",
+  "toolSummary"
+]
 ? 0
 ```
 

@@ -340,3 +340,92 @@ export const FillRecordSchema = z.object({
 });
 
 export type FillRecord = z.infer<typeof FillRecordSchema>;
+
+// =============================================================================
+// Stable FillRecord (for golden tests)
+// =============================================================================
+
+/**
+ * Stripped ToolStats without timing information.
+ */
+export type StableToolStats = Omit<ToolStats, 'timing'>;
+
+/**
+ * Stripped ToolSummary without timing information.
+ */
+export type StableToolSummary = Omit<ToolSummary, 'totalDurationMs' | 'byTool'> & {
+  byTool: StableToolStats[];
+};
+
+/**
+ * FillRecord with unstable fields removed for deterministic golden tests.
+ *
+ * Removes:
+ * - sessionId, startedAt, completedAt, durationMs (top-level timing)
+ * - timeline (contains per-turn timestamps and durations)
+ * - timingBreakdown (all timing values)
+ * - toolSummary.totalDurationMs and toolSummary.byTool[].timing
+ */
+export type StableFillRecord = Omit<
+  FillRecord,
+  | 'sessionId'
+  | 'startedAt'
+  | 'completedAt'
+  | 'durationMs'
+  | 'timeline'
+  | 'timingBreakdown'
+  | 'toolSummary'
+> & {
+  toolSummary: StableToolSummary;
+};
+
+/**
+ * Strip unstable fields from FillRecord for golden test comparisons.
+ *
+ * In mock mode, all remaining fields should be deterministic:
+ * - status, statusDetail: based on completion logic
+ * - form: form metadata (static)
+ * - formProgress: counts of filled fields (deterministic from mock source)
+ * - llm: provider/model/tokens (tokens are 0 in mock mode)
+ * - toolSummary: call counts and success rates (without timing)
+ * - execution: turn counts, parallel settings (deterministic)
+ */
+export function stripUnstableFillRecordFields(record: FillRecord): StableFillRecord {
+  // Strip timing from each tool's stats
+  const stableByTool: StableToolStats[] = record.toolSummary.byTool.map((toolStats) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { timing, ...rest } = toolStats;
+    return rest;
+  });
+
+  // Build stable tool summary without timing
+  const stableToolSummary: StableToolSummary = {
+    totalCalls: record.toolSummary.totalCalls,
+    successfulCalls: record.toolSummary.successfulCalls,
+    failedCalls: record.toolSummary.failedCalls,
+    successRate: record.toolSummary.successRate,
+    byTool: stableByTool,
+  };
+
+  return {
+    // Keep form metadata (stable)
+    form: record.form,
+
+    // Keep outcome (stable in mock mode)
+    status: record.status,
+    statusDetail: record.statusDetail,
+    formProgress: record.formProgress,
+
+    // Keep LLM info (tokens are 0 in mock mode)
+    llm: record.llm,
+
+    // Use stable tool summary
+    toolSummary: stableToolSummary,
+
+    // Keep execution metadata (stable)
+    execution: record.execution,
+
+    // Keep custom data if present
+    customData: record.customData,
+  };
+}

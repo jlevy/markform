@@ -30,6 +30,7 @@ import type {
   WireFormat,
 } from '../../engine/coreTypes.js';
 import { FillRecordCollector } from '../../harness/fillRecordCollector.js';
+import { stripUnstableFillRecordFields } from '../../harness/fillRecord.js';
 import { formatFillRecordSummary } from '../../harness/formatFillRecordSummary.js';
 import { createHarness } from '../../harness/harness.js';
 import { resolveHarnessConfig } from '../../harness/harnessConfigResolver.js';
@@ -176,6 +177,10 @@ export function registerFillCommand(program: Command): void {
     )
     .option('--normalize', 'Regenerate form without preserving external content')
     .option('--record-fill', 'Write fill record to sidecar .fill.json file')
+    .option(
+      '--record-fill-stable',
+      'Write fill record without timestamps/durations (for golden tests)',
+    )
     .action(
       async (
         file: string,
@@ -197,6 +202,7 @@ export function registerFillCommand(program: Command): void {
           interactive?: boolean;
           normalize?: boolean;
           recordFill?: boolean;
+          recordFillStable?: boolean;
         },
         cmd: Command,
       ) => {
@@ -711,15 +717,20 @@ export function registerFillCommand(program: Command): void {
             console.error(summary);
           }
 
-          // Write FillRecord sidecar file if recordFill is enabled
-          if (options.recordFill) {
+          // Write FillRecord sidecar file if recordFill or recordFillStable is enabled
+          if (options.recordFill || options.recordFillStable) {
             // Derive sidecar path from output path (replace extension with .fill.json)
             const sidecarPath = outputPath.replace(/\.(form\.)?md$/, '.fill.json');
+
+            // Strip unstable fields for golden tests
+            const recordToWrite = options.recordFillStable
+              ? stripUnstableFillRecordFields(fillRecord)
+              : fillRecord;
 
             if (ctx.dryRun) {
               logInfo(ctx, `[DRY RUN] Would write fill record to: ${sidecarPath}`);
             } else {
-              writeFileSync(sidecarPath, JSON.stringify(fillRecord, null, 2));
+              writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
               logSuccess(ctx, `Fill record written to: ${sidecarPath}`);
             }
           }
