@@ -43,7 +43,7 @@ export function currentTimeMs(): number {
 }
 
 /**
- * Generate a unique session ID using ULID.
+ * Generate a unique session ID using ULID with a "sess-" prefix.
  *
  * ULIDs are:
  * - Lexicographically sortable by time
@@ -51,17 +51,18 @@ export function currentTimeMs(): number {
  * - URL-safe (no special characters)
  * - Monotonically increasing within the same millisecond
  *
- * Use this instead of crypto.randomUUID() for session IDs
- * to avoid crypto dependency and gain sortability.
+ * The "sess-" prefix makes IDs self-identifying, following the policy
+ * that all IDs should indicate their type at a glance. The ULID is
+ * lowercased for consistency and readability.
  *
- * @returns ULID string (26 characters)
+ * @returns Prefixed lowercase ULID string (31 characters: "sess-" + 26-char ULID)
  *
  * @example
  * ```typescript
  * const sessionId = generateSessionId();
- * // => "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+ * // => "sess-01arz3ndektsv4rrffq69g5fav"
  * ```
  */
 export function generateSessionId(): string {
-  return ulid();
+  return `sess-${ulid().toLowerCase()}`;
 }

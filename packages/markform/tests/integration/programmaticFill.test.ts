@@ -467,8 +467,8 @@ describe('programmatic fill API - integration tests', () => {
       expect(result.record).toBeDefined();
       const record = result.record!;
 
-      // Session ID should be a valid ULID (26 characters, Crockford base32)
-      expect(record.sessionId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/i);
+      // Session ID should be a prefixed lowercase ULID (sess- + 26 characters)
+      expect(record.sessionId).toMatch(/^sess-[0-9a-hjkmnp-tv-z]{26}$/);
 
       // Timestamps should be valid ISO strings within the test window
       const startedAt = new Date(record.startedAt);
