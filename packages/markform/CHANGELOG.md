@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.19
+
+### Patch Changes
+
+- 114105b: FillRecord implementation, security fixes, proxy support, and URL rendering improvements
+
 ## 0.1.18
 
 ### Patch Changes
