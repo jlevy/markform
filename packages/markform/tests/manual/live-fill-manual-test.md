@@ -33,14 +33,16 @@
 
 ## Test 1: Simple Form Fill (OpenAI)
 
-Fill the simple form with basic field types using GPT-4o-mini.
+Fill the simple form with basic field types using GPT-5-mini.
 Uses `--roles "*"` to fill all fields (the simple form has user-role fields by default).
+
+**Note**: Use `openai/gpt-5-mini` for all manual testing - it's the recommended model.
 
 ### Command
 
 ```bash
 ./dist/bin.mjs fill examples/simple/simple.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --roles "*" \
   --output /tmp/markform-manual-tests/simple-filled.form.md \
   --record-fill \
@@ -53,7 +55,7 @@ Uses `--roles "*"` to fill all fields (the simple form has user-role fields by d
 ⚠️  Warning: Filling all roles including user-designated fields
 Available tools: fill_form, web_search
 Filling form: .../examples/simple/simple.form.md
-Agent: live (openai/gpt-4o-mini)
+Agent: live (openai/gpt-5-mini)
 Turn 1: 10 issue(s): age (missing), categories (missing), ...
   → 10 patches (tokens: ↓XXXX ↑XXX):
     age (number) = 42
@@ -72,7 +74,7 @@ Form written to: /tmp/markform-manual-tests/simple-filled.form.md
 
 Fill completed in 16.2s (0 turns)
 
-Tokens:  12,295 input / 519 output (openai/openai/gpt-4o-mini)
+Tokens:  12,295 input / 519 output (openai/openai/gpt-5-mini)
 Tools:   0 calls
 
 Progress: 21/21 fields filled (100%)
@@ -129,7 +131,7 @@ Fill the startup research form which requires web search capabilities.
 
 ```bash
 ./dist/bin.mjs research examples/startup-research/startup-research.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --company "Anthropic" \
   --output /tmp/markform-manual-tests/startup-anthropic.form.md \
   --record-fill
@@ -140,7 +142,7 @@ Fill the startup research form which requires web search capabilities.
 ```bash
 # If research command not available, use fill with pre-filled company name
 ./dist/bin.mjs fill examples/startup-research/startup-research.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --output /tmp/markform-manual-tests/startup-filled.form.md \
   --record-fill
 ```
@@ -149,7 +151,7 @@ Fill the startup research form which requires web search capabilities.
 
 ```
 Filling form: .../startup-research.form.md
-Agent: openai/gpt-4o-mini
+Agent: openai/gpt-5-mini
 Turn 1: X issues
 ...
 Form completed in N turn(s)
@@ -158,7 +160,7 @@ Form written to: /tmp/markform-manual-tests/startup-filled.form.md
 
 Fill completed in Xms (N turns)
 
-Tokens:  XXXX input / XXXX output (openai/gpt-4o-mini)
+Tokens:  XXXX input / XXXX output (openai/gpt-5-mini)
 Tools:   N calls (N succeeded)
 
 Progress: X/Y fields filled (XX%)
@@ -182,7 +184,7 @@ Verify `--quiet` suppresses the FillRecord summary.
 
 ```bash
 ./dist/bin.mjs fill examples/simple/simple.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --output /tmp/markform-manual-tests/simple-quiet.form.md \
   --quiet
 ```
@@ -200,7 +202,7 @@ Should show minimal output with NO FillRecord summary:
 ```bash
 # This should return nothing (no summary lines)
 ./dist/bin.mjs fill examples/simple/simple.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --output /tmp/markform-manual-tests/simple-quiet2.form.md \
   --quiet 2>&1 | grep -E "^(Fill completed|Tokens:|Tools:|Progress:)"
 ```
@@ -215,7 +217,7 @@ Verify the `--record-fill` flag creates a complete FillRecord JSON sidecar.
 
 ```bash
 ./dist/bin.mjs fill examples/simple/simple.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --output /tmp/markform-manual-tests/simple-record.form.md \
   --record-fill
 ```
@@ -254,7 +256,7 @@ The sidecar should contain:
   "durationMs": 1234,
   "status": "completed",
   "provider": "openai",
-  "model": "gpt-4o-mini",
+  "model": "gpt-5-mini",
   "tokenUsage": {
     "inputTokens": 1234,
     "outputTokens": 567
@@ -284,7 +286,7 @@ Verify graceful handling of API errors.
 
 ```bash
 OPENAI_API_KEY=invalid-key ./dist/bin.mjs fill examples/simple/simple.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --output /tmp/markform-manual-tests/simple-error.form.md 2>&1
 ```
 
@@ -304,7 +306,7 @@ Compare fill behavior across different providers (if keys available).
 
 ```bash
 ./dist/bin.mjs fill examples/simple/simple.form.md \
-  --model openai/gpt-4o-mini \
+  --model openai/gpt-5-mini \
   --output /tmp/markform-manual-tests/simple-openai.form.md \
   --record-fill
 ```
