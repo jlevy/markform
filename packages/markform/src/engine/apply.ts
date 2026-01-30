@@ -266,8 +266,9 @@ function typeMismatchError(index: number, op: string, field: Field): PatchError 
  * @param value - The string value to check
  * @returns The detected sentinel type ('skip' | 'abort') or null if no sentinel found
  */
-function detectEmbeddedSentinel(value: string | null | undefined): 'skip' | 'abort' | null {
-  if (value == null) return null;
+function detectEmbeddedSentinel(value: unknown): 'skip' | 'abort' | null {
+  // Guard against non-string values (e.g., numbers/objects from untyped JSON input)
+  if (value == null || typeof value !== 'string') return null;
 
   // First try exact case match using parseSentinel (canonical format)
   const sentinel = parseSentinel(value);
