@@ -28,6 +28,21 @@ timeline—in an elegant, easy-to-understand format.
 - **Cost calculation**: We show tokens, but leave cost calculation to the client
 - **Comparison**: Comparing multiple fill records is out of scope
 
+## Scope: All Fill Record Statuses
+
+The serve command will **primarily** show completed fill records, but the visualization
+must handle all four FillRecord status values:
+
+| Status      | When It Occurs                              | Visualization Needs |
+|-------------|---------------------------------------------|---------------------|
+| `completed` | Form fill finished successfully             | Standard display    |
+| `partial`   | Hit max_turns before completing             | Warning banner, show progress gap |
+| `cancelled` | User aborted via AbortSignal                | Cancelled banner, show what was done |
+| `failed`    | Error during fill (see prerequisites below) | Error banner with message |
+
+For debugging and analysis, partial/cancelled/failed fill records are often **more
+valuable** than completed ones—they show what went wrong and where.
+
 ## Background
 
 ### Current State
@@ -92,24 +107,25 @@ A syntax-highlighted YAML view with interactive tree navigation.
 ### Option B: Card-Based Dashboard
 
 A structured dashboard with distinct sections/cards for each data category.
+Organized to mirror the FillRecord data structure: **summary data first, details after**.
 
 **Approach:**
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ Fill Summary                                            │
+│ Fill Summary (aggregated metrics)                       │
 │ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────────┐ │
-│ │ 3 turns │ │ 2.4s    │ │ 89%     │ │ 5 tool calls    │ │
-│ │ Total   │ │ Duration│ │ Success │ │ 4 web searches  │ │
+│ │ 3 turns │ │ 12.4s   │ │ 86%     │ │ 5 tool calls    │ │
+│ │ Total   │ │ Duration│ │ Filled  │ │ 4 web searches  │ │
 │ └─────────┘ └─────────┘ └─────────┘ └─────────────────┘ │
 ├─────────────────────────────────────────────────────────┤
 │ Timing Breakdown                 Token Usage            │
 │ ┌──────────────────────────┐     ┌────────────────────┐ │
-│ │ ████████░░░░░░░░░░░░░░░░ │     │ Input:  2,450      │ │
-│ │ LLM: 55% | Tools: 41%    │     │ Output:   890      │ │
-│ │ Overhead: 4%              │     │ Total:  3,340      │ │
+│ │ ████████████░░░░░░░░░░░░ │     │ Input:   2,450     │ │
+│ │ LLM: 6.8s | Tools: 5.1s  │     │ Output:    890     │ │
+│ │ Overhead: 0.5s           │     │ Total:   3,340     │ │
 │ └──────────────────────────┘     └────────────────────┘ │
 ├─────────────────────────────────────────────────────────┤
-│ Tool Summary                                            │
+│ Tool Summary (aggregated stats by tool)                 │
 │ ┌───────────────┬────────┬─────────┬─────────┬────────┐ │
 │ │ Tool          │ Calls  │ Success │ Avg     │ p95    │ │
 │ ├───────────────┼────────┼─────────┼─────────┼────────┤ │
@@ -117,7 +133,7 @@ A structured dashboard with distinct sections/cards for each data category.
 │ │ fill_form     │ 1      │ 100%    │ 50ms    │ 50ms   │ │
 │ └───────────────┴────────┴─────────┴─────────┴────────┘ │
 ├─────────────────────────────────────────────────────────┤
-│ ▼ Timeline (3 turns)                                    │
+│ ▼ Timeline (detailed turn-by-turn history)              │
 │   ┌─────────────────────────────────────────────────┐   │
 │   │ Turn 1 • 2.1s • 5 tool calls                    │   │
 │   │   ▼ web_search: "CEO of Acme Corp" → 8 results  │   │
@@ -126,6 +142,8 @@ A structured dashboard with distinct sections/cards for each data category.
 │   └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**Note:** Timing uses **absolute durations** (6.8s, 5.1s) rather than percentages for clarity.
 
 **Pros:**
 - Purpose-built UI, easier to scan quickly
@@ -168,43 +186,59 @@ An interactive timeline using D3.js for rich data visualization.
 ### Option D: Hybrid Approach (Recommended)
 
 Combine Options A and B: A card-based dashboard with expandable sections that can
-reveal raw YAML/JSON data.
+reveal raw YAML/JSON data. Structure mirrors the FillRecord schema—**summary aggregates
+first, detailed timeline last**.
 
 **Approach:**
 
-1. **Summary Cards** (always visible):
-   - Status badge (completed/partial/failed)
-   - Duration, turn count, token totals
-   - Progress bar (fields filled)
+1. **Status Banner** (if non-completed):
+   - For `partial`: "Fill incomplete - hit max turns (X/Y fields filled)"
+   - For `cancelled`: "Fill cancelled by user"
+   - For `failed`: "Fill failed: {error message}"
 
-2. **Metric Sections** (collapsible):
-   - Timing breakdown with simple bar visualization (CSS only)
-   - Tool summary table
-   - LLM usage details
+2. **Summary Cards** (always visible):
+   - Status badge (completed/partial/failed/cancelled)
+   - Total duration (absolute: "12.4s")
+   - Turn count
+   - Token totals (input/output)
+   - Progress (fields filled/total)
 
-3. **Timeline Section** (collapsible):
+3. **Timing Breakdown** (collapsible):
+   - Horizontal stacked bar showing LLM/tools/overhead
+   - **Absolute durations** (e.g., "LLM: 6.8s | Tools: 5.1s | Overhead: 0.5s")
+   - Clearer than percentages for understanding actual time spent
+
+4. **Tool Summary Table** (collapsible):
+   - Aggregated per-tool statistics
+   - Call counts, success rates, timing percentiles (avg, p95)
+   - Result counts for applicable tools (web_search)
+
+5. **Timeline Section** (collapsible, collapsed by default for long fills):
    - Turn-by-turn accordion
-   - Each turn shows patches applied, tokens used
-   - Expand to see individual tool calls
+   - Each turn: duration, tokens, patches applied/rejected
+   - Expand to see individual tool calls with inputs/outputs
 
-4. **Raw Data Section** (collapsed by default):
-   - Full JSON with syntax highlighting
-   - Copy button for the entire record
+6. **Raw Data Section** (collapsed by default):
+   - Full YAML with syntax highlighting (reuse `renderYamlContent()` from Values tab)
+   - Copy buttons for both YAML and JSON formats
+   - Consistent styling with existing serve tabs
 
 **Implementation details:**
 - **No external JS libraries**: Pure HTML/CSS with vanilla JS for interactivity
-- **CSS-only visualizations**: Bar charts via flexbox/grid + percentage widths
+- **CSS-only visualizations**: Bar charts via flexbox/grid + proportional widths
 - **Semantic HTML**: Accessible, screen-reader friendly
 - **Mobile responsive**: Cards stack vertically on narrow screens
 
 ## Recommended Design: Option D (Hybrid)
 
-### Visual Mockup
+### Visual Mockup — Completed Fill
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║  Fill Record                                                    [Copy JSON]║
 ╠═══════════════════════════════════════════════════════════════════════════╣
+║                                                                           ║
+║  ══════════════════════════ SUMMARY ══════════════════════════════════    ║
 ║                                                                           ║
 ║  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  ║
 ║  │ ✓ Completed │  │   12.4s     │  │  5 turns    │  │  3,340 tokens   │  ║
@@ -217,11 +251,11 @@ reveal raw YAML/JSON data.
 ║  │ 18/21 fields filled (86%)  •  3 skipped                              │║
 ║  └───────────────────────────────────────────────────────────────────────┘║
 ║                                                                           ║
-║  ▼ Timing Breakdown                                                       ║
+║  ▼ Timing Breakdown (12.4s total)                                         ║
 ║  ┌───────────────────────────────────────────────────────────────────────┐║
-║  │ LLM Calls    ███████████████████████████████░░░░░░░░░░░░░░░░░  55%   │║
-║  │ Tool Exec    █████████████████████████░░░░░░░░░░░░░░░░░░░░░░░  41%   │║
-║  │ Overhead     ███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   4%   │║
+║  │ LLM Calls    ███████████████████████████████░░░░░░░░░░░░░░░░░  6.8s  │║
+║  │ Tool Exec    █████████████████████████░░░░░░░░░░░░░░░░░░░░░░░  5.1s  │║
+║  │ Overhead     ███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0.5s  │║
 ║  └───────────────────────────────────────────────────────────────────────┘║
 ║                                                                           ║
 ║  ▼ Tool Summary                                                           ║
@@ -231,6 +265,8 @@ reveal raw YAML/JSON data.
 ║  │ web_search    │   4   │  100%   │  1.2s  │  2.1s  │ 23 total, 0 empty│║
 ║  │ fill_form     │   1   │  100%   │  50ms  │  50ms  │ —                │║
 ║  └───────────────────────────────────────────────────────────────────────┘║
+║                                                                           ║
+║  ══════════════════════════ DETAILS ══════════════════════════════════    ║
 ║                                                                           ║
 ║  ▼ Timeline (5 turns)                                                     ║
 ║  ┌───────────────────────────────────────────────────────────────────────┐║
@@ -243,12 +279,53 @@ reveal raw YAML/JSON data.
 ║  │   ...                                                                 │║
 ║  └───────────────────────────────────────────────────────────────────────┘║
 ║                                                                           ║
-║  ▶ Raw JSON                                                               ║
+║  ▶ Raw YAML                                                    [Copy JSON]║
 ║                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝
 ```
 
+### Visual Mockup — Partial Fill (max_turns hit)
+
+```
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  Fill Record                                                    [Copy JSON]║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║  ┌───────────────────────────────────────────────────────────────────────┐║
+║  │ ⚠️  PARTIAL: Hit max turns (10) before completion                     │║
+║  │     12/21 fields remain unfilled                                      │║
+║  └───────────────────────────────────────────────────────────────────────┘║
+║                                                                           ║
+║  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  ║
+║  │ ⚠ Partial   │  │   45.2s     │  │  10 turns   │  │  12,450 tokens  │  ║
+║  │   Status    │  │  Duration   │  │  (max)      │  │  10.2k in/2.2k out║
+║  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘║
+║  ...                                                                      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+```
+
+### Visual Mockup — Failed Fill
+
+```
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  Fill Record                                                    [Copy JSON]║
+╠═══════════════════════════════════════════════════════════════════════════╣
+║  ┌───────────────────────────────────────────────────────────────────────┐║
+║  │ ❌ FAILED: Rate limit exceeded (429) after 3 turns                    │║
+║  │    Error: API rate limit exceeded. Please retry after 60 seconds.    │║
+║  └───────────────────────────────────────────────────────────────────────┘║
+║                                                                           ║
+║  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  ║
+║  │ ❌ Failed   │  │   8.3s      │  │  3 turns    │  │  2,100 tokens   │  ║
+║  │   Status    │  │  Duration   │  │  (stopped)  │  │  1.8k in/300 out │ ║
+║  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘║
+║  ...                                                                      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+```
+
 ### Components
+
+**Design principle:** Reuse existing serve.ts rendering functions where possible for
+UI consistency and reduced code.
 
 1. **FillRecord Tab Handler** (`serve.ts`)
    - Detect `.fill.json` sidecar file when serving a form
@@ -260,18 +337,23 @@ reveal raw YAML/JSON data.
    - Generates HTML with embedded CSS for the dashboard
    - Uses semantic HTML for accessibility
 
-3. **CSS Styles** (embedded in HTML)
+3. **Reused Components** (from existing serve.ts):
+   - `renderYamlContent()` — For Raw YAML section (same as Values tab)
+   - `escapeHtml()` — HTML escaping utility
+   - Existing table styles (`.data-table`) — For tool summary table
+   - Tab content container styles (`.tab-content`)
+
+4. **New CSS Styles** (embedded, minimal additions):
    - `.fill-record-dashboard`: Main container
    - `.metric-card`: Status, duration, turns, tokens cards
-   - `.progress-bar`: Field completion progress
-   - `.timing-bar`: Horizontal stacked bar for timing
-   - `.tool-table`: Tool summary statistics
+   - `.status-banner`: Warning/error banner for non-completed fills
+   - `.progress-bar`: Field completion progress (simple div with percentage width)
+   - `.timing-bar`: Horizontal bar segments (flexbox)
    - `.timeline-accordion`: Expandable turn list
-   - `.tool-call-item`: Individual tool call display
 
-4. **JavaScript** (minimal, embedded)
+5. **JavaScript** (minimal, embedded)
    - Accordion expand/collapse for sections
-   - Copy JSON to clipboard functionality
+   - Copy to clipboard (YAML and JSON formats)
    - No external dependencies
 
 ### API Changes
@@ -299,7 +381,41 @@ function renderFillRecordContent(record: FillRecord): string;
 
 ## Implementation Plan
 
-### Phase 1: Core Implementation
+### Phase 1: Error Finalization (Fill Record on Failure)
+
+Code investigation reveals **gaps in partial/failed fill record handling** that must
+be fixed for the visualization to be useful for debugging failed fills.
+
+**Current State:**
+
+| Status      | Currently Supported? | Notes |
+|-------------|---------------------|-------|
+| `completed` | ✅ Yes | Works correctly |
+| `partial`   | ✅ Yes | Set when max_turns hit |
+| `cancelled` | ✅ Yes | Set when AbortSignal fires |
+| `failed`    | ❌ No  | **Never used** despite being defined in schema |
+
+**Tasks:**
+
+- [ ] **Gap 1: Add `failed` status support in programmaticFill**
+  - Location: `packages/markform/src/harness/programmaticFill.ts`
+  - Wrap fill execution in try/catch
+  - Call `collector.setStatus('failed', errorMessage)` on caught errors
+  - Include fill record in error result when collector has data
+
+- [ ] **Gap 2: CLI error handler must write fill record**
+  - Location: `packages/markform/src/cli/commands/fill.ts:772`
+  - If collector exists and has recorded events, write `.fill.json` before exit
+  - Preserves debugging data even on failure
+
+- [ ] **Gap 3: Ensure `buildErrorResult` can include FillRecord**
+  - Location: `packages/markform/src/harness/programmaticFill.ts:230`
+  - For early errors (parse, model resolution): acceptable to have no record
+  - For mid-fill errors: must capture whatever was recorded
+
+- [ ] Add tests for partial/failed fill record generation
+
+### Phase 2: Core Visualization
 
 - [ ] Add fill record sidecar detection in serve command
 - [ ] Extend Tab interface to include 'fill-record' tab ID
@@ -315,7 +431,7 @@ function renderFillRecordContent(record: FillRecord): string;
 - [ ] Add CSS styles for dashboard components
 - [ ] Add minimal JavaScript for interactivity (accordion, copy)
 
-### Phase 2: Polish (if needed)
+### Phase 3: Polish (if needed)
 
 - [ ] Mobile responsive layout adjustments
 - [ ] Keyboard navigation for accordion
