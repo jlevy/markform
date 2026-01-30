@@ -26,7 +26,7 @@ import type {
   TableRowResponse,
   TableValue,
 } from './coreTypes.js';
-import { parseSentinel } from './parseSentinels.js';
+import { detectSentinel } from './parseSentinels.js';
 import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
 import { validate } from './validate.js';
 
@@ -256,39 +256,6 @@ function typeMismatchError(index: number, op: string, field: Field): PatchError 
 }
 
 /**
- * Check if a string value contains an embedded sentinel (%SKIP% or %ABORT%).
- * This detects sentinel patterns that should be rejected in patch values -
- * agents should use skip_field/abort_field instead.
- *
- * Uses case-insensitive matching since LLMs may generate lowercase sentinels.
- * First tries exact case using parseSentinel, then falls back to case-insensitive check.
- *
- * @param value - The string value to check
- * @returns The detected sentinel type ('skip' | 'abort') or null if no sentinel found
- */
-function detectEmbeddedSentinel(value: unknown): 'skip' | 'abort' | null {
-  // Guard against non-string values (e.g., numbers/objects from untyped JSON input)
-  if (value == null || typeof value !== 'string') return null;
-
-  // First try exact case match using parseSentinel (canonical format)
-  const sentinel = parseSentinel(value);
-  if (sentinel) {
-    return sentinel.type;
-  }
-
-  // Fall back to case-insensitive check for LLM-generated lowercase variants
-  const trimmed = value.trim().toUpperCase();
-  if (trimmed.startsWith('%SKIP%')) {
-    return 'skip';
-  }
-  if (trimmed.startsWith('%ABORT%')) {
-    return 'abort';
-  }
-
-  return null;
-}
-
-/**
  * Create an error for embedded sentinel in patch value.
  */
 function embeddedSentinelError(
@@ -340,9 +307,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
   // Check for embedded sentinels in string values (issue #119)
   // Agents should use skip_field/abort_field operations instead of embedding sentinels
   if (patch.op === 'set_string' || patch.op === 'set_url' || patch.op === 'set_date') {
-    const sentinelType = detectEmbeddedSentinel(patch.value);
-    if (sentinelType) {
-      return embeddedSentinelError(index, field.id, sentinelType);
+    const sentinel = detectSentinel(patch.value);
+    if (sentinel) {
+      return embeddedSentinelError(index, field.id, sentinel.type);
     }
   }
 
@@ -359,9 +326,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     }
     // Check for embedded sentinels in list items (issue #119)
     for (const item of patch.value) {
-      const sentinelType = detectEmbeddedSentinel(item);
-      if (sentinelType) {
-        return embeddedSentinelError(index, field.id, sentinelType);
+      const sentinel = detectSentinel(item);
+      if (sentinel) {
+        return embeddedSentinelError(index, field.id, sentinel.type);
       }
     }
   } else if (patch.op === 'set_single_select' && field.kind === 'single_select') {
@@ -418,9 +385,9 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     }
     // Check for embedded sentinels in list items (issue #119)
     for (const item of patch.value) {
-      const sentinelType = detectEmbeddedSentinel(item);
-      if (sentinelType) {
-        return embeddedSentinelError(index, field.id, sentinelType);
+      const sentinel = detectSentinel(item);
+      if (sentinel) {
+        return embeddedSentinelError(index, field.id, sentinel.type);
       }
     }
   } else if (patch.op === 'set_table' && field.kind === 'table') {
@@ -531,17 +498,16 @@ function patchValueToCell(value: string | number | null | undefined): CellRespon
     return { state: 'skipped' };
   }
 
+  // Use shared sentinel detection for consistent handling across all patch types
+  const sentinel = detectSentinel(value);
+  if (sentinel) {
+    return sentinel.type === 'skip'
+      ? { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) }
+      : { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) };
+  }
+
   if (typeof value === 'string') {
-    const trimmed = value.trim();
-    const skipMatch = /^%SKIP(?:[:(](.*))?[)]?%$/i.exec(trimmed);
-    if (skipMatch) {
-      return { state: 'skipped', reason: skipMatch[1] };
-    }
-    const abortMatch = /^%ABORT(?:[:(](.*))?[)]?%$/i.exec(trimmed);
-    if (abortMatch) {
-      return { state: 'aborted', reason: abortMatch[1] };
-    }
-    return { state: 'answered', value: trimmed };
+    return { state: 'answered', value: value.trim() };
   }
 
   return { state: 'answered', value };
