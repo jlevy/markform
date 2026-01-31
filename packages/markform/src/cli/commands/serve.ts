@@ -8,6 +8,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Command } from 'commander';
 
 import { exec } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readFile as readFileAsync } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { basename, resolve } from 'node:path';
@@ -19,6 +20,7 @@ import { applyPatches } from '../../engine/apply.js';
 import { parseForm } from '../../engine/parse.js';
 import { formToJsonSchema } from '../../engine/jsonSchema.js';
 import { serializeForm, serializeReport } from '../../engine/serialize.js';
+import type { FillRecord } from '../../harness/fillRecord.js';
 import { toNotesArray, toStructuredValues } from '../lib/exportHelpers.js';
 import { DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
 import type {
@@ -84,18 +86,28 @@ function openBrowser(url: string): void {
 
 /** Represents a tab for navigation */
 interface Tab {
-  id: 'view' | 'form' | 'source' | 'report' | 'values' | 'schema';
+  id: 'view' | 'form' | 'source' | 'report' | 'values' | 'schema' | 'fill-record';
   label: string;
   path: string | null; // Source file path (for source tab) or null for dynamically generated
 }
 
 /**
+ * Get the fill record sidecar path for a form file.
+ * The sidecar is stored as .fill.json next to the form.
+ * For example: form.form.md -> form.fill.json
+ */
+function getFillRecordSidecarPath(formPath: string): string {
+  // Remove .form.md extension and add .fill.json
+  return formPath.replace(/\.form\.md$/, '.fill.json');
+}
+
+/**
  * Build tabs for a form file.
  * All tabs are always present - content is generated dynamically from the form.
- * Tab order: View, Edit, Source, Report, Values, Schema
+ * Tab order: View, Edit, Source, Report, Values, Schema, Fill Record (if sidecar exists)
  */
 function buildFormTabs(formPath: string): Tab[] {
-  return [
+  const tabs: Tab[] = [
     { id: 'view', label: 'View', path: null }, // Generated from form
     { id: 'form', label: 'Edit', path: formPath }, // Interactive editor
     { id: 'source', label: 'Source', path: formPath }, // Form source
@@ -103,6 +115,14 @@ function buildFormTabs(formPath: string): Tab[] {
     { id: 'values', label: 'Values', path: null }, // Generated from form
     { id: 'schema', label: 'Schema', path: null }, // Generated from form
   ];
+
+  // Add Fill Record tab if sidecar file exists
+  const sidecarPath = getFillRecordSidecarPath(formPath);
+  if (existsSync(sidecarPath)) {
+    tabs.push({ id: 'fill-record', label: 'Fill Record', path: sidecarPath });
+  }
+
+  return tabs;
 }
 
 /**
@@ -240,6 +260,23 @@ async function handleRequest(
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
       return;
+    }
+
+    // Fill Record tab - load and render fill record sidecar
+    if (tabId === 'fill-record' && tab?.path) {
+      try {
+        const content = await readFileAsync(tab.path, 'utf-8');
+        const fillRecord = JSON.parse(content) as FillRecord;
+        const html = renderFillRecordContent(fillRecord);
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(html);
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end(`Error loading fill record: ${message}`);
+        return;
+      }
     }
 
     res.writeHead(404);
@@ -2526,4 +2563,250 @@ export function renderJsonContent(content: string): string {
     .replace(/: (null)/g, ': <span class="syn-null">$1</span>');
 
   return `<pre>${highlighted}</pre>`;
+}
+
+/**
+ * Format milliseconds as human-readable duration.
+ */
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms.toFixed(0)}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  const minutes = Math.floor(ms / 60000);
+  const seconds = ((ms % 60000) / 1000).toFixed(0);
+  return `${minutes}m ${seconds}s`;
+}
+
+/**
+ * Format token count with K suffix for large numbers.
+ */
+function formatTokens(count: number): string {
+  if (count >= 10000) return `${(count / 1000).toFixed(1)}k`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+  return count.toLocaleString();
+}
+
+/**
+ * Get status badge HTML with appropriate styling.
+ */
+function getStatusBadge(status: string): string {
+  const statusConfig: Record<string, { color: string; icon: string; label: string }> = {
+    completed: { color: '#22c55e', icon: '✓', label: 'Completed' },
+    partial: { color: '#f59e0b', icon: '⚠', label: 'Partial' },
+    cancelled: { color: '#6b7280', icon: '⊘', label: 'Cancelled' },
+    failed: { color: '#ef4444', icon: '✕', label: 'Failed' },
+  };
+  const config = statusConfig[status] ?? { color: '#6b7280', icon: '?', label: status };
+  return `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 4px; font-weight: 600; background: ${config.color}20; color: ${config.color};">${config.icon} ${config.label}</span>`;
+}
+
+/**
+ * Render fill record content (dashboard-style visualization).
+ * Used for tab content.
+ * @public Exported for testing.
+ */
+export function renderFillRecordContent(record: FillRecord): string {
+  const {
+    status,
+    statusDetail,
+    durationMs,
+    llm,
+    formProgress,
+    timingBreakdown,
+    toolSummary,
+    timeline,
+  } = record;
+
+  // Status banner for non-completed fills
+  let statusBanner = '';
+  if (status !== 'completed') {
+    const bannerColor = status === 'failed' ? '#fef2f2' : '#fffbeb';
+    const bannerBorder = status === 'failed' ? '#ef4444' : '#f59e0b';
+    const bannerIcon = status === 'failed' ? '❌' : '⚠️';
+    const bannerTitle =
+      status === 'failed' ? 'FAILED' : status === 'cancelled' ? 'CANCELLED' : 'PARTIAL';
+    const bannerMsg = statusDetail ?? (status === 'partial' ? 'Did not complete all fields' : '');
+    statusBanner = `
+      <div style="background: ${bannerColor}; border: 1px solid ${bannerBorder}; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+        <strong>${bannerIcon} ${bannerTitle}${bannerMsg ? ':' : ''}</strong>${bannerMsg ? ` ${escapeHtml(bannerMsg)}` : ''}
+      </div>
+    `;
+  }
+
+  // Summary cards
+  const totalTokens = llm.inputTokens + llm.outputTokens;
+  const summaryCards = `
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
+        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Status</div>
+        <div>${getStatusBadge(status)}</div>
+      </div>
+      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
+        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Duration</div>
+        <div style="font-size: 20px; font-weight: 600;">${formatDuration(durationMs)}</div>
+      </div>
+      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
+        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Turns</div>
+        <div style="font-size: 20px; font-weight: 600;">${timeline.length}</div>
+      </div>
+      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
+        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Tokens</div>
+        <div style="font-size: 20px; font-weight: 600;">${formatTokens(totalTokens)}</div>
+        <div style="font-size: 12px; color: #9ca3af;">${formatTokens(llm.inputTokens)} in / ${formatTokens(llm.outputTokens)} out</div>
+      </div>
+    </div>
+  `;
+
+  // Progress bar
+  const totalFields = formProgress.totalFields;
+  const filledFields = formProgress.filledFields;
+  const progressPercent = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+  const progressBar = `
+    <div style="margin-bottom: 24px;">
+      <div style="font-size: 14px; color: #374151; margin-bottom: 8px; font-weight: 500;">Progress</div>
+      <div style="background: #e5e7eb; border-radius: 4px; height: 20px; overflow: hidden;">
+        <div style="background: #3b82f6; height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div>
+      </div>
+      <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">
+        ${filledFields}/${totalFields} fields filled (${progressPercent}%)
+        ${formProgress.skippedFields > 0 ? ` • ${formProgress.skippedFields} skipped` : ''}
+      </div>
+    </div>
+  `;
+
+  // Timing breakdown
+  const llmMs = timingBreakdown.llmTimeMs;
+  const toolMs = timingBreakdown.toolTimeMs;
+  const overheadMs = timingBreakdown.overheadMs;
+  const totalMs = llmMs + toolMs + overheadMs;
+  const timingSection = `
+    <details style="margin-bottom: 24px;" open>
+      <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▼ Timing Breakdown (${formatDuration(totalMs)} total)</summary>
+      <div style="background: #f9fafb; border-radius: 8px; padding: 16px;">
+        ${[
+          { label: 'LLM Calls', ms: llmMs, color: '#3b82f6' },
+          { label: 'Tool Exec', ms: toolMs, color: '#10b981' },
+          { label: 'Overhead', ms: overheadMs, color: '#6b7280' },
+        ]
+          .map(({ label, ms, color }) => {
+            const percent = totalMs > 0 ? (ms / totalMs) * 100 : 0;
+            return `
+            <div style="margin-bottom: 8px;">
+              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                <span>${label}</span>
+                <span style="font-weight: 500;">${formatDuration(ms)}</span>
+              </div>
+              <div style="background: #e5e7eb; border-radius: 2px; height: 8px; overflow: hidden;">
+                <div style="background: ${color}; height: 100%; width: ${percent}%;"></div>
+              </div>
+            </div>
+          `;
+          })
+          .join('')}
+      </div>
+    </details>
+  `;
+
+  // Tool summary table
+  let toolSection = '';
+  if (toolSummary.byTool.length > 0) {
+    const toolRows = toolSummary.byTool
+      .map(
+        (t) => `
+      <tr>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(t.toolName)}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${t.callCount}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${t.successCount === t.callCount ? '100%' : `${Math.round((t.successCount / t.callCount) * 100)}%`}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${formatDuration(t.timing.avgMs)}</td>
+        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${formatDuration(t.timing.p95Ms)}</td>
+      </tr>
+    `,
+      )
+      .join('');
+
+    toolSection = `
+      <details style="margin-bottom: 24px;" open>
+        <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▼ Tool Summary</summary>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background: #f3f4f6;">
+                <th style="padding: 8px 12px; text-align: left; font-weight: 600;">Tool</th>
+                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Calls</th>
+                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Success</th>
+                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Avg</th>
+                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">p95</th>
+              </tr>
+            </thead>
+            <tbody>${toolRows}</tbody>
+          </table>
+        </div>
+      </details>
+    `;
+  }
+
+  // Timeline accordion
+  let timelineSection = '';
+  if (timeline.length > 0) {
+    const timelineItems = timeline
+      .map((turn) => {
+        const turnTokens = turn.tokens.input + turn.tokens.output;
+        const toolCallsList = turn.toolCalls
+          .map((tc) => {
+            const resultSummary = tc.result?.error
+              ? `<span style="color: #ef4444;">Error: ${escapeHtml(tc.result.error)}</span>`
+              : tc.result?.resultCount !== undefined
+                ? `${tc.result.resultCount} results`
+                : 'OK';
+            return `<li style="margin: 4px 0; font-size: 12px; color: #6b7280;">
+          ${tc.success ? '✓' : '✕'} <strong>${escapeHtml(tc.tool)}</strong>: ${resultSummary} (${formatDuration(tc.durationMs)})
+        </li>`;
+          })
+          .join('');
+
+        return `
+        <details style="margin-bottom: 8px; background: #f9fafb; border-radius: 4px;">
+          <summary style="cursor: pointer; padding: 12px; font-size: 13px;">
+            <strong>Turn ${turn.turnNumber}</strong> • Order ${turn.order} • ${formatDuration(turn.durationMs)} • ${formatTokens(turnTokens)} tokens
+            ${turn.patchesApplied > 0 ? ` • ${turn.patchesApplied} patches` : ''}
+            ${turn.patchesRejected > 0 ? ` <span style="color: #ef4444;">(${turn.patchesRejected} rejected)</span>` : ''}
+          </summary>
+          <div style="padding: 0 12px 12px 12px;">
+            ${turn.toolCalls.length > 0 ? `<ul style="margin: 0; padding-left: 20px;">${toolCallsList}</ul>` : '<span style="color: #9ca3af; font-size: 12px;">No tool calls</span>'}
+          </div>
+        </details>
+      `;
+      })
+      .join('');
+
+    timelineSection = `
+      <details style="margin-bottom: 24px;">
+        <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▶ Timeline (${timeline.length} turns)</summary>
+        ${timelineItems}
+      </details>
+    `;
+  }
+
+  // Raw YAML section
+  const yamlContent = YAML.stringify(record, { lineWidth: 0 });
+  const rawSection = `
+    <details style="margin-bottom: 24px;">
+      <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▶ Raw YAML</summary>
+      <div style="position: relative;">
+        <button onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent)" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">Copy</button>
+        ${renderYamlContent(yamlContent)}
+      </div>
+    </details>
+  `;
+
+  return `
+    <div style="font-family: system-ui, -apple-system, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto;">
+      ${statusBanner}
+      ${summaryCards}
+      ${progressBar}
+      ${timingSection}
+      ${toolSection}
+      ${timelineSection}
+      ${rawSection}
+    </div>
+  `;
 }
