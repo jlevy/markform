@@ -445,12 +445,12 @@ be fixed for the visualization to be useful for debugging failed fills.
 
 Commit: `feat: add Fill Record tab to serve command`
 
-### Phase 3: Polish (if needed)
+### Phase 3: Polish (completed 2026-01-31)
 
-- [ ] Mobile responsive layout adjustments
-- [ ] Keyboard navigation for accordion
-- [ ] Dark mode support (matching serve's existing theme)
-- [ ] Loading states for async tab content
+- [x] Mobile responsive layout adjustments (CSS grid with breakpoints)
+- [x] Keyboard navigation for accordion (native `<details>` provides this)
+- [x] Dark mode support (CSS custom properties with `prefers-color-scheme`)
+- [ ] Loading states for async tab content (not needed - static content)
 
 ## Testing Strategy
 
@@ -499,21 +499,28 @@ Commit: `feat: add Fill Record tab to serve command`
 
 ### Decisions Made During Implementation
 
-1. **Inline CSS instead of external classes**: Used inline styles for the dashboard
-   components to keep the implementation self-contained and avoid adding to the
-   existing CSS. This can be refactored to use classes if the serve command gets
-   a proper CSS framework.
+1. **CSS custom properties for theming**: Used CSS custom properties (`--fr-*` prefix)
+   for all colors and spacing. This enables theming and provides automatic dark mode
+   support via `@media (prefers-color-scheme: dark)`. The styles are extracted into
+   a reusable `FILL_RECORD_STYLES` constant.
 
-2. **Native HTML details/summary for accordions**: Used `<details>` and `<summary>`
+2. **BEM-like class naming**: All classes use `.fr-*` prefix (fill-record) with
+   BEM-like naming (`.fr-card`, `.fr-badge--completed`, etc.) for maintainability
+   and to avoid conflicts with serve's existing styles.
+
+3. **Native HTML details/summary for accordions**: Used `<details>` and `<summary>`
    elements for collapsible sections instead of custom JavaScript. This provides
    accessibility and keyboard navigation out of the box.
 
-3. **YAML for raw data**: Used YAML instead of JSON for the raw data section
+4. **YAML for raw data**: Used YAML instead of JSON for the raw data section
    (reusing `renderYamlContent()`) for consistency with the Values tab and better
    readability.
 
-4. **Sidecar path convention**: The fill record sidecar is expected at
+5. **Sidecar path convention**: The fill record sidecar is expected at
    `<form-name>.fill.json` (replacing `.form.md` with `.fill.json`).
+
+6. **Exported utilities**: `formatDuration()` and `formatTokens()` are exported
+   for reuse in other visualizations or CLI output.
 
 ### Known Limitations
 
