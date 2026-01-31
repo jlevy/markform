@@ -266,18 +266,6 @@
   }
 </style>
 
-    
-    <script>
-      function frCopyYaml(btn) {
-        const pre = btn.parentElement.querySelector('pre');
-        navigator.clipboard.writeText(pre.textContent).then(() => {
-          const orig = btn.textContent;
-          btn.textContent = 'Copied!';
-          setTimeout(() => btn.textContent = orig, 1500);
-        });
-      }
-    </script>
-  
     <div class="fr-dashboard">
       <div class="fr-banner fr-banner--warning"><strong>⚠ PARTIAL:</strong> max_turns</div>
       
