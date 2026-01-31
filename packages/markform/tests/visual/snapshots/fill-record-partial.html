@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partial Fill Record</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f5f5f5;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #111827;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+    
+<style>
+  .fr-dashboard {
+    --fr-bg: #ffffff;
+    --fr-bg-muted: #f9fafb;
+    --fr-bg-subtle: #f3f4f6;
+    --fr-border: #e5e7eb;
+    --fr-text: #111827;
+    --fr-text-muted: #6b7280;
+    --fr-text-subtle: #9ca3af;
+    --fr-primary: #3b82f6;
+    --fr-success: #22c55e;
+    --fr-warning: #f59e0b;
+    --fr-error: #ef4444;
+    --fr-info: #6b7280;
+
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    color: var(--fr-text);
+    line-height: 1.5;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .fr-dashboard {
+      --fr-bg: #1f2937;
+      --fr-bg-muted: #374151;
+      --fr-bg-subtle: #4b5563;
+      --fr-border: #4b5563;
+      --fr-text: #f9fafb;
+      --fr-text-muted: #9ca3af;
+      --fr-text-subtle: #6b7280;
+    }
+  }
+
+  .fr-banner {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .fr-banner--error {
+    background: color-mix(in srgb, var(--fr-error) 10%, var(--fr-bg));
+    border: 1px solid var(--fr-error);
+  }
+  .fr-banner--warning {
+    background: color-mix(in srgb, var(--fr-warning) 10%, var(--fr-bg));
+    border: 1px solid var(--fr-warning);
+  }
+
+  .fr-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .fr-card {
+    padding: 16px;
+    background: var(--fr-bg-muted);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .fr-card__label {
+    font-size: 13px;
+    color: var(--fr-text-muted);
+    margin-bottom: 4px;
+  }
+  .fr-card__value {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .fr-card__sub {
+    font-size: 12px;
+    color: var(--fr-text-subtle);
+    margin-top: 2px;
+  }
+
+  .fr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .fr-badge--completed { background: color-mix(in srgb, var(--fr-success) 15%, transparent); color: var(--fr-success); }
+  .fr-badge--partial { background: color-mix(in srgb, var(--fr-warning) 15%, transparent); color: var(--fr-warning); }
+  .fr-badge--cancelled { background: color-mix(in srgb, var(--fr-info) 15%, transparent); color: var(--fr-info); }
+  .fr-badge--failed { background: color-mix(in srgb, var(--fr-error) 15%, transparent); color: var(--fr-error); }
+
+  .fr-section {
+    margin-bottom: 24px;
+  }
+  .fr-section__title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fr-text);
+    margin-bottom: 8px;
+  }
+
+  .fr-progress {
+    background: var(--fr-border);
+    border-radius: 4px;
+    height: 20px;
+    overflow: hidden;
+  }
+  .fr-progress__bar {
+    background: var(--fr-primary);
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .fr-progress__text {
+    font-size: 13px;
+    color: var(--fr-text-muted);
+    margin-top: 4px;
+  }
+
+  .fr-timing-bar {
+    margin-bottom: 8px;
+  }
+  .fr-timing-bar__header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .fr-timing-bar__track {
+    background: var(--fr-border);
+    border-radius: 2px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .fr-timing-bar__fill {
+    height: 100%;
+  }
+  .fr-timing-bar__fill--llm { background: var(--fr-primary); }
+  .fr-timing-bar__fill--tool { background: var(--fr-success); }
+  .fr-timing-bar__fill--overhead { background: var(--fr-info); }
+
+  .fr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .fr-table th {
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    background: var(--fr-bg-subtle);
+  }
+  .fr-table th:not(:first-child) { text-align: center; }
+  .fr-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--fr-border);
+  }
+  .fr-table td:not(:first-child) { text-align: center; }
+
+  .fr-details {
+    border: none;
+    background: none;
+  }
+  .fr-details summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fr-text);
+    padding: 8px 0;
+    list-style: none;
+  }
+  .fr-details summary::-webkit-details-marker { display: none; }
+  .fr-details summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s;
+    font-size: 10px;
+  }
+  .fr-details[open] summary::before {
+    transform: rotate(90deg);
+  }
+  .fr-details__content {
+    background: var(--fr-bg-muted);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+
+  .fr-turn {
+    margin-bottom: 8px;
+    background: var(--fr-bg-muted);
+    border-radius: 4px;
+  }
+  .fr-turn summary {
+    padding: 12px;
+    font-size: 13px;
+  }
+  .fr-turn__content {
+    padding: 0 12px 12px;
+  }
+  .fr-turn__tools {
+    margin: 0;
+    padding-left: 20px;
+    list-style: none;
+  }
+  .fr-turn__tool {
+    margin: 4px 0;
+    font-size: 12px;
+    color: var(--fr-text-muted);
+  }
+  .fr-turn__tool--error { color: var(--fr-error); }
+
+  .fr-raw {
+    position: relative;
+  }
+  .fr-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    background: var(--fr-bg-subtle);
+    border: 1px solid var(--fr-border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--fr-text-muted);
+    transition: all 0.15s;
+  }
+  .fr-copy-btn:hover {
+    background: var(--fr-border);
+    color: var(--fr-text);
+  }
+  .fr-copy-btn:active {
+    transform: scale(0.95);
+  }
+
+  @media (max-width: 600px) {
+    .fr-dashboard { padding: 12px; }
+    .fr-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .fr-card { padding: 12px; }
+    .fr-card__value { font-size: 18px; }
+    .fr-table { font-size: 12px; }
+    .fr-table th, .fr-table td { padding: 6px 8px; }
+  }
+</style>
+
+    
+    <script>
+      function frCopyYaml(btn) {
+        const pre = btn.parentElement.querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = orig, 1500);
+        });
+      }
+    </script>
+  
+    <div class="fr-dashboard">
+      <div class="fr-banner fr-banner--warning"><strong>⚠ PARTIAL:</strong> max_turns</div>
+      
+    <div class="fr-cards">
+      <div class="fr-card">
+        <div class="fr-card__label">Status</div>
+        <div><span class="fr-badge fr-badge--partial">⚠ Partial</span></div>
+      </div>
+      <div class="fr-card">
+        <div class="fr-card__label">Duration</div>
+        <div class="fr-card__value">12.4s</div>
+      </div>
+      <div class="fr-card">
+        <div class="fr-card__label">Turns</div>
+        <div class="fr-card__value">3</div>
+      </div>
+      <div class="fr-card">
+        <div class="fr-card__label">Tokens</div>
+        <div class="fr-card__value">6.1k</div>
+        <div class="fr-card__sub">4.3k in / 1.9k out</div>
+      </div>
+    </div>
+  
+      
+    <div class="fr-section">
+      <div class="fr-section__title">Progress</div>
+      <div class="fr-progress">
+        <div class="fr-progress__bar" style="width: 78%"></div>
+      </div>
+      <div class="fr-progress__text">
+        14/18 fields filled (78%) • 2 skipped
+      </div>
+    </div>
+  
+      
+    <details class="fr-details fr-section" open>
+      <summary>Timing Breakdown (12.4s total)</summary>
+      <div class="fr-details__content">
+      <div class="fr-timing-bar">
+        <div class="fr-timing-bar__header">
+          <span>LLM Calls</span>
+          <span style="font-weight: 500">6.8s</span>
+        </div>
+        <div class="fr-timing-bar__track">
+          <div class="fr-timing-bar__fill fr-timing-bar__fill--llm" style="width: 54.61847389558233%"></div>
+        </div>
+      </div>
+    
+      <div class="fr-timing-bar">
+        <div class="fr-timing-bar__header">
+          <span>Tool Exec</span>
+          <span style="font-weight: 500">5.1s</span>
+        </div>
+        <div class="fr-timing-bar__track">
+          <div class="fr-timing-bar__fill fr-timing-bar__fill--tool" style="width: 40.963855421686745%"></div>
+        </div>
+      </div>
+    
+      <div class="fr-timing-bar">
+        <div class="fr-timing-bar__header">
+          <span>Overhead</span>
+          <span style="font-weight: 500">550ms</span>
+        </div>
+        <div class="fr-timing-bar__track">
+          <div class="fr-timing-bar__fill fr-timing-bar__fill--overhead" style="width: 4.417670682730924%"></div>
+        </div>
+      </div>
+    </div>
+    </details>
+  
+      
+      <details class="fr-details fr-section" open>
+        <summary>Tool Summary</summary>
+        <div style="overflow-x: auto; margin-top: 8px;">
+          <table class="fr-table">
+            <thead><tr><th>Tool</th><th>Calls</th><th>Success</th><th>Avg</th><th>p95</th></tr></thead>
+            <tbody>
+      <tr>
+        <td>web_search</td>
+        <td>5</td>
+        <td>80%</td>
+        <td>920ms</td>
+        <td>1.6s</td>
+      </tr>
+    
+      <tr>
+        <td>fill_form</td>
+        <td>3</td>
+        <td>100%</td>
+        <td>167ms</td>
+        <td>210ms</td>
+      </tr>
+    </tbody>
+          </table>
+        </div>
+      </details>
+    
+      
+      <details class="fr-details fr-section">
+        <summary>Timeline (3 turns)</summary>
+        <div style="margin-top: 8px;">
+        <details class="fr-turn">
+          <summary><strong>Turn 1</strong> • Order 1 • 4.4s • 2.1k tokens • 6 patches <span style="color: var(--fr-error)">(1 rejected)</span></summary>
+          <div class="fr-turn__content">
+            <ul class="fr-turn__tools"><li class="fr-turn__tool">✓ <strong>web_search</strong>: 8 results (850ms)</li><li class="fr-turn__tool">✓ <strong>web_search</strong>: 12 results (1.2s)</li><li class="fr-turn__tool">✓ <strong>fill_form</strong>: OK (160ms)</li></ul>
+          </div>
+        </details>
+      
+        <details class="fr-turn">
+          <summary><strong>Turn 2</strong> • Order 1 • 3.6s • 2.0k tokens • 8 patches</summary>
+          <div class="fr-turn__content">
+            <ul class="fr-turn__tools"><li class="fr-turn__tool fr-turn__tool--error">✕ <strong>web_search</strong>: Error: Rate limit exceeded, retrying... (450ms)</li><li class="fr-turn__tool">✓ <strong>web_search</strong>: 5 results (1.8s)</li><li class="fr-turn__tool">✓ <strong>fill_form</strong>: OK (220ms)</li></ul>
+          </div>
+        </details>
+      
+        <details class="fr-turn">
+          <summary><strong>Turn 3</strong> • Order 1 • 4.0s • 2.0k tokens • 4 patches</summary>
+          <div class="fr-turn__content">
+            <ul class="fr-turn__tools"><li class="fr-turn__tool">✓ <strong>web_search</strong>: 3 results (300ms)</li><li class="fr-turn__tool">✓ <strong>fill_form</strong>: OK (120ms)</li></ul>
+          </div>
+        </details>
+      </div>
+      </details>
+    
+      
+    <details class="fr-details fr-section">
+      <summary>Raw YAML</summary>
+      <div class="fr-raw" style="margin-top: 8px;">
+        <button class="fr-copy-btn" onclick="frCopyYaml(this)">Copy</button>
+        <pre><span class="syn-key">sessionId</span>: <span class="syn-string">sess-test-partial</span>
+<span class="syn-key">startedAt</span>: <span class="syn-string">2026-01-30T14:30:00.000Z</span>
+<span class="syn-key">completedAt</span>: <span class="syn-string">2026-01-30T14:30:12.450Z</span>
+<span class="syn-key">durationMs</span>: <span class="syn-number">12450</span>
+<span class="syn-key">form</span>:
+<span class="syn-key">  id</span>: <span class="syn-string">startup_research</span>
+<span class="syn-key">  title</span>: <span class="syn-string">Startup Deep Research</span>
+<span class="syn-key">  description</span>: <span class="syn-string">Comprehensive research form for startup analysis</span>
+<span class="syn-key">  structure</span>:
+<span class="syn-key">    groupCount</span>: <span class="syn-number">5</span>
+<span class="syn-key">    fieldCount</span>: <span class="syn-number">18</span>
+<span class="syn-key">    optionCount</span>: <span class="syn-number">8</span>
+<span class="syn-key">    columnCount</span>: <span class="syn-number">4</span>
+<span class="syn-key">    fieldCountByKind</span>:
+<span class="syn-key">      string</span>: <span class="syn-number">6</span>
+<span class="syn-key">      number</span>: <span class="syn-number">4</span>
+<span class="syn-key">      string_list</span>: <span class="syn-number">0</span>
+<span class="syn-key">      checkboxes</span>: <span class="syn-number">1</span>
+<span class="syn-key">      single_select</span>: <span class="syn-number">1</span>
+<span class="syn-key">      multi_select</span>: <span class="syn-number">0</span>
+<span class="syn-key">      url</span>: <span class="syn-number">3</span>
+<span class="syn-key">      url_list</span>: <span class="syn-number">1</span>
+<span class="syn-key">      date</span>: <span class="syn-number">0</span>
+<span class="syn-key">      year</span>: <span class="syn-number">0</span>
+<span class="syn-key">      table</span>: <span class="syn-number">2</span>
+<span class="syn-key">    groupsById</span>: <span class="syn-string">{}</span>
+<span class="syn-key">    fieldsById</span>: <span class="syn-string">{}</span>
+<span class="syn-key">    optionsById</span>: <span class="syn-string">{}</span>
+<span class="syn-key">    columnsById</span>: <span class="syn-string">{}</span>
+<span class="syn-key">status</span>: <span class="syn-string">partial</span>
+<span class="syn-key">formProgress</span>:
+<span class="syn-key">  totalFields</span>: <span class="syn-number">18</span>
+<span class="syn-key">  requiredFields</span>: <span class="syn-number">12</span>
+<span class="syn-key">  unansweredFields</span>: <span class="syn-number">4</span>
+<span class="syn-key">  answeredFields</span>: <span class="syn-number">14</span>
+<span class="syn-key">  skippedFields</span>: <span class="syn-number">2</span>
+<span class="syn-key">  abortedFields</span>: <span class="syn-number">0</span>
+<span class="syn-key">  validFields</span>: <span class="syn-number">18</span>
+<span class="syn-key">  invalidFields</span>: <span class="syn-number">0</span>
+<span class="syn-key">  emptyFields</span>: <span class="syn-number">4</span>
+<span class="syn-key">  filledFields</span>: <span class="syn-number">14</span>
+<span class="syn-key">  emptyRequiredFields</span>: <span class="syn-number">0</span>
+<span class="syn-key">  totalNotes</span>: <span class="syn-number">3</span>
+<span class="syn-key">llm</span>:
+<span class="syn-key">  provider</span>: <span class="syn-string">anthropic</span>
+<span class="syn-key">  model</span>: <span class="syn-string">claude-sonnet-4-20250514</span>
+<span class="syn-key">  totalCalls</span>: <span class="syn-number">3</span>
+<span class="syn-key">  inputTokens</span>: <span class="syn-number">4250</span>
+<span class="syn-key">  outputTokens</span>: <span class="syn-number">1890</span>
+<span class="syn-key">toolSummary</span>:
+<span class="syn-key">  totalCalls</span>: <span class="syn-number">8</span>
+<span class="syn-key">  successfulCalls</span>: <span class="syn-number">7</span>
+<span class="syn-key">  failedCalls</span>: <span class="syn-number">1</span>
+<span class="syn-key">  successRate</span>: <span class="syn-number">87.5</span>
+<span class="syn-key">  totalDurationMs</span>: <span class="syn-number">5100</span>
+<span class="syn-key">  byTool</span>:
+    - <span class="syn-string">toolName: web_search</span>
+<span class="syn-key">      callCount</span>: <span class="syn-number">5</span>
+<span class="syn-key">      successCount</span>: <span class="syn-number">4</span>
+<span class="syn-key">      failureCount</span>: <span class="syn-number">1</span>
+<span class="syn-key">      successRate</span>: <span class="syn-number">80</span>
+<span class="syn-key">      timing</span>:
+<span class="syn-key">        minMs</span>: <span class="syn-number">450</span>
+<span class="syn-key">        maxMs</span>: <span class="syn-number">1800</span>
+<span class="syn-key">        avgMs</span>: <span class="syn-number">920</span>
+<span class="syn-key">        p50Ms</span>: <span class="syn-number">850</span>
+<span class="syn-key">        p95Ms</span>: <span class="syn-number">1650</span>
+<span class="syn-key">        totalMs</span>: <span class="syn-number">4600</span>
+    - <span class="syn-string">toolName: fill_form</span>
+<span class="syn-key">      callCount</span>: <span class="syn-number">3</span>
+<span class="syn-key">      successCount</span>: <span class="syn-number">3</span>
+<span class="syn-key">      failureCount</span>: <span class="syn-number">0</span>
+<span class="syn-key">      successRate</span>: <span class="syn-number">100</span>
+<span class="syn-key">      timing</span>:
+<span class="syn-key">        minMs</span>: <span class="syn-number">120</span>
+<span class="syn-key">        maxMs</span>: <span class="syn-number">220</span>
+<span class="syn-key">        avgMs</span>: <span class="syn-number">167</span>
+<span class="syn-key">        p50Ms</span>: <span class="syn-number">160</span>
+<span class="syn-key">        p95Ms</span>: <span class="syn-number">210</span>
+<span class="syn-key">        totalMs</span>: <span class="syn-number">500</span>
+<span class="syn-key">timingBreakdown</span>:
+<span class="syn-key">  totalMs</span>: <span class="syn-number">12450</span>
+<span class="syn-key">  llmTimeMs</span>: <span class="syn-number">6800</span>
+<span class="syn-key">  toolTimeMs</span>: <span class="syn-number">5100</span>
+<span class="syn-key">  overheadMs</span>: <span class="syn-number">550</span>
+<span class="syn-key">  breakdown</span>:
+    - <span class="syn-string">category: llm</span>
+<span class="syn-key">      label</span>: <span class="syn-string">LLM API calls</span>
+<span class="syn-key">      ms</span>: <span class="syn-number">6800</span>
+<span class="syn-key">      percentage</span>: <span class="syn-number">54.6</span>
+    - <span class="syn-string">category: tools</span>
+<span class="syn-key">      label</span>: <span class="syn-string">Tool execution</span>
+<span class="syn-key">      ms</span>: <span class="syn-number">5100</span>
+<span class="syn-key">      percentage</span>: <span class="syn-number">41</span>
+    - <span class="syn-string">category: overhead</span>
+<span class="syn-key">      label</span>: <span class="syn-string">Overhead</span>
+<span class="syn-key">      ms</span>: <span class="syn-number">550</span>
+<span class="syn-key">      percentage</span>: <span class="syn-number">4.4</span>
+<span class="syn-key">timeline</span>:
+  - <span class="syn-string">turnNumber: 1</span>
+<span class="syn-key">    order</span>: <span class="syn-number">1</span>
+<span class="syn-key">    startedAt</span>: <span class="syn-string">2026-01-30T14:30:00.100Z</span>
+<span class="syn-key">    completedAt</span>: <span class="syn-string">2026-01-30T14:30:04.500Z</span>
+<span class="syn-key">    durationMs</span>: <span class="syn-number">4400</span>
+<span class="syn-key">    tokens</span>:
+<span class="syn-key">      input</span>: <span class="syn-number">1500</span>
+<span class="syn-key">      output</span>: <span class="syn-number">650</span>
+<span class="syn-key">    toolCalls</span>:
+      - <span class="syn-string">tool: web_search</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:00.200Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:01.050Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">850</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">true</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          query</span>: <span class="syn-string">startup funding</span>
+<span class="syn-key">        result</span>:
+<span class="syn-key">          resultCount</span>: <span class="syn-number">8</span>
+      - <span class="syn-string">tool: web_search</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:01.100Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:02.300Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">1200</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">true</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          query</span>: <span class="syn-string">startup founders</span>
+<span class="syn-key">        result</span>:
+<span class="syn-key">          resultCount</span>: <span class="syn-number">12</span>
+      - <span class="syn-string">tool: fill_form</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:02.400Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:02.560Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">160</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">true</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          patches</span>: <span class="syn-string">[]</span>
+<span class="syn-key">    patchesApplied</span>: <span class="syn-number">6</span>
+<span class="syn-key">    patchesRejected</span>: <span class="syn-number">1</span>
+  - <span class="syn-string">turnNumber: 2</span>
+<span class="syn-key">    order</span>: <span class="syn-number">1</span>
+<span class="syn-key">    startedAt</span>: <span class="syn-string">2026-01-30T14:30:04.600Z</span>
+<span class="syn-key">    completedAt</span>: <span class="syn-string">2026-01-30T14:30:08.200Z</span>
+<span class="syn-key">    durationMs</span>: <span class="syn-number">3600</span>
+<span class="syn-key">    tokens</span>:
+<span class="syn-key">      input</span>: <span class="syn-number">1450</span>
+<span class="syn-key">      output</span>: <span class="syn-number">580</span>
+<span class="syn-key">    toolCalls</span>:
+      - <span class="syn-string">tool: web_search</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:04.700Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:05.150Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">450</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">false</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          query</span>: <span class="syn-string">startup valuation</span>
+<span class="syn-key">        result</span>:
+<span class="syn-key">          error</span>: <span class="syn-string">Rate limit exceeded, retrying...</span>
+      - <span class="syn-string">tool: web_search</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:05.200Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:07.000Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">1800</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">true</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          query</span>: <span class="syn-string">startup valuation</span>
+<span class="syn-key">        result</span>:
+<span class="syn-key">          resultCount</span>: <span class="syn-number">5</span>
+      - <span class="syn-string">tool: fill_form</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:07.100Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:07.320Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">220</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">true</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          patches</span>: <span class="syn-string">[]</span>
+<span class="syn-key">    patchesApplied</span>: <span class="syn-number">8</span>
+<span class="syn-key">    patchesRejected</span>: <span class="syn-number">0</span>
+  - <span class="syn-string">turnNumber: 3</span>
+<span class="syn-key">    order</span>: <span class="syn-number">1</span>
+<span class="syn-key">    startedAt</span>: <span class="syn-string">2026-01-30T14:30:08.300Z</span>
+<span class="syn-key">    completedAt</span>: <span class="syn-string">2026-01-30T14:30:12.350Z</span>
+<span class="syn-key">    durationMs</span>: <span class="syn-number">4050</span>
+<span class="syn-key">    tokens</span>:
+<span class="syn-key">      input</span>: <span class="syn-number">1300</span>
+<span class="syn-key">      output</span>: <span class="syn-number">660</span>
+<span class="syn-key">    toolCalls</span>:
+      - <span class="syn-string">tool: web_search</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:08.400Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:08.700Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">300</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">true</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          query</span>: <span class="syn-string">startup team</span>
+<span class="syn-key">        result</span>:
+<span class="syn-key">          resultCount</span>: <span class="syn-number">3</span>
+      - <span class="syn-string">tool: fill_form</span>
+<span class="syn-key">        startedAt</span>: <span class="syn-string">2026-01-30T14:30:08.800Z</span>
+<span class="syn-key">        completedAt</span>: <span class="syn-string">2026-01-30T14:30:08.920Z</span>
+<span class="syn-key">        durationMs</span>: <span class="syn-number">120</span>
+<span class="syn-key">        success</span>: <span class="syn-bool">true</span>
+<span class="syn-key">        input</span>:
+<span class="syn-key">          patches</span>: <span class="syn-string">[]</span>
+<span class="syn-key">    patchesApplied</span>: <span class="syn-number">4</span>
+<span class="syn-key">    patchesRejected</span>: <span class="syn-number">0</span>
+<span class="syn-key">execution</span>:
+<span class="syn-key">  totalTurns</span>: <span class="syn-number">3</span>
+<span class="syn-key">  parallelEnabled</span>: <span class="syn-bool">false</span>
+<span class="syn-key">  orderLevels</span>:
+    - <span class="syn-number">1</span>
+<span class="syn-key">  executionThreads</span>: <span class="syn-string">[]</span>
+<span class="syn-key">statusDetail</span>: <span class="syn-string">max_turns</span>
+</pre>
+      </div>
+    </details>
+  
+    </div>
+  
+</body>
+</html>
