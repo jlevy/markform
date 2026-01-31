@@ -13,6 +13,7 @@ import type {
   FieldValue,
   InspectIssue,
   ParsedForm,
+  Patch,
   PatchRejection,
   SessionTurnContext,
   SessionTurnStats,
@@ -37,7 +38,7 @@ import { createHarness } from './harness.js';
 import { createLiveAgent } from './liveAgent.js';
 import { resolveModel } from './modelResolver.js';
 import { runWithConcurrency, scopeIssuesForItem } from './parallelHarness.js';
-import type { Agent, FillOptions, FillResult, FillStatus } from './harnessTypes.js';
+import type { Agent, FillOptions, FillResult, FillStatus, TurnStats } from './harnessTypes.js';
 
 // Re-export types for backwards compatibility
 export type { FillOptions, FillResult, FillStatus, TurnProgress } from './harnessTypes.js';
@@ -490,6 +491,11 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
     // Check for cancellation
     if (options.signal?.aborted) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('cancelled');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
@@ -497,6 +503,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         { ok: false, reason: 'cancelled' },
         inputContextWarnings,
         stepResult.issues,
+        record,
       );
     }
 
@@ -532,12 +539,27 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
 
     // Generate patches using agent (pass previous rejections so LLM can learn from mistakes)
-    const response = await agent.fillFormTool(
-      turnIssues,
-      form,
-      maxPatchesPerTurn,
-      previousRejections,
-    );
+    let response: { patches: Patch[]; stats?: TurnStats };
+    try {
+      response = await agent.fillFormTool(turnIssues, form, maxPatchesPerTurn, previousRejections);
+    } catch (error) {
+      // Agent threw an error - capture it in fill record and return
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('failed', errorMessage);
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        { ok: false, reason: 'error', message: errorMessage },
+        inputContextWarnings,
+        turnIssues,
+        record,
+      );
+    }
     const { patches, stats } = response;
 
     // Call onPatchesGenerated callback (after agent, before applying)
@@ -555,6 +577,11 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
     // Re-check for cancellation after agent call (signal may have fired during LLM call)
     if (options.signal?.aborted) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('cancelled');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
@@ -562,6 +589,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         { ok: false, reason: 'cancelled' },
         inputContextWarnings,
         turnIssues,
+        record,
       );
     }
 
