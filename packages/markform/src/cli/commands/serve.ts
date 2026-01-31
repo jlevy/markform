@@ -2567,8 +2567,9 @@ export function renderJsonContent(content: string): string {
 
 /**
  * Format milliseconds as human-readable duration.
+ * @public Exported for reuse in other visualizations.
  */
-function formatDuration(ms: number): string {
+export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms.toFixed(0)}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   const minutes = Math.floor(ms / 60000);
@@ -2578,31 +2579,274 @@ function formatDuration(ms: number): string {
 
 /**
  * Format token count with K suffix for large numbers.
+ * @public Exported for reuse in other visualizations.
  */
-function formatTokens(count: number): string {
+export function formatTokens(count: number): string {
   if (count >= 10000) return `${(count / 1000).toFixed(1)}k`;
   if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
   return count.toLocaleString();
 }
 
 /**
- * Get status badge HTML with appropriate styling.
+ * CSS styles for fill record visualization.
+ * Uses CSS custom properties for theming (supports dark mode via prefers-color-scheme).
+ * Designed to be lightweight, reusable, and embeddable.
  */
-function getStatusBadge(status: string): string {
-  const statusConfig: Record<string, { color: string; icon: string; label: string }> = {
-    completed: { color: '#22c55e', icon: '✓', label: 'Completed' },
-    partial: { color: '#f59e0b', icon: '⚠', label: 'Partial' },
-    cancelled: { color: '#6b7280', icon: '⊘', label: 'Cancelled' },
-    failed: { color: '#ef4444', icon: '✕', label: 'Failed' },
-  };
-  const config = statusConfig[status] ?? { color: '#6b7280', icon: '?', label: status };
-  return `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 4px; font-weight: 600; background: ${config.color}20; color: ${config.color};">${config.icon} ${config.label}</span>`;
-}
+const FILL_RECORD_STYLES = `
+<style>
+  .fr-dashboard {
+    --fr-bg: #ffffff;
+    --fr-bg-muted: #f9fafb;
+    --fr-bg-subtle: #f3f4f6;
+    --fr-border: #e5e7eb;
+    --fr-text: #111827;
+    --fr-text-muted: #6b7280;
+    --fr-text-subtle: #9ca3af;
+    --fr-primary: #3b82f6;
+    --fr-success: #22c55e;
+    --fr-warning: #f59e0b;
+    --fr-error: #ef4444;
+    --fr-info: #6b7280;
+
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    color: var(--fr-text);
+    line-height: 1.5;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .fr-dashboard {
+      --fr-bg: #1f2937;
+      --fr-bg-muted: #374151;
+      --fr-bg-subtle: #4b5563;
+      --fr-border: #4b5563;
+      --fr-text: #f9fafb;
+      --fr-text-muted: #9ca3af;
+      --fr-text-subtle: #6b7280;
+    }
+  }
+
+  .fr-banner {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .fr-banner--error {
+    background: color-mix(in srgb, var(--fr-error) 10%, var(--fr-bg));
+    border: 1px solid var(--fr-error);
+  }
+  .fr-banner--warning {
+    background: color-mix(in srgb, var(--fr-warning) 10%, var(--fr-bg));
+    border: 1px solid var(--fr-warning);
+  }
+
+  .fr-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .fr-card {
+    padding: 16px;
+    background: var(--fr-bg-muted);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .fr-card__label {
+    font-size: 13px;
+    color: var(--fr-text-muted);
+    margin-bottom: 4px;
+  }
+  .fr-card__value {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .fr-card__sub {
+    font-size: 12px;
+    color: var(--fr-text-subtle);
+    margin-top: 2px;
+  }
+
+  .fr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .fr-badge--completed { background: color-mix(in srgb, var(--fr-success) 15%, transparent); color: var(--fr-success); }
+  .fr-badge--partial { background: color-mix(in srgb, var(--fr-warning) 15%, transparent); color: var(--fr-warning); }
+  .fr-badge--cancelled { background: color-mix(in srgb, var(--fr-info) 15%, transparent); color: var(--fr-info); }
+  .fr-badge--failed { background: color-mix(in srgb, var(--fr-error) 15%, transparent); color: var(--fr-error); }
+
+  .fr-section {
+    margin-bottom: 24px;
+  }
+  .fr-section__title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fr-text);
+    margin-bottom: 8px;
+  }
+
+  .fr-progress {
+    background: var(--fr-border);
+    border-radius: 4px;
+    height: 20px;
+    overflow: hidden;
+  }
+  .fr-progress__bar {
+    background: var(--fr-primary);
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .fr-progress__text {
+    font-size: 13px;
+    color: var(--fr-text-muted);
+    margin-top: 4px;
+  }
+
+  .fr-timing-bar {
+    margin-bottom: 8px;
+  }
+  .fr-timing-bar__header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .fr-timing-bar__track {
+    background: var(--fr-border);
+    border-radius: 2px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .fr-timing-bar__fill {
+    height: 100%;
+  }
+  .fr-timing-bar__fill--llm { background: var(--fr-primary); }
+  .fr-timing-bar__fill--tool { background: var(--fr-success); }
+  .fr-timing-bar__fill--overhead { background: var(--fr-info); }
+
+  .fr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .fr-table th {
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    background: var(--fr-bg-subtle);
+  }
+  .fr-table th:not(:first-child) { text-align: center; }
+  .fr-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--fr-border);
+  }
+  .fr-table td:not(:first-child) { text-align: center; }
+
+  .fr-details {
+    border: none;
+    background: none;
+  }
+  .fr-details summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fr-text);
+    padding: 8px 0;
+    list-style: none;
+  }
+  .fr-details summary::-webkit-details-marker { display: none; }
+  .fr-details summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s;
+    font-size: 10px;
+  }
+  .fr-details[open] summary::before {
+    transform: rotate(90deg);
+  }
+  .fr-details__content {
+    background: var(--fr-bg-muted);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+
+  .fr-turn {
+    margin-bottom: 8px;
+    background: var(--fr-bg-muted);
+    border-radius: 4px;
+  }
+  .fr-turn summary {
+    padding: 12px;
+    font-size: 13px;
+  }
+  .fr-turn__content {
+    padding: 0 12px 12px;
+  }
+  .fr-turn__tools {
+    margin: 0;
+    padding-left: 20px;
+    list-style: none;
+  }
+  .fr-turn__tool {
+    margin: 4px 0;
+    font-size: 12px;
+    color: var(--fr-text-muted);
+  }
+  .fr-turn__tool--error { color: var(--fr-error); }
+
+  .fr-raw {
+    position: relative;
+  }
+  .fr-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    background: var(--fr-bg-subtle);
+    border: 1px solid var(--fr-border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--fr-text-muted);
+    transition: all 0.15s;
+  }
+  .fr-copy-btn:hover {
+    background: var(--fr-border);
+    color: var(--fr-text);
+  }
+  .fr-copy-btn:active {
+    transform: scale(0.95);
+  }
+
+  @media (max-width: 600px) {
+    .fr-dashboard { padding: 12px; }
+    .fr-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .fr-card { padding: 12px; }
+    .fr-card__value { font-size: 18px; }
+    .fr-table { font-size: 12px; }
+    .fr-table th, .fr-table td { padding: 6px 8px; }
+  }
+</style>
+`;
 
 /**
  * Render fill record content (dashboard-style visualization).
- * Used for tab content.
- * @public Exported for testing.
+ * Uses CSS custom properties for theming with automatic dark mode support.
+ * Mobile responsive with grid-based layout.
+ *
+ * @public Exported for testing and reuse.
  */
 export function renderFillRecordContent(record: FillRecord): string {
   const {
@@ -2619,39 +2863,37 @@ export function renderFillRecordContent(record: FillRecord): string {
   // Status banner for non-completed fills
   let statusBanner = '';
   if (status !== 'completed') {
-    const bannerColor = status === 'failed' ? '#fef2f2' : '#fffbeb';
-    const bannerBorder = status === 'failed' ? '#ef4444' : '#f59e0b';
-    const bannerIcon = status === 'failed' ? '❌' : '⚠️';
-    const bannerTitle =
-      status === 'failed' ? 'FAILED' : status === 'cancelled' ? 'CANCELLED' : 'PARTIAL';
-    const bannerMsg = statusDetail ?? (status === 'partial' ? 'Did not complete all fields' : '');
-    statusBanner = `
-      <div style="background: ${bannerColor}; border: 1px solid ${bannerBorder}; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
-        <strong>${bannerIcon} ${bannerTitle}${bannerMsg ? ':' : ''}</strong>${bannerMsg ? ` ${escapeHtml(bannerMsg)}` : ''}
-      </div>
-    `;
+    const bannerClass = status === 'failed' ? 'fr-banner--error' : 'fr-banner--warning';
+    const icon = status === 'failed' ? '✕' : '⚠';
+    const title = status === 'failed' ? 'FAILED' : status === 'cancelled' ? 'CANCELLED' : 'PARTIAL';
+    const msg = statusDetail ?? (status === 'partial' ? 'Did not complete all fields' : '');
+    statusBanner = `<div class="fr-banner ${bannerClass}"><strong>${icon} ${title}${msg ? ':' : ''}</strong>${msg ? ` ${escapeHtml(msg)}` : ''}</div>`;
   }
 
   // Summary cards
   const totalTokens = llm.inputTokens + llm.outputTokens;
+  const badgeClass = `fr-badge fr-badge--${status}`;
+  const badgeIcon = { completed: '✓', partial: '⚠', cancelled: '⊘', failed: '✕' }[status] ?? '?';
+  const badgeLabel = status.charAt(0).toUpperCase() + status.slice(1);
+
   const summaryCards = `
-    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
-      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
-        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Status</div>
-        <div>${getStatusBadge(status)}</div>
+    <div class="fr-cards">
+      <div class="fr-card">
+        <div class="fr-card__label">Status</div>
+        <div><span class="${badgeClass}">${badgeIcon} ${badgeLabel}</span></div>
       </div>
-      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
-        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Duration</div>
-        <div style="font-size: 20px; font-weight: 600;">${formatDuration(durationMs)}</div>
+      <div class="fr-card">
+        <div class="fr-card__label">Duration</div>
+        <div class="fr-card__value">${formatDuration(durationMs)}</div>
       </div>
-      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
-        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Turns</div>
-        <div style="font-size: 20px; font-weight: 600;">${timeline.length}</div>
+      <div class="fr-card">
+        <div class="fr-card__label">Turns</div>
+        <div class="fr-card__value">${timeline.length}</div>
       </div>
-      <div style="flex: 1; min-width: 120px; padding: 16px; background: #f9fafb; border-radius: 8px; text-align: center;">
-        <div style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">Tokens</div>
-        <div style="font-size: 20px; font-weight: 600;">${formatTokens(totalTokens)}</div>
-        <div style="font-size: 12px; color: #9ca3af;">${formatTokens(llm.inputTokens)} in / ${formatTokens(llm.outputTokens)} out</div>
+      <div class="fr-card">
+        <div class="fr-card__label">Tokens</div>
+        <div class="fr-card__value">${formatTokens(totalTokens)}</div>
+        <div class="fr-card__sub">${formatTokens(llm.inputTokens)} in / ${formatTokens(llm.outputTokens)} out</div>
       </div>
     </div>
   `;
@@ -2661,14 +2903,13 @@ export function renderFillRecordContent(record: FillRecord): string {
   const filledFields = formProgress.filledFields;
   const progressPercent = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
   const progressBar = `
-    <div style="margin-bottom: 24px;">
-      <div style="font-size: 14px; color: #374151; margin-bottom: 8px; font-weight: 500;">Progress</div>
-      <div style="background: #e5e7eb; border-radius: 4px; height: 20px; overflow: hidden;">
-        <div style="background: #3b82f6; height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div>
+    <div class="fr-section">
+      <div class="fr-section__title">Progress</div>
+      <div class="fr-progress">
+        <div class="fr-progress__bar" style="width: ${progressPercent}%"></div>
       </div>
-      <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">
-        ${filledFields}/${totalFields} fields filled (${progressPercent}%)
-        ${formProgress.skippedFields > 0 ? ` • ${formProgress.skippedFields} skipped` : ''}
+      <div class="fr-progress__text">
+        ${filledFields}/${totalFields} fields filled (${progressPercent}%)${formProgress.skippedFields > 0 ? ` • ${formProgress.skippedFields} skipped` : ''}
       </div>
     </div>
   `;
@@ -2678,31 +2919,32 @@ export function renderFillRecordContent(record: FillRecord): string {
   const toolMs = timingBreakdown.toolTimeMs;
   const overheadMs = timingBreakdown.overheadMs;
   const totalMs = llmMs + toolMs + overheadMs;
-  const timingSection = `
-    <details style="margin-bottom: 24px;" open>
-      <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▼ Timing Breakdown (${formatDuration(totalMs)} total)</summary>
-      <div style="background: #f9fafb; border-radius: 8px; padding: 16px;">
-        ${[
-          { label: 'LLM Calls', ms: llmMs, color: '#3b82f6' },
-          { label: 'Tool Exec', ms: toolMs, color: '#10b981' },
-          { label: 'Overhead', ms: overheadMs, color: '#6b7280' },
-        ]
-          .map(({ label, ms, color }) => {
-            const percent = totalMs > 0 ? (ms / totalMs) * 100 : 0;
-            return `
-            <div style="margin-bottom: 8px;">
-              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
-                <span>${label}</span>
-                <span style="font-weight: 500;">${formatDuration(ms)}</span>
-              </div>
-              <div style="background: #e5e7eb; border-radius: 2px; height: 8px; overflow: hidden;">
-                <div style="background: ${color}; height: 100%; width: ${percent}%;"></div>
-              </div>
-            </div>
-          `;
-          })
-          .join('')}
+
+  const timingBars = [
+    { label: 'LLM Calls', ms: llmMs, type: 'llm' },
+    { label: 'Tool Exec', ms: toolMs, type: 'tool' },
+    { label: 'Overhead', ms: overheadMs, type: 'overhead' },
+  ]
+    .map(({ label, ms, type }) => {
+      const percent = totalMs > 0 ? (ms / totalMs) * 100 : 0;
+      return `
+      <div class="fr-timing-bar">
+        <div class="fr-timing-bar__header">
+          <span>${label}</span>
+          <span style="font-weight: 500">${formatDuration(ms)}</span>
+        </div>
+        <div class="fr-timing-bar__track">
+          <div class="fr-timing-bar__fill fr-timing-bar__fill--${type}" style="width: ${percent}%"></div>
+        </div>
       </div>
+    `;
+    })
+    .join('');
+
+  const timingSection = `
+    <details class="fr-details fr-section" open>
+      <summary>Timing Breakdown (${formatDuration(totalMs)} total)</summary>
+      <div class="fr-details__content">${timingBars}</div>
     </details>
   `;
 
@@ -2713,30 +2955,22 @@ export function renderFillRecordContent(record: FillRecord): string {
       .map(
         (t) => `
       <tr>
-        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(t.toolName)}</td>
-        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${t.callCount}</td>
-        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${t.successCount === t.callCount ? '100%' : `${Math.round((t.successCount / t.callCount) * 100)}%`}</td>
-        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${formatDuration(t.timing.avgMs)}</td>
-        <td style="padding: 8px 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${formatDuration(t.timing.p95Ms)}</td>
+        <td>${escapeHtml(t.toolName)}</td>
+        <td>${t.callCount}</td>
+        <td>${t.successCount === t.callCount ? '100%' : `${Math.round((t.successCount / t.callCount) * 100)}%`}</td>
+        <td>${formatDuration(t.timing.avgMs)}</td>
+        <td>${formatDuration(t.timing.p95Ms)}</td>
       </tr>
     `,
       )
       .join('');
 
     toolSection = `
-      <details style="margin-bottom: 24px;" open>
-        <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▼ Tool Summary</summary>
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <thead>
-              <tr style="background: #f3f4f6;">
-                <th style="padding: 8px 12px; text-align: left; font-weight: 600;">Tool</th>
-                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Calls</th>
-                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Success</th>
-                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">Avg</th>
-                <th style="padding: 8px 12px; text-align: center; font-weight: 600;">p95</th>
-              </tr>
-            </thead>
+      <details class="fr-details fr-section" open>
+        <summary>Tool Summary</summary>
+        <div style="overflow-x: auto; margin-top: 8px;">
+          <table class="fr-table">
+            <thead><tr><th>Tool</th><th>Calls</th><th>Success</th><th>Avg</th><th>p95</th></tr></thead>
             <tbody>${toolRows}</tbody>
           </table>
         </div>
@@ -2752,26 +2986,27 @@ export function renderFillRecordContent(record: FillRecord): string {
         const turnTokens = turn.tokens.input + turn.tokens.output;
         const toolCallsList = turn.toolCalls
           .map((tc) => {
-            const resultSummary = tc.result?.error
-              ? `<span style="color: #ef4444;">Error: ${escapeHtml(tc.result.error)}</span>`
+            const hasError = !!tc.result?.error;
+            const resultSummary = hasError
+              ? `Error: ${escapeHtml(tc.result?.error ?? '')}`
               : tc.result?.resultCount !== undefined
                 ? `${tc.result.resultCount} results`
                 : 'OK';
-            return `<li style="margin: 4px 0; font-size: 12px; color: #6b7280;">
-          ${tc.success ? '✓' : '✕'} <strong>${escapeHtml(tc.tool)}</strong>: ${resultSummary} (${formatDuration(tc.durationMs)})
-        </li>`;
+            return `<li class="fr-turn__tool${hasError ? ' fr-turn__tool--error' : ''}">${tc.success ? '✓' : '✕'} <strong>${escapeHtml(tc.tool)}</strong>: ${resultSummary} (${formatDuration(tc.durationMs)})</li>`;
           })
           .join('');
 
+        const patchInfo = turn.patchesApplied > 0 ? ` • ${turn.patchesApplied} patches` : '';
+        const rejectedInfo =
+          turn.patchesRejected > 0
+            ? ` <span style="color: var(--fr-error)">(${turn.patchesRejected} rejected)</span>`
+            : '';
+
         return `
-        <details style="margin-bottom: 8px; background: #f9fafb; border-radius: 4px;">
-          <summary style="cursor: pointer; padding: 12px; font-size: 13px;">
-            <strong>Turn ${turn.turnNumber}</strong> • Order ${turn.order} • ${formatDuration(turn.durationMs)} • ${formatTokens(turnTokens)} tokens
-            ${turn.patchesApplied > 0 ? ` • ${turn.patchesApplied} patches` : ''}
-            ${turn.patchesRejected > 0 ? ` <span style="color: #ef4444;">(${turn.patchesRejected} rejected)</span>` : ''}
-          </summary>
-          <div style="padding: 0 12px 12px 12px;">
-            ${turn.toolCalls.length > 0 ? `<ul style="margin: 0; padding-left: 20px;">${toolCallsList}</ul>` : '<span style="color: #9ca3af; font-size: 12px;">No tool calls</span>'}
+        <details class="fr-turn">
+          <summary><strong>Turn ${turn.turnNumber}</strong> • Order ${turn.order} • ${formatDuration(turn.durationMs)} • ${formatTokens(turnTokens)} tokens${patchInfo}${rejectedInfo}</summary>
+          <div class="fr-turn__content">
+            ${turn.toolCalls.length > 0 ? `<ul class="fr-turn__tools">${toolCallsList}</ul>` : '<span style="color: var(--fr-text-subtle); font-size: 12px;">No tool calls</span>'}
           </div>
         </details>
       `;
@@ -2779,27 +3014,42 @@ export function renderFillRecordContent(record: FillRecord): string {
       .join('');
 
     timelineSection = `
-      <details style="margin-bottom: 24px;">
-        <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▶ Timeline (${timeline.length} turns)</summary>
-        ${timelineItems}
+      <details class="fr-details fr-section">
+        <summary>Timeline (${timeline.length} turns)</summary>
+        <div style="margin-top: 8px;">${timelineItems}</div>
       </details>
     `;
   }
 
-  // Raw YAML section
+  // Raw YAML section with improved copy functionality
   const yamlContent = YAML.stringify(record, { lineWidth: 0 });
+  const copyScript = `
+    <script>
+      function frCopyYaml(btn) {
+        const pre = btn.parentElement.querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = orig, 1500);
+        });
+      }
+    </script>
+  `;
+
   const rawSection = `
-    <details style="margin-bottom: 24px;">
-      <summary style="cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 12px;">▶ Raw YAML</summary>
-      <div style="position: relative;">
-        <button onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent)" style="position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">Copy</button>
+    <details class="fr-details fr-section">
+      <summary>Raw YAML</summary>
+      <div class="fr-raw" style="margin-top: 8px;">
+        <button class="fr-copy-btn" onclick="frCopyYaml(this)">Copy</button>
         ${renderYamlContent(yamlContent)}
       </div>
     </details>
   `;
 
   return `
-    <div style="font-family: system-ui, -apple-system, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto;">
+    ${FILL_RECORD_STYLES}
+    ${copyScript}
+    <div class="fr-dashboard">
       ${statusBanner}
       ${summaryCards}
       ${progressBar}
