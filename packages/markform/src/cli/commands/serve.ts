@@ -1015,6 +1015,16 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
   </div>
   ${showTabs ? '<div id="tab-other" class="tab-content"><div class="loading">Loading...</div></div>' : ''}
   <script>
+    // Copy YAML content handler for Fill Record tab (must be global for dynamically loaded content)
+    function frCopyYaml(btn) {
+      const pre = btn.parentElement.querySelector('pre');
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      });
+    }
+
     // Track fields marked for skip
     const skippedFields = new Set();
 
@@ -3021,20 +3031,8 @@ export function renderFillRecordContent(record: FillRecord): string {
     `;
   }
 
-  // Raw YAML section with improved copy functionality
+  // Raw YAML section with copy functionality (handler defined in main page script)
   const yamlContent = YAML.stringify(record, { lineWidth: 0 });
-  const copyScript = `
-    <script>
-      function frCopyYaml(btn) {
-        const pre = btn.parentElement.querySelector('pre');
-        navigator.clipboard.writeText(pre.textContent).then(() => {
-          const orig = btn.textContent;
-          btn.textContent = 'Copied!';
-          setTimeout(() => btn.textContent = orig, 1500);
-        });
-      }
-    </script>
-  `;
 
   const rawSection = `
     <details class="fr-details fr-section">
@@ -3048,7 +3046,6 @@ export function renderFillRecordContent(record: FillRecord): string {
 
   return `
     ${FILL_RECORD_STYLES}
-    ${copyScript}
     <div class="fr-dashboard">
       ${statusBanner}
       ${summaryCards}
