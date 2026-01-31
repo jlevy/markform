@@ -393,43 +393,57 @@ be fixed for the visualization to be useful for debugging failed fills.
 | `completed` | ✅ Yes | Works correctly |
 | `partial`   | ✅ Yes | Set when max_turns hit |
 | `cancelled` | ✅ Yes | Set when AbortSignal fires |
-| `failed`    | ❌ No  | **Never used** despite being defined in schema |
+| `failed`    | ✅ Yes | **Now supported** (see implementation below) |
 
 **Tasks:**
 
-- [ ] **Gap 1: Add `failed` status support in programmaticFill**
-  - Location: `packages/markform/src/harness/programmaticFill.ts`
-  - Wrap fill execution in try/catch
-  - Call `collector.setStatus('failed', errorMessage)` on caught errors
-  - Include fill record in error result when collector has data
+- [x] **Gap 1: Add `failed` status support in programmaticFill** ✅
+  - Wrapped agent.fillFormTool in try/catch
+  - Calls `collector.setStatus('failed', errorMessage)` on caught errors
+  - Returns fill record in error result when collector has data
+  - Also added fill record to cancelled status returns
+  - Commit: `feat: add fill record support for failed/cancelled status in fillForm`
 
-- [ ] **Gap 2: CLI error handler must write fill record**
+- [ ] **Gap 2: CLI error handler must write fill record** (deferred)
   - Location: `packages/markform/src/cli/commands/fill.ts:772`
-  - If collector exists and has recorded events, write `.fill.json` before exit
-  - Preserves debugging data even on failure
+  - Would require more invasive changes to the CLI command
+  - Lower priority since programmaticFill now handles errors correctly
 
-- [ ] **Gap 3: Ensure `buildErrorResult` can include FillRecord**
-  - Location: `packages/markform/src/harness/programmaticFill.ts:230`
-  - For early errors (parse, model resolution): acceptable to have no record
-  - For mid-fill errors: must capture whatever was recorded
+- [ ] **Gap 3: Ensure `buildErrorResult` can include FillRecord** (deferred)
+  - For early errors before collector is created, this is acceptable
+  - Mid-fill errors now handled by Gap 1 fix
 
-- [ ] Add tests for partial/failed fill record generation
+- [x] Add tests for partial/failed fill record generation ✅
+  - Added 4 new tests in `programmaticFill.test.ts`:
+    - `returns FillRecord with failed status when agent throws mid-fill`
+    - `fill record captures partial data before error`
+    - `cancelled status includes fill record when recordFill enabled`
+    - `partial status includes fill record when max_turns hit`
 
-### Phase 2: Core Visualization
+### Phase 2: Core Visualization ✅ IMPLEMENTED
 
-- [ ] Add fill record sidecar detection in serve command
-- [ ] Extend Tab interface to include 'fill-record' tab ID
-- [ ] Update `buildFormTabs()` to conditionally include Fill Record tab
-- [ ] Implement `/tab/fill-record` route handler
-- [ ] Create `renderFillRecordContent()` function with:
-  - Summary cards section
-  - Progress bar
-  - Timing breakdown visualization
-  - Tool summary table
-  - Timeline accordion
-  - Raw JSON section with copy button
-- [ ] Add CSS styles for dashboard components
-- [ ] Add minimal JavaScript for interactivity (accordion, copy)
+- [x] Add fill record sidecar detection in serve command ✅
+  - Added `getFillRecordSidecarPath()` helper function
+  - Checks for `.fill.json` file next to form
+- [x] Extend Tab interface to include 'fill-record' tab ID ✅
+- [x] Update `buildFormTabs()` to conditionally include Fill Record tab ✅
+- [x] Implement `/tab/fill-record` route handler ✅
+  - Loads and parses JSON from sidecar file
+  - Passes FillRecord to renderer
+- [x] Create `renderFillRecordContent()` function ✅
+  - Status banner for non-completed fills
+  - Summary cards (status, duration, turns, tokens)
+  - Progress bar with percentage
+  - Timing breakdown with visual bars (LLM/tools/overhead)
+  - Tool summary table (call counts, success rates, timing)
+  - Timeline accordion (turn-by-turn with tool calls)
+  - Raw YAML section with copy button
+- [x] Add CSS styles ✅ (inline styles for simplicity)
+- [x] Add JavaScript for interactivity ✅
+  - Using native HTML `<details>` for accordion (no JS needed)
+  - Copy button using `navigator.clipboard` API
+
+Commit: `feat: add Fill Record tab to serve command`
 
 ### Phase 3: Polish (if needed)
 
@@ -480,6 +494,39 @@ be fixed for the visualization to be useful for debugging failed fills.
 
    *Recommendation:* Show query for web_search, show patch count + summary for
    fill_form. Full details available in Raw JSON section.
+
+## Implementation Notes
+
+### Decisions Made During Implementation
+
+1. **Inline CSS instead of external classes**: Used inline styles for the dashboard
+   components to keep the implementation self-contained and avoid adding to the
+   existing CSS. This can be refactored to use classes if the serve command gets
+   a proper CSS framework.
+
+2. **Native HTML details/summary for accordions**: Used `<details>` and `<summary>`
+   elements for collapsible sections instead of custom JavaScript. This provides
+   accessibility and keyboard navigation out of the box.
+
+3. **YAML for raw data**: Used YAML instead of JSON for the raw data section
+   (reusing `renderYamlContent()`) for consistency with the Values tab and better
+   readability.
+
+4. **Sidecar path convention**: The fill record sidecar is expected at
+   `<form-name>.fill.json` (replacing `.form.md` with `.fill.json`).
+
+### Known Limitations
+
+1. **No form/record validation**: The implementation doesn't validate that the
+   fill record matches the form being served. If the form.id differs, the data
+   is still displayed.
+
+2. **No stable fill record support**: Currently only detects `.fill.json` sidecars,
+   not `.fill.stable.json` variants.
+
+3. **Copy button requires HTTPS in production**: The `navigator.clipboard` API
+   requires a secure context. Works on localhost but may need fallback for
+   non-HTTPS deployments.
 
 ## References
 
