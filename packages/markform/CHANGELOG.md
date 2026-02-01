@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.20
+
+### Patch Changes
+
+- e899eef: Add FillRecord visualization with Gantt chart, tooltips, and copy handlers
+
 ## 0.1.19
 
 ### Patch Changes
