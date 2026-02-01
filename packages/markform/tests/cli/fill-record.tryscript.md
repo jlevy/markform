@@ -24,11 +24,13 @@ Fill completed in ...
 ? 0
 ```
 
-# Test: fill --quiet suppresses summary
+# Test: fill --quiet suppresses all output
+
+With --quiet, only the form output path is written (no summary, no session transcript).
+The command produces no stdout/stderr output.
 
 ```console
-$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --roles "*" --output /tmp/test-fill-quiet.form.md --quiet 2>&1 | grep "Fill completed" | wc -l
-0
+$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --roles "*" --output /tmp/test-fill-quiet.form.md --quiet 2>&1
 ? 0
 ```
 
@@ -86,7 +88,7 @@ Form completed in 3 turn(s)
 ⏰ Fill time: [..]
 Form written to: /tmp/test-fill-full.form.md
 
-Fill completed in [..] (0 turns)
+Fill completed in [..] (3 turns)
 
 Tokens:  0 input / 0 output (mock/mock)
 Tools:   0 calls
@@ -169,10 +171,14 @@ $ cat /tmp/test-fill-stable.fill.json | jq '{status, form: {id: .form.id, title:
     "byTool": []
   },
   "execution": {
-    "totalTurns": 0,
+    "totalTurns": 3,
     "parallelEnabled": false,
-    "orderLevels": [],
-    "executionThreads": []
+    "orderLevels": [
+      0
+    ],
+    "executionThreads": [
+      "cli-serial"
+    ]
   }
 }
 ? 0
@@ -192,6 +198,89 @@ $ cat /tmp/test-fill-stable.fill.json | jq 'keys'
   "status",
   "toolSummary"
 ]
+? 0
+```
+
+---
+
+## Full FillRecord Timeline Verification (mf-ln09)
+
+These tests verify that the CLI fill command produces FillRecords with non-empty
+timelines and correct turn counts. This validates the fix for mf-mgxo where CLI
+was missing onTurnStart/onTurnComplete callback wiring.
+
+# Test: FillRecord timeline structure shows turn progression
+
+The regular `--record-fill` output should have a timeline array with entries for
+each turn. This shows the stable fields (turnNumber, executionId, issuesAddressed,
+patchesApplied, patchesRejected, tokens, toolCalls) while omitting unstable timing
+fields (startedAt, completedAt, durationMs).
+
+```console
+$ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --roles "*" --output /tmp/test-timeline.form.md --record-fill --quiet && cat /tmp/test-timeline.fill.json | jq '[.timeline[] | {turnNumber, order, executionId, issuesAddressed, patchesApplied, patchesRejected, tokens, toolCallsCount: (.toolCalls | length)}]'
+[
+  {
+    "turnNumber": 1,
+    "order": 0,
+    "executionId": "cli-serial",
+    "issuesAddressed": 10,
+    "patchesApplied": 10,
+    "patchesRejected": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "toolCallsCount": 0
+  },
+  {
+    "turnNumber": 2,
+    "order": 0,
+    "executionId": "cli-serial",
+    "issuesAddressed": 10,
+    "patchesApplied": 10,
+    "patchesRejected": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "toolCallsCount": 0
+  },
+  {
+    "turnNumber": 3,
+    "order": 0,
+    "executionId": "cli-serial",
+    "issuesAddressed": 1,
+    "patchesApplied": 1,
+    "patchesRejected": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "toolCallsCount": 0
+  }
+]
+? 0
+```
+
+# Test: FillRecord execution summary matches timeline
+
+The execution summary should accurately reflect the timeline contents.
+
+```console
+$ cat /tmp/test-timeline.fill.json | jq '{timelineLength: (.timeline | length), execution}'
+{
+  "timelineLength": 3,
+  "execution": {
+    "totalTurns": 3,
+    "parallelEnabled": false,
+    "orderLevels": [
+      0
+    ],
+    "executionThreads": [
+      "cli-serial"
+    ]
+  }
+}
 ? 0
 ```
 

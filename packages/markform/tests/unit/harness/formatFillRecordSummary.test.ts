@@ -269,4 +269,116 @@ describe('formatFillRecordSummary', () => {
     expect(summary).toContain('0/20');
     expect(summary).toContain('0%');
   });
+
+  describe('empty timeline warnings', () => {
+    it('warns when timeline is empty but totalTurns > 0', () => {
+      // This indicates callback wiring bug - turn callbacks not firing
+      const record = createTestRecord({
+        timeline: [],
+        execution: {
+          totalTurns: 3,
+          parallelEnabled: false,
+          orderLevels: [0],
+          executionThreads: ['cli-serial'],
+        },
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).toContain('Warning:');
+      expect(summary).toContain('timeline is empty');
+    });
+
+    it('warns when timeline is empty but fields were filled', () => {
+      // This indicates callback wiring bug - fields got filled but no timeline
+      const record = createTestRecord({
+        timeline: [],
+        execution: {
+          totalTurns: 0,
+          parallelEnabled: false,
+          orderLevels: [0],
+          executionThreads: ['cli-serial'],
+        },
+        formProgress: {
+          totalFields: 10,
+          requiredFields: 10,
+          unansweredFields: 0,
+          answeredFields: 10,
+          skippedFields: 0,
+          abortedFields: 0,
+          validFields: 10,
+          invalidFields: 0,
+          emptyFields: 0,
+          filledFields: 10,
+          emptyRequiredFields: 0,
+          totalNotes: 0,
+        },
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).toContain('Warning:');
+      expect(summary).toContain('timeline is empty');
+    });
+
+    it('does NOT warn when timeline is empty and no fields filled (empty form)', () => {
+      // This is expected - no work was done
+      const record = createTestRecord({
+        timeline: [],
+        execution: {
+          totalTurns: 0,
+          parallelEnabled: false,
+          orderLevels: [0],
+          executionThreads: ['cli-serial'],
+        },
+        formProgress: {
+          totalFields: 10,
+          requiredFields: 10,
+          unansweredFields: 10,
+          answeredFields: 0,
+          skippedFields: 0,
+          abortedFields: 0,
+          validFields: 0,
+          invalidFields: 0,
+          emptyFields: 10,
+          filledFields: 0,
+          emptyRequiredFields: 10,
+          totalNotes: 0,
+        },
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).not.toContain('Warning:');
+      expect(summary).not.toContain('timeline is empty');
+    });
+
+    it('does NOT warn when timeline has entries', () => {
+      // Normal case - timeline has data
+      const record = createTestRecord({
+        timeline: [
+          {
+            turnNumber: 1,
+            order: 0,
+            executionId: 'cli-serial',
+            startedAt: '2026-01-29T12:00:00.000Z',
+            completedAt: '2026-01-29T12:00:01.000Z',
+            durationMs: 1000,
+            issuesAddressed: 5,
+            patchesApplied: 5,
+            patchesRejected: 0,
+            tokens: { input: 1000, output: 200 },
+            toolCalls: [],
+          },
+        ],
+        execution: {
+          totalTurns: 1,
+          parallelEnabled: false,
+          orderLevels: [0],
+          executionThreads: ['cli-serial'],
+        },
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).not.toContain('Warning:');
+      expect(summary).not.toContain('timeline is empty');
+    });
+  });
 });

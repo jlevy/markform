@@ -83,6 +83,16 @@ export function formatFillRecordSummary(
     statusLine += ` - ${record.statusDetail}`;
   }
   lines.push(statusLine);
+
+  // Warn if timeline is empty but work was done (indicates callback wiring bug)
+  // This catches the mf-mgxo bug where CLI was missing onTurnStart/onTurnComplete wiring
+  const timelineEmpty = record.timeline.length === 0;
+  const hadTurns = record.execution.totalTurns > 0;
+  const hadFieldsFilled = record.formProgress.filledFields > 0;
+  if (timelineEmpty && (hadTurns || hadFieldsFilled)) {
+    lines.push('Warning: timeline is empty but work was recorded (possible callback wiring issue)');
+  }
+
   lines.push('');
 
   // Token usage

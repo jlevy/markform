@@ -22,6 +22,7 @@ import type {
   FillMode,
   HarnessConfig,
   MockMode,
+  ParsedForm,
   PatchRejection,
   SessionFinal,
   SessionTranscript,
@@ -211,11 +212,17 @@ export function registerFillCommand(program: Command): void {
         const ctx = getCommandContext(cmd);
         const filePath = resolve(file);
 
+        // Declare variables that may be needed in error handler
+        // These are accessible in catch block for partial fill record writing
+        let harness: ReturnType<typeof createHarness> | undefined;
+        let collector: FillRecordCollector | undefined;
+        let targetRoles: string[] = [];
+        let form: ParsedForm | undefined;
+
         try {
           const startTime = Date.now();
 
           // Parse and validate --roles (default depends on mode)
-          let targetRoles: string[];
           if (options.roles) {
             try {
               targetRoles = parseRolesFlag(options.roles);
@@ -243,7 +250,7 @@ export function registerFillCommand(program: Command): void {
           const formContent = await readFile(filePath);
 
           logVerbose(ctx, 'Parsing form...');
-          const form = parseForm(formContent);
+          form = parseForm(formContent);
 
           // =====================================================================
           // INTERACTIVE MODE
@@ -364,10 +371,9 @@ export function registerFillCommand(program: Command): void {
           const harnessConfig = resolveHarnessConfig(form, cliOptions);
 
           // Create harness
-          const harness = createHarness(form, harnessConfig);
+          harness = createHarness(form, harnessConfig);
 
-          // FillRecordCollector will be created after model resolution
-          let collector: FillRecordCollector | undefined;
+          // Note: collector is declared in outer scope for error handler access
 
           // Create agent based on type
           let agent: Agent;
@@ -817,8 +823,8 @@ export function registerFillCommand(program: Command): void {
               await writeFile(recordPath, yaml);
               logSuccess(ctx, `Session recorded to: ${recordPath}`);
             }
-          } else {
-            // Output to stdout in requested format
+          } else if (!ctx.quiet) {
+            // Output to stdout in requested format (unless quiet)
             const output = formatOutput(ctx, transcript, (data, useColors) =>
               formatConsoleSession(data as SessionTranscript, useColors),
             );
@@ -829,6 +835,44 @@ export function registerFillCommand(program: Command): void {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           logError(message);
+
+          // Write partial fill record if available (helps with debugging failures)
+          if (
+            (options.recordFill || options.recordFillStable) &&
+            collector &&
+            harness &&
+            form &&
+            options.output
+          ) {
+            try {
+              // Get current form state and compute progress
+              const currentForm = harness.getForm();
+              const finalInspect = inspect(currentForm, { targetRoles });
+              const progressSummary = computeProgressSummary(
+                form.schema,
+                currentForm.responsesByFieldId,
+                currentForm.notes,
+                finalInspect.issues,
+              );
+
+              // Set failed status with error message
+              collector.setStatus('failed', message);
+              const fillRecord = collector.getRecord(progressSummary.counts);
+
+              // Write sidecar file
+              const outputPath = resolve(options.output);
+              const sidecarPath = deriveFillRecordPath(outputPath);
+              const recordToWrite = options.recordFillStable
+                ? stripUnstableFillRecordFields(fillRecord)
+                : fillRecord;
+
+              writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
+              logWarn(ctx, `Partial fill record written to: ${sidecarPath}`);
+            } catch {
+              // Ignore errors writing partial record - the main error is more important
+            }
+          }
+
           process.exit(1);
         }
       },
