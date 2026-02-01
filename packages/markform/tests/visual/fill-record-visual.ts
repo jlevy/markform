@@ -360,6 +360,34 @@ function wrapHtml(content: string, title: string): string {
       }
     }
   </style>
+  <script>
+    // Tooltip handlers for Fill Record visualizations
+    function frShowTip(el) {
+      var tip = document.getElementById('fr-tooltip');
+      if (tip && el.dataset.tooltip) {
+        tip.textContent = el.dataset.tooltip;
+        // Position tooltip centered above the element
+        var rect = el.getBoundingClientRect();
+        tip.style.left = (rect.left + rect.width / 2) + 'px';
+        tip.style.top = (rect.top - 8) + 'px';
+        tip.style.transform = 'translate(-50%, -100%)';
+        tip.classList.add('visible');
+      }
+    }
+    function frHideTip() {
+      var tip = document.getElementById('fr-tooltip');
+      if (tip) tip.classList.remove('visible');
+    }
+    // Copy YAML handler
+    function frCopyYaml(btn) {
+      var pre = btn.parentElement.querySelector('pre');
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = orig; }, 1500);
+      });
+    }
+  </script>
 </head>
 <body>
   ${content}
