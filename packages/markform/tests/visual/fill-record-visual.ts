@@ -150,7 +150,16 @@ const completedRecord = {
           completedAt: '2026-01-30T14:30:02.560Z',
           durationMs: 160,
           success: true,
-          input: { patches: [] },
+          input: {
+            patches: [
+              { op: 'set_string', fieldId: 'company_name', value: 'Acme Corporation' },
+              { op: 'set_string', fieldId: 'ceo_name', value: 'Jane Smith' },
+              { op: 'set_number', fieldId: 'funding_amount', value: 15000000 },
+              { op: 'set_url', fieldId: 'website', value: 'https://acme.example.com' },
+              { op: 'set_single_select', fieldId: 'stage', value: 'series_a' },
+              { op: 'skip_field', fieldId: 'optional_notes' },
+            ],
+          },
         },
       ],
       patchesApplied: 6,
@@ -188,7 +197,26 @@ const completedRecord = {
           completedAt: '2026-01-30T14:30:07.320Z',
           durationMs: 220,
           success: true,
-          input: { patches: [] },
+          input: {
+            patches: [
+              { op: 'set_number', fieldId: 'valuation', value: 50000000 },
+              { op: 'set_date', fieldId: 'founded_date', value: '2019-03-15' },
+              {
+                op: 'set_string_list',
+                fieldId: 'key_investors',
+                value: ['Sequoia Capital', 'Andreessen Horowitz', 'Y Combinator'],
+              },
+              { op: 'set_string', fieldId: 'headquarters', value: 'San Francisco, CA' },
+              {
+                op: 'set_checkboxes',
+                fieldId: 'industries',
+                values: ['technology', 'saas', 'enterprise'],
+              },
+              { op: 'set_string', fieldId: 'employee_count', value: '50-100' },
+              { op: 'clear_field', fieldId: 'deprecated_field' },
+              { op: 'set_number', fieldId: 'revenue', value: 5200000 },
+            ],
+          },
         },
       ],
       patchesApplied: 8,
@@ -217,7 +245,39 @@ const completedRecord = {
           completedAt: '2026-01-30T14:30:08.920Z',
           durationMs: 120,
           success: true,
-          input: { patches: [] },
+          input: {
+            patches: [
+              {
+                op: 'set_table',
+                fieldId: 'team_members',
+                rows: [
+                  {
+                    name: 'Jane Smith',
+                    role: 'CEO',
+                    linkedin: 'https://linkedin.com/in/janesmith',
+                  },
+                  { name: 'John Doe', role: 'CTO', linkedin: 'https://linkedin.com/in/johndoe' },
+                  {
+                    name: 'Alice Johnson',
+                    role: 'CFO',
+                    linkedin: 'https://linkedin.com/in/alicejohnson',
+                  },
+                ],
+              },
+              {
+                op: 'set_url_list',
+                fieldId: 'press_coverage',
+                value: ['https://techcrunch.com/acme-funding', 'https://forbes.com/acme-profile'],
+              },
+              {
+                op: 'set_string',
+                fieldId: 'company_description',
+                value:
+                  'Acme Corporation is a leading enterprise SaaS company providing innovative solutions for workflow automation and business process optimization. Founded in 2019, we have grown to serve over 500 enterprise customers globally.',
+              },
+              { op: 'abort_field', fieldId: 'competitor_analysis' },
+            ],
+          },
         },
       ],
       patchesApplied: 4,

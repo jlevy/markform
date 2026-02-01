@@ -2593,6 +2593,138 @@ export function formatTokens(count: number): string {
 }
 
 /**
+ * Format a patch value for display.
+ * Handles different value types and truncates long values.
+ */
+function formatPatchValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '<em class="fr-turn__patch-value--clear">(cleared)</em>';
+  }
+  if (typeof value === 'string') {
+    const escaped = escapeHtml(value);
+    if (escaped.length > 200) {
+      return escaped.substring(0, 200) + '...';
+    }
+    return escaped;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    // For arrays (string lists, url lists, table rows), show count and preview
+    const preview = JSON.stringify(value, null, 2);
+    if (preview.length > 200) {
+      return `[${value.length} items]`;
+    }
+    return escapeHtml(preview);
+  }
+  // Fallback for any other type (including objects not caught above)
+  const preview = JSON.stringify(value, null, 2);
+  if (preview.length > 200) {
+    return escapeHtml(preview.substring(0, 200)) + '...';
+  }
+  return escapeHtml(preview);
+}
+
+/**
+ * Render patches from a fill_form tool call input.
+ * Returns HTML for the patch details section.
+ */
+function renderPatchDetails(input: Record<string, unknown>): string {
+  const patches = input.patches;
+  if (!Array.isArray(patches) || patches.length === 0) {
+    return '';
+  }
+
+  const patchHtml = patches
+    .map((patch: unknown) => {
+      if (!patch || typeof patch !== 'object') return '';
+      const p = patch as Record<string, unknown>;
+      const op = typeof p.op === 'string' ? p.op : 'unknown';
+      const fieldId =
+        typeof p.fieldId === 'string' ? p.fieldId : typeof p.noteId === 'string' ? p.noteId : '';
+
+      // Determine the display based on operation type
+      const opLabel = op.replace(/_/g, ' ');
+      let valueHtml = '';
+
+      if (op === 'skip_field') {
+        valueHtml = '<em class="fr-turn__patch-value--skip">(skipped)</em>';
+      } else if (op === 'abort_field') {
+        valueHtml = '<em class="fr-turn__patch-value--skip">(aborted)</em>';
+      } else if (op === 'clear_field') {
+        valueHtml = '<em class="fr-turn__patch-value--clear">(cleared)</em>';
+      } else if ('value' in p) {
+        valueHtml = formatPatchValue(p.value);
+      } else if ('values' in p) {
+        valueHtml = formatPatchValue(p.values);
+      } else if ('rows' in p) {
+        const rows = p.rows as unknown[];
+        valueHtml = `[${rows.length} row${rows.length !== 1 ? 's' : ''}]`;
+      }
+
+      return `
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">${escapeHtml(fieldId)}</span>
+          <span class="fr-turn__patch-op">${escapeHtml(opLabel)}</span>
+          <span class="fr-turn__patch-value">${valueHtml}</span>
+        </div>
+      `;
+    })
+    .filter(Boolean)
+    .join('');
+
+  return `<div class="fr-turn__patches">${patchHtml}</div>`;
+}
+
+/**
+ * Render a single tool call with enhanced details.
+ * Shows query for web_search, patch details for fill_form.
+ */
+function renderToolCall(tc: {
+  tool: string;
+  success: boolean;
+  durationMs: number;
+  input: Record<string, unknown>;
+  result?: { error?: string; resultCount?: number };
+}): string {
+  const hasError = !!tc.result?.error;
+  const icon = tc.success ? '✓' : '✕';
+  const errorClass = hasError ? ' fr-turn__tool--error' : '';
+
+  // Build result summary
+  let resultSummary = '';
+  if (hasError) {
+    resultSummary = `Error: ${escapeHtml(tc.result?.error ?? '')}`;
+  } else if (tc.result?.resultCount !== undefined) {
+    resultSummary = `${tc.result.resultCount} results`;
+  } else {
+    resultSummary = 'OK';
+  }
+
+  // Build tool-specific details
+  let detailHtml = '';
+  if (tc.tool === 'web_search' && typeof tc.input.query === 'string') {
+    const query = escapeHtml(tc.input.query);
+    detailHtml = ` <span class="fr-turn__query">"${query}"</span>`;
+  }
+
+  // Base tool call line
+  const toolLine = `<li class="fr-turn__tool${errorClass}">${icon} <strong>${escapeHtml(tc.tool)}</strong>${detailHtml}: ${resultSummary} (${formatDuration(tc.durationMs)})</li>`;
+
+  // For fill_form, add patch details
+  if (tc.tool === 'fill_form' && tc.input.patches) {
+    const patchDetails = renderPatchDetails(tc.input);
+    if (patchDetails) {
+      return toolLine + patchDetails;
+    }
+  }
+
+  return toolLine;
+}
+
+/**
  * CSS styles for fill record visualization.
  * Uses CSS custom properties for theming (supports dark mode via prefers-color-scheme).
  * Designed to be lightweight, reusable, and embeddable.
@@ -2811,6 +2943,58 @@ const FILL_RECORD_STYLES = `
   }
   .fr-turn__tool--error { color: var(--fr-error); }
 
+  .fr-turn__query {
+    color: var(--fr-primary);
+    font-style: italic;
+  }
+
+  .fr-turn__patches {
+    margin: 4px 0 8px 20px;
+    padding: 8px 12px;
+    background: var(--fr-bg-subtle);
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .fr-turn__patch {
+    margin: 4px 0;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--fr-border);
+  }
+  .fr-turn__patch:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .fr-turn__patch-field {
+    font-weight: 600;
+    color: var(--fr-text);
+  }
+  .fr-turn__patch-op {
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    background: var(--fr-bg-muted);
+    color: var(--fr-text-subtle);
+    margin-left: 6px;
+  }
+  .fr-turn__patch-value {
+    display: block;
+    margin-top: 2px;
+    color: var(--fr-text-muted);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    word-break: break-word;
+    max-height: 80px;
+    overflow: auto;
+  }
+  .fr-turn__patch-value--skip {
+    color: var(--fr-warning);
+    font-style: italic;
+  }
+  .fr-turn__patch-value--clear {
+    color: var(--fr-info);
+    font-style: italic;
+  }
+
   .fr-raw {
     position: relative;
   }
@@ -2989,17 +3173,7 @@ export function renderFillRecordContent(record: FillRecord): string {
     const timelineItems = timeline
       .map((turn) => {
         const turnTokens = turn.tokens.input + turn.tokens.output;
-        const toolCallsList = turn.toolCalls
-          .map((tc) => {
-            const hasError = !!tc.result?.error;
-            const resultSummary = hasError
-              ? `Error: ${escapeHtml(tc.result?.error ?? '')}`
-              : tc.result?.resultCount !== undefined
-                ? `${tc.result.resultCount} results`
-                : 'OK';
-            return `<li class="fr-turn__tool${hasError ? ' fr-turn__tool--error' : ''}">${tc.success ? '✓' : '✕'} <strong>${escapeHtml(tc.tool)}</strong>: ${resultSummary} (${formatDuration(tc.durationMs)})</li>`;
-          })
-          .join('');
+        const toolCallsList = turn.toolCalls.map((tc) => renderToolCall(tc)).join('');
 
         const patchInfo = turn.patchesApplied > 0 ? ` • ${turn.patchesApplied} patches` : '';
         const rejectedInfo =
