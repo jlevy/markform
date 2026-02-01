@@ -684,13 +684,32 @@ markform fill input.form.md -o output.form.md --record-fill
 #   output.fill.json    # The FillRecord (JSON)
 ```
 
-**CLI naming convention:**
+**Recommended File Naming Conventions:**
 
-The fill record file is derived from the output form path:
-- Output: `path/to/some-name.form.md` → Record: `path/to/some-name.fill.json`
-- Output: `path/to/document.md` → Record: `path/to/document.fill.json`
+For consistent tooling support, we recommend these file extensions:
 
-The pattern is: replace the file extension with `.fill.json`.
+| File Type | Extension | Example |
+|-----------|-----------|---------|
+| Form (source/filled) | `.form.md` | `intake.form.md` |
+| Fill Record (sidecar) | `.fill.json` | `intake.fill.json` |
+
+**Why these conventions matter:**
+- The `serve` command auto-discovers fill records based on these patterns
+- Other tools can reliably find related files
+- Clear separation between form content (`.form.md`) and metadata (`.fill.json`)
+
+**Derivation rules (implemented in `deriveFillRecordPath`):**
+1. If path ends with `.form.md` → strip it and add `.fill.json`
+2. Otherwise if path ends with `.md` → strip it and add `.fill.json`
+3. Otherwise → append `.fill.json`
+
+Examples:
+- `path/to/intake.form.md` → `path/to/intake.fill.json` (recommended)
+- `path/to/document.md` → `path/to/document.fill.json` (fallback)
+- `path/to/file.txt` → `path/to/file.txt.fill.json` (edge case)
+
+**Implementation:** Both `fill` and `serve` commands use the shared `deriveFillRecordPath()`
+function from `settings.ts` to ensure consistent behavior.
 
 **CLI defaults:**
 
@@ -734,7 +753,19 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 - [x] Add `--record-fill` flag to `fill` command (defaults to `false`)
 - [x] Implement sidecar file naming: `{basename}.fill.json`
 - [x] Write JSON fill record when flag is set
-- [x] CLI tests for record file generation
+- [ ] **BUG:** CLI tests for record file generation — tests exist but don't verify timeline content
+
+**⚠️ BUG FOUND (2026-01-31) — FIXED (2026-02-01):**
+
+The CLI's fill command had a **callback wiring gap** that caused the timeline to be empty.
+
+**Root Cause:** The CLI runs its own harness loop manually instead of using the `fillForm()`
+function. It was only wiring 4 of 7 callbacks, missing `onTurnStart`, `onTurnComplete`,
+and `onWebSearch`.
+
+**Fix Applied:** Added all missing callbacks to the CLI's callback object and invoked
+`onTurnStart` at the start of each turn and `onTurnComplete` after `harness.apply()`.
+See Phase 6 checklist below for details.
 
 ### Phase 4: Documentation & Examples
 
@@ -807,6 +838,52 @@ view of execution that can be included in test fixtures. This helps validate:
 - Expected turn counts
 - Tool call patterns
 - Performance characteristics
+
+### Phase 6: Bug Fixes — CLI Callback Wiring (NEW)
+
+Fixes the critical bug where CLI fill records have empty timelines.
+
+**Related Beads:**
+- `mf-mgxo` (P1 bug): CLI fill command missing onTurnStart/onTurnComplete callbacks
+- `mf-niiz` (P2 bug): CLI fill command missing onWebSearch callback forwarding
+- `mf-ln09` (P2 task): Add integration tests for CLI fill record timeline verification
+- `mf-1omw` (P3 task): Fill Record visualization should warn when timeline is empty
+
+**Checklist:**
+- [x] Add `onTurnStart` callback to CLI's callback object (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add `onTurnComplete` callback to CLI's callback object (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add `onWebSearch` callback forwarding to collector (`mf-niiz`) — DONE 2026-02-01
+- [x] Call `onTurnStart` at start of harness loop iteration (`mf-mgxo`) — DONE 2026-02-01
+- [x] Call `onTurnComplete` after `harness.apply()` returns (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add unit test: verify CLI callback wiring produces non-empty timeline — DONE 2026-02-01
+- [ ] Add integration test: verify CLI fill record has non-empty timeline (`mf-ln09`)
+- [ ] Add integration test: verify CLI fill record has correct turn count (`mf-ln09`)
+- [ ] Add integration test: verify tool calls appear in timeline entries (`mf-ln09`)
+- [x] Manual verification: run `markform fill --record-fill` and inspect JSON — DONE 2026-02-01
+
+**Implementation Notes:**
+
+The fix should be localized to `packages/markform/src/cli/commands/fill.ts`:
+
+```typescript
+// Add to callbacks object (around line 454):
+const callbacks = {
+  onTurnStart: (turn: { turnNumber: number; issuesCount: number; executionId: string }) => {
+    liveCollector.onTurnStart(turn);
+  },
+  onTurnComplete: (progress: TurnProgress) => {
+    liveCollector.onTurnComplete(progress);
+  },
+  onWebSearch: (info: { query: string; resultCount: number; provider: string }) => {
+    liveCollector.onWebSearch(info);
+  },
+  // ... existing onToolStart, onToolEnd, onLlmCallStart, onLlmCallEnd
+};
+
+// In the harness loop, call callbacks at appropriate points:
+// Before agent.fillFormTool(): callbacks.onTurnStart(...)
+// After harness.apply(): callbacks.onTurnComplete(...)
+```
 
 ## Backward Compatibility
 

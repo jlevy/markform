@@ -29,6 +29,7 @@ import type {
   SessionTurnStats,
   WireFormat,
 } from '../../engine/coreTypes.js';
+import type { TurnProgress } from '../../harness/harnessTypes.js';
 import { FillRecordCollector } from '../../harness/fillRecordCollector.js';
 import { stripUnstableFillRecordFields } from '../../harness/fillRecord.js';
 import { formatFillRecordSummary } from '../../harness/formatFillRecordSummary.js';
@@ -43,6 +44,7 @@ import {
   AGENT_ROLE,
   USER_ROLE,
   parseRolesFlag,
+  deriveFillRecordPath,
 } from '../../settings.js';
 import { getFormsDir } from '../lib/paths.js';
 import { formatSuggestedLlms } from '../../llms.js';
@@ -452,6 +454,22 @@ export function registerFillCommand(program: Command): void {
             // Collector is always defined at this point (created above)
             const liveCollector = collector;
             const callbacks = {
+              onTurnStart: (turn: {
+                turnNumber: number;
+                issuesCount: number;
+                order?: number;
+                executionId?: string;
+              }) => {
+                liveCollector.onTurnStart({
+                  turnNumber: turn.turnNumber,
+                  issuesCount: turn.issuesCount,
+                  order: turn.order ?? 0,
+                  executionId: turn.executionId ?? 'cli-serial',
+                });
+              },
+              onTurnComplete: (progress: TurnProgress) => {
+                liveCollector.onTurnComplete(progress);
+              },
               onToolStart: (call: { name: string; input: unknown; executionId: string }) => {
                 cliCallbacks.onToolStart?.(call);
                 liveCollector.onToolStart(call);
@@ -476,6 +494,14 @@ export function registerFillCommand(program: Command): void {
                 executionId: string;
               }) => {
                 liveCollector.onLlmCallEnd(call);
+              },
+              onWebSearch: (info: {
+                query: string;
+                resultCount: number;
+                provider: string;
+                executionId: string;
+              }) => {
+                liveCollector.onWebSearch(info);
               },
             };
 
@@ -519,6 +545,14 @@ export function registerFillCommand(program: Command): void {
             ctx,
             `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
           );
+
+          // Record first turn start for FillRecord (fixes mf-mgxo: empty timeline bug)
+          collector.onTurnStart({
+            turnNumber: stepResult.turnNumber,
+            issuesCount: stepResult.issues.length,
+            order: 0,
+            executionId: 'cli-serial',
+          });
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
             // Create spinner for LLM call (only for live agent with TTY)
@@ -644,7 +678,23 @@ export function registerFillCommand(program: Command): void {
             }
 
             // Apply patches (with wire format for comprehensive session logging)
+            const prevTurnNumber = stepResult.turnNumber;
+            const prevIssuesShown = stepResult.issues.length;
             stepResult = harness.apply(patches, stepResult.issues, llmStats, context, wire);
+
+            // Record turn completion for FillRecord (fixes mf-mgxo: empty timeline bug)
+            const rejectedPatches = stepResult.rejectedPatches ?? [];
+            collector.onTurnComplete({
+              turnNumber: prevTurnNumber,
+              issuesShown: prevIssuesShown,
+              patchesApplied: patches.length - rejectedPatches.length,
+              requiredIssuesRemaining: stepResult.issues.filter((i) => i.severity === 'required')
+                .length,
+              isComplete: stepResult.isComplete,
+              rejectedPatches,
+              issues: stepResult.issues,
+              patches,
+            });
 
             // Track rejections for next turn's wire format context
             previousRejections = stepResult.rejectedPatches;
@@ -658,6 +708,14 @@ export function registerFillCommand(program: Command): void {
                 ctx,
                 `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
               );
+
+              // Record next turn start for FillRecord
+              collector.onTurnStart({
+                turnNumber: stepResult.turnNumber,
+                issuesCount: stepResult.issues.length,
+                order: 0,
+                executionId: 'cli-serial',
+              });
             }
           }
 
@@ -719,8 +777,7 @@ export function registerFillCommand(program: Command): void {
 
           // Write FillRecord sidecar file if recordFill or recordFillStable is enabled
           if (options.recordFill || options.recordFillStable) {
-            // Derive sidecar path from output path (replace extension with .fill.json)
-            const sidecarPath = outputPath.replace(/\.(form\.)?md$/, '.fill.json');
+            const sidecarPath = deriveFillRecordPath(outputPath);
 
             // Strip unstable fields for golden tests
             const recordToWrite = options.recordFillStable

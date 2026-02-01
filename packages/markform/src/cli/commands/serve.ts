@@ -22,7 +22,12 @@ import { formToJsonSchema } from '../../engine/jsonSchema.js';
 import { serializeForm, serializeReport } from '../../engine/serialize.js';
 import type { FillRecord } from '../../harness/fillRecord.js';
 import { toNotesArray, toStructuredValues } from '../lib/exportHelpers.js';
-import { DEFAULT_PORT, detectFileType, type FileType } from '../../settings.js';
+import {
+  DEFAULT_PORT,
+  deriveFillRecordPath,
+  detectFileType,
+  type FileType,
+} from '../../settings.js';
 import type {
   CheckboxesField,
   CheckboxesValue,
@@ -92,16 +97,6 @@ interface Tab {
 }
 
 /**
- * Get the fill record sidecar path for a form file.
- * The sidecar is stored as .fill.json next to the form.
- * For example: form.form.md -> form.fill.json
- */
-function getFillRecordSidecarPath(formPath: string): string {
-  // Remove .form.md extension and add .fill.json
-  return formPath.replace(/\.form\.md$/, '.fill.json');
-}
-
-/**
  * Build tabs for a form file.
  * All tabs are always present - content is generated dynamically from the form.
  * Tab order: View, Edit, Source, Report, Values, Schema, Fill Record (if sidecar exists)
@@ -117,7 +112,7 @@ function buildFormTabs(formPath: string): Tab[] {
   ];
 
   // Add Fill Record tab if sidecar file exists
-  const sidecarPath = getFillRecordSidecarPath(formPath);
+  const sidecarPath = deriveFillRecordPath(formPath);
   if (existsSync(sidecarPath)) {
     tabs.push({ id: 'fill-record', label: 'Fill Record', path: sidecarPath });
   }

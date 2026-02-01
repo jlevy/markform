@@ -79,7 +79,9 @@ example.form.md          → Form content
 example.fill.json        → FillRecord data (if exists)
 ```
 
-The serve command should detect the sidecar file and enable the Fill Record tab.
+The serve command uses `deriveFillRecordPath()` from `settings.ts` to locate the
+sidecar file and enable the Fill Record tab. This shared function ensures
+consistent path derivation between the `fill` and `serve` commands.
 
 ## Design Options
 
@@ -367,14 +369,19 @@ interface Tab {
 }
 ```
 
-**New Functions:**
+**Shared Utilities (from `settings.ts`):**
 ```typescript
-// Check if fill record sidecar exists
-function getFillRecordPath(formPath: string): string | null;
+// Derive fill record sidecar path from form path
+// Uses shared deriveFillRecordPath() from settings.ts for consistency with fill command
+import { deriveFillRecordPath } from '../../settings.js';
 
-// Load and parse fill record from sidecar file
-function loadFillRecord(fillRecordPath: string): Promise<FillRecord | null>;
+// Examples:
+// deriveFillRecordPath('intake.form.md') → 'intake.fill.json'
+// deriveFillRecordPath('document.md') → 'document.fill.json'
+```
 
+**New Functions (in `serve.ts`):**
+```typescript
 // Render fill record as HTML dashboard
 function renderFillRecordContent(record: FillRecord): string;
 ```
@@ -423,7 +430,7 @@ be fixed for the visualization to be useful for debugging failed fills.
 ### Phase 2: Core Visualization ✅ IMPLEMENTED
 
 - [x] Add fill record sidecar detection in serve command ✅
-  - Added `getFillRecordSidecarPath()` helper function
+  - Uses shared `deriveFillRecordPath()` from `settings.ts`
   - Checks for `.fill.json` file next to form
 - [x] Extend Tab interface to include 'fill-record' tab ID ✅
 - [x] Update `buildFormTabs()` to conditionally include Fill Record tab ✅
@@ -516,8 +523,11 @@ Commit: `feat: add Fill Record tab to serve command`
    (reusing `renderYamlContent()`) for consistency with the Values tab and better
    readability.
 
-5. **Sidecar path convention**: The fill record sidecar is expected at
-   `<form-name>.fill.json` (replacing `.form.md` with `.fill.json`).
+5. **Sidecar path convention**: The fill record sidecar path is derived using the
+   shared `deriveFillRecordPath()` function from `settings.ts`. This ensures
+   consistent behavior between `fill` and `serve` commands:
+   - `intake.form.md` → `intake.fill.json` (recommended)
+   - `document.md` → `document.fill.json` (fallback)
 
 6. **Exported utilities**: `formatDuration()` and `formatTokens()` are exported
    for reuse in other visualizations or CLI output.
@@ -541,3 +551,4 @@ Commit: `feat: add Fill Record tab to serve command`
 - `packages/markform/src/harness/fillRecord.ts` — FillRecord Zod schemas
 - `packages/markform/src/cli/commands/serve.ts` — Serve command implementation
 - `packages/markform/src/harness/formatFillRecordSummary.ts` — Text summary formatter
+- `packages/markform/src/settings.ts` — Shared constants and `deriveFillRecordPath()` utility
