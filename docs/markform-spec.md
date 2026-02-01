@@ -144,6 +144,30 @@ markform:
   When omitted, tools may infer from field roles or require explicit selection.
   This is a hint for tooling, not enforced by the engine.
 
+- `harness` (*optional*): A map of harness configuration hints that suggest execution
+  parameters to harness implementations. These are suggestions — a harness MAY ignore
+  them or override them via API options.
+
+  Supported keys (all values must be numbers, all keys must be `snake_case`):
+
+  | Key | Description |
+  | --- | --- |
+  | `max_turns` | Suggested maximum turns before stopping |
+  | `max_patches_per_turn` | Suggested maximum patches per turn |
+  | `max_issues_per_turn` | Suggested maximum issues surfaced per turn |
+  | `max_parallel_agents` | Suggested maximum concurrent agents for parallel execution |
+
+  Unrecognized keys or non-numeric values are parse errors.
+
+  Example:
+  ```yaml
+  markform:
+    spec: MF/0.1
+    harness:
+      max_turns: 50
+      max_parallel_agents: 4
+  ```
+
 **Behavioral rules (*required*):**
 
 - *required:* `form_summary`, `form_progress`, and `form_state` are derived,
@@ -255,6 +279,8 @@ Example: `pattern="^[A-Z]{1,5}$"` for a ticker symbol.
 | `label` | string | Required. Human-readable field name |
 | `required` | boolean | Whether field must be filled for form completion |
 | `role` | string | Target actor (e.g., `"user"`, `"agent"`). See role-filtered completion |
+| `parallel` | string | Parallel batch identifier. Top-level fields/groups only. See [Parallel Execution Hints](#parallel-execution-hints) |
+| `order` | number | Fill order (default: `0`). Lower values filled first. See [Fill Order](#fill-order) |
 
 The `role` attribute enables multi-actor workflows where different fields are assigned
 to different actors.
@@ -1259,6 +1285,59 @@ On GitHub, all `<!-- ... -->` comments are hidden, leaving only the visible cont
 **Constraint:** Values containing the literal string `-->` require escaping or should
 use the tag syntax to avoid prematurely closing the comment.
 
+##### Parallel Execution Hints
+
+Top-level fields and groups MAY include a `parallel` attribute to indicate that they
+can be filled concurrently with other items sharing the same value.
+
+```markdown
+<!-- field kind="string" id="a" label="A" parallel="batch_1" --><!-- /field -->
+<!-- field kind="string" id="b" label="B" parallel="batch_1" --><!-- /field -->
+```
+
+**Rules:**
+- `parallel` value is an arbitrary string identifier (recommended: `snake_case`)
+- Items with the same `parallel` value form a *parallel batch*
+- Items without `parallel` remain in loose-serial mode (single agent, no enforced
+  ordering) — identical to current behavior
+- `parallel` MUST NOT appear on fields inside groups (parse error) — only on
+  top-level fields and groups
+- All items in a parallel batch MUST have the same effective `role` (parse error)
+- `parallel` is a hint — a harness MAY ignore it and fill everything in
+  loose-serial mode
+
+**Execution model:**
+```
+Without parallel: All items filled by one agent in loose-serial mode (current behavior).
+
+With parallel: Items are partitioned into two pools:
+  1. Loose-serial pool: items without `parallel`, filled by primary agent
+  2. Parallel batches: items with `parallel`, each item filled by a separate agent
+All agents (primary + parallel) run concurrently. No barriers between them.
+```
+
+##### Fill Order
+
+Fields and groups MAY include an `order` attribute (numeric) that controls the
+sequence in which the harness presents fields to the agent.
+
+```markdown
+<!-- field kind="string" id="details" label="Details" --><!-- /field -->
+<!-- field kind="string" id="summary" label="Summary" order=99 --><!-- /field -->
+```
+
+**Rules:**
+- `order` is a number (integer or float). Default: `0`.
+- Lower `order` values are filled first. Fields at the same order level are
+  filled in loose-serial order (agent chooses).
+- The harness MUST NOT surface issues for `order=N` fields until all fields at
+  `order<N` are complete (answered, skipped, or aborted).
+- Fields at different order levels are always filled in separate agent turns.
+- A field inside a group with `order` MUST NOT specify a different `order`
+  (parse error). Use separate groups for different order levels.
+- `order` composes with `parallel`: all items in a parallel batch MUST have the
+  same effective `order` value (parse error otherwise).
+
 * * *
 
 ## Layer 2: Form Data Model
@@ -1442,6 +1521,8 @@ interface FieldGroup {
   // Note: `required` on groups is not supported in MF/0.1 (ignored with warning)
   validate?: ValidatorRef[];  // validator references (string IDs or parameterized objects)
   children: Field[];          // MF/0.1/0.2: fields only; nested groups deferred (future)
+  parallel?: string;          // Parallel batch identifier
+  order?: number;             // Fill order (default: 0). Applies to all child fields.
 }
 
 type FieldPriorityLevel = 'high' | 'medium' | 'low';
@@ -1452,6 +1533,8 @@ interface FieldBase {
   required: boolean;             // explicit: parser defaults to false if not specified
   priority: FieldPriorityLevel;  // explicit: parser defaults to 'medium' if not specified
   validate?: ValidatorRef[];     // validator references (string IDs or parameterized objects)
+  parallel?: string;             // Parallel batch identifier (top-level only)
+  order?: number;                // Fill order (default: 0). Lower = filled first.
 }
 
 // NOTE: `required` and `priority` are explicit (not optional) in the data model.
@@ -2663,6 +2746,38 @@ isRetryableError(error)    // LLM error with retryable=true
 
 `ParseError` is exported as an alias for `MarkformParseError` for backward compatibility.
 Use `MarkformParseError` in new code.
+
+#### Execution Plan
+
+An **execution plan** partitions top-level form items into a loose-serial pool and
+zero or more parallel batches:
+
+```typescript
+interface ExecutionPlan {
+  /** Items without `parallel` — filled by primary agent in loose-serial mode */
+  looseSerial: Array<{ itemId: Id; itemType: 'field' | 'group' }>;
+
+  /** Parallel batches — each item filled by a separate concurrent agent */
+  parallelBatches: Array<{
+    batchId: string;
+    items: Array<{ itemId: Id; itemType: 'field' | 'group' }>;
+  }>;
+}
+```
+
+**Computation:** Walk top-level items (fields and groups) in document order:
+- If item has no `parallel`: add to the loose-serial pool
+- If item has `parallel`: add to the batch with that ID (create batch if new)
+
+**Execution:** The primary agent fills loose-serial items. For each parallel batch,
+one agent per item is spawned. All agents (primary + batch agents) run concurrently.
+When all complete, patches are merged and validation runs.
+
+**Order-based filtering:** The harness partitions items by their effective `order`
+value (default `0`). Issues for fields at `order=N` are only surfaced after all fields
+at `order<N` are complete (answered, skipped, or aborted). This ensures fields at
+different order levels are always filled in separate agent turns, so higher-order fields
+see completed lower-order field values in the form markdown.
 
 * * *
 

@@ -11,6 +11,7 @@ import type { HarnessConfig, ParsedForm } from '../engine/coreTypes.js';
 import type { FillOptions } from './harnessTypes.js';
 import {
   DEFAULT_MAX_ISSUES_PER_TURN,
+  DEFAULT_MAX_PARALLEL_AGENTS,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
 } from '../settings.js';
@@ -45,7 +46,10 @@ export function resolveHarnessConfig(
       options?.maxIssuesPerTurn ??
       frontmatterConfig?.maxIssuesPerTurn ??
       DEFAULT_MAX_ISSUES_PER_TURN,
-    // These don't have frontmatter equivalents
+    maxParallelAgents:
+      options?.maxParallelAgents ??
+      frontmatterConfig?.maxParallelAgents ??
+      DEFAULT_MAX_PARALLEL_AGENTS,
     targetRoles: options?.targetRoles,
     fillMode: options?.fillMode,
   };

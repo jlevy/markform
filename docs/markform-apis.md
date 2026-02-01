@@ -202,9 +202,41 @@ const result = await fillForm({
 | `maxStepsPerTurn` | `number` | `20` | Maximum AI SDK steps (tool call rounds) per turn |
 | `targetRoles` | `string[]` | `['agent']` | Roles to fill |
 | `fillMode` | `FillMode` | `'continue'` | `'continue'` or `'overwrite'` |
+| `enableParallel` | `boolean` | `false` | Enable parallel execution for forms with `parallel` batches |
+| `maxParallelAgents` | `number` | `4` | Max concurrent agents for parallel batches |
 | `callbacks` | `FillCallbacks` | `undefined` | Progress callbacks |
 | `signal` | `AbortSignal` | `undefined` | Cancellation signal |
 | `additionalTools` | `Record<string, Tool>` | `undefined` | Custom tools for agent |
+| `recordFill` | `boolean` | (required) | Collect detailed FillRecord with timeline and stats |
+
+### Parallel Execution
+
+When a form uses `parallel` attributes on groups, you can enable concurrent execution:
+
+```typescript
+const result = await fillForm({
+  form: formMarkdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: true,
+  captureWireFormat: false,
+  enableParallel: true,
+  maxParallelAgents: 4,
+  callbacks: {
+    onOrderLevelStart: ({ order }) => console.log(`Order ${order} starting`),
+    onBatchStart: ({ batchId }) => console.log(`Batch ${batchId} starting`),
+    onBatchComplete: ({ batchId, patchesApplied }) =>
+      console.log(`Batch ${batchId}: ${patchesApplied} patches`),
+  },
+});
+```
+
+**Behavior:**
+- `enableParallel: false` (default): All fields filled serially, `parallel` attributes
+  ignored. The `order` attribute still controls issue filtering.
+- `enableParallel: true`: Batch items run concurrently (up to `maxParallelAgents`).
+  Each agent runs a multi-turn loop with rejection feedback, same as the serial path.
+- If the form has no `parallel` batches, falls back to serial automatically.
+- `FillResult` shape is identical regardless of serial or parallel execution.
 
 ### FillStatus
 
@@ -312,6 +344,7 @@ await fillForm({
 | `onToolEnd` | `{ name, output, durationMs, error? }` | Called after a tool completes |
 | `onLlmCallStart` | `{ model }` | Called before an LLM request |
 | `onLlmCallEnd` | `{ model, inputTokens, outputTokens }` | Called after an LLM response |
+| `onWebSearch` | `{ query, resultCount, provider }` | Called when a web search is performed |
 
 **TurnProgress fields:**
 
@@ -334,6 +367,85 @@ interface PatchRejection {
   message: string;     // Why the patch was rejected
 }
 ```
+
+### FillRecord
+
+When `recordFill: true`, the `FillResult.record` contains a complete record of everything
+that happened during the fill operation. Useful for cost analysis, debugging, and auditing.
+
+```typescript
+const result = await fillForm({
+  form: formMarkdown,
+  model: 'anthropic/claude-sonnet-4-5',
+  enableWebSearch: true,
+  captureWireFormat: false,
+  recordFill: true,
+});
+
+if (result.record) {
+  console.log(`Session: ${result.record.sessionId}`);
+  console.log(`Duration: ${result.record.durationMs}ms`);
+  console.log(`Tokens: ${result.record.llm.inputTokens} in, ${result.record.llm.outputTokens} out`);
+  console.log(`Tool calls: ${result.record.toolSummary.totalCalls}`);
+}
+```
+
+**FillRecord fields:**
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `sessionId` | `string` | Unique session identifier (UUID) |
+| `startedAt` | `string` | ISO datetime when fill started |
+| `completedAt` | `string` | ISO datetime when fill completed |
+| `durationMs` | `number` | Total duration in milliseconds |
+| `form` | `object` | Form metadata (id, title, structure) |
+| `status` | `string` | `'completed'`, `'partial'`, `'failed'`, `'cancelled'` |
+| `formProgress` | `ProgressCounts` | Final form progress counts |
+| `llm` | `object` | LLM usage (provider, model, tokens) |
+| `toolSummary` | `ToolSummary` | Aggregated tool statistics |
+| `timingBreakdown` | `TimingBreakdown` | Time spent in LLM, tools, overhead |
+| `timeline` | `TimelineEntry[]` | Turn-by-turn execution history |
+| `execution` | `ExecutionMetadata` | Parallel execution details |
+| `customData` | `object` | Optional client-defined data |
+
+### formatFillRecordSummary(record, options?): string
+
+Format a FillRecord as a human-readable text summary.
+
+```typescript
+import { formatFillRecordSummary } from 'markform';
+
+const summary = formatFillRecordSummary(result.record, { verbose: true });
+console.log(summary);
+```
+
+**Output example:**
+
+```
+Fill completed in 12.4s (5 turns)
+
+Tokens:  2,450 input / 890 output (anthropic/claude-sonnet-4-5)
+Tools:   12 calls (11 succeeded, 1 failed)
+         - web_search: 5 calls, avg 1.2s, p95 2.1s
+         - fill_form: 7 calls, avg 45ms
+
+Timing:  55% LLM (6.8s) | 41% tools (5.1s) | 4% overhead (0.5s)
+
+Progress: 18/20 fields filled (90%)
+```
+
+**CLI usage:**
+
+The CLI provides `--record-fill` to write a sidecar `.fill.json` file:
+
+```bash
+markform fill input.form.md -o output.form.md --record-fill
+# Creates: output.form.md (filled form)
+#          output.fill.json (FillRecord JSON)
+```
+
+The CLI always prints a summary to stderr (use `--quiet` to suppress, `--verbose` for
+more detail).
 
 ### createHarness(form, config?): FormHarness
 

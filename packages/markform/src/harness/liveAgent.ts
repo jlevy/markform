@@ -157,7 +157,7 @@ export class LiveAgent implements Agent {
     };
 
     // Wrap tools with callbacks for observability
-    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks);
+    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks, this.provider);
 
     // Get model ID for callbacks (may not be available on all model types)
     const modelId = (this.model as { modelId?: string }).modelId ?? 'unknown';
@@ -165,7 +165,12 @@ export class LiveAgent implements Agent {
     // Call onLlmCallStart callback (errors don't abort)
     if (this.callbacks?.onLlmCallStart) {
       try {
-        this.callbacks.onLlmCallStart({ model: modelId });
+        this.callbacks.onLlmCallStart({
+          model: modelId,
+          // Default executionId for serial execution
+          // Parallel harness will provide proper context
+          executionId: '0-serial',
+        });
       } catch {
         // Ignore callback errors
       }
@@ -187,6 +192,8 @@ export class LiveAgent implements Agent {
           model: modelId,
           inputTokens: result.usage?.inputTokens ?? 0,
           outputTokens: result.usage?.outputTokens ?? 0,
+          // Default executionId for serial execution
+          executionId: '0-serial',
         });
       } catch {
         // Ignore callback errors
@@ -197,16 +204,50 @@ export class LiveAgent implements Agent {
     const patches: Patch[] = [];
     const toolCallCounts = new Map<string, number>();
 
+    // Get execution ID for callbacks (matches what wrapToolsWithCallbacks uses)
+    const executionId = '0-serial';
+
     for (const step of result.steps) {
       for (const toolCall of step.toolCalls) {
         // Count tool calls
         const count = toolCallCounts.get(toolCall.toolName) ?? 0;
         toolCallCounts.set(toolCall.toolName, count + 1);
 
-        // Extract patches from fill_form calls
+        // Extract patches from fill_form calls and emit tool events
+        // (fill_form is declarative so doesn't go through wrapToolsWithCallbacks)
         if (toolCall.toolName === FILL_FORM_TOOL_NAME && 'input' in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
+          const startTime = Date.now();
+
+          // Emit onToolStart for fill_form
+          if (this.callbacks?.onToolStart) {
+            try {
+              this.callbacks.onToolStart({
+                name: FILL_FORM_TOOL_NAME,
+                input,
+                executionId,
+              });
+            } catch {
+              // Ignore callback errors
+            }
+          }
+
           patches.push(...input.patches);
+
+          // Emit onToolEnd for fill_form
+          if (this.callbacks?.onToolEnd) {
+            try {
+              this.callbacks.onToolEnd({
+                name: FILL_FORM_TOOL_NAME,
+                output: { patchCount: input.patches.length },
+                durationMs: Date.now() - startTime,
+                executionId,
+                error: undefined,
+              });
+            } catch {
+              // Ignore callback errors
+            }
+          }
         }
       }
     }
@@ -576,9 +617,10 @@ function findField(form: ParsedForm, fieldId: string) {
 function wrapToolsWithCallbacks(
   tools: Record<string, Tool>,
   callbacks?: FillCallbacks,
+  provider?: string,
 ): Record<string, Tool> {
   // Skip wrapping if no tool callbacks
-  if (!callbacks?.onToolStart && !callbacks?.onToolEnd) {
+  if (!callbacks?.onToolStart && !callbacks?.onToolEnd && !callbacks?.onWebSearch) {
     return tools;
   }
 
@@ -589,7 +631,7 @@ function wrapToolsWithCallbacks(
     const execute = (tool as any).execute;
     if (typeof execute === 'function') {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      wrapped[name] = wrapTool(name, tool, execute, callbacks);
+      wrapped[name] = wrapTool(name, tool, execute, callbacks, provider);
     } else {
       // Pass through declarative tools unchanged
       wrapped[name] = tool;
@@ -606,16 +648,21 @@ function wrapTool(
   tool: Tool,
   originalExecute: (input: unknown) => Promise<unknown>,
   callbacks: FillCallbacks,
+  provider?: string,
 ): Tool {
   return {
     ...tool,
     execute: async (input: unknown) => {
       const startTime = Date.now();
 
+      // Default executionId for serial execution
+      // Parallel harness will provide proper context
+      const executionId = '0-serial';
+
       // Call onToolStart (errors don't abort)
       if (callbacks.onToolStart) {
         try {
-          callbacks.onToolStart({ name, input });
+          callbacks.onToolStart({ name, input, executionId });
         } catch {
           // Ignore callback errors
         }
@@ -631,7 +678,20 @@ function wrapTool(
               name,
               output,
               durationMs: Date.now() - startTime,
+              executionId,
             });
+          } catch {
+            // Ignore callback errors
+          }
+        }
+
+        // Check if this is a web search tool and call onWebSearch
+        if (callbacks.onWebSearch && isWebSearchTool(name)) {
+          try {
+            const webSearchInfo = extractWebSearchInfo(input, output, provider ?? 'unknown');
+            if (webSearchInfo) {
+              callbacks.onWebSearch({ ...webSearchInfo, executionId });
+            }
           } catch {
             // Ignore callback errors
           }
@@ -647,6 +707,7 @@ function wrapTool(
               output: null,
               durationMs: Date.now() - startTime,
               error: error instanceof Error ? error.message : String(error),
+              executionId,
             });
           } catch {
             // Ignore callback errors
@@ -656,6 +717,56 @@ function wrapTool(
       }
     },
   };
+}
+
+/**
+ * Check if a tool name indicates a web search tool.
+ */
+function isWebSearchTool(name: string): boolean {
+  return name === 'web_search' || name === 'google_search' || name.includes('search');
+}
+
+/**
+ * Extract web search info from tool input/output.
+ * Different providers may have different structures.
+ */
+function extractWebSearchInfo(
+  input: unknown,
+  output: unknown,
+  provider: string,
+): { query: string; resultCount: number; provider: string } | undefined {
+  // Try to extract query from input
+  let query: string | undefined;
+  if (input && typeof input === 'object') {
+    const inputObj = input as Record<string, unknown>;
+    if (typeof inputObj.query === 'string') {
+      query = inputObj.query;
+    } else if (typeof inputObj.q === 'string') {
+      query = inputObj.q;
+    }
+  }
+
+  if (!query) {
+    return undefined;
+  }
+
+  // Try to extract result count from output
+  let resultCount = 0;
+  if (output && typeof output === 'object') {
+    const outputObj = output as Record<string, unknown>;
+    // Common patterns for result count
+    if (Array.isArray(outputObj.results)) {
+      resultCount = outputObj.results.length;
+    } else if (Array.isArray(outputObj.searchResults)) {
+      resultCount = outputObj.searchResults.length;
+    } else if (typeof outputObj.resultCount === 'number') {
+      resultCount = outputObj.resultCount;
+    } else if (typeof outputObj.totalResults === 'number') {
+      resultCount = outputObj.totalResults;
+    }
+  }
+
+  return { query, resultCount, provider };
 }
 
 // =============================================================================

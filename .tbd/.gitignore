@@ -1,5 +1,7 @@
 # Local cache (not shared)
-cache/
+docs/
+
+state.yml
 
 # Hidden worktree for tbd-sync branch
 data-sync-worktree/
@@ -9,3 +11,8 @@ data-sync/
 
 # Temporary files
 *.tmp
+
+# Backups created by tbd doctor --fix
+backups/
+
+*.temp

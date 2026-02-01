@@ -21,7 +21,7 @@ markform:
       7. Include source URLs for every piece of information
       8. Leave unknown fields empty - don't guess or fabricate
       9. Keep descriptions concise (50-150 words max)
-  harness_config:
+  harness:
     max_issues_per_turn: 5
     max_patches_per_turn: 10
 ---

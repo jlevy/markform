@@ -1358,6 +1358,34 @@ markform:
       expect(output).toContain('max_patches_per_turn:');
     });
 
+    it('preserves max_parallel_agents in frontmatter round-trip', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+  harness:
+    max_parallel_agents: 8
+    max_turns: 10
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      expect(parsed.metadata?.harnessConfig?.maxParallelAgents).toBe(8);
+
+      const output = serializeForm(parsed);
+      expect(output).toContain('max_parallel_agents:');
+
+      // Full round-trip
+      const reparsed = parseForm(output);
+      expect(reparsed.metadata?.harnessConfig?.maxParallelAgents).toBe(8);
+    });
+
     it('preserves run_mode in frontmatter', () => {
       const markdown = `---
 markform:

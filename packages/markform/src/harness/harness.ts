@@ -235,9 +235,11 @@ export class FormHarness {
    */
   private computeStepResult(result: ReturnType<typeof inspect>): StepResult {
     // Issue filtering pipeline (order matters):
+    // 0. Filter by order level - only surface issues for the current (lowest incomplete) order
     // 1. Filter by maxGroupsPerTurn/maxFieldsPerTurn - limits scope diversity
     // 2. Cap by maxIssuesPerTurn - limits total count shown to agent
-    const filteredIssues = this.filterIssuesByScope(result.issues);
+    const orderFiltered = this.filterIssuesByOrder(result.issues);
+    const filteredIssues = this.filterIssuesByScope(orderFiltered);
     const limitedIssues = filteredIssues.slice(0, this.config.maxIssuesPerTurn);
 
     // Step budget = min of max patches per turn and issues to address
@@ -385,6 +387,59 @@ export class FormHarness {
     }
 
     return result;
+  }
+
+  /**
+   * Filter issues by order level.
+   *
+   * Only includes issues for fields at the current (lowest incomplete) order level.
+   * Fields at higher order levels are deferred until all lower-order fields are complete.
+   * If no order attributes are used, all issues pass through (all at order 0).
+   */
+  private filterIssuesByOrder(issues: InspectIssue[]): InspectIssue[] {
+    // Build a map: fieldId → effective order
+    const fieldOrderMap = new Map<string, number>();
+    for (const group of this.form.schema.groups) {
+      const groupOrder = group.order ?? 0;
+      for (const field of group.children) {
+        // If field has explicit order, use it; otherwise inherit group's order
+        fieldOrderMap.set(field.id, field.order ?? groupOrder);
+      }
+    }
+
+    // Find all distinct order levels that still have open issues
+    const openOrderLevels = new Set<number>();
+    for (const issue of issues) {
+      const fieldId = this.getFieldIdFromRef(issue.ref, issue.scope);
+      if (fieldId) {
+        const order = fieldOrderMap.get(fieldId) ?? 0;
+        openOrderLevels.add(order);
+      } else if (issue.scope === 'form') {
+        // Form-level issues are always at order 0
+        openOrderLevels.add(0);
+      }
+    }
+
+    if (openOrderLevels.size <= 1) {
+      // All issues are at the same order level (or no issues) — no filtering needed
+      return issues;
+    }
+
+    // Find the lowest order level with open issues
+    const currentOrder = Math.min(...openOrderLevels);
+
+    // Only include issues at the current order level
+    return issues.filter((issue) => {
+      if (issue.scope === 'form') {
+        return true; // Form-level issues always pass
+      }
+      const fieldId = this.getFieldIdFromRef(issue.ref, issue.scope);
+      if (!fieldId) {
+        return true; // Can't determine order — include
+      }
+      const order = fieldOrderMap.get(fieldId) ?? 0;
+      return order === currentOrder;
+    });
   }
 
   /**

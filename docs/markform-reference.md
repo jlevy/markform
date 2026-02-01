@@ -61,7 +61,21 @@ markform:
 
 ## Conventions
 
-Use `.form.md` for Markform files.
+### File Extensions
+
+| File Type | Extension | Description |
+|-----------|-----------|-------------|
+| Form | `.form.md` | Markform source and filled forms |
+| Fill Record | `.fill.json` | Execution metadata (sidecar file) |
+| Report | `.report.md` | Filtered human-readable output |
+| Schema | `.schema.json` | JSON Schema for form structure |
+| Values | `.yml` or `.json` | Exported field values |
+
+**Recommended:** Use `.form.md` for all Markform files. This enables:
+- Auto-discovery of fill records by `markform serve`
+- Consistent tooling behavior across CLI commands
+- Clear distinction from regular markdown files
+
 Markform uses HTML comment syntax for structure tags, which render invisibly on GitHub.
 
 ### Syntax
@@ -416,6 +430,8 @@ All fields support these attributes:
 | `required` | boolean | false | Must be filled for completion |
 | `role` | string | - | Target actor (`user`, `agent`) |
 | `priority` | string | medium | `high`, `medium`, `low` |
+| `order` | number | `0` | Fill order. Lower values filled first. Different order levels are filled in separate turns. |
+| `parallel` | string | - | Parallel batch identifier. Items with the same value may execute concurrently. Top-level only. |
 
 **Text-entry fields only** (string, number, string-list, url, url-list):
 
@@ -431,6 +447,31 @@ All fields support these attributes:
 
 Note: `placeholder` and `examples` are NOT valid on chooser fields (single-select,
 multi-select, checkboxes).
+
+## Harness Configuration
+
+Optional harness hints can be set in YAML frontmatter under `markform.harness`.
+All keys must be `snake_case` and all values must be numbers.
+These are suggestions — a harness may ignore or override them via API options.
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `max_turns` | number | Maximum turns before stopping |
+| `max_patches_per_turn` | number | Maximum patches per turn |
+| `max_issues_per_turn` | number | Maximum issues surfaced per turn |
+| `max_parallel_agents` | number | Maximum concurrent agents for parallel execution |
+
+```yaml
+markform:
+  spec: MF/0.1
+  harness:
+    max_turns: 50
+    max_issues_per_turn: 5
+    max_patches_per_turn: 10
+    max_parallel_agents: 4
+```
+
+Unrecognized keys or non-numeric values cause parse errors.
 
 ## Documentation Blocks
 

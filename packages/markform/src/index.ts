@@ -347,6 +347,17 @@ export { FormHarness, createHarness } from './harness/harness.js';
 export { MockAgent, createMockAgent } from './harness/mockAgent.js';
 export { fillForm } from './harness/programmaticFill.js';
 export { resolveHarnessConfig } from './harness/harnessConfigResolver.js';
+export {
+  ParallelHarness,
+  createParallelHarness,
+  scopeIssuesForItem,
+} from './harness/parallelHarness.js';
+export type {
+  ScopedFillRequest,
+  ParallelHarnessConfig,
+  ParallelStepResult,
+  ParallelRunResult,
+} from './harness/parallelHarness.js';
 export type {
   FillCallbacks,
   FillOptions,
@@ -356,6 +367,37 @@ export type {
   TurnStats,
   AgentResponse,
 } from './harness/harnessTypes.js';
+
+// =============================================================================
+// FillRecord Exports
+// =============================================================================
+
+export { FillRecordCollector } from './harness/fillRecordCollector.js';
+export type { FillRecordCollectorOptions } from './harness/fillRecordCollector.js';
+export { formatFillRecordSummary } from './harness/formatFillRecordSummary.js';
+export type { FormatFillRecordSummaryOptions } from './harness/formatFillRecordSummary.js';
+export type {
+  FillRecord,
+  FillRecordStatus,
+  TimelineEntry,
+  ToolCallRecord,
+  ToolStats,
+  ToolSummary,
+  TimingBreakdown,
+  TimingBreakdownItem,
+  ExecutionMetadata,
+} from './harness/fillRecord.js';
+export {
+  FillRecordSchema,
+  FillRecordStatusSchema,
+  TimelineEntrySchema,
+  ToolCallRecordSchema,
+  ToolStatsSchema,
+  ToolSummarySchema,
+  TimingBreakdownSchema,
+  TimingBreakdownItemSchema,
+  ExecutionMetadataSchema,
+} from './harness/fillRecord.js';
 
 // =============================================================================
 // Research Exports

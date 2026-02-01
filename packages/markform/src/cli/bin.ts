@@ -12,6 +12,7 @@ import { resolve } from 'node:path';
 
 import { config } from 'dotenv';
 
+import { bootstrapProxy } from './bootstrapProxy.js';
 import { runCli } from './cli.js';
 
 // Load .env files from current working directory
@@ -24,6 +25,9 @@ for (const file of ['.env.local', '.env']) {
     config({ path, override: false, debug: false, quiet: true });
   }
 }
+
+// Configure proxy support for Node.js fetch (must be after env loading)
+bootstrapProxy();
 
 runCli().catch((error: unknown) => {
   console.error('Fatal error:', error);

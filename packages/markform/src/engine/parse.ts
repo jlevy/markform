@@ -35,7 +35,13 @@ import {
   DEFAULT_ROLE_INSTRUCTIONS,
 } from '../settings.js';
 import { parseField } from './parseFields.js';
-import { getBooleanAttr, getStringAttr, getValidateAttr, isTagNode } from './parseHelpers.js';
+import {
+  getBooleanAttr,
+  getNumberAttr,
+  getStringAttr,
+  getValidateAttr,
+  isTagNode,
+} from './parseHelpers.js';
 import { MarkformParseError } from '../errors.js';
 import { detectSyntaxStyle, preprocessCommentSyntax } from './preprocess.js';
 import { findAllCheckboxes } from './injectIds.js';
@@ -69,7 +75,8 @@ interface FrontmatterResult {
 
 /**
  * Parse harness configuration from frontmatter.
- * Converts snake_case keys to camelCase.
+ * YAML keys must be snake_case; they are mapped to camelCase internally.
+ * Unrecognized keys produce a parse error.
  */
 function parseHarnessConfig(raw: unknown): FrontmatterHarnessConfig | undefined {
   if (!raw || typeof raw !== 'object') {
@@ -79,21 +86,27 @@ function parseHarnessConfig(raw: unknown): FrontmatterHarnessConfig | undefined 
   const config = raw as Record<string, unknown>;
   const result: FrontmatterHarnessConfig = {};
 
-  // Map snake_case to camelCase
+  // Map snake_case YAML keys to camelCase TypeScript keys
   const keyMap: Record<string, keyof FrontmatterHarnessConfig> = {
     max_turns: 'maxTurns',
-    maxTurns: 'maxTurns',
     max_patches_per_turn: 'maxPatchesPerTurn',
-    maxPatchesPerTurn: 'maxPatchesPerTurn',
     max_issues_per_turn: 'maxIssuesPerTurn',
-    maxIssuesPerTurn: 'maxIssuesPerTurn',
+    max_parallel_agents: 'maxParallelAgents',
   };
 
   for (const [key, value] of Object.entries(config)) {
     const camelKey = keyMap[key];
-    if (camelKey && typeof value === 'number') {
-      result[camelKey] = value;
+    if (!camelKey) {
+      throw new MarkformParseError(
+        `Unknown harness config key '${key}'. Valid keys: ${Object.keys(keyMap).join(', ')}`,
+      );
     }
+    if (typeof value !== 'number') {
+      throw new MarkformParseError(
+        `Harness config key '${key}' must be a number, got ${typeof value}`,
+      );
+    }
+    result[camelKey] = value;
   }
 
   return Object.keys(result).length > 0 ? result : undefined;
@@ -446,12 +459,42 @@ function parseFieldGroup(
     }
   }
 
+  const parallel = getStringAttr(node, 'parallel');
+  const order = getNumberAttr(node, 'order');
+
+  // Validate: fields inside a group must not have `parallel`
+  // Validate: fields inside a group must not explicitly specify a different `order`
+  const groupEffectiveOrder = order ?? 0;
+  for (const child of children) {
+    if (child.parallel) {
+      throw new MarkformParseError(
+        `Field '${child.id}' has parallel='${child.parallel}' but is inside ` +
+          `group '${id}'. The parallel attribute is only allowed on ` +
+          `top-level fields and groups.`,
+      );
+    }
+    // Only error if the child *explicitly* sets order to a different value.
+    // Unset order on a child is fine — it inherits the group's order.
+    if (child.order !== undefined) {
+      const childEffectiveOrder = child.order;
+      if (childEffectiveOrder !== groupEffectiveOrder) {
+        throw new MarkformParseError(
+          `Field '${child.id}' has order=${child.order} but is inside ` +
+            `group '${id}' with order=${groupEffectiveOrder}. ` +
+            `A field inside a group must not specify a different order.`,
+        );
+      }
+    }
+  }
+
   return {
     id,
     title,
     validate: getValidateAttr(node),
     children,
     report: getBooleanAttr(node, 'report'),
+    parallel,
+    order,
   };
 }
 
@@ -672,7 +715,79 @@ function parseFormTag(
     }
   }
 
+  // Validate parallel batch consistency: same order and same role within each batch.
+  // Collect all top-level items that have parallel set.
+  // For explicit groups, the group itself is the item.
+  // For implicit groups, each child field is a top-level item.
+  validateParallelBatches(groups);
+
   return { id, title, groups };
+}
+
+/**
+ * Validate that parallel batches have consistent order and role values.
+ */
+function validateParallelBatches(groups: FieldGroup[]): void {
+  // Collect batch membership: batchId → array of { order, role, itemId }
+  const batches = new Map<string, { order: number; role: string; itemId: string }[]>();
+
+  for (const group of groups) {
+    if (group.implicit) {
+      // Implicit group: each child field is a top-level item
+      for (const field of group.children) {
+        if (field.parallel) {
+          const list = batches.get(field.parallel) ?? [];
+          list.push({
+            order: field.order ?? 0,
+            role: field.role,
+            itemId: field.id,
+          });
+          batches.set(field.parallel, list);
+        }
+      }
+    } else {
+      // Explicit group: the group is the item
+      if (group.parallel) {
+        // For a group's role, use the role of the first child (they should all match
+        // since fields inside a group share the group's execution context).
+        // If the group has no children, use AGENT_ROLE as default.
+        const groupRole = group.children[0]?.role ?? AGENT_ROLE;
+        const list = batches.get(group.parallel) ?? [];
+        list.push({
+          order: group.order ?? 0,
+          role: groupRole,
+          itemId: group.id,
+        });
+        batches.set(group.parallel, list);
+      }
+    }
+  }
+
+  // Validate each batch
+  for (const [batchId, items] of batches) {
+    if (items.length < 2) continue;
+
+    const firstOrder = items[0]!.order;
+    const firstRole = items[0]!.role;
+
+    const differentOrders = items.filter((i) => i.order !== firstOrder);
+    if (differentOrders.length > 0) {
+      const orderValues = [...new Set(items.map((i) => i.order))].join(', ');
+      throw new MarkformParseError(
+        `Parallel batch '${batchId}' has items with different order values (${orderValues}). ` +
+          `All items in a parallel batch must have the same order.`,
+      );
+    }
+
+    const differentRoles = items.filter((i) => i.role !== firstRole);
+    if (differentRoles.length > 0) {
+      const roles = [...new Set(items.map((i) => i.role))].join(', ');
+      throw new MarkformParseError(
+        `Parallel batch '${batchId}' has items with different roles (${roles}). ` +
+          `All items in a parallel batch must have the same role.`,
+      );
+    }
+  }
 }
 
 // =============================================================================

@@ -86,7 +86,7 @@ async function promptForModel(webSearchRequired: boolean): Promise<string | null
       message: 'Model ID (provider/model-id):',
       placeholder: 'anthropic/claude-sonnet-4-20250514',
       validate: (value) => {
-        if (!value.includes('/')) {
+        if (!value?.includes('/')) {
           return 'Format: provider/model-id (e.g., anthropic/claude-sonnet-4-20250514)';
         }
         return undefined;
@@ -247,6 +247,7 @@ async function runAgentFillWorkflow(
     fillMode: overwrite ? 'overwrite' : 'continue',
     enableWebSearch: isResearch,
     captureWireFormat: false,
+    recordFill: false,
     callbacks,
   });
 

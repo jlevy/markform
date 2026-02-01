@@ -1866,4 +1866,281 @@ markform:
       expect(result.rejectedPatches.length).toBe(0);
     });
   });
+
+  // =============================================================================
+  // Issue #119: Reject embedded sentinels in string values
+  // =============================================================================
+  //
+  // Bug: fill_form accepts patches that embed %SKIP% as part of a string value
+  // (e.g., "%SKIP% (reason)") even on required fields. This causes markform serve
+  // to later fail validation because the final value contains the skip sentinel.
+  //
+  // Fix: Values containing %SKIP% or %ABORT% sentinels should be rejected during
+  // patch application, not just during final validation.
+  describe('embedded sentinel rejection (issue #119)', () => {
+    describe('set_string with embedded sentinels', () => {
+      it('rejects %SKIP% embedded in string value on required field', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          { op: 'set_string', fieldId: 'name', value: '%SKIP% (Not available)' },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+        expect(result.rejectedPatches[0]?.message).toContain('skip_field');
+      });
+
+      it('rejects %SKIP% embedded in string value on optional field', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          { op: 'set_string', fieldId: 'notes', value: '%SKIP% (reason text here)' },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+      });
+
+      it('rejects exact %SKIP% value (should use skip_field instead)', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [{ op: 'set_string', fieldId: 'notes', value: '%SKIP%' }];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('skip_field');
+      });
+
+      it('rejects %ABORT% embedded in string value', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" required=true %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          { op: 'set_string', fieldId: 'name', value: '%ABORT% (Data unavailable)' },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('%ABORT%');
+        expect(result.rejectedPatches[0]?.message).toContain('abort_field');
+      });
+
+      it('rejects case-insensitive %skip% sentinel', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          { op: 'set_string', fieldId: 'notes', value: '%skip% (lowercase)' },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+      });
+
+      it('allows normal strings containing "SKIP" as substring', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        // "Skip this step" should be allowed - it's not using the sentinel format
+        const patches: Patch[] = [{ op: 'set_string', fieldId: 'notes', value: 'Skip this step' }];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('applied');
+      });
+    });
+
+    describe('set_url with embedded sentinels', () => {
+      it('rejects %SKIP% in URL value', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url" id="website" label="Website" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          { op: 'set_url', fieldId: 'website', value: '%SKIP% (no website)' },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+      });
+    });
+
+    describe('set_date with embedded sentinels', () => {
+      it('rejects %SKIP% in date value', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="date" id="birthday" label="Birthday" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          { op: 'set_date', fieldId: 'birthday', value: '%SKIP% (unknown)' },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+      });
+    });
+
+    describe('set_string_list with embedded sentinels', () => {
+      it('rejects %SKIP% in any list item', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          {
+            op: 'set_string_list',
+            fieldId: 'tags',
+            value: ['valid', '%SKIP% (reason)', 'also valid'],
+          },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+      });
+    });
+
+    describe('set_url_list with embedded sentinels', () => {
+      it('rejects %SKIP% in any URL item', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url_list" id="sources" label="Sources" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          {
+            op: 'set_url_list',
+            fieldId: 'sources',
+            value: ['https://example.com', '%SKIP%', 'https://other.com'],
+          },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('rejected');
+        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+      });
+    });
+  });
 });

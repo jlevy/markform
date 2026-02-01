@@ -101,3 +101,47 @@ export function isUrl(str: string): boolean {
   }
   return false;
 }
+
+/**
+ * Format bare URLs in text as HTML links with abbreviated display text.
+ * Also handles markdown-style links [text](url) for consistency.
+ *
+ * Processing order:
+ * 1. Escape all HTML to prevent XSS
+ * 2. Convert markdown links [text](url) to <a> tags
+ * 3. Convert bare URLs (not already in links) to <a> tags with abbreviated display
+ *
+ * @param text - The raw text containing URLs (will be HTML-escaped)
+ * @param escapeHtml - Function to escape HTML entities
+ * @returns HTML-safe text with URLs converted to <a> tags
+ */
+export function formatBareUrlsAsHtmlLinks(text: string, escapeHtml: (s: string) => string): string {
+  // SECURITY: Escape the entire text first to prevent XSS
+  let result = escapeHtml(text);
+
+  // Convert markdown links [text](url) to <a> tags
+  // After escaping, we need to unescape &amp; back to & for URLs
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, linkText: string, url: string) => {
+    const cleanUrl = url.replace(/&amp;/g, '&');
+    return `<a href="${escapeHtml(cleanUrl)}" target="_blank" class="url-link" data-url="${escapeHtml(cleanUrl)}">${linkText}</a>`;
+  });
+
+  // Convert bare URLs to <a> tags with abbreviated display
+  // Uses negative lookbehind to skip URLs that are:
+  // - Inside href="" or data-url="" attributes
+  // - Inside anchor tag content (preceded by ">)
+  // Pattern matches http://, https://, www. URLs
+  result = result.replace(
+    /(?<!href="|data-url="|">)(?:https?:\/\/|www\.)[^\s<>"]+(?<![.,;:!?'")])/g,
+    (url: string) => {
+      // Unescape &amp; back to & for the actual URL
+      const cleanUrl = url.replace(/&amp;/g, '&');
+      // Normalize www. URLs to have https://
+      const fullUrl = cleanUrl.startsWith('www.') ? `https://${cleanUrl}` : cleanUrl;
+      const display = friendlyUrlAbbrev(fullUrl);
+      return `<a href="${escapeHtml(fullUrl)}" target="_blank" class="url-link" data-url="${escapeHtml(fullUrl)}">${escapeHtml(display)}</a>`;
+    },
+  );
+
+  return result;
+}

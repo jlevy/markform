@@ -26,6 +26,7 @@ import type {
   TableRowResponse,
   TableValue,
 } from './coreTypes.js';
+import { detectSentinel } from './parseSentinels.js';
 import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
 import { validate } from './validate.js';
 
@@ -255,6 +256,23 @@ function typeMismatchError(index: number, op: string, field: Field): PatchError 
 }
 
 /**
+ * Create an error for embedded sentinel in patch value.
+ */
+function embeddedSentinelError(
+  index: number,
+  fieldId: string,
+  sentinelType: 'skip' | 'abort',
+): PatchError {
+  const operation = sentinelType === 'skip' ? 'skip_field' : 'abort_field';
+  const sentinel = sentinelType === 'skip' ? '%SKIP%' : '%ABORT%';
+  return {
+    patchIndex: index,
+    message: `Value contains ${sentinel} sentinel for field "${fieldId}". Use ${operation} operation instead of embedding sentinel in value.`,
+    fieldId,
+  };
+}
+
+/**
  * Validate a single patch against the form schema.
  */
 function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchError | null {
@@ -286,6 +304,15 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     return typeMismatchError(index, patch.op, field);
   }
 
+  // Check for embedded sentinels in string values (issue #119)
+  // Agents should use skip_field/abort_field operations instead of embedding sentinels
+  if (patch.op === 'set_string' || patch.op === 'set_url' || patch.op === 'set_date') {
+    const sentinel = detectSentinel(patch.value);
+    if (sentinel) {
+      return embeddedSentinelError(index, field.id, sentinel.type);
+    }
+  }
+
   // Additional validation for container types, select/checkbox options, and table columns
   if (patch.op === 'set_string_list' && field.kind === 'string_list') {
     // Validate value is a non-null array
@@ -296,6 +323,13 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         fieldId: field.id,
         fieldKind: field.kind,
       };
+    }
+    // Check for embedded sentinels in list items (issue #119)
+    for (const item of patch.value) {
+      const sentinel = detectSentinel(item);
+      if (sentinel) {
+        return embeddedSentinelError(index, field.id, sentinel.type);
+      }
     }
   } else if (patch.op === 'set_single_select' && field.kind === 'single_select') {
     if (patch.value !== null) {
@@ -348,6 +382,13 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         fieldId: field.id,
         fieldKind: field.kind,
       };
+    }
+    // Check for embedded sentinels in list items (issue #119)
+    for (const item of patch.value) {
+      const sentinel = detectSentinel(item);
+      if (sentinel) {
+        return embeddedSentinelError(index, field.id, sentinel.type);
+      }
     }
   } else if (patch.op === 'set_table' && field.kind === 'table') {
     // Validate value is a non-null array
@@ -457,17 +498,16 @@ function patchValueToCell(value: string | number | null | undefined): CellRespon
     return { state: 'skipped' };
   }
 
+  // Use shared sentinel detection for consistent handling across all patch types
+  const sentinel = detectSentinel(value);
+  if (sentinel) {
+    return sentinel.type === 'skip'
+      ? { state: 'skipped', ...(sentinel.reason && { reason: sentinel.reason }) }
+      : { state: 'aborted', ...(sentinel.reason && { reason: sentinel.reason }) };
+  }
+
   if (typeof value === 'string') {
-    const trimmed = value.trim();
-    const skipMatch = /^%SKIP(?:[:(](.*))?[)]?%$/i.exec(trimmed);
-    if (skipMatch) {
-      return { state: 'skipped', reason: skipMatch[1] };
-    }
-    const abortMatch = /^%ABORT(?:[:(](.*))?[)]?%$/i.exec(trimmed);
-    if (abortMatch) {
-      return { state: 'aborted', reason: abortMatch[1] };
-    }
-    return { state: 'answered', value: trimmed };
+    return { state: 'answered', value: value.trim() };
   }
 
   return { state: 'answered', value };

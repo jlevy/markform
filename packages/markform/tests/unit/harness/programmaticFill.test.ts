@@ -75,6 +75,7 @@ describe('fillForm', () => {
         model: 'mock/model', // ignored when _testAgent provided
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' }, // Pre-fill user field
         targetRoles: ['user', 'agent'], // Target both roles
         _testAgent: mockAgent,
@@ -94,6 +95,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -111,6 +113,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -130,6 +133,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -148,6 +152,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         _testAgent: mockAgent,
       });
@@ -167,6 +172,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'Pre-filled Name' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -185,6 +191,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { nonexistent: 'value' },
         _testAgent: mockAgent,
       });
@@ -205,6 +212,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: { complex: 'object' } },
         _testAgent: mockAgent,
       });
@@ -225,6 +233,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: {
           name: 123, // number will be coerced to string with warning
         },
@@ -251,6 +260,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -276,6 +286,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -300,6 +311,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -326,6 +338,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -351,6 +364,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -380,6 +394,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         callbacks: {
@@ -403,6 +418,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         // No callbacks option at all
@@ -425,6 +441,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -448,6 +465,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'Pre-filled' },
         _testAgent: mockAgent,
         signal: controller.signal,
@@ -479,6 +497,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John' },
         _testAgent: cancellingAgent,
         signal: controller.signal,
@@ -515,6 +534,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         maxTurnsTotal: 2,
         _testAgent: emptyMockAgent,
       });
@@ -538,6 +558,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         maxTurnsTotal: 1,
         _testAgent: emptyMockAgent,
       });
@@ -555,6 +576,7 @@ describe('fillForm', () => {
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -572,6 +594,7 @@ describe('fillForm', () => {
         model: 'invalid/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
       });
 
       expect(result.status.ok).toBe(false);
@@ -602,6 +625,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         fillMode: 'continue',
         targetRoles: ['user', 'agent'],
         _testAgent: mockAgent,
@@ -624,6 +648,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         maxTurnsThisCall: 1,
@@ -652,6 +677,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         maxTurnsThisCall: 1,
@@ -670,6 +696,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         targetRoles: ['user', 'agent'],
         startingTurnNumber: r1.turns,
         _testAgent: mockAgent,
@@ -693,6 +720,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         targetRoles: ['user', 'agent'],
         maxTurnsThisCall: 5,
         _testAgent: mockAgent,
@@ -714,6 +742,7 @@ Original Name
         model: 'mock/model',
         enableWebSearch: false,
         captureWireFormat: false,
+        recordFill: false,
         inputContext: { name: 'John Doe' },
         targetRoles: ['user', 'agent'],
         startingTurnNumber: 10, // Simulating resume from turn 10
@@ -727,6 +756,400 @@ Original Name
 
       // Turn numbers should start from 11 (startingTurnNumber + 1)
       expect(turnNumbers[0]).toBe(11);
+    });
+  });
+
+  describe('parallel execution (enableParallel)', () => {
+    // Form with parallel batches and order levels
+    const PARALLEL_FORM = `---
+markform:
+  spec: MF/0.1
+  roles:
+    - agent
+---
+
+{% form id="parallel_test" title="Parallel Test" %}
+
+{% group id="overview" order=0 %}
+
+{% field kind="string" id="company_name" label="Company Name" role="agent" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="financials" parallel="research" order=0 %}
+
+{% field kind="string" id="revenue" label="Revenue" role="agent" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="team" parallel="research" order=0 %}
+
+{% field kind="string" id="leadership" label="Leadership" role="agent" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="synthesis" order=10 %}
+
+{% field kind="string" id="overall" label="Overall Assessment" role="agent" required=true %}{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    const PARALLEL_COMPLETED = `---
+markform:
+  spec: MF/0.1
+  roles:
+    - agent
+---
+
+{% form id="parallel_test" title="Parallel Test" %}
+
+{% group id="overview" order=0 %}
+
+{% field kind="string" id="company_name" label="Company Name" role="agent" required=true %}
+\`\`\`value
+Acme Corp
+\`\`\`
+{% /field %}
+
+{% /group %}
+
+{% group id="financials" parallel="research" order=0 %}
+
+{% field kind="string" id="revenue" label="Revenue" role="agent" required=true %}
+\`\`\`value
+$10M
+\`\`\`
+{% /field %}
+
+{% /group %}
+
+{% group id="team" parallel="research" order=0 %}
+
+{% field kind="string" id="leadership" label="Leadership" role="agent" required=true %}
+\`\`\`value
+Jane Doe, CEO
+\`\`\`
+{% /field %}
+
+{% /group %}
+
+{% group id="synthesis" order=10 %}
+
+{% field kind="string" id="overall" label="Overall Assessment" role="agent" required=true %}
+\`\`\`value
+Strong company
+\`\`\`
+{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    it('fills parallel form with enableParallel: true', async () => {
+      const completedForm = parseForm(PARALLEL_COMPLETED);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.values.company_name).toBeDefined();
+      expect(result.values.revenue).toBeDefined();
+      expect(result.values.leadership).toBeDefined();
+      expect(result.values.overall).toBeDefined();
+      expect(result.totalPatches).toBeGreaterThanOrEqual(4);
+    });
+
+    it('fills parallel form serially when enableParallel: false', async () => {
+      const completedForm = parseForm(PARALLEL_COMPLETED);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: false,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.values.company_name).toBeDefined();
+      expect(result.values.revenue).toBeDefined();
+      expect(result.values.leadership).toBeDefined();
+      expect(result.values.overall).toBeDefined();
+    });
+
+    it('falls back to serial when enableParallel: true but no parallel batches', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        inputContext: { name: 'John Doe' },
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.values.name).toBeDefined();
+      expect(result.values.age).toBeDefined();
+    });
+
+    it('returns identical FillResult shape for serial and parallel', async () => {
+      const completedForm = parseForm(PARALLEL_COMPLETED);
+      const mockAgent = createMockAgent(completedForm);
+
+      const serialResult = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: false,
+        _testAgent: mockAgent,
+      });
+
+      const mockAgent2 = createMockAgent(completedForm);
+      const parallelResult = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        _testAgent: mockAgent2,
+      });
+
+      // Same keys in result
+      expect(Object.keys(serialResult).sort()).toEqual(Object.keys(parallelResult).sort());
+      // Both complete
+      expect(serialResult.status.ok).toBe(true);
+      expect(parallelResult.status.ok).toBe(true);
+      // Both have same values
+      expect(Object.keys(serialResult.values).sort()).toEqual(
+        Object.keys(parallelResult.values).sort(),
+      );
+    });
+
+    it('fires onOrderLevelStart/Complete callbacks', async () => {
+      const completedForm = parseForm(PARALLEL_COMPLETED);
+      const mockAgent = createMockAgent(completedForm);
+
+      const orderLevelsStarted: number[] = [];
+      const orderLevelsCompleted: number[] = [];
+
+      await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        _testAgent: mockAgent,
+        callbacks: {
+          onOrderLevelStart: ({ order }) => orderLevelsStarted.push(order),
+          onOrderLevelComplete: ({ order }) => orderLevelsCompleted.push(order),
+        },
+      });
+
+      expect(orderLevelsStarted).toEqual([0, 10]);
+      expect(orderLevelsCompleted).toEqual([0, 10]);
+    });
+
+    it('fires onBatchStart/Complete callbacks', async () => {
+      const completedForm = parseForm(PARALLEL_COMPLETED);
+      const mockAgent = createMockAgent(completedForm);
+
+      const batchesStarted: string[] = [];
+      const batchesCompleted: string[] = [];
+
+      await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        _testAgent: mockAgent,
+        callbacks: {
+          onBatchStart: ({ batchId }) => batchesStarted.push(batchId),
+          onBatchComplete: ({ batchId }) => batchesCompleted.push(batchId),
+        },
+      });
+
+      expect(batchesStarted).toContain('research');
+      expect(batchesCompleted).toContain('research');
+    });
+
+    it('respects AbortSignal in parallel mode', async () => {
+      const completedForm = parseForm(PARALLEL_COMPLETED);
+      const mockAgent = createMockAgent(completedForm);
+
+      const controller = new AbortController();
+      controller.abort(); // Abort immediately
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        signal: controller.signal,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('cancelled');
+      }
+    });
+  });
+
+  describe('fill record on errors', () => {
+    it('returns FillRecord with failed status when agent throws mid-fill', async () => {
+      // Create an agent that throws an error on the first call
+      const errorAgent = {
+        fillFormTool() {
+          throw new Error('API rate limit exceeded');
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true, // Enable fill record
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+      });
+
+      // Should return error status
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('API rate limit exceeded');
+      }
+
+      // Should have a fill record with failed status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('failed');
+      expect(result.record?.statusDetail).toContain('API rate limit exceeded');
+    });
+
+    it('fill record captures partial data before error', async () => {
+      let callCount = 0;
+
+      // Create an agent that succeeds first, then throws
+      const partialErrorAgent = {
+        fillFormTool() {
+          callCount++;
+          if (callCount === 1) {
+            // First call succeeds with a patch
+            return Promise.resolve({
+              patches: [{ op: 'set_number' as const, fieldId: 'age', value: 25 }],
+            });
+          }
+          // Second call throws
+          throw new Error('Network error');
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        maxIssuesPerTurn: 1, // Force multiple turns
+        _testAgent: partialErrorAgent,
+      });
+
+      // Should have error status
+      expect(result.status.ok).toBe(false);
+
+      // Fill record should exist with failed status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('failed');
+
+      // Fill record should have captured the first turn
+      expect(result.record?.execution.totalTurns).toBeGreaterThanOrEqual(1);
+    });
+
+    it('cancelled status includes fill record when recordFill enabled', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const controller = new AbortController();
+      controller.abort(); // Abort immediately
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        signal: controller.signal,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('cancelled');
+      }
+
+      // Should have fill record with cancelled status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('cancelled');
+    });
+
+    it('partial status includes fill record when max_turns hit', async () => {
+      // Create a mock agent that never completes
+      const emptyMockAgent = {
+        fillFormTool() {
+          return Promise.resolve({ patches: [] }); // Never generates patches
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        maxTurnsTotal: 2,
+        _testAgent: emptyMockAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('max_turns');
+      }
+
+      // Should have fill record with partial status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('partial');
+      expect(result.record?.statusDetail).toBe('max_turns');
     });
   });
 });

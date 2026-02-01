@@ -1,7 +1,7 @@
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21348674471)
-[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21348674471)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21559895603)
+[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21559895603)
 [![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
 [![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
 
@@ -467,6 +467,8 @@ markform fill my-form.form.md --interactive
 markform fill my-form.form.md --model=anthropic/claude-sonnet-4-5
 # Mock agent for testing (uses pre-filled form as source)
 markform fill my-form.form.md --mock --mock-source filled.form.md
+# Record fill session to JSON sidecar (tokens, timing, tool calls)
+markform fill my-form.form.md --model=openai/gpt-5-mini --record-fill
 ```
 
 ### Export and Transform
@@ -564,6 +566,29 @@ console.log(form.responsesByFieldId);
 // Serialize back to markdown
 const output = serialize(form);
 ```
+
+### High-Level Fill API
+
+The simplest way to fill a form programmatically:
+
+```typescript
+import { fillForm } from "markform";
+
+const result = await fillForm({
+  form: markdownContent,
+  model: "anthropic/claude-sonnet-4-5",
+  enableWebSearch: true,
+  recordFill: true, // Capture tokens, timing, tool calls
+});
+
+if (result.status.ok) {
+  console.log("Values:", result.values);
+  console.log("Tokens used:", result.record?.llm.inputTokens);
+}
+```
+
+See the [API documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)
+for options like parallel execution, callbacks, and checkpointing.
 
 ### AI SDK Integration
 

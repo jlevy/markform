@@ -183,6 +183,7 @@ export function registerResearchCommand(program: Command): void {
             model: modelId,
             enableWebSearch: true,
             captureWireFormat: false,
+            recordFill: false,
             maxTurnsTotal: maxTurns,
             maxPatchesPerTurn,
             maxIssuesPerTurn,

@@ -1,5 +1,23 @@
 # markform
 
+## 0.1.20
+
+### Patch Changes
+
+- e899eef: Add FillRecord visualization with Gantt chart, tooltips, and copy handlers
+
+## 0.1.19
+
+### Patch Changes
+
+- 114105b: FillRecord implementation, security fixes, proxy support, and URL rendering improvements
+
+## 0.1.18
+
+### Patch Changes
+
+- 28696dc: Add parallel form filling with plan command, ParallelHarness, and order/parallel attributes
+
 ## 0.1.17
 
 ### Patch Changes
