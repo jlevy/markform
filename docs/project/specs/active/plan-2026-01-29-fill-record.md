@@ -918,20 +918,34 @@ These questions were resolved during spec review:
 
 ## Error Handling Requirements
 
-**CRITICAL INVARIANT: All fill errors MUST be captured in FillRecord. Errors must NEVER
-be silently dropped.**
+**CRITICAL INVARIANT: All errors that occur DURING a fill operation MUST be captured in
+FillRecord. Pre-fill configuration errors fail fast without a FillRecord.**
 
-This is essential for:
-- **Debugging**: Understanding why fills failed
-- **Audit trails**: Complete record of what happened
-- **Cost tracking**: Even failed fills consume tokens
-- **Reliability**: Silent failures are unacceptable in production systems
+### Error Categories
+
+1. **Pre-fill configuration errors** — These prevent the fill from starting and fail fast
+   without creating a FillRecord (similar to form parse errors):
+   - Form parse failure (invalid markdown)
+   - Model resolution failure (invalid model string, API key missing)
+   - Input context errors (invalid field values)
+
+   Rationale: No fill work was done, so there's nothing to record. A FillRecord would
+   have empty timeline, zero tokens, zero tools — providing no useful information.
+
+2. **Fill execution errors** — These occur DURING the fill loop and MUST be captured:
+   - Agent call failures (LLM API errors)
+   - Cancellation via abort signal
+   - Max turns limits (per-call or total)
+   - Parallel agent failures
+
+   These errors are captured because fill work was done: turns executed, tokens used,
+   fields potentially filled. The FillRecord provides valuable debugging and audit data.
 
 ### Error Status Types
 
 The `status` field captures the fill outcome:
 - **`completed`**: Form fill finished successfully, all targeted fields addressed
-- **`partial`**: Fill stopped before completion (e.g., max_turns reached)
+- **`partial`**: Fill stopped before completion (e.g., max_turns reached, batch_limit)
 - **`failed`**: An error occurred during fill (agent error, API failure, etc.)
 - **`cancelled`**: Fill was cancelled via abort signal
 
@@ -939,39 +953,40 @@ The `statusDetail` field provides additional context (error message, reason code
 
 ### Error Capture Requirements
 
-Every error path in the fill pipeline MUST:
-1. Call `collector.setStatus('failed', errorMessage)` if collector exists
+Every error path DURING fill execution MUST:
+1. Call `collector.setStatus('failed'|'partial'|'cancelled', detail)` if collector exists
 2. Include the FillRecord in the result (via `collector.getRecord()`)
 3. Write the sidecar file if `--record-fill` is enabled (CLI)
 
 ### Error Path Audit (2026-02-01)
 
-| Error Path | Location | Status | Notes |
-|------------|----------|--------|-------|
-| Form parse failure | programmaticFill:345 | ✅ Acceptable | Form unavailable, no collector |
-| Model resolution error | programmaticFill:384 | ❌ **GAP** | Should capture if collector exists |
-| Agent call failure | programmaticFill:543 | ✅ Fixed | `setStatus('failed')` + record |
-| Cancellation (all paths) | programmaticFill:493,579 | ✅ Fixed | `setStatus('cancelled')` + record |
-| Max turns per-call limit | programmaticFill:478 | ❌ **GAP** | Record not passed to buildResult |
-| Max turns final | programmaticFill:673 | ✅ Fixed | `setStatus('partial')` + record |
-| CLI outer catch | fill.ts:835 | ✅ Fixed | Writes partial record if prerequisites met |
-| CLI agent call | fill.ts:585 | ✅ Fixed | Re-throws to outer catch |
-| Parallel loose item error | parallelHarness:176 | ❌ **GAP** | Error in array but no collector status |
-| Parallel agent rejection | parallelHarness:234 | ❌ **GAP** | Error in array but no collector status |
-| Tool execution failure | liveAgent:637 | ✅ Fixed | Captured in timeline via onToolEnd |
-
-### Outstanding Gaps (Beads Created)
-
-1. **mf-9whi** (P2 bug): Model resolution errors should set collector status if collector exists
-2. **mf-xit0** (P2 bug): Max turns per-call should pass record to buildResult
-3. **mf-9nzj** (P2 bug): parallelHarness errors should call collector.setStatus
+| Error Path | Location | Category | Status | Notes |
+|------------|----------|----------|--------|-------|
+| Form parse failure | programmaticFill:345 | Pre-fill | ✅ OK | Config error, no FillRecord |
+| Model resolution error | programmaticFill:379 | Pre-fill | ✅ OK | Config error, no FillRecord |
+| Input context error | programmaticFill:413 | Pre-fill | ✅ OK | Config error, no FillRecord |
+| Agent call failure | programmaticFill:543 | Execution | ✅ Fixed | `setStatus('failed')` + record |
+| Cancellation (all paths) | programmaticFill:493,579 | Execution | ✅ Fixed | `setStatus('cancelled')` + record |
+| Max turns per-call limit | programmaticFill:478 | Execution | ✅ Fixed | `setStatus('partial')` + record |
+| Max turns final | programmaticFill:673 | Execution | ✅ Fixed | `setStatus('partial')` + record |
+| CLI outer catch | fill.ts:835 | Execution | ✅ Fixed | Writes partial record if available |
+| Parallel serial abort | programmaticFill:802 | Execution | ✅ Fixed | `setStatus()` + record |
+| Parallel batch errors | programmaticFill:863 | Execution | ✅ Fixed | Errors logged, continues filling |
+| Tool execution failure | liveAgent:637 | Execution | ✅ Fixed | Captured in timeline via onToolEnd |
 
 ### Implementation Guidelines
 
-When adding new error paths:
-
+**For pre-fill configuration errors:**
 ```typescript
-// CORRECT: Always capture errors in FillRecord
+// Form parse, model resolution, input context errors — fail fast, no FillRecord
+if (error) {
+  return buildErrorResult(form, [error.message], []); // No record
+}
+```
+
+**For fill execution errors:**
+```typescript
+// Errors during fill loop — MUST capture in FillRecord
 try {
   // ... operation that might fail
 } catch (error) {
@@ -984,11 +999,6 @@ try {
   return buildResult(form, turnCount, totalPatches,
     { ok: false, reason: 'error', message: errorMessage },
     inputContextWarnings, remainingIssues, record);
-}
-
-// WRONG: Error not captured in FillRecord
-} catch (error) {
-  return buildErrorResult(form, [error.message], []); // No record!
 }
 ```
 
