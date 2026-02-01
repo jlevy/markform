@@ -204,16 +204,50 @@ export class LiveAgent implements Agent {
     const patches: Patch[] = [];
     const toolCallCounts = new Map<string, number>();
 
+    // Get execution ID for callbacks (matches what wrapToolsWithCallbacks uses)
+    const executionId = '0-serial';
+
     for (const step of result.steps) {
       for (const toolCall of step.toolCalls) {
         // Count tool calls
         const count = toolCallCounts.get(toolCall.toolName) ?? 0;
         toolCallCounts.set(toolCall.toolName, count + 1);
 
-        // Extract patches from fill_form calls
+        // Extract patches from fill_form calls and emit tool events
+        // (fill_form is declarative so doesn't go through wrapToolsWithCallbacks)
         if (toolCall.toolName === FILL_FORM_TOOL_NAME && 'input' in toolCall) {
           const input = toolCall.input as { patches: Patch[] };
+          const startTime = Date.now();
+
+          // Emit onToolStart for fill_form
+          if (this.callbacks?.onToolStart) {
+            try {
+              this.callbacks.onToolStart({
+                name: FILL_FORM_TOOL_NAME,
+                input,
+                executionId,
+              });
+            } catch {
+              // Ignore callback errors
+            }
+          }
+
           patches.push(...input.patches);
+
+          // Emit onToolEnd for fill_form
+          if (this.callbacks?.onToolEnd) {
+            try {
+              this.callbacks.onToolEnd({
+                name: FILL_FORM_TOOL_NAME,
+                output: { patchCount: input.patches.length },
+                durationMs: Date.now() - startTime,
+                executionId,
+                error: undefined,
+              });
+            } catch {
+              // Ignore callback errors
+            }
+          }
         }
       }
     }

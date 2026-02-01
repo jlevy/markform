@@ -73,15 +73,15 @@
     "publint": "publint"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "^2.0.12",
-    "@ai-sdk/google": "^3.0.16",
-    "@ai-sdk/openai": "^3.0.21",
-    "@ai-sdk/xai": "^3.0.41",
+    "@ai-sdk/deepseek": "^2.0.16",
+    "@ai-sdk/google": "^3.0.19",
+    "@ai-sdk/openai": "^3.0.24",
+    "@ai-sdk/xai": "^3.0.45",
     "@clack/prompts": "^1.0.0",
     "@markdoc/markdoc": "^0.5.4",
-    "ai": "^6.0.59",
+    "ai": "^6.0.66",
     "atomically": "^2.1.0",
-    "commander": "^14.0.2",
+    "commander": "^14.0.3",
     "dotenv": "^17.2.3",
     "jiti": "^2.6.1",
     "js-sha256": "^0.11.1",
@@ -92,7 +92,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "^3.0.29",
+    "@ai-sdk/anthropic": "^3.0.34",
     "@types/node": "^25.1.0",
     "@vitest/coverage-v8": "^4.0.18",
     "ajv": "^8.17.1",

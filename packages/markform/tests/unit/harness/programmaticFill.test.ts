@@ -1022,4 +1022,134 @@ Strong company
       }
     });
   });
+
+  describe('fill record on errors', () => {
+    it('returns FillRecord with failed status when agent throws mid-fill', async () => {
+      // Create an agent that throws an error on the first call
+      const errorAgent = {
+        fillFormTool() {
+          throw new Error('API rate limit exceeded');
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true, // Enable fill record
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+      });
+
+      // Should return error status
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('API rate limit exceeded');
+      }
+
+      // Should have a fill record with failed status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('failed');
+      expect(result.record?.statusDetail).toContain('API rate limit exceeded');
+    });
+
+    it('fill record captures partial data before error', async () => {
+      let callCount = 0;
+
+      // Create an agent that succeeds first, then throws
+      const partialErrorAgent = {
+        fillFormTool() {
+          callCount++;
+          if (callCount === 1) {
+            // First call succeeds with a patch
+            return Promise.resolve({
+              patches: [{ op: 'set_number' as const, fieldId: 'age', value: 25 }],
+            });
+          }
+          // Second call throws
+          throw new Error('Network error');
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        maxIssuesPerTurn: 1, // Force multiple turns
+        _testAgent: partialErrorAgent,
+      });
+
+      // Should have error status
+      expect(result.status.ok).toBe(false);
+
+      // Fill record should exist with failed status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('failed');
+
+      // Fill record should have captured the first turn
+      expect(result.record?.execution.totalTurns).toBeGreaterThanOrEqual(1);
+    });
+
+    it('cancelled status includes fill record when recordFill enabled', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const controller = new AbortController();
+      controller.abort(); // Abort immediately
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        signal: controller.signal,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('cancelled');
+      }
+
+      // Should have fill record with cancelled status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('cancelled');
+    });
+
+    it('partial status includes fill record when max_turns hit', async () => {
+      // Create a mock agent that never completes
+      const emptyMockAgent = {
+        fillFormTool() {
+          return Promise.resolve({ patches: [] }); // Never generates patches
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        maxTurnsTotal: 2,
+        _testAgent: emptyMockAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('max_turns');
+      }
+
+      // Should have fill record with partial status
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('partial');
+      expect(result.record?.statusDetail).toBe('max_turns');
+    });
+  });
 });

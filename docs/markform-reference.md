@@ -61,7 +61,21 @@ markform:
 
 ## Conventions
 
-Use `.form.md` for Markform files.
+### File Extensions
+
+| File Type | Extension | Description |
+|-----------|-----------|-------------|
+| Form | `.form.md` | Markform source and filled forms |
+| Fill Record | `.fill.json` | Execution metadata (sidecar file) |
+| Report | `.report.md` | Filtered human-readable output |
+| Schema | `.schema.json` | JSON Schema for form structure |
+| Values | `.yml` or `.json` | Exported field values |
+
+**Recommended:** Use `.form.md` for all Markform files. This enables:
+- Auto-discovery of fill records by `markform serve`
+- Consistent tooling behavior across CLI commands
+- Clear distinction from regular markdown files
+
 Markform uses HTML comment syntax for structure tags, which render invisibly on GitHub.
 
 ### Syntax

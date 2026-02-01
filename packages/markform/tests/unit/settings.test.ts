@@ -6,10 +6,12 @@ import { describe, expect, it } from 'vitest';
 import {
   ALL_EXTENSIONS,
   deriveExportPath,
+  deriveFillRecordPath,
   deriveReportPath,
   deriveSchemaPath,
   detectFileType,
   EXPORT_EXTENSIONS,
+  FILL_RECORD_EXTENSION,
   normalizeRole,
   parseRolesFlag,
   REPORT_EXTENSION,
@@ -161,6 +163,43 @@ describe('deriveSchemaPath', () => {
 
   it('SCHEMA_EXTENSION is correct', () => {
     expect(SCHEMA_EXTENSION).toBe('.schema.json');
+  });
+});
+
+describe('deriveFillRecordPath', () => {
+  it('FILL_RECORD_EXTENSION is correct', () => {
+    expect(FILL_RECORD_EXTENSION).toBe('.fill.json');
+  });
+
+  it('converts .form.md to .fill.json (recommended convention)', () => {
+    expect(deriveFillRecordPath('/path/file.form.md')).toBe('/path/file.fill.json');
+    expect(deriveFillRecordPath('document.form.md')).toBe('document.fill.json');
+  });
+
+  it('converts plain .md to .fill.json (fallback)', () => {
+    expect(deriveFillRecordPath('/path/file.md')).toBe('/path/file.fill.json');
+    expect(deriveFillRecordPath('document.md')).toBe('document.fill.json');
+  });
+
+  it('prioritizes .form.md over .md', () => {
+    // Ensures we strip the full .form.md, not just .md
+    expect(deriveFillRecordPath('test.form.md')).toBe('test.fill.json');
+  });
+
+  it('handles paths with directories', () => {
+    expect(deriveFillRecordPath('/some/path/to/form.form.md')).toBe('/some/path/to/form.fill.json');
+    expect(deriveFillRecordPath('./forms/intake.form.md')).toBe('./forms/intake.fill.json');
+  });
+
+  it('appends extension for non-markdown files', () => {
+    // Edge case: non-markdown files just get the extension appended
+    expect(deriveFillRecordPath('/path/file.txt')).toBe('/path/file.txt.fill.json');
+    expect(deriveFillRecordPath('/path/file')).toBe('/path/file.fill.json');
+  });
+
+  it('handles filenames with multiple dots', () => {
+    expect(deriveFillRecordPath('my.complex.name.form.md')).toBe('my.complex.name.fill.json');
+    expect(deriveFillRecordPath('file.v2.form.md')).toBe('file.v2.fill.json');
   });
 });
 

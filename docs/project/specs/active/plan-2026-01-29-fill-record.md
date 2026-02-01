@@ -684,13 +684,32 @@ markform fill input.form.md -o output.form.md --record-fill
 #   output.fill.json    # The FillRecord (JSON)
 ```
 
-**CLI naming convention:**
+**Recommended File Naming Conventions:**
 
-The fill record file is derived from the output form path:
-- Output: `path/to/some-name.form.md` → Record: `path/to/some-name.fill.json`
-- Output: `path/to/document.md` → Record: `path/to/document.fill.json`
+For consistent tooling support, we recommend these file extensions:
 
-The pattern is: replace the file extension with `.fill.json`.
+| File Type | Extension | Example |
+|-----------|-----------|---------|
+| Form (source/filled) | `.form.md` | `intake.form.md` |
+| Fill Record (sidecar) | `.fill.json` | `intake.fill.json` |
+
+**Why these conventions matter:**
+- The `serve` command auto-discovers fill records based on these patterns
+- Other tools can reliably find related files
+- Clear separation between form content (`.form.md`) and metadata (`.fill.json`)
+
+**Derivation rules (implemented in `deriveFillRecordPath`):**
+1. If path ends with `.form.md` → strip it and add `.fill.json`
+2. Otherwise if path ends with `.md` → strip it and add `.fill.json`
+3. Otherwise → append `.fill.json`
+
+Examples:
+- `path/to/intake.form.md` → `path/to/intake.fill.json` (recommended)
+- `path/to/document.md` → `path/to/document.fill.json` (fallback)
+- `path/to/file.txt` → `path/to/file.txt.fill.json` (edge case)
+
+**Implementation:** Both `fill` and `serve` commands use the shared `deriveFillRecordPath()`
+function from `settings.ts` to ensure consistent behavior.
 
 **CLI defaults:**
 
@@ -734,7 +753,19 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 - [x] Add `--record-fill` flag to `fill` command (defaults to `false`)
 - [x] Implement sidecar file naming: `{basename}.fill.json`
 - [x] Write JSON fill record when flag is set
-- [x] CLI tests for record file generation
+- [x] **BUG:** CLI tests for record file generation — tests now verify timeline content (`mf-ln09`)
+
+**⚠️ BUG FOUND (2026-01-31) — FIXED (2026-02-01):**
+
+The CLI's fill command had a **callback wiring gap** that caused the timeline to be empty.
+
+**Root Cause:** The CLI runs its own harness loop manually instead of using the `fillForm()`
+function. It was only wiring 4 of 7 callbacks, missing `onTurnStart`, `onTurnComplete`,
+and `onWebSearch`.
+
+**Fix Applied:** Added all missing callbacks to the CLI's callback object and invoked
+`onTurnStart` at the start of each turn and `onTurnComplete` after `harness.apply()`.
+See Phase 6 checklist below for details.
 
 ### Phase 4: Documentation & Examples
 
@@ -808,6 +839,52 @@ view of execution that can be included in test fixtures. This helps validate:
 - Tool call patterns
 - Performance characteristics
 
+### Phase 6: Bug Fixes — CLI Callback Wiring (NEW)
+
+Fixes the critical bug where CLI fill records have empty timelines.
+
+**Related Beads:**
+- `mf-mgxo` (P1 bug): CLI fill command missing onTurnStart/onTurnComplete callbacks
+- `mf-niiz` (P2 bug): CLI fill command missing onWebSearch callback forwarding
+- `mf-ln09` (P2 task): Add integration tests for CLI fill record timeline verification
+- `mf-1omw` (P3 task): Fill Record visualization should warn when timeline is empty
+
+**Checklist:**
+- [x] Add `onTurnStart` callback to CLI's callback object (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add `onTurnComplete` callback to CLI's callback object (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add `onWebSearch` callback forwarding to collector (`mf-niiz`) — DONE 2026-02-01
+- [x] Call `onTurnStart` at start of harness loop iteration (`mf-mgxo`) — DONE 2026-02-01
+- [x] Call `onTurnComplete` after `harness.apply()` returns (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add unit test: verify CLI callback wiring produces non-empty timeline — DONE 2026-02-01
+- [x] Add integration test: verify CLI fill record has non-empty timeline (`mf-ln09`) — DONE 2026-02-01
+- [x] Add integration test: verify CLI fill record has correct turn count (`mf-ln09`) — DONE 2026-02-01
+- [x] Add integration test: verify tool calls appear in timeline entries (`mf-ln09`) — DONE 2026-02-01
+- [x] Manual verification: run `markform fill --record-fill` and inspect JSON — DONE 2026-02-01
+
+**Implementation Notes:**
+
+The fix should be localized to `packages/markform/src/cli/commands/fill.ts`:
+
+```typescript
+// Add to callbacks object (around line 454):
+const callbacks = {
+  onTurnStart: (turn: { turnNumber: number; issuesCount: number; executionId: string }) => {
+    liveCollector.onTurnStart(turn);
+  },
+  onTurnComplete: (progress: TurnProgress) => {
+    liveCollector.onTurnComplete(progress);
+  },
+  onWebSearch: (info: { query: string; resultCount: number; provider: string }) => {
+    liveCollector.onWebSearch(info);
+  },
+  // ... existing onToolStart, onToolEnd, onLlmCallStart, onLlmCallEnd
+};
+
+// In the harness loop, call callbacks at appropriate points:
+// Before agent.fillFormTool(): callbacks.onTurnStart(...)
+// After harness.apply(): callbacks.onTurnComplete(...)
+```
+
 ## Backward Compatibility
 
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
@@ -838,6 +915,92 @@ These questions were resolved during spec review:
    an `executionId` field (e.g., `"main"`, `"batch-1-item-0"`) for debugging and
    visibility. Timestamps on everything allow calculating totals and understanding
    parallel execution patterns.
+
+## Error Handling Requirements
+
+**CRITICAL INVARIANT: All errors that occur DURING a fill operation MUST be captured in
+FillRecord. Pre-fill configuration errors fail fast without a FillRecord.**
+
+### Error Categories
+
+1. **Pre-fill configuration errors** — These prevent the fill from starting and fail fast
+   without creating a FillRecord (similar to form parse errors):
+   - Form parse failure (invalid markdown)
+   - Model resolution failure (invalid model string, API key missing)
+   - Input context errors (invalid field values)
+
+   Rationale: No fill work was done, so there's nothing to record. A FillRecord would
+   have empty timeline, zero tokens, zero tools — providing no useful information.
+
+2. **Fill execution errors** — These occur DURING the fill loop and MUST be captured:
+   - Agent call failures (LLM API errors)
+   - Cancellation via abort signal
+   - Max turns limits (per-call or total)
+   - Parallel agent failures
+
+   These errors are captured because fill work was done: turns executed, tokens used,
+   fields potentially filled. The FillRecord provides valuable debugging and audit data.
+
+### Error Status Types
+
+The `status` field captures the fill outcome:
+- **`completed`**: Form fill finished successfully, all targeted fields addressed
+- **`partial`**: Fill stopped before completion (e.g., max_turns reached, batch_limit)
+- **`failed`**: An error occurred during fill (agent error, API failure, etc.)
+- **`cancelled`**: Fill was cancelled via abort signal
+
+The `statusDetail` field provides additional context (error message, reason code).
+
+### Error Capture Requirements
+
+Every error path DURING fill execution MUST:
+1. Call `collector.setStatus('failed'|'partial'|'cancelled', detail)` if collector exists
+2. Include the FillRecord in the result (via `collector.getRecord()`)
+3. Write the sidecar file if `--record-fill` is enabled (CLI)
+
+### Error Path Audit (2026-02-01)
+
+| Error Path | Location | Category | Status | Notes |
+|------------|----------|----------|--------|-------|
+| Form parse failure | programmaticFill:345 | Pre-fill | ✅ OK | Config error, no FillRecord |
+| Model resolution error | programmaticFill:379 | Pre-fill | ✅ OK | Config error, no FillRecord |
+| Input context error | programmaticFill:413 | Pre-fill | ✅ OK | Config error, no FillRecord |
+| Agent call failure | programmaticFill:543 | Execution | ✅ Fixed | `setStatus('failed')` + record |
+| Cancellation (all paths) | programmaticFill:493,579 | Execution | ✅ Fixed | `setStatus('cancelled')` + record |
+| Max turns per-call limit | programmaticFill:478 | Execution | ✅ Fixed | `setStatus('partial')` + record |
+| Max turns final | programmaticFill:673 | Execution | ✅ Fixed | `setStatus('partial')` + record |
+| CLI outer catch | fill.ts:835 | Execution | ✅ Fixed | Writes partial record if available |
+| Parallel serial abort | programmaticFill:802 | Execution | ✅ Fixed | `setStatus()` + record |
+| Parallel batch errors | programmaticFill:863 | Execution | ✅ Fixed | Errors logged, continues filling |
+| Tool execution failure | liveAgent:637 | Execution | ✅ Fixed | Captured in timeline via onToolEnd |
+
+### Implementation Guidelines
+
+**For pre-fill configuration errors:**
+```typescript
+// Form parse, model resolution, input context errors — fail fast, no FillRecord
+if (error) {
+  return buildErrorResult(form, [error.message], []); // No record
+}
+```
+
+**For fill execution errors:**
+```typescript
+// Errors during fill loop — MUST capture in FillRecord
+try {
+  // ... operation that might fail
+} catch (error) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  let record: FillRecord | undefined;
+  if (collector) {
+    collector.setStatus('failed', errorMessage);
+    record = collector.getRecord(getProgressCounts(form, targetRoles));
+  }
+  return buildResult(form, turnCount, totalPatches,
+    { ok: false, reason: 'error', message: errorMessage },
+    inputContextWarnings, remainingIssues, record);
+}
+```
 
 ## References
 

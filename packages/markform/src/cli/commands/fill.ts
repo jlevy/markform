@@ -22,6 +22,7 @@ import type {
   FillMode,
   HarnessConfig,
   MockMode,
+  ParsedForm,
   PatchRejection,
   SessionFinal,
   SessionTranscript,
@@ -29,6 +30,7 @@ import type {
   SessionTurnStats,
   WireFormat,
 } from '../../engine/coreTypes.js';
+import type { TurnProgress } from '../../harness/harnessTypes.js';
 import { FillRecordCollector } from '../../harness/fillRecordCollector.js';
 import { stripUnstableFillRecordFields } from '../../harness/fillRecord.js';
 import { formatFillRecordSummary } from '../../harness/formatFillRecordSummary.js';
@@ -43,6 +45,7 @@ import {
   AGENT_ROLE,
   USER_ROLE,
   parseRolesFlag,
+  deriveFillRecordPath,
 } from '../../settings.js';
 import { getFormsDir } from '../lib/paths.js';
 import { formatSuggestedLlms } from '../../llms.js';
@@ -209,11 +212,17 @@ export function registerFillCommand(program: Command): void {
         const ctx = getCommandContext(cmd);
         const filePath = resolve(file);
 
+        // Declare variables that may be needed in error handler
+        // These are accessible in catch block for partial fill record writing
+        let harness: ReturnType<typeof createHarness> | undefined;
+        let collector: FillRecordCollector | undefined;
+        let targetRoles: string[] = [];
+        let form: ParsedForm | undefined;
+
         try {
           const startTime = Date.now();
 
           // Parse and validate --roles (default depends on mode)
-          let targetRoles: string[];
           if (options.roles) {
             try {
               targetRoles = parseRolesFlag(options.roles);
@@ -241,7 +250,7 @@ export function registerFillCommand(program: Command): void {
           const formContent = await readFile(filePath);
 
           logVerbose(ctx, 'Parsing form...');
-          const form = parseForm(formContent);
+          form = parseForm(formContent);
 
           // =====================================================================
           // INTERACTIVE MODE
@@ -362,10 +371,9 @@ export function registerFillCommand(program: Command): void {
           const harnessConfig = resolveHarnessConfig(form, cliOptions);
 
           // Create harness
-          const harness = createHarness(form, harnessConfig);
+          harness = createHarness(form, harnessConfig);
 
-          // FillRecordCollector will be created after model resolution
-          let collector: FillRecordCollector | undefined;
+          // Note: collector is declared in outer scope for error handler access
 
           // Create agent based on type
           let agent: Agent;
@@ -452,6 +460,22 @@ export function registerFillCommand(program: Command): void {
             // Collector is always defined at this point (created above)
             const liveCollector = collector;
             const callbacks = {
+              onTurnStart: (turn: {
+                turnNumber: number;
+                issuesCount: number;
+                order?: number;
+                executionId?: string;
+              }) => {
+                liveCollector.onTurnStart({
+                  turnNumber: turn.turnNumber,
+                  issuesCount: turn.issuesCount,
+                  order: turn.order ?? 0,
+                  executionId: turn.executionId ?? 'cli-serial',
+                });
+              },
+              onTurnComplete: (progress: TurnProgress) => {
+                liveCollector.onTurnComplete(progress);
+              },
               onToolStart: (call: { name: string; input: unknown; executionId: string }) => {
                 cliCallbacks.onToolStart?.(call);
                 liveCollector.onToolStart(call);
@@ -476,6 +500,14 @@ export function registerFillCommand(program: Command): void {
                 executionId: string;
               }) => {
                 liveCollector.onLlmCallEnd(call);
+              },
+              onWebSearch: (info: {
+                query: string;
+                resultCount: number;
+                provider: string;
+                executionId: string;
+              }) => {
+                liveCollector.onWebSearch(info);
               },
             };
 
@@ -519,6 +551,14 @@ export function registerFillCommand(program: Command): void {
             ctx,
             `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
           );
+
+          // Record first turn start for FillRecord (fixes mf-mgxo: empty timeline bug)
+          collector.onTurnStart({
+            turnNumber: stepResult.turnNumber,
+            issuesCount: stepResult.issues.length,
+            order: 0,
+            executionId: 'cli-serial',
+          });
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
             // Create spinner for LLM call (only for live agent with TTY)
@@ -644,7 +684,23 @@ export function registerFillCommand(program: Command): void {
             }
 
             // Apply patches (with wire format for comprehensive session logging)
+            const prevTurnNumber = stepResult.turnNumber;
+            const prevIssuesShown = stepResult.issues.length;
             stepResult = harness.apply(patches, stepResult.issues, llmStats, context, wire);
+
+            // Record turn completion for FillRecord (fixes mf-mgxo: empty timeline bug)
+            const rejectedPatches = stepResult.rejectedPatches ?? [];
+            collector.onTurnComplete({
+              turnNumber: prevTurnNumber,
+              issuesShown: prevIssuesShown,
+              patchesApplied: patches.length - rejectedPatches.length,
+              requiredIssuesRemaining: stepResult.issues.filter((i) => i.severity === 'required')
+                .length,
+              isComplete: stepResult.isComplete,
+              rejectedPatches,
+              issues: stepResult.issues,
+              patches,
+            });
 
             // Track rejections for next turn's wire format context
             previousRejections = stepResult.rejectedPatches;
@@ -658,6 +714,14 @@ export function registerFillCommand(program: Command): void {
                 ctx,
                 `${pc.bold(`Turn ${stepResult.turnNumber}:`)} ${formatTurnIssues(stepResult.issues)}`,
               );
+
+              // Record next turn start for FillRecord
+              collector.onTurnStart({
+                turnNumber: stepResult.turnNumber,
+                issuesCount: stepResult.issues.length,
+                order: 0,
+                executionId: 'cli-serial',
+              });
             }
           }
 
@@ -719,8 +783,7 @@ export function registerFillCommand(program: Command): void {
 
           // Write FillRecord sidecar file if recordFill or recordFillStable is enabled
           if (options.recordFill || options.recordFillStable) {
-            // Derive sidecar path from output path (replace extension with .fill.json)
-            const sidecarPath = outputPath.replace(/\.(form\.)?md$/, '.fill.json');
+            const sidecarPath = deriveFillRecordPath(outputPath);
 
             // Strip unstable fields for golden tests
             const recordToWrite = options.recordFillStable
@@ -760,8 +823,8 @@ export function registerFillCommand(program: Command): void {
               await writeFile(recordPath, yaml);
               logSuccess(ctx, `Session recorded to: ${recordPath}`);
             }
-          } else {
-            // Output to stdout in requested format
+          } else if (!ctx.quiet) {
+            // Output to stdout in requested format (unless quiet)
             const output = formatOutput(ctx, transcript, (data, useColors) =>
               formatConsoleSession(data as SessionTranscript, useColors),
             );
@@ -772,6 +835,44 @@ export function registerFillCommand(program: Command): void {
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           logError(message);
+
+          // Write partial fill record if available (helps with debugging failures)
+          if (
+            (options.recordFill || options.recordFillStable) &&
+            collector &&
+            harness &&
+            form &&
+            options.output
+          ) {
+            try {
+              // Get current form state and compute progress
+              const currentForm = harness.getForm();
+              const finalInspect = inspect(currentForm, { targetRoles });
+              const progressSummary = computeProgressSummary(
+                form.schema,
+                currentForm.responsesByFieldId,
+                currentForm.notes,
+                finalInspect.issues,
+              );
+
+              // Set failed status with error message
+              collector.setStatus('failed', message);
+              const fillRecord = collector.getRecord(progressSummary.counts);
+
+              // Write sidecar file
+              const outputPath = resolve(options.output);
+              const sidecarPath = deriveFillRecordPath(outputPath);
+              const recordToWrite = options.recordFillStable
+                ? stripUnstableFillRecordFields(fillRecord)
+                : fillRecord;
+
+              writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
+              logWarn(ctx, `Partial fill record written to: ${sidecarPath}`);
+            } catch {
+              // Ignore errors writing partial record - the main error is more important
+            }
+          }
+
           process.exit(1);
         }
       },

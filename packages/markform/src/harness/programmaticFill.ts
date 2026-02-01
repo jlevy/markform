@@ -13,6 +13,7 @@ import type {
   FieldValue,
   InspectIssue,
   ParsedForm,
+  Patch,
   PatchRejection,
   SessionTurnContext,
   SessionTurnStats,
@@ -37,7 +38,7 @@ import { createHarness } from './harness.js';
 import { createLiveAgent } from './liveAgent.js';
 import { resolveModel } from './modelResolver.js';
 import { runWithConcurrency, scopeIssuesForItem } from './parallelHarness.js';
-import type { Agent, FillOptions, FillResult, FillStatus } from './harnessTypes.js';
+import type { Agent, FillOptions, FillResult, FillStatus, TurnStats } from './harnessTypes.js';
 
 // Re-export types for backwards compatibility
 export type { FillOptions, FillResult, FillStatus, TurnProgress } from './harnessTypes.js';
@@ -227,7 +228,12 @@ function mergeCallbacks(
   };
 }
 
-function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]): FillResult {
+function buildErrorResult(
+  form: ParsedForm,
+  errors: string[],
+  warnings: string[],
+  record?: FillRecord,
+): FillResult {
   // Extract values from responses
   const values: Record<string, FieldValue> = {};
   for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
@@ -236,7 +242,7 @@ function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]
     }
   }
 
-  return {
+  const result: FillResult = {
     status: {
       ok: false,
       reason: 'error',
@@ -249,6 +255,12 @@ function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]
     totalPatches: 0,
     inputContextWarnings: warnings.length > 0 ? warnings : undefined,
   };
+
+  if (record) {
+    result.record = record;
+  }
+
+  return result;
 }
 
 function buildResult(
@@ -379,6 +391,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         // Web search will be disabled in this case
       }
     } catch (error) {
+      // Model resolution is a pre-fill configuration error - fail fast without FillRecord
       const message = error instanceof Error ? error.message : String(error);
       return buildErrorResult(form, [`Model resolution error: ${message}`], []);
     }
@@ -388,12 +401,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   }
 
   // 3. Create collector if recordFill is enabled
-  const collector = createCollectorIfNeeded(
-    options,
-    form,
-    provider ?? 'unknown',
-    typeof options.model === 'string' ? options.model : 'custom',
-  );
+  const modelString = typeof options.model === 'string' ? options.model : 'custom';
+  const collector = createCollectorIfNeeded(options, form, provider ?? 'unknown', modelString);
   const mergedCallbacks = mergeCallbacks(options.callbacks, collector);
 
   // 4. Apply input context using coercion layer
@@ -403,7 +412,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   if (options.inputContext) {
     const coercionResult = coerceInputContext(form, options.inputContext);
 
-    // Fail fast on input context errors
+    // Input context errors are pre-fill configuration errors - fail fast without FillRecord
     if (coercionResult.errors.length > 0) {
       return buildErrorResult(form, coercionResult.errors, coercionResult.warnings);
     }
@@ -475,6 +484,11 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
     // Check per-call limit (before executing any work this turn)
     if (options.maxTurnsThisCall !== undefined && turnsThisCall >= options.maxTurnsThisCall) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('partial', 'batch_limit');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
@@ -486,10 +500,16 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         },
         inputContextWarnings,
         stepResult.issues,
+        record,
       );
     }
     // Check for cancellation
     if (options.signal?.aborted) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('cancelled');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
@@ -497,6 +517,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         { ok: false, reason: 'cancelled' },
         inputContextWarnings,
         stepResult.issues,
+        record,
       );
     }
 
@@ -532,12 +553,27 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
 
     // Generate patches using agent (pass previous rejections so LLM can learn from mistakes)
-    const response = await agent.fillFormTool(
-      turnIssues,
-      form,
-      maxPatchesPerTurn,
-      previousRejections,
-    );
+    let response: { patches: Patch[]; stats?: TurnStats };
+    try {
+      response = await agent.fillFormTool(turnIssues, form, maxPatchesPerTurn, previousRejections);
+    } catch (error) {
+      // Agent threw an error - capture it in fill record and return
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('failed', errorMessage);
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
+      return buildResult(
+        form,
+        turnCount,
+        totalPatches,
+        { ok: false, reason: 'error', message: errorMessage },
+        inputContextWarnings,
+        turnIssues,
+        record,
+      );
+    }
     const { patches, stats } = response;
 
     // Call onPatchesGenerated callback (after agent, before applying)
@@ -555,6 +591,11 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
     // Re-check for cancellation after agent call (signal may have fired during LLM call)
     if (options.signal?.aborted) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('cancelled');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
@@ -562,6 +603,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         { ok: false, reason: 'cancelled' },
         inputContextWarnings,
         turnIssues,
+        record,
       );
     }
 
@@ -771,8 +813,31 @@ async function fillFormParallel(
       totalPatches += result.patchesApplied;
       turnCount += result.turnsUsed;
 
-      if (result.aborted) {
-        return buildResult(form, turnCount, totalPatches, result.status!, inputContextWarnings);
+      if (result.aborted && result.status) {
+        let record: FillRecord | undefined;
+        if (collector) {
+          // Set status based on abort reason
+          const status = result.status;
+          if (!status.ok) {
+            if (status.reason === 'cancelled') {
+              collector.setStatus('cancelled');
+            } else if (status.reason === 'error') {
+              collector.setStatus('failed', status.message);
+            } else {
+              collector.setStatus('partial', status.reason);
+            }
+          }
+          record = collector.getRecord(getProgressCounts(form, targetRoles));
+        }
+        return buildResult(
+          form,
+          turnCount,
+          totalPatches,
+          result.status,
+          inputContextWarnings,
+          undefined,
+          record,
+        );
       }
     }
 
@@ -826,12 +891,31 @@ async function fillFormParallel(
       );
 
       let batchPatches = 0;
+      const batchErrors: string[] = [];
       for (const result of results) {
         if (result.status === 'fulfilled') {
           totalPatches += result.value.patchesApplied;
           batchPatches += result.value.patchesApplied;
           turnCount += result.value.turnsUsed;
+          // Track errors from aborted items (agent threw an error)
+          const itemStatus = result.value.status;
+          if (result.value.aborted && itemStatus && !itemStatus.ok && itemStatus.message) {
+            batchErrors.push(itemStatus.message);
+          }
+        } else {
+          // Promise itself was rejected (shouldn't happen with new error handling, but defensive)
+          const reason: unknown = result.reason;
+          const errorMsg = reason instanceof Error ? reason.message : String(reason);
+          batchErrors.push(`Parallel agent error: ${errorMsg}`);
         }
+      }
+
+      // If any batch items had errors, record them (but continue processing)
+      // The form may still be partially filled even with some errors
+      if (batchErrors.length > 0 && collector) {
+        // Don't set failed status yet - we may still complete. Just log the errors.
+        // The final status will be set at the end based on form completeness.
+        console.warn(`[markform] Parallel batch ${batch.batchId} had errors:`, batchErrors);
       }
 
       try {
@@ -989,13 +1073,25 @@ async function runMultiTurnForItems(
       /* ignore */
     }
 
-    // Call agent
-    const response = await agent.fillFormTool(
-      scopedIssues,
-      form,
-      maxPatchesPerTurn,
-      previousRejections,
-    );
+    // Call agent (catch errors to avoid rejecting the parallel promise)
+    let response: { patches: Patch[]; stats?: TurnStats };
+    try {
+      response = await agent.fillFormTool(
+        scopedIssues,
+        form,
+        maxPatchesPerTurn,
+        previousRejections,
+      );
+    } catch (error) {
+      // Return early with error result so it can be tracked by the parallel harness
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        patchesApplied,
+        turnsUsed,
+        aborted: true,
+        status: { ok: false, reason: 'error', message: errorMessage },
+      };
+    }
 
     // Apply patches
     if (response.patches.length > 0) {
