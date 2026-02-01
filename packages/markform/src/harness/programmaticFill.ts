@@ -376,10 +376,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     };
   }
 
-  // 2. Determine model string for collector (before resolution so we can capture errors)
-  const modelString = typeof options.model === 'string' ? options.model : 'custom';
-
-  // 3. Resolve model if string (skip if _testAgent provided)
+  // 2. Resolve model if string (skip if _testAgent provided)
   let model: LanguageModel | undefined;
   let provider: string | undefined;
   if (!options._testAgent) {
@@ -394,40 +391,30 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         // Web search will be disabled in this case
       }
     } catch (error) {
-      // Model resolution failed - create collector to capture this error
+      // Model resolution is a pre-fill configuration error - fail fast without FillRecord
       const message = error instanceof Error ? error.message : String(error);
-      const errorCollector = createCollectorIfNeeded(options, form, 'unknown', modelString);
-      let record: FillRecord | undefined;
-      if (errorCollector) {
-        errorCollector.setStatus('failed', `Model resolution error: ${message}`);
-        record = errorCollector.getRecord(getProgressCounts(form, options.targetRoles));
-      }
-      return buildErrorResult(form, [`Model resolution error: ${message}`], [], record);
+      return buildErrorResult(form, [`Model resolution error: ${message}`], []);
     }
   } else if (typeof options.model === 'string' && options.model.includes('/')) {
     // For test agent, extract provider from model string (e.g., "mock/model" -> "mock")
     provider = options.model.split('/')[0];
   }
 
-  // 4. Create collector if recordFill is enabled
+  // 3. Create collector if recordFill is enabled
+  const modelString = typeof options.model === 'string' ? options.model : 'custom';
   const collector = createCollectorIfNeeded(options, form, provider ?? 'unknown', modelString);
   const mergedCallbacks = mergeCallbacks(options.callbacks, collector);
 
-  // 5. Apply input context using coercion layer
+  // 4. Apply input context using coercion layer
   let totalPatches = 0;
   let inputContextWarnings: string[] = [];
 
   if (options.inputContext) {
     const coercionResult = coerceInputContext(form, options.inputContext);
 
-    // Fail fast on input context errors
+    // Input context errors are pre-fill configuration errors - fail fast without FillRecord
     if (coercionResult.errors.length > 0) {
-      let record: FillRecord | undefined;
-      if (collector) {
-        collector.setStatus('failed', `Input context error: ${coercionResult.errors.join('; ')}`);
-        record = collector.getRecord(getProgressCounts(form, options.targetRoles));
-      }
-      return buildErrorResult(form, coercionResult.errors, coercionResult.warnings, record);
+      return buildErrorResult(form, coercionResult.errors, coercionResult.warnings);
     }
 
     // Apply coerced patches
