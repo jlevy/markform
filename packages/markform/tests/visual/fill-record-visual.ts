@@ -439,6 +439,8 @@ function hasCommand(cmd: string): boolean {
 if (hasCommand('wkhtmltoimage')) {
   console.log('\n--- Generating PNG snapshots ---');
   const hasImagemagick = hasCommand('convert');
+  let failedCount = 0;
+  const generatedPngs: string[] = [];
 
   for (const { name } of testCases) {
     const htmlPath = join(snapshotDir, `fill-record-${name}.html`);
@@ -457,20 +459,35 @@ if (hasCommand('wkhtmltoimage')) {
       }
 
       console.log(`✓ Generated: ${pngPath}`);
+      generatedPngs.push(pngPath);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error(`✗ Failed to generate PNG for ${name}: ${errorMsg}`);
+      failedCount++;
     }
   }
-  console.log('\n✅ PNG snapshots generated!');
-  if (hasImagemagick) {
-    console.log('   (optimized with ImageMagick for smaller file sizes)');
+
+  // Report results based on success/failure
+  if (failedCount === 0) {
+    console.log('\n✅ PNG snapshots generated!');
+    if (hasImagemagick) {
+      console.log('   (optimized with ImageMagick for smaller file sizes)');
+    }
+    console.log(`\nPNG files for PR attachment:`);
+    for (const pngPath of generatedPngs) {
+      console.log(`  ${pngPath}`);
+    }
+  } else if (generatedPngs.length > 0) {
+    console.log(`\n⚠ PNG generation partially failed: ${failedCount}/${testCases.length} failed`);
+    console.log(`\nSuccessfully generated:`);
+    for (const pngPath of generatedPngs) {
+      console.log(`  ${pngPath}`);
+    }
+    process.exitCode = 1;
+  } else {
+    console.error('\n✗ All PNG generation failed!');
+    process.exitCode = 1;
   }
-  console.log(`\nPNG files for PR attachment:`);
-  console.log(`  ${snapshotDir}/fill-record-completed.png`);
-  console.log(`  ${snapshotDir}/fill-record-failed.png`);
-  console.log(`  ${snapshotDir}/fill-record-partial.png`);
-  console.log(`  ${snapshotDir}/fill-record-cancelled.png`);
 } else {
   console.log('\n⚠ wkhtmltoimage not found - skipping PNG generation');
   console.log('  Install with: apt-get install wkhtmltopdf');
