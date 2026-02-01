@@ -916,6 +916,82 @@ These questions were resolved during spec review:
    visibility. Timestamps on everything allow calculating totals and understanding
    parallel execution patterns.
 
+## Error Handling Requirements
+
+**CRITICAL INVARIANT: All fill errors MUST be captured in FillRecord. Errors must NEVER
+be silently dropped.**
+
+This is essential for:
+- **Debugging**: Understanding why fills failed
+- **Audit trails**: Complete record of what happened
+- **Cost tracking**: Even failed fills consume tokens
+- **Reliability**: Silent failures are unacceptable in production systems
+
+### Error Status Types
+
+The `status` field captures the fill outcome:
+- **`completed`**: Form fill finished successfully, all targeted fields addressed
+- **`partial`**: Fill stopped before completion (e.g., max_turns reached)
+- **`failed`**: An error occurred during fill (agent error, API failure, etc.)
+- **`cancelled`**: Fill was cancelled via abort signal
+
+The `statusDetail` field provides additional context (error message, reason code).
+
+### Error Capture Requirements
+
+Every error path in the fill pipeline MUST:
+1. Call `collector.setStatus('failed', errorMessage)` if collector exists
+2. Include the FillRecord in the result (via `collector.getRecord()`)
+3. Write the sidecar file if `--record-fill` is enabled (CLI)
+
+### Error Path Audit (2026-02-01)
+
+| Error Path | Location | Status | Notes |
+|------------|----------|--------|-------|
+| Form parse failure | programmaticFill:345 | ✅ Acceptable | Form unavailable, no collector |
+| Model resolution error | programmaticFill:384 | ❌ **GAP** | Should capture if collector exists |
+| Agent call failure | programmaticFill:543 | ✅ Fixed | `setStatus('failed')` + record |
+| Cancellation (all paths) | programmaticFill:493,579 | ✅ Fixed | `setStatus('cancelled')` + record |
+| Max turns per-call limit | programmaticFill:478 | ❌ **GAP** | Record not passed to buildResult |
+| Max turns final | programmaticFill:673 | ✅ Fixed | `setStatus('partial')` + record |
+| CLI outer catch | fill.ts:835 | ✅ Fixed | Writes partial record if prerequisites met |
+| CLI agent call | fill.ts:585 | ✅ Fixed | Re-throws to outer catch |
+| Parallel loose item error | parallelHarness:176 | ❌ **GAP** | Error in array but no collector status |
+| Parallel agent rejection | parallelHarness:234 | ❌ **GAP** | Error in array but no collector status |
+| Tool execution failure | liveAgent:637 | ✅ Fixed | Captured in timeline via onToolEnd |
+
+### Outstanding Gaps (Beads Created)
+
+1. **mf-9whi** (P2 bug): Model resolution errors should set collector status if collector exists
+2. **mf-xit0** (P2 bug): Max turns per-call should pass record to buildResult
+3. **mf-9nzj** (P2 bug): parallelHarness errors should call collector.setStatus
+
+### Implementation Guidelines
+
+When adding new error paths:
+
+```typescript
+// CORRECT: Always capture errors in FillRecord
+try {
+  // ... operation that might fail
+} catch (error) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  let record: FillRecord | undefined;
+  if (collector) {
+    collector.setStatus('failed', errorMessage);
+    record = collector.getRecord(getProgressCounts(form, targetRoles));
+  }
+  return buildResult(form, turnCount, totalPatches,
+    { ok: false, reason: 'error', message: errorMessage },
+    inputContextWarnings, remainingIssues, record);
+}
+
+// WRONG: Error not captured in FillRecord
+} catch (error) {
+  return buildErrorResult(form, [error.message], []); // No record!
+}
+```
+
 ## References
 
 - `packages/markform/src/harness/harnessTypes.ts` — Current callback/stats types
