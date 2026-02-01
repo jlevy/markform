@@ -228,7 +228,12 @@ function mergeCallbacks(
   };
 }
 
-function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]): FillResult {
+function buildErrorResult(
+  form: ParsedForm,
+  errors: string[],
+  warnings: string[],
+  record?: FillRecord,
+): FillResult {
   // Extract values from responses
   const values: Record<string, FieldValue> = {};
   for (const [fieldId, response] of Object.entries(form.responsesByFieldId)) {
@@ -237,7 +242,7 @@ function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]
     }
   }
 
-  return {
+  const result: FillResult = {
     status: {
       ok: false,
       reason: 'error',
@@ -250,6 +255,12 @@ function buildErrorResult(form: ParsedForm, errors: string[], warnings: string[]
     totalPatches: 0,
     inputContextWarnings: warnings.length > 0 ? warnings : undefined,
   };
+
+  if (record) {
+    result.record = record;
+  }
+
+  return result;
 }
 
 function buildResult(
@@ -365,7 +376,10 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     };
   }
 
-  // 2. Resolve model if string (skip if _testAgent provided)
+  // 2. Determine model string for collector (before resolution so we can capture errors)
+  const modelString = typeof options.model === 'string' ? options.model : 'custom';
+
+  // 3. Resolve model if string (skip if _testAgent provided)
   let model: LanguageModel | undefined;
   let provider: string | undefined;
   if (!options._testAgent) {
@@ -380,24 +394,26 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         // Web search will be disabled in this case
       }
     } catch (error) {
+      // Model resolution failed - create collector to capture this error
       const message = error instanceof Error ? error.message : String(error);
-      return buildErrorResult(form, [`Model resolution error: ${message}`], []);
+      const errorCollector = createCollectorIfNeeded(options, form, 'unknown', modelString);
+      let record: FillRecord | undefined;
+      if (errorCollector) {
+        errorCollector.setStatus('failed', `Model resolution error: ${message}`);
+        record = errorCollector.getRecord(getProgressCounts(form, options.targetRoles));
+      }
+      return buildErrorResult(form, [`Model resolution error: ${message}`], [], record);
     }
   } else if (typeof options.model === 'string' && options.model.includes('/')) {
     // For test agent, extract provider from model string (e.g., "mock/model" -> "mock")
     provider = options.model.split('/')[0];
   }
 
-  // 3. Create collector if recordFill is enabled
-  const collector = createCollectorIfNeeded(
-    options,
-    form,
-    provider ?? 'unknown',
-    typeof options.model === 'string' ? options.model : 'custom',
-  );
+  // 4. Create collector if recordFill is enabled
+  const collector = createCollectorIfNeeded(options, form, provider ?? 'unknown', modelString);
   const mergedCallbacks = mergeCallbacks(options.callbacks, collector);
 
-  // 4. Apply input context using coercion layer
+  // 5. Apply input context using coercion layer
   let totalPatches = 0;
   let inputContextWarnings: string[] = [];
 
@@ -406,7 +422,12 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
 
     // Fail fast on input context errors
     if (coercionResult.errors.length > 0) {
-      return buildErrorResult(form, coercionResult.errors, coercionResult.warnings);
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('failed', `Input context error: ${coercionResult.errors.join('; ')}`);
+        record = collector.getRecord(getProgressCounts(form, options.targetRoles));
+      }
+      return buildErrorResult(form, coercionResult.errors, coercionResult.warnings, record);
     }
 
     // Apply coerced patches
@@ -476,6 +497,11 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
     // Check per-call limit (before executing any work this turn)
     if (options.maxTurnsThisCall !== undefined && turnsThisCall >= options.maxTurnsThisCall) {
+      let record: FillRecord | undefined;
+      if (collector) {
+        collector.setStatus('partial', 'batch_limit');
+        record = collector.getRecord(getProgressCounts(form, targetRoles));
+      }
       return buildResult(
         form,
         turnCount,
@@ -487,6 +513,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         },
         inputContextWarnings,
         stepResult.issues,
+        record,
       );
     }
     // Check for cancellation
@@ -799,8 +826,31 @@ async function fillFormParallel(
       totalPatches += result.patchesApplied;
       turnCount += result.turnsUsed;
 
-      if (result.aborted) {
-        return buildResult(form, turnCount, totalPatches, result.status!, inputContextWarnings);
+      if (result.aborted && result.status) {
+        let record: FillRecord | undefined;
+        if (collector) {
+          // Set status based on abort reason
+          const status = result.status;
+          if (!status.ok) {
+            if (status.reason === 'cancelled') {
+              collector.setStatus('cancelled');
+            } else if (status.reason === 'error') {
+              collector.setStatus('failed', status.message);
+            } else {
+              collector.setStatus('partial', status.reason);
+            }
+          }
+          record = collector.getRecord(getProgressCounts(form, targetRoles));
+        }
+        return buildResult(
+          form,
+          turnCount,
+          totalPatches,
+          result.status,
+          inputContextWarnings,
+          undefined,
+          record,
+        );
       }
     }
 
@@ -854,12 +904,31 @@ async function fillFormParallel(
       );
 
       let batchPatches = 0;
+      const batchErrors: string[] = [];
       for (const result of results) {
         if (result.status === 'fulfilled') {
           totalPatches += result.value.patchesApplied;
           batchPatches += result.value.patchesApplied;
           turnCount += result.value.turnsUsed;
+          // Track errors from aborted items (agent threw an error)
+          const itemStatus = result.value.status;
+          if (result.value.aborted && itemStatus && !itemStatus.ok && itemStatus.message) {
+            batchErrors.push(itemStatus.message);
+          }
+        } else {
+          // Promise itself was rejected (shouldn't happen with new error handling, but defensive)
+          const reason: unknown = result.reason;
+          const errorMsg = reason instanceof Error ? reason.message : String(reason);
+          batchErrors.push(`Parallel agent error: ${errorMsg}`);
         }
+      }
+
+      // If any batch items had errors, record them (but continue processing)
+      // The form may still be partially filled even with some errors
+      if (batchErrors.length > 0 && collector) {
+        // Don't set failed status yet - we may still complete. Just log the errors.
+        // The final status will be set at the end based on form completeness.
+        console.warn(`[markform] Parallel batch ${batch.batchId} had errors:`, batchErrors);
       }
 
       try {
@@ -1017,13 +1086,25 @@ async function runMultiTurnForItems(
       /* ignore */
     }
 
-    // Call agent
-    const response = await agent.fillFormTool(
-      scopedIssues,
-      form,
-      maxPatchesPerTurn,
-      previousRejections,
-    );
+    // Call agent (catch errors to avoid rejecting the parallel promise)
+    let response: { patches: Patch[]; stats?: TurnStats };
+    try {
+      response = await agent.fillFormTool(
+        scopedIssues,
+        form,
+        maxPatchesPerTurn,
+        previousRejections,
+      );
+    } catch (error) {
+      // Return early with error result so it can be tracked by the parallel harness
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        patchesApplied,
+        turnsUsed,
+        aborted: true,
+        status: { ok: false, reason: 'error', message: errorMessage },
+      };
+    }
 
     // Apply patches
     if (response.patches.length > 0) {
