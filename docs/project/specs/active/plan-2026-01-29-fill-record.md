@@ -753,7 +753,7 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 - [x] Add `--record-fill` flag to `fill` command (defaults to `false`)
 - [x] Implement sidecar file naming: `{basename}.fill.json`
 - [x] Write JSON fill record when flag is set
-- [ ] **BUG:** CLI tests for record file generation — tests exist but don't verify timeline content
+- [x] **BUG:** CLI tests for record file generation — tests now verify timeline content (`mf-ln09`)
 
 **⚠️ BUG FOUND (2026-01-31) — FIXED (2026-02-01):**
 
@@ -856,9 +856,9 @@ Fixes the critical bug where CLI fill records have empty timelines.
 - [x] Call `onTurnStart` at start of harness loop iteration (`mf-mgxo`) — DONE 2026-02-01
 - [x] Call `onTurnComplete` after `harness.apply()` returns (`mf-mgxo`) — DONE 2026-02-01
 - [x] Add unit test: verify CLI callback wiring produces non-empty timeline — DONE 2026-02-01
-- [ ] Add integration test: verify CLI fill record has non-empty timeline (`mf-ln09`)
-- [ ] Add integration test: verify CLI fill record has correct turn count (`mf-ln09`)
-- [ ] Add integration test: verify tool calls appear in timeline entries (`mf-ln09`)
+- [x] Add integration test: verify CLI fill record has non-empty timeline (`mf-ln09`) — DONE 2026-02-01
+- [x] Add integration test: verify CLI fill record has correct turn count (`mf-ln09`) — DONE 2026-02-01
+- [x] Add integration test: verify tool calls appear in timeline entries (`mf-ln09`) — DONE 2026-02-01
 - [x] Manual verification: run `markform fill --record-fill` and inspect JSON — DONE 2026-02-01
 
 **Implementation Notes:**
