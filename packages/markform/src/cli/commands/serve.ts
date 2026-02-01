@@ -1020,6 +1020,24 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
       });
     }
 
+    // Tooltip handlers for Fill Record visualizations (must be global for dynamically loaded content)
+    function frShowTip(el) {
+      var tip = document.getElementById('fr-tooltip');
+      if (tip && el.dataset.tooltip) {
+        tip.textContent = el.dataset.tooltip;
+        // Position tooltip centered above the element
+        var rect = el.getBoundingClientRect();
+        tip.style.left = (rect.left + rect.width / 2) + 'px';
+        tip.style.top = (rect.top - 8) + 'px';
+        tip.style.transform = 'translate(-50%, -100%)';
+        tip.classList.add('visible');
+      }
+    }
+    function frHideTip() {
+      var tip = document.getElementById('fr-tooltip');
+      if (tip) tip.classList.remove('visible');
+    }
+
     // Track fields marked for skip
     const skippedFields = new Set();
 
@@ -2594,37 +2612,20 @@ export function formatTokens(count: number): string {
 
 /**
  * Format a patch value for display.
- * Handles different value types and truncates long values.
+ * Shows full content - the container has max-height with scroll for long values.
  */
 function formatPatchValue(value: unknown): string {
   if (value === null || value === undefined) {
     return '<em class="fr-turn__patch-value--clear">(cleared)</em>';
   }
   if (typeof value === 'string') {
-    const escaped = escapeHtml(value);
-    if (escaped.length > 200) {
-      return escaped.substring(0, 200) + '...';
-    }
-    return escaped;
+    return escapeHtml(value);
   }
   if (typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
   }
-  if (Array.isArray(value)) {
-    if (value.length === 0) return '[]';
-    // For arrays (string lists, url lists, table rows), show count and preview
-    const preview = JSON.stringify(value, null, 2);
-    if (preview.length > 200) {
-      return `[${value.length} items]`;
-    }
-    return escapeHtml(preview);
-  }
-  // Fallback for any other type (including objects not caught above)
-  const preview = JSON.stringify(value, null, 2);
-  if (preview.length > 200) {
-    return escapeHtml(preview.substring(0, 200)) + '...';
-  }
-  return escapeHtml(preview);
+  // Arrays and objects - show full JSON
+  return escapeHtml(JSON.stringify(value, null, 2));
 }
 
 /**
@@ -2660,8 +2661,7 @@ function renderPatchDetails(input: Record<string, unknown>): string {
       } else if ('values' in p) {
         valueHtml = formatPatchValue(p.values);
       } else if ('rows' in p) {
-        const rows = p.rows as unknown[];
-        valueHtml = `[${rows.length} row${rows.length !== 1 ? 's' : ''}]`;
+        valueHtml = formatPatchValue(p.rows);
       }
 
       return `
@@ -2738,12 +2738,16 @@ const FILL_RECORD_STYLES = `
     --fr-border: #e5e7eb;
     --fr-text: #111827;
     --fr-text-muted: #6b7280;
-    --fr-text-subtle: #9ca3af;
     --fr-primary: #3b82f6;
     --fr-success: #22c55e;
     --fr-warning: #f59e0b;
     --fr-error: #ef4444;
     --fr-info: #6b7280;
+
+    /* Typography - consolidated to fewer sizes */
+    --fr-font-sm: 13px;
+    --fr-font-base: 14px;
+    --fr-font-lg: 20px;
 
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     padding: 20px;
@@ -2761,15 +2765,33 @@ const FILL_RECORD_STYLES = `
       --fr-border: #4b5563;
       --fr-text: #f9fafb;
       --fr-text-muted: #9ca3af;
-      --fr-text-subtle: #6b7280;
     }
+  }
+
+  .fr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--fr-border);
+  }
+  .fr-header__model {
+    font-weight: 600;
+    font-size: var(--fr-font-base);
+    color: var(--fr-text);
+  }
+  .fr-header__time {
+    font-weight: 600;
+    font-size: var(--fr-font-base);
+    color: var(--fr-text);
   }
 
   .fr-banner {
     border-radius: 8px;
     padding: 12px 16px;
     margin-bottom: 20px;
-    font-size: 14px;
+    font-size: var(--fr-font-base);
   }
   .fr-banner--error {
     background: color-mix(in srgb, var(--fr-error) 10%, var(--fr-bg));
@@ -2794,17 +2816,17 @@ const FILL_RECORD_STYLES = `
     text-align: center;
   }
   .fr-card__label {
-    font-size: 13px;
+    font-size: var(--fr-font-sm);
     color: var(--fr-text-muted);
     margin-bottom: 4px;
   }
   .fr-card__value {
-    font-size: 20px;
+    font-size: var(--fr-font-lg);
     font-weight: 600;
   }
   .fr-card__sub {
-    font-size: 12px;
-    color: var(--fr-text-subtle);
+    font-size: var(--fr-font-sm);
+    color: var(--fr-text-muted);
     margin-top: 2px;
   }
 
@@ -2815,7 +2837,7 @@ const FILL_RECORD_STYLES = `
     padding: 4px 10px;
     border-radius: 4px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: var(--fr-font-sm);
   }
   .fr-badge--completed { background: color-mix(in srgb, var(--fr-success) 15%, transparent); color: var(--fr-success); }
   .fr-badge--partial { background: color-mix(in srgb, var(--fr-warning) 15%, transparent); color: var(--fr-warning); }
@@ -2826,7 +2848,7 @@ const FILL_RECORD_STYLES = `
     margin-bottom: 24px;
   }
   .fr-section__title {
-    font-size: 14px;
+    font-size: var(--fr-font-base);
     font-weight: 500;
     color: var(--fr-text);
     margin-bottom: 8px;
@@ -2844,37 +2866,140 @@ const FILL_RECORD_STYLES = `
     transition: width 0.3s ease;
   }
   .fr-progress__text {
-    font-size: 13px;
+    font-size: var(--fr-font-sm);
     color: var(--fr-text-muted);
     margin-top: 4px;
   }
 
-  .fr-timing-bar {
+  .fr-progress__segments {
+    display: flex;
+    height: 100%;
+    width: 100%;
+  }
+  .fr-progress-segment {
+    height: 100%;
+    min-width: 2px;
+    border-right: 2px solid var(--fr-bg);
+    cursor: pointer;
+  }
+  .fr-progress-segment:last-child {
+    border-right: none;
+  }
+  .fr-progress-segment--filled {
+    background: var(--fr-primary);
+  }
+  .fr-progress-segment--filled:hover {
+    background: color-mix(in srgb, var(--fr-primary) 70%, white);
+  }
+  .fr-progress-segment--prefilled {
+    background: #8b5cf6;
+  }
+  .fr-progress-segment--prefilled:hover {
+    background: color-mix(in srgb, #8b5cf6 70%, white);
+  }
+  .fr-progress-segment--skipped {
+    background: var(--fr-warning);
+  }
+  .fr-progress-segment--skipped:hover {
+    background: color-mix(in srgb, var(--fr-warning) 70%, white);
+  }
+  .fr-progress-segment--empty {
+    background: var(--fr-border);
+  }
+
+  /* Gantt chart - each call on its own row */
+  .fr-gantt {
     margin-bottom: 8px;
   }
-  .fr-timing-bar__header {
+  .fr-gantt__row {
     display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    margin-bottom: 4px;
+    align-items: center;
+    height: 20px;
+    margin-bottom: 3px;
   }
-  .fr-timing-bar__track {
-    background: var(--fr-border);
-    border-radius: 2px;
-    height: 8px;
+  .fr-gantt__label {
+    width: 90px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--fr-text-muted);
+    white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+    text-align: right;
   }
-  .fr-timing-bar__fill {
-    height: 100%;
+  .fr-gantt__track {
+    flex: 1;
+    background: var(--fr-bg-subtle);
+    border-radius: 3px;
+    height: 14px;
+    position: relative;
   }
-  .fr-timing-bar__fill--llm { background: var(--fr-primary); }
-  .fr-timing-bar__fill--tool { background: var(--fr-success); }
-  .fr-timing-bar__fill--overhead { background: var(--fr-info); }
+  .fr-gantt__bar {
+    position: absolute;
+    top: 2px;
+    height: calc(100% - 4px);
+    min-width: 6px;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .fr-gantt__bar:hover {
+    filter: brightness(1.15);
+  }
+  .fr-gantt__bar--llm {
+    background: var(--fr-primary);
+  }
+  .fr-gantt__bar--tool {
+    background: var(--fr-success);
+  }
+  .fr-gantt__legend {
+    display: flex;
+    gap: 16px;
+    font-size: var(--fr-font-sm);
+    color: var(--fr-text-muted);
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--fr-border);
+  }
+  .fr-gantt__legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fr-gantt__legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .fr-gantt__legend-dot--llm { background: var(--fr-primary); }
+  .fr-gantt__legend-dot--tool { background: var(--fr-success); }
+
+  /* Tooltip container */
+  .fr-tooltip {
+    position: fixed;
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: var(--fr-font-sm);
+    white-space: pre-line;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.05s ease-out, visibility 0.05s ease-out;
+  }
+  .fr-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.2s ease-in, visibility 0.2s ease-in;
+  }
 
   .fr-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: var(--fr-font-sm);
   }
   .fr-table th {
     padding: 8px 12px;
@@ -2893,23 +3018,23 @@ const FILL_RECORD_STYLES = `
     border: none;
     background: none;
   }
-  .fr-details summary {
+  .fr-details > summary {
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--fr-font-base);
     font-weight: 500;
     color: var(--fr-text);
     padding: 8px 0;
     list-style: none;
   }
-  .fr-details summary::-webkit-details-marker { display: none; }
-  .fr-details summary::before {
+  .fr-details > summary::-webkit-details-marker { display: none; }
+  .fr-details > summary::before {
     content: '▶';
     display: inline-block;
     margin-right: 8px;
     transition: transform 0.2s;
-    font-size: 10px;
+    font-size: 11px;
   }
-  .fr-details[open] summary::before {
+  .fr-details[open] > summary::before {
     transform: rotate(90deg);
   }
   .fr-details__content {
@@ -2925,8 +3050,21 @@ const FILL_RECORD_STYLES = `
     border-radius: 4px;
   }
   .fr-turn summary {
+    cursor: pointer;
     padding: 12px;
-    font-size: 13px;
+    font-size: var(--fr-font-sm);
+    list-style: none;
+  }
+  .fr-turn summary::-webkit-details-marker { display: none; }
+  .fr-turn summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s;
+    font-size: 11px;
+  }
+  .fr-turn[open] summary::before {
+    transform: rotate(90deg);
   }
   .fr-turn__content {
     padding: 0 12px 12px;
@@ -2938,7 +3076,7 @@ const FILL_RECORD_STYLES = `
   }
   .fr-turn__tool {
     margin: 4px 0;
-    font-size: 12px;
+    font-size: var(--fr-font-sm);
     color: var(--fr-text-muted);
   }
   .fr-turn__tool--error { color: var(--fr-error); }
@@ -2953,7 +3091,7 @@ const FILL_RECORD_STYLES = `
     padding: 8px 12px;
     background: var(--fr-bg-subtle);
     border-radius: 4px;
-    font-size: 11px;
+    font-size: var(--fr-font-sm);
   }
   .fr-turn__patch {
     margin: 4px 0;
@@ -2970,11 +3108,11 @@ const FILL_RECORD_STYLES = `
     color: var(--fr-text);
   }
   .fr-turn__patch-op {
-    font-size: 10px;
+    font-size: 11px;
     padding: 1px 4px;
     border-radius: 2px;
     background: var(--fr-bg-muted);
-    color: var(--fr-text-subtle);
+    color: var(--fr-text-muted);
     margin-left: 6px;
   }
   .fr-turn__patch-value {
@@ -2983,7 +3121,8 @@ const FILL_RECORD_STYLES = `
     color: var(--fr-text-muted);
     font-family: ui-monospace, 'SF Mono', Menlo, monospace;
     word-break: break-word;
-    max-height: 80px;
+    white-space: pre-wrap;
+    max-height: 200px;
     overflow: auto;
   }
   .fr-turn__patch-value--skip {
@@ -3003,7 +3142,7 @@ const FILL_RECORD_STYLES = `
     top: 8px;
     right: 8px;
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: var(--fr-font-sm);
     background: var(--fr-bg-subtle);
     border: 1px solid var(--fr-border);
     border-radius: 4px;
@@ -3019,12 +3158,33 @@ const FILL_RECORD_STYLES = `
     transform: scale(0.95);
   }
 
+  /* Scoped pre styles to override parent .tab-content pre */
+  .fr-dashboard pre {
+    background: var(--fr-bg-muted);
+    color: var(--fr-text);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--fr-border);
+    overflow-x: auto;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Override syntax highlighting colors for dark mode compatibility */
+  .fr-dashboard .syn-key { color: var(--fr-primary); }
+  .fr-dashboard .syn-string { color: var(--fr-success); }
+  .fr-dashboard .syn-number { color: var(--fr-primary); }
+  .fr-dashboard .syn-bool { color: var(--fr-warning); }
+  .fr-dashboard .syn-null { color: var(--fr-error); }
+
   @media (max-width: 600px) {
     .fr-dashboard { padding: 12px; }
     .fr-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .fr-card { padding: 12px; }
     .fr-card__value { font-size: 18px; }
-    .fr-table { font-size: 12px; }
+    .fr-table { font-size: var(--fr-font-sm); }
     .fr-table th, .fr-table td { padding: 6px 8px; }
   }
 </style>
@@ -3038,16 +3198,29 @@ const FILL_RECORD_STYLES = `
  * @public Exported for testing and reuse.
  */
 export function renderFillRecordContent(record: FillRecord): string {
-  const {
-    status,
-    statusDetail,
-    durationMs,
-    llm,
-    formProgress,
-    timingBreakdown,
-    toolSummary,
-    timeline,
-  } = record;
+  const { status, statusDetail, startedAt, durationMs, llm, formProgress, toolSummary, timeline } =
+    record;
+
+  // Format start time for display
+  const startDate = new Date(startedAt);
+  const formattedDate = startDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const formattedTime = startDate.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  // Header with model and timestamp
+  const headerInfo = `
+    <div class="fr-header">
+      <div class="fr-header__model">${escapeHtml(llm.model)}</div>
+      <div class="fr-header__time">${formattedDate} at ${formattedTime}</div>
+    </div>
+  `;
 
   // Status banner for non-completed fills
   let statusBanner = '';
@@ -3088,52 +3261,192 @@ export function renderFillRecordContent(record: FillRecord): string {
   `;
 
   // Progress bar
+  // Extract filled fields from timeline to show individual segments
+  // Use Map to deduplicate by fieldId, keeping only the last (final) state for each field
+  const fieldsMap = new Map<string, { fieldId: string; op: string; turnNumber: number }>();
+  for (const turn of timeline) {
+    for (const tc of turn.toolCalls) {
+      if (tc.tool === 'fill_form' && tc.input.patches) {
+        const patches = tc.input.patches as { op?: string; fieldId?: string }[];
+        for (const patch of patches) {
+          if (patch.fieldId && patch.op) {
+            fieldsMap.set(patch.fieldId, {
+              fieldId: patch.fieldId,
+              op: patch.op,
+              turnNumber: turn.turnNumber,
+            });
+          }
+        }
+      }
+    }
+  }
+  const fieldsFilled = Array.from(fieldsMap.values());
+
   const totalFields = formProgress.totalFields;
   const filledFields = formProgress.filledFields;
+  const skippedFields = formProgress.skippedFields;
+  const abortedFields = formProgress.abortedFields ?? 0;
   const progressPercent = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+
+  // Build progress segments
+  const segmentWidth = totalFields > 0 ? 100 / totalFields : 0;
+
+  // AI-filled fields (from timeline patches, excluding skip/abort)
+  const aiFilledFields = fieldsFilled.filter(
+    (f) => f.op !== 'skip_field' && f.op !== 'abort_field',
+  );
+  const aiFilledSegmentsHtml = aiFilledFields
+    .map((f) => {
+      const opLabel = f.op.replace(/_/g, ' ');
+      const tooltip = `${f.fieldId}\n${opLabel}\nTurn ${f.turnNumber}`;
+      return `<div class="fr-progress-segment fr-progress-segment--filled" style="width: ${segmentWidth}%" data-tooltip="${escapeHtml(tooltip)}" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>`;
+    })
+    .join('');
+
+  // Pre-filled fields (filled before AI started, not in timeline)
+  const prefilledCount = Math.max(0, filledFields - aiFilledFields.length);
+  const prefilledSegmentsHtml =
+    prefilledCount > 0
+      ? `<div class="fr-progress-segment fr-progress-segment--prefilled" style="width: ${segmentWidth * prefilledCount}%" data-tooltip="Pre-filled (${prefilledCount} field${prefilledCount !== 1 ? 's' : ''})" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>`
+      : '';
+
+  // Skipped/aborted fields
+  const skippedSegmentsHtml = fieldsFilled
+    .filter((f) => f.op === 'skip_field' || f.op === 'abort_field')
+    .map((f) => {
+      const opLabel = f.op === 'skip_field' ? 'skipped' : 'aborted';
+      const tooltip = `${f.fieldId}\n${opLabel}\nTurn ${f.turnNumber}`;
+      return `<div class="fr-progress-segment fr-progress-segment--skipped" style="width: ${segmentWidth}%" data-tooltip="${escapeHtml(tooltip)}" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>`;
+    })
+    .join('');
+
+  // Empty segments for unfilled fields
+  const unfilledCount = totalFields - filledFields - skippedFields - abortedFields;
+  const unfilledSegmentsHtml =
+    unfilledCount > 0
+      ? `<div class="fr-progress-segment fr-progress-segment--empty" style="width: ${segmentWidth * unfilledCount}%"></div>`
+      : '';
+
+  // Build progress text with details
+  const progressDetails: string[] = [];
+  if (prefilledCount > 0) progressDetails.push(`${prefilledCount} pre-filled`);
+  if (skippedFields > 0) progressDetails.push(`${skippedFields} skipped`);
+  const progressDetailsText = progressDetails.length > 0 ? ` • ${progressDetails.join(' • ')}` : '';
+
   const progressBar = `
     <div class="fr-section">
       <div class="fr-section__title">Progress</div>
       <div class="fr-progress">
-        <div class="fr-progress__bar" style="width: ${progressPercent}%"></div>
+        <div class="fr-progress__segments">
+          ${prefilledSegmentsHtml}${aiFilledSegmentsHtml}${skippedSegmentsHtml}${unfilledSegmentsHtml}
+        </div>
       </div>
       <div class="fr-progress__text">
-        ${filledFields}/${totalFields} fields filled (${progressPercent}%)${formProgress.skippedFields > 0 ? ` • ${formProgress.skippedFields} skipped` : ''}
+        ${filledFields}/${totalFields} fields filled (${progressPercent}%)${progressDetailsText}
       </div>
     </div>
   `;
 
-  // Timing breakdown
-  const llmMs = timingBreakdown.llmTimeMs;
-  const toolMs = timingBreakdown.toolTimeMs;
-  const overheadMs = timingBreakdown.overheadMs;
-  const totalMs = llmMs + toolMs + overheadMs;
+  // Gantt-style timeline visualization
+  // Calculate actual start/end times for each call
+  const totalMs = durationMs;
+  const llmCallCount = llm.totalCalls;
+  const toolCallCount = toolSummary.totalCalls;
 
-  const timingBars = [
-    { label: 'LLM Calls', ms: llmMs, type: 'llm' },
-    { label: 'Tool Exec', ms: toolMs, type: 'tool' },
-    { label: 'Overhead', ms: overheadMs, type: 'overhead' },
-  ]
-    .map(({ label, ms, type }) => {
-      const percent = totalMs > 0 ? (ms / totalMs) * 100 : 0;
+  // Build timeline events with actual positions
+  // For each turn: LLM call happens first, then tool calls sequentially
+  interface TimelineEvent {
+    type: 'llm' | 'tool';
+    startMs: number;
+    durationMs: number;
+    turnNumber: number;
+    label: string;
+    tokens?: { input: number; output: number; total: number };
+  }
+
+  const timelineEvents: TimelineEvent[] = [];
+  let currentTime = 0;
+
+  for (const turn of timeline) {
+    const toolTimeInTurn = turn.toolCalls.reduce((sum, tc) => sum + tc.durationMs, 0);
+    const llmTimeInTurn = Math.max(0, turn.durationMs - toolTimeInTurn);
+
+    // LLM call for this turn
+    if (llmTimeInTurn > 0) {
+      timelineEvents.push({
+        type: 'llm',
+        startMs: currentTime,
+        durationMs: llmTimeInTurn,
+        turnNumber: turn.turnNumber,
+        label: `Turn ${turn.turnNumber}`,
+        tokens: {
+          input: turn.tokens.input,
+          output: turn.tokens.output,
+          total: turn.tokens.input + turn.tokens.output,
+        },
+      });
+    }
+    currentTime += llmTimeInTurn;
+
+    // Tool calls for this turn (sequential for now)
+    for (const tc of turn.toolCalls) {
+      timelineEvents.push({
+        type: 'tool',
+        startMs: currentTime,
+        durationMs: tc.durationMs,
+        turnNumber: turn.turnNumber,
+        label: tc.tool,
+      });
+      currentTime += tc.durationMs;
+    }
+  }
+
+  // Render Gantt chart rows - each event gets its own row
+  const ganttRowsHtml = timelineEvents
+    .map((e) => {
+      const leftPct = totalMs > 0 ? (e.startMs / totalMs) * 100 : 0;
+      const widthPct = totalMs > 0 ? (e.durationMs / totalMs) * 100 : 0;
+      const barClass = e.type === 'llm' ? 'fr-gantt__bar--llm' : 'fr-gantt__bar--tool';
+      const tooltip =
+        e.type === 'llm'
+          ? `${e.label}&#10;${formatDuration(e.durationMs)}&#10;${formatTokens(e.tokens?.total ?? 0)} tokens (${formatTokens(e.tokens?.input ?? 0)} in / ${formatTokens(e.tokens?.output ?? 0)} out)`
+          : `${e.label}&#10;${formatDuration(e.durationMs)}&#10;Turn ${e.turnNumber}`;
+
       return `
-      <div class="fr-timing-bar">
-        <div class="fr-timing-bar__header">
-          <span>${label}</span>
-          <span style="font-weight: 500">${formatDuration(ms)}</span>
-        </div>
-        <div class="fr-timing-bar__track">
-          <div class="fr-timing-bar__fill fr-timing-bar__fill--${type}" style="width: ${percent}%"></div>
-        </div>
-      </div>
-    `;
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">${escapeHtml(e.label)}</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar ${barClass}" style="left: ${leftPct}%; width: ${widthPct}%" data-tooltip="${tooltip}" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>`;
     })
     .join('');
 
+  const llmTotalMs = timelineEvents
+    .filter((e) => e.type === 'llm')
+    .reduce((sum, e) => sum + e.durationMs, 0);
+  const toolTotalMs = timelineEvents
+    .filter((e) => e.type === 'tool')
+    .reduce((sum, e) => sum + e.durationMs, 0);
+
   const timingSection = `
     <details class="fr-details fr-section" open>
-      <summary>Timing Breakdown (${formatDuration(totalMs)} total)</summary>
-      <div class="fr-details__content">${timingBars}</div>
+      <summary>Timeline (${formatDuration(totalMs)} total)</summary>
+      <div class="fr-details__content">
+        <div class="fr-gantt">
+          ${ganttRowsHtml}
+          <div class="fr-gantt__legend">
+            <div class="fr-gantt__legend-item">
+              <div class="fr-gantt__legend-dot fr-gantt__legend-dot--llm"></div>
+              <span>LLM (${llmCallCount} call${llmCallCount !== 1 ? 's' : ''}, ${formatDuration(llmTotalMs)})</span>
+            </div>
+            <div class="fr-gantt__legend-item">
+              <div class="fr-gantt__legend-dot fr-gantt__legend-dot--tool"></div>
+              <span>Tools (${toolCallCount} call${toolCallCount !== 1 ? 's' : ''}, ${formatDuration(toolTotalMs)})</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </details>
   `;
 
@@ -3167,7 +3480,7 @@ export function renderFillRecordContent(record: FillRecord): string {
     `;
   }
 
-  // Timeline accordion
+  // Turn Details accordion
   let timelineSection = '';
   if (timeline.length > 0) {
     const timelineItems = timeline
@@ -3185,7 +3498,7 @@ export function renderFillRecordContent(record: FillRecord): string {
         <details class="fr-turn">
           <summary><strong>Turn ${turn.turnNumber}</strong> • Order ${turn.order} • ${formatDuration(turn.durationMs)} • ${formatTokens(turnTokens)} tokens${patchInfo}${rejectedInfo}</summary>
           <div class="fr-turn__content">
-            ${turn.toolCalls.length > 0 ? `<ul class="fr-turn__tools">${toolCallsList}</ul>` : '<span style="color: var(--fr-text-subtle); font-size: 12px;">No tool calls</span>'}
+            ${turn.toolCalls.length > 0 ? `<ul class="fr-turn__tools">${toolCallsList}</ul>` : '<span class="fr-turn__tool">No tool calls</span>'}
           </div>
         </details>
       `;
@@ -3194,7 +3507,7 @@ export function renderFillRecordContent(record: FillRecord): string {
 
     timelineSection = `
       <details class="fr-details fr-section">
-        <summary>Timeline (${timeline.length} turns)</summary>
+        <summary>Turn Details (${timeline.length} turns)</summary>
         <div style="margin-top: 8px;">${timelineItems}</div>
       </details>
     `;
@@ -3213,9 +3526,14 @@ export function renderFillRecordContent(record: FillRecord): string {
     </details>
   `;
 
+  // Tooltip element - functions are defined in main page script
+  const tooltipHtml = `<div id="fr-tooltip" class="fr-tooltip"></div>`;
+
   return `
     ${FILL_RECORD_STYLES}
+    ${tooltipHtml}
     <div class="fr-dashboard">
+      ${headerInfo}
       ${statusBanner}
       ${summaryCards}
       ${progressBar}
