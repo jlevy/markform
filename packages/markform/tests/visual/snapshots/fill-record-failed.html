@@ -1,1032 +1,795 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Failed Fill Record</title>
-    <style>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Failed Fill Record</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f5f5f5;
+    }
+    @media (prefers-color-scheme: dark) {
       body {
-        margin: 0;
-        background: #f5f5f5;
+        background: #111827;
       }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background: #111827;
-        }
+    }
+  </style>
+  <script>
+    // Tooltip handlers for Fill Record visualizations
+    function frShowTip(el) {
+      var tip = document.getElementById('fr-tooltip');
+      if (tip && el.dataset.tooltip) {
+        tip.textContent = el.dataset.tooltip;
+        // Position tooltip centered above the element
+        var rect = el.getBoundingClientRect();
+        tip.style.left = (rect.left + rect.width / 2) + 'px';
+        tip.style.top = (rect.top - 8) + 'px';
+        tip.style.transform = 'translate(-50%, -100%)';
+        tip.classList.add('visible');
       }
-    </style>
-    <script>
-      // Tooltip handlers for Fill Record visualizations
-      function frShowTip(el) {
-        var tip = document.getElementById('fr-tooltip');
-        if (tip && el.dataset.tooltip) {
-          tip.textContent = el.dataset.tooltip;
-          // Position tooltip centered above the element
-          var rect = el.getBoundingClientRect();
-          tip.style.left = rect.left + rect.width / 2 + 'px';
-          tip.style.top = rect.top - 8 + 'px';
-          tip.style.transform = 'translate(-50%, -100%)';
-          tip.classList.add('visible');
-        }
-      }
-      function frHideTip() {
-        var tip = document.getElementById('fr-tooltip');
-        if (tip) tip.classList.remove('visible');
-      }
-      // Copy YAML handler
-      function frCopyYaml(btn) {
-        var pre = btn.parentElement.querySelector('pre');
-        navigator.clipboard.writeText(pre.textContent).then(function () {
-          var orig = btn.textContent;
-          btn.textContent = 'Copied!';
-          setTimeout(function () {
-            btn.textContent = orig;
-          }, 1500);
-        });
-      }
-    </script>
-  </head>
-  <body>
-    <style>
-      .fr-dashboard {
-        --fr-bg: #ffffff;
-        --fr-bg-muted: #f9fafb;
-        --fr-bg-subtle: #f3f4f6;
-        --fr-border: #e5e7eb;
-        --fr-text: #111827;
-        --fr-text-muted: #6b7280;
-        --fr-primary: #3b82f6;
-        --fr-success: #22c55e;
-        --fr-warning: #f59e0b;
-        --fr-error: #ef4444;
-        --fr-info: #6b7280;
+    }
+    function frHideTip() {
+      var tip = document.getElementById('fr-tooltip');
+      if (tip) tip.classList.remove('visible');
+    }
+    // Copy YAML handler
+    function frCopyYaml(btn) {
+      var pre = btn.parentElement.querySelector('pre');
+      navigator.clipboard.writeText(pre.textContent).then(function() {
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = orig; }, 1500);
+      });
+    }
+  </script>
+</head>
+<body>
+  
+    
+<style>
+  .fr-dashboard {
+    --fr-bg: #ffffff;
+    --fr-bg-muted: #f9fafb;
+    --fr-bg-subtle: #f3f4f6;
+    --fr-border: #e5e7eb;
+    --fr-text: #111827;
+    --fr-text-muted: #6b7280;
+    --fr-primary: #3b82f6;
+    --fr-success: #22c55e;
+    --fr-warning: #f59e0b;
+    --fr-error: #ef4444;
+    --fr-info: #6b7280;
 
-        /* Typography - consolidated to fewer sizes */
-        --fr-font-sm: 13px;
-        --fr-font-base: 14px;
-        --fr-font-lg: 20px;
+    /* Typography - consolidated to fewer sizes */
+    --fr-font-sm: 13px;
+    --fr-font-base: 14px;
+    --fr-font-lg: 20px;
 
-        font-family:
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          'Segoe UI',
-          Roboto,
-          sans-serif;
-        padding: 20px;
-        max-width: 900px;
-        margin: 0 auto;
-        color: var(--fr-text);
-        line-height: 1.5;
-      }
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    color: var(--fr-text);
+    line-height: 1.5;
+  }
 
-      @media (prefers-color-scheme: dark) {
-        .fr-dashboard {
-          --fr-bg: #1f2937;
-          --fr-bg-muted: #374151;
-          --fr-bg-subtle: #4b5563;
-          --fr-border: #4b5563;
-          --fr-text: #f9fafb;
-          --fr-text-muted: #9ca3af;
-        }
-      }
+  @media (prefers-color-scheme: dark) {
+    .fr-dashboard {
+      --fr-bg: #1f2937;
+      --fr-bg-muted: #374151;
+      --fr-bg-subtle: #4b5563;
+      --fr-border: #4b5563;
+      --fr-text: #f9fafb;
+      --fr-text-muted: #9ca3af;
+    }
+  }
 
-      .fr-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid var(--fr-border);
-      }
-      .fr-header__model {
-        font-weight: 600;
-        font-size: var(--fr-font-base);
-        color: var(--fr-text);
-      }
-      .fr-header__time {
-        font-weight: 600;
-        font-size: var(--fr-font-base);
-        color: var(--fr-text);
-      }
+  .fr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--fr-border);
+  }
+  .fr-header__model {
+    font-weight: 600;
+    font-size: var(--fr-font-base);
+    color: var(--fr-text);
+  }
+  .fr-header__time {
+    font-weight: 600;
+    font-size: var(--fr-font-base);
+    color: var(--fr-text);
+  }
 
-      .fr-banner {
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-        font-size: var(--fr-font-base);
-      }
-      .fr-banner--error {
-        background: color-mix(in srgb, var(--fr-error) 10%, var(--fr-bg));
-        border: 1px solid var(--fr-error);
-      }
-      .fr-banner--warning {
-        background: color-mix(in srgb, var(--fr-warning) 10%, var(--fr-bg));
-        border: 1px solid var(--fr-warning);
-      }
+  .fr-banner {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: var(--fr-font-base);
+  }
+  .fr-banner--error {
+    background: color-mix(in srgb, var(--fr-error) 10%, var(--fr-bg));
+    border: 1px solid var(--fr-error);
+  }
+  .fr-banner--warning {
+    background: color-mix(in srgb, var(--fr-warning) 10%, var(--fr-bg));
+    border: 1px solid var(--fr-warning);
+  }
 
-      .fr-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-      }
+  .fr-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
 
-      .fr-card {
-        padding: 16px;
-        background: var(--fr-bg-muted);
-        border-radius: 8px;
-        text-align: center;
-      }
-      .fr-card__label {
-        font-size: var(--fr-font-sm);
-        color: var(--fr-text-muted);
-        margin-bottom: 4px;
-      }
-      .fr-card__value {
-        font-size: var(--fr-font-lg);
-        font-weight: 600;
-      }
-      .fr-card__sub {
-        font-size: var(--fr-font-sm);
-        color: var(--fr-text-muted);
-        margin-top: 2px;
-      }
+  .fr-card {
+    padding: 16px;
+    background: var(--fr-bg-muted);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .fr-card__label {
+    font-size: var(--fr-font-sm);
+    color: var(--fr-text-muted);
+    margin-bottom: 4px;
+  }
+  .fr-card__value {
+    font-size: var(--fr-font-lg);
+    font-weight: 600;
+  }
+  .fr-card__sub {
+    font-size: var(--fr-font-sm);
+    color: var(--fr-text-muted);
+    margin-top: 2px;
+  }
 
-      .fr-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: var(--fr-font-sm);
-      }
-      .fr-badge--completed {
-        background: color-mix(in srgb, var(--fr-success) 15%, transparent);
-        color: var(--fr-success);
-      }
-      .fr-badge--partial {
-        background: color-mix(in srgb, var(--fr-warning) 15%, transparent);
-        color: var(--fr-warning);
-      }
-      .fr-badge--cancelled {
-        background: color-mix(in srgb, var(--fr-info) 15%, transparent);
-        color: var(--fr-info);
-      }
-      .fr-badge--failed {
-        background: color-mix(in srgb, var(--fr-error) 15%, transparent);
-        color: var(--fr-error);
-      }
+  .fr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: var(--fr-font-sm);
+  }
+  .fr-badge--completed { background: color-mix(in srgb, var(--fr-success) 15%, transparent); color: var(--fr-success); }
+  .fr-badge--partial { background: color-mix(in srgb, var(--fr-warning) 15%, transparent); color: var(--fr-warning); }
+  .fr-badge--cancelled { background: color-mix(in srgb, var(--fr-info) 15%, transparent); color: var(--fr-info); }
+  .fr-badge--failed { background: color-mix(in srgb, var(--fr-error) 15%, transparent); color: var(--fr-error); }
 
-      .fr-section {
-        margin-bottom: 24px;
-      }
-      .fr-section__title {
-        font-size: var(--fr-font-base);
-        font-weight: 500;
-        color: var(--fr-text);
-        margin-bottom: 8px;
-      }
+  .fr-section {
+    margin-bottom: 24px;
+  }
+  .fr-section__title {
+    font-size: var(--fr-font-base);
+    font-weight: 500;
+    color: var(--fr-text);
+    margin-bottom: 8px;
+  }
 
-      .fr-progress {
-        background: var(--fr-border);
-        border-radius: 4px;
-        height: 20px;
-        overflow: hidden;
-      }
-      .fr-progress__bar {
-        background: var(--fr-primary);
-        height: 100%;
-        transition: width 0.3s ease;
-      }
-      .fr-progress__text {
-        font-size: var(--fr-font-sm);
-        color: var(--fr-text-muted);
-        margin-top: 4px;
-      }
+  .fr-progress {
+    background: var(--fr-border);
+    border-radius: 4px;
+    height: 20px;
+    overflow: hidden;
+  }
+  .fr-progress__bar {
+    background: var(--fr-primary);
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .fr-progress__text {
+    font-size: var(--fr-font-sm);
+    color: var(--fr-text-muted);
+    margin-top: 4px;
+  }
 
-      .fr-progress__segments {
-        display: flex;
-        height: 100%;
-        width: 100%;
-      }
-      .fr-progress-segment {
-        height: 100%;
-        min-width: 2px;
-        border-right: 2px solid var(--fr-bg);
-        cursor: pointer;
-      }
-      .fr-progress-segment:last-child {
-        border-right: none;
-      }
-      .fr-progress-segment--filled {
-        background: var(--fr-primary);
-      }
-      .fr-progress-segment--filled:hover {
-        background: color-mix(in srgb, var(--fr-primary) 70%, white);
-      }
-      .fr-progress-segment--prefilled {
-        background: #8b5cf6;
-      }
-      .fr-progress-segment--prefilled:hover {
-        background: color-mix(in srgb, #8b5cf6 70%, white);
-      }
-      .fr-progress-segment--skipped {
-        background: var(--fr-warning);
-      }
-      .fr-progress-segment--skipped:hover {
-        background: color-mix(in srgb, var(--fr-warning) 70%, white);
-      }
-      .fr-progress-segment--empty {
-        background: var(--fr-border);
-      }
+  .fr-progress__segments {
+    display: flex;
+    height: 100%;
+    width: 100%;
+  }
+  .fr-progress-segment {
+    height: 100%;
+    min-width: 2px;
+    border-right: 2px solid var(--fr-bg);
+    cursor: pointer;
+  }
+  .fr-progress-segment:last-child {
+    border-right: none;
+  }
+  .fr-progress-segment--filled {
+    background: var(--fr-primary);
+  }
+  .fr-progress-segment--filled:hover {
+    background: color-mix(in srgb, var(--fr-primary) 70%, white);
+  }
+  .fr-progress-segment--prefilled {
+    background: #8b5cf6;
+  }
+  .fr-progress-segment--prefilled:hover {
+    background: color-mix(in srgb, #8b5cf6 70%, white);
+  }
+  .fr-progress-segment--skipped {
+    background: var(--fr-warning);
+  }
+  .fr-progress-segment--skipped:hover {
+    background: color-mix(in srgb, var(--fr-warning) 70%, white);
+  }
+  .fr-progress-segment--empty {
+    background: var(--fr-border);
+  }
 
-      /* Gantt chart - each call on its own row */
-      .fr-gantt {
-        margin-bottom: 8px;
-      }
-      .fr-gantt__row {
-        display: flex;
-        align-items: center;
-        height: 20px;
-        margin-bottom: 3px;
-      }
-      .fr-gantt__label {
-        width: 90px;
-        flex-shrink: 0;
-        font-size: 11px;
-        color: var(--fr-text-muted);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        padding-right: 8px;
-        text-align: right;
-      }
-      .fr-gantt__track {
-        flex: 1;
-        background: var(--fr-bg-subtle);
-        border-radius: 3px;
-        height: 14px;
-        position: relative;
-      }
-      .fr-gantt__bar {
-        position: absolute;
-        top: 2px;
-        height: calc(100% - 4px);
-        min-width: 6px;
-        border-radius: 2px;
-        cursor: pointer;
-      }
-      .fr-gantt__bar:hover {
-        filter: brightness(1.15);
-      }
-      .fr-gantt__bar--llm {
-        background: var(--fr-primary);
-      }
-      .fr-gantt__bar--tool {
-        background: var(--fr-success);
-      }
-      .fr-gantt__legend {
-        display: flex;
-        gap: 16px;
-        font-size: var(--fr-font-sm);
-        color: var(--fr-text-muted);
-        margin-top: 12px;
-        padding-top: 8px;
-        border-top: 1px solid var(--fr-border);
-      }
-      .fr-gantt__legend-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .fr-gantt__legend-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 2px;
-      }
-      .fr-gantt__legend-dot--llm {
-        background: var(--fr-primary);
-      }
-      .fr-gantt__legend-dot--tool {
-        background: var(--fr-success);
-      }
+  /* Gantt chart - each call on its own row */
+  .fr-gantt {
+    margin-bottom: 8px;
+  }
+  .fr-gantt__row {
+    display: flex;
+    align-items: center;
+    height: 20px;
+    margin-bottom: 3px;
+  }
+  .fr-gantt__label {
+    width: 90px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--fr-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 8px;
+    text-align: right;
+  }
+  .fr-gantt__track {
+    flex: 1;
+    background: var(--fr-bg-subtle);
+    border-radius: 3px;
+    height: 14px;
+    position: relative;
+  }
+  .fr-gantt__bar {
+    position: absolute;
+    top: 2px;
+    height: calc(100% - 4px);
+    min-width: 6px;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  .fr-gantt__bar:hover {
+    filter: brightness(1.15);
+  }
+  .fr-gantt__bar--llm {
+    background: var(--fr-primary);
+  }
+  .fr-gantt__bar--tool {
+    background: var(--fr-success);
+  }
+  .fr-gantt__legend {
+    display: flex;
+    gap: 16px;
+    font-size: var(--fr-font-sm);
+    color: var(--fr-text-muted);
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--fr-border);
+  }
+  .fr-gantt__legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fr-gantt__legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .fr-gantt__legend-dot--llm { background: var(--fr-primary); }
+  .fr-gantt__legend-dot--tool { background: var(--fr-success); }
 
-      /* Tooltip container */
-      .fr-tooltip {
-        position: fixed;
-        background: #1f2937;
-        color: #f9fafb;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: var(--fr-font-sm);
-        white-space: pre-line;
-        pointer-events: none;
-        z-index: 1000;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        opacity: 0;
-        visibility: hidden;
-        transition:
-          opacity 0.05s ease-out,
-          visibility 0.05s ease-out;
-      }
-      .fr-tooltip.visible {
-        opacity: 1;
-        visibility: visible;
-        transition:
-          opacity 0.2s ease-in,
-          visibility 0.2s ease-in;
-      }
+  /* Tooltip container */
+  .fr-tooltip {
+    position: fixed;
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: var(--fr-font-sm);
+    white-space: pre-line;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.05s ease-out, visibility 0.05s ease-out;
+  }
+  .fr-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.2s ease-in, visibility 0.2s ease-in;
+  }
 
-      .fr-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: var(--fr-font-sm);
-      }
-      .fr-table th {
-        padding: 8px 12px;
-        text-align: left;
-        font-weight: 600;
-        background: var(--fr-bg-subtle);
-      }
-      .fr-table th:not(:first-child) {
-        text-align: center;
-      }
-      .fr-table td {
-        padding: 8px 12px;
-        border-bottom: 1px solid var(--fr-border);
-      }
-      .fr-table td:not(:first-child) {
-        text-align: center;
-      }
+  .fr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fr-font-sm);
+  }
+  .fr-table th {
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    background: var(--fr-bg-subtle);
+  }
+  .fr-table th:not(:first-child) { text-align: center; }
+  .fr-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--fr-border);
+  }
+  .fr-table td:not(:first-child) { text-align: center; }
 
-      .fr-details {
-        border: none;
-        background: none;
-      }
-      .fr-details > summary {
-        cursor: pointer;
-        font-size: var(--fr-font-base);
-        font-weight: 500;
-        color: var(--fr-text);
-        padding: 8px 0;
-        list-style: none;
-      }
-      .fr-details > summary::-webkit-details-marker {
-        display: none;
-      }
-      .fr-details > summary::before {
-        content: '▶';
-        display: inline-block;
-        margin-right: 8px;
-        transition: transform 0.2s;
-        font-size: 11px;
-      }
-      .fr-details[open] > summary::before {
-        transform: rotate(90deg);
-      }
-      .fr-details__content {
-        background: var(--fr-bg-muted);
-        border-radius: 8px;
-        padding: 16px;
-        margin-top: 8px;
-      }
+  .fr-details {
+    border: none;
+    background: none;
+  }
+  .fr-details > summary {
+    cursor: pointer;
+    font-size: var(--fr-font-base);
+    font-weight: 500;
+    color: var(--fr-text);
+    padding: 8px 0;
+    list-style: none;
+  }
+  .fr-details > summary::-webkit-details-marker { display: none; }
+  .fr-details > summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s;
+    font-size: 11px;
+  }
+  .fr-details[open] > summary::before {
+    transform: rotate(90deg);
+  }
+  .fr-details__content {
+    background: var(--fr-bg-muted);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 8px;
+  }
 
-      .fr-turn {
-        margin-bottom: 8px;
-        background: var(--fr-bg-muted);
-        border-radius: 4px;
-      }
-      .fr-turn summary {
-        cursor: pointer;
-        padding: 12px;
-        font-size: var(--fr-font-sm);
-        list-style: none;
-      }
-      .fr-turn summary::-webkit-details-marker {
-        display: none;
-      }
-      .fr-turn summary::before {
-        content: '▶';
-        display: inline-block;
-        margin-right: 8px;
-        transition: transform 0.2s;
-        font-size: 11px;
-      }
-      .fr-turn[open] summary::before {
-        transform: rotate(90deg);
-      }
-      .fr-turn__content {
-        padding: 0 12px 12px;
-      }
-      .fr-turn__tools {
-        margin: 0;
-        padding-left: 20px;
-        list-style: none;
-      }
-      .fr-turn__tool {
-        margin: 4px 0;
-        font-size: var(--fr-font-sm);
-        color: var(--fr-text-muted);
-      }
-      .fr-turn__tool--error {
-        color: var(--fr-error);
-      }
+  .fr-turn {
+    margin-bottom: 8px;
+    background: var(--fr-bg-muted);
+    border-radius: 4px;
+  }
+  .fr-turn summary {
+    cursor: pointer;
+    padding: 12px;
+    font-size: var(--fr-font-sm);
+    list-style: none;
+  }
+  .fr-turn summary::-webkit-details-marker { display: none; }
+  .fr-turn summary::before {
+    content: '▶';
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.2s;
+    font-size: 11px;
+  }
+  .fr-turn[open] summary::before {
+    transform: rotate(90deg);
+  }
+  .fr-turn__content {
+    padding: 0 12px 12px;
+  }
+  .fr-turn__tools {
+    margin: 0;
+    padding-left: 20px;
+    list-style: none;
+  }
+  .fr-turn__tool {
+    margin: 4px 0;
+    font-size: var(--fr-font-sm);
+    color: var(--fr-text-muted);
+  }
+  .fr-turn__tool--error { color: var(--fr-error); }
 
-      .fr-turn__query {
-        color: var(--fr-primary);
-        font-style: italic;
-      }
+  .fr-turn__query {
+    color: var(--fr-primary);
+    font-style: italic;
+  }
 
-      .fr-turn__patches {
-        margin: 4px 0 8px 20px;
-        padding: 8px 12px;
-        background: var(--fr-bg-subtle);
-        border-radius: 4px;
-        font-size: var(--fr-font-sm);
-      }
-      .fr-turn__patch {
-        margin: 4px 0;
-        padding: 4px 0;
-        border-bottom: 1px solid var(--fr-border);
-      }
-      .fr-turn__patch:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-      }
-      .fr-turn__patch-field {
-        font-weight: 600;
-        color: var(--fr-text);
-      }
-      .fr-turn__patch-op {
-        font-size: 11px;
-        padding: 1px 4px;
-        border-radius: 2px;
-        background: var(--fr-bg-muted);
-        color: var(--fr-text-muted);
-        margin-left: 6px;
-      }
-      .fr-turn__patch-value {
-        display: block;
-        margin-top: 2px;
-        color: var(--fr-text-muted);
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        word-break: break-word;
-        white-space: pre-wrap;
-        max-height: 200px;
-        overflow: auto;
-      }
-      .fr-turn__patch-value--skip {
-        color: var(--fr-warning);
-        font-style: italic;
-      }
-      .fr-turn__patch-value--clear {
-        color: var(--fr-info);
-        font-style: italic;
-      }
+  .fr-turn__patches {
+    margin: 4px 0 8px 20px;
+    padding: 8px 12px;
+    background: var(--fr-bg-subtle);
+    border-radius: 4px;
+    font-size: var(--fr-font-sm);
+  }
+  .fr-turn__patch {
+    margin: 4px 0;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--fr-border);
+  }
+  .fr-turn__patch:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  .fr-turn__patch-field {
+    font-weight: 600;
+    color: var(--fr-text);
+  }
+  .fr-turn__patch-op {
+    font-size: 11px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    background: var(--fr-bg-muted);
+    color: var(--fr-text-muted);
+    margin-left: 6px;
+  }
+  .fr-turn__patch-value {
+    display: block;
+    margin-top: 2px;
+    color: var(--fr-text-muted);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    word-break: break-word;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow: auto;
+  }
+  .fr-turn__patch-value--skip {
+    color: var(--fr-warning);
+    font-style: italic;
+  }
+  .fr-turn__patch-value--clear {
+    color: var(--fr-info);
+    font-style: italic;
+  }
 
-      .fr-raw {
-        position: relative;
-      }
-      .fr-copy-btn {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        padding: 4px 8px;
-        font-size: var(--fr-font-sm);
-        background: var(--fr-bg-subtle);
-        border: 1px solid var(--fr-border);
-        border-radius: 4px;
-        cursor: pointer;
-        color: var(--fr-text-muted);
-        transition: all 0.15s;
-      }
-      .fr-copy-btn:hover {
-        background: var(--fr-border);
-        color: var(--fr-text);
-      }
-      .fr-copy-btn:active {
-        transform: scale(0.95);
-      }
+  .fr-raw {
+    position: relative;
+  }
+  .fr-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    font-size: var(--fr-font-sm);
+    background: var(--fr-bg-subtle);
+    border: 1px solid var(--fr-border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--fr-text-muted);
+    transition: all 0.15s;
+  }
+  .fr-copy-btn:hover {
+    background: var(--fr-border);
+    color: var(--fr-text);
+  }
+  .fr-copy-btn:active {
+    transform: scale(0.95);
+  }
 
-      /* Scoped pre styles to override parent .tab-content pre */
-      .fr-dashboard pre {
-        background: var(--fr-bg-muted);
-        color: var(--fr-text);
-        padding: 1rem;
-        border-radius: 6px;
-        border: 1px solid var(--fr-border);
-        overflow-x: auto;
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        font-size: 0.85rem;
-        line-height: 1.5;
-        margin: 0;
-      }
+  /* Scoped pre styles to override parent .tab-content pre */
+  .fr-dashboard pre {
+    background: var(--fr-bg-muted);
+    color: var(--fr-text);
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--fr-border);
+    overflow-x: auto;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+  }
 
-      /* Override syntax highlighting colors for dark mode compatibility */
-      .fr-dashboard .syn-key {
-        color: var(--fr-primary);
-      }
-      .fr-dashboard .syn-string {
-        color: var(--fr-success);
-      }
-      .fr-dashboard .syn-number {
-        color: var(--fr-primary);
-      }
-      .fr-dashboard .syn-bool {
-        color: var(--fr-warning);
-      }
-      .fr-dashboard .syn-null {
-        color: var(--fr-error);
-      }
+  /* Override syntax highlighting colors for dark mode compatibility */
+  .fr-dashboard .syn-key { color: var(--fr-primary); }
+  .fr-dashboard .syn-string { color: var(--fr-success); }
+  .fr-dashboard .syn-number { color: var(--fr-primary); }
+  .fr-dashboard .syn-bool { color: var(--fr-warning); }
+  .fr-dashboard .syn-null { color: var(--fr-error); }
 
-      @media (max-width: 600px) {
-        .fr-dashboard {
-          padding: 12px;
-        }
-        .fr-cards {
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-        }
-        .fr-card {
-          padding: 12px;
-        }
-        .fr-card__value {
-          font-size: 18px;
-        }
-        .fr-table {
-          font-size: var(--fr-font-sm);
-        }
-        .fr-table th,
-        .fr-table td {
-          padding: 6px 8px;
-        }
-      }
-    </style>
+  @media (max-width: 600px) {
+    .fr-dashboard { padding: 12px; }
+    .fr-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .fr-card { padding: 12px; }
+    .fr-card__value { font-size: 18px; }
+    .fr-table { font-size: var(--fr-font-sm); }
+    .fr-table th, .fr-table td { padding: 6px 8px; }
+  }
+</style>
 
     <div id="fr-tooltip" class="fr-tooltip"></div>
     <div class="fr-dashboard">
-      <div class="fr-header">
-        <div class="fr-header__model">claude-sonnet-4-20250514</div>
-        <div class="fr-header__time">Jan 30, 2026 at 6:30 AM</div>
+      
+    <div class="fr-header">
+      <div class="fr-header__model">claude-sonnet-4-20250514</div>
+      <div class="fr-header__time">Jan 30, 2026 at 2:30 PM</div>
+    </div>
+  
+      <div class="fr-banner fr-banner--error"><strong>✕ FAILED:</strong> API rate limit exceeded after 3 retries</div>
+      
+    <div class="fr-cards">
+      <div class="fr-card">
+        <div class="fr-card__label">Status</div>
+        <div><span class="fr-badge fr-badge--failed">✕ Failed</span></div>
       </div>
-
-      <div class="fr-banner fr-banner--error">
-        <strong>✕ FAILED:</strong> API rate limit exceeded after 3 retries
+      <div class="fr-card">
+        <div class="fr-card__label">Duration</div>
+        <div class="fr-card__value">8.5s</div>
       </div>
-
-      <div class="fr-cards">
-        <div class="fr-card">
-          <div class="fr-card__label">Status</div>
-          <div><span class="fr-badge fr-badge--failed">✕ Failed</span></div>
-        </div>
-        <div class="fr-card">
-          <div class="fr-card__label">Duration</div>
-          <div class="fr-card__value">8.5s</div>
-        </div>
-        <div class="fr-card">
-          <div class="fr-card__label">Turns</div>
-          <div class="fr-card__value">2</div>
-        </div>
-        <div class="fr-card">
-          <div class="fr-card__label">Tokens</div>
-          <div class="fr-card__value">6.1k</div>
-          <div class="fr-card__sub">4.3k in / 1.9k out</div>
-        </div>
+      <div class="fr-card">
+        <div class="fr-card__label">Turns</div>
+        <div class="fr-card__value">2</div>
       </div>
-
-      <div class="fr-section">
-        <div class="fr-section__title">Progress</div>
-        <div class="fr-progress">
-          <div class="fr-progress__segments">
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="company_name
+      <div class="fr-card">
+        <div class="fr-card__label">Tokens</div>
+        <div class="fr-card__value">6.1k</div>
+        <div class="fr-card__sub">4.3k in / 1.9k out</div>
+      </div>
+    </div>
+  
+      
+    <div class="fr-section">
+      <div class="fr-section__title">Progress</div>
+      <div class="fr-progress">
+        <div class="fr-progress__segments">
+          <div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="company_name
 set string
-Turn 1"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="ceo_name
+Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="ceo_name
 set string
-Turn 1"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="funding_amount
+Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="funding_amount
 set number
-Turn 1"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="website
+Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="website
 set url
-Turn 1"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="stage
+Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="stage
 set single select
-Turn 1"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="valuation
+Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="valuation
 set number
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="founded_date
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="founded_date
 set date
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="key_investors
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="key_investors
 set string list
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="headquarters
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="headquarters
 set string
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="industries
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="industries
 set checkboxes
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="employee_count
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="employee_count
 set string
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="deprecated_field
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="deprecated_field
 clear field
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--filled"
-              style="width: 5.555555555555555%"
-              data-tooltip="revenue
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--filled" style="width: 5.555555555555555%" data-tooltip="revenue
 set number
-Turn 2"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--skipped"
-              style="width: 5.555555555555555%"
-              data-tooltip="optional_notes
+Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--skipped" style="width: 5.555555555555555%" data-tooltip="optional_notes
 skipped
-Turn 1"
-              onmouseenter="frShowTip(this)"
-              onmouseleave="frHideTip()"
-            ></div>
-            <div
-              class="fr-progress-segment fr-progress-segment--empty"
-              style="width: 44.44444444444444%"
-            ></div>
-          </div>
+Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div><div class="fr-progress-segment fr-progress-segment--empty" style="width: 44.44444444444444%"></div>
         </div>
-        <div class="fr-progress__text">8/18 fields filled (44%) • 2 skipped</div>
       </div>
-
-      <details class="fr-details fr-section" open>
-        <summary>Timeline (8.5s total)</summary>
-        <div class="fr-details__content">
-          <div class="fr-gantt">
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">Turn 1</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--llm"
-                  style="left: 0%; width: 25.76470588235294%"
-                  data-tooltip="Turn 1&#10;2.2s&#10;2.1k tokens (1.5k in / 650 out)"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
+      <div class="fr-progress__text">
+        8/18 fields filled (44%) • 2 skipped
+      </div>
+    </div>
+  
+      
+    <details class="fr-details fr-section" open>
+      <summary>Timeline (8.5s total)</summary>
+      <div class="fr-details__content">
+        <div class="fr-gantt">
+          
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">Turn 1</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--llm" style="left: 0%; width: 25.76470588235294%" data-tooltip="Turn 1&#10;2.2s&#10;2.1k tokens (1.5k in / 650 out)" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">web_search</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--tool" style="left: 25.76470588235294%; width: 10%" data-tooltip="web_search&#10;850ms&#10;Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">web_search</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--tool" style="left: 35.76470588235294%; width: 14.117647058823529%" data-tooltip="web_search&#10;1.2s&#10;Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">fill_form</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--tool" style="left: 49.88235294117647%; width: 1.8823529411764703%" data-tooltip="fill_form&#10;160ms&#10;Turn 1" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">Turn 2</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--llm" style="left: 51.76470588235295%; width: 13.294117647058822%" data-tooltip="Turn 2&#10;1.1s&#10;2.0k tokens (1.4k in / 580 out)" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">web_search</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--tool" style="left: 65.05882352941177%; width: 5.294117647058823%" data-tooltip="web_search&#10;450ms&#10;Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">web_search</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--tool" style="left: 70.35294117647058%; width: 21.176470588235293%" data-tooltip="web_search&#10;1.8s&#10;Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+        <div class="fr-gantt__row">
+          <div class="fr-gantt__label">fill_form</div>
+          <div class="fr-gantt__track">
+            <div class="fr-gantt__bar fr-gantt__bar--tool" style="left: 91.52941176470588%; width: 2.588235294117647%" data-tooltip="fill_form&#10;220ms&#10;Turn 2" onmouseenter="frShowTip(this)" onmouseleave="frHideTip()"></div>
+          </div>
+        </div>
+          <div class="fr-gantt__legend">
+            <div class="fr-gantt__legend-item">
+              <div class="fr-gantt__legend-dot fr-gantt__legend-dot--llm"></div>
+              <span>LLM (3 calls, 3.3s)</span>
             </div>
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">web_search</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--tool"
-                  style="left: 25.76470588235294%; width: 10%"
-                  data-tooltip="web_search&#10;850ms&#10;Turn 1"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
-            </div>
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">web_search</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--tool"
-                  style="left: 35.76470588235294%; width: 14.117647058823529%"
-                  data-tooltip="web_search&#10;1.2s&#10;Turn 1"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
-            </div>
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">fill_form</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--tool"
-                  style="left: 49.88235294117647%; width: 1.8823529411764703%"
-                  data-tooltip="fill_form&#10;160ms&#10;Turn 1"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
-            </div>
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">Turn 2</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--llm"
-                  style="left: 51.76470588235295%; width: 13.294117647058822%"
-                  data-tooltip="Turn 2&#10;1.1s&#10;2.0k tokens (1.4k in / 580 out)"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
-            </div>
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">web_search</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--tool"
-                  style="left: 65.05882352941177%; width: 5.294117647058823%"
-                  data-tooltip="web_search&#10;450ms&#10;Turn 2"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
-            </div>
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">web_search</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--tool"
-                  style="left: 70.35294117647058%; width: 21.176470588235293%"
-                  data-tooltip="web_search&#10;1.8s&#10;Turn 2"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
-            </div>
-            <div class="fr-gantt__row">
-              <div class="fr-gantt__label">fill_form</div>
-              <div class="fr-gantt__track">
-                <div
-                  class="fr-gantt__bar fr-gantt__bar--tool"
-                  style="left: 91.52941176470588%; width: 2.588235294117647%"
-                  data-tooltip="fill_form&#10;220ms&#10;Turn 2"
-                  onmouseenter="frShowTip(this)"
-                  onmouseleave="frHideTip()"
-                ></div>
-              </div>
-            </div>
-            <div class="fr-gantt__legend">
-              <div class="fr-gantt__legend-item">
-                <div class="fr-gantt__legend-dot fr-gantt__legend-dot--llm"></div>
-                <span>LLM (3 calls, 3.3s)</span>
-              </div>
-              <div class="fr-gantt__legend-item">
-                <div class="fr-gantt__legend-dot fr-gantt__legend-dot--tool"></div>
-                <span>Tools (8 calls, 4.7s)</span>
-              </div>
+            <div class="fr-gantt__legend-item">
+              <div class="fr-gantt__legend-dot fr-gantt__legend-dot--tool"></div>
+              <span>Tools (8 calls, 4.7s)</span>
             </div>
           </div>
         </div>
-      </details>
-
+      </div>
+    </details>
+  
+      
       <details class="fr-details fr-section" open>
         <summary>Tool Summary</summary>
-        <div style="overflow-x: auto; margin-top: 8px">
+        <div style="overflow-x: auto; margin-top: 8px;">
           <table class="fr-table">
-            <thead>
-              <tr>
-                <th>Tool</th>
-                <th>Calls</th>
-                <th>Success</th>
-                <th>Avg</th>
-                <th>p95</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Tool</th><th>Calls</th><th>Success</th><th>Avg</th><th>p95</th></tr></thead>
             <tbody>
-              <tr>
-                <td>web_search</td>
-                <td>5</td>
-                <td>80%</td>
-                <td>920ms</td>
-                <td>1.6s</td>
-              </tr>
-
-              <tr>
-                <td>fill_form</td>
-                <td>3</td>
-                <td>100%</td>
-                <td>167ms</td>
-                <td>210ms</td>
-              </tr>
-            </tbody>
+      <tr>
+        <td>web_search</td>
+        <td>5</td>
+        <td>80%</td>
+        <td>920ms</td>
+        <td>1.6s</td>
+      </tr>
+    
+      <tr>
+        <td>fill_form</td>
+        <td>3</td>
+        <td>100%</td>
+        <td>167ms</td>
+        <td>210ms</td>
+      </tr>
+    </tbody>
           </table>
         </div>
       </details>
-
+    
+      
       <details class="fr-details fr-section">
         <summary>Turn Details (2 turns)</summary>
-        <div style="margin-top: 8px">
-          <details class="fr-turn">
-            <summary>
-              <strong>Turn 1</strong> • Order 1 • 4.4s • 2.1k tokens • 6 patches
-              <span style="color: var(--fr-error)">(1 rejected)</span>
-            </summary>
-            <div class="fr-turn__content">
-              <ul class="fr-turn__tools">
-                <li class="fr-turn__tool">
-                  ✓ <strong>web_search</strong>
-                  <span class="fr-turn__query">"startup funding"</span>: 8 results (850ms)
-                </li>
-                <li class="fr-turn__tool">
-                  ✓ <strong>web_search</strong>
-                  <span class="fr-turn__query">"startup founders"</span>: 12 results (1.2s)
-                </li>
-                <li class="fr-turn__tool">✓ <strong>fill_form</strong>: OK (160ms)</li>
-                <div class="fr-turn__patches">
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">company_name</span>
-                    <span class="fr-turn__patch-op">set string</span>
-                    <span class="fr-turn__patch-value">Acme Corporation</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">ceo_name</span>
-                    <span class="fr-turn__patch-op">set string</span>
-                    <span class="fr-turn__patch-value">Jane Smith</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">funding_amount</span>
-                    <span class="fr-turn__patch-op">set number</span>
-                    <span class="fr-turn__patch-value">15000000</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">website</span>
-                    <span class="fr-turn__patch-op">set url</span>
-                    <span class="fr-turn__patch-value">https://acme.example.com</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">stage</span>
-                    <span class="fr-turn__patch-op">set single select</span>
-                    <span class="fr-turn__patch-value">series_a</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">optional_notes</span>
-                    <span class="fr-turn__patch-op">skip field</span>
-                    <span class="fr-turn__patch-value"
-                      ><em class="fr-turn__patch-value--skip">(skipped)</em></span
-                    >
-                  </div>
-                </div>
-              </ul>
-            </div>
-          </details>
-
-          <details class="fr-turn">
-            <summary><strong>Turn 2</strong> • Order 1 • 3.6s • 2.0k tokens • 8 patches</summary>
-            <div class="fr-turn__content">
-              <ul class="fr-turn__tools">
-                <li class="fr-turn__tool fr-turn__tool--error">
-                  ✕ <strong>web_search</strong>
-                  <span class="fr-turn__query">"startup valuation"</span>: Error: Rate limit
-                  exceeded, retrying... (450ms)
-                </li>
-                <li class="fr-turn__tool">
-                  ✓ <strong>web_search</strong>
-                  <span class="fr-turn__query">"startup valuation"</span>: 5 results (1.8s)
-                </li>
-                <li class="fr-turn__tool">✓ <strong>fill_form</strong>: OK (220ms)</li>
-                <div class="fr-turn__patches">
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">valuation</span>
-                    <span class="fr-turn__patch-op">set number</span>
-                    <span class="fr-turn__patch-value">50000000</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">founded_date</span>
-                    <span class="fr-turn__patch-op">set date</span>
-                    <span class="fr-turn__patch-value">2019-03-15</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">key_investors</span>
-                    <span class="fr-turn__patch-op">set string list</span>
-                    <span class="fr-turn__patch-value"
-                      >[ &quot;Sequoia Capital&quot;, &quot;Andreessen Horowitz&quot;, &quot;Y
-                      Combinator&quot; ]</span
-                    >
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">headquarters</span>
-                    <span class="fr-turn__patch-op">set string</span>
-                    <span class="fr-turn__patch-value">San Francisco, CA</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">industries</span>
-                    <span class="fr-turn__patch-op">set checkboxes</span>
-                    <span class="fr-turn__patch-value"
-                      >[ &quot;technology&quot;, &quot;saas&quot;, &quot;enterprise&quot; ]</span
-                    >
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">employee_count</span>
-                    <span class="fr-turn__patch-op">set string</span>
-                    <span class="fr-turn__patch-value">50-100</span>
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">deprecated_field</span>
-                    <span class="fr-turn__patch-op">clear field</span>
-                    <span class="fr-turn__patch-value"
-                      ><em class="fr-turn__patch-value--clear">(cleared)</em></span
-                    >
-                  </div>
-
-                  <div class="fr-turn__patch">
-                    <span class="fr-turn__patch-field">revenue</span>
-                    <span class="fr-turn__patch-op">set number</span>
-                    <span class="fr-turn__patch-value">5200000</span>
-                  </div>
-                </div>
-              </ul>
-            </div>
-          </details>
+        <div style="margin-top: 8px;">
+        <details class="fr-turn">
+          <summary><strong>Turn 1</strong> • Order 1 • 4.4s • 2.1k tokens • 6 patches <span style="color: var(--fr-error)">(1 rejected)</span></summary>
+          <div class="fr-turn__content">
+            <ul class="fr-turn__tools"><li class="fr-turn__tool">✓ <strong>web_search</strong> <span class="fr-turn__query">"startup funding"</span>: 8 results (850ms)</li><li class="fr-turn__tool">✓ <strong>web_search</strong> <span class="fr-turn__query">"startup founders"</span>: 12 results (1.2s)</li><li class="fr-turn__tool">✓ <strong>fill_form</strong>: OK (160ms)</li><div class="fr-turn__patches">
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">company_name</span>
+          <span class="fr-turn__patch-op">set string</span>
+          <span class="fr-turn__patch-value">Acme Corporation</span>
         </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">ceo_name</span>
+          <span class="fr-turn__patch-op">set string</span>
+          <span class="fr-turn__patch-value">Jane Smith</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">funding_amount</span>
+          <span class="fr-turn__patch-op">set number</span>
+          <span class="fr-turn__patch-value">15000000</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">website</span>
+          <span class="fr-turn__patch-op">set url</span>
+          <span class="fr-turn__patch-value">https://acme.example.com</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">stage</span>
+          <span class="fr-turn__patch-op">set single select</span>
+          <span class="fr-turn__patch-value">series_a</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">optional_notes</span>
+          <span class="fr-turn__patch-op">skip field</span>
+          <span class="fr-turn__patch-value"><em class="fr-turn__patch-value--skip">(skipped)</em></span>
+        </div>
+      </div></ul>
+          </div>
+        </details>
+      
+        <details class="fr-turn">
+          <summary><strong>Turn 2</strong> • Order 1 • 3.6s • 2.0k tokens • 8 patches</summary>
+          <div class="fr-turn__content">
+            <ul class="fr-turn__tools"><li class="fr-turn__tool fr-turn__tool--error">✕ <strong>web_search</strong> <span class="fr-turn__query">"startup valuation"</span>: Error: Rate limit exceeded, retrying... (450ms)</li><li class="fr-turn__tool">✓ <strong>web_search</strong> <span class="fr-turn__query">"startup valuation"</span>: 5 results (1.8s)</li><li class="fr-turn__tool">✓ <strong>fill_form</strong>: OK (220ms)</li><div class="fr-turn__patches">
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">valuation</span>
+          <span class="fr-turn__patch-op">set number</span>
+          <span class="fr-turn__patch-value">50000000</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">founded_date</span>
+          <span class="fr-turn__patch-op">set date</span>
+          <span class="fr-turn__patch-value">2019-03-15</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">key_investors</span>
+          <span class="fr-turn__patch-op">set string list</span>
+          <span class="fr-turn__patch-value">[
+  &quot;Sequoia Capital&quot;,
+  &quot;Andreessen Horowitz&quot;,
+  &quot;Y Combinator&quot;
+]</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">headquarters</span>
+          <span class="fr-turn__patch-op">set string</span>
+          <span class="fr-turn__patch-value">San Francisco, CA</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">industries</span>
+          <span class="fr-turn__patch-op">set checkboxes</span>
+          <span class="fr-turn__patch-value">[
+  &quot;technology&quot;,
+  &quot;saas&quot;,
+  &quot;enterprise&quot;
+]</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">employee_count</span>
+          <span class="fr-turn__patch-op">set string</span>
+          <span class="fr-turn__patch-value">50-100</span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">deprecated_field</span>
+          <span class="fr-turn__patch-op">clear field</span>
+          <span class="fr-turn__patch-value"><em class="fr-turn__patch-value--clear">(cleared)</em></span>
+        </div>
+      
+        <div class="fr-turn__patch">
+          <span class="fr-turn__patch-field">revenue</span>
+          <span class="fr-turn__patch-op">set number</span>
+          <span class="fr-turn__patch-value">5200000</span>
+        </div>
+      </div></ul>
+          </div>
+        </details>
+      </div>
       </details>
-
-      <details class="fr-details fr-section">
-        <summary>Raw YAML</summary>
-        <div class="fr-raw" style="margin-top: 8px">
-          <button class="fr-copy-btn" onclick="frCopyYaml(this)">Copy</button>
-          <pre><span class="syn-key">sessionId</span>: <span class="syn-string">sess-test-failed</span>
+    
+      
+    <details class="fr-details fr-section">
+      <summary>Raw YAML</summary>
+      <div class="fr-raw" style="margin-top: 8px;">
+        <button class="fr-copy-btn" onclick="frCopyYaml(this)">Copy</button>
+        <pre><span class="syn-key">sessionId</span>: <span class="syn-string">sess-test-failed</span>
 <span class="syn-key">startedAt</span>: <span class="syn-string">2026-01-30T14:30:00.000Z</span>
 <span class="syn-key">completedAt</span>: <span class="syn-string">2026-01-30T14:30:12.450Z</span>
 <span class="syn-key">durationMs</span>: <span class="syn-number">8500</span>
@@ -1251,8 +1014,10 @@ Turn 1"
 <span class="syn-key">  executionThreads</span>: <span class="syn-string">[]</span>
 <span class="syn-key">statusDetail</span>: <span class="syn-string">API rate limit exceeded after 3 retries</span>
 </pre>
-        </div>
-      </details>
+      </div>
+    </details>
+  
     </div>
-  </body>
+  
+</body>
 </html>

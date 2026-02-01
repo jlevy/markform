@@ -7,6 +7,7 @@
  */
 
 import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -422,7 +423,59 @@ console.log(`formatTokens(500) = "${formatTokens(500)}"`);
 console.log(`formatTokens(1500) = "${formatTokens(1500)}"`);
 console.log(`formatTokens(15000) = "${formatTokens(15000)}"`);
 
-console.log('\n✅ All visual snapshots generated successfully!');
+console.log('\n✅ All HTML snapshots generated successfully!');
+
+// Check if a command is available
+function hasCommand(cmd: string): boolean {
+  try {
+    execSync(`which ${cmd}`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Generate PNG snapshots if wkhtmltoimage is available
+if (hasCommand('wkhtmltoimage')) {
+  console.log('\n--- Generating PNG snapshots ---');
+  const hasImagemagick = hasCommand('convert');
+
+  for (const { name } of testCases) {
+    const htmlPath = join(snapshotDir, `fill-record-${name}.html`);
+    const pngPath = join(snapshotDir, `fill-record-${name}.png`);
+    try {
+      // Use wkhtmltoimage to convert HTML to PNG
+      // --width 900 matches the max-width of .fr-dashboard
+      execSync(
+        `wkhtmltoimage --width 900 --quality 90 --enable-local-file-access "${htmlPath}" "${pngPath}"`,
+        { stdio: 'pipe' },
+      );
+
+      // Optimize with ImageMagick if available (reduce size for PR attachment)
+      if (hasImagemagick) {
+        execSync(`convert "${pngPath}" -resize 50% -quality 85 "${pngPath}"`, { stdio: 'pipe' });
+      }
+
+      console.log(`✓ Generated: ${pngPath}`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`✗ Failed to generate PNG for ${name}: ${errorMsg}`);
+    }
+  }
+  console.log('\n✅ PNG snapshots generated!');
+  if (hasImagemagick) {
+    console.log('   (optimized with ImageMagick for smaller file sizes)');
+  }
+  console.log(`\nPNG files for PR attachment:`);
+  console.log(`  ${snapshotDir}/fill-record-completed.png`);
+  console.log(`  ${snapshotDir}/fill-record-failed.png`);
+  console.log(`  ${snapshotDir}/fill-record-partial.png`);
+  console.log(`  ${snapshotDir}/fill-record-cancelled.png`);
+} else {
+  console.log('\n⚠ wkhtmltoimage not found - skipping PNG generation');
+  console.log('  Install with: apt-get install wkhtmltopdf');
+}
+
 console.log(`\nOpen the HTML files in a browser to review:`);
 console.log(`  file://${snapshotDir}/fill-record-completed.html`);
 console.log(`  file://${snapshotDir}/fill-record-failed.html`);
