@@ -22,12 +22,12 @@ import type {
   IdIndexEntry,
   Note,
   ParsedForm,
-  RunMode,
   SyntaxStyle,
   TagRegion,
   TagType,
 } from './coreTypes.js';
-import { RunModeSchema } from './coreTypes.js';
+import { MarkformSectionInputSchema } from './coreTypes.js';
+import type { ZodError } from 'zod';
 import {
   AGENT_ROLE,
   DEFAULT_PRIORITY,
@@ -74,47 +74,38 @@ interface FrontmatterResult {
 }
 
 /**
- * Parse harness configuration from frontmatter.
- * YAML keys must be snake_case; they are mapped to camelCase internally.
- * Unrecognized keys produce a parse error.
+ * Transform validated harness config from snake_case to camelCase.
  */
-function parseHarnessConfig(raw: unknown): FrontmatterHarnessConfig | undefined {
-  if (!raw || typeof raw !== 'object') {
-    return undefined;
-  }
-
-  const config = raw as Record<string, unknown>;
+function transformHarnessConfig(
+  harness: NonNullable<ReturnType<typeof MarkformSectionInputSchema.parse>['harness']>,
+): FrontmatterHarnessConfig {
   const result: FrontmatterHarnessConfig = {};
+  if (harness.max_turns !== undefined) result.maxTurns = harness.max_turns;
+  if (harness.max_patches_per_turn !== undefined)
+    result.maxPatchesPerTurn = harness.max_patches_per_turn;
+  if (harness.max_issues_per_turn !== undefined)
+    result.maxIssuesPerTurn = harness.max_issues_per_turn;
+  if (harness.max_parallel_agents !== undefined)
+    result.maxParallelAgents = harness.max_parallel_agents;
+  return result;
+}
 
-  // Map snake_case YAML keys to camelCase TypeScript keys
-  const keyMap: Record<string, keyof FrontmatterHarnessConfig> = {
-    max_turns: 'maxTurns',
-    max_patches_per_turn: 'maxPatchesPerTurn',
-    max_issues_per_turn: 'maxIssuesPerTurn',
-    max_parallel_agents: 'maxParallelAgents',
-  };
-
-  for (const [key, value] of Object.entries(config)) {
-    const camelKey = keyMap[key];
-    if (!camelKey) {
-      throw new MarkformParseError(
-        `Unknown harness config key '${key}'. Valid keys: ${Object.keys(keyMap).join(', ')}`,
-      );
-    }
-    if (typeof value !== 'number') {
-      throw new MarkformParseError(
-        `Harness config key '${key}' must be a number, got ${typeof value}`,
-      );
-    }
-    result[camelKey] = value;
-  }
-
-  return Object.keys(result).length > 0 ? result : undefined;
+/**
+ * Format Zod validation errors for user-friendly display.
+ */
+function formatZodError(error: ZodError): string {
+  return error.issues
+    .map((issue) => {
+      const path = issue.path.map(String).join('.');
+      return path ? `${path}: ${issue.message}` : issue.message;
+    })
+    .join('; ');
 }
 
 /**
  * Extract YAML frontmatter from Markdoc AST.
  * Uses Markdoc's native frontmatter extraction and parses the YAML.
+ * Validates the markform section using Zod schema.
  */
 function extractFrontmatter(ast: Node): FrontmatterResult {
   const rawFrontmatter = ast.attributes.frontmatter as string | undefined;
@@ -127,50 +118,44 @@ function extractFrontmatter(ast: Node): FrontmatterResult {
     const frontmatter = parsed ?? {};
 
     // Extract metadata from markform section
-    const markformSection = frontmatter.markform as Record<string, unknown> | undefined;
-    if (!markformSection) {
+    const rawMarkformSection = frontmatter.markform;
+    if (!rawMarkformSection) {
       return { frontmatter };
     }
 
-    // Parse harness config from markform.harness
-    const harnessConfig = parseHarnessConfig(markformSection.harness);
-
-    // Parse run_mode from markform.run_mode
-    let runMode: RunMode | undefined;
-    const rawRunMode = markformSection.run_mode;
-    if (rawRunMode !== undefined) {
-      const parsed = RunModeSchema.safeParse(rawRunMode);
-      if (!parsed.success) {
-        throw new MarkformParseError(
-          `Invalid run_mode: '${typeof rawRunMode === 'string' ? rawRunMode : JSON.stringify(rawRunMode)}'. Must be one of: interactive, fill, research`,
-        );
-      }
-      runMode = parsed.data;
+    // Validate markform section with Zod schema
+    const validationResult = MarkformSectionInputSchema.safeParse(rawMarkformSection);
+    if (!validationResult.success) {
+      throw new MarkformParseError(
+        `Invalid markform frontmatter: ${formatZodError(validationResult.error)}`,
+      );
     }
+    const markformSection = validationResult.data;
 
-    // Extract title and description from markform section
-    const title = typeof markformSection.title === 'string' ? markformSection.title : undefined;
-    const description =
-      typeof markformSection.description === 'string' ? markformSection.description : undefined;
+    // Transform harness config from snake_case to camelCase
+    const harnessConfig =
+      markformSection.harness && Object.keys(markformSection.harness).length > 0
+        ? transformHarnessConfig(markformSection.harness)
+        : undefined;
 
     // Build metadata
     // Note: roles and role_instructions can be either inside markform: or at top-level
     // Prefer markform section, fall back to top-level for backwards compatibility
     const metadata: FormMetadata = {
-      markformVersion: (markformSection.spec as string) ?? 'MF/0.1',
-      ...(title && { title }),
-      ...(description && { description }),
-      roles: (markformSection.roles as string[]) ??
-        (frontmatter.roles as string[]) ?? [...DEFAULT_ROLES],
+      markformVersion: markformSection.spec ?? 'MF/0.1',
+      ...(markformSection.title && { title: markformSection.title }),
+      ...(markformSection.description && { description: markformSection.description }),
+      roles: markformSection.roles ??
+        (frontmatter.roles as string[] | undefined) ?? [...DEFAULT_ROLES],
       roleInstructions:
-        (markformSection.role_instructions as Record<string, string>) ??
-        (frontmatter.role_instructions as Record<string, string>) ??
+        markformSection.role_instructions ??
+        (frontmatter.role_instructions as Record<string, string> | undefined) ??
         DEFAULT_ROLE_INSTRUCTIONS,
       ...(harnessConfig && { harnessConfig }),
-      ...(runMode && { runMode }),
+      ...(markformSection.run_mode && { runMode: markformSection.run_mode }),
     };
 
-    return { frontmatter, metadata, description };
+    return { frontmatter, metadata, description: markformSection.description };
   } catch (error) {
     // Re-throw ParseError as-is, wrap other errors
     if (error instanceof MarkformParseError) {
