@@ -17,7 +17,6 @@ import type {
   FieldResponse,
   FormMetadata,
   FormSchema,
-  FrontmatterHarnessConfig,
   Id,
   IdIndexEntry,
   Note,
@@ -33,6 +32,7 @@ import {
   DEFAULT_PRIORITY,
   DEFAULT_ROLES,
   DEFAULT_ROLE_INSTRUCTIONS,
+  transformHarnessConfigToTs,
 } from '../settings.js';
 import { parseField } from './parseFields.js';
 import {
@@ -71,23 +71,6 @@ interface FrontmatterResult {
   metadata?: FormMetadata;
   /** Description from markform.description in frontmatter */
   description?: string;
-}
-
-/**
- * Transform validated harness config from snake_case to camelCase.
- */
-function transformHarnessConfig(
-  harness: NonNullable<ReturnType<typeof MarkformSectionInputSchema.parse>['harness']>,
-): FrontmatterHarnessConfig {
-  const result: FrontmatterHarnessConfig = {};
-  if (harness.max_turns !== undefined) result.maxTurns = harness.max_turns;
-  if (harness.max_patches_per_turn !== undefined)
-    result.maxPatchesPerTurn = harness.max_patches_per_turn;
-  if (harness.max_issues_per_turn !== undefined)
-    result.maxIssuesPerTurn = harness.max_issues_per_turn;
-  if (harness.max_parallel_agents !== undefined)
-    result.maxParallelAgents = harness.max_parallel_agents;
-  return result;
 }
 
 /**
@@ -135,7 +118,7 @@ function extractFrontmatter(ast: Node): FrontmatterResult {
     // Transform harness config from snake_case to camelCase
     const harnessConfig =
       markformSection.harness && Object.keys(markformSection.harness).length > 0
-        ? transformHarnessConfig(markformSection.harness)
+        ? transformHarnessConfigToTs(markformSection.harness)
         : undefined;
 
     // Build metadata

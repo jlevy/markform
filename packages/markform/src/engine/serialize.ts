@@ -22,7 +22,6 @@ import type {
   FieldResponse,
   FormMetadata,
   FormSchema,
-  FrontmatterHarnessConfig,
   Id,
   MultiSelectField,
   MultiSelectValue,
@@ -49,7 +48,12 @@ import type {
   YearField,
   YearValue,
 } from './coreTypes.js';
-import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
+import {
+  AGENT_ROLE,
+  DEFAULT_PRIORITY,
+  MF_SPEC_VERSION,
+  transformHarnessConfigToYaml,
+} from '../settings.js';
 import { priorityKeyComparator } from '../utils/keySort.js';
 import { formatUrlAsMarkdownLink } from '../utils/urlFormat.js';
 import { findInlineCodeEnd, isInLeadingWhitespace } from './preprocess.js';
@@ -1407,26 +1411,6 @@ function serializeFormSchema(
 // =============================================================================
 
 /**
- * Build harness config object for YAML output (camelCase to snake_case).
- */
-function buildHarnessConfig(config: FrontmatterHarnessConfig): Record<string, number> {
-  const result: Record<string, number> = {};
-  if (config.maxTurns !== undefined) {
-    result.max_turns = config.maxTurns;
-  }
-  if (config.maxPatchesPerTurn !== undefined) {
-    result.max_patches_per_turn = config.maxPatchesPerTurn;
-  }
-  if (config.maxIssuesPerTurn !== undefined) {
-    result.max_issues_per_turn = config.maxIssuesPerTurn;
-  }
-  if (config.maxParallelAgents !== undefined) {
-    result.max_parallel_agents = config.maxParallelAgents;
-  }
-  return result;
-}
-
-/**
  * Build frontmatter YAML from form metadata.
  * Preserves title, description, roles, role_instructions, harness config, and run_mode.
  */
@@ -1451,7 +1435,7 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
   }
 
   if (metadata?.harnessConfig && Object.keys(metadata.harnessConfig).length > 0) {
-    markformSection.harness = buildHarnessConfig(metadata.harnessConfig);
+    markformSection.harness = transformHarnessConfigToYaml(metadata.harnessConfig);
   }
 
   // Add roles inside markform section if not default
