@@ -130,6 +130,17 @@ export const DEFAULT_PORT = 3344;
  */
 export const DEFAULT_YAML_LINE_WIDTH = 88;
 
+/**
+ * YAML stringify options for readable output.
+ * - No forced quoting (YAML only quotes when necessary)
+ * - lineWidth provides reasonable wrapping for long strings
+ * - Plain keys without quotes
+ */
+export const YAML_STRINGIFY_OPTIONS = {
+  lineWidth: DEFAULT_YAML_LINE_WIDTH,
+  defaultKeyType: 'PLAIN',
+} as const;
+
 // =============================================================================
 // Harness Config Mapping (snake_case ↔ camelCase)
 // =============================================================================

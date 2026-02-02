@@ -51,9 +51,9 @@ import type {
 import {
   AGENT_ROLE,
   DEFAULT_PRIORITY,
-  DEFAULT_YAML_LINE_WIDTH,
   MF_SPEC_VERSION,
   transformHarnessConfigToYaml,
+  YAML_STRINGIFY_OPTIONS,
 } from '../settings.js';
 import { priorityKeyComparator } from '../utils/keySort.js';
 import { formatUrlAsMarkdownLink } from '../utils/urlFormat.js';
@@ -1468,14 +1468,7 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
     markform: markformSection,
   };
 
-  // Serialize to YAML with readable formatting
-  // - No forced quoting (YAML only quotes when necessary)
-  // - lineWidth provides reasonable wrapping for long strings
-  // - Plain keys without quotes
-  const yamlStr = YAML.stringify(frontmatterObj, {
-    lineWidth: DEFAULT_YAML_LINE_WIDTH,
-    defaultKeyType: 'PLAIN',
-  });
+  const yamlStr = YAML.stringify(frontmatterObj, YAML_STRINGIFY_OPTIONS);
 
   return `---\n${yamlStr}---`;
 }
