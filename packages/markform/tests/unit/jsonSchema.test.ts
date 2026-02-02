@@ -161,11 +161,11 @@ describe('jsonSchema', () => {
 
       expect(result.schema['x-markform']).toBeDefined();
       expect(result.schema['x-markform']?.spec).toBe('MF/0.1');
-      expect(result.schema['x-markform']?.roles).toEqual(['user', 'agent']);
-      // Role instructions are set by the parser with defaults
+      // simple.form.md explicitly defines only 'user' role
+      expect(result.schema['x-markform']?.roles).toEqual(['user']);
+      // Role instructions are set by the parser
       expect(result.schema['x-markform']?.roleInstructions).toBeDefined();
       expect(result.schema['x-markform']?.roleInstructions?.user).toBeDefined();
-      expect(result.schema['x-markform']?.roleInstructions?.agent).toBeDefined();
       expect(result.schema['x-markform']?.groups).toBeDefined();
     });
 

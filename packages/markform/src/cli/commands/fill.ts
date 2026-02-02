@@ -38,6 +38,7 @@ import { createHarness } from '../../harness/harness.js';
 import { resolveHarnessConfig } from '../../harness/harnessConfigResolver.js';
 import { createLiveAgent, buildMockWireFormat } from '../../harness/liveAgent.js';
 import { createMockAgent } from '../../harness/mockAgent.js';
+import { fillForm } from '../../harness/programmaticFill.js';
 import {
   DEFAULT_MAX_ISSUES_PER_TURN,
   DEFAULT_MAX_PATCHES_PER_TURN,
@@ -184,6 +185,7 @@ export function registerFillCommand(program: Command): void {
       '--record-fill-stable',
       'Write fill record without timestamps/durations (for golden tests)',
     )
+    .option('--parallel', 'Enable parallel execution for forms with parallel batches')
     .action(
       async (
         file: string,
@@ -206,6 +208,7 @@ export function registerFillCommand(program: Command): void {
           normalize?: boolean;
           recordFill?: boolean;
           recordFillStable?: boolean;
+          parallel?: boolean;
         },
         cmd: Command,
       ) => {
@@ -358,6 +361,120 @@ export function registerFillCommand(program: Command): void {
             logWarn(ctx, 'Warning: Filling all roles including user-designated fields');
           }
 
+          // =====================================================================
+          // PARALLEL EXECUTION PATH (uses programmatic fillForm API)
+          // =====================================================================
+          if (options.parallel && !options.mock) {
+            logInfo(ctx, pc.cyan(`Filling form (parallel): ${filePath}`));
+            logInfo(ctx, `Agent: live (${options.model})`);
+
+            // Determine system prompt
+            let systemPrompt: string | undefined;
+            if (options.instructions) {
+              systemPrompt = options.instructions;
+            } else if (options.prompt) {
+              const promptPath = resolve(options.prompt);
+              systemPrompt = await readFile(promptPath);
+            }
+
+            // Determine output path
+            let outputPath: string;
+            if (options.output) {
+              outputPath = resolve(options.output);
+            } else {
+              const formsDir = getFormsDir(ctx.formsDir);
+              await ensureFormsDir(formsDir);
+              outputPath = generateVersionedPathInFormsDir(filePath, formsDir);
+            }
+
+            // Run programmatic fill with parallel enabled
+            const result = await fillForm({
+              form,
+              model: options.model!,
+              enableParallel: true,
+              enableWebSearch: true,
+              captureWireFormat: false,
+              recordFill: true,
+              targetRoles,
+              fillMode,
+              maxTurnsTotal: options.maxTurns ? parseInt(options.maxTurns, 10) : undefined,
+              maxPatchesPerTurn: options.maxPatches ? parseInt(options.maxPatches, 10) : undefined,
+              maxIssuesPerTurn: options.maxIssues ? parseInt(options.maxIssues, 10) : undefined,
+              systemPromptAddition: systemPrompt,
+              callbacks: {
+                onTurnStart: ({ turnNumber, executionId }) => {
+                  logInfo(
+                    ctx,
+                    `${pc.bold(`Turn ${turnNumber}:`)} started (${pc.dim(executionId)})`,
+                  );
+                },
+                onTurnComplete: (progress) => {
+                  const patchText = progress.patchesApplied === 1 ? 'patch' : 'patches';
+                  logInfo(
+                    ctx,
+                    `  → ${pc.yellow(String(progress.patchesApplied))} ${patchText} applied`,
+                  );
+                  if (progress.isComplete) {
+                    logInfo(ctx, pc.green(`  ✓ Complete`));
+                  }
+                },
+                onBatchStart: ({ batchId, itemCount }) => {
+                  logInfo(ctx, pc.cyan(`Starting batch "${batchId}" with ${itemCount} items`));
+                },
+                onBatchComplete: ({ batchId, patchesApplied }) => {
+                  logInfo(ctx, pc.cyan(`Batch "${batchId}" completed: ${patchesApplied} patches`));
+                },
+              },
+            });
+
+            const durationMs = Date.now() - startTime;
+
+            // Check if completed
+            if (result.status.ok) {
+              logSuccess(ctx, `Form completed in ${result.turns} turn(s)`);
+            } else {
+              logWarn(ctx, `Fill incomplete: ${result.status.reason}`);
+            }
+
+            logTiming(ctx, 'Fill time', durationMs);
+
+            // Write output
+            if (ctx.dryRun) {
+              logInfo(ctx, `[DRY RUN] Would write form to: ${outputPath}`);
+            } else {
+              await writeFile(outputPath, result.markdown);
+              logSuccess(ctx, `Form written to: ${outputPath}`);
+            }
+
+            // Print fill record summary
+            if (result.record && !ctx.quiet) {
+              console.log('');
+              const summary = formatFillRecordSummary(result.record, { verbose: ctx.verbose });
+              console.error(summary);
+            }
+
+            // Write fill record sidecar
+            if ((options.recordFill || options.recordFillStable) && result.record) {
+              const sidecarPath = deriveFillRecordPath(outputPath);
+              const recordToWrite = options.recordFillStable
+                ? stripUnstableFillRecordFields(result.record)
+                : result.record;
+
+              if (ctx.dryRun) {
+                logInfo(ctx, `[DRY RUN] Would write fill record to: ${sidecarPath}`);
+              } else {
+                writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
+                logSuccess(ctx, `Fill record written to: ${sidecarPath}`);
+              }
+            }
+
+            process.exit(result.status.ok ? 0 : 1);
+          }
+
+          // =====================================================================
+          // SERIAL EXECUTION PATH (original manual harness loop)
+          // =====================================================================
+
           // Parse harness config using resolver (handles frontmatter defaults)
           const cliOptions = {
             maxTurns: options.maxTurns ? parseInt(options.maxTurns, 10) : undefined,
@@ -470,7 +587,7 @@ export function registerFillCommand(program: Command): void {
                   turnNumber: turn.turnNumber,
                   issuesCount: turn.issuesCount,
                   order: turn.order ?? 0,
-                  executionId: turn.executionId ?? 'cli-serial',
+                  executionId: turn.executionId ?? 'eid:serial:o0',
                 });
               },
               onTurnComplete: (progress: TurnProgress) => {
@@ -513,6 +630,7 @@ export function registerFillCommand(program: Command): void {
 
             // Pass first target role to agent (for instruction lookup)
             targetRole = targetRoles[0] === '*' ? AGENT_ROLE : (targetRoles[0] ?? AGENT_ROLE);
+
             const liveAgent = createLiveAgent({
               model,
               provider,
@@ -557,7 +675,7 @@ export function registerFillCommand(program: Command): void {
             turnNumber: stepResult.turnNumber,
             issuesCount: stepResult.issues.length,
             order: 0,
-            executionId: 'cli-serial',
+            executionId: 'eid:serial:o0',
           });
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
@@ -720,7 +838,7 @@ export function registerFillCommand(program: Command): void {
                 turnNumber: stepResult.turnNumber,
                 issuesCount: stepResult.issues.length,
                 order: 0,
-                executionId: 'cli-serial',
+                executionId: 'eid:serial:o0',
               });
             }
           }

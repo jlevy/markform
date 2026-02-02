@@ -1,63 +1,45 @@
 ---
 markform:
-  spec: MF/0.1
-  title: Movie Research Demo
-  description: Movie lookup with ratings from IMDB and Rotten Tomatoes.
-  run_mode: research
-  roles:
-    - user
-    - agent
+  spec: "MF/0.1"
+  title: "Movie Research Demo"
+  description: "Movie lookup with ratings from IMDB and Rotten Tomatoes."
+  run_mode: "research"
   role_instructions:
     user: "Enter the movie title."
-    agent: |
-      Identify the movie with web searches and use imdb.com and rottentomatoes.com to fill in the ratings.
-
+    agent: "Identify the movie with web searches and use imdb.com and rottentomatoes.com to fill in the ratings.\n"
 ---
-{% form id="movie_research_demo" %}
 
-{% group id="movie_input" %}
+<!-- form id="movie_research_demo" -->
 
-## What movie do you want to research?
+<!-- group id="movie_input" -->
 
-{% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
+<!-- field kind="string" id="movie" role="user" label="Movie" maxLength=300 minLength=1 required=true --><!-- /field -->
 
-{% instructions ref="movie" %}Enter the movie title (add year or details for
-disambiguation).{% /instructions %}
+<!-- instructions ref="movie" -->
+Enter the movie title (add year or details for
+disambiguation).
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="about_the_movie" title="About the Movie" %}
+<!-- group id="about_the_movie" title="About the Movie" -->
 
-## Movie Ratings
+<!-- field kind="single_select" id="mpaa_rating" label="MPAA Rating" -->
+- [ ] G <!-- #g -->
+- [ ] PG <!-- #pg -->
+- [ ] PG-13 <!-- #pg_13 -->
+- [ ] R <!-- #r -->
+- [ ] NC-17 <!-- #nc_17 -->
+- [ ] NR/Unrated <!-- #nr -->
+<!-- /field -->
 
-Here are the ratings for the movie:
+<!-- field kind="table" id="ratings_table" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=3 minRows=0 required=true --><!-- /field -->
 
-{% field kind="single_select" id="mpaa_rating" role="agent" label="MPAA Rating" %}
+<!-- instructions ref="ratings_table" -->
+Fill in scores and vote counts from each source:IMDB: Rating (1.0-10.0 scale), vote countRT Critics: Tomatometer (0-100%), review countRT Audience: Audience Score (0-100%), rating count
+<!-- /instructions -->
 
-- [ ] G {% #g %}
-- [ ] PG {% #pg %}
-- [ ] PG-13 {% #pg_13 %}
-- [ ] R {% #r %}
-- [ ] NC-17 {% #nc_17 %}
-- [ ] NR/Unrated {% #nr %}
+<!-- /group -->
 
-{% /field %}
+<!-- /form -->
 
-{% field kind="table" id="ratings_table" role="agent" label="Ratings" required=true columnIds=["source", "score", "votes"] columnTypes=["string", "number", "number"] minRows=0 maxRows=3 %}
-
-| Source | Score | Votes |
-|--------|-------|-------|
-
-{% /field %}
-
-{% instructions ref="ratings_table" %}
-Fill in scores and vote counts from each source:
-- IMDB: Rating (1.0-10.0 scale), vote count
-- RT Critics: Tomatometer (0-100%), review count
-- RT Audience: Audience Score (0-100%), rating count
-
-{% /instructions %}
-
-{% /group %}
-
-{% /form %}

@@ -1,8 +1,13 @@
 /**
- * FillRecordCollector - Thread-safe, append-only collector for fill records.
+ * FillRecordCollector - Append-only collector for fill records.
  *
  * Implements FillCallbacks to capture all events during a form fill operation
  * and assembles them into a FillRecord at the end.
+ *
+ * Concurrency model: Uses an append-only event log pattern that safely handles
+ * interleaved async operations. JavaScript's single-threaded event loop ensures
+ * that synchronous array pushes are atomic, so concurrent async callbacks can
+ * safely append events without data races.
  *
  * @see docs/project/specs/active/plan-2026-01-29-fill-record.md
  */
@@ -42,6 +47,7 @@ interface TurnCompleteEvent {
   patchesApplied: number;
   patchesRejected: number;
   issuesAddressed: number;
+  executionId?: string;
 }
 
 interface LlmCallStartEvent {
@@ -125,10 +131,11 @@ export interface FillRecordCollectorOptions {
 // =============================================================================
 
 /**
- * Thread-safe collector for FillRecord data.
+ * Collector for FillRecord data from async form fill operations.
  *
- * Uses an append-only event log pattern for thread safety.
- * Events are aggregated when getRecord() is called.
+ * Uses an append-only event log pattern that safely handles interleaved
+ * async callbacks from parallel execution. Events are aggregated when
+ * getRecord() is called.
  */
 export class FillRecordCollector implements FillCallbacks {
   private readonly startedAt: string;
@@ -140,7 +147,7 @@ export class FillRecordCollector implements FillCallbacks {
   private readonly maxParallelAgents?: number;
   private customData: Record<string, unknown>;
 
-  // Append-only event log (thread-safe via JS single-threaded event loop)
+  // Append-only event log - safe for interleaved async operations
   private events: CollectorEvent[] = [];
 
   // Explicit status override
@@ -192,6 +199,7 @@ export class FillRecordCollector implements FillCallbacks {
       patchesApplied: progress.patchesApplied,
       patchesRejected: progress.rejectedPatches?.length ?? 0,
       issuesAddressed: progress.issuesShown,
+      executionId: progress.executionId,
     });
   }
 
@@ -350,120 +358,159 @@ export class FillRecordCollector implements FillCallbacks {
   // ===========================================================================
 
   private buildTimeline(): TimelineEntry[] {
-    const turns = new Map<number, TimelineEntry>();
-    const turnStartEvents = new Map<number, TurnStartEvent>();
-    const turnToolCalls = new Map<number, ToolCallRecord[]>();
-    const turnTokens = new Map<number, { input: number; output: number }>();
+    // Use composite key (executionId:turnNumber) to properly track parallel turns
+    const turnKey = (execId: string, turnNum: number) => `${execId}:${turnNum}`;
+
+    // Fill start time for calculating relative offsets
+    const fillStartMs = new Date(this.startedAt).getTime();
+
+    const turns = new Map<string, TimelineEntry>();
+    const turnStartEvents = new Map<string, TurnStartEvent>();
+    const turnToolCalls = new Map<string, ToolCallRecord[]>();
+    const turnTokens = new Map<string, { input: number; output: number }>();
 
     // First pass: collect turn start events and tool calls
     for (const event of this.events) {
       if (event.type === 'turn_start') {
-        turnStartEvents.set(event.turnNumber, event);
-        turnToolCalls.set(event.turnNumber, []);
-        turnTokens.set(event.turnNumber, { input: 0, output: 0 });
+        const key = turnKey(event.executionId, event.turnNumber);
+        turnStartEvents.set(key, event);
+        turnToolCalls.set(key, []);
+        turnTokens.set(key, { input: 0, output: 0 });
       }
     }
 
-    // Track active tool calls per turn
+    // Track active tool calls per turn (keyed by composite key)
     const activeToolsByTurn = new Map<
-      number,
-      Map<string, { start: ToolStartEvent; turnNumber: number }>
+      string,
+      Map<string, { start: ToolStartEvent; turnKey: string }>
     >();
-    let currentTurnNumber = 0;
+    // Track current turn key for each executionId (for proper sequential turn tracking)
+    const currentTurnKeyByExecutionId = new Map<string, string>();
 
     // Second pass: match tool start/end events and LLM tokens
     for (const event of this.events) {
       if (event.type === 'turn_start') {
-        currentTurnNumber = event.turnNumber;
-        activeToolsByTurn.set(currentTurnNumber, new Map());
+        const key = turnKey(event.executionId, event.turnNumber);
+        currentTurnKeyByExecutionId.set(event.executionId, key);
+        activeToolsByTurn.set(key, new Map());
       } else if (event.type === 'tool_start') {
-        const activeTurn =
-          this.findTurnForExecutionId(event.executionId, turnStartEvents) ?? currentTurnNumber;
-        const activeTools = activeToolsByTurn.get(activeTurn);
-        if (activeTools) {
-          const key = `${event.executionId}:${event.name}`;
-          activeTools.set(key, { start: event, turnNumber: activeTurn });
+        // Use the current turn for this executionId (not the most recent globally)
+        const activeTurnKey = currentTurnKeyByExecutionId.get(event.executionId);
+        if (activeTurnKey) {
+          const activeTools = activeToolsByTurn.get(activeTurnKey);
+          if (activeTools) {
+            const toolKey = `${event.executionId}:${event.name}`;
+            activeTools.set(toolKey, { start: event, turnKey: activeTurnKey });
+          }
         }
       } else if (event.type === 'tool_end') {
-        const key = `${event.executionId}:${event.name}`;
+        const toolKey = `${event.executionId}:${event.name}`;
         // Find which turn this tool call belongs to
-        let foundTurn: number | undefined;
-        for (const [turnNum, activeTools] of activeToolsByTurn) {
-          if (activeTools.has(key)) {
-            foundTurn = turnNum;
+        let foundTurnKey: string | undefined;
+        for (const [tk, activeTools] of activeToolsByTurn) {
+          if (activeTools.has(toolKey)) {
+            foundTurnKey = tk;
             break;
           }
         }
 
-        if (foundTurn !== undefined) {
-          const activeTools = activeToolsByTurn.get(foundTurn)!;
-          const startInfo = activeTools.get(key);
+        if (foundTurnKey !== undefined) {
+          const activeTools = activeToolsByTurn.get(foundTurnKey)!;
+          const startInfo = activeTools.get(toolKey);
           if (startInfo) {
             const toolCall: ToolCallRecord = {
               tool: event.name,
               startedAt: startInfo.start.timestamp,
               completedAt: event.timestamp,
+              startMs: new Date(startInfo.start.timestamp).getTime() - fillStartMs,
               durationMs: event.durationMs,
               success: !event.error,
               input: this.normalizeInput(startInfo.start.input),
               result: event.error ? { error: event.error } : this.extractResultCount(event.output),
             };
-            turnToolCalls.get(foundTurn)?.push(toolCall);
-            activeTools.delete(key);
+            turnToolCalls.get(foundTurnKey)?.push(toolCall);
+            activeTools.delete(toolKey);
           }
         }
       } else if (event.type === 'llm_call_end') {
-        const turnNum =
-          this.findTurnForExecutionId(event.executionId, turnStartEvents) ?? currentTurnNumber;
-        const tokens = turnTokens.get(turnNum);
-        if (tokens) {
-          tokens.input += event.inputTokens;
-          tokens.output += event.outputTokens;
+        // Use the current turn for this executionId
+        const tk = currentTurnKeyByExecutionId.get(event.executionId);
+        if (tk) {
+          const tokens = turnTokens.get(tk);
+          if (tokens) {
+            tokens.input += event.inputTokens;
+            tokens.output += event.outputTokens;
+          }
         }
       }
     }
 
     // Third pass: build timeline entries from turn complete events
+    // Match turn_complete events to their start events by executionId + turnNumber
+    const turnCompleteByKey = new Map<string, TurnCompleteEvent>();
     for (const event of this.events) {
       if (event.type === 'turn_complete') {
-        const startEvent = turnStartEvents.get(event.turnNumber);
-        if (startEvent) {
-          const tokens = turnTokens.get(event.turnNumber) ?? { input: 0, output: 0 };
-          const toolCalls = turnToolCalls.get(event.turnNumber) ?? [];
-
-          const entry: TimelineEntry = {
-            turnNumber: event.turnNumber,
-            order: startEvent.order,
-            executionId: startEvent.executionId,
-            startedAt: startEvent.timestamp,
-            completedAt: event.timestamp,
-            durationMs:
-              new Date(event.timestamp).getTime() - new Date(startEvent.timestamp).getTime(),
-            issuesAddressed: event.issuesAddressed,
-            patchesApplied: event.patchesApplied,
-            patchesRejected: event.patchesRejected,
-            tokens,
-            toolCalls,
-          };
-          turns.set(event.turnNumber, entry);
+        // Use executionId if available (parallel execution), otherwise fall back to matching by turnNumber
+        if (event.executionId) {
+          const key = turnKey(event.executionId, event.turnNumber);
+          turnCompleteByKey.set(key, event);
+        } else {
+          // Legacy fallback: find first unmatched start event with same turnNumber
+          for (const [key, startEvent] of turnStartEvents) {
+            if (startEvent.turnNumber === event.turnNumber && !turnCompleteByKey.has(key)) {
+              turnCompleteByKey.set(key, event);
+              break;
+            }
+          }
         }
       }
     }
 
-    // Sort by turn number
-    return Array.from(turns.values()).sort((a, b) => a.turnNumber - b.turnNumber);
-  }
+    for (const [key, startEvent] of turnStartEvents) {
+      const completeEvent = turnCompleteByKey.get(key);
+      if (completeEvent) {
+        const tokens = turnTokens.get(key) ?? { input: 0, output: 0 };
+        const toolCalls = turnToolCalls.get(key) ?? [];
 
-  private findTurnForExecutionId(
-    executionId: string,
-    turnStartEvents: Map<number, TurnStartEvent>,
-  ): number | undefined {
-    for (const [turnNumber, event] of turnStartEvents) {
-      if (event.executionId === executionId) {
-        return turnNumber;
+        const turnStartMs = new Date(startEvent.timestamp).getTime();
+        const entry: TimelineEntry = {
+          turnNumber: startEvent.turnNumber,
+          order: startEvent.order,
+          executionId: startEvent.executionId,
+          startedAt: startEvent.timestamp,
+          completedAt: completeEvent.timestamp,
+          startMs: turnStartMs - fillStartMs,
+          durationMs: new Date(completeEvent.timestamp).getTime() - turnStartMs,
+          issuesAddressed: completeEvent.issuesAddressed,
+          patchesApplied: completeEvent.patchesApplied,
+          patchesRejected: completeEvent.patchesRejected,
+          tokens,
+          toolCalls,
+        };
+        turns.set(key, entry);
       }
     }
-    return undefined;
+
+    // Sort by startedAt timestamp (proper chronological order for parallel execution)
+    return Array.from(turns.values()).sort(
+      (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+    );
+  }
+
+  private findTurnKeyForExecutionId(
+    executionId: string,
+    turnStartEvents: Map<string, TurnStartEvent>,
+  ): string | undefined {
+    // Find the most recent turn for this executionId
+    let latestKey: string | undefined;
+    let latestTime = '';
+    for (const [key, event] of turnStartEvents) {
+      if (event.executionId === executionId && event.timestamp > latestTime) {
+        latestKey = key;
+        latestTime = event.timestamp;
+      }
+    }
+    return latestKey;
   }
 
   private normalizeInput(input: unknown): Record<string, unknown> {

@@ -112,7 +112,7 @@ describe('FillRecord CLI helpers', () => {
             turnNumber: turn.turnNumber,
             issuesCount: turn.issuesCount,
             order: turn.order ?? 0,
-            executionId: turn.executionId ?? 'cli-serial',
+            executionId: turn.executionId ?? 'eid:serial:o0',
           });
         },
         onTurnComplete: (progress: {
@@ -124,6 +124,7 @@ describe('FillRecord CLI helpers', () => {
           rejectedPatches?: { patchIndex: number; message: string; fieldId?: string }[];
           issues?: unknown[];
           patches?: unknown[];
+          executionId?: string;
         }) => {
           // The collector expects TurnProgress shape with rejectedPatches array
           collector.onTurnComplete({
@@ -135,6 +136,7 @@ describe('FillRecord CLI helpers', () => {
             rejectedPatches: progress.rejectedPatches ?? [],
             issues: (progress.issues ?? []) as never[],
             patches: (progress.patches ?? []) as never[],
+            executionId: progress.executionId,
           });
         },
         onToolStart: (call: { name: string; input: unknown; executionId: string }) => {
@@ -164,24 +166,24 @@ describe('FillRecord CLI helpers', () => {
 
       // Simulate a 2-turn fill execution
       // Turn 1
-      callbacks.onTurnStart({ turnNumber: 1, issuesCount: 3, executionId: 'cli-serial' });
-      callbacks.onLlmCallStart({ model: 'gpt-4.1-mini', executionId: 'cli-serial' });
+      callbacks.onTurnStart({ turnNumber: 1, issuesCount: 3, executionId: 'eid:serial:o0' });
+      callbacks.onLlmCallStart({ model: 'gpt-4.1-mini', executionId: 'eid:serial:o0' });
       callbacks.onToolStart({
         name: 'fill_form',
         input: { patches: [] },
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       callbacks.onToolEnd({
         name: 'fill_form',
         output: { success: true },
         durationMs: 150,
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       callbacks.onLlmCallEnd({
         model: 'gpt-4.1-mini',
         inputTokens: 1000,
         outputTokens: 200,
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       callbacks.onTurnComplete({
         turnNumber: 1,
@@ -190,27 +192,28 @@ describe('FillRecord CLI helpers', () => {
         requiredIssuesRemaining: 1,
         isComplete: false,
         rejectedPatches: [{ patchIndex: 0, message: 'validation error', fieldId: 'field1' }],
+        executionId: 'eid:serial:o0',
       });
 
       // Turn 2
-      callbacks.onTurnStart({ turnNumber: 2, issuesCount: 1, executionId: 'cli-serial' });
-      callbacks.onLlmCallStart({ model: 'gpt-4.1-mini', executionId: 'cli-serial' });
+      callbacks.onTurnStart({ turnNumber: 2, issuesCount: 1, executionId: 'eid:serial:o0' });
+      callbacks.onLlmCallStart({ model: 'gpt-4.1-mini', executionId: 'eid:serial:o0' });
       callbacks.onToolStart({
         name: 'fill_form',
         input: { patches: [] },
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       callbacks.onToolEnd({
         name: 'fill_form',
         output: { success: true },
         durationMs: 120,
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       callbacks.onLlmCallEnd({
         model: 'gpt-4.1-mini',
         inputTokens: 800,
         outputTokens: 150,
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       callbacks.onTurnComplete({
         turnNumber: 2,
@@ -219,6 +222,7 @@ describe('FillRecord CLI helpers', () => {
         requiredIssuesRemaining: 0,
         isComplete: true,
         rejectedPatches: [],
+        executionId: 'eid:serial:o0',
       });
 
       collector.setStatus('completed');
@@ -291,23 +295,23 @@ describe('FillRecord CLI helpers', () => {
       };
 
       // Simulate execution WITHOUT calling turn callbacks
-      brokenCallbacks.onLlmCallStart({ model: 'gpt-4.1-mini', executionId: 'cli-serial' });
+      brokenCallbacks.onLlmCallStart({ model: 'gpt-4.1-mini', executionId: 'eid:serial:o0' });
       brokenCallbacks.onToolStart({
         name: 'fill_form',
         input: { patches: [] },
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       brokenCallbacks.onToolEnd({
         name: 'fill_form',
         output: { success: true },
         durationMs: 150,
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
       brokenCallbacks.onLlmCallEnd({
         model: 'gpt-4.1-mini',
         inputTokens: 1000,
         outputTokens: 200,
-        executionId: 'cli-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.setStatus('completed');

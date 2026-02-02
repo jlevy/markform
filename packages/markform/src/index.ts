@@ -240,8 +240,9 @@ export {
   WireResponseStepSchema,
   WireToolCallSchema,
   WireToolResultSchema,
-  // Frontmatter schema
+  // Frontmatter schemas
   MarkformFrontmatterSchema,
+  MarkformSectionInputSchema,
   // Run mode schema
   RunModeSchema,
 } from './engine/coreTypes.js';

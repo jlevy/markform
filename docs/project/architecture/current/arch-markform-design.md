@@ -641,6 +641,63 @@ sequenceDiagram
 
 </details>
 
+#### Execution IDs
+
+Execution IDs uniquely identify each execution thread during form filling. They enable
+proper tracking of LLM calls, tool calls, and events in parallel execution scenarios.
+
+**Format:**
+
+All execution IDs use the prefix `eid:` followed by type-specific components:
+
+| Type | Format | Example |
+| --- | --- | --- |
+| Serial | `eid:serial:o{order}` | `eid:serial:o0` |
+| Batch | `eid:batch:o{order}:{batchId}:i{index}` | `eid:batch:o0:research:i0` |
+
+**Components:**
+
+| Component | Description |
+| --- | --- |
+| `eid:` | Prefix identifying this as an execution ID |
+| `serial` / `batch` | Execution type: single thread or parallel batch |
+| `o{order}` | Order level in the execution plan (0-indexed) |
+| `{batchId}` | Identifier for the batch (e.g., `research`, `contact`) |
+| `i{index}` | Item index within the batch (0-indexed) |
+
+**Examples:**
+
+```
+eid:serial:o0           # Serial execution at order 0
+eid:serial:o1           # Serial execution at order 1
+eid:batch:o0:research:i0  # First item in "research" batch at order 0
+eid:batch:o0:research:i1  # Second item in "research" batch at order 0
+eid:batch:o1:contact:i0   # First item in "contact" batch at order 1
+```
+
+**Helper Functions:**
+
+The harness provides helper functions for creating and parsing execution IDs:
+
+```ts
+// Create execution IDs
+serialExecutionId(order: number): string
+batchExecutionId(order: number, batchId: string, itemIndex: number): string
+
+// Parse execution IDs
+parseExecutionId(id: string):
+  | { type: 'serial'; order: number }
+  | { type: 'batch'; order: number; batchId: string; itemIndex: number }
+  | null
+```
+
+**Usage in callbacks:**
+
+Execution IDs are passed to all harness callbacks (`onLlmCallStart`, `onLlmCallEnd`,
+`onToolStart`, `onToolEnd`, `onTurnStart`, `onTurnComplete`) to associate events with
+their execution thread. This enables accurate timing analysis and debugging for parallel
+executions.
+
 #### Research Workflow
 
 The research workflow is a specialized application of the harness loop for web-search-
