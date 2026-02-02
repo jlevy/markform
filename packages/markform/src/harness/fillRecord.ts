@@ -80,6 +80,8 @@ export const ToolCallRecordSchema = z.object({
   startedAt: z.string().datetime(),
   /** When the tool completed */
   completedAt: z.string().datetime(),
+  /** Start time relative to fill start (milliseconds) */
+  startMs: z.number().int().nonnegative(),
   /** Duration in milliseconds */
   durationMs: z.number().int().nonnegative(),
   /** Whether the call succeeded */
@@ -125,6 +127,8 @@ export const TimelineEntrySchema = z.object({
   startedAt: z.string().datetime(),
   /** When the turn completed */
   completedAt: z.string().datetime(),
+  /** Start time relative to fill start (milliseconds) */
+  startMs: z.number().int().nonnegative(),
   /** Duration in milliseconds */
   durationMs: z.number().int().nonnegative(),
 

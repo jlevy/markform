@@ -361,6 +361,9 @@ export class FillRecordCollector implements FillCallbacks {
     // Use composite key (executionId:turnNumber) to properly track parallel turns
     const turnKey = (execId: string, turnNum: number) => `${execId}:${turnNum}`;
 
+    // Fill start time for calculating relative offsets
+    const fillStartMs = new Date(this.startedAt).getTime();
+
     const turns = new Map<string, TimelineEntry>();
     const turnStartEvents = new Map<string, TurnStartEvent>();
     const turnToolCalls = new Map<string, ToolCallRecord[]>();
@@ -419,6 +422,7 @@ export class FillRecordCollector implements FillCallbacks {
               tool: event.name,
               startedAt: startInfo.start.timestamp,
               completedAt: event.timestamp,
+              startMs: new Date(startInfo.start.timestamp).getTime() - fillStartMs,
               durationMs: event.durationMs,
               success: !event.error,
               input: this.normalizeInput(startInfo.start.input),
@@ -468,14 +472,15 @@ export class FillRecordCollector implements FillCallbacks {
         const tokens = turnTokens.get(key) ?? { input: 0, output: 0 };
         const toolCalls = turnToolCalls.get(key) ?? [];
 
+        const turnStartMs = new Date(startEvent.timestamp).getTime();
         const entry: TimelineEntry = {
           turnNumber: startEvent.turnNumber,
           order: startEvent.order,
           executionId: startEvent.executionId,
           startedAt: startEvent.timestamp,
           completedAt: completeEvent.timestamp,
-          durationMs:
-            new Date(completeEvent.timestamp).getTime() - new Date(startEvent.timestamp).getTime(),
+          startMs: turnStartMs - fillStartMs,
+          durationMs: new Date(completeEvent.timestamp).getTime() - turnStartMs,
           issuesAddressed: completeEvent.issuesAddressed,
           patchesApplied: completeEvent.patchesApplied,
           patchesRejected: completeEvent.patchesRejected,
