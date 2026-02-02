@@ -46,7 +46,7 @@ turns:
             - votes
     after:
       required_issue_count: 1
-      markdown_sha256: ab8b407151c68510508675bc17b6a7f7eaf02d6d8966527569eba318a7c616e6
+      markdown_sha256: 292ae742715199f5bdb095fb0167aaef0e06e8346e97a2145d2f9f60780aaa50
       answered_field_count: 1
       skipped_field_count: 0
     context:
@@ -123,26 +123,27 @@ turns:
             agent: "Complete the remaining fields based on the provided context."
         ---
 
-        {% form id="rejection_test" title="Rejection Test Form" %}
+        <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-        {% description ref="rejection_test" %}
+        <!-- description ref="rejection_test" -->
         A form to test patch rejection scenarios - verifies that type mismatch errors are
         properly recorded and recovery works.
-        {% /description %}
+        <!-- /description -->
 
-        {% group id="fields" title="Test Fields" %}
+        <!-- group id="fields" title="Test Fields" -->
 
-        {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+        <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-        {% instructions ref="ratings" %}
+        <!-- instructions ref="ratings" -->
         Enter rating data with source name, score (0-100), and vote count.
-        {% /instructions %}
+        <!-- /instructions -->
 
-        {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+        <!-- field kind="string" id="title" label="Title" required=true --><!-- /field -->
 
-        {% /group %}
+        <!-- /group -->
 
-        {% /form %}
+        <!-- /form -->
+
 
         ```
 
@@ -243,26 +244,27 @@ turns:
               agent: "Complete the remaining fields based on the provided context."
           ---
 
-          {% form id="rejection_test" title="Rejection Test Form" %}
+          <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-          {% description ref="rejection_test" %}
+          <!-- description ref="rejection_test" -->
           A form to test patch rejection scenarios - verifies that type mismatch errors are
           properly recorded and recovery works.
-          {% /description %}
+          <!-- /description -->
 
-          {% group id="fields" title="Test Fields" %}
+          <!-- group id="fields" title="Test Fields" -->
 
-          {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+          <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-          {% instructions ref="ratings" %}
+          <!-- instructions ref="ratings" -->
           Enter rating data with source name, score (0-100), and vote count.
-          {% /instructions %}
+          <!-- /instructions -->
 
-          {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+          <!-- field kind="string" id="title" label="Title" required=true --><!-- /field -->
 
-          {% /group %}
+          <!-- /group -->
 
-          {% /form %}
+          <!-- /form -->
+
 
           ```
 
@@ -343,7 +345,7 @@ turns:
               votes: 450
     after:
       required_issue_count: 0
-      markdown_sha256: 0128dd1818457617cd97d3043195aa015086a524046ff847f8e232d8bbcb9ea8
+      markdown_sha256: 3ba8efb77f32d570159f194341a7eaa4bc2cc1bf9517cc3cb7b700838fb47078
       answered_field_count: 2
       skipped_field_count: 0
     context:
@@ -428,30 +430,31 @@ turns:
             agent: "Complete the remaining fields based on the provided context."
         ---
 
-        {% form id="rejection_test" title="Rejection Test Form" %}
+        <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-        {% description ref="rejection_test" %}
+        <!-- description ref="rejection_test" -->
         A form to test patch rejection scenarios - verifies that type mismatch errors are
         properly recorded and recovery works.
-        {% /description %}
+        <!-- /description -->
 
-        {% group id="fields" title="Test Fields" %}
+        <!-- group id="fields" title="Test Fields" -->
 
-        {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+        <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-        {% instructions ref="ratings" %}
+        <!-- instructions ref="ratings" -->
         Enter rating data with source name, score (0-100), and vote count.
-        {% /instructions %}
+        <!-- /instructions -->
 
-        {% field kind="string" id="title" label="Title" required=true %}
+        <!-- field kind="string" id="title" label="Title" required=true -->
         ```value
         Test Movie
         ```
-        {% /field %}
+        <!-- /field -->
 
-        {% /group %}
+        <!-- /group -->
 
-        {% /form %}
+        <!-- /form -->
+
 
         ```
 
@@ -554,30 +557,31 @@ turns:
               agent: "Complete the remaining fields based on the provided context."
           ---
 
-          {% form id="rejection_test" title="Rejection Test Form" %}
+          <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-          {% description ref="rejection_test" %}
+          <!-- description ref="rejection_test" -->
           A form to test patch rejection scenarios - verifies that type mismatch errors are
           properly recorded and recovery works.
-          {% /description %}
+          <!-- /description -->
 
-          {% group id="fields" title="Test Fields" %}
+          <!-- group id="fields" title="Test Fields" -->
 
-          {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+          <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-          {% instructions ref="ratings" %}
+          <!-- instructions ref="ratings" -->
           Enter rating data with source name, score (0-100), and vote count.
-          {% /instructions %}
+          <!-- /instructions -->
 
-          {% field kind="string" id="title" label="Title" required=true %}
+          <!-- field kind="string" id="title" label="Title" required=true -->
           ```value
           Test Movie
           ```
-          {% /field %}
+          <!-- /field -->
 
-          {% /group %}
+          <!-- /group -->
 
-          {% /form %}
+          <!-- /form -->
+
 
           ```
 
