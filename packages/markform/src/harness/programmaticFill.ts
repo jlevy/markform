@@ -44,6 +44,87 @@ import type { Agent, FillOptions, FillResult, FillStatus, TurnStats } from './ha
 export type { FillOptions, FillResult, FillStatus, TurnProgress } from './harnessTypes.js';
 
 // =============================================================================
+// Execution ID Helpers
+// =============================================================================
+
+/**
+ * Execution ID format for tracking parallel and serial execution threads.
+ *
+ * Format: `eid:{type}:o{order}[:{batchId}:i{index}]`
+ *
+ * Components:
+ * - `eid:` - Prefix identifying this as an execution ID
+ * - `{type}` - Either `serial` or `batch`
+ * - `o{order}` - Order level (e.g., `o0`, `o10`)
+ * - For batch only: `:{batchId}:i{index}` - Batch name and item index
+ *
+ * Examples:
+ * - `eid:serial:o0` - Serial execution at order level 0
+ * - `eid:batch:o0:research:i0` - First item in "research" batch at order 0
+ * - `eid:batch:o0:research:i3` - Fourth item in "research" batch at order 0
+ * - `eid:serial:o10` - Serial execution at order level 10
+ *
+ * Design principles:
+ * - Self-identifying: Clear `eid:` prefix
+ * - Structured: Type comes first for easy filtering
+ * - Explicit: Each component has a prefix (`o` for order, `i` for index)
+ * - Parseable: Can be split on `:` to extract components
+ */
+
+/** Prefix for all execution IDs */
+const EXECUTION_ID_PREFIX = 'eid';
+
+/**
+ * Create an execution ID for serial execution at an order level.
+ */
+export function serialExecutionId(order: number): string {
+  return `${EXECUTION_ID_PREFIX}:serial:o${order}`;
+}
+
+/**
+ * Create an execution ID for a batch item at an order level.
+ */
+export function batchExecutionId(order: number, batchId: string, itemIndex: number): string {
+  return `${EXECUTION_ID_PREFIX}:batch:o${order}:${batchId}:i${itemIndex}`;
+}
+
+/**
+ * Parse an execution ID into its components.
+ * Returns null if the ID doesn't match the expected format.
+ */
+export function parseExecutionId(
+  id: string,
+):
+  | { type: 'serial'; order: number }
+  | { type: 'batch'; order: number; batchId: string; itemIndex: number }
+  | null {
+  if (!id.startsWith(`${EXECUTION_ID_PREFIX}:`)) return null;
+
+  const parts = id.split(':');
+  if (parts.length < 3) return null;
+
+  const type = parts[1];
+  const orderPart = parts[2];
+
+  if (!orderPart?.startsWith('o')) return null;
+  const order = parseInt(orderPart.slice(1), 10);
+  if (isNaN(order)) return null;
+
+  if (type === 'serial') {
+    return { type: 'serial', order };
+  } else if (type === 'batch' && parts.length >= 5) {
+    const batchId = parts[3];
+    const indexPart = parts[4];
+    if (!indexPart?.startsWith('i') || !batchId) return null;
+    const itemIndex = parseInt(indexPart.slice(1), 10);
+    if (isNaN(itemIndex)) return null;
+    return { type: 'batch', order, batchId, itemIndex };
+  }
+
+  return null;
+}
+
+// =============================================================================
 // Helper Functions
 // =============================================================================
 
@@ -801,8 +882,8 @@ async function fillFormParallel(
     // --- Serial items at this order level (multi-turn) ---
     const serialItems = plan.looseSerial.filter((i) => i.order === order);
     if (serialItems.length > 0) {
-      const serialExecutionId = `${order}-serial`;
-      const serialAgent = createAgentForExecution(serialExecutionId);
+      const serialExecId = serialExecutionId(order);
+      const serialAgent = createAgentForExecution(serialExecId);
       const result = await runMultiTurnForItems(
         form,
         serialAgent,
@@ -814,7 +895,7 @@ async function fillFormParallel(
         turnCount,
         options,
         order,
-        serialExecutionId,
+        serialExecId,
         mergedCallbacks,
       );
       totalPatches += result.patchesApplied;
@@ -863,9 +944,9 @@ async function fillFormParallel(
       // Factories are called lazily when a slot becomes available
       const itemFactories = batchItems.map((item, itemIndex) => {
         return () => {
-          const batchExecutionId = `${order}-batch-${batch.batchId}-${itemIndex}`;
+          const batchExecId = batchExecutionId(order, batch.batchId, itemIndex);
           // Create a scoped agent for this batch item with correct executionId
-          const scopedAgent = createAgentForExecution(batchExecutionId);
+          const scopedAgent = createAgentForExecution(batchExecId);
 
           return runMultiTurnForItems(
             form,
@@ -878,7 +959,7 @@ async function fillFormParallel(
             turnCount,
             options,
             order,
-            batchExecutionId,
+            batchExecId,
             mergedCallbacks,
           );
         };

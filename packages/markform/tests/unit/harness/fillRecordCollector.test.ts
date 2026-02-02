@@ -88,7 +88,7 @@ describe('FillRecordCollector', () => {
         turnNumber: 1,
         issuesCount: 3,
         order: 0,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       // Complete the turn to create a timeline entry
@@ -122,7 +122,7 @@ describe('FillRecordCollector', () => {
         turnNumber: 1,
         issuesCount: 3,
         order: 0,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onTurnComplete({
@@ -155,15 +155,15 @@ describe('FillRecordCollector', () => {
         turnNumber: 1,
         issuesCount: 1,
         order: 0,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '0-serial' });
+      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: 'eid:serial:o0' });
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 500,
         outputTokens: 100,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onTurnComplete({
@@ -193,13 +193,18 @@ describe('FillRecordCollector', () => {
       });
 
       // Turn 1
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 2, order: 0, executionId: '0-serial' });
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: 'eid:serial:o0' });
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 500,
         outputTokens: 100,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onTurnComplete({
         turnNumber: 1,
@@ -213,13 +218,18 @@ describe('FillRecordCollector', () => {
       });
 
       // Turn 2
-      collector.onTurnStart({ turnNumber: 2, issuesCount: 1, order: 0, executionId: '0-serial' });
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 2,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: 'eid:serial:o0' });
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 600,
         outputTokens: 150,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onTurnComplete({
         turnNumber: 2,
@@ -247,18 +257,23 @@ describe('FillRecordCollector', () => {
         model: 'claude-sonnet-4-5',
       });
 
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 1, order: 0, executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
 
       collector.onToolStart({
         name: 'web_search',
         input: { query: 'test query' },
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onToolEnd({
         name: 'web_search',
         output: { results: ['a', 'b'] },
         durationMs: 1500,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onTurnComplete({
@@ -286,19 +301,24 @@ describe('FillRecordCollector', () => {
         model: 'claude-sonnet-4-5',
       });
 
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 1, order: 0, executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
 
       collector.onToolStart({
         name: 'web_search',
         input: { query: 'test' },
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onToolEnd({
         name: 'web_search',
         output: null,
         durationMs: 500,
         error: 'Rate limit exceeded',
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onTurnComplete({
@@ -325,44 +345,49 @@ describe('FillRecordCollector', () => {
         model: 'claude-sonnet-4-5',
       });
 
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 2, order: 0, executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
 
       // Multiple web searches
       collector.onToolStart({
         name: 'web_search',
         input: { query: 'q1' },
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onToolEnd({
         name: 'web_search',
         output: { results: ['a'] },
         durationMs: 1000,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onToolStart({
         name: 'web_search',
         input: { query: 'q2' },
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onToolEnd({
         name: 'web_search',
         output: { results: ['b', 'c'] },
         durationMs: 2000,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       // fill_form tool
       collector.onToolStart({
         name: 'fill_form',
         input: { patchCount: 2 },
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onToolEnd({
         name: 'fill_form',
         output: { applied: 2 },
         durationMs: 50,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onTurnComplete({
@@ -395,13 +420,18 @@ describe('FillRecordCollector', () => {
         model: 'claude-sonnet-4-5',
       });
 
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 1, order: 0, executionId: '0-serial' });
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: 'eid:serial:o0' });
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 500,
         outputTokens: 100,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onTurnComplete({
         turnNumber: 1,
@@ -493,13 +523,18 @@ describe('FillRecordCollector', () => {
       });
 
       // Simulate parallel execution: order 0 serial, then order 1 parallel batch
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 1, order: 0, executionId: '0-serial' });
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: 'eid:serial:o0' });
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 300,
         outputTokens: 50,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onTurnComplete({
         turnNumber: 1,
@@ -517,29 +552,35 @@ describe('FillRecordCollector', () => {
         turnNumber: 2,
         issuesCount: 1,
         order: 1,
-        executionId: '1-batch-contact-0',
+        executionId: 'eid:batch:o1:contact:i0',
       });
       collector.onTurnStart({
         turnNumber: 3,
         issuesCount: 1,
         order: 1,
-        executionId: '1-batch-contact-1',
+        executionId: 'eid:batch:o1:contact:i1',
       });
 
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '1-batch-contact-0' });
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '1-batch-contact-1' });
+      collector.onLlmCallStart({
+        model: 'claude-sonnet-4-5',
+        executionId: 'eid:batch:o1:contact:i0',
+      });
+      collector.onLlmCallStart({
+        model: 'claude-sonnet-4-5',
+        executionId: 'eid:batch:o1:contact:i1',
+      });
 
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 200,
         outputTokens: 40,
-        executionId: '1-batch-contact-1',
+        executionId: 'eid:batch:o1:contact:i1',
       });
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 250,
         outputTokens: 45,
-        executionId: '1-batch-contact-0',
+        executionId: 'eid:batch:o1:contact:i0',
       });
 
       collector.onTurnComplete({
@@ -574,9 +615,9 @@ describe('FillRecordCollector', () => {
       expect(record.execution.totalTurns).toBe(3);
       expect(record.execution.orderLevels).toContain(0);
       expect(record.execution.orderLevels).toContain(1);
-      expect(record.execution.executionThreads).toContain('0-serial');
-      expect(record.execution.executionThreads).toContain('1-batch-contact-0');
-      expect(record.execution.executionThreads).toContain('1-batch-contact-1');
+      expect(record.execution.executionThreads).toContain('eid:serial:o0');
+      expect(record.execution.executionThreads).toContain('eid:batch:o1:contact:i0');
+      expect(record.execution.executionThreads).toContain('eid:batch:o1:contact:i1');
 
       // Tokens should be aggregated
       expect(record.llm.totalCalls).toBe(3);
@@ -593,27 +634,32 @@ describe('FillRecordCollector', () => {
         model: 'claude-sonnet-4-5',
       });
 
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 1, order: 0, executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
 
-      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: '0-serial' });
+      collector.onLlmCallStart({ model: 'claude-sonnet-4-5', executionId: 'eid:serial:o0' });
       // Simulate LLM time
       collector.onLlmCallEnd({
         model: 'claude-sonnet-4-5',
         inputTokens: 500,
         outputTokens: 100,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onToolStart({
         name: 'web_search',
         input: { query: 'test' },
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
       collector.onToolEnd({
         name: 'web_search',
         output: {},
         durationMs: 1500,
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onTurnComplete({
@@ -680,7 +726,7 @@ describe('FillRecordCollector', () => {
         query: 'test query',
         resultCount: 5,
         provider: 'anthropic',
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       // Verify the collector still works
@@ -699,14 +745,14 @@ describe('FillRecordCollector', () => {
         query: 'first query',
         resultCount: 3,
         provider: 'anthropic',
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       collector.onWebSearch({
         query: 'second query',
         resultCount: 0,
         provider: 'anthropic',
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       // Verify the collector completes without error
@@ -725,7 +771,12 @@ describe('FillRecordCollector', () => {
       });
 
       // Order 0 - serial
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 5, order: 0, executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 5,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
       collector.onTurnComplete({
         turnNumber: 1,
         issuesShown: 5,
@@ -735,7 +786,7 @@ describe('FillRecordCollector', () => {
         issues: [],
         patches: [],
         rejectedPatches: [],
-        executionId: '0-serial',
+        executionId: 'eid:serial:o0',
       });
 
       // Order 1 - parallel batch with 3 items running concurrently
@@ -744,21 +795,21 @@ describe('FillRecordCollector', () => {
         turnNumber: 2,
         issuesCount: 2,
         order: 1,
-        executionId: '1-batch-test-0',
+        executionId: 'eid:batch:o1:test:i0',
       });
       // Item 1
       collector.onTurnStart({
         turnNumber: 2,
         issuesCount: 3,
         order: 1,
-        executionId: '1-batch-test-1',
+        executionId: 'eid:batch:o1:test:i1',
       });
       // Item 2
       collector.onTurnStart({
         turnNumber: 2,
         issuesCount: 1,
         order: 1,
-        executionId: '1-batch-test-2',
+        executionId: 'eid:batch:o1:test:i2',
       });
 
       // Completions can come in any order
@@ -771,7 +822,7 @@ describe('FillRecordCollector', () => {
         issues: [],
         patches: [],
         rejectedPatches: [],
-        executionId: '1-batch-test-1',
+        executionId: 'eid:batch:o1:test:i1',
       });
       collector.onTurnComplete({
         turnNumber: 2,
@@ -782,7 +833,7 @@ describe('FillRecordCollector', () => {
         issues: [],
         patches: [],
         rejectedPatches: [],
-        executionId: '1-batch-test-0',
+        executionId: 'eid:batch:o1:test:i0',
       });
       collector.onTurnComplete({
         turnNumber: 2,
@@ -793,7 +844,7 @@ describe('FillRecordCollector', () => {
         issues: [],
         patches: [],
         rejectedPatches: [],
-        executionId: '1-batch-test-2',
+        executionId: 'eid:batch:o1:test:i2',
       });
 
       const record = collector.getRecord(mockProgressCounts);
@@ -805,18 +856,18 @@ describe('FillRecordCollector', () => {
       expect(record.execution.parallelEnabled).toBe(true);
       expect(record.execution.totalTurns).toBe(4);
       expect(record.execution.executionThreads).toHaveLength(4);
-      expect(record.execution.executionThreads).toContain('0-serial');
-      expect(record.execution.executionThreads).toContain('1-batch-test-0');
-      expect(record.execution.executionThreads).toContain('1-batch-test-1');
-      expect(record.execution.executionThreads).toContain('1-batch-test-2');
+      expect(record.execution.executionThreads).toContain('eid:serial:o0');
+      expect(record.execution.executionThreads).toContain('eid:batch:o1:test:i0');
+      expect(record.execution.executionThreads).toContain('eid:batch:o1:test:i1');
+      expect(record.execution.executionThreads).toContain('eid:batch:o1:test:i2');
 
       // Verify each timeline entry has correct executionId
-      const serialEntry = record.timeline.find((e) => e.executionId === '0-serial');
+      const serialEntry = record.timeline.find((e) => e.executionId === 'eid:serial:o0');
       expect(serialEntry).toBeDefined();
       expect(serialEntry!.order).toBe(0);
       expect(serialEntry!.turnNumber).toBe(1);
 
-      const parallelEntries = record.timeline.filter((e) => e.executionId.startsWith('1-batch'));
+      const parallelEntries = record.timeline.filter((e) => e.executionId.startsWith('eid:batch'));
       expect(parallelEntries).toHaveLength(3);
       parallelEntries.forEach((entry) => {
         expect(entry.order).toBe(1);
@@ -832,7 +883,12 @@ describe('FillRecordCollector', () => {
       });
 
       // Turn without executionId in onTurnComplete (legacy behavior)
-      collector.onTurnStart({ turnNumber: 1, issuesCount: 1, order: 0, executionId: '0-serial' });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
       collector.onTurnComplete({
         turnNumber: 1,
         issuesShown: 1,
@@ -847,7 +903,7 @@ describe('FillRecordCollector', () => {
 
       const record = collector.getRecord(mockProgressCounts);
       expect(record.timeline).toHaveLength(1);
-      expect(record.timeline[0]!.executionId).toBe('0-serial');
+      expect(record.timeline[0]!.executionId).toBe('eid:serial:o0');
     });
   });
 });

@@ -470,7 +470,7 @@ export function registerFillCommand(program: Command): void {
                   turnNumber: turn.turnNumber,
                   issuesCount: turn.issuesCount,
                   order: turn.order ?? 0,
-                  executionId: turn.executionId ?? 'cli-serial',
+                  executionId: turn.executionId ?? 'eid:serial:o0',
                 });
               },
               onTurnComplete: (progress: TurnProgress) => {
@@ -557,7 +557,7 @@ export function registerFillCommand(program: Command): void {
             turnNumber: stepResult.turnNumber,
             issuesCount: stepResult.issues.length,
             order: 0,
-            executionId: 'cli-serial',
+            executionId: 'eid:serial:o0',
           });
 
           while (!stepResult.isComplete && !harness.hasReachedMaxTurns()) {
@@ -720,7 +720,7 @@ export function registerFillCommand(program: Command): void {
                 turnNumber: stepResult.turnNumber,
                 issuesCount: stepResult.issues.length,
                 order: 0,
-                executionId: 'cli-serial',
+                executionId: 'eid:serial:o0',
               });
             }
           }
