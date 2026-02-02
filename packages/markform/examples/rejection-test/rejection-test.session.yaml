@@ -46,7 +46,7 @@ turns:
             - votes
     after:
       required_issue_count: 1
-      markdown_sha256: b24578a1abb357a8f215de6fe006fa4a15b6388b3bb277526b1f3afd918a46e6
+      markdown_sha256: ab8b407151c68510508675bc17b6a7f7eaf02d6d8966527569eba318a7c616e6
       answered_field_count: 1
       skipped_field_count: 0
     context:
@@ -114,9 +114,13 @@ turns:
         ---
         markform:
           spec: "MF/0.1"
-        role_instructions:
-          user: "Fill in the fields you have direct knowledge of."
-          agent: "Complete the remaining fields based on the provided context."
+          title: "Rejection Test Form"
+          description: "Tests type mismatch rejection and recovery behavior"
+          roles:
+            - "agent"
+          role_instructions:
+            user: "Fill in the fields you have direct knowledge of."
+            agent: "Complete the remaining fields based on the provided context."
         ---
 
         {% form id="rejection_test" title="Rejection Test Form" %}
@@ -230,9 +234,13 @@ turns:
           ---
           markform:
             spec: "MF/0.1"
-          role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            title: "Rejection Test Form"
+            description: "Tests type mismatch rejection and recovery behavior"
+            roles:
+              - "agent"
+            role_instructions:
+              user: "Fill in the fields you have direct knowledge of."
+              agent: "Complete the remaining fields based on the provided context."
           ---
 
           {% form id="rejection_test" title="Rejection Test Form" %}
@@ -335,7 +343,7 @@ turns:
               votes: 450
     after:
       required_issue_count: 0
-      markdown_sha256: eabdf7aef8cbd52893d7bc0b03fd3c0b2a21eebf9e16f98af6884509b5101e34
+      markdown_sha256: 0128dd1818457617cd97d3043195aa015086a524046ff847f8e232d8bbcb9ea8
       answered_field_count: 2
       skipped_field_count: 0
     context:
@@ -411,9 +419,13 @@ turns:
         ---
         markform:
           spec: "MF/0.1"
-        role_instructions:
-          user: "Fill in the fields you have direct knowledge of."
-          agent: "Complete the remaining fields based on the provided context."
+          title: "Rejection Test Form"
+          description: "Tests type mismatch rejection and recovery behavior"
+          roles:
+            - "agent"
+          role_instructions:
+            user: "Fill in the fields you have direct knowledge of."
+            agent: "Complete the remaining fields based on the provided context."
         ---
 
         {% form id="rejection_test" title="Rejection Test Form" %}
@@ -533,9 +545,13 @@ turns:
           ---
           markform:
             spec: "MF/0.1"
-          role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            title: "Rejection Test Form"
+            description: "Tests type mismatch rejection and recovery behavior"
+            roles:
+              - "agent"
+            role_instructions:
+              user: "Fill in the fields you have direct knowledge of."
+              agent: "Complete the remaining fields based on the provided context."
           ---
 
           {% form id="rejection_test" title="Rejection Test Form" %}

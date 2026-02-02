@@ -120,7 +120,7 @@ turns:
             test: na
     after:
       required_issue_count: 2
-      markdown_sha256: 18f7c0fed3947e24df66bd4f8cafa4a5d916d77b6a0cd8f76327f9e14f04a74f
+      markdown_sha256: db17e3e1543f69d0ed91b596d228820aaafdf7a9997a110a319ac9014b3d718c
       answered_field_count: 10
       skipped_field_count: 0
     context:
@@ -173,7 +173,7 @@ turns:
         `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
-        # Instructions for agent role
+        # Role guidance
         Complete the remaining fields based on the provided context.
 
         # Field-specific instructions
@@ -195,10 +195,13 @@ turns:
         ---
         markform:
           spec: "MF/0.1"
+          title: "Simple Test Form"
+          description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
           run_mode: "interactive"
-        role_instructions:
-          user: "Fill in the fields you have direct knowledge of."
-          agent: "Complete the remaining fields based on the provided context."
+          roles:
+            - "user"
+          role_instructions:
+            user: "Fill in all fields in this form."
         ---
 
         {% form id="simple_test" title="Simple Test Form" %}
@@ -493,7 +496,7 @@ turns:
           `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
-          # Instructions for agent role
+          # Role guidance
           Complete the remaining fields based on the provided context.
 
           # Field-specific instructions
@@ -515,10 +518,13 @@ turns:
           ---
           markform:
             spec: "MF/0.1"
+            title: "Simple Test Form"
+            description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
             run_mode: "interactive"
-          role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            roles:
+              - "user"
+            role_instructions:
+              user: "Fill in all fields in this form."
           ---
 
           {% form id="simple_test" title="Simple Test Form" %}
@@ -936,7 +942,7 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: b3e42a2b1c09183968a8ff280c27381a71f05724987fd01b7fefe2d9a25ee765
+      markdown_sha256: f9d4a686ab2f0e3fa8f8eccddd608bafbf1cfaee6450c74269d66d5308182b32
       answered_field_count: 16
       skipped_field_count: 4
     context:
@@ -989,7 +995,7 @@ turns:
         `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
-        # Instructions for agent role
+        # Role guidance
         Complete the remaining fields based on the provided context.
 
         # Field-specific instructions
@@ -1011,10 +1017,13 @@ turns:
         ---
         markform:
           spec: "MF/0.1"
+          title: "Simple Test Form"
+          description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
           run_mode: "interactive"
-        role_instructions:
-          user: "Fill in the fields you have direct knowledge of."
-          agent: "Complete the remaining fields based on the provided context."
+          roles:
+            - "user"
+          role_instructions:
+            user: "Fill in all fields in this form."
         ---
 
         {% form id="simple_test" title="Simple Test Form" %}
@@ -1333,7 +1342,7 @@ turns:
           `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
-          # Instructions for agent role
+          # Role guidance
           Complete the remaining fields based on the provided context.
 
           # Field-specific instructions
@@ -1355,10 +1364,13 @@ turns:
           ---
           markform:
             spec: "MF/0.1"
+            title: "Simple Test Form"
+            description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
             run_mode: "interactive"
-          role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            roles:
+              - "user"
+            role_instructions:
+              user: "Fill in all fields in this form."
           ---
 
           {% form id="simple_test" title="Simple Test Form" %}
@@ -1714,7 +1726,7 @@ turns:
               start_date: 2023-06-01
     after:
       required_issue_count: 0
-      markdown_sha256: 72665385974b33d91df16c5e2323be5e13b514dd0f34220417bc6f021c09f690
+      markdown_sha256: bb627d4744a85a9724125daad899ab210a9876886aeaac9e79fab2a93fa6e634
       answered_field_count: 17
       skipped_field_count: 4
     context:
@@ -1767,7 +1779,7 @@ turns:
         `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
-        # Instructions for agent role
+        # Role guidance
         Complete the remaining fields based on the provided context.
 
         # Field-specific instructions
@@ -1782,10 +1794,13 @@ turns:
         ---
         markform:
           spec: "MF/0.1"
+          title: "Simple Test Form"
+          description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
           run_mode: "interactive"
-        role_instructions:
-          user: "Fill in the fields you have direct knowledge of."
-          agent: "Complete the remaining fields based on the provided context."
+          roles:
+            - "user"
+          role_instructions:
+            user: "Fill in all fields in this form."
         ---
 
         {% form id="simple_test" title="Simple Test Form" %}
@@ -2086,7 +2101,7 @@ turns:
           `{ op: "skip_field", fieldId: "...", reason: "Could not find verified data" }`
 
 
-          # Instructions for agent role
+          # Role guidance
           Complete the remaining fields based on the provided context.
 
           # Field-specific instructions
@@ -2101,10 +2116,13 @@ turns:
           ---
           markform:
             spec: "MF/0.1"
+            title: "Simple Test Form"
+            description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
             run_mode: "interactive"
-          role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            roles:
+              - "user"
+            role_instructions:
+              user: "Fill in all fields in this form."
           ---
 
           {% form id="simple_test" title="Simple Test Form" %}

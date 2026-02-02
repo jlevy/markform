@@ -509,6 +509,10 @@ export type RunMode = 'interactive' | 'fill' | 'research';
 /** Form-level metadata from YAML frontmatter, including role configuration */
 export interface FormMetadata {
   markformVersion: string;
+  /** Optional title from frontmatter (may differ from form tag title) */
+  title?: string;
+  /** Optional description from frontmatter */
+  description?: string;
   roles: string[];
   roleInstructions: Record<string, string>;
   /** Optional harness configuration from frontmatter */

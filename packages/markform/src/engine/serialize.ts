@@ -1428,13 +1428,23 @@ function buildHarnessConfig(config: FrontmatterHarnessConfig): Record<string, nu
 
 /**
  * Build frontmatter YAML from form metadata.
- * Preserves roles, role_instructions, harness config, and run_mode.
+ * Preserves title, description, roles, role_instructions, harness config, and run_mode.
  */
 function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: string): string {
   // Build markform section
   const markformSection: Record<string, unknown> = {
     spec: specVersion,
   };
+
+  // Add title if present
+  if (metadata?.title) {
+    markformSection.title = metadata.title;
+  }
+
+  // Add description if present
+  if (metadata?.description) {
+    markformSection.description = metadata.description;
+  }
 
   if (metadata?.runMode) {
     markformSection.run_mode = metadata.runMode;
@@ -1444,22 +1454,17 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
     markformSection.harness = buildHarnessConfig(metadata.harnessConfig);
   }
 
-  // Build top-level frontmatter object
-  const frontmatterObj: Record<string, unknown> = {
-    markform: markformSection,
-  };
-
-  // Add roles if not default
+  // Add roles inside markform section if not default
   const defaultRoles = ['user', 'agent'];
   if (
     metadata?.roles &&
     (metadata.roles.length !== defaultRoles.length ||
       !metadata.roles.every((r, i) => r === defaultRoles[i]))
   ) {
-    frontmatterObj.roles = metadata.roles;
+    markformSection.roles = metadata.roles;
   }
 
-  // Add role_instructions if not default/empty
+  // Add role_instructions inside markform section if not default/empty
   const defaultInstructions = { user: '', agent: '' };
   if (metadata?.roleInstructions) {
     const hasCustomInstructions = Object.entries(metadata.roleInstructions).some(
@@ -1469,9 +1474,14 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
       },
     );
     if (hasCustomInstructions) {
-      frontmatterObj.role_instructions = metadata.roleInstructions;
+      markformSection.role_instructions = metadata.roleInstructions;
     }
   }
+
+  // Build top-level frontmatter object
+  const frontmatterObj: Record<string, unknown> = {
+    markform: markformSection,
+  };
 
   // Serialize to YAML with proper formatting for multiline strings
   const yamlStr = YAML.stringify(frontmatterObj, {

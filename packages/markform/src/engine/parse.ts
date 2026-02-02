@@ -148,16 +148,24 @@ function extractFrontmatter(ast: Node): FrontmatterResult {
       runMode = parsed.data;
     }
 
-    // Extract description from markform.description
+    // Extract title and description from markform section
+    const title = typeof markformSection.title === 'string' ? markformSection.title : undefined;
     const description =
       typeof markformSection.description === 'string' ? markformSection.description : undefined;
 
     // Build metadata
+    // Note: roles and role_instructions can be either inside markform: or at top-level
+    // Prefer markform section, fall back to top-level for backwards compatibility
     const metadata: FormMetadata = {
       markformVersion: (markformSection.spec as string) ?? 'MF/0.1',
-      roles: (frontmatter.roles as string[]) ?? [...DEFAULT_ROLES],
+      ...(title && { title }),
+      ...(description && { description }),
+      roles: (markformSection.roles as string[]) ??
+        (frontmatter.roles as string[]) ?? [...DEFAULT_ROLES],
       roleInstructions:
-        (frontmatter.role_instructions as Record<string, string>) ?? DEFAULT_ROLE_INSTRUCTIONS,
+        (markformSection.role_instructions as Record<string, string>) ??
+        (frontmatter.role_instructions as Record<string, string>) ??
+        DEFAULT_ROLE_INSTRUCTIONS,
       ...(harnessConfig && { harnessConfig }),
       ...(runMode && { runMode }),
     };
