@@ -82,8 +82,8 @@ const MUTATIONS: Mutation[] = [
   {
     name: 'tool schema $ref change',
     description: 'Modify tool schema reference',
-    find: '$ref: "#/$defs/patch"',
-    replace: '$ref: "#/$defs/patches"',
+    find: "$ref: '#/$defs/patch'",
+    replace: "$ref: '#/$defs/patches'",
   },
   {
     name: 'fill mode change',
