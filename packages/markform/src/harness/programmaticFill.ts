@@ -732,19 +732,23 @@ async function fillFormParallel(
   let totalPatches = initialPatches;
   let turnCount = startingTurnNumber;
 
-  // Create primary agent for serial items
-  const primaryAgent: Agent =
-    options._testAgent ??
-    createLiveAgent({
-      model: model!,
-      systemPromptAddition: options.systemPromptAddition,
-      targetRole: targetRoles[0] ?? AGENT_ROLE,
-      provider,
-      enableWebSearch: options.enableWebSearch,
-      additionalTools: options.additionalTools,
-      callbacks: mergedCallbacks,
-      maxStepsPerTurn: options.maxStepsPerTurn,
-    });
+  // Helper to create an agent with the correct executionId
+  const createAgentForExecution = (executionId: string): Agent => {
+    return (
+      options._testAgent ??
+      createLiveAgent({
+        model: model!,
+        systemPromptAddition: options.systemPromptAddition,
+        targetRole: targetRoles[0] ?? AGENT_ROLE,
+        provider,
+        enableWebSearch: options.enableWebSearch,
+        additionalTools: options.additionalTools,
+        callbacks: mergedCallbacks,
+        maxStepsPerTurn: options.maxStepsPerTurn,
+        executionId,
+      })
+    );
+  };
 
   for (const order of plan.orderLevels) {
     // Check cancellation
@@ -797,9 +801,11 @@ async function fillFormParallel(
     // --- Serial items at this order level (multi-turn) ---
     const serialItems = plan.looseSerial.filter((i) => i.order === order);
     if (serialItems.length > 0) {
+      const serialExecutionId = `${order}-serial`;
+      const serialAgent = createAgentForExecution(serialExecutionId);
       const result = await runMultiTurnForItems(
         form,
-        primaryAgent,
+        serialAgent,
         serialItems,
         targetRoles,
         maxPatchesPerTurn,
@@ -808,7 +814,7 @@ async function fillFormParallel(
         turnCount,
         options,
         order,
-        `${order}-serial`,
+        serialExecutionId,
         mergedCallbacks,
       );
       totalPatches += result.patchesApplied;
@@ -857,19 +863,9 @@ async function fillFormParallel(
       // Factories are called lazily when a slot becomes available
       const itemFactories = batchItems.map((item, itemIndex) => {
         return () => {
-          // Create a scoped agent for this batch item (or reuse test agent)
-          const scopedAgent: Agent =
-            options._testAgent ??
-            createLiveAgent({
-              model: model!,
-              systemPromptAddition: options.systemPromptAddition,
-              targetRole: targetRoles[0] ?? AGENT_ROLE,
-              provider,
-              enableWebSearch: options.enableWebSearch,
-              additionalTools: options.additionalTools,
-              callbacks: mergedCallbacks,
-              maxStepsPerTurn: options.maxStepsPerTurn,
-            });
+          const batchExecutionId = `${order}-batch-${batch.batchId}-${itemIndex}`;
+          // Create a scoped agent for this batch item with correct executionId
+          const scopedAgent = createAgentForExecution(batchExecutionId);
 
           return runMultiTurnForItems(
             form,
@@ -882,7 +878,7 @@ async function fillFormParallel(
             turnCount,
             options,
             order,
-            `${order}-batch-${batch.batchId}-${itemIndex}`,
+            batchExecutionId,
             mergedCallbacks,
           );
         };

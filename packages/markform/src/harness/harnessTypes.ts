@@ -134,6 +134,12 @@ export interface LiveAgentConfig {
   targetRole?: string;
   /** Provider name (needed for web search tool selection) */
   provider?: string;
+  /**
+   * Execution thread ID for parallel tracking.
+   * Used to associate LLM calls, tool calls, and events with the correct execution thread.
+   * Defaults to '0-serial' for serial execution.
+   */
+  executionId?: string;
 
   /**
    * Enable provider web search tools.
