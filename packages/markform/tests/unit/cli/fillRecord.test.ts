@@ -124,6 +124,7 @@ describe('FillRecord CLI helpers', () => {
           rejectedPatches?: { patchIndex: number; message: string; fieldId?: string }[];
           issues?: unknown[];
           patches?: unknown[];
+          executionId?: string;
         }) => {
           // The collector expects TurnProgress shape with rejectedPatches array
           collector.onTurnComplete({
@@ -135,6 +136,7 @@ describe('FillRecord CLI helpers', () => {
             rejectedPatches: progress.rejectedPatches ?? [],
             issues: (progress.issues ?? []) as never[],
             patches: (progress.patches ?? []) as never[],
+            executionId: progress.executionId,
           });
         },
         onToolStart: (call: { name: string; input: unknown; executionId: string }) => {
@@ -190,6 +192,7 @@ describe('FillRecord CLI helpers', () => {
         requiredIssuesRemaining: 1,
         isComplete: false,
         rejectedPatches: [{ patchIndex: 0, message: 'validation error', fieldId: 'field1' }],
+        executionId: 'cli-serial',
       });
 
       // Turn 2
@@ -219,6 +222,7 @@ describe('FillRecord CLI helpers', () => {
         requiredIssuesRemaining: 0,
         isComplete: true,
         rejectedPatches: [],
+        executionId: 'cli-serial',
       });
 
       collector.setStatus('completed');

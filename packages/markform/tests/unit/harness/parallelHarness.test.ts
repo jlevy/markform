@@ -18,6 +18,7 @@ import { createMockAgent } from '../../../src/harness/mockAgent.js';
 import type { Agent, AgentResponse } from '../../../src/harness/harnessTypes.js';
 import {
   createParallelHarness,
+  runWithConcurrency,
   type ScopedFillRequest,
   scopeIssuesForItem,
 } from '../../../src/harness/parallelHarness.js';
@@ -529,6 +530,234 @@ describe('ParallelHarness', () => {
 
       expect(starts).toEqual([0, 10]);
       expect(completes).toEqual([0, 10]);
+    });
+  });
+});
+
+// =============================================================================
+// runWithConcurrency Tests
+// =============================================================================
+
+describe('runWithConcurrency', () => {
+  describe('basic functionality', () => {
+    it('returns empty array for empty input', async () => {
+      const results = await runWithConcurrency([], 5);
+      expect(results).toEqual([]);
+    });
+
+    it('returns results in correct order', async () => {
+      const factories = [
+        () => Promise.resolve('a'),
+        () => Promise.resolve('b'),
+        () => Promise.resolve('c'),
+      ];
+
+      const results = await runWithConcurrency(factories, 10);
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).toEqual({ status: 'fulfilled', value: 'a' });
+      expect(results[1]).toEqual({ status: 'fulfilled', value: 'b' });
+      expect(results[2]).toEqual({ status: 'fulfilled', value: 'c' });
+    });
+
+    it('handles rejected promises', async () => {
+      const error = new Error('Test error');
+      const factories = [
+        () => Promise.resolve('success'),
+        () => Promise.reject(error),
+        () => Promise.resolve('also success'),
+      ];
+
+      const results = await runWithConcurrency(factories, 10);
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).toEqual({ status: 'fulfilled', value: 'success' });
+      expect(results[1]).toEqual({ status: 'rejected', reason: error });
+      expect(results[2]).toEqual({ status: 'fulfilled', value: 'also success' });
+    });
+
+    it('handles all rejected promises', async () => {
+      const factories = [
+        () => Promise.reject(new Error('error1')),
+        () => Promise.reject(new Error('error2')),
+      ];
+
+      const results = await runWithConcurrency(factories, 10);
+
+      expect(results).toHaveLength(2);
+      expect(results[0]?.status).toBe('rejected');
+      expect(results[1]?.status).toBe('rejected');
+    });
+  });
+
+  describe('concurrency limiting', () => {
+    it('limits concurrent executions to maxConcurrent', async () => {
+      let currentConcurrency = 0;
+      let maxObservedConcurrency = 0;
+
+      const createDelayedFactory = (value: number, delayMs: number) => async () => {
+        currentConcurrency++;
+        maxObservedConcurrency = Math.max(maxObservedConcurrency, currentConcurrency);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        currentConcurrency--;
+        return value;
+      };
+
+      const factories = [
+        createDelayedFactory(1, 50),
+        createDelayedFactory(2, 50),
+        createDelayedFactory(3, 50),
+        createDelayedFactory(4, 50),
+        createDelayedFactory(5, 50),
+      ];
+
+      const results = await runWithConcurrency(factories, 2);
+
+      expect(results).toHaveLength(5);
+      expect(maxObservedConcurrency).toBeLessThanOrEqual(2);
+      // Verify all results are correct
+      expect(results.map((r) => (r as PromiseFulfilledResult<number>).value)).toEqual([
+        1, 2, 3, 4, 5,
+      ]);
+    });
+
+    it('runs all at once when maxConcurrent >= factories.length', async () => {
+      let currentConcurrency = 0;
+      let maxObservedConcurrency = 0;
+
+      const createDelayedFactory = (value: number) => async () => {
+        currentConcurrency++;
+        maxObservedConcurrency = Math.max(maxObservedConcurrency, currentConcurrency);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        currentConcurrency--;
+        return value;
+      };
+
+      const factories = [createDelayedFactory(1), createDelayedFactory(2), createDelayedFactory(3)];
+
+      await runWithConcurrency(factories, 10);
+
+      // All 3 should run concurrently since maxConcurrent (10) >= factories.length (3)
+      expect(maxObservedConcurrency).toBe(3);
+    });
+
+    it('processes with maxConcurrent=1 (sequential)', async () => {
+      const executionOrder: number[] = [];
+
+      const createFactory = (value: number) => async () => {
+        executionOrder.push(value);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        return value;
+      };
+
+      const factories = [createFactory(1), createFactory(2), createFactory(3)];
+
+      const results = await runWithConcurrency(factories, 1);
+
+      expect(results).toHaveLength(3);
+      // With maxConcurrent=1, execution should be sequential
+      expect(executionOrder).toEqual([1, 2, 3]);
+    });
+  });
+
+  describe('factory lazy evaluation', () => {
+    it('does not call factories until slot is available', async () => {
+      const factoryCallTimes: number[] = [];
+      const startTime = Date.now();
+
+      const createSlowFactory = (value: number, delayMs: number) => () => {
+        factoryCallTimes.push(Date.now() - startTime);
+        return new Promise<number>((resolve) => setTimeout(() => { resolve(value); }, delayMs));
+      };
+
+      // First two factories take 100ms each, third one should start ~100ms later
+      const factories = [
+        createSlowFactory(1, 100),
+        createSlowFactory(2, 100),
+        createSlowFactory(3, 10), // Quick once it starts
+      ];
+
+      await runWithConcurrency(factories, 2);
+
+      // First two factories should be called immediately (within ~5ms)
+      expect(factoryCallTimes[0]).toBeLessThan(20);
+      expect(factoryCallTimes[1]).toBeLessThan(20);
+
+      // Third factory should be called after one of the first two finishes (~100ms)
+      expect(factoryCallTimes[2]).toBeGreaterThanOrEqual(80);
+    });
+  });
+
+  describe('error isolation', () => {
+    it('continues processing after a factory throws', async () => {
+      const factories = [
+        () => Promise.resolve('first'),
+        () => {
+          throw new Error('Sync error');
+        },
+        () => Promise.resolve('third'),
+      ];
+
+      const results = await runWithConcurrency(factories, 2);
+
+      expect(results).toHaveLength(3);
+      expect(results[0]).toEqual({ status: 'fulfilled', value: 'first' });
+      expect(results[1]?.status).toBe('rejected');
+      expect((results[1] as PromiseRejectedResult).reason).toBeInstanceOf(Error);
+      expect(results[2]).toEqual({ status: 'fulfilled', value: 'third' });
+    });
+
+    it('handles mixed sync throws and async rejections', async () => {
+      const factories = [
+        () => Promise.resolve('a'),
+        () => {
+          throw new Error('sync');
+        },
+        () => Promise.reject(new Error('async')),
+        () => Promise.resolve('d'),
+      ];
+
+      const results = await runWithConcurrency(factories, 10);
+
+      expect(results[0]).toEqual({ status: 'fulfilled', value: 'a' });
+      expect(results[1]?.status).toBe('rejected');
+      expect(results[2]?.status).toBe('rejected');
+      expect(results[3]).toEqual({ status: 'fulfilled', value: 'd' });
+    });
+  });
+
+  describe('edge cases', () => {
+    it('handles single factory', async () => {
+      const results = await runWithConcurrency([() => Promise.resolve(42)], 5);
+      expect(results).toEqual([{ status: 'fulfilled', value: 42 }]);
+    });
+
+    it('handles large number of factories', async () => {
+      const count = 100;
+      const factories = Array.from({ length: count }, (_, i) => () => Promise.resolve(i));
+
+      const results = await runWithConcurrency(factories, 10);
+
+      expect(results).toHaveLength(count);
+      for (let i = 0; i < count; i++) {
+        expect(results[i]).toEqual({ status: 'fulfilled', value: i });
+      }
+    });
+
+    it('maintains result order with varying completion times', async () => {
+      // Factory with index 0 completes last, index 2 completes first
+      const factories = [
+        () => new Promise<string>((resolve) => setTimeout(() => { resolve('slow'); }, 60)),
+        () => new Promise<string>((resolve) => setTimeout(() => { resolve('medium'); }, 30)),
+        () => new Promise<string>((resolve) => setTimeout(() => { resolve('fast'); }, 10)),
+      ];
+
+      const results = await runWithConcurrency(factories, 10);
+
+      // Despite different completion times, results should be in original order
+      expect(results[0]).toEqual({ status: 'fulfilled', value: 'slow' });
+      expect(results[1]).toEqual({ status: 'fulfilled', value: 'medium' });
+      expect(results[2]).toEqual({ status: 'fulfilled', value: 'fast' });
     });
   });
 });

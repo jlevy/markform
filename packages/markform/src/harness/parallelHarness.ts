@@ -302,7 +302,8 @@ export async function runWithConcurrency<T>(
 
   if (maxConcurrent >= factories.length) {
     // Start all and await - no limiting needed
-    return Promise.allSettled(factories.map((f) => f()));
+    // Use async wrapper to convert sync throws to rejected promises
+    return Promise.allSettled(factories.map(async (f) => f()));
   }
 
   // Semaphore-based concurrency limiter with lazy promise creation

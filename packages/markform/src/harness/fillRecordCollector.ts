@@ -1,8 +1,13 @@
 /**
- * FillRecordCollector - Thread-safe, append-only collector for fill records.
+ * FillRecordCollector - Append-only collector for fill records.
  *
  * Implements FillCallbacks to capture all events during a form fill operation
  * and assembles them into a FillRecord at the end.
+ *
+ * Concurrency model: Uses an append-only event log pattern that safely handles
+ * interleaved async operations. JavaScript's single-threaded event loop ensures
+ * that synchronous array pushes are atomic, so concurrent async callbacks can
+ * safely append events without data races.
  *
  * @see docs/project/specs/active/plan-2026-01-29-fill-record.md
  */
@@ -126,10 +131,11 @@ export interface FillRecordCollectorOptions {
 // =============================================================================
 
 /**
- * Thread-safe collector for FillRecord data.
+ * Collector for FillRecord data from async form fill operations.
  *
- * Uses an append-only event log pattern for thread safety.
- * Events are aggregated when getRecord() is called.
+ * Uses an append-only event log pattern that safely handles interleaved
+ * async callbacks from parallel execution. Events are aggregated when
+ * getRecord() is called.
  */
 export class FillRecordCollector implements FillCallbacks {
   private readonly startedAt: string;
@@ -141,7 +147,7 @@ export class FillRecordCollector implements FillCallbacks {
   private readonly maxParallelAgents?: number;
   private customData: Record<string, unknown>;
 
-  // Append-only event log (thread-safe via JS single-threaded event loop)
+  // Append-only event log - safe for interleaved async operations
   private events: CollectorEvent[] = [];
 
   // Explicit status override
