@@ -381,20 +381,24 @@ export class FillRecordCollector implements FillCallbacks {
       string,
       Map<string, { start: ToolStartEvent; turnKey: string }>
     >();
-    let currentTurnKey = '';
+    // Track current turn key for each executionId (for proper sequential turn tracking)
+    const currentTurnKeyByExecutionId = new Map<string, string>();
 
     // Second pass: match tool start/end events and LLM tokens
     for (const event of this.events) {
       if (event.type === 'turn_start') {
-        currentTurnKey = turnKey(event.executionId, event.turnNumber);
-        activeToolsByTurn.set(currentTurnKey, new Map());
+        const key = turnKey(event.executionId, event.turnNumber);
+        currentTurnKeyByExecutionId.set(event.executionId, key);
+        activeToolsByTurn.set(key, new Map());
       } else if (event.type === 'tool_start') {
-        const activeTurnKey =
-          this.findTurnKeyForExecutionId(event.executionId, turnStartEvents) ?? currentTurnKey;
-        const activeTools = activeToolsByTurn.get(activeTurnKey);
-        if (activeTools) {
-          const toolKey = `${event.executionId}:${event.name}`;
-          activeTools.set(toolKey, { start: event, turnKey: activeTurnKey });
+        // Use the current turn for this executionId (not the most recent globally)
+        const activeTurnKey = currentTurnKeyByExecutionId.get(event.executionId);
+        if (activeTurnKey) {
+          const activeTools = activeToolsByTurn.get(activeTurnKey);
+          if (activeTools) {
+            const toolKey = `${event.executionId}:${event.name}`;
+            activeTools.set(toolKey, { start: event, turnKey: activeTurnKey });
+          }
         }
       } else if (event.type === 'tool_end') {
         const toolKey = `${event.executionId}:${event.name}`;
@@ -425,12 +429,14 @@ export class FillRecordCollector implements FillCallbacks {
           }
         }
       } else if (event.type === 'llm_call_end') {
-        const tk =
-          this.findTurnKeyForExecutionId(event.executionId, turnStartEvents) ?? currentTurnKey;
-        const tokens = turnTokens.get(tk);
-        if (tokens) {
-          tokens.input += event.inputTokens;
-          tokens.output += event.outputTokens;
+        // Use the current turn for this executionId
+        const tk = currentTurnKeyByExecutionId.get(event.executionId);
+        if (tk) {
+          const tokens = turnTokens.get(tk);
+          if (tokens) {
+            tokens.input += event.inputTokens;
+            tokens.output += event.outputTokens;
+          }
         }
       }
     }
