@@ -172,6 +172,16 @@ export interface LiveAgentConfig {
 
   /** Optional callbacks for observing agent execution */
   callbacks?: FillCallbacks;
+
+  /**
+   * Tool choice strategy for the LLM.
+   *
+   * - 'auto': Model decides whether to use tools
+   * - 'required' (default): Model MUST call a tool (some models like gpt-5-mini don't reliably call tools with 'auto')
+   *
+   * @default 'required'
+   */
+  toolChoice?: 'auto' | 'required';
 }
 
 // =============================================================================
@@ -442,6 +452,16 @@ export interface FillOptions {
    * - Audit trails and provenance
    */
   recordFill: boolean;
+
+  /**
+   * Tool choice strategy for the LLM.
+   *
+   * - 'auto': Model decides whether to use tools
+   * - 'required' (default): Model MUST call a tool (some models like gpt-5-mini don't reliably call tools with 'auto')
+   *
+   * @default 'required'
+   */
+  toolChoice?: 'auto' | 'required';
 }
 
 /**

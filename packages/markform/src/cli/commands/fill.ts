@@ -630,6 +630,7 @@ export function registerFillCommand(program: Command): void {
 
             // Pass first target role to agent (for instruction lookup)
             targetRole = targetRoles[0] === '*' ? AGENT_ROLE : (targetRoles[0] ?? AGENT_ROLE);
+
             const liveAgent = createLiveAgent({
               model,
               provider,

@@ -65,6 +65,7 @@ export class LiveAgent implements Agent {
   private additionalTools: Record<string, Tool>;
   private callbacks?: FillCallbacks;
   private executionId: string;
+  private toolChoice: 'auto' | 'required';
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -76,6 +77,10 @@ export class LiveAgent implements Agent {
     this.additionalTools = config.additionalTools ?? {};
     this.callbacks = config.callbacks;
     this.executionId = config.executionId ?? '0-serial';
+    // TODO: Make toolChoice configurable per-model or per-form in the future.
+    // For now, 'required' is always safe since Markform agents must use tools.
+    // Some models (e.g., gpt-5-mini) don't reliably call tools with 'auto'.
+    this.toolChoice = config.toolChoice ?? 'required';
 
     // Eagerly load web search tools to enable early logging
     if (this.enableWebSearch && this.provider) {
@@ -182,6 +187,7 @@ export class LiveAgent implements Agent {
       system: systemPrompt,
       prompt: contextPrompt,
       tools,
+      toolChoice: this.toolChoice,
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
 
