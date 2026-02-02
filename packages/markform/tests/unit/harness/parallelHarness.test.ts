@@ -667,7 +667,11 @@ describe('runWithConcurrency', () => {
 
       const createSlowFactory = (value: number, delayMs: number) => () => {
         factoryCallTimes.push(Date.now() - startTime);
-        return new Promise<number>((resolve) => setTimeout(() => { resolve(value); }, delayMs));
+        return new Promise<number>((resolve) =>
+          setTimeout(() => {
+            resolve(value);
+          }, delayMs),
+        );
       };
 
       // First two factories take 100ms each, third one should start ~100ms later
@@ -747,9 +751,24 @@ describe('runWithConcurrency', () => {
     it('maintains result order with varying completion times', async () => {
       // Factory with index 0 completes last, index 2 completes first
       const factories = [
-        () => new Promise<string>((resolve) => setTimeout(() => { resolve('slow'); }, 60)),
-        () => new Promise<string>((resolve) => setTimeout(() => { resolve('medium'); }, 30)),
-        () => new Promise<string>((resolve) => setTimeout(() => { resolve('fast'); }, 10)),
+        () =>
+          new Promise<string>((resolve) =>
+            setTimeout(() => {
+              resolve('slow');
+            }, 60),
+          ),
+        () =>
+          new Promise<string>((resolve) =>
+            setTimeout(() => {
+              resolve('medium');
+            }, 30),
+          ),
+        () =>
+          new Promise<string>((resolve) =>
+            setTimeout(() => {
+              resolve('fast');
+            }, 10),
+          ),
       ];
 
       const results = await runWithConcurrency(factories, 10);
