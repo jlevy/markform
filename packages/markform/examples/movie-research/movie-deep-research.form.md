@@ -1,15 +1,18 @@
 ---
 markform:
-  spec: "MF/0.1"
-  title: "Movie Deep Research"
-  description: "Comprehensive movie research form with ratings, box office, cast/crew, technical specs, streaming availability, and cultural analysis."
-  run_mode: "research"
+  spec: MF/0.1
+  title: Movie Deep Research
+  description: Comprehensive movie research form with ratings, box office, cast/crew,
+    technical specs, streaming availability, and cultural analysis.
+  run_mode: research
   harness:
     max_patches_per_turn: 15
     max_issues_per_turn: 5
   role_instructions:
-    user: "Enter the movie title and optionally the year for disambiguation."
-    agent: "Conduct comprehensive research and fill in all available fields for the specified movie.
+    user: Enter the movie title and optionally the year for disambiguation.
+    agent: >
+      Conduct comprehensive research and fill in all available fields for the specified
+      movie.
 
 
       WORKFLOW - Complete in this order:
@@ -54,7 +57,7 @@ markform:
 
       - For box office, use millions (e.g., 100.5 for $100.5M)
 
-      - Add notes for any missing, confusing, or unclear information\n"
+      - Add notes for any missing, confusing, or unclear information
 ---
 
 <!-- form id="movie_research_deep" title="Movie Deep Research" -->
@@ -436,4 +439,6 @@ One per line.
 <!-- /group -->
 
 <!-- /form -->
+
+
 

@@ -1,13 +1,13 @@
 ---
 markform:
-  spec: "MF/0.1"
-  title: "Simple Test Form"
-  description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
-  run_mode: "interactive"
+  spec: MF/0.1
+  title: Simple Test Form
+  description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+  run_mode: interactive
   roles:
-    - "user"
+    - user
   role_instructions:
-    user: "Fill in all fields in this form."
+    user: Fill in all fields in this form.
 ---
 
 <!-- form id="simple_test" title="Simple Test Form" -->
@@ -174,4 +174,6 @@ Optionally add a year.
 <!-- /group -->
 
 <!-- /form -->
+
+
 

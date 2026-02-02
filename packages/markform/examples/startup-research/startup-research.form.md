@@ -1,26 +1,19 @@
 ---
 markform:
-  spec: "MF/0.1"
-  run_mode: "research"
+  spec: MF/0.1
+  run_mode: research
   role_instructions:
-    user: "Enter the name of the startup company you want to research."
-    agent: "Research and fill in all company information for the specified startup.
-
+    user: Enter the name of the startup company you want to research.
+    agent: |
+      Research and fill in all company information for the specified startup.
       Guidelines:
-
       1. Start with Crunchbase - The company's Crunchbase page is the primary source
-
       2. Verify with company website and press releases
-
       3. Use official formats - Dates as YYYY-MM-DD, funding as USD amounts
-
       4. Fill funding rounds chronologically - Most recent first
-
       5. Include all relevant URLs - Website, LinkedIn, press coverage
-
       6. Leave unknown fields empty - Don't guess or fabricate information
-
-      7. Keep descriptions concise - Aim for 100-200 words max\n"
+      7. Keep descriptions concise - Aim for 100-200 words max
 ---
 
 <!-- form id="startup_research" title="Startup Research Form" -->
@@ -32,10 +25,6 @@ press coverage, and other web references.
 The user provides the company name, and the agent researches and fills all remaining
 fields.
 <!-- /description -->
-
-<!-- documentation ref="startup_research" -->
-Workflow:User enters the startup company nameAgent researches and fills company informationAgent includes all relevant URLs (website, LinkedIn, press, funding sources)Agent provides source citationsData Sources:Crunchbase profilesCompany websitesPress releasesLinkedIn company pagesTech news publications
-<!-- /documentation -->
 
 <!-- group id="basic_info" title="Company Information" -->
 
@@ -187,4 +176,6 @@ Include Crunchbase, company website, and any additional sources consulted.
 <!-- /group -->
 
 <!-- /form -->
+
+
 

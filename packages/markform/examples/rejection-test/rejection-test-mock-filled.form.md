@@ -1,13 +1,13 @@
 ---
 markform:
-  spec: "MF/0.1"
-  title: "Rejection Test Form"
-  description: "Tests type mismatch rejection and recovery behavior"
+  spec: MF/0.1
+  title: Rejection Test Form
+  description: Tests type mismatch rejection and recovery behavior
   roles:
-    - "agent"
+    - agent
   role_instructions:
-    user: "Fill in the fields you have direct knowledge of."
-    agent: "Complete the remaining fields based on the provided context."
+    user: Fill in the fields you have direct knowledge of.
+    agent: Complete the remaining fields based on the provided context.
 ---
 
 <!-- form id="rejection_test" title="Rejection Test Form" -->
@@ -39,4 +39,6 @@ Test Movie
 <!-- /group -->
 
 <!-- /form -->
+
+
 

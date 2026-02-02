@@ -82,8 +82,8 @@ markform:
 
     // Verify both survive round-trip
     const serialized = serializeForm(form);
-    expect(serialized).toContain('title: "Test Form Title"');
-    expect(serialized).toContain('description: "Test form description."');
+    expect(serialized).toContain('title: Test Form Title');
+    expect(serialized).toContain('description: Test form description.');
   });
 
   it('handles forms without title or description', () => {

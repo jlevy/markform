@@ -51,6 +51,7 @@ import type {
 import {
   AGENT_ROLE,
   DEFAULT_PRIORITY,
+  DEFAULT_YAML_LINE_WIDTH,
   MF_SPEC_VERSION,
   transformHarnessConfigToYaml,
 } from '../settings.js';
@@ -1467,10 +1468,12 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
     markform: markformSection,
   };
 
-  // Serialize to YAML with proper formatting for multiline strings
+  // Serialize to YAML with readable formatting
+  // - No forced quoting (YAML only quotes when necessary)
+  // - lineWidth provides reasonable wrapping for long strings
+  // - Plain keys without quotes
   const yamlStr = YAML.stringify(frontmatterObj, {
-    lineWidth: 0, // Don't wrap lines
-    defaultStringType: 'QUOTE_DOUBLE',
+    lineWidth: DEFAULT_YAML_LINE_WIDTH,
     defaultKeyType: 'PLAIN',
   });
 

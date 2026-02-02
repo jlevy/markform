@@ -1,21 +1,24 @@
 ---
 markform:
-  spec: "MF/0.1"
-  title: "Startup Deep Research"
-  description: "Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence."
-  run_mode: "research"
+  spec: MF/0.1
+  title: Startup Deep Research
+  description: Comprehensive startup intelligence gathering with company info, founders,
+    funding, competitors, social media, and community presence.
+  run_mode: research
   harness:
     max_patches_per_turn: 10
     max_issues_per_turn: 5
   role_instructions:
-    user: "Enter the startup name and any clarifying details (website, founder names, etc.)."
-    agent: "Research and fill in all fields for the specified startup.
+    user: Enter the startup name and any clarifying details (website, founder names, etc.).
+    agent: >
+      Research and fill in all fields for the specified startup.
 
       Guidelines:
 
       1. Start with the company website and Crunchbase for basic info
 
-      2. Cross-reference funding data with multiple sources (Crunchbase, PitchBook, press releases)
+      2. Cross-reference funding data with multiple sources (Crunchbase, PitchBook,
+      press releases)
 
       3. Search Hacker News via hn.algolia.com for discussions and launches
 
@@ -29,7 +32,7 @@ markform:
 
       8. Leave unknown fields empty - don't guess or fabricate
 
-      9. Keep descriptions concise (50-150 words max)\n"
+      9. Keep descriptions concise (50-150 words max)
 ---
 
 <!-- form id="startup_deep_research" title="Startup Deep Research" -->
@@ -440,4 +443,6 @@ unavailable”, “Company is in stealth mode”, “Limited public information 
 <!-- /group -->
 
 <!-- /form -->
+
+
 

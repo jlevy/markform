@@ -120,6 +120,17 @@ export const MAX_FORMS_IN_MENU = 30;
 export const DEFAULT_PORT = 3344;
 
 // =============================================================================
+// YAML Formatting
+// =============================================================================
+
+/**
+ * Default line width for YAML output.
+ * Long strings will wrap at this column for readability.
+ * 88 is a common line width that works well with most editors.
+ */
+export const DEFAULT_YAML_LINE_WIDTH = 88;
+
+// =============================================================================
 // Harness Config Mapping (snake_case ↔ camelCase)
 // =============================================================================
 
