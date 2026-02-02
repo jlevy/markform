@@ -651,6 +651,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           issues: turnIssues,
           patches,
           rejectedPatches: stepResult.rejectedPatches ?? [],
+          executionId: '0-serial',
         });
       } catch {
         // Ignore callback errors
@@ -852,43 +853,43 @@ async function fillFormParallel(
         /* ignore */
       }
 
-      // Run each batch item with its own multi-turn loop, concurrently
-      const itemPromises = batchItems.map((item, itemIndex) => {
-        // Create a scoped agent for this batch item (or reuse test agent)
-        const scopedAgent: Agent =
-          options._testAgent ??
-          createLiveAgent({
-            model: model!,
-            systemPromptAddition: options.systemPromptAddition,
-            targetRole: targetRoles[0] ?? AGENT_ROLE,
-            provider,
-            enableWebSearch: options.enableWebSearch,
-            additionalTools: options.additionalTools,
-            callbacks: mergedCallbacks,
-            maxStepsPerTurn: options.maxStepsPerTurn,
-          });
+      // Create promise factories for each batch item (for true concurrency limiting)
+      // Factories are called lazily when a slot becomes available
+      const itemFactories = batchItems.map((item, itemIndex) => {
+        return () => {
+          // Create a scoped agent for this batch item (or reuse test agent)
+          const scopedAgent: Agent =
+            options._testAgent ??
+            createLiveAgent({
+              model: model!,
+              systemPromptAddition: options.systemPromptAddition,
+              targetRole: targetRoles[0] ?? AGENT_ROLE,
+              provider,
+              enableWebSearch: options.enableWebSearch,
+              additionalTools: options.additionalTools,
+              callbacks: mergedCallbacks,
+              maxStepsPerTurn: options.maxStepsPerTurn,
+            });
 
-        return runMultiTurnForItems(
-          form,
-          scopedAgent,
-          [item],
-          targetRoles,
-          maxPatchesPerTurn,
-          maxIssuesPerTurn,
-          maxTurnsTotal,
-          turnCount,
-          options,
-          order,
-          `${order}-batch-${batch.batchId}-${itemIndex}`,
-          mergedCallbacks,
-        );
+          return runMultiTurnForItems(
+            form,
+            scopedAgent,
+            [item],
+            targetRoles,
+            maxPatchesPerTurn,
+            maxIssuesPerTurn,
+            maxTurnsTotal,
+            turnCount,
+            options,
+            order,
+            `${order}-batch-${batch.batchId}-${itemIndex}`,
+            mergedCallbacks,
+          );
+        };
       });
 
-      // Limit concurrency
-      const results = await runWithConcurrency(
-        itemPromises.map((p) => p),
-        maxParallelAgents,
-      );
+      // Run with concurrency limit (factories are called lazily)
+      const results = await runWithConcurrency(itemFactories, maxParallelAgents);
 
       let batchPatches = 0;
       const batchErrors: string[] = [];
@@ -1118,6 +1119,7 @@ async function runMultiTurnForItems(
         issues: scopedIssues,
         patches: response.patches,
         rejectedPatches: previousRejections ?? [],
+        executionId,
       });
     } catch {
       /* ignore */

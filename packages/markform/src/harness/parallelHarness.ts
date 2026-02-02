@@ -197,8 +197,8 @@ export class ParallelHarness {
 
       const maxConcurrent = this.config.maxParallelAgents ?? DEFAULT_MAX_PARALLEL_AGENTS;
 
-      // Create promises for each batch item (limited concurrency)
-      const agentPromises: Promise<AgentResponse>[] = [];
+      // Create promise factories for each batch item (for true concurrency limiting)
+      const agentFactories: (() => Promise<AgentResponse>)[] = [];
       const itemFieldIds = new Map<number, string[]>();
 
       for (let i = 0; i < batchItems.length; i++) {
@@ -208,7 +208,7 @@ export class ParallelHarness {
         itemFieldIds.set(i, targetFieldIds);
 
         if (scopedIssues.length === 0) {
-          agentPromises.push(Promise.resolve({ patches: [] }));
+          agentFactories.push(() => Promise.resolve({ patches: [] }));
           continue;
         }
 
@@ -222,11 +222,12 @@ export class ParallelHarness {
         // Use agentFactory if provided, otherwise use primary agent
         const agent = this.config.agentFactory ? this.config.agentFactory(request) : primaryAgent;
 
-        agentPromises.push(agent.fillFormTool(scopedIssues, this.form, maxPatches));
+        // Wrap in factory so promise starts when slot is available
+        agentFactories.push(() => agent.fillFormTool(scopedIssues, this.form, maxPatches));
       }
 
-      // Run with concurrency limit
-      const results = await runWithConcurrency(agentPromises, maxConcurrent);
+      // Run with concurrency limit (factories are called lazily)
+      const results = await runWithConcurrency(agentFactories, maxConcurrent);
 
       // Merge all patches from parallel agents
       const allPatches: Patch[] = [];
@@ -286,26 +287,35 @@ export class ParallelHarness {
 // =============================================================================
 
 /**
- * Run promises with a concurrency limit.
+ * Run promise factories with a concurrency limit.
+ * Takes an array of functions that create promises (factories), not already-started promises.
+ * This ensures concurrency limiting actually works - promises are started lazily.
  * Returns results in the same order as input.
  */
 export async function runWithConcurrency<T>(
-  promises: Promise<T>[],
+  factories: (() => Promise<T>)[],
   maxConcurrent: number,
 ): Promise<PromiseSettledResult<T>[]> {
-  if (maxConcurrent >= promises.length) {
-    return Promise.allSettled(promises);
+  if (factories.length === 0) {
+    return [];
   }
 
-  // Simple semaphore-based concurrency limiter
-  const results: PromiseSettledResult<T>[] = new Array<PromiseSettledResult<T>>(promises.length);
+  if (maxConcurrent >= factories.length) {
+    // Start all and await - no limiting needed
+    return Promise.allSettled(factories.map((f) => f()));
+  }
+
+  // Semaphore-based concurrency limiter with lazy promise creation
+  const results: PromiseSettledResult<T>[] = new Array<PromiseSettledResult<T>>(factories.length);
   let nextIndex = 0;
 
   async function runNext(): Promise<void> {
-    while (nextIndex < promises.length) {
+    while (nextIndex < factories.length) {
       const idx = nextIndex++;
+      const factory = factories[idx];
+      if (!factory) continue;
       try {
-        const value = await promises[idx]!;
+        const value = await factory(); // Create promise here, when slot is available
         results[idx] = { status: 'fulfilled', value };
       } catch (reason) {
         results[idx] = { status: 'rejected', reason };
@@ -313,7 +323,9 @@ export async function runWithConcurrency<T>(
     }
   }
 
-  const workers = Array.from({ length: Math.min(maxConcurrent, promises.length) }, () => runNext());
+  const workers = Array.from({ length: Math.min(maxConcurrent, factories.length) }, () =>
+    runNext(),
+  );
   await Promise.all(workers);
 
   return results;

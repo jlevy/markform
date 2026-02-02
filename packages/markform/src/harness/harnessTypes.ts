@@ -456,6 +456,8 @@ export interface TurnProgress {
   patches: Patch[];
   /** Empty if patches applied successfully, contains rejection details if failed */
   rejectedPatches: PatchRejection[];
+  /** Execution ID for parallel tracking (e.g., "1-batch-research-0") */
+  executionId?: string;
 }
 
 /**
