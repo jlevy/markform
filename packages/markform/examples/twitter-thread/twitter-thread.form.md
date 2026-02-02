@@ -11,36 +11,66 @@ markform:
     user: |
       Provide your raw content and any context about your audience and goals.
       The content can be a transcript, blog draft, notes, or any text.
+      Include as much detail as possible: specific examples, names, links, code.
     agent: |
       Transform the input into a compelling Twitter thread. Work through each stage in order—do not skip stages.
 
-      STAGE 1 - CLEANUP: Edit raw content into clean prose. Fix errors, remove filler.
+      VOICE AND STYLE (CRITICAL):
+      - Write like a smart person talking, not a press release
+      - Be informal: use contractions, conversational phrasing
+      - Be opinionated: take strong positions, not wishy-washy hedging
+      - Be specific: name people, cite sources, link to things
+      - Be novel: each tweet should make the reader pause and think
+      - AVOID: generic "sounds like perfect English" corporate speak
+      - AVOID: vague claims like "improves quality" without showing HOW
 
-      STAGE 2 - EXTRACT INSIGHTS: Identify every key insight, claim, or idea worth sharing.
-      Use the insights table to capture each one with why it matters.
+      Good example: "LLMs are, first and foremost, fuzzy subgraph matching machines"
+      Bad example: "LLMs have limitations in certain reasoning tasks"
 
-      STAGE 3 - PRIORITIZE: Rank insights by impact. Identify which works as the hook,
-      which are supporting points, which are examples. Not everything needs to be included.
+      Good example: "Like Katalin Karikó, for instance" (names a specific person)
+      Bad example: "Like many successful researchers" (generic)
 
-      STAGE 4 - STRUCTURE: Plan the thread flow. Map ranked insights to tweet positions.
-      Consider: hook → context → main points → examples → conclusion/CTA.
+      STAGE 1 - CLEANUP: Edit raw content. PRESERVE specific names, examples, links, code.
 
-      STAGE 5 - DRAFT: Write each tweet with character count. Stay under 280 chars.
-      Include thread numbering (1/, 2/, etc.).
+      STAGE 2 - EXTRACT INSIGHTS: Find CONCRETE, NOVEL insights worth sharing.
+      Look for:
+      - Specific examples with names/links (people, repos, books, episodes)
+      - Technical details that are precise and memorable
+      - Personal observations ("As a researcher, I find...")
+      - Contrarian or surprising claims
+      - Things that make you go "huh, I never thought of it that way"
+      AVOID: Generic claims that could be in any article on the topic
 
-      STAGE 6 - REVIEW: Compare drafts against structure plan. Check each tweet for:
-      - Character limit compliance
-      - Clarity and punch
-      - Flow from previous tweet
-      - Standalone readability
+      STAGE 3 - PRIORITIZE: Rank by NOVELTY and specificity.
+      The hook should be surprising or contrarian, not a generic claim.
+      Include tweets that link to specific things (repos, docs, people, books).
 
-      STAGE 7 - FINAL: Produce polished, copy-paste ready output. Verify all checks pass.
+      STAGE 4 - STRUCTURE: Plan the thread. Longer is fine (15-25 tweets) if every
+      tweet has real substance. Include:
+      - Specific examples with links
+      - Technical details that are precise
+      - Personal takes and opinions
+      - At least 2-3 tweets that reference specific things to click/explore
+
+      STAGE 5 - DRAFT: Write informally. Sound like a person, not a brand.
+      - Use contractions (I've, it's, that's)
+      - Use parentheticals for asides (if you're a researcher, you'll have noticed)
+      - Be direct and opinionated
+      - Include specific names, links, code when relevant
+
+      STAGE 6 - REVIEW: Check each tweet:
+      - Does it sound like a person talking? (not corporate)
+      - Is it specific? (names, examples, links)
+      - Is it novel? (makes you think, not just nod)
+      - Would someone quote-tweet this specific insight?
+
+      STAGE 7 - FINAL: Produce polished output. Every tweet should be quotable.
 
       Key principles:
-      - The hook determines if anyone reads the rest
-      - One idea per tweet—don't cram
-      - Each tweet should make sense if quoted alone
-      - End with value (summary, CTA, or invitation to discuss)
+      - Generic = worthless. Specific = valuable.
+      - Sound like yourself, not like marketing copy
+      - Each tweet should teach something or make someone think
+      - Include things to click on (links, repos, names to search)
   harness_config:
     max_issues_per_turn: 5
     max_patches_per_turn: 15
