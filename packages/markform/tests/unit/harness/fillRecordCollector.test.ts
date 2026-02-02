@@ -714,4 +714,140 @@ describe('FillRecordCollector', () => {
       expect(record.sessionId).toBeDefined();
     });
   });
+
+  describe('parallel execution tracking', () => {
+    it('tracks multiple parallel execution threads correctly', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+        parallelEnabled: true,
+      });
+
+      // Order 0 - serial
+      collector.onTurnStart({ turnNumber: 1, issuesCount: 5, order: 0, executionId: '0-serial' });
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 5,
+        patchesApplied: 3,
+        requiredIssuesRemaining: 2,
+        isComplete: false,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        executionId: '0-serial',
+      });
+
+      // Order 1 - parallel batch with 3 items running concurrently
+      // Item 0
+      collector.onTurnStart({
+        turnNumber: 2,
+        issuesCount: 2,
+        order: 1,
+        executionId: '1-batch-test-0',
+      });
+      // Item 1
+      collector.onTurnStart({
+        turnNumber: 2,
+        issuesCount: 3,
+        order: 1,
+        executionId: '1-batch-test-1',
+      });
+      // Item 2
+      collector.onTurnStart({
+        turnNumber: 2,
+        issuesCount: 1,
+        order: 1,
+        executionId: '1-batch-test-2',
+      });
+
+      // Completions can come in any order
+      collector.onTurnComplete({
+        turnNumber: 2,
+        issuesShown: 3,
+        patchesApplied: 2,
+        requiredIssuesRemaining: 1,
+        isComplete: false,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        executionId: '1-batch-test-1',
+      });
+      collector.onTurnComplete({
+        turnNumber: 2,
+        issuesShown: 2,
+        patchesApplied: 2,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        executionId: '1-batch-test-0',
+      });
+      collector.onTurnComplete({
+        turnNumber: 2,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        executionId: '1-batch-test-2',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      // Should have 4 timeline entries: 1 serial + 3 parallel
+      expect(record.timeline).toHaveLength(4);
+
+      // Check execution metadata
+      expect(record.execution.parallelEnabled).toBe(true);
+      expect(record.execution.totalTurns).toBe(4);
+      expect(record.execution.executionThreads).toHaveLength(4);
+      expect(record.execution.executionThreads).toContain('0-serial');
+      expect(record.execution.executionThreads).toContain('1-batch-test-0');
+      expect(record.execution.executionThreads).toContain('1-batch-test-1');
+      expect(record.execution.executionThreads).toContain('1-batch-test-2');
+
+      // Verify each timeline entry has correct executionId
+      const serialEntry = record.timeline.find((e) => e.executionId === '0-serial');
+      expect(serialEntry).toBeDefined();
+      expect(serialEntry!.order).toBe(0);
+      expect(serialEntry!.turnNumber).toBe(1);
+
+      const parallelEntries = record.timeline.filter((e) => e.executionId.startsWith('1-batch'));
+      expect(parallelEntries).toHaveLength(3);
+      parallelEntries.forEach((entry) => {
+        expect(entry.order).toBe(1);
+        expect(entry.turnNumber).toBe(2);
+      });
+    });
+
+    it('handles parallel turns without executionId using legacy fallback', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      // Turn without executionId in onTurnComplete (legacy behavior)
+      collector.onTurnStart({ turnNumber: 1, issuesCount: 1, order: 0, executionId: '0-serial' });
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        // No executionId - should match via turnNumber fallback
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline).toHaveLength(1);
+      expect(record.timeline[0]!.executionId).toBe('0-serial');
+    });
+  });
 });
