@@ -46,26 +46,9 @@ Error: ENOENT: no such file or directory, open '/nonexistent/file.form.md'
 # Test: apply patches a form field
 
 ```console
-$ cp examples/simple/simple.form.md /tmp/test-apply.form.md && $CLI apply /tmp/test-apply.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | head -19
----
-markform:
-  spec: "MF/0.1"
-  run_mode: "interactive"
-role_instructions:
-  user: "Fill in the fields you have direct knowledge of."
-  agent: "Complete the remaining fields based on the provided context."
----
-
-{% form id="simple_test" title="Simple Test Form" %}
-
-{% description ref="simple_test" %}
-A fully interactive form demonstrating all Markform v0.1 field types.
-Fill all fields using interactive prompts - no LLM API key needed.
-{% /description %}
-
-{% group id="basic_fields" title="Basic Fields" %}
-
-{% field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true %}
+$ cp examples/simple/simple.form.md /tmp/test-apply.form.md && $CLI apply /tmp/test-apply.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | grep -A 1 'id="name"'
+<!-- field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true -->
+[..]value
 ? 0
 ```
 

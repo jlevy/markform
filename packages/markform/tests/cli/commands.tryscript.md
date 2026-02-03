@@ -362,7 +362,7 @@ Form State: ◌ empty
 # Test: validate --syntax=tags passes for Markdoc syntax file
 
 ```console
-$ $CLI validate examples/simple/simple.form.md --syntax=tags
+$ $CLI validate examples/simple/simple-tags-syntax.form.md --syntax=tags
 Form Validation Report
 Title: Simple Test Form
 
@@ -374,10 +374,10 @@ Form State: ◌ empty
 # Test: validate --syntax=comments fails for Markdoc syntax file
 
 ```console
-$ $CLI validate examples/simple/simple.form.md --syntax=comments
+$ $CLI validate examples/simple/simple-tags-syntax.form.md --syntax=comments
 Syntax violations found (expected: comments):
 
-  Line 12: Markdoc tag found
+  Line 13: Markdoc tag found
 ...
 ? 1
 ```
@@ -385,7 +385,7 @@ Syntax violations found (expected: comments):
 # Test: validate --syntax=tags fails for comment syntax file
 
 ```console
-$ $CLI validate examples/simple/simple-comment-syntax.form.md --syntax=tags
+$ $CLI validate examples/simple/simple.form.md --syntax=tags
 Syntax violations found (expected: tags):
 
   Line 13: HTML comment found
@@ -404,7 +404,7 @@ Fatal error: Error: Invalid syntax value: invalid. Must be 'comments' or 'tags'.
 # Test: validate --syntax=comments with --format json outputs violations
 
 ```console
-$ $CLI validate examples/simple/simple.form.md --syntax=comments --format json 2>&1 | grep -A2 '"error"'
+$ $CLI validate examples/simple/simple-tags-syntax.form.md --syntax=comments --format json 2>&1 | grep -A2 '"error"'
   "error": "syntax_violation",
   "expected": "comments",
   "violations": [
