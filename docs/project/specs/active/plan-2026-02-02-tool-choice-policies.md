@@ -1,6 +1,6 @@
 # Plan Spec: Tool Choice Policies for Reliable Form Filling
 
-**Date:** 2026-02-02 (last updated 2026-02-02)
+**Date:** 2026-02-02 (last updated 2026-02-03)
 
 **Author:** AI Research
 
@@ -77,16 +77,30 @@ A new `toolPolicy` option controls how the harness manages tool selection:
 
 ```typescript
 type ToolPolicy =
-  | 'auto'              // Current behavior: model chooses freely
-  | 'require-tools'     // toolChoice: 'required' on every turn
-  | 'research-first'    // Force webSearch on first turn, then auto
-  | 'research-always'   // Force webSearch every turn until form complete
-  | 'two-phase'         // Phase 1: research only, Phase 2: fill only
+  | 'none'                // No tools provided to agent
+  | 'auto'                // Model chooses freely whether to use tools
+  | 'require_tools'       // toolChoice: 'required' on every turn (DEFAULT)
+  | 'web_search_first'    // Force web_search on first turn, then require_tools
+  | 'web_search_always'   // Force web_search every turn until form complete
+  | 'two_phase'           // Phase 1: web search only, Phase 2: fill only
 ```
+
+**Default:** `require_tools` — ensures the agent always makes progress by calling a tool
+(either `fill_form` or `web_search`) on every turn. This prevents "analysis paralysis"
+where models describe what they would do without actually doing it.
 
 ### Policy Behaviors
 
-#### `auto` (Default - Current Behavior)
+#### `none`
+
+```
+No tools provided to agent
+Agent can only generate text responses
+```
+
+**When to use:** Testing, debugging, or when tools are intentionally disabled
+
+#### `auto`
 
 ```
 toolChoice: 'auto' on every turn
@@ -94,9 +108,10 @@ Model decides when to search and when to fill
 No enforcement of research before filling
 ```
 
-**When to use:** Simple forms, fields that don't need external research, testing
+**When to use:** Legacy behavior, simple forms that don't need research, or when you
+want maximum model flexibility
 
-#### `require-tools`
+#### `require_tools` (Default)
 
 ```
 toolChoice: 'required' on every turn
@@ -105,9 +120,10 @@ Prevents "analysis paralysis" where model talks without acting
 Uses termination detection to allow final response
 ```
 
-**When to use:** General production use, ensures progress every turn
+**When to use:** General production use, ensures progress every turn. This is the
+recommended default for most forms.
 
-#### `research-first`
+#### `web_search_first`
 
 ```
 Turn 1: toolChoice: { type: 'tool', toolName: 'web_search' }
@@ -116,7 +132,7 @@ Turn 2+: toolChoice: 'required'
 
 **When to use:** Forms with factual fields that need current data, moderate latency tolerance
 
-#### `research-always`
+#### `web_search_always`
 
 ```
 Every turn: First call must be web_search (via prepareStep logic)
@@ -138,7 +154,7 @@ prepareStep: ({ lastToolResults }) => {
 },
 ```
 
-#### `two-phase`
+#### `two_phase`
 
 ```
 Phase 1 (Research): Only web_search available, toolChoice: 'required'
@@ -163,12 +179,12 @@ interface FillOptions {
    * Tool choice policy for agent tool selection.
    * Controls how strictly the harness enforces tool usage.
    *
-   * @default 'auto'
+   * @default 'require_tools'
    */
   toolPolicy?: ToolPolicy;
 
   /**
-   * For 'two-phase' policy: max turns in research phase.
+   * For 'two_phase' policy: max turns in research phase.
    * After this many turns, switches to fill phase.
    *
    * @default 5
@@ -176,7 +192,7 @@ interface FillOptions {
   researchPhaseTurns?: number;
 
   /**
-   * For 'research-always': max searches per turn.
+   * For 'web_search_always': max searches per turn.
    * Prevents excessive API calls on forms with many fields.
    *
    * @default 3
@@ -192,9 +208,9 @@ interface FillOptions {
 markform:
   spec: MF/0.1
   harness_config:
-    tool_policy: research-first    # New option
-    research_phase_turns: 5        # For two-phase
-    max_searches_per_turn: 3       # For research-always
+    tool_policy: web_search_first    # New option
+    research_phase_turns: 5          # For two_phase
+    max_searches_per_turn: 3         # For web_search_always
 ---
 ```
 
@@ -202,10 +218,10 @@ markform:
 
 ```bash
 # New --tool-policy flag
-markform fill form.md --tool-policy=research-first
+markform fill form.md --tool-policy=web_search_first
 
 # Override policy at CLI level
-markform fill form.md --tool-policy=two-phase --research-phase-turns=8
+markform fill form.md --tool-policy=two_phase --research-phase-turns=8
 ```
 
 ### Field-Level Research Hints (Future Enhancement)
@@ -234,20 +250,20 @@ From research, key provider differences to handle:
 | DeepSeek | Unreliable multi-turn; best with `auto` or single-turn `required` |
 | xAI | Can't force provider-defined tools; use grok-4-1-fast |
 
-**Recommendation:** Test `two-phase` and `research-always` across all providers before
-recommending as defaults. `require-tools` should work reliably across all providers.
+**Recommendation:** Test `two_phase` and `web_search_always` across all providers before
+recommending as defaults. `require_tools` should work reliably across all providers.
 
 ### Areas of Uncertainty (Requiring Testing)
 
 1. **DeepSeek multi-turn behavior**: Research indicates unreliable tool calling after first turn.
    Need to test:
    - Does `toolChoice: 'required'` work reliably on DeepSeek?
-   - What happens with `two-phase` policy?
+   - What happens with `two_phase` policy?
    - Should we auto-downgrade to `auto` for DeepSeek?
 
 2. **Anthropic extended thinking**: `toolChoice: 'required'` may conflict with extended thinking.
    Need to test:
-   - Does `research-first` work with Claude 4 extended thinking?
+   - Does `web_search_first` work with Claude 4 extended thinking?
    - Should we detect extended thinking and adjust policy?
 
 3. **Termination detection**: With `toolChoice: 'required'`, how do we allow final text response?
@@ -259,9 +275,9 @@ recommending as defaults. `require-tools` should work reliably across all provid
 4. **Parallel execution interaction**: When `enableParallel: true`:
    - Should each parallel agent have its own tool policy?
    - Should research happen in loose-serial before parallel batches?
-   - Test: parallel agents with `research-first` - do they all search or just one?
+   - Test: parallel agents with `web_search_first` - do they all search or just one?
 
-5. **Turn limits**: With `research-always`, does forcing search on every turn:
+5. **Turn limits**: With `web_search_always`, does forcing search on every turn:
    - Hit rate limits with providers?
    - Significantly impact latency?
    - Improve accuracy enough to justify cost?
@@ -270,7 +286,7 @@ recommending as defaults. `require-tools` should work reliably across all provid
 
 ### Phase 1: Core Policy Engine
 
-**Goal:** Implement `toolPolicy` option with `auto`, `require-tools`, and `research-first`.
+**Goal:** Implement `toolPolicy` option with `none`, `auto`, `require_tools`, and `web_search_first`.
 
 - [ ] Add `ToolPolicy` type to `harnessTypes.ts`
 - [ ] Add `toolPolicy` to `FillOptions` and `HarnessConfig`
@@ -284,13 +300,13 @@ recommending as defaults. `require-tools` should work reliably across all provid
 
 ### Phase 2: Advanced Policies
 
-**Goal:** Implement `research-always` and `two-phase` policies.
+**Goal:** Implement `web_search_always` and `two_phase` policies.
 
-- [ ] Implement `research-always` with `prepareStep` logic
-- [ ] Implement `two-phase` with separate agent invocations
+- [ ] Implement `web_search_always` with `prepareStep` logic
+- [ ] Implement `two_phase` with separate agent invocations
 - [ ] Add `researchPhaseTurns` and `maxSearchesPerTurn` options
 - [ ] Update frontmatter parser for new options
-- [ ] Add session transcript support for two-phase (mark phase transitions)
+- [ ] Add session transcript support for two_phase (mark phase transitions)
 - [ ] Write integration tests for advanced policies
 
 ### Phase 3: Provider Testing & Documentation
@@ -310,8 +326,8 @@ recommending as defaults. `require-tools` should work reliably across all provid
 **Goal:** Ensure policies work correctly with parallel execution.
 
 - [ ] Define policy behavior for parallel agents
-- [ ] Test `research-first` with parallel batches
-- [ ] Test `two-phase` with parallel batches (research → parallel fill)
+- [ ] Test `web_search_first` with parallel batches
+- [ ] Test `two_phase` with parallel batches (research → parallel fill)
 - [ ] Add policy options to `ParallelHarnessConfig`
 - [ ] Document parallel + policy interaction
 
@@ -325,17 +341,18 @@ recommending as defaults. `require-tools` should work reliably across all provid
 
 ### Integration Tests (Mock Agents)
 
-- `auto`: Agent receives no toolChoice override
-- `require-tools`: Agent receives `toolChoice: 'required'`
-- `research-first`: Turn 1 gets forced webSearch, turn 2+ gets required
-- `research-always`: Each turn starts with forced webSearch
-- `two-phase`: Two agent invocations with different tool sets
+- `none`: Agent receives no tools
+- `auto`: Agent receives `toolChoice: 'auto'`
+- `require_tools`: Agent receives `toolChoice: 'required'`
+- `web_search_first`: Turn 1 gets forced web_search, turn 2+ gets required
+- `web_search_always`: Each turn starts with forced web_search
+- `two_phase`: Two agent invocations with different tool sets
 
 ### End-to-End Tests (Real LLM Calls)
 
 - Test each policy with a factual research form
 - Verify web search is actually called (check fill record)
-- Compare accuracy: auto vs research-first vs two-phase
+- Compare accuracy: auto vs web_search_first vs two_phase
 - Measure latency impact
 
 ### Provider Matrix Tests
@@ -343,34 +360,37 @@ recommending as defaults. `require-tools` should work reliably across all provid
 Create automated tests that run the same form across providers:
 
 ```
-┌─────────────────┬────────┬──────────┬─────────┬────────┐
-│ Policy          │ OpenAI │ Anthropic│ DeepSeek│ Google │
-├─────────────────┼────────┼──────────┼─────────┼────────┤
-│ auto            │   ✓    │    ✓     │    ✓    │   ✓    │
-│ require-tools   │   ✓    │    ✓     │    ?    │   ✓    │
-│ research-first  │   ✓    │    ✓     │    ?    │   ✓    │
-│ research-always │   ✓    │    ?     │    ?    │   ✓    │
-│ two-phase       │   ✓    │    ✓     │    ?    │   ✓    │
-└─────────────────┴────────┴──────────┴─────────┴────────┘
+┌───────────────────┬────────┬──────────┬─────────┬────────┐
+│ Policy            │ OpenAI │ Anthropic│ DeepSeek│ Google │
+├───────────────────┼────────┼──────────┼─────────┼────────┤
+│ none              │   ✓    │    ✓     │    ✓    │   ✓    │
+│ auto              │   ✓    │    ✓     │    ✓    │   ✓    │
+│ require_tools     │   ✓    │    ✓     │    ?    │   ✓    │
+│ web_search_first  │   ✓    │    ✓     │    ?    │   ✓    │
+│ web_search_always │   ✓    │    ?     │    ?    │   ✓    │
+│ two_phase         │   ✓    │    ✓     │    ?    │   ✓    │
+└───────────────────┴────────┴──────────┴─────────┴────────┘
 ```
 
 ## Rollout Plan
 
-1. **Phase 1 release**: Add `toolPolicy` with `auto`, `require-tools`, `research-first`
-   - Default remains `auto` for backward compatibility
-   - Document as experimental
+1. **Phase 1 release**: Add `toolPolicy` with `none`, `auto`, `require_tools`, `web_search_first`
+   - Default is `require_tools` for reliable tool usage out of the box
+   - Document policy options and when to use each
 
-2. **Phase 2 release**: Add `research-always` and `two-phase`
+2. **Phase 2 release**: Add `web_search_always` and `two_phase`
    - Include provider testing results
    - Document recommended policies per use case
 
-3. **Future consideration**: Change default to `require-tools` once validated across providers
+3. **Backward compatibility**: Existing forms without `tool_policy` get `require_tools`
+   - This is a behavior change from implicit `auto`, but improves reliability
+   - Users can explicitly set `tool_policy: auto` if needed
 
 ## Open Questions
 
-1. **Default policy**: Should we change the default from `auto` to `require-tools`?
-   - Pro: More reliable tool usage out of the box
-   - Con: Breaking change, may cause issues with DeepSeek
+1. **DeepSeek compatibility**: Does `require_tools` work reliably on DeepSeek?
+   - If not, should we auto-detect DeepSeek and fall back to `auto`?
+   - Need testing to determine
 
 2. **Per-field policies**: Is form-level policy sufficient, or do we need field-level control?
    - Current decision: Form-level first, field-level in v2
@@ -382,7 +402,7 @@ Create automated tests that run the same form across providers:
 4. **Cost tracking**: Should we track web search costs separately in fill records?
    - Recommendation: Yes, add `webSearchCalls` count to fill record
 
-5. **Policy composition with `order`**: For `two-phase`, should research happen only for
+5. **Policy composition with `order`**: For `two_phase`, should research happen only for
    the current order level, or research all fields upfront?
    - Recommendation: Research current order level only (progressive disclosure)
 
