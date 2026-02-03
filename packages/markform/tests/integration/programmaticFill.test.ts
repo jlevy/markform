@@ -10,7 +10,11 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { parseForm } from '../../src/engine/parse.js';
-import { fillForm } from '../../src/harness/programmaticFill.js';
+import {
+  fillForm,
+  serialExecutionId,
+  batchExecutionId,
+} from '../../src/harness/programmaticFill.js';
 import { createMockAgent } from '../../src/harness/mockAgent.js';
 
 // =============================================================================
@@ -801,6 +805,248 @@ describe('programmatic fill API - integration tests', () => {
         record.formProgress.skippedFields +
         record.formProgress.abortedFields;
       expect(sum).toBe(record.formProgress.totalFields);
+    });
+  });
+
+  describe('parallel execution', () => {
+    // Form with parallel batches for testing
+    const PARALLEL_FORM = `---
+markform:
+  spec: MF/0.1
+  roles:
+    - agent
+  role_instructions:
+    agent: "Fill in all fields."
+---
+{% form id="parallel_test" %}
+
+{% group id="overview" order=0 %}
+{% field kind="string" id="company_name" label="Company Name" role="agent" required=true %}{% /field %}
+{% /group %}
+
+{% group id="financials" parallel="research" order=0 %}
+{% field kind="string" id="revenue" label="Revenue" role="agent" %}{% /field %}
+{% /group %}
+
+{% group id="team" parallel="research" order=0 %}
+{% field kind="string" id="leadership" label="Leadership" role="agent" %}{% /field %}
+{% /group %}
+
+{% group id="market" parallel="research" order=0 %}
+{% field kind="string" id="competitors" label="Competitors" role="agent" %}{% /field %}
+{% /group %}
+
+{% group id="synthesis" order=10 %}
+{% field kind="string" id="overall" label="Overall" role="agent" required=true %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    const PARALLEL_FORM_FILLED = `---
+markform:
+  spec: MF/0.1
+  roles:
+    - agent
+  role_instructions:
+    agent: "Fill in all fields."
+---
+{% form id="parallel_test" %}
+
+{% group id="overview" order=0 %}
+{% field kind="string" id="company_name" label="Company Name" role="agent" required=true %}
+\`\`\`value
+Acme Corp
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% group id="financials" parallel="research" order=0 %}
+{% field kind="string" id="revenue" label="Revenue" role="agent" %}
+\`\`\`value
+$10M ARR
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% group id="team" parallel="research" order=0 %}
+{% field kind="string" id="leadership" label="Leadership" role="agent" %}
+\`\`\`value
+CEO: Jane Doe
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% group id="market" parallel="research" order=0 %}
+{% field kind="string" id="competitors" label="Competitors" role="agent" %}
+\`\`\`value
+BigCorp, SmallCo
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% group id="synthesis" order=10 %}
+{% field kind="string" id="overall" label="Overall" role="agent" required=true %}
+\`\`\`value
+Strong company
+\`\`\`
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('tracks distinct executionIds for parallel batch items', async () => {
+      const filledForm = parseForm(PARALLEL_FORM_FILLED);
+      const mockAgent = createMockAgent(filledForm);
+
+      // Track executionIds from callbacks
+      const turnExecutionIds: string[] = [];
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        enableParallel: true,
+        recordFill: true,
+        _testAgent: mockAgent,
+        callbacks: {
+          onTurnStart: (turn) => {
+            turnExecutionIds.push(turn.executionId);
+          },
+        },
+      });
+
+      expect(result.status.ok).toBe(true);
+
+      // Should have multiple distinct executionIds
+      const uniqueIds = new Set(turnExecutionIds);
+      expect(uniqueIds.size).toBeGreaterThan(1);
+
+      // Should include serial execution IDs
+      const serialIds = turnExecutionIds.filter((id) => id.includes(':serial:'));
+      expect(serialIds.length).toBeGreaterThan(0);
+
+      // Should include batch execution IDs for the "research" batch
+      const batchIds = turnExecutionIds.filter((id) => id.includes(':batch:'));
+      expect(batchIds.length).toBeGreaterThan(0);
+
+      // Batch IDs should follow the expected format
+      batchIds.forEach((id) => {
+        expect(id).toMatch(/^eid:batch:o\d+:research:i\d+$/);
+      });
+    });
+
+    it('FillRecord captures parallel execution metadata', async () => {
+      const filledForm = parseForm(PARALLEL_FORM_FILLED);
+      const mockAgent = createMockAgent(filledForm);
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        enableParallel: true,
+        recordFill: true,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Execution metadata should indicate parallel was enabled
+      expect(record.execution.parallelEnabled).toBe(true);
+
+      // Should have multiple order levels (0 and 10)
+      expect(record.execution.orderLevels).toContain(0);
+      expect(record.execution.orderLevels).toContain(10);
+
+      // Should have multiple execution threads
+      expect(record.execution.executionThreads.length).toBeGreaterThan(1);
+
+      // Execution threads should include serial and batch IDs
+      const hasSerial = record.execution.executionThreads.some((id) => id.includes(':serial:'));
+      const hasBatch = record.execution.executionThreads.some((id) => id.includes(':batch:'));
+      expect(hasSerial).toBe(true);
+      expect(hasBatch).toBe(true);
+    });
+
+    it('executionId helper functions produce correct format', () => {
+      // Serial execution ID format
+      expect(serialExecutionId(0)).toBe('eid:serial:o0');
+      expect(serialExecutionId(10)).toBe('eid:serial:o10');
+
+      // Batch execution ID format
+      expect(batchExecutionId(0, 'research', 0)).toBe('eid:batch:o0:research:i0');
+      expect(batchExecutionId(0, 'research', 3)).toBe('eid:batch:o0:research:i3');
+      expect(batchExecutionId(5, 'deep_dive', 1)).toBe('eid:batch:o5:deep_dive:i1');
+    });
+
+    it('timeline entries have correct executionIds', async () => {
+      const filledForm = parseForm(PARALLEL_FORM_FILLED);
+      const mockAgent = createMockAgent(filledForm);
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        enableParallel: true,
+        recordFill: true,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Each timeline entry should have an executionId
+      record.timeline.forEach((entry) => {
+        expect(entry.executionId).toBeDefined();
+        expect(entry.executionId).toMatch(/^eid:(serial|batch):/);
+      });
+
+      // Order 0 entries can be serial or batch
+      const order0Entries = record.timeline.filter((e) => e.order === 0);
+      expect(order0Entries.length).toBeGreaterThan(0);
+
+      // Order 10 entries should be serial (synthesis group)
+      const order10Entries = record.timeline.filter((e) => e.order === 10);
+      order10Entries.forEach((entry) => {
+        expect(entry.executionId).toMatch(/^eid:serial:o10$/);
+      });
+    });
+
+    it('parallel batch items have same turnNumber but different executionIds', async () => {
+      const filledForm = parseForm(PARALLEL_FORM_FILLED);
+      const mockAgent = createMockAgent(filledForm);
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        enableParallel: true,
+        recordFill: true,
+        _testAgent: mockAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      // Find batch entries (they should all have turnNumber based on when the batch started)
+      const batchEntries = record.timeline.filter((e) => e.executionId.includes(':batch:'));
+
+      if (batchEntries.length > 1) {
+        // All batch items in the same batch should have different executionIds
+        const executionIds = new Set(batchEntries.map((e) => e.executionId));
+
+        // Each batch item should have a unique executionId
+        expect(executionIds.size).toBe(batchEntries.length);
+      }
     });
   });
 });

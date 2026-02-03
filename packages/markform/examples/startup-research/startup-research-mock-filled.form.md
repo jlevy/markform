@@ -1,11 +1,8 @@
 ---
 markform:
-  spec: "MF/0.1"
-  roles:
-    - user
-    - agent
+  spec: MF/0.1
   role_instructions:
-    user: "Enter the name of the startup company you want to research."
+    user: Enter the name of the startup company you want to research.
     agent: |
       Research and fill in all company information for the specified startup.
       Guidelines:
@@ -17,133 +14,116 @@ markform:
       6. Leave unknown fields empty - Don't guess or fabricate information
       7. Keep descriptions concise - Aim for 100-200 words max
 ---
-{% form id="startup_research" title="Startup Research Form" %}
 
-{% description ref="startup_research" %}
+<!-- form id="startup_research" title="Startup Research Form" -->
+
+<!-- description ref="startup_research" -->
 A comprehensive research form for startup companies.
 This form demonstrates URL field types for capturing company websites, funding sources,
 press coverage, and other web references.
 The user provides the company name, and the agent researches and fills all remaining
 fields.
-{% /description %}
+<!-- /description -->
 
-{% documentation ref="startup_research" %}
-**Workflow:**
-1. User enters the startup company name
-2. Agent researches and fills company information
-3. Agent includes all relevant URLs (website, LinkedIn, press, funding sources)
-4. Agent provides source citations
+<!-- group id="basic_info" title="Company Information" -->
 
-**Data Sources:**
-- Crunchbase profiles
-- Company websites
-- Press releases
-- LinkedIn company pages
-- Tech news publications
-
-{% /documentation %}
-
-{% group id="basic_info" title="Company Information" %}
-
-{% field kind="string" id="company_name" label="Company Name" role="user" required=true minLength=2 maxLength=200 %}
+<!-- field kind="string" id="company_name" role="user" label="Company Name" maxLength=200 minLength=2 required=true -->
 ```value
 Anthropic
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="company_name" %}
+<!-- instructions ref="company_name" -->
 Enter the official name of the startup company you want to research (e.g., “Stripe”,
 “OpenAI”).
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="company_website" label="Company Website" required=true %}
+<!-- field kind="url" id="company_website" label="Company Website" required=true -->
 ```value
 https://www.anthropic.com
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="company_website" %}
+<!-- instructions ref="company_website" -->
 The official company website URL.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="linkedin_page" label="LinkedIn Company Page" %}
+<!-- field kind="url" id="linkedin_page" label="LinkedIn Company Page" -->
 ```value
 https://www.linkedin.com/company/anthropic
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="linkedin_page" %}
+<!-- instructions ref="linkedin_page" -->
 LinkedIn company page URL if available.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="founded_date" label="Founded Date" pattern="^\\d{4}(-\\d{2}(-\\d{2})?)?$" %}
+<!-- field kind="string" id="founded_date" label="Founded Date" pattern="^\\d{4}(-\\d{2}(-\\d{2})?)?$" -->
 ```value
 2021
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="founded_date" %}
+<!-- instructions ref="founded_date" -->
 Format: YYYY, YYYY-MM, or YYYY-MM-DD (e.g., 2010, 2010-06, 2010-06-15)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="headquarters" label="Headquarters Location" %}
+<!-- field kind="string" id="headquarters" label="Headquarters Location" -->
 ```value
 San Francisco, California
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="headquarters" %}
+<!-- instructions ref="headquarters" -->
 Format: City, State/Country (e.g., “San Francisco, California”)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="company_description" label="Company Description" multiline=true maxLength=1000 %}
+<!-- field kind="string" id="company_description" label="Company Description" maxLength=1000 multiline=true -->
 ```value
 Anthropic is an AI safety company focused on building reliable, interpretable, and steerable AI systems. Founded by former members of OpenAI, the company develops large language models with an emphasis on safety research and alignment. Their flagship product is Claude, an AI assistant designed to be helpful, harmless, and honest.
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="company_description" %}
+<!-- instructions ref="company_description" -->
 Brief description of what the company does.
 100-200 words max.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="funding_info" title="Funding Information" %}
+<!-- group id="funding_info" title="Funding Information" -->
 
-{% field kind="string" id="total_funding" label="Total Funding Raised" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" %}
+<!-- field kind="string" id="total_funding" label="Total Funding Raised" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" -->
 ```value
 $7.6B
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="total_funding" %}
+<!-- instructions ref="total_funding" -->
 Format: $X.XB, $XXM, or $XXK (e.g., “$1.5B”, “$50M”, “$500K”)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="latest_valuation" label="Latest Valuation" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" %}
+<!-- field kind="string" id="latest_valuation" label="Latest Valuation" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" -->
 ```value
 $18.4B
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="latest_valuation" %}
+<!-- instructions ref="latest_valuation" -->
 Format: $X.XB, $XXM, or $XXK (e.g., “$10B”)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="single_select" id="funding_stage" label="Funding Stage" %}
+<!-- field kind="single_select" id="funding_stage" label="Funding Stage" -->
+- [ ] Pre-seed <!-- #pre_seed -->
+- [ ] Seed <!-- #seed -->
+- [ ] Series A <!-- #series_a -->
+- [ ] Series B <!-- #series_b -->
+- [ ] Series C <!-- #series_c -->
+- [x] Series D+ <!-- #series_d_plus -->
+- [ ] Public <!-- #public -->
+<!-- /field -->
 
-- [ ] Pre-seed {% #pre_seed %}
-- [ ] Seed {% #seed %}
-- [ ] Series A {% #series_a %}
-- [ ] Series B {% #series_b %}
-- [ ] Series C {% #series_c %}
-- [x] Series D+ {% #series_d_plus %}
-- [ ] Public {% #public %}
-
-{% /field %}
-
-{% field kind="string_list" id="key_investors" label="Key Investors" maxItems=10 %}
+<!-- field kind="string_list" id="key_investors" label="Key Investors" maxItems=10 -->
 ```value
 Google
 Spark Capital
@@ -151,48 +131,48 @@ Salesforce Ventures
 Amazon
 Sound Ventures
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="key_investors" %}
+<!-- instructions ref="key_investors" -->
 List notable investors (VCs, angels), one per line.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url_list" id="funding_announcements" label="Funding Announcement URLs" maxItems=5 uniqueItems=true %}
+<!-- field kind="url_list" id="funding_announcements" label="Funding Announcement URLs" maxItems=5 uniqueItems=true -->
 ```value
 https://www.anthropic.com/news/anthropic-raises-series-c
 https://techcrunch.com/2023/09/25/amazon-to-invest-up-to-4-billion-in-anthropic/
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="funding_announcements" %}
+<!-- instructions ref="funding_announcements" -->
 URLs to press releases or articles about funding rounds.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="people" title="Key People" %}
+<!-- group id="people" title="Key People" -->
 
-{% field kind="string" id="ceo" label="CEO / Founder" %}
+<!-- field kind="string" id="ceo" label="CEO / Founder" -->
 ```value
 Dario Amodei
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="ceo" %}
+<!-- instructions ref="ceo" -->
 Name of CEO or primary founder.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="ceo_linkedin" label="CEO LinkedIn" %}
+<!-- field kind="url" id="ceo_linkedin" label="CEO LinkedIn" -->
 ```value
 https://www.linkedin.com/in/dario-amodei
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="ceo_linkedin" %}
+<!-- instructions ref="ceo_linkedin" -->
 LinkedIn profile URL of the CEO/founder.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string_list" id="founders" label="Founders" maxItems=5 %}
+<!-- field kind="string_list" id="founders" label="Founders" maxItems=5 -->
 ```value
 Dario Amodei
 Daniela Amodei
@@ -200,117 +180,118 @@ Tom Brown
 Chris Olah
 Sam McCandlish
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="founders" %}
+<!-- instructions ref="founders" -->
 List all founders, one per line.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="number" id="employee_count" label="Employee Count" min=1 integer=true %}
+<!-- field kind="number" id="employee_count" integer=true label="Employee Count" min=1 -->
 ```value
 1000
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="employee_count" %}
+<!-- instructions ref="employee_count" -->
 Approximate number of employees.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="market_info" title="Market & Industry" %}
+<!-- group id="market_info" title="Market & Industry" -->
 
-{% field kind="multi_select" id="industry_sectors" label="Industry Sectors" minSelections=1 maxSelections=5 %}
+<!-- field kind="multi_select" id="industry_sectors" label="Industry Sectors" maxSelections=5 minSelections=1 -->
+- [x] AI/ML <!-- #ai_ml -->
+- [ ] FinTech <!-- #fintech -->
+- [ ] HealthTech <!-- #healthtech -->
+- [ ] EdTech <!-- #edtech -->
+- [x] SaaS <!-- #saas -->
+- [ ] E-commerce <!-- #ecommerce -->
+- [x] Security <!-- #security -->
+- [x] Developer Tools <!-- #devtools -->
+- [ ] Climate Tech <!-- #climatetech -->
+- [ ] Other <!-- #other -->
+<!-- /field -->
 
-- [x] AI/ML {% #ai_ml %}
-- [ ] FinTech {% #fintech %}
-- [ ] HealthTech {% #healthtech %}
-- [ ] EdTech {% #edtech %}
-- [x] SaaS {% #saas %}
-- [ ] E-commerce {% #ecommerce %}
-- [x] Security {% #security %}
-- [x] Developer Tools {% #devtools %}
-- [ ] Climate Tech {% #climatetech %}
-- [ ] Other {% #other %}
-
-{% /field %}
-
-{% field kind="string_list" id="competitors" label="Competitors" maxItems=5 %}
+<!-- field kind="string_list" id="competitors" label="Competitors" maxItems=5 -->
 ```value
 OpenAI
 Google DeepMind
 Cohere
 Mistral AI
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="competitors" %}
+<!-- instructions ref="competitors" -->
 List main competitors, one per line.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url_list" id="competitor_urls" label="Competitor Website URLs" maxItems=5 uniqueItems=true %}
+<!-- field kind="url_list" id="competitor_urls" label="Competitor Website URLs" maxItems=5 uniqueItems=true -->
 ```value
 https://openai.com
 https://deepmind.google
 https://cohere.com
 https://mistral.ai
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="competitor_urls" %}
+<!-- instructions ref="competitor_urls" -->
 Website URLs of main competitors.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="press_coverage" title="Press & Coverage" %}
+<!-- group id="press_coverage" title="Press & Coverage" -->
 
-{% field kind="url_list" id="press_articles" label="Press Coverage URLs" minItems=1 maxItems=10 uniqueItems=true %}
+<!-- field kind="url_list" id="press_articles" label="Press Coverage URLs" maxItems=10 minItems=1 uniqueItems=true -->
 ```value
 https://www.wired.com/story/anthropic-ai-claude-chatgpt-rival/
 https://www.nytimes.com/2023/03/14/technology/anthropic-ai-chatbot.html
 https://www.forbes.com/sites/alexkonrad/2023/09/25/anthropic-ai-amazon-investment/
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="press_articles" %}
+<!-- instructions ref="press_articles" -->
 URLs to major press articles, reviews, or coverage about the company.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="crunchbase_url" label="Crunchbase Profile" %}
+<!-- field kind="url" id="crunchbase_url" label="Crunchbase Profile" -->
 ```value
 https://www.crunchbase.com/organization/anthropic
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="crunchbase_url" %}
+<!-- instructions ref="crunchbase_url" -->
 Crunchbase company profile URL.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="pitchbook_url" label="PitchBook Profile" %}{% /field %}
+<!-- field kind="url" id="pitchbook_url" label="PitchBook Profile" --><!-- /field -->
 
-{% instructions ref="pitchbook_url" %}
+<!-- instructions ref="pitchbook_url" -->
 PitchBook company profile URL if available.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="sources_section" title="Research Sources" %}
+<!-- group id="sources_section" title="Research Sources" -->
 
-{% field kind="url_list" id="sources" label="Source URLs" minItems=1 uniqueItems=true %}
+<!-- field kind="url_list" id="sources" label="Source URLs" minItems=1 uniqueItems=true -->
 ```value
 https://www.crunchbase.com/organization/anthropic
 https://www.anthropic.com
 https://www.linkedin.com/company/anthropic
 https://en.wikipedia.org/wiki/Anthropic
 ```
-{% /field %}
+<!-- /field -->
 
-{% instructions ref="sources" %}
+<!-- instructions ref="sources" -->
 List all source URLs used for this research.
 Include Crunchbase, company website, and any additional sources consulted.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% /form %}
+<!-- /form -->
+
+
+

@@ -44,6 +44,87 @@ import type { Agent, FillOptions, FillResult, FillStatus, TurnStats } from './ha
 export type { FillOptions, FillResult, FillStatus, TurnProgress } from './harnessTypes.js';
 
 // =============================================================================
+// Execution ID Helpers
+// =============================================================================
+
+/**
+ * Execution ID format for tracking parallel and serial execution threads.
+ *
+ * Format: `eid:{type}:o{order}[:{batchId}:i{index}]`
+ *
+ * Components:
+ * - `eid:` - Prefix identifying this as an execution ID
+ * - `{type}` - Either `serial` or `batch`
+ * - `o{order}` - Order level (e.g., `o0`, `o10`)
+ * - For batch only: `:{batchId}:i{index}` - Batch name and item index
+ *
+ * Examples:
+ * - `eid:serial:o0` - Serial execution at order level 0
+ * - `eid:batch:o0:research:i0` - First item in "research" batch at order 0
+ * - `eid:batch:o0:research:i3` - Fourth item in "research" batch at order 0
+ * - `eid:serial:o10` - Serial execution at order level 10
+ *
+ * Design principles:
+ * - Self-identifying: Clear `eid:` prefix
+ * - Structured: Type comes first for easy filtering
+ * - Explicit: Each component has a prefix (`o` for order, `i` for index)
+ * - Parseable: Can be split on `:` to extract components
+ */
+
+/** Prefix for all execution IDs */
+const EXECUTION_ID_PREFIX = 'eid';
+
+/**
+ * Create an execution ID for serial execution at an order level.
+ */
+export function serialExecutionId(order: number): string {
+  return `${EXECUTION_ID_PREFIX}:serial:o${order}`;
+}
+
+/**
+ * Create an execution ID for a batch item at an order level.
+ */
+export function batchExecutionId(order: number, batchId: string, itemIndex: number): string {
+  return `${EXECUTION_ID_PREFIX}:batch:o${order}:${batchId}:i${itemIndex}`;
+}
+
+/**
+ * Parse an execution ID into its components.
+ * Returns null if the ID doesn't match the expected format.
+ */
+export function parseExecutionId(
+  id: string,
+):
+  | { type: 'serial'; order: number }
+  | { type: 'batch'; order: number; batchId: string; itemIndex: number }
+  | null {
+  if (!id.startsWith(`${EXECUTION_ID_PREFIX}:`)) return null;
+
+  const parts = id.split(':');
+  if (parts.length < 3) return null;
+
+  const type = parts[1];
+  const orderPart = parts[2];
+
+  if (!orderPart?.startsWith('o')) return null;
+  const order = parseInt(orderPart.slice(1), 10);
+  if (isNaN(order)) return null;
+
+  if (type === 'serial') {
+    return { type: 'serial', order };
+  } else if (type === 'batch' && parts.length >= 5) {
+    const batchId = parts[3];
+    const indexPart = parts[4];
+    if (!indexPart?.startsWith('i') || !batchId) return null;
+    const itemIndex = parseInt(indexPart.slice(1), 10);
+    if (isNaN(itemIndex)) return null;
+    return { type: 'batch', order, batchId, itemIndex };
+  }
+
+  return null;
+}
+
+// =============================================================================
 // Helper Functions
 // =============================================================================
 
@@ -472,6 +553,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       additionalTools: options.additionalTools,
       callbacks: mergedCallbacks,
       maxStepsPerTurn: options.maxStepsPerTurn,
+      toolChoice: options.toolChoice,
     });
 
   // 7. Run harness loop
@@ -651,6 +733,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           issues: turnIssues,
           patches,
           rejectedPatches: stepResult.rejectedPatches ?? [],
+          executionId: '0-serial',
         });
       } catch {
         // Ignore callback errors
@@ -731,19 +814,24 @@ async function fillFormParallel(
   let totalPatches = initialPatches;
   let turnCount = startingTurnNumber;
 
-  // Create primary agent for serial items
-  const primaryAgent: Agent =
-    options._testAgent ??
-    createLiveAgent({
-      model: model!,
-      systemPromptAddition: options.systemPromptAddition,
-      targetRole: targetRoles[0] ?? AGENT_ROLE,
-      provider,
-      enableWebSearch: options.enableWebSearch,
-      additionalTools: options.additionalTools,
-      callbacks: mergedCallbacks,
-      maxStepsPerTurn: options.maxStepsPerTurn,
-    });
+  // Helper to create an agent with the correct executionId
+  const createAgentForExecution = (executionId: string): Agent => {
+    return (
+      options._testAgent ??
+      createLiveAgent({
+        model: model!,
+        systemPromptAddition: options.systemPromptAddition,
+        targetRole: targetRoles[0] ?? AGENT_ROLE,
+        provider,
+        enableWebSearch: options.enableWebSearch,
+        additionalTools: options.additionalTools,
+        callbacks: mergedCallbacks,
+        maxStepsPerTurn: options.maxStepsPerTurn,
+        executionId,
+        toolChoice: options.toolChoice,
+      })
+    );
+  };
 
   for (const order of plan.orderLevels) {
     // Check cancellation
@@ -796,9 +884,11 @@ async function fillFormParallel(
     // --- Serial items at this order level (multi-turn) ---
     const serialItems = plan.looseSerial.filter((i) => i.order === order);
     if (serialItems.length > 0) {
+      const serialExecId = serialExecutionId(order);
+      const serialAgent = createAgentForExecution(serialExecId);
       const result = await runMultiTurnForItems(
         form,
-        primaryAgent,
+        serialAgent,
         serialItems,
         targetRoles,
         maxPatchesPerTurn,
@@ -807,7 +897,7 @@ async function fillFormParallel(
         turnCount,
         options,
         order,
-        `${order}-serial`,
+        serialExecId,
         mergedCallbacks,
       );
       totalPatches += result.patchesApplied;
@@ -852,43 +942,33 @@ async function fillFormParallel(
         /* ignore */
       }
 
-      // Run each batch item with its own multi-turn loop, concurrently
-      const itemPromises = batchItems.map((item, itemIndex) => {
-        // Create a scoped agent for this batch item (or reuse test agent)
-        const scopedAgent: Agent =
-          options._testAgent ??
-          createLiveAgent({
-            model: model!,
-            systemPromptAddition: options.systemPromptAddition,
-            targetRole: targetRoles[0] ?? AGENT_ROLE,
-            provider,
-            enableWebSearch: options.enableWebSearch,
-            additionalTools: options.additionalTools,
-            callbacks: mergedCallbacks,
-            maxStepsPerTurn: options.maxStepsPerTurn,
-          });
+      // Create promise factories for each batch item (for true concurrency limiting)
+      // Factories are called lazily when a slot becomes available
+      const itemFactories = batchItems.map((item, itemIndex) => {
+        return () => {
+          const batchExecId = batchExecutionId(order, batch.batchId, itemIndex);
+          // Create a scoped agent for this batch item with correct executionId
+          const scopedAgent = createAgentForExecution(batchExecId);
 
-        return runMultiTurnForItems(
-          form,
-          scopedAgent,
-          [item],
-          targetRoles,
-          maxPatchesPerTurn,
-          maxIssuesPerTurn,
-          maxTurnsTotal,
-          turnCount,
-          options,
-          order,
-          `${order}-batch-${batch.batchId}-${itemIndex}`,
-          mergedCallbacks,
-        );
+          return runMultiTurnForItems(
+            form,
+            scopedAgent,
+            [item],
+            targetRoles,
+            maxPatchesPerTurn,
+            maxIssuesPerTurn,
+            maxTurnsTotal,
+            turnCount,
+            options,
+            order,
+            batchExecId,
+            mergedCallbacks,
+          );
+        };
       });
 
-      // Limit concurrency
-      const results = await runWithConcurrency(
-        itemPromises.map((p) => p),
-        maxParallelAgents,
-      );
+      // Run with concurrency limit (factories are called lazily)
+      const results = await runWithConcurrency(itemFactories, maxParallelAgents);
 
       let batchPatches = 0;
       const batchErrors: string[] = [];
@@ -1118,6 +1198,7 @@ async function runMultiTurnForItems(
         issues: scopedIssues,
         patches: response.patches,
         rejectedPatches: previousRejections ?? [],
+        executionId,
       });
     } catch {
       /* ignore */

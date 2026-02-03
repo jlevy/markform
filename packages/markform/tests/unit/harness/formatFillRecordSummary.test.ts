@@ -360,6 +360,7 @@ describe('formatFillRecordSummary', () => {
             executionId: 'cli-serial',
             startedAt: '2026-01-29T12:00:00.000Z',
             completedAt: '2026-01-29T12:00:01.000Z',
+            startMs: 0,
             durationMs: 1000,
             issuesAddressed: 5,
             patchesApplied: 5,

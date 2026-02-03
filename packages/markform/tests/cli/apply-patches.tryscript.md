@@ -35,7 +35,7 @@ $ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_number","fieldI
 
 ```console
 $ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_single_select","fieldId":"priority","value":"high"}]' | grep "\[x\].*High"
-- [x] High {% #high %}
+- [x] High <!-- #high -->
 ? 0
 ```
 

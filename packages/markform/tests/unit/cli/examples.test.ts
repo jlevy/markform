@@ -114,7 +114,8 @@ describe('examples registry', () => {
       expect(content).toBeTruthy();
       expect(typeof content).toBe('string');
       expect(content).toContain('markform:');
-      expect(content).toContain('{% form');
+      // Accept either HTML comment or Markdoc syntax
+      expect(content).toMatch(/<!-- form|{% form/);
     });
 
     it('throws for unknown example', () => {
@@ -167,16 +168,19 @@ describe('examples registry', () => {
       expect(form.schema.groups.length).toBeGreaterThan(0);
     });
 
-    it('all examples contain roles in frontmatter content', () => {
+    it('all examples have valid roles in parsed metadata', () => {
       for (const example of EXAMPLE_DEFINITIONS) {
         const content = loadExampleContent(example.id);
+        const form = parseForm(content);
 
-        // Check that the raw content contains roles in frontmatter
-        expect(content).toContain('roles:');
-        expect(content).toContain('- user');
+        // Check that parsed form has valid roles
+        expect(form.metadata).toBeDefined();
+        expect(form.metadata!.roles).toBeTruthy();
+        expect(form.metadata!.roles.length).toBeGreaterThan(0);
+        expect(form.metadata!.roles).toContain('user');
         // Note: simple form only has user role for testing interactive fill
         if (example.id !== 'simple') {
-          expect(content).toContain('- agent');
+          expect(form.metadata!.roles).toContain('agent');
         }
       }
     });

@@ -254,12 +254,20 @@ describe('fillLogging', () => {
 
         // Normal mode
         const callbacksNormal = createFillLoggingCallbacks(ctxNormal);
-        callbacksNormal.onToolStart!({ name: 'web_search', input: {}, executionId: '0-serial' });
+        callbacksNormal.onToolStart!({
+          name: 'web_search',
+          input: {},
+          executionId: 'eid:serial:o0',
+        });
         expect(consoleOutput.length).toBe(0);
 
         // Verbose mode
         const callbacksVerbose = createFillLoggingCallbacks(ctxVerbose);
-        callbacksVerbose.onToolStart!({ name: 'web_search', input: {}, executionId: '0-serial' });
+        callbacksVerbose.onToolStart!({
+          name: 'web_search',
+          input: {},
+          executionId: 'eid:serial:o0',
+        });
         expect(consoleOutput.length).toBe(1);
         expect(consoleOutput[0]).toContain('web_search');
       });
@@ -278,7 +286,7 @@ describe('fillLogging', () => {
           name: 'web_search',
           output: 'results',
           durationMs: 1234,
-          executionId: '0-serial',
+          executionId: 'eid:serial:o0',
         });
 
         expect(consoleOutput.length).toBe(1);
@@ -301,7 +309,7 @@ describe('fillLogging', () => {
           output: null,
           durationMs: 500,
           error: 'Network timeout',
-          executionId: '0-serial',
+          executionId: 'eid:serial:o0',
         });
 
         expect(consoleOutput.length).toBe(1);
@@ -321,7 +329,7 @@ describe('fillLogging', () => {
         };
 
         const callbacks = createFillLoggingCallbacks(ctxVerbose);
-        callbacks.onLlmCallStart!({ model: 'claude-sonnet', executionId: '0-serial' });
+        callbacks.onLlmCallStart!({ model: 'claude-sonnet', executionId: 'eid:serial:o0' });
 
         expect(consoleOutput.length).toBe(1);
         expect(consoleOutput[0]).toContain('claude-sonnet');
@@ -341,7 +349,7 @@ describe('fillLogging', () => {
           model: 'claude-sonnet',
           inputTokens: 1000,
           outputTokens: 250,
-          executionId: '0-serial',
+          executionId: 'eid:serial:o0',
         });
 
         expect(consoleOutput.length).toBe(1);
@@ -371,7 +379,7 @@ describe('fillLogging', () => {
           },
         });
 
-        callbacks.onToolStart!({ name: 'web_search', input: {}, executionId: '0-serial' });
+        callbacks.onToolStart!({ name: 'web_search', input: {}, executionId: 'eid:serial:o0' });
 
         expect(spinnerMessage).toHaveBeenCalledWith('Web search...');
       });

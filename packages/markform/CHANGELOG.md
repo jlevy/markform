@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.21
+
+### Patch Changes
+
+- e445541: Bug fixes for parallel execution tracking and YAML formatting improvements
+
 ## 0.1.20
 
 ### Patch Changes

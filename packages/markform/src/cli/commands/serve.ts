@@ -3365,17 +3365,16 @@ export function renderFillRecordContent(record: FillRecord): string {
   }
 
   const timelineEvents: TimelineEvent[] = [];
-  let currentTime = 0;
 
   for (const turn of timeline) {
     const toolTimeInTurn = turn.toolCalls.reduce((sum, tc) => sum + tc.durationMs, 0);
     const llmTimeInTurn = Math.max(0, turn.durationMs - toolTimeInTurn);
 
-    // LLM call for this turn
+    // LLM call for this turn - starts at turn.startMs
     if (llmTimeInTurn > 0) {
       timelineEvents.push({
         type: 'llm',
-        startMs: currentTime,
+        startMs: turn.startMs,
         durationMs: llmTimeInTurn,
         turnNumber: turn.turnNumber,
         label: `Turn ${turn.turnNumber}`,
@@ -3386,18 +3385,16 @@ export function renderFillRecordContent(record: FillRecord): string {
         },
       });
     }
-    currentTime += llmTimeInTurn;
 
-    // Tool calls for this turn (sequential for now)
+    // Tool calls for this turn - use pre-computed startMs
     for (const tc of turn.toolCalls) {
       timelineEvents.push({
         type: 'tool',
-        startMs: currentTime,
+        startMs: tc.startMs,
         durationMs: tc.durationMs,
         turnNumber: turn.turnNumber,
         label: tc.tool,
       });
-      currentTime += tc.durationMs;
     }
   }
 
@@ -3407,10 +3404,11 @@ export function renderFillRecordContent(record: FillRecord): string {
       const leftPct = totalMs > 0 ? (e.startMs / totalMs) * 100 : 0;
       const widthPct = totalMs > 0 ? (e.durationMs / totalMs) * 100 : 0;
       const barClass = e.type === 'llm' ? 'fr-gantt__bar--llm' : 'fr-gantt__bar--tool';
+      const startTime = `Start: ${formatDuration(e.startMs)}`;
       const tooltip =
         e.type === 'llm'
-          ? `${e.label}&#10;${formatDuration(e.durationMs)}&#10;${formatTokens(e.tokens?.total ?? 0)} tokens (${formatTokens(e.tokens?.input ?? 0)} in / ${formatTokens(e.tokens?.output ?? 0)} out)`
-          : `${e.label}&#10;${formatDuration(e.durationMs)}&#10;Turn ${e.turnNumber}`;
+          ? `${e.label}&#10;${startTime}&#10;Duration: ${formatDuration(e.durationMs)}&#10;${formatTokens(e.tokens?.total ?? 0)} tokens (${formatTokens(e.tokens?.input ?? 0)} in / ${formatTokens(e.tokens?.output ?? 0)} out)`
+          : `${e.label}&#10;${startTime}&#10;Duration: ${formatDuration(e.durationMs)}&#10;Turn ${e.turnNumber}`;
 
       return `
         <div class="fr-gantt__row">

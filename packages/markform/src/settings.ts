@@ -120,6 +120,83 @@ export const MAX_FORMS_IN_MENU = 30;
 export const DEFAULT_PORT = 3344;
 
 // =============================================================================
+// YAML Formatting
+// =============================================================================
+
+/**
+ * Default line width for YAML output.
+ * Long strings will wrap at this column for readability.
+ * 88 is a common line width that works well with most editors.
+ */
+export const DEFAULT_YAML_LINE_WIDTH = 88;
+
+/**
+ * YAML stringify options for readable output.
+ * - No forced quoting (YAML only quotes when necessary)
+ * - lineWidth provides reasonable wrapping for long strings
+ * - Plain keys without quotes
+ */
+export const YAML_STRINGIFY_OPTIONS = {
+  lineWidth: DEFAULT_YAML_LINE_WIDTH,
+  defaultKeyType: 'PLAIN',
+} as const;
+
+// =============================================================================
+// Harness Config Mapping (snake_case ↔ camelCase)
+// =============================================================================
+
+import type { FrontmatterHarnessConfig } from './engine/coreTypes.js';
+
+/**
+ * Mapping between YAML snake_case keys and TypeScript camelCase keys
+ * for harness configuration. Single source of truth for all transformations.
+ */
+export const HARNESS_CONFIG_MAPPING = {
+  max_turns: 'maxTurns',
+  max_patches_per_turn: 'maxPatchesPerTurn',
+  max_issues_per_turn: 'maxIssuesPerTurn',
+  max_parallel_agents: 'maxParallelAgents',
+} as const;
+
+/** Type for snake_case harness config (used in YAML frontmatter) */
+export interface HarnessConfigYaml {
+  max_turns?: number;
+  max_patches_per_turn?: number;
+  max_issues_per_turn?: number;
+  max_parallel_agents?: number;
+}
+
+/**
+ * Transform harness config from YAML snake_case to TypeScript camelCase.
+ * Used by the parser when reading frontmatter.
+ */
+export function transformHarnessConfigToTs(yaml: HarnessConfigYaml): FrontmatterHarnessConfig {
+  const result: FrontmatterHarnessConfig = {};
+  for (const [snakeKey, camelKey] of Object.entries(HARNESS_CONFIG_MAPPING)) {
+    const value = yaml[snakeKey as keyof HarnessConfigYaml];
+    if (value !== undefined) {
+      result[camelKey as keyof FrontmatterHarnessConfig] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * Transform harness config from TypeScript camelCase to YAML snake_case.
+ * Used by the serializer when writing frontmatter.
+ */
+export function transformHarnessConfigToYaml(ts: FrontmatterHarnessConfig): HarnessConfigYaml {
+  const result: HarnessConfigYaml = {};
+  for (const [snakeKey, camelKey] of Object.entries(HARNESS_CONFIG_MAPPING)) {
+    const value = ts[camelKey as keyof FrontmatterHarnessConfig];
+    if (value !== undefined) {
+      result[snakeKey as keyof HarnessConfigYaml] = value;
+    }
+  }
+  return result;
+}
+
+// =============================================================================
 // Harness Defaults
 // =============================================================================
 
