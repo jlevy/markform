@@ -529,7 +529,10 @@ markform --help
 ## API Key Setup
 
 Set the appropriate environment variable for your provider before running
-`markform fill`:
+`markform fill`. The CLI automatically loads from `.env.local` and `.env` files in the
+current directory.
+
+Supported providers:
 
 | Provider | Env Variable | Native Web Search |
 | --- | --- | :---: |
@@ -587,7 +590,8 @@ if (result.status.ok) {
 }
 ```
 
-See the [API documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)
+See the
+[API documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)
 for options like parallel execution, callbacks, and checkpointing.
 
 ### AI SDK Integration
@@ -768,20 +772,20 @@ more on the philosophy behind “docs-as-data” that Markform extends to “for
 We could use XML tags, but Markdoc has some niceties like tagging Markdown AST nodes
 (`{% #some-id %}`) so I decided to go with this.
 
-### Is there a VSCode plugin for Markform or Markdoc?
+### What editor settings work best?
 
-For quick syntax highlighting of `{% tag %}` syntax, install
+**HTML comment syntax (recommended):** Regular Markdown mode works perfectly since
+`<!-- tag -->` comments are standard Markdown.
+
+**Markdoc syntax (`{% tag %}`):** Install
 [Better Jinja](https://marketplace.visualstudio.com/items?itemName=samuelcolvin.jinjahtml)
-and associate `.form.md` files with the `jinja-md` language mode in your VS Code
-settings:
+and associate `.form.md` files with `jinja-md` mode:
 
 ```json
 "files.associations": {
   "*.form.md": "jinja-md"
 }
 ```
-
-Or see [markdoc/language-server](https://github.com/markdoc/language-server).
 
 ## License
 

@@ -22,7 +22,6 @@ import type {
   FieldResponse,
   FormMetadata,
   FormSchema,
-  FrontmatterHarnessConfig,
   Id,
   MultiSelectField,
   MultiSelectValue,
@@ -49,7 +48,13 @@ import type {
   YearField,
   YearValue,
 } from './coreTypes.js';
-import { AGENT_ROLE, DEFAULT_PRIORITY, MF_SPEC_VERSION } from '../settings.js';
+import {
+  AGENT_ROLE,
+  DEFAULT_PRIORITY,
+  MF_SPEC_VERSION,
+  transformHarnessConfigToYaml,
+  YAML_STRINGIFY_OPTIONS,
+} from '../settings.js';
 import { priorityKeyComparator } from '../utils/keySort.js';
 import { formatUrlAsMarkdownLink } from '../utils/urlFormat.js';
 import { findInlineCodeEnd, isInLeadingWhitespace } from './preprocess.js';
@@ -1407,28 +1412,8 @@ function serializeFormSchema(
 // =============================================================================
 
 /**
- * Build harness config object for YAML output (camelCase to snake_case).
- */
-function buildHarnessConfig(config: FrontmatterHarnessConfig): Record<string, number> {
-  const result: Record<string, number> = {};
-  if (config.maxTurns !== undefined) {
-    result.max_turns = config.maxTurns;
-  }
-  if (config.maxPatchesPerTurn !== undefined) {
-    result.max_patches_per_turn = config.maxPatchesPerTurn;
-  }
-  if (config.maxIssuesPerTurn !== undefined) {
-    result.max_issues_per_turn = config.maxIssuesPerTurn;
-  }
-  if (config.maxParallelAgents !== undefined) {
-    result.max_parallel_agents = config.maxParallelAgents;
-  }
-  return result;
-}
-
-/**
  * Build frontmatter YAML from form metadata.
- * Preserves roles, role_instructions, harness config, and run_mode.
+ * Preserves title, description, roles, role_instructions, harness config, and run_mode.
  */
 function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: string): string {
   // Build markform section
@@ -1436,30 +1421,35 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
     spec: specVersion,
   };
 
+  // Add title if present
+  if (metadata?.title) {
+    markformSection.title = metadata.title;
+  }
+
+  // Add description if present
+  if (metadata?.description) {
+    markformSection.description = metadata.description;
+  }
+
   if (metadata?.runMode) {
     markformSection.run_mode = metadata.runMode;
   }
 
   if (metadata?.harnessConfig && Object.keys(metadata.harnessConfig).length > 0) {
-    markformSection.harness = buildHarnessConfig(metadata.harnessConfig);
+    markformSection.harness = transformHarnessConfigToYaml(metadata.harnessConfig);
   }
 
-  // Build top-level frontmatter object
-  const frontmatterObj: Record<string, unknown> = {
-    markform: markformSection,
-  };
-
-  // Add roles if not default
+  // Add roles inside markform section if not default
   const defaultRoles = ['user', 'agent'];
   if (
     metadata?.roles &&
     (metadata.roles.length !== defaultRoles.length ||
       !metadata.roles.every((r, i) => r === defaultRoles[i]))
   ) {
-    frontmatterObj.roles = metadata.roles;
+    markformSection.roles = metadata.roles;
   }
 
-  // Add role_instructions if not default/empty
+  // Add role_instructions inside markform section if not default/empty
   const defaultInstructions = { user: '', agent: '' };
   if (metadata?.roleInstructions) {
     const hasCustomInstructions = Object.entries(metadata.roleInstructions).some(
@@ -1469,16 +1459,16 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
       },
     );
     if (hasCustomInstructions) {
-      frontmatterObj.role_instructions = metadata.roleInstructions;
+      markformSection.role_instructions = metadata.roleInstructions;
     }
   }
 
-  // Serialize to YAML with proper formatting for multiline strings
-  const yamlStr = YAML.stringify(frontmatterObj, {
-    lineWidth: 0, // Don't wrap lines
-    defaultStringType: 'QUOTE_DOUBLE',
-    defaultKeyType: 'PLAIN',
-  });
+  // Build top-level frontmatter object
+  const frontmatterObj: Record<string, unknown> = {
+    markform: markformSection,
+  };
+
+  const yamlStr = YAML.stringify(frontmatterObj, YAML_STRINGIFY_OPTIONS);
 
   return `---\n${yamlStr}---`;
 }

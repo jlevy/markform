@@ -387,10 +387,9 @@
   ],
   "x-markform": {
     "spec": "MF/0.1",
-    "roles": ["user", "agent"],
+    "roles": ["user"],
     "roleInstructions": {
-      "user": "Fill in the fields you have direct knowledge of.",
-      "agent": "Complete the remaining fields based on the provided context."
+      "user": "Fill in all fields in this form."
     },
     "groups": [
       {

@@ -509,6 +509,10 @@ export type RunMode = 'interactive' | 'fill' | 'research';
 /** Form-level metadata from YAML frontmatter, including role configuration */
 export interface FormMetadata {
   markformVersion: string;
+  /** Optional title from frontmatter (may differ from form tag title) */
+  title?: string;
+  /** Optional description from frontmatter */
+  description?: string;
   roles: string[];
   roleInstructions: Record<string, string>;
   /** Optional harness configuration from frontmatter */
@@ -1540,19 +1544,44 @@ export const DocumentationBlockSchema = z.object({
   bodyMarkdown: z.string(),
 });
 
-// Frontmatter harness config schema
+// Frontmatter harness config schema (camelCase, used internally)
 export const FrontmatterHarnessConfigSchema = z.object({
   maxTurns: z.number().int().positive().optional(),
   maxPatchesPerTurn: z.number().int().positive().optional(),
   maxIssuesPerTurn: z.number().int().positive().optional(),
+  maxParallelAgents: z.number().int().positive().optional(),
 });
 
 // Run mode schema
 export const RunModeSchema = z.enum(['interactive', 'fill', 'research']);
 
-// Form metadata schema
+/**
+ * Schema for the raw YAML markform section input (snake_case keys).
+ * Used to validate frontmatter before transforming to internal representation.
+ */
+export const MarkformSectionInputSchema = z.object({
+  spec: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  run_mode: RunModeSchema.optional(),
+  roles: z.array(z.string()).min(1).optional(),
+  role_instructions: z.record(z.string(), z.string()).optional(),
+  harness: z
+    .object({
+      max_turns: z.number().int().positive().optional(),
+      max_patches_per_turn: z.number().int().positive().optional(),
+      max_issues_per_turn: z.number().int().positive().optional(),
+      max_parallel_agents: z.number().int().positive().optional(),
+    })
+    .strict() // Fail on unknown keys
+    .optional(),
+});
+
+// Form metadata schema (camelCase, internal representation)
 export const FormMetadataSchema = z.object({
   markformVersion: z.string(),
+  title: z.string().optional(),
+  description: z.string().optional(),
   roles: z.array(z.string()).min(1),
   roleInstructions: z.record(z.string(), z.string()),
   harnessConfig: FrontmatterHarnessConfigSchema.optional(),

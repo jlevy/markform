@@ -2588,7 +2588,7 @@ markform:
 {% /group %}
 {% /form %}
 `;
-      expect(() => parseForm(markdown)).toThrow(/Unknown harness config key 'bogus_key'/);
+      expect(() => parseForm(markdown)).toThrow(/Unrecognized key.*bogus_key/);
     });
 
     it('errors on camelCase harness config key (must use snake_case)', () => {
@@ -2605,7 +2605,7 @@ markform:
 {% /group %}
 {% /form %}
 `;
-      expect(() => parseForm(markdown)).toThrow(/Unknown harness config key 'maxTurns'/);
+      expect(() => parseForm(markdown)).toThrow(/Unrecognized key.*maxTurns/);
     });
 
     it('errors on non-numeric harness config value', () => {
@@ -2622,7 +2622,7 @@ markform:
 {% /group %}
 {% /form %}
 `;
-      expect(() => parseForm(markdown)).toThrow(/must be a number/);
+      expect(() => parseForm(markdown)).toThrow(/expected number/);
     });
 
     it('returns no harness config when harness section is absent', () => {

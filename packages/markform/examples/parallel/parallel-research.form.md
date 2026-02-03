@@ -2,56 +2,60 @@
 markform:
   spec: MF/0.1
   title: Company Research (Parallel)
-  description: "Demonstrates parallel and order attributes for concurrent form filling."
-  roles:
-    - agent
-  role_instructions:
-    agent: "Research the company and fill in all fields."
+  description: Demonstrates parallel and order attributes for concurrent form filling.
   harness:
     max_turns: 10
     max_parallel_agents: 4
+  roles:
+    - agent
+  role_instructions:
+    agent: Research the company and fill in all fields.
 ---
-{% form id="company_research" title="Company Research (Parallel)" %}
 
-{% description ref="company_research" %}
-A company research form that uses `parallel` for concurrent deep research
-and `order` to sequence synthesis after data gathering.
-{% /description %}
+<!-- form id="company_research" title="Company Research (Parallel)" -->
 
-{% group id="overview" order=0 %}
+<!-- description ref="company_research" -->
+A company research form that uses  for concurrent deep research
+and  to sequence synthesis after data gathering.
+<!-- /description -->
 
-{% field kind="string" id="company_name" label="Company Name" role="agent" required=true %}{% /field %}
+<!-- group id="overview" order=0 -->
 
-{% field kind="string" id="company_overview" label="Company Overview" role="agent" %}{% /field %}
+<!-- field kind="string" id="company_name" label="Company Name" required=true --><!-- /field -->
 
-{% /group %}
+<!-- field kind="string" id="company_overview" label="Company Overview" --><!-- /field -->
 
-{% group id="financials" parallel="deep_research" order=0 %}
+<!-- /group -->
 
-{% field kind="string" id="revenue" label="Annual Revenue" role="agent" %}{% /field %}
+<!-- group id="financials" order=0 parallel="deep_research" -->
 
-{% field kind="string" id="margins" label="Margin Analysis" role="agent" %}{% /field %}
+<!-- field kind="string" id="revenue" label="Annual Revenue" --><!-- /field -->
 
-{% /group %}
+<!-- field kind="string" id="margins" label="Margin Analysis" --><!-- /field -->
 
-{% group id="team" parallel="deep_research" order=0 %}
+<!-- /group -->
 
-{% field kind="string" id="leadership" label="Team & Leadership" role="agent" %}{% /field %}
+<!-- group id="team" order=0 parallel="deep_research" -->
 
-{% /group %}
+<!-- field kind="string" id="leadership" label="Team & Leadership" --><!-- /field -->
 
-{% group id="market" parallel="deep_research" order=0 %}
+<!-- /group -->
 
-{% field kind="string" id="tam" label="TAM" role="agent" %}{% /field %}
+<!-- group id="market" order=0 parallel="deep_research" -->
 
-{% field kind="string" id="competitors" label="Competitors" role="agent" %}{% /field %}
+<!-- field kind="string" id="tam" label="TAM" --><!-- /field -->
 
-{% /group %}
+<!-- field kind="string" id="competitors" label="Competitors" --><!-- /field -->
 
-{% group id="synthesis" order=10 %}
+<!-- /group -->
 
-{% field kind="string" id="overall" label="Overall Assessment" role="agent" required=true %}{% /field %}
+<!-- group id="synthesis" order=10 -->
 
-{% /group %}
+<!-- field kind="string" id="overall" label="Overall Assessment" required=true --><!-- /field -->
 
-{% /form %}
+<!-- /group -->
+
+<!-- /form -->
+
+
+

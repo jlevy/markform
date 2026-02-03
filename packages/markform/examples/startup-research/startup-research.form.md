@@ -2,11 +2,8 @@
 markform:
   spec: MF/0.1
   run_mode: research
-  roles:
-    - user
-    - agent
   role_instructions:
-    user: "Enter the name of the startup company you want to research."
+    user: Enter the name of the startup company you want to research.
     agent: |
       Research and fill in all company information for the specified startup.
       Guidelines:
@@ -18,203 +15,167 @@ markform:
       6. Leave unknown fields empty - Don't guess or fabricate information
       7. Keep descriptions concise - Aim for 100-200 words max
 ---
-{% form id="startup_research" title="Startup Research Form" %}
 
-{% description ref="startup_research" %}
+<!-- form id="startup_research" title="Startup Research Form" -->
+
+<!-- description ref="startup_research" -->
 A comprehensive research form for startup companies.
 This form demonstrates URL field types for capturing company websites, funding sources,
 press coverage, and other web references.
 The user provides the company name, and the agent researches and fills all remaining
 fields.
-{% /description %}
+<!-- /description -->
 
-{% documentation ref="startup_research" %}
-**Workflow:**
-1. User enters the startup company name
-2. Agent researches and fills company information
-3. Agent includes all relevant URLs (website, LinkedIn, press, funding sources)
-4. Agent provides source citations
+<!-- group id="basic_info" title="Company Information" -->
 
-**Data Sources:**
-- Crunchbase profiles
-- Company websites
-- Press releases
-- LinkedIn company pages
-- Tech news publications
+<!-- field kind="string" id="company_name" role="user" label="Company Name" maxLength=200 minLength=2 required=true --><!-- /field -->
 
-{% /documentation %}
-
-{% group id="basic_info" title="Company Information" %}
-
-{% field kind="string" id="company_name" label="Company Name" role="user" required=true minLength=2 maxLength=200 %}{% /field %}
-
-{% instructions ref="company_name" %}
+<!-- instructions ref="company_name" -->
 Enter the official name of the startup company you want to research (e.g., “Stripe”,
 “OpenAI”).
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="company_website" label="Company Website" required=true %}{% /field %}
+<!-- field kind="url" id="company_website" label="Company Website" required=true --><!-- /field -->
 
-{% instructions ref="company_website" %}
+<!-- instructions ref="company_website" -->
 The official company website URL.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="linkedin_page" label="LinkedIn Company Page" %}{% /field %}
+<!-- field kind="url" id="linkedin_page" label="LinkedIn Company Page" --><!-- /field -->
 
-{% instructions ref="linkedin_page" %}
+<!-- instructions ref="linkedin_page" -->
 LinkedIn company page URL if available.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="founded_date" label="Founded Date" pattern="^\\d{4}(-\\d{2}(-\\d{2})?)?$" %}{% /field %}
+<!-- field kind="string" id="founded_date" label="Founded Date" pattern="^\\d{4}(-\\d{2}(-\\d{2})?)?$" --><!-- /field -->
 
-{% instructions ref="founded_date" %}
+<!-- instructions ref="founded_date" -->
 Format: YYYY, YYYY-MM, or YYYY-MM-DD (e.g., 2010, 2010-06, 2010-06-15)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="headquarters" label="Headquarters Location" %}{% /field %}
+<!-- field kind="string" id="headquarters" label="Headquarters Location" --><!-- /field -->
 
-{% instructions ref="headquarters" %}
+<!-- instructions ref="headquarters" -->
 Format: City, State/Country (e.g., “San Francisco, California”)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="company_description" label="Company Description" multiline=true maxLength=1000 %}{% /field %}
+<!-- field kind="string" id="company_description" label="Company Description" maxLength=1000 multiline=true --><!-- /field -->
 
-{% instructions ref="company_description" %}
+<!-- instructions ref="company_description" -->
 Brief description of what the company does.
 100-200 words max.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="funding_info" title="Funding Information" %}
+<!-- group id="funding_info" title="Funding Information" -->
 
-{% field kind="string" id="total_funding" label="Total Funding Raised" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" %}{% /field %}
+<!-- field kind="string" id="total_funding" label="Total Funding Raised" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" --><!-- /field -->
 
-{% instructions ref="total_funding" %}
+<!-- instructions ref="total_funding" -->
 Format: $X.XB, $XXM, or $XXK (e.g., “$1.5B”, “$50M”, “$500K”)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string" id="latest_valuation" label="Latest Valuation" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" %}{% /field %}
+<!-- field kind="string" id="latest_valuation" label="Latest Valuation" pattern="^\\$[0-9]+(\\.[0-9]+)?(K|M|B)?$" --><!-- /field -->
 
-{% instructions ref="latest_valuation" %}
+<!-- instructions ref="latest_valuation" -->
 Format: $X.XB, $XXM, or $XXK (e.g., “$10B”)
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="single_select" id="funding_stage" label="Funding Stage" %}
+<!-- field kind="single_select" id="funding_stage" label="Funding Stage" -->
+- [ ] Pre-seed <!-- #pre_seed -->
+- [ ] Seed <!-- #seed -->
+- [ ] Series A <!-- #series_a -->
+- [ ] Series B <!-- #series_b -->
+- [ ] Series C <!-- #series_c -->
+- [ ] Series D+ <!-- #series_d_plus -->
+- [ ] Public <!-- #public -->
+<!-- /field -->
 
-- [ ] Pre-seed {% #pre_seed %}
-- [ ] Seed {% #seed %}
-- [ ] Series A {% #series_a %}
-- [ ] Series B {% #series_b %}
-- [ ] Series C {% #series_c %}
-- [ ] Series D+ {% #series_d_plus %}
-- [ ] Public {% #public %}
+<!-- field kind="table" id="funding_rounds" columnIds=["round_type", "date", "amount", "lead_investors", "source_url"] columnLabels=["Round Type", "Date", "Amount", "Lead Investor(s)", "Source URL"] columnTypes=["string", "string", "string", "string", "url"] label="Funding Rounds" maxRows=10 minRows=0 --><!-- /field -->
 
-{% /field %}
-
-{% field kind="table" id="funding_rounds" label="Funding Rounds" columnIds=["round_type", "date", "amount", "lead_investors", "source_url"] columnTypes=["string", "string", "string", "string", "url"] minRows=0 maxRows=10 %}
-
-| Round Type | Date | Amount | Lead Investor(s) | Source URL |
-|------------|------|--------|------------------|------------|
-
-{% /field %}
-
-{% instructions ref="funding_rounds" %}
+<!-- instructions ref="funding_rounds" -->
 List funding rounds, most recent first.
 Date format: YYYY-MM. Example: Series B | 2023-06 | $50M | Sequoia Capital |
 https://techcrunch.com/...
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="people" title="Key People" %}
+<!-- group id="people" title="Key People" -->
 
-{% field kind="table" id="founders" label="Founders" columnIds=["name", "title", "linkedin"] columnTypes=["string", "string", "url"] minRows=1 maxRows=5 %}
+<!-- field kind="table" id="founders" columnIds=["name", "title", "linkedin"] columnLabels=["Name", "Title", "LinkedIn URL"] columnTypes=["string", "string", "url"] label="Founders" maxRows=5 minRows=1 --><!-- /field -->
 
-| Name | Title | LinkedIn URL |
-|------|-------|--------------|
-
-{% /field %}
-
-{% instructions ref="founders" %}
+<!-- instructions ref="founders" -->
 List founders and co-founders.
 Include name, current title, and LinkedIn profile URL.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="number" id="employee_count" label="Employee Count" min=1 integer=true %}{% /field %}
+<!-- field kind="number" id="employee_count" integer=true label="Employee Count" min=1 --><!-- /field -->
 
-{% instructions ref="employee_count" %}
+<!-- instructions ref="employee_count" -->
 Approximate number of employees.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="market_info" title="Market & Industry" %}
+<!-- group id="market_info" title="Market & Industry" -->
 
-{% field kind="multi_select" id="industry_sectors" label="Industry Sectors" minSelections=1 maxSelections=5 %}
+<!-- field kind="multi_select" id="industry_sectors" label="Industry Sectors" maxSelections=5 minSelections=1 -->
+- [ ] AI/ML <!-- #ai_ml -->
+- [ ] FinTech <!-- #fintech -->
+- [ ] HealthTech <!-- #healthtech -->
+- [ ] EdTech <!-- #edtech -->
+- [ ] SaaS <!-- #saas -->
+- [ ] E-commerce <!-- #ecommerce -->
+- [ ] Security <!-- #security -->
+- [ ] Developer Tools <!-- #devtools -->
+- [ ] Climate Tech <!-- #climatetech -->
+- [ ] Other <!-- #other -->
+<!-- /field -->
 
-- [ ] AI/ML {% #ai_ml %}
-- [ ] FinTech {% #fintech %}
-- [ ] HealthTech {% #healthtech %}
-- [ ] EdTech {% #edtech %}
-- [ ] SaaS {% #saas %}
-- [ ] E-commerce {% #ecommerce %}
-- [ ] Security {% #security %}
-- [ ] Developer Tools {% #devtools %}
-- [ ] Climate Tech {% #climatetech %}
-- [ ] Other {% #other %}
+<!-- field kind="table" id="competitors" columnIds=["company_name", "website", "one_liner"] columnLabels=["Company Name", "Website", "One-liner"] columnTypes=["string", "url", "string"] label="Key Competitors" maxRows=5 minRows=0 --><!-- /field -->
 
-{% /field %}
-
-{% field kind="table" id="competitors" label="Key Competitors" columnIds=["company_name", "website", "one_liner"] columnTypes=["string", "url", "string"] minRows=0 maxRows=5 %}
-
-| Company Name | Website | One-liner |
-|--------------|---------|-----------|
-
-{% /field %}
-
-{% instructions ref="competitors" %}
+<!-- instructions ref="competitors" -->
 List main competitors with their website and a brief description.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="press_coverage" title="Press & Coverage" %}
+<!-- group id="press_coverage" title="Press & Coverage" -->
 
-{% field kind="table" id="press_articles" label="Press Coverage" columnIds=["title", "publication", "date", "url"] columnTypes=["string", "string", "date", "url"] minRows=1 maxRows=10 %}
+<!-- field kind="table" id="press_articles" columnIds=["title", "publication", "date", "url"] columnLabels=["Title", "Publication", "Date", "URL"] columnTypes=["string", "string", "date", "url"] label="Press Coverage" maxRows=10 minRows=1 --><!-- /field -->
 
-| Title | Publication | Date | URL |
-|-------|-------------|------|-----|
-
-{% /field %}
-
-{% instructions ref="press_articles" %}
+<!-- instructions ref="press_articles" -->
 Notable press articles, reviews, or coverage about the company.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="crunchbase_url" label="Crunchbase Profile" %}{% /field %}
+<!-- field kind="url" id="crunchbase_url" label="Crunchbase Profile" --><!-- /field -->
 
-{% instructions ref="crunchbase_url" %}
+<!-- instructions ref="crunchbase_url" -->
 Crunchbase company profile URL.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="pitchbook_url" label="PitchBook Profile" %}{% /field %}
+<!-- field kind="url" id="pitchbook_url" label="PitchBook Profile" --><!-- /field -->
 
-{% instructions ref="pitchbook_url" %}
+<!-- instructions ref="pitchbook_url" -->
 PitchBook company profile URL if available.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="sources_section" title="Research Sources" %}
+<!-- group id="sources_section" title="Research Sources" -->
 
-{% field kind="url_list" id="sources" label="Source URLs" minItems=1 uniqueItems=true %}{% /field %}
+<!-- field kind="url_list" id="sources" label="Source URLs" minItems=1 uniqueItems=true --><!-- /field -->
 
-{% instructions ref="sources" %}
+<!-- instructions ref="sources" -->
 List all source URLs used for this research.
 Include Crunchbase, company website, and any additional sources consulted.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% /form %}
+<!-- /form -->
+
+
+

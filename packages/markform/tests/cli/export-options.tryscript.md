@@ -38,19 +38,18 @@ $ $CLI export examples/simple/simple.form.md --format json | head -10
 $ $CLI export examples/simple/simple.form.md --format markform | head -15
 ---
 markform:
-  spec: "MF/0.1"
-  run_mode: "interactive"
-role_instructions:
-  user: "Fill in the fields you have direct knowledge of."
-  agent: "Complete the remaining fields based on the provided context."
+  spec: MF/0.1
+  title: Simple Test Form
+  description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+  run_mode: interactive
+  roles:
+    - user
+  role_instructions:
+    user: Fill in all fields in this form.
 ---
 
-{% form id="simple_test" title="Simple Test Form" %}
-
-{% description ref="simple_test" %}
-A fully interactive form demonstrating all Markform v0.1 field types.
-Fill all fields using interactive prompts - no LLM API key needed.
-{% /description %}
+<!-- form id="simple_test" title="Simple Test Form" -->
+...
 ? 0
 ```
 

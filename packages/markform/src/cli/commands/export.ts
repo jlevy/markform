@@ -15,7 +15,7 @@ import YAML from 'yaml';
 
 import { parseForm } from '../../engine/parse.js';
 import { serializeForm, serializeRawMarkdown } from '../../engine/serialize.js';
-import type { FieldValue, Id, Note } from '../../engine/coreTypes.js';
+import type { FieldValue, Id, Note, SyntaxStyle } from '../../engine/coreTypes.js';
 import { getCommandContext, logError, logVerbose, readFile } from '../lib/shared.js';
 
 interface ExportField {
@@ -61,8 +61,22 @@ export function registerExportCommand(program: Command): void {
     )
     .option('--compact', 'Output compact JSON (no formatting, only for JSON format)')
     .option('--normalize', 'Regenerate form without preserving external content')
+    .option(
+      '--syntax <style>',
+      'Output syntax style: comments (HTML comments) or tags (Markdoc). Default: preserve original.',
+      (value: string) => {
+        if (value !== 'comments' && value !== 'tags') {
+          throw new Error(`Invalid syntax value: ${value}. Must be 'comments' or 'tags'.`);
+        }
+        return value as SyntaxStyle;
+      },
+    )
     .action(
-      async (file: string, options: { compact?: boolean; normalize?: boolean }, cmd: Command) => {
+      async (
+        file: string,
+        options: { compact?: boolean; normalize?: boolean; syntax?: SyntaxStyle },
+        cmd: Command,
+      ) => {
         const ctx = getCommandContext(cmd);
 
         // Determine format: map global format to export format
@@ -89,7 +103,12 @@ export function registerExportCommand(program: Command): void {
 
           // For markform format, output canonical markdoc markdown
           if (format === 'markform') {
-            console.log(serializeForm(form, { preserveContent: !options.normalize }));
+            console.log(
+              serializeForm(form, {
+                preserveContent: !options.normalize,
+                syntaxStyle: options.syntax,
+              }),
+            );
             return;
           }
 
@@ -141,7 +160,10 @@ export function registerExportCommand(program: Command): void {
             schema,
             values,
             notes: form.notes,
-            markdown: serializeForm(form, { preserveContent: !options.normalize }),
+            markdown: serializeForm(form, {
+              preserveContent: !options.normalize,
+              syntaxStyle: options.syntax,
+            }),
           };
 
           // Output in JSON or YAML format

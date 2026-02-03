@@ -64,6 +64,8 @@ export class LiveAgent implements Agent {
   private webSearchTools: Record<string, Tool> | null = null;
   private additionalTools: Record<string, Tool>;
   private callbacks?: FillCallbacks;
+  private executionId: string;
+  private toolChoice: 'auto' | 'required';
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -74,6 +76,11 @@ export class LiveAgent implements Agent {
     this.enableWebSearch = config.enableWebSearch;
     this.additionalTools = config.additionalTools ?? {};
     this.callbacks = config.callbacks;
+    this.executionId = config.executionId ?? '0-serial';
+    // TODO: Make toolChoice configurable per-model or per-form in the future.
+    // For now, 'required' is always safe since Markform agents must use tools.
+    // Some models (e.g., gpt-5-mini) don't reliably call tools with 'auto'.
+    this.toolChoice = config.toolChoice ?? 'required';
 
     // Eagerly load web search tools to enable early logging
     if (this.enableWebSearch && this.provider) {
@@ -157,7 +164,7 @@ export class LiveAgent implements Agent {
     };
 
     // Wrap tools with callbacks for observability
-    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks, this.provider);
+    const tools = wrapToolsWithCallbacks(rawTools, this.callbacks, this.provider, this.executionId);
 
     // Get model ID for callbacks (may not be available on all model types)
     const modelId = (this.model as { modelId?: string }).modelId ?? 'unknown';
@@ -167,9 +174,7 @@ export class LiveAgent implements Agent {
       try {
         this.callbacks.onLlmCallStart({
           model: modelId,
-          // Default executionId for serial execution
-          // Parallel harness will provide proper context
-          executionId: '0-serial',
+          executionId: this.executionId,
         });
       } catch {
         // Ignore callback errors
@@ -182,6 +187,7 @@ export class LiveAgent implements Agent {
       system: systemPrompt,
       prompt: contextPrompt,
       tools,
+      toolChoice: this.toolChoice,
       stopWhen: stepCountIs(this.maxStepsPerTurn),
     });
 
@@ -192,8 +198,7 @@ export class LiveAgent implements Agent {
           model: modelId,
           inputTokens: result.usage?.inputTokens ?? 0,
           outputTokens: result.usage?.outputTokens ?? 0,
-          // Default executionId for serial execution
-          executionId: '0-serial',
+          executionId: this.executionId,
         });
       } catch {
         // Ignore callback errors
@@ -203,9 +208,6 @@ export class LiveAgent implements Agent {
     // Extract patches from tool calls and count tool usage
     const patches: Patch[] = [];
     const toolCallCounts = new Map<string, number>();
-
-    // Get execution ID for callbacks (matches what wrapToolsWithCallbacks uses)
-    const executionId = '0-serial';
 
     for (const step of result.steps) {
       for (const toolCall of step.toolCalls) {
@@ -225,7 +227,7 @@ export class LiveAgent implements Agent {
               this.callbacks.onToolStart({
                 name: FILL_FORM_TOOL_NAME,
                 input,
-                executionId,
+                executionId: this.executionId,
               });
             } catch {
               // Ignore callback errors
@@ -241,7 +243,7 @@ export class LiveAgent implements Agent {
                 name: FILL_FORM_TOOL_NAME,
                 output: { patchCount: input.patches.length },
                 durationMs: Date.now() - startTime,
-                executionId,
+                executionId: this.executionId,
                 error: undefined,
               });
             } catch {
@@ -618,6 +620,7 @@ function wrapToolsWithCallbacks(
   tools: Record<string, Tool>,
   callbacks?: FillCallbacks,
   provider?: string,
+  executionId = '0-serial',
 ): Record<string, Tool> {
   // Skip wrapping if no tool callbacks
   if (!callbacks?.onToolStart && !callbacks?.onToolEnd && !callbacks?.onWebSearch) {
@@ -631,7 +634,7 @@ function wrapToolsWithCallbacks(
     const execute = (tool as any).execute;
     if (typeof execute === 'function') {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      wrapped[name] = wrapTool(name, tool, execute, callbacks, provider);
+      wrapped[name] = wrapTool(name, tool, execute, callbacks, provider, executionId);
     } else {
       // Pass through declarative tools unchanged
       wrapped[name] = tool;
@@ -648,16 +651,13 @@ function wrapTool(
   tool: Tool,
   originalExecute: (input: unknown) => Promise<unknown>,
   callbacks: FillCallbacks,
-  provider?: string,
+  provider: string | undefined,
+  executionId: string,
 ): Tool {
   return {
     ...tool,
     execute: async (input: unknown) => {
       const startTime = Date.now();
-
-      // Default executionId for serial execution
-      // Parallel harness will provide proper context
-      const executionId = '0-serial';
 
       // Call onToolStart (errors don't abort)
       if (callbacks.onToolStart) {

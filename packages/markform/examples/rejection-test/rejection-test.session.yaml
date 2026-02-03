@@ -46,7 +46,7 @@ turns:
             - votes
     after:
       required_issue_count: 1
-      markdown_sha256: b24578a1abb357a8f215de6fe006fa4a15b6388b3bb277526b1f3afd918a46e6
+      markdown_sha256: 1c9297f8e24b731881ca8006c9b215738001b05cf58fbce068a3da4eaf326ce0
       answered_field_count: 1
       skipped_field_count: 0
     context:
@@ -113,32 +113,39 @@ turns:
         ```markdown
         ---
         markform:
-          spec: "MF/0.1"
-        role_instructions:
-          user: "Fill in the fields you have direct knowledge of."
-          agent: "Complete the remaining fields based on the provided context."
+          spec: MF/0.1
+          title: Rejection Test Form
+          description: Tests type mismatch rejection and recovery behavior
+          roles:
+            - agent
+          role_instructions:
+            user: Fill in the fields you have direct knowledge of.
+            agent: Complete the remaining fields based on the provided context.
         ---
 
-        {% form id="rejection_test" title="Rejection Test Form" %}
+        <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-        {% description ref="rejection_test" %}
+        <!-- description ref="rejection_test" -->
         A form to test patch rejection scenarios - verifies that type mismatch errors are
         properly recorded and recovery works.
-        {% /description %}
+        <!-- /description -->
 
-        {% group id="fields" title="Test Fields" %}
+        <!-- group id="fields" title="Test Fields" -->
 
-        {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+        <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-        {% instructions ref="ratings" %}
+        <!-- instructions ref="ratings" -->
         Enter rating data with source name, score (0-100), and vote count.
-        {% /instructions %}
+        <!-- /instructions -->
 
-        {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+        <!-- field kind="string" id="title" label="Title" required=true --><!-- /field -->
 
-        {% /group %}
+        <!-- /group -->
 
-        {% /form %}
+        <!-- /form -->
+
+
+
 
         ```
 
@@ -229,32 +236,39 @@ turns:
           ```markdown
           ---
           markform:
-            spec: "MF/0.1"
-          role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            spec: MF/0.1
+            title: Rejection Test Form
+            description: Tests type mismatch rejection and recovery behavior
+            roles:
+              - agent
+            role_instructions:
+              user: Fill in the fields you have direct knowledge of.
+              agent: Complete the remaining fields based on the provided context.
           ---
 
-          {% form id="rejection_test" title="Rejection Test Form" %}
+          <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-          {% description ref="rejection_test" %}
+          <!-- description ref="rejection_test" -->
           A form to test patch rejection scenarios - verifies that type mismatch errors are
           properly recorded and recovery works.
-          {% /description %}
+          <!-- /description -->
 
-          {% group id="fields" title="Test Fields" %}
+          <!-- group id="fields" title="Test Fields" -->
 
-          {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+          <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-          {% instructions ref="ratings" %}
+          <!-- instructions ref="ratings" -->
           Enter rating data with source name, score (0-100), and vote count.
-          {% /instructions %}
+          <!-- /instructions -->
 
-          {% field kind="string" id="title" label="Title" required=true %}{% /field %}
+          <!-- field kind="string" id="title" label="Title" required=true --><!-- /field -->
 
-          {% /group %}
+          <!-- /group -->
 
-          {% /form %}
+          <!-- /form -->
+
+
+
 
           ```
 
@@ -335,7 +349,7 @@ turns:
               votes: 450
     after:
       required_issue_count: 0
-      markdown_sha256: eabdf7aef8cbd52893d7bc0b03fd3c0b2a21eebf9e16f98af6884509b5101e34
+      markdown_sha256: 6c9ac35ce61126e8ff2e7d2bec229952f78ec88d2c4750d65a821e99cc6e69a3
       answered_field_count: 2
       skipped_field_count: 0
     context:
@@ -410,36 +424,43 @@ turns:
         ```markdown
         ---
         markform:
-          spec: "MF/0.1"
-        role_instructions:
-          user: "Fill in the fields you have direct knowledge of."
-          agent: "Complete the remaining fields based on the provided context."
+          spec: MF/0.1
+          title: Rejection Test Form
+          description: Tests type mismatch rejection and recovery behavior
+          roles:
+            - agent
+          role_instructions:
+            user: Fill in the fields you have direct knowledge of.
+            agent: Complete the remaining fields based on the provided context.
         ---
 
-        {% form id="rejection_test" title="Rejection Test Form" %}
+        <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-        {% description ref="rejection_test" %}
+        <!-- description ref="rejection_test" -->
         A form to test patch rejection scenarios - verifies that type mismatch errors are
         properly recorded and recovery works.
-        {% /description %}
+        <!-- /description -->
 
-        {% group id="fields" title="Test Fields" %}
+        <!-- group id="fields" title="Test Fields" -->
 
-        {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+        <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-        {% instructions ref="ratings" %}
+        <!-- instructions ref="ratings" -->
         Enter rating data with source name, score (0-100), and vote count.
-        {% /instructions %}
+        <!-- /instructions -->
 
-        {% field kind="string" id="title" label="Title" required=true %}
+        <!-- field kind="string" id="title" label="Title" required=true -->
         ```value
         Test Movie
         ```
-        {% /field %}
+        <!-- /field -->
 
-        {% /group %}
+        <!-- /group -->
 
-        {% /form %}
+        <!-- /form -->
+
+
+
 
         ```
 
@@ -532,36 +553,43 @@ turns:
           ```markdown
           ---
           markform:
-            spec: "MF/0.1"
-          role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            spec: MF/0.1
+            title: Rejection Test Form
+            description: Tests type mismatch rejection and recovery behavior
+            roles:
+              - agent
+            role_instructions:
+              user: Fill in the fields you have direct knowledge of.
+              agent: Complete the remaining fields based on the provided context.
           ---
 
-          {% form id="rejection_test" title="Rejection Test Form" %}
+          <!-- form id="rejection_test" title="Rejection Test Form" -->
 
-          {% description ref="rejection_test" %}
+          <!-- description ref="rejection_test" -->
           A form to test patch rejection scenarios - verifies that type mismatch errors are
           properly recorded and recovery works.
-          {% /description %}
+          <!-- /description -->
 
-          {% group id="fields" title="Test Fields" %}
+          <!-- group id="fields" title="Test Fields" -->
 
-          {% field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true %}{% /field %}
+          <!-- field kind="table" id="ratings" columnIds=["source", "score", "votes"] columnLabels=["Source", "Score", "Votes"] columnTypes=["string", "number", "number"] label="Ratings" maxRows=5 minRows=1 required=true --><!-- /field -->
 
-          {% instructions ref="ratings" %}
+          <!-- instructions ref="ratings" -->
           Enter rating data with source name, score (0-100), and vote count.
-          {% /instructions %}
+          <!-- /instructions -->
 
-          {% field kind="string" id="title" label="Title" required=true %}
+          <!-- field kind="string" id="title" label="Title" required=true -->
           ```value
           Test Movie
           ```
-          {% /field %}
+          <!-- /field -->
 
-          {% /group %}
+          <!-- /group -->
 
-          {% /form %}
+          <!-- /form -->
+
+
+
 
           ```
 

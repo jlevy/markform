@@ -134,6 +134,12 @@ export interface LiveAgentConfig {
   targetRole?: string;
   /** Provider name (needed for web search tool selection) */
   provider?: string;
+  /**
+   * Execution thread ID for parallel tracking.
+   * Used to associate LLM calls, tool calls, and events with the correct execution thread.
+   * Defaults to '0-serial' for serial execution.
+   */
+  executionId?: string;
 
   /**
    * Enable provider web search tools.
@@ -166,6 +172,16 @@ export interface LiveAgentConfig {
 
   /** Optional callbacks for observing agent execution */
   callbacks?: FillCallbacks;
+
+  /**
+   * Tool choice strategy for the LLM.
+   *
+   * - 'auto': Model decides whether to use tools
+   * - 'required' (default): Model MUST call a tool (some models like gpt-5-mini don't reliably call tools with 'auto')
+   *
+   * @default 'required'
+   */
+  toolChoice?: 'auto' | 'required';
 }
 
 // =============================================================================
@@ -436,6 +452,16 @@ export interface FillOptions {
    * - Audit trails and provenance
    */
   recordFill: boolean;
+
+  /**
+   * Tool choice strategy for the LLM.
+   *
+   * - 'auto': Model decides whether to use tools
+   * - 'required' (default): Model MUST call a tool (some models like gpt-5-mini don't reliably call tools with 'auto')
+   *
+   * @default 'required'
+   */
+  toolChoice?: 'auto' | 'required';
 }
 
 /**
@@ -456,6 +482,8 @@ export interface TurnProgress {
   patches: Patch[];
   /** Empty if patches applied successfully, contains rejection details if failed */
   rejectedPatches: PatchRejection[];
+  /** Execution ID for parallel tracking (e.g., "1-batch-research-0") */
+  executionId?: string;
 }
 
 /**

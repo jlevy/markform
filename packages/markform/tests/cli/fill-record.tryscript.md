@@ -177,7 +177,7 @@ $ cat /tmp/test-fill-stable.fill.json | jq '{status, form: {id: .form.id, title:
       0
     ],
     "executionThreads": [
-      "cli-serial"
+      "eid:serial:o0"
     ]
   }
 }
@@ -222,7 +222,7 @@ $ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/
   {
     "turnNumber": 1,
     "order": 0,
-    "executionId": "cli-serial",
+    "executionId": "eid:serial:o0",
     "issuesAddressed": 10,
     "patchesApplied": 10,
     "patchesRejected": 0,
@@ -235,7 +235,7 @@ $ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/
   {
     "turnNumber": 2,
     "order": 0,
-    "executionId": "cli-serial",
+    "executionId": "eid:serial:o0",
     "issuesAddressed": 10,
     "patchesApplied": 10,
     "patchesRejected": 0,
@@ -248,7 +248,7 @@ $ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/
   {
     "turnNumber": 3,
     "order": 0,
-    "executionId": "cli-serial",
+    "executionId": "eid:serial:o0",
     "issuesAddressed": 1,
     "patchesApplied": 1,
     "patchesRejected": 0,
@@ -277,7 +277,7 @@ $ cat /tmp/test-timeline.fill.json | jq '{timelineLength: (.timeline | length), 
       0
     ],
     "executionThreads": [
-      "cli-serial"
+      "eid:serial:o0"
     ]
   }
 }
