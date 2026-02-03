@@ -53,6 +53,7 @@ import {
   DEFAULT_PRIORITY,
   MF_SPEC_VERSION,
   transformHarnessConfigToYaml,
+  YAML_STRINGIFY_OPTIONS,
 } from '../settings.js';
 import { priorityKeyComparator } from '../utils/keySort.js';
 import { formatUrlAsMarkdownLink } from '../utils/urlFormat.js';
@@ -1467,12 +1468,7 @@ function buildFrontmatter(metadata: FormMetadata | undefined, specVersion: strin
     markform: markformSection,
   };
 
-  // Serialize to YAML with proper formatting for multiline strings
-  const yamlStr = YAML.stringify(frontmatterObj, {
-    lineWidth: 0, // Don't wrap lines
-    defaultStringType: 'QUOTE_DOUBLE',
-    defaultKeyType: 'PLAIN',
-  });
+  const yamlStr = YAML.stringify(frontmatterObj, YAML_STRINGIFY_OPTIONS);
 
   return `---\n${yamlStr}---`;
 }

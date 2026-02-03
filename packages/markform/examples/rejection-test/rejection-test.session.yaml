@@ -46,7 +46,7 @@ turns:
             - votes
     after:
       required_issue_count: 1
-      markdown_sha256: 292ae742715199f5bdb095fb0167aaef0e06e8346e97a2145d2f9f60780aaa50
+      markdown_sha256: 1c9297f8e24b731881ca8006c9b215738001b05cf58fbce068a3da4eaf326ce0
       answered_field_count: 1
       skipped_field_count: 0
     context:
@@ -113,14 +113,14 @@ turns:
         ```markdown
         ---
         markform:
-          spec: "MF/0.1"
-          title: "Rejection Test Form"
-          description: "Tests type mismatch rejection and recovery behavior"
+          spec: MF/0.1
+          title: Rejection Test Form
+          description: Tests type mismatch rejection and recovery behavior
           roles:
-            - "agent"
+            - agent
           role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            user: Fill in the fields you have direct knowledge of.
+            agent: Complete the remaining fields based on the provided context.
         ---
 
         <!-- form id="rejection_test" title="Rejection Test Form" -->
@@ -143,6 +143,8 @@ turns:
         <!-- /group -->
 
         <!-- /form -->
+
+
 
 
         ```
@@ -234,14 +236,14 @@ turns:
           ```markdown
           ---
           markform:
-            spec: "MF/0.1"
-            title: "Rejection Test Form"
-            description: "Tests type mismatch rejection and recovery behavior"
+            spec: MF/0.1
+            title: Rejection Test Form
+            description: Tests type mismatch rejection and recovery behavior
             roles:
-              - "agent"
+              - agent
             role_instructions:
-              user: "Fill in the fields you have direct knowledge of."
-              agent: "Complete the remaining fields based on the provided context."
+              user: Fill in the fields you have direct knowledge of.
+              agent: Complete the remaining fields based on the provided context.
           ---
 
           <!-- form id="rejection_test" title="Rejection Test Form" -->
@@ -264,6 +266,8 @@ turns:
           <!-- /group -->
 
           <!-- /form -->
+
+
 
 
           ```
@@ -345,7 +349,7 @@ turns:
               votes: 450
     after:
       required_issue_count: 0
-      markdown_sha256: 3ba8efb77f32d570159f194341a7eaa4bc2cc1bf9517cc3cb7b700838fb47078
+      markdown_sha256: 6c9ac35ce61126e8ff2e7d2bec229952f78ec88d2c4750d65a821e99cc6e69a3
       answered_field_count: 2
       skipped_field_count: 0
     context:
@@ -420,14 +424,14 @@ turns:
         ```markdown
         ---
         markform:
-          spec: "MF/0.1"
-          title: "Rejection Test Form"
-          description: "Tests type mismatch rejection and recovery behavior"
+          spec: MF/0.1
+          title: Rejection Test Form
+          description: Tests type mismatch rejection and recovery behavior
           roles:
-            - "agent"
+            - agent
           role_instructions:
-            user: "Fill in the fields you have direct knowledge of."
-            agent: "Complete the remaining fields based on the provided context."
+            user: Fill in the fields you have direct knowledge of.
+            agent: Complete the remaining fields based on the provided context.
         ---
 
         <!-- form id="rejection_test" title="Rejection Test Form" -->
@@ -454,6 +458,8 @@ turns:
         <!-- /group -->
 
         <!-- /form -->
+
+
 
 
         ```
@@ -547,14 +553,14 @@ turns:
           ```markdown
           ---
           markform:
-            spec: "MF/0.1"
-            title: "Rejection Test Form"
-            description: "Tests type mismatch rejection and recovery behavior"
+            spec: MF/0.1
+            title: Rejection Test Form
+            description: Tests type mismatch rejection and recovery behavior
             roles:
-              - "agent"
+              - agent
             role_instructions:
-              user: "Fill in the fields you have direct knowledge of."
-              agent: "Complete the remaining fields based on the provided context."
+              user: Fill in the fields you have direct knowledge of.
+              agent: Complete the remaining fields based on the provided context.
           ---
 
           <!-- form id="rejection_test" title="Rejection Test Form" -->
@@ -581,6 +587,8 @@ turns:
           <!-- /group -->
 
           <!-- /form -->
+
+
 
 
           ```

@@ -529,7 +529,10 @@ markform --help
 ## API Key Setup
 
 Set the appropriate environment variable for your provider before running
-`markform fill`:
+`markform fill`. The CLI automatically loads from `.env.local` and `.env` files in the
+current directory.
+
+Supported providers:
 
 | Provider | Env Variable | Native Web Search |
 | --- | --- | :---: |

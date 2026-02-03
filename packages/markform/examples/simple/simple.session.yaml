@@ -120,7 +120,7 @@ turns:
             test: na
     after:
       required_issue_count: 2
-      markdown_sha256: 81441cad28784c9a2b7412b3fddac73d50c21fee148588fbc8be1424b2f7285b
+      markdown_sha256: 5dc18a81508d9ae2487c8c7628d5afccd603df4e6461c840d40dd5ee8905b7bb
       answered_field_count: 10
       skipped_field_count: 0
     context:
@@ -194,14 +194,14 @@ turns:
         ```markdown
         ---
         markform:
-          spec: "MF/0.1"
-          title: "Simple Test Form"
-          description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
-          run_mode: "interactive"
+          spec: MF/0.1
+          title: Simple Test Form
+          description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+          run_mode: interactive
           roles:
-            - "user"
+            - user
           role_instructions:
-            user: "Fill in all fields in this form."
+            user: Fill in all fields in this form.
         ---
 
         <!-- form id="simple_test" title="Simple Test Form" -->
@@ -370,6 +370,8 @@ turns:
         <!-- /form -->
 
 
+
+
         ```
 
         # Current Form Issues
@@ -518,14 +520,14 @@ turns:
           ```markdown
           ---
           markform:
-            spec: "MF/0.1"
-            title: "Simple Test Form"
-            description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
-            run_mode: "interactive"
+            spec: MF/0.1
+            title: Simple Test Form
+            description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+            run_mode: interactive
             roles:
-              - "user"
+              - user
             role_instructions:
-              user: "Fill in all fields in this form."
+              user: Fill in all fields in this form.
           ---
 
           <!-- form id="simple_test" title="Simple Test Form" -->
@@ -692,6 +694,8 @@ turns:
           <!-- /group -->
 
           <!-- /form -->
+
+
 
 
           ```
@@ -944,7 +948,7 @@ turns:
           value: 87.5
     after:
       required_issue_count: 0
-      markdown_sha256: 81b4300d04f3299fe88c7981ba17adc023414d6955c772647f5ab15691be7413
+      markdown_sha256: 53aa6ec5a9c403633cb91d29d6e7f8c197f207695e2a66da460c1aa837ce22af
       answered_field_count: 16
       skipped_field_count: 4
     context:
@@ -1018,14 +1022,14 @@ turns:
         ```markdown
         ---
         markform:
-          spec: "MF/0.1"
-          title: "Simple Test Form"
-          description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
-          run_mode: "interactive"
+          spec: MF/0.1
+          title: Simple Test Form
+          description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+          run_mode: interactive
           roles:
-            - "user"
+            - user
           role_instructions:
-            user: "Fill in all fields in this form."
+            user: Fill in all fields in this form.
         ---
 
         <!-- form id="simple_test" title="Simple Test Form" -->
@@ -1220,6 +1224,8 @@ turns:
         <!-- /form -->
 
 
+
+
         ```
 
         # Current Form Issues
@@ -1366,14 +1372,14 @@ turns:
           ```markdown
           ---
           markform:
-            spec: "MF/0.1"
-            title: "Simple Test Form"
-            description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
-            run_mode: "interactive"
+            spec: MF/0.1
+            title: Simple Test Form
+            description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+            run_mode: interactive
             roles:
-              - "user"
+              - user
             role_instructions:
-              user: "Fill in all fields in this form."
+              user: Fill in all fields in this form.
           ---
 
           <!-- form id="simple_test" title="Simple Test Form" -->
@@ -1568,6 +1574,8 @@ turns:
           <!-- /form -->
 
 
+
+
           ```
 
           # Current Form Issues
@@ -1730,7 +1738,7 @@ turns:
               start_date: 2023-06-01
     after:
       required_issue_count: 0
-      markdown_sha256: 6424e680750871b6dd193f304cb5702201f7626535eab7e5c22244e32c9e0b80
+      markdown_sha256: 4f95050f83002c993880cf5ac7ff3ed6a8e261a660ab5956d9274d24c9fe192c
       answered_field_count: 17
       skipped_field_count: 4
     context:
@@ -1797,14 +1805,14 @@ turns:
         ```markdown
         ---
         markform:
-          spec: "MF/0.1"
-          title: "Simple Test Form"
-          description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
-          run_mode: "interactive"
+          spec: MF/0.1
+          title: Simple Test Form
+          description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+          run_mode: interactive
           roles:
-            - "user"
+            - user
           role_instructions:
-            user: "Fill in all fields in this form."
+            user: Fill in all fields in this form.
         ---
 
         <!-- form id="simple_test" title="Simple Test Form" -->
@@ -2037,6 +2045,8 @@ turns:
         <!-- /form -->
 
 
+
+
         ```
 
         # Current Form Issues
@@ -2120,14 +2130,14 @@ turns:
           ```markdown
           ---
           markform:
-            spec: "MF/0.1"
-            title: "Simple Test Form"
-            description: "Fully interactive demo - no LLM required. Demonstrates all Markform field types."
-            run_mode: "interactive"
+            spec: MF/0.1
+            title: Simple Test Form
+            description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
+            run_mode: interactive
             roles:
-              - "user"
+              - user
             role_instructions:
-              user: "Fill in all fields in this form."
+              user: Fill in all fields in this form.
           ---
 
           <!-- form id="simple_test" title="Simple Test Form" -->
@@ -2358,6 +2368,8 @@ turns:
           <!-- /group -->
 
           <!-- /form -->
+
+
 
 
           ```

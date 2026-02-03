@@ -1,15 +1,15 @@
 ---
 markform:
-  spec: "MF/0.1"
-  title: "Company Research (Parallel)"
-  description: "Demonstrates parallel and order attributes for concurrent form filling."
+  spec: MF/0.1
+  title: Company Research (Parallel)
+  description: Demonstrates parallel and order attributes for concurrent form filling.
   harness:
     max_turns: 10
     max_parallel_agents: 4
   roles:
-    - "agent"
+    - agent
   role_instructions:
-    agent: "Research the company and fill in all fields."
+    agent: Research the company and fill in all fields.
 ---
 
 <!-- form id="company_research" title="Company Research (Parallel)" -->
@@ -56,4 +56,6 @@ and  to sequence synthesis after data gathering.
 <!-- /group -->
 
 <!-- /form -->
+
+
 

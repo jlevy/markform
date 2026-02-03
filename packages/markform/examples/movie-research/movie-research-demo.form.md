@@ -1,12 +1,14 @@
 ---
 markform:
-  spec: "MF/0.1"
-  title: "Movie Research Demo"
-  description: "Movie lookup with ratings from IMDB and Rotten Tomatoes."
-  run_mode: "research"
+  spec: MF/0.1
+  title: Movie Research Demo
+  description: Movie lookup with ratings from IMDB and Rotten Tomatoes.
+  run_mode: research
   role_instructions:
-    user: "Enter the movie title."
-    agent: "Identify the movie with web searches and use imdb.com and rottentomatoes.com to fill in the ratings.\n"
+    user: Enter the movie title.
+    agent: >
+      Identify the movie with web searches and use imdb.com and rottentomatoes.com to
+      fill in the ratings.
 ---
 
 <!-- form id="movie_research_demo" -->
@@ -42,4 +44,6 @@ Fill in scores and vote counts from each source:IMDB: Rating (1.0-10.0 scale), v
 <!-- /group -->
 
 <!-- /form -->
+
+
 
