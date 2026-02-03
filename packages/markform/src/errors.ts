@@ -148,6 +148,8 @@ export class MarkformLlmError extends MarkformError {
   readonly statusCode?: number;
   /** Whether this error is retryable */
   readonly retryable: boolean;
+  /** Raw response body from the API (for debugging) */
+  readonly responseBody?: string;
 
   constructor(
     message: string,
@@ -156,6 +158,7 @@ export class MarkformLlmError extends MarkformError {
       model?: string;
       statusCode?: number;
       retryable?: boolean;
+      responseBody?: string;
       cause?: Error;
     },
   ) {
@@ -164,6 +167,7 @@ export class MarkformLlmError extends MarkformError {
     this.model = context.model;
     this.statusCode = context.statusCode;
     this.retryable = context.retryable ?? false;
+    this.responseBody = context.responseBody;
   }
 }
 
@@ -262,6 +266,130 @@ export function isAbortError(error: unknown): error is MarkformAbortError {
 /** Check if an error is retryable (currently only LLM errors) */
 export function isRetryableError(error: unknown): boolean {
   return isLlmError(error) && error.retryable;
+}
+
+// =============================================================================
+// API Error Wrapping
+// =============================================================================
+
+/**
+ * Check if an error looks like a Vercel AI SDK APICallError.
+ * These errors have statusCode, responseBody, and isRetryable properties.
+ */
+function isApiCallError(
+  error: unknown,
+): error is Error & { statusCode?: number; responseBody?: string; isRetryable?: boolean } {
+  return (
+    error instanceof Error &&
+    ('statusCode' in error || 'responseBody' in error || 'isRetryable' in error)
+  );
+}
+
+/**
+ * Generate troubleshooting hints based on error status and message.
+ */
+function getTroubleshootingHints(
+  statusCode: number | undefined,
+  message: string,
+  provider: string,
+  model: string,
+): string[] {
+  const hints: string[] = [];
+  const lowerMessage = message.toLowerCase();
+
+  // Status-code specific hints
+  if (statusCode === 404 || lowerMessage.includes('not found')) {
+    hints.push(`Check if model "${model}" exists and is available for the ${provider} API`);
+    hints.push('Verify the model ID is spelled correctly (check provider documentation)');
+    hints.push('Some models require specific API tier access or waitlist approval');
+  } else if (statusCode === 403 || lowerMessage.includes('forbidden')) {
+    hints.push(`Your API key may not have permission to use model "${model}"`);
+    hints.push('Check that your API key has the required access tier/plan');
+    hints.push('Some preview models require explicit opt-in via provider dashboard');
+  } else if (
+    statusCode === 401 ||
+    lowerMessage.includes('unauthorized') ||
+    lowerMessage.includes('invalid api key')
+  ) {
+    hints.push('Verify your API key is correct and not expired');
+    hints.push(`Check that the correct env var is set (e.g., ${provider.toUpperCase()}_API_KEY)`);
+  } else if (statusCode === 429 || lowerMessage.includes('rate limit')) {
+    hints.push('You have hit the rate limit - wait a moment and retry');
+    hints.push('Consider using a model with higher rate limits or upgrading your plan');
+  } else if (statusCode === 500 || statusCode === 502 || statusCode === 503) {
+    hints.push('The API provider is experiencing issues - retry in a few minutes');
+    hints.push('Check the provider status page for any ongoing incidents');
+  }
+
+  // Generic hints if no specific match
+  if (hints.length === 0) {
+    hints.push('Check your API key and model availability');
+    hints.push(`Run "markform models" to see available models for ${provider}`);
+  }
+
+  return hints;
+}
+
+/**
+ * Wrap an API error with rich context for debugging.
+ *
+ * Extracts details from Vercel AI SDK APICallError and creates a MarkformLlmError
+ * with actionable information including model ID, status code, response body, and
+ * troubleshooting hints.
+ *
+ * @param error - The original error from the API call
+ * @param provider - The LLM provider name (e.g., 'anthropic', 'openai')
+ * @param model - The model identifier that was requested
+ * @returns A MarkformLlmError with rich context
+ */
+export function wrapApiError(error: unknown, provider: string, model: string): MarkformLlmError {
+  // Extract details from APICallError if available
+  let statusCode: number | undefined;
+  let responseBody: string | undefined;
+  let retryable = false;
+  let originalMessage = 'Unknown error';
+
+  if (isApiCallError(error)) {
+    statusCode = error.statusCode;
+    responseBody = error.responseBody;
+    retryable = error.isRetryable ?? false;
+    originalMessage = error.message;
+  } else if (error instanceof Error) {
+    originalMessage = error.message;
+  } else {
+    originalMessage = String(error);
+  }
+
+  // Build a rich error message
+  const parts: string[] = [];
+  parts.push(`API call failed for model "${provider}/${model}"`);
+
+  if (statusCode !== undefined) {
+    parts.push(`HTTP ${statusCode}`);
+  }
+
+  parts.push(originalMessage);
+
+  // Add response body hint if available and not too long
+  if (responseBody) {
+    const truncated = responseBody.length > 200 ? responseBody.slice(0, 200) + '...' : responseBody;
+    parts.push(`Response: ${truncated}`);
+  }
+
+  // Add troubleshooting hints
+  const hints = getTroubleshootingHints(statusCode, originalMessage, provider, model);
+  if (hints.length > 0) {
+    parts.push(`\n\nTroubleshooting:\n  - ${hints.join('\n  - ')}`);
+  }
+
+  return new MarkformLlmError(parts.join(': '), {
+    provider,
+    model,
+    statusCode,
+    retryable,
+    responseBody,
+    cause: error instanceof Error ? error : undefined,
+  });
 }
 
 // =============================================================================

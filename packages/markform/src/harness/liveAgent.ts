@@ -26,6 +26,7 @@ import { PatchSchema } from '../engine/coreTypes.js';
 import { serializeForm } from '../engine/serialize.js';
 import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, DEFAULT_MAX_STEPS_PER_TURN } from '../settings.js';
 import { getWebSearchConfig } from '../llms.js';
+import { wrapApiError } from '../errors.js';
 import type {
   Agent,
   AgentResponse,
@@ -182,14 +183,20 @@ export class LiveAgent implements Agent {
     }
 
     // Call the model (stateless - full context provided each turn)
-    const result = await generateText({
-      model: this.model,
-      system: systemPrompt,
-      prompt: contextPrompt,
-      tools,
-      toolChoice: this.toolChoice,
-      stopWhen: stepCountIs(this.maxStepsPerTurn),
-    });
+    let result;
+    try {
+      result = await generateText({
+        model: this.model,
+        system: systemPrompt,
+        prompt: contextPrompt,
+        tools,
+        toolChoice: this.toolChoice,
+        stopWhen: stepCountIs(this.maxStepsPerTurn),
+      });
+    } catch (error) {
+      // Wrap API errors with rich context for debugging
+      throw wrapApiError(error, this.provider ?? 'unknown', modelId);
+    }
 
     // Call onLlmCallEnd callback (errors don't abort)
     if (this.callbacks?.onLlmCallEnd) {
