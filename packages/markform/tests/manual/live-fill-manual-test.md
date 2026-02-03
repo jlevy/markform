@@ -25,12 +25,10 @@
    ```
 
    The CLI automatically loads `.env` files from the current working directory.
+   Loading order (highest priority first): shell env vars > `.env.local` > `.env`.
 
-3. **Create output directory** (gitignored within package):
-   ```bash
-   mkdir -p test-output
-   ```
-   Note: `test-output/` is gitignored to prevent polluting the repository.
+Note: Output files go to `test-output/` which is gitignored. Parent directories are
+created automatically.
 
 * * *
 
