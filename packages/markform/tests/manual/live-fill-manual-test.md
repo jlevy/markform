@@ -2,13 +2,13 @@
 
 > **Purpose**: Validate live agent form filling with real API keys.
 > These tests capture complete FillRecord output for manual review.
->
+> 
 > **NOT automated** - Run manually before releases to verify end-to-end behavior.
->
+> 
 > **Environment**: Works with both direct network access and proxy environments.
 > The CLI automatically configures proxy support via undici when HTTP_PROXY is set.
 
----
+* * *
 
 ## Prerequisites
 
@@ -17,34 +17,37 @@
    pnpm build
    ```
 
-2. **Set up API keys** in `.env` at repository root:
+2. **Set up API keys** in `.env` at the directory where you run the CLI:
    ```bash
    OPENAI_API_KEY=sk-...
    # Or for Anthropic:
    # ANTHROPIC_API_KEY=sk-ant-...
    ```
 
-3. **Create output directory**:
-   ```bash
-   mkdir -p /tmp/markform-manual-tests
-   ```
+   The CLI automatically loads `.env` files from the current working directory.
 
----
+3. **Create output directory** (gitignored within package):
+   ```bash
+   mkdir -p test-output
+   ```
+   Note: `test-output/` is gitignored to prevent polluting the repository.
+
+* * *
 
 ## Test 1: Simple Form Fill (OpenAI)
 
 Fill the simple form with basic field types using GPT-5-mini.
 Uses `--roles "*"` to fill all fields (the simple form has user-role fields by default).
 
-**Note**: Use `openai/gpt-5-mini` for all manual testing - it's the recommended model.
+**Note**: Use `openai/gpt-5-mini` for all manual testing - it’s the recommended model.
 
 ### Command
 
 ```bash
-./dist/bin.mjs fill examples/simple/simple.form.md \
+pnpm markform fill examples/simple/simple.form.md \
   --model openai/gpt-5-mini \
   --roles "*" \
-  --output /tmp/markform-manual-tests/simple-filled.form.md \
+  --output test-output/simple-filled.form.md \
   --record-fill \
   --instructions "Fill this form with realistic sample data."
 ```
@@ -70,7 +73,7 @@ Turn 3: 1 issue(s): team_members (unanswered)
   ✓ Complete
 Form completed in 3 turn(s)
 ⏰ Fill time: 16.2s
-Form written to: /tmp/markform-manual-tests/simple-filled.form.md
+Form written to: test-output/simple-filled.form.md
 
 Fill completed in 16.2s (0 turns)
 
@@ -78,7 +81,7 @@ Tokens:  12,295 input / 519 output (openai/openai/gpt-5-mini)
 Tools:   0 calls
 
 Progress: 21/21 fields filled (100%)
-Fill record written to: /tmp/markform-manual-tests/simple-filled.fill.json
+Fill record written to: test-output/simple-filled.fill.json
 Session Transcript
 
 Form: .../examples/simple/simple.form.md
@@ -96,7 +99,7 @@ Turns (3):
   Turn 3: 1 issues → 1 patches → 0 remaining
 
 Expected: ✓ complete
-Completed form: /tmp/markform-manual-tests/simple-filled.form.md
+Completed form: test-output/simple-filled.form.md
 ```
 
 ### Verification Checklist
@@ -112,16 +115,16 @@ Completed form: /tmp/markform-manual-tests/simple-filled.form.md
 
 ```bash
 # Check output form is valid
-./dist/bin.mjs validate /tmp/markform-manual-tests/simple-filled.form.md
+pnpm markform validate test-output/simple-filled.form.md
 
 # Check fill status
-./dist/bin.mjs status /tmp/markform-manual-tests/simple-filled.form.md
+pnpm markform status test-output/simple-filled.form.md
 
 # View FillRecord sidecar
-cat /tmp/markform-manual-tests/simple-filled.fill.json | jq .
+cat test-output/simple-filled.fill.json | jq .
 ```
 
----
+* * *
 
 ## Test 2: Startup Research Form (Web Search)
 
@@ -130,10 +133,10 @@ Fill the startup research form which requires web search capabilities.
 ### Command
 
 ```bash
-./dist/bin.mjs research examples/startup-research/startup-research.form.md \
+pnpm markform research examples/startup-research/startup-research.form.md \
   --model openai/gpt-5-mini \
   --company "Anthropic" \
-  --output /tmp/markform-manual-tests/startup-anthropic.form.md \
+  --output test-output/startup-anthropic.form.md \
   --record-fill
 ```
 
@@ -141,9 +144,9 @@ Fill the startup research form which requires web search capabilities.
 
 ```bash
 # If research command not available, use fill with pre-filled company name
-./dist/bin.mjs fill examples/startup-research/startup-research.form.md \
+pnpm markform fill examples/startup-research/startup-research.form.md \
   --model openai/gpt-5-mini \
-  --output /tmp/markform-manual-tests/startup-filled.form.md \
+  --output test-output/startup-filled.form.md \
   --record-fill
 ```
 
@@ -156,7 +159,7 @@ Turn 1: X issues
 ...
 Form completed in N turn(s)
 ⏰ Fill time: X.Xs
-Form written to: /tmp/markform-manual-tests/startup-filled.form.md
+Form written to: test-output/startup-filled.form.md
 
 Fill completed in Xms (N turns)
 
@@ -174,7 +177,7 @@ Progress: X/Y fields filled (XX%)
 - [ ] Company information fields populated
 - [ ] URLs captured (company website, etc.)
 
----
+* * *
 
 ## Test 3: Quiet Mode Verification
 
@@ -183,31 +186,31 @@ Verify `--quiet` suppresses the FillRecord summary.
 ### Command
 
 ```bash
-./dist/bin.mjs fill examples/simple/simple.form.md \
+pnpm markform fill examples/simple/simple.form.md \
   --model openai/gpt-5-mini \
-  --output /tmp/markform-manual-tests/simple-quiet.form.md \
+  --output test-output/simple-quiet.form.md \
   --quiet
 ```
 
 ### Expected Output
 
 Should show minimal output with NO FillRecord summary:
-- No "Fill completed in..." line
-- No "Tokens:" line
-- No "Tools:" line
-- No "Progress:" line
+- No “Fill completed in …” line
+- No “Tokens:” line
+- No “Tools:” line
+- No “Progress:” line
 
 ### Verification
 
 ```bash
 # This should return nothing (no summary lines)
-./dist/bin.mjs fill examples/simple/simple.form.md \
+pnpm markform fill examples/simple/simple.form.md \
   --model openai/gpt-5-mini \
-  --output /tmp/markform-manual-tests/simple-quiet2.form.md \
+  --output test-output/simple-quiet2.form.md \
   --quiet 2>&1 | grep -E "^(Fill completed|Tokens:|Tools:|Progress:)"
 ```
 
----
+* * *
 
 ## Test 4: FillRecord JSON Sidecar
 
@@ -216,9 +219,9 @@ Verify the `--record-fill` flag creates a complete FillRecord JSON sidecar.
 ### Command
 
 ```bash
-./dist/bin.mjs fill examples/simple/simple.form.md \
+pnpm markform fill examples/simple/simple.form.md \
   --model openai/gpt-5-mini \
-  --output /tmp/markform-manual-tests/simple-record.form.md \
+  --output test-output/simple-record.form.md \
   --record-fill
 ```
 
@@ -226,22 +229,22 @@ Verify the `--record-fill` flag creates a complete FillRecord JSON sidecar.
 
 ```bash
 # Check sidecar file exists
-ls -la /tmp/markform-manual-tests/simple-record.fill.json
+ls -la test-output/simple-record.fill.json
 
 # Verify JSON structure
-cat /tmp/markform-manual-tests/simple-record.fill.json | jq 'keys'
+cat test-output/simple-record.fill.json | jq 'keys'
 # Expected: ["completedAt", "durationMs", "events", "finalProgress", "model", ...]
 
 # Check events were captured
-cat /tmp/markform-manual-tests/simple-record.fill.json | jq '.events | length'
+cat test-output/simple-record.fill.json | jq '.events | length'
 # Should be > 0
 
 # Check token usage
-cat /tmp/markform-manual-tests/simple-record.fill.json | jq '.tokenUsage'
+cat test-output/simple-record.fill.json | jq '.tokenUsage'
 # Should show inputTokens and outputTokens > 0
 
 # Check tool calls
-cat /tmp/markform-manual-tests/simple-record.fill.json | jq '.toolCalls'
+cat test-output/simple-record.fill.json | jq '.toolCalls'
 # Should show count > 0
 ```
 
@@ -276,7 +279,7 @@ The sidecar should contain:
 }
 ```
 
----
+* * *
 
 ## Test 5: Error Handling
 
@@ -285,9 +288,9 @@ Verify graceful handling of API errors.
 ### Test with Invalid API Key
 
 ```bash
-OPENAI_API_KEY=invalid-key ./dist/bin.mjs fill examples/simple/simple.form.md \
+OPENAI_API_KEY=invalid-key pnpm markform fill examples/simple/simple.form.md \
   --model openai/gpt-5-mini \
-  --output /tmp/markform-manual-tests/simple-error.form.md 2>&1
+  --output test-output/simple-error.form.md 2>&1
 ```
 
 ### Expected Behavior
@@ -296,7 +299,7 @@ OPENAI_API_KEY=invalid-key ./dist/bin.mjs fill examples/simple/simple.form.md \
 - Should not crash with unhandled exception
 - Exit code should be non-zero
 
----
+* * *
 
 ## Test 6: Multi-Provider Comparison
 
@@ -305,18 +308,18 @@ Compare fill behavior across different providers (if keys available).
 ### OpenAI
 
 ```bash
-./dist/bin.mjs fill examples/simple/simple.form.md \
+pnpm markform fill examples/simple/simple.form.md \
   --model openai/gpt-5-mini \
-  --output /tmp/markform-manual-tests/simple-openai.form.md \
+  --output test-output/simple-openai.form.md \
   --record-fill
 ```
 
 ### Anthropic
 
 ```bash
-./dist/bin.mjs fill examples/simple/simple.form.md \
+pnpm markform fill examples/simple/simple.form.md \
   --model anthropic/claude-sonnet-4-5 \
-  --output /tmp/markform-manual-tests/simple-anthropic.form.md \
+  --output test-output/simple-anthropic.form.md \
   --record-fill
 ```
 
@@ -325,28 +328,28 @@ Compare fill behavior across different providers (if keys available).
 ```bash
 # Compare token usage
 echo "OpenAI tokens:"
-cat /tmp/markform-manual-tests/simple-openai.fill.json | jq '.tokenUsage'
+cat test-output/simple-openai.fill.json | jq '.tokenUsage'
 
 echo "Anthropic tokens:"
-cat /tmp/markform-manual-tests/simple-anthropic.fill.json | jq '.tokenUsage'
+cat test-output/simple-anthropic.fill.json | jq '.tokenUsage'
 
 # Compare turns needed
 echo "OpenAI turns:"
-cat /tmp/markform-manual-tests/simple-openai.fill.json | jq '.turns'
+cat test-output/simple-openai.fill.json | jq '.turns'
 
 echo "Anthropic turns:"
-cat /tmp/markform-manual-tests/simple-anthropic.fill.json | jq '.turns'
+cat test-output/simple-anthropic.fill.json | jq '.turns'
 ```
 
----
+* * *
 
 ## Cleanup
 
 ```bash
-rm -rf /tmp/markform-manual-tests
+rm -rf test-output
 ```
 
----
+* * *
 
 ## Regression Checklist
 
@@ -359,9 +362,10 @@ Before release, verify:
 - [ ] Test 5: Errors are handled gracefully
 - [ ] Test 6: Multiple providers work (if keys available)
 
-**Compare output to previous release** - Review FillRecord structure for unexpected changes.
+**Compare output to previous release** - Review FillRecord structure for unexpected
+changes.
 
----
+* * *
 
 ## Notes
 
