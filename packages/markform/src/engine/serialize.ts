@@ -1070,9 +1070,9 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
 
 /**
  * Serialize a cell value for table output.
- * URL-typed columns are formatted as markdown links with domain as display text.
+ * Values are serialized as-is; HTML rendering handles display formatting.
  */
-function serializeCellValue(cell: CellResponse, columnType: ColumnTypeName): string {
+function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): string {
   if (cell.state === 'skipped') {
     return cell.reason ? `%SKIP:${cell.reason}%` : '%SKIP%';
   }
@@ -1086,10 +1086,8 @@ function serializeCellValue(cell: CellResponse, columnType: ColumnTypeName): str
   if (typeof cell.value === 'number') {
     return String(cell.value);
   }
-  // Format URL columns as markdown links
-  if (columnType === 'url') {
-    return formatUrlAsMarkdownLink(cell.value);
-  }
+  // URL columns: keep bare URL for round-trip safety
+  // (HTML rendering handles abbreviated display via formatBareUrlsAsHtmlLinks)
   return cell.value;
 }
 
