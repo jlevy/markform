@@ -1444,6 +1444,81 @@ markform:
 
       expect(result.isValid).toBe(true);
     });
+
+    it('validates URL columns with bare URLs', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="sources" label="Sources" columnIds=["name", "url"] columnTypes=["string", "url"] %}
+| name | url |
+|------|-----|
+| Example | https://example.com |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(true);
+    });
+
+    it('validates URL columns with markdown link format', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="sources" label="Sources" columnIds=["name", "url"] columnTypes=["string", "url"] %}
+| name | url |
+|------|-----|
+| SEC Filing | [sec.gov/Archives/edg…](https://www.sec.gov/Archives/edgar/data/1326801) |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      // Should pass - the URL is extracted from the markdown link
+      expect(result.isValid).toBe(true);
+      expect(result.issues).toHaveLength(0);
+    });
+
+    it('rejects invalid URLs in URL columns', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="sources" label="Sources" columnIds=["name", "url"] columnTypes=["string", "url"] %}
+| name | url |
+|------|-----|
+| Invalid | not-a-valid-url |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      expect(result.issues[0]?.message).toContain('must be a valid URL');
+    });
   });
 
   describe('group validators', () => {
