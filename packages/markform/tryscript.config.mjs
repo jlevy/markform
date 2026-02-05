@@ -19,7 +19,7 @@ export default defineConfig({
   // See: https://github.com/jlevy/tryscript/blob/main/docs/tryscript-reference.md
   coverage: {
     reportsDir: 'coverage-tryscript',
-    reporters: ['text', 'text-summary', 'html', 'lcov'],
+    reporters: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
     include: ['dist/**'],
     src: 'src',
     excludeNodeModules: true,
