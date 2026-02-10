@@ -1604,5 +1604,37 @@ markform:
       expect(output).toContain('## Empty But Visible');
       expect(output).not.toContain('Hidden');
     });
+
+    it('shows skip reason in report for skipped fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" title="Skip Report" %}
+
+{% group id="g1" title="Section" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      parsed.responsesByFieldId = {
+        name: { state: 'skipped', reason: 'Not applicable to this company' },
+        notes: { state: 'skipped' },
+      };
+      const output = serializeReport(parsed);
+
+      // Field with reason should show the reason
+      expect(output).toContain('**Name:**');
+      expect(output).toContain('skipped');
+      expect(output).toContain('Not applicable to this company');
+
+      // Field without reason should just show skipped
+      expect(output).toContain('**Notes:**');
+      expect(output).toMatch(/skipped/i);
+    });
   });
 });
