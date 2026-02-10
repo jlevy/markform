@@ -1816,6 +1816,18 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
   // Blank line after label to ensure new paragraph (and prevent Flowmark merging)
   lines.push('');
 
+  // Handle skipped/aborted states before checking value
+  if (response?.state === 'skipped') {
+    const text = response.reason ? `_(skipped: ${response.reason})_` : '_(skipped)_';
+    lines.push(text);
+    return lines.join('\n');
+  }
+  if (response?.state === 'aborted') {
+    const text = response.reason ? `_(aborted: ${response.reason})_` : '_(aborted)_';
+    lines.push(text);
+    return lines.join('\n');
+  }
+
   // Extract value from response if state is "answered"
   const value = response?.state === 'answered' ? response.value : undefined;
 

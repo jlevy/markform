@@ -9,7 +9,7 @@ author: Claude (AI assistant)
 
 **Author:** Claude
 
-**Status:** Draft
+**Status:** Implemented
 
 ## Overview
 
@@ -31,7 +31,7 @@ addresses showing the skip reason in both tabs.
 
 - Changing how skip reasons are parsed or stored (already working correctly)
 - Changing the markdown serialization format
-- Modifying the Report tab or other tab rendering
+- ~~Modifying the Report tab~~ (added: report tab also fixed)
 - Adding UI for users to enter skip reasons (separate feature)
 
 ## Background
