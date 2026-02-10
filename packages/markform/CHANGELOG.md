@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.22
+
+### Patch Changes
+
+- a8738d4: Render subpath export, skip reason display, URL parsing fix, API error improvements
+
 ## 0.1.21
 
 ### Patch Changes
