@@ -927,6 +927,17 @@ markform:
         expect(html).toMatch(/skipped/i);
         expect(html).toContain('disabled');
       });
+
+      it('should show skip reason in edit tab when reason is provided', () => {
+        const form = parseForm(formContent);
+        form.responsesByFieldId = {
+          notes: { state: 'skipped', reason: 'Not applicable' },
+        };
+        const html = renderFormHtml(form);
+
+        expect(html).toContain('Not applicable');
+        expect(html).toContain('skipped-badge');
+      });
     });
   });
 
@@ -1240,6 +1251,25 @@ John Doe
       };
       const html = renderViewContent(form);
       expect(html).toContain('(skipped)');
+    });
+
+    it('should show skip reason in view when reason is provided', () => {
+      const form = parseForm(formContent);
+      form.responsesByFieldId = {
+        name: { state: 'skipped', reason: 'Not applicable to this company' },
+      };
+      const html = renderViewContent(form);
+      expect(html).toContain('(skipped: Not applicable to this company)');
+    });
+
+    it('should show skip reason in skipped badge when reason is provided', () => {
+      const form = parseForm(formContent);
+      form.responsesByFieldId = {
+        name: { state: 'skipped', reason: 'Field not relevant' },
+      };
+      const html = renderViewContent(form);
+      expect(html).toContain('skipped-badge');
+      expect(html).toContain('Field not relevant');
     });
 
     it('should render single_select with selected option label', () => {
