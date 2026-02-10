@@ -19,7 +19,7 @@ test@example.com
 
 **Score:**
 
-_(empty)_
+_(skipped: Not needed for this test)_
 
 ## List Fields
 
@@ -84,30 +84,30 @@ High
 
 **Team Members:**
 
-_(empty)_
+_(skipped)_
 
 **Project Tasks:**
 
-_(empty)_
+_(skipped)_
 
 ## Optional Fields
 
 **Notes:**
 
-_(empty)_
+_(skipped: No notes required)_
 
 **Optional Number:**
 
-_(empty)_
+_(skipped)_
 
 **Related URL:**
 
-_(empty)_
+_(skipped: No related URL needed)_
 
 **Optional Date:**
 
-_(empty)_
+_(skipped)_
 
 **Optional Year:**
 
-_(empty)_
+_(skipped)_

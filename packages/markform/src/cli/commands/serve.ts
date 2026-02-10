@@ -1303,7 +1303,8 @@ function renderGroup(group: FieldGroup, responses: ParsedForm['responsesByFieldI
       const response = responses[field.id];
       const value = response?.state === 'answered' ? response.value : undefined;
       const isSkipped = response?.state === 'skipped';
-      return renderFieldHtml(field, value, isSkipped);
+      const skipReason = isSkipped ? response?.reason : undefined;
+      return renderFieldHtml(field, value, isSkipped, skipReason);
     })
     .join('\n');
 
@@ -1322,11 +1323,13 @@ export function renderFieldHtml(
   field: Field,
   value: FieldValue | undefined,
   isSkipped?: boolean,
+  skipReason?: string,
 ): string {
   const skipped = isSkipped === true;
   const requiredMark = field.required ? '<span class="required">*</span>' : '';
   const typeLabel = `<span class="type-badge">${field.kind}</span>`;
-  const skippedBadge = skipped ? '<span class="skipped-badge">Skipped</span>' : '';
+  const skippedText = skipped && skipReason ? `Skipped: ${escapeHtml(skipReason)}` : 'Skipped';
+  const skippedBadge = skipped ? `<span class="skipped-badge">${skippedText}</span>` : '';
   const fieldClass = skipped ? 'field field-skipped' : 'field';
   const disabledAttr = skipped ? ' disabled' : '';
 

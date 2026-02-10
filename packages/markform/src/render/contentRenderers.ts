@@ -46,9 +46,11 @@ function renderViewFieldValue(
   field: Field,
   value: FieldValue | undefined,
   isSkipped: boolean,
+  skipReason?: string,
 ): string {
   if (isSkipped) {
-    return '<div class="view-field-empty">(skipped)</div>';
+    const reasonText = skipReason ? `(skipped: ${escapeHtml(skipReason)})` : '(skipped)';
+    return `<div class="view-field-empty">${reasonText}</div>`;
   }
 
   if (value === undefined) {
@@ -212,6 +214,7 @@ export function renderViewContent(form: ParsedForm): string {
       const response = responsesByFieldId[field.id];
       const value = response?.state === 'answered' ? response.value : undefined;
       const isSkipped = response?.state === 'skipped';
+      const skipReason = isSkipped ? response?.reason : undefined;
 
       html += '<div class="view-field">';
       html += `<div class="view-field-label">${escapeHtml(field.label)}`;
@@ -220,12 +223,13 @@ export function renderViewContent(form: ParsedForm): string {
         html += ' <span class="required">*</span>';
       }
       if (isSkipped) {
-        html += ' <span class="skipped-badge">Skipped</span>';
+        const reasonText = skipReason ? `Skipped: ${escapeHtml(skipReason)}` : 'Skipped';
+        html += ` <span class="skipped-badge">${reasonText}</span>`;
       }
       html += '</div>';
 
       // Render value based on field type
-      html += renderViewFieldValue(field, value, isSkipped);
+      html += renderViewFieldValue(field, value, isSkipped, skipReason);
       html += '</div>';
     }
 
