@@ -379,9 +379,19 @@ just moving.
 
 ### Phase 6: Documentation
 
-- Update `docs/markform-apis.md` with the new subpath
-- Add usage example showing how to import from `markform/render`
-- Update issue #131 with implementation notes
+Update all project docs that reference subpath exports to include `markform/render`:
+
+1. **`docs/markform-apis.md`** — Add "Rendering API" section (DONE: content renderers,
+   CSS/JS constants, utility functions documented)
+2. **`README.md` (root)** — Add "Rendering API" subsection under "Programmatic Usage",
+   following the existing "AI SDK Integration" pattern
+3. **`packages/markform/README.md`** — Mirror root README changes (these two files are
+   kept in sync)
+4. **`docs/development.md`** — Add "Rendering API" section after "AI SDK Integration",
+   showing import example and linking to markform-apis.md
+5. **`docs/project/architecture/current/arch-markform-design.md`** — Add render module
+   to "Programmatic APIs" or "User Interfaces" section, and update "NPM Package" section
+   to list the render subpath
 
 ## Files Involved (Summary)
 

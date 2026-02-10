@@ -1097,6 +1097,36 @@ Markform MCP server.
 
 * * *
 
+### Rendering API (`markform/render`)
+
+Extracted rendering functions available as a standalone subpath export, enabling external
+applications to render forms and fill records with visual parity to `markform serve`
+without depending on CLI/server code.
+
+**Module structure (`src/render/`):**
+
+- `renderUtils.ts` — Pure utilities: `escapeHtml`, `formatDuration`, `formatTokens`
+- `contentRenderers.ts` — Content renderers: `renderViewContent`, `renderSourceContent`,
+  `renderMarkdownContent`, `renderYamlContent`, `renderJsonContent`
+- `fillRecordRenderer.ts` — Fill record dashboard: `renderFillRecordContent`,
+  `FILL_RECORD_STYLES`, `FILL_RECORD_SCRIPTS`
+- `index.ts` — Public API surface
+
+**Design constraints:**
+
+- Render module has **no dependencies on CLI or server code** (one-way: serve.ts imports
+  from render/, not the reverse)
+- Functions produce **HTML fragments**, not full pages — consumers provide their own page
+  shell
+- `serve.ts` re-exports from render/ for backward compatibility
+
+**Subpath export:** `markform/render` (configured in package.json exports and
+tsdown.config.ts entry points)
+
+See [markform-apis.md](../../../markform-apis.md#rendering-api) for the full public API.
+
+* * *
+
 ### Testing Framework
 
 Provides a unified testing approach covering parsing/serialization, tool operations,
@@ -1197,9 +1227,13 @@ First release as **`markform`** on npm.
 
 MF/0.1 includes:
 
-- Core library
+- Core library (main entry)
 
-- CLI binary
+- CLI binary (`./cli`)
+
+- AI SDK integration (`./ai-sdk`)
+
+- Rendering API (`./render`)
 
 - Golden test runner
 

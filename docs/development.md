@@ -510,6 +510,46 @@ ANTHROPIC_API_KEY=your-key npx tsx packages/markform/scripts/test-live-agent.ts
 npx tsx packages/markform/scripts/test-live-agent.ts path/to/form.md
 ```
 
+## Rendering API
+
+Markform exports HTML rendering functions via the `markform/render` subpath. These
+produce the same output as `markform serve` but as HTML fragments (not full pages),
+suitable for embedding in external applications.
+
+### Usage
+
+```typescript
+import {
+  renderViewContent,
+  renderSourceContent,
+  renderMarkdownContent,
+  renderYamlContent,
+  renderJsonContent,
+  renderFillRecordContent,
+  FILL_RECORD_STYLES,
+  FILL_RECORD_SCRIPTS,
+  escapeHtml,
+  formatDuration,
+  formatTokens,
+} from "markform/render";
+```
+
+### Module Structure
+
+The render module lives in `packages/markform/src/render/`:
+
+| File | Contents |
+| --- | --- |
+| `renderUtils.ts` | `escapeHtml`, `formatDuration`, `formatTokens` |
+| `contentRenderers.ts` | View, source, markdown, YAML, JSON renderers + private helpers |
+| `fillRecordRenderer.ts` | Fill record dashboard renderer + `FILL_RECORD_STYLES` + `FILL_RECORD_SCRIPTS` |
+| `index.ts` | Public API re-exports |
+
+These functions were extracted from `src/cli/commands/serve.ts`, which now imports from
+`render/` and re-exports for backward compatibility.
+
+See [markform-apis.md](markform-apis.md#rendering-api) for full API documentation.
+
 * * *
 
 > **Note:** This is an initial version created during Phase 0 scaffolding.
