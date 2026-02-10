@@ -2,32 +2,17 @@
 
 ### Features
 
-- **Frontmatter validation**: Added MarkformSectionInputSchema with Zod validation for more reliable frontmatter parsing
-- **Timing metrics**: Added startMs to timeline entries and tool calls for relative timing analysis in FillRecords
+- **Render subpath export**: New `markform/render` subpath exports rendering functions (`renderViewContent`, `renderSourceContent`, `renderFillRecordContent`, etc.) so external consumers can render forms with visual parity to `markform serve` without CLI/server dependencies
+- **Twitter thread example**: New content transformation example form for Twitter thread workflows
 
 ### Fixes
 
-- **Reliable tool calling**: Default toolChoice to 'required' for consistent agent behavior
-- **Parallel execution tracking**: Fixed executionId passing and per-execution turn tracking for correct tool call matching
-- **Frontmatter round-trips**: Preserve title/description fields when serializing forms
-- **Concurrency handling**: Corrected parallel execution concurrency and FillRecord tracking
+- **Skip reason display**: Skip reasons from agents (e.g., "Not applicable") now display correctly in View, Edit, and Report tabs of the serve UI
+- **URL preservation in tables**: Fixed URL validation in table cells that incorrectly checked link display text instead of the actual URL, causing valid URLs to be rejected
+- **API error messages**: Improved error context for model API failures with HTTP status codes, response bodies, and actionable troubleshooting hints
 
 ### Refactoring
 
-- **YAML formatting**: Centralized stringify options and improved output readability
-- **HTML comment syntax**: Migrated all forms to HTML comment syntax for field attributes
-- **Config handling**: Centralized harness config snake_case/camelCase mapping
-- **Execution IDs**: Self-documenting format with eid: prefix
+- Extracted ~1600 lines of rendering code from `serve.ts` into dedicated `src/render/` module
 
-### Testing
-
-- Comprehensive frontmatter unit tests
-- Parallel execution integration and tracking tests
-- Updated test expectations for HTML comment syntax
-
-### Documentation
-
-- Clarified .env file loading behavior
-- Updated manual test docs and gitignore patterns
-
-**Full commit history**: https://github.com/jlevy/markform/compare/v0.1.20...v0.1.21
+**Full commit history**: https://github.com/jlevy/markform/compare/v0.1.21...v0.1.22
