@@ -546,6 +546,59 @@ interface InjectHeaderIdsOptions {
 }
 ```
 
+## Rendering API
+
+Import from the render subpath for HTML rendering functions that produce the same output
+as `markform serve`:
+
+```typescript
+import {
+  renderViewContent,
+  renderSourceContent,
+  renderMarkdownContent,
+  renderYamlContent,
+  renderJsonContent,
+  renderFillRecordContent,
+  FILL_RECORD_STYLES,
+  FILL_RECORD_SCRIPTS,
+  escapeHtml,
+  formatDuration,
+  formatTokens,
+} from 'markform/render';
+```
+
+These functions produce HTML fragments (not full pages), so consumers can embed them in
+their own page shell with their own layout, CSS reset, and surrounding UI.
+
+### Content Renderers
+
+| Function | Input | Description |
+| --- | --- | --- |
+| `renderViewContent(form)` | `ParsedForm` | Render a form as a read-only HTML view |
+| `renderSourceContent(content)` | `string` | Render Jinja-style form source with syntax highlighting |
+| `renderMarkdownContent(content)` | `string` | Render markdown as HTML |
+| `renderYamlContent(content)` | `string` | Render YAML with syntax highlighting |
+| `renderJsonContent(content)` | `string` | Render JSON with syntax highlighting |
+| `renderFillRecordContent(record)` | `FillRecord` | Render a fill record as an interactive dashboard |
+
+### CSS and JavaScript Constants
+
+| Export | Description |
+| --- | --- |
+| `FILL_RECORD_STYLES` | `<style>` block with CSS for the fill record dashboard |
+| `FILL_RECORD_SCRIPTS` | JavaScript providing `frShowTip()`, `frHideTip()`, `frCopyYaml()` for fill record interactivity |
+
+Include `FILL_RECORD_STYLES` in your page `<head>` and `FILL_RECORD_SCRIPTS` in a
+`<script>` tag when using `renderFillRecordContent()`.
+
+### Utility Functions
+
+| Function | Description |
+| --- | --- |
+| `escapeHtml(str)` | Escape HTML special characters |
+| `formatDuration(ms)` | Format milliseconds as human-readable duration (e.g., `"1m 5s"`) |
+| `formatTokens(count)` | Format token counts with k suffix (e.g., `"1.5k"`) |
+
 ## Type Exports
 
 All Zod schemas and TypeScript types are exported from the main package:

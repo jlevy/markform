@@ -40,6 +40,10 @@
       "types": "./dist/ai-sdk.d.mts",
       "default": "./dist/ai-sdk.mjs"
     },
+    "./render": {
+      "types": "./dist/render.d.mts",
+      "default": "./dist/render.mjs"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
