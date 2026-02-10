@@ -551,8 +551,8 @@ If unsure, try `gpt-5-mini` first as it’s fast and supports web search.
 
 ## Programmatic Usage
 
-Markform exports a parsing engine and AI SDK integration for use in your own
-applications.
+Markform exports a parsing engine, rendering functions, and AI SDK integration for use in
+your own applications.
 
 ### Basic Parsing
 
@@ -593,6 +593,34 @@ if (result.status.ok) {
 See the
 [API documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)
 for options like parallel execution, callbacks, and checkpointing.
+
+### Rendering API
+
+Import from the `markform/render` subpath to render forms and fill records as HTML
+fragments — the same output as `markform serve`, without pulling in CLI/server
+dependencies:
+
+```typescript
+import {
+  renderViewContent,
+  renderFillRecordContent,
+  FILL_RECORD_STYLES,
+  FILL_RECORD_SCRIPTS,
+} from "markform/render";
+
+// Render a filled form as read-only HTML
+const formHtml = renderViewContent(parsedForm);
+
+// Render a fill record dashboard
+const dashboardHtml = renderFillRecordContent(fillRecord);
+```
+
+Also exports `renderSourceContent`, `renderMarkdownContent`, `renderYamlContent`,
+`renderJsonContent`, `escapeHtml`, `formatDuration`, and `formatTokens`.
+
+See the
+[API documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md#rendering-api)
+for full details.
 
 ### AI SDK Integration
 
