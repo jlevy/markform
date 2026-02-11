@@ -942,6 +942,12 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
       border-radius: 3px;
       margin-left: 0.5rem;
     }
+    .skip-reason {
+      font-size: 0.85rem;
+      color: #6c757d;
+      font-style: italic;
+      margin-top: 0.25rem;
+    }
     .table-container {
       overflow-x: auto;
     }
@@ -1328,8 +1334,11 @@ export function renderFieldHtml(
   const skipped = isSkipped === true;
   const requiredMark = field.required ? '<span class="required">*</span>' : '';
   const typeLabel = `<span class="type-badge">${field.kind}</span>`;
-  const skippedText = skipped && skipReason ? `Skipped: ${escapeHtml(skipReason)}` : 'Skipped';
-  const skippedBadge = skipped ? `<span class="skipped-badge">${skippedText}</span>` : '';
+  const skippedBadge = skipped ? `<span class="skipped-badge">Skipped</span>` : '';
+  const skipReasonHtml =
+    skipped && skipReason
+      ? `<div class="skip-reason">(skipped: ${escapeHtml(skipReason)})</div>`
+      : '';
   const fieldClass = skipped ? 'field field-skipped' : 'field';
   const disabledAttr = skipped ? ' disabled' : '';
 
@@ -1398,6 +1407,7 @@ export function renderFieldHtml(
         ${escapeHtml(field.label)} ${requiredMark} ${typeLabel} ${skippedBadge}
       </label>
       ${inputHtml}
+      ${skipReasonHtml}
       ${skipButton}
     </div>`;
 }
