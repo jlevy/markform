@@ -935,8 +935,9 @@ markform:
         };
         const html = renderFormHtml(form);
 
-        expect(html).toContain('Not applicable');
-        expect(html).toContain('skipped-badge');
+        expect(html).toContain('skipped-badge">Skipped</span>');
+        expect(html).toContain('skip-reason');
+        expect(html).toContain('(skipped: Not applicable)');
       });
     });
   });
@@ -1262,14 +1263,15 @@ John Doe
       expect(html).toContain('(skipped: Not applicable to this company)');
     });
 
-    it('should show skip reason in skipped badge when reason is provided', () => {
+    it('should show skipped badge without reason text', () => {
       const form = parseForm(formContent);
       form.responsesByFieldId = {
         name: { state: 'skipped', reason: 'Field not relevant' },
       };
       const html = renderViewContent(form);
       expect(html).toContain('skipped-badge');
-      expect(html).toContain('Field not relevant');
+      expect(html).not.toContain('skipped-badge">Skipped: Field not relevant');
+      expect(html).toContain('skipped-badge">Skipped</span>');
     });
 
     it('should render single_select with selected option label', () => {

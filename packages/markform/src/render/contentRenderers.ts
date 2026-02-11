@@ -223,8 +223,7 @@ export function renderViewContent(form: ParsedForm): string {
         html += ' <span class="required">*</span>';
       }
       if (isSkipped) {
-        const reasonText = skipReason ? `Skipped: ${escapeHtml(skipReason)}` : 'Skipped';
-        html += ` <span class="skipped-badge">${reasonText}</span>`;
+        html += ` <span class="skipped-badge">Skipped</span>`;
       }
       html += '</div>';
 
