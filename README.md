@@ -1,7 +1,7 @@
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21954355942)
-[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21954355942)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
+[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
 [![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
 [![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
 
@@ -370,10 +370,10 @@ flowchart LR
         subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions<br/>for forms, fields, values"]
         end
 
-        subgraph L3["<b>LAYER 3: VALIDATION <br/>AND FORM FILLING</b><br/>Rules for filling forms<br/>via patches, required<br/>field semantics, validation"]
+        subgraph L3["<b>LAYER 3: VALIDATION <br/>AND PATCHES</b><br/>Rules for filling forms<br/>via patches, required<br/>field semantics, validation"]
         end
 
-        subgraph L4["<b>LAYER 4: TOOL API <br/>AND INTERFACES</b><br/>Form-filling<br/>harness for LLMs,<br/>tool API for agents<br/>and humans"]
+        subgraph L4["<b>LAYER 4: TOOL API <br/>AND INTERFACES</b><br/>Abstract form-filling<br/>loop, concurrency<br/>model, tool layer"]
         end
 
         L4 --> L3 --> L2 --> L1
