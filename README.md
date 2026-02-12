@@ -1,9 +1,11 @@
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21954512510)
-[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21954512510)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
+[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
 [![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
 [![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
+
+### What if your Markdown docs had a semantic API?
 
 **Markform** is a text format for defining structured forms that humans can read,
 machines can parse, and agents can fill via tool calls.
@@ -13,12 +15,14 @@ Agents fill forms incrementally via patches.
 Fields are validated, so errors are caught early and can be corrected.
 Humans can review or intervene at any point.
 
-**Why forms?** For deep research or complex AI tasks, you need more than just prompts or
+### Why forms?
+
+For deep research or complex AI tasks, you need more than just prompts or
 flow: you need *structure*, which is precise control over agent output at every stage of
 a workflow. A well-designed form combines instructions, structured data, and validations
 in one place.
 
-**How it works:**
+### How it Works
 
 - A Markform document exposes a programmatic interface: users fill fields via CLI or web
   UI, agents fill via tool calls ([Vercel AI SDK](https://github.com/vercel/ai)
@@ -33,9 +37,24 @@ in one place.
   [precise specification](https://github.com/jlevy/markform/blob/main/docs/markform-spec.md).
   Export Markform syntax to JSON, YAML, JSON Schema, or plain Markdown reports.
 
-Markform syntax is a good source format: token-efficient text you can read, diff, and
-version control. Structure is defined with HTML comment tags (`<!-- field -->`) that
-render invisibly on GitHub, so forms look like regular Markdown.
+- Optionally, the whole thing is wrapped in a harness where large forms can be filled
+  concurrently by any LLM in a structured agentic loop.
+
+### Useful details
+
+- Markform syntax is a good source format: it is **token-efficient text** you can read, diff, and
+  version control.
+
+- Structure is defined with HTML comment tags (`<!-- field -->`) that
+  render invisibly on GitHub, so **forms look like regular Markdown**. (Jinja-style
+  tag syntax also works if you prefer.)
+
+- Optionally, **a fill record** of the form-filling process is kept, so you can see
+  and debug exactly how forms are filled by agents, tool usage, LLM call time, etc.
+
+- The CLI has a built-in web renderer, **`markform serve`**, for easy viewing and debugging
+  of forms (including a form web UI, the form schema, and a waterfall-style overview of the
+  fill record, including performance details, which is useful for large, concurrently filled forms).
 
 ## Simple Example: Research a Movie
 
