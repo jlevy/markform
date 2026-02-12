@@ -370,10 +370,10 @@ flowchart LR
         subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
         end
 
-        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
+        subgraph L3["<b>LAYER 3: VALIDATION <br/>AND FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
         end
 
-        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
+        subgraph L4["<b>LAYER 4: TOOL API <br/>AND INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
         end
 
         L4 --> L3 --> L2 --> L1
