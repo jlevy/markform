@@ -1,11 +1,11 @@
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21955014678)
-[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21955014678)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
+[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
 [![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
 [![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
 
-### What if your Markdown docs had a semantic API?
+### What if your Markdown docs had an agent-friendly semantic API?
 
 **Markform** is a text format for defining structured forms that humans can read,
 machines can parse, and agents can fill via tool calls.
@@ -43,7 +43,8 @@ in one place.
 ### Useful details
 
 - Markform syntax is a good source format: it is **token-efficient text** you can read, diff, and
-  version control.
+  version control and it is **ideal for context engineering** because it combines
+  document context, data schema, and memory (data filled so far).
 
 - Structure is defined with HTML comment tags (`<!-- field -->`) that
   render invisibly on GitHub, so **forms look like regular Markdown**. (Jinja-style
