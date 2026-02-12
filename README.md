@@ -1,7 +1,7 @@
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21953727103)
-[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21953727103)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
+[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21892273413)
 [![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
 [![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
 
@@ -364,16 +364,16 @@ flowchart LR
     subgraph SPEC["<b>MARKFORM SPEC</b>"]
         direction TB
 
-        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, group, string-field, checkboxes, etc.)"]
+        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax<br/>and frontmatter (form,<br/>group, string-field, <br/>checkboxes, etc.)"]
         end
 
-        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
+        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions<br/>for forms, fields, values"]
         end
 
-        subgraph L3["<b>LAYER 3: VALIDATION <br/>AND FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
+        subgraph L3["<b>LAYER 3: VALIDATION <br/>AND FORM FILLING</b><br/>Rules for filling forms<br/>via patches, required<br/>field semantics, validation"]
         end
 
-        subgraph L4["<b>LAYER 4: TOOL API <br/>AND INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
+        subgraph L4["<b>LAYER 4: TOOL API <br/>AND INTERFACES</b><br/>Form-filling<br/>harness for LLMs,<br/>tool API for agents<br/>and humans"]
         end
 
         L4 --> L3 --> L2 --> L1
@@ -382,19 +382,19 @@ flowchart LR
     subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
         direction TB
 
-        subgraph CLI["<b>`markform` CLI</b><br/>Command-line interface to all features"]
+        subgraph CLI["<b>`markform` CLI</b><br/>Command-line interface<br/>to all features"]
         end
 
-        subgraph AGENT["<b>AGENT TOOL INTERFACE</b><br/>Tool API library using AI SDK tools"]
+        subgraph AGENT["<b>AGENT TOOL INTERFACE</b><br/>Tool API library><br/>(AI SDK tools)"]
         end
 
-        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step form-filling agentic loop"]
+        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Concurrent form-filling<br/>agentic loop<br/>(AI SDK)"]
         end
 
-        subgraph ENGINE["<b>CORE TYPESCRIPT APIS</b><br/>Markdoc parser, serializer, patch application, validation (uses jiti for TypeScript rules)"]
+        subgraph ENGINE["<b>CORE TYPESCRIPT APIS</b><br/>Markdoc parser, serializer,<br/>patch application,<br/>validation (jiti for rules)"]
         end
 
-        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts"]
+        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing<br/>(.session.yaml transcripts)"]
         end
 
         CLI --> ENGINE
