@@ -1,4 +1,6 @@
 ---
+close_reason: normalizeProvider, extractToolsFromProvider, BUILT_IN_PROVIDERS added, all tests pass
+closed_at: 2026-02-13T08:22:44.250Z
 created_at: 2026-02-13T08:06:18.078Z
 dependencies:
   - target: is-01khb0jy0x0ymq4prw67ydney9
@@ -12,9 +14,9 @@ kind: task
 labels:
   - provider-adapter
 priority: 1
-status: open
+status: closed
 title: Add normalizeProvider(), extractToolsFromProvider(), BUILT_IN_PROVIDERS to modelResolver.ts
 type: is
-updated_at: 2026-02-13T08:07:54.315Z
-version: 5
+updated_at: 2026-02-13T08:33:58.876Z
+version: 8
 ---

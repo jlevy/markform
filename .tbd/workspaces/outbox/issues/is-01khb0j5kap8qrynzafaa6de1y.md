@@ -1,4 +1,6 @@
 ---
+close_reason: Types added, all tests pass, committed
+closed_at: 2026-02-13T08:17:08.468Z
 created_at: 2026-02-13T08:06:02.089Z
 dependencies:
   - target: is-01khb0jdjfhe70gb6s9ezcyjpk
@@ -14,9 +16,9 @@ kind: task
 labels:
   - provider-adapter
 priority: 1
-status: open
+status: closed
 title: Add ProviderAdapter, ProviderInput, BuiltInProviderName types to harnessTypes.ts
 type: is
-updated_at: 2026-02-13T08:07:53.418Z
-version: 6
+updated_at: 2026-02-13T08:33:58.862Z
+version: 9
 ---
