@@ -5,7 +5,7 @@
  * - programmaticFill.ts: FillOptions, TurnProgress, FillStatus, FillResult
  * - mockAgent.ts: Agent interface
  * - liveAgent.ts: LiveAgentConfig
- * - modelResolver.ts: ProviderName, ParsedModelId, ResolvedModel, ProviderInfo
+ * - modelResolver.ts: BuiltInProviderName, ParsedModelId, ResolvedModel, ProviderInfo
  */
 
 import type { LanguageModel, Tool } from 'ai';
@@ -196,15 +196,15 @@ export interface LiveAgentConfig {
 export type BuiltInProviderName = 'anthropic' | 'openai' | 'google' | 'xai' | 'deepseek';
 
 /**
- * @deprecated Use `BuiltInProviderName` for built-in providers or `string` for any provider.
+ * Any provider name — built-in or custom. Provides autocomplete for built-in names.
  */
-export type ProviderName = BuiltInProviderName;
+export type ProviderName = BuiltInProviderName | (string & {});
 
 /**
  * Parsed model identifier.
  */
 export interface ParsedModelId {
-  provider: string;
+  provider: ProviderName;
   modelId: string;
 }
 
@@ -213,7 +213,7 @@ export interface ParsedModelId {
  */
 export interface ResolvedModel {
   model: LanguageModel;
-  provider: string;
+  provider: ProviderName;
   modelId: string;
   /** Adapter-provided tools (e.g., web search) */
   tools?: Record<string, Tool>;

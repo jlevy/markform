@@ -12,7 +12,7 @@ import pc from 'picocolors';
 import {
   getProviderInfo,
   getProviderNames,
-  type ProviderName,
+  type BuiltInProviderName,
 } from '../../harness/modelResolver.js';
 import { SUGGESTED_LLMS } from '../../settings.js';
 import { formatOutput, getCommandContext, logError } from '../lib/shared.js';
@@ -21,7 +21,7 @@ import { formatOutput, getCommandContext, logError } from '../lib/shared.js';
  * Model info for a single provider.
  */
 interface ProviderModelInfo {
-  provider: ProviderName;
+  provider: BuiltInProviderName;
   envVar: string;
   models: string[];
 }
@@ -33,11 +33,13 @@ function getModelInfo(providerFilter?: string): ProviderModelInfo[] {
   const providers = getProviderNames();
 
   // Validate filter if provided
-  if (providerFilter && !providers.includes(providerFilter as ProviderName)) {
+  if (providerFilter && !providers.includes(providerFilter as BuiltInProviderName)) {
     throw new Error(`Unknown provider: "${providerFilter}". Available: ${providers.join(', ')}`);
   }
 
-  const filtered = providerFilter ? [providerFilter as ProviderName] : providers;
+  const filtered: BuiltInProviderName[] = providerFilter
+    ? [providerFilter as BuiltInProviderName]
+    : providers;
 
   return filtered.map((provider) => {
     const info = getProviderInfo(provider);

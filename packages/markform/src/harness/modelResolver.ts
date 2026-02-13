@@ -15,7 +15,6 @@ import type {
   ProviderAdapter,
   ProviderInfo,
   ProviderInput,
-  ProviderName,
   ResolvedModel,
 } from './harnessTypes.js';
 
@@ -294,14 +293,14 @@ export async function resolveModel(
 /**
  * Get list of supported provider names.
  */
-export function getProviderNames(): ProviderName[] {
-  return Object.keys(PROVIDERS) as ProviderName[];
+export function getProviderNames(): BuiltInProviderName[] {
+  return Object.keys(PROVIDERS) as BuiltInProviderName[];
 }
 
 /**
  * Get provider info for display purposes.
  */
-export function getProviderInfo(provider: ProviderName): ProviderInfo {
+export function getProviderInfo(provider: BuiltInProviderName): ProviderInfo {
   const config = PROVIDERS[provider];
   return {
     package: config.package,

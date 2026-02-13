@@ -370,6 +370,7 @@ export type {
   ProviderAdapter,
   ProviderInput,
   BuiltInProviderName,
+  ProviderName,
 } from './harness/harnessTypes.js';
 
 export { BUILT_IN_PROVIDERS } from './harness/modelResolver.js';
