@@ -8,15 +8,32 @@
 import type { LanguageModel } from 'ai';
 
 import { MarkformConfigError } from '../errors.js';
-import type { ParsedModelId, ProviderInfo, ProviderName, ResolvedModel } from './harnessTypes.js';
+import type {
+  BuiltInProviderName,
+  ParsedModelId,
+  ProviderInfo,
+  ProviderName,
+  ResolvedModel,
+} from './harnessTypes.js';
 
 // Re-export types for backwards compatibility
-export type { ParsedModelId, ProviderInfo, ProviderName, ResolvedModel } from './harnessTypes.js';
+export type {
+  BuiltInProviderName,
+  ParsedModelId,
+  ProviderAdapter,
+  ProviderInfo,
+  ProviderInput,
+  ProviderName,
+  ResolvedModel,
+} from './harnessTypes.js';
 
 /**
  * Map of provider names to their npm package and env var.
  */
-const PROVIDERS: Record<ProviderName, { package: string; envVar: string; createFn: string }> = {
+const PROVIDERS: Record<
+  BuiltInProviderName,
+  { package: string; envVar: string; createFn: string }
+> = {
   anthropic: {
     package: '@ai-sdk/anthropic',
     envVar: 'ANTHROPIC_API_KEY',
@@ -107,7 +124,7 @@ export function parseModelId(modelIdString: string): ParsedModelId {
  */
 export async function resolveModel(modelIdString: string): Promise<ResolvedModel> {
   const { provider, modelId } = parseModelId(modelIdString);
-  const providerConfig = PROVIDERS[provider];
+  const providerConfig = PROVIDERS[provider as BuiltInProviderName];
 
   // Check for API key
   const apiKey = process.env[providerConfig.envVar];
