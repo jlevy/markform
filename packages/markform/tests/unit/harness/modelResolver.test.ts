@@ -6,10 +6,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import type { LanguageModel, Tool } from 'ai';
+import type { AiSdkProviderCallable, ProviderAdapter } from '../../../src/harness/harnessTypes.js';
 import {
   parseModelId,
   getProviderNames,
   getProviderInfo,
+  normalizeProvider,
+  extractToolsFromProvider,
+  resolveModel,
+  BUILT_IN_PROVIDERS,
 } from '../../../src/harness/modelResolver.js';
 
 describe('modelResolver', () => {
@@ -147,6 +153,141 @@ describe('modelResolver', () => {
       expect(info).toHaveProperty('envVar');
       expect(typeof info.package).toBe('string');
       expect(typeof info.envVar).toBe('string');
+    });
+  });
+
+  describe('normalizeProvider', () => {
+    it('should pass through a ProviderAdapter unchanged', () => {
+      const adapter: ProviderAdapter = {
+        model: (id) => ({ modelId: id }) as LanguageModel,
+      };
+      const result = normalizeProvider(adapter);
+      expect(result).toBe(adapter);
+    });
+
+    it('should wrap a callable into a ProviderAdapter', () => {
+      const callable = ((id: string) => ({ modelId: id })) as unknown as AiSdkProviderCallable;
+      const result = normalizeProvider(callable);
+      expect(typeof result.model).toBe('function');
+      expect(result).not.toBe(callable);
+    });
+
+    it('should extract tools from a callable with .tools', () => {
+      const callable = Object.assign((id: string) => ({ modelId: id }) as LanguageModel, {
+        tools: { webSearch: () => ({ type: 'web_search' }) },
+      }) as unknown as AiSdkProviderCallable;
+      const result = normalizeProvider(callable);
+      expect(result.tools).toBeDefined();
+      expect(result.tools!.web_search).toBeDefined();
+    });
+  });
+
+  describe('extractToolsFromProvider', () => {
+    it('should return undefined for callable without .tools', () => {
+      const callable = ((id: string) => ({ modelId: id })) as unknown as AiSdkProviderCallable;
+      expect(extractToolsFromProvider(callable)).toBeUndefined();
+    });
+
+    it('should extract webSearch tool', () => {
+      const callable = Object.assign((id: string) => ({ modelId: id }) as LanguageModel, {
+        tools: { webSearch: () => ({ type: 'web_search' }) },
+      }) as unknown as AiSdkProviderCallable;
+      const result = extractToolsFromProvider(callable);
+      expect(result).toBeDefined();
+      expect(result!.web_search).toBeDefined();
+    });
+
+    it('should extract googleSearch tool with correct key', () => {
+      const callable = Object.assign((id: string) => ({ modelId: id }) as LanguageModel, {
+        tools: { googleSearch: () => ({ type: 'google_search' }) },
+      }) as unknown as AiSdkProviderCallable;
+      const result = extractToolsFromProvider(callable);
+      expect(result).toBeDefined();
+      expect(result!.google_search).toBeDefined();
+    });
+
+    it('should handle tool factory that throws', () => {
+      const callable = Object.assign((id: string) => ({ modelId: id }) as LanguageModel, {
+        tools: {
+          webSearch: () => {
+            throw new Error('no api key');
+          },
+        },
+      }) as unknown as AiSdkProviderCallable;
+      const result = extractToolsFromProvider(callable);
+      expect(result).toBeUndefined();
+    });
+
+    it('should return undefined for empty tools object', () => {
+      const callable = Object.assign((id: string) => ({ modelId: id }) as LanguageModel, {
+        tools: {},
+      }) as unknown as AiSdkProviderCallable;
+      const result = extractToolsFromProvider(callable);
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('resolveModel with custom providers', () => {
+    it('should resolve via custom provider when matched', async () => {
+      const mockModel = { modelId: 'test-model' } as LanguageModel;
+      const providers = {
+        custom: { model: () => mockModel } as ProviderAdapter,
+      };
+      const result = await resolveModel('custom/test-model', providers);
+      expect(result.model).toBe(mockModel);
+      expect(result.provider).toBe('custom');
+      expect(result.modelId).toBe('test-model');
+    });
+
+    it('should include adapter tools in result', async () => {
+      const mockModel = { modelId: 'test-model' } as LanguageModel;
+      const mockTools = { web_search: {} as Tool };
+      const providers = {
+        custom: { model: () => mockModel, tools: mockTools } as ProviderAdapter,
+      };
+      const result = await resolveModel('custom/test-model', providers);
+      expect(result.tools).toBe(mockTools);
+    });
+
+    it('should prefer custom provider over built-in', async () => {
+      const mockModel = { modelId: 'custom-openai' } as LanguageModel;
+      const providers = {
+        openai: { model: () => mockModel } as ProviderAdapter,
+      };
+      const result = await resolveModel('openai/gpt-4o', providers);
+      expect(result.model).toBe(mockModel);
+    });
+
+    it('should throw for unknown provider without custom provider', async () => {
+      await expect(resolveModel('unknown/model')).rejects.toThrow(/Unknown provider/);
+      await expect(resolveModel('unknown/model')).rejects.toThrow(/providers/);
+    });
+
+    it('should wrap error from adapter.model()', async () => {
+      const providers = {
+        failing: {
+          model: () => {
+            throw new Error('API key missing');
+          },
+        } as ProviderAdapter,
+      };
+      await expect(resolveModel('failing/test', providers)).rejects.toThrow(
+        /Custom provider "failing" failed/,
+      );
+    });
+  });
+
+  describe('BUILT_IN_PROVIDERS', () => {
+    it('should contain all 5 built-in provider names', () => {
+      expect(BUILT_IN_PROVIDERS.anthropic).toBe('anthropic');
+      expect(BUILT_IN_PROVIDERS.openai).toBe('openai');
+      expect(BUILT_IN_PROVIDERS.google).toBe('google');
+      expect(BUILT_IN_PROVIDERS.xai).toBe('xai');
+      expect(BUILT_IN_PROVIDERS.deepseek).toBe('deepseek');
+    });
+
+    it('should be frozen', () => {
+      expect(Object.isFrozen(BUILT_IN_PROVIDERS)).toBe(true);
     });
   });
 });
