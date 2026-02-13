@@ -5,7 +5,7 @@
  * - programmaticFill.ts: FillOptions, TurnProgress, FillStatus, FillResult
  * - mockAgent.ts: Agent interface
  * - liveAgent.ts: LiveAgentConfig
- * - modelResolver.ts: ProviderName, ParsedModelId, ResolvedModel, ProviderInfo
+ * - modelResolver.ts: BuiltInProviderName, ParsedModelId, ResolvedModel, ProviderInfo
  */
 
 import type { LanguageModel, Tool } from 'ai';
@@ -134,6 +134,8 @@ export interface LiveAgentConfig {
   targetRole?: string;
   /** Provider name (needed for web search tool selection) */
   provider?: string;
+  /** Provider-adapter-supplied tools (e.g., web search from custom providers). */
+  providerTools?: Record<string, Tool>;
   /**
    * Execution thread ID for parallel tracking.
    * Used to associate LLM calls, tool calls, and events with the correct execution thread.
@@ -189,11 +191,14 @@ export interface LiveAgentConfig {
 // =============================================================================
 
 /**
- * Supported provider names.
- *
- * These correspond to the @ai-sdk/* packages from Vercel AI SDK.
+ * Built-in provider names corresponding to the @ai-sdk/* packages from Vercel AI SDK.
  */
-export type ProviderName = 'anthropic' | 'openai' | 'google' | 'xai' | 'deepseek';
+export type BuiltInProviderName = 'anthropic' | 'openai' | 'google' | 'xai' | 'deepseek';
+
+/**
+ * Any provider name — built-in or custom. Provides autocomplete for built-in names.
+ */
+export type ProviderName = BuiltInProviderName | (string & {});
 
 /**
  * Parsed model identifier.
@@ -210,6 +215,8 @@ export interface ResolvedModel {
   model: LanguageModel;
   provider: ProviderName;
   modelId: string;
+  /** Adapter-provided tools (e.g., web search) */
+  tools?: Record<string, Tool>;
 }
 
 /**
@@ -219,6 +226,34 @@ export interface ProviderInfo {
   package: string;
   envVar: string;
 }
+
+/**
+ * Adapter for an AI provider. Clients import their own @ai-sdk/* package,
+ * configure it, and pass the adapter to markform.
+ *
+ * The interface matches the AI SDK provider shape so providers can often
+ * be passed directly without wrapping.
+ */
+export interface ProviderAdapter {
+  /** Resolve a model name to a LanguageModel instance. */
+  model(modelId: string): LanguageModel;
+  /** Optional provider-specific tools (e.g., web search). */
+  tools?: Record<string, Tool>;
+}
+
+/**
+ * AI SDK providers are callable: provider(modelId) => LanguageModel.
+ * They may also have a .tools property with tool factories.
+ */
+export type AiSdkProviderCallable = ((modelId: string) => LanguageModel) & {
+  tools?: Record<string, (...args: unknown[]) => Tool>;
+};
+
+/**
+ * A ProviderInput is either a ProviderAdapter (with `.model()` method)
+ * or an AI SDK provider callable (auto-normalized via `normalizeProvider()`).
+ */
+export type ProviderInput = ProviderAdapter | AiSdkProviderCallable;
 
 // =============================================================================
 // Fill Callbacks
@@ -415,6 +450,14 @@ export interface FillOptions {
    * If a custom tool has the same name as a built-in tool, the custom tool wins.
    */
   additionalTools?: Record<string, Tool>;
+
+  /**
+   * Additional providers for string-based model resolution.
+   * Keys are provider names (the part before the `/` in model IDs).
+   * Values are ProviderAdapter objects or AI SDK provider callables.
+   * These take priority over built-in providers.
+   */
+  providers?: Record<string, ProviderInput>;
 
   /**
    * TEST ONLY: Override agent for testing with MockAgent.

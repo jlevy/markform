@@ -1,3 +1,4 @@
+import type { LanguageModel } from 'ai';
 import { describe, expect, it } from 'vitest';
 
 import { parseForm } from '../../../src/engine/parse.js';
@@ -1150,6 +1151,62 @@ Strong company
       expect(result.record).toBeDefined();
       expect(result.record?.status).toBe('partial');
       expect(result.record?.statusDetail).toBe('max_turns');
+    });
+  });
+
+  describe('custom providers', () => {
+    it('should resolve model via custom provider adapter', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'custom/test-model',
+        providers: {
+          custom: {
+            model: () => ({ modelId: 'test-model' }) as LanguageModel,
+          },
+        },
+        _testAgent: mockAgent,
+        inputContext: { name: 'John Doe' },
+        targetRoles: ['user', 'agent'],
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+      });
+      expect(result.status.ok).toBe(true);
+    });
+
+    it('should error for unknown provider without custom providers', async () => {
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'unknown/test-model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+      });
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('Unknown provider');
+      }
+    });
+
+    it('should still work with built-in provider string (regression)', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'anthropic/claude-sonnet-4-5',
+        _testAgent: mockAgent,
+        inputContext: { name: 'John Doe' },
+        targetRoles: ['user', 'agent'],
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+      });
+      expect(result.status.ok).toBe(true);
     });
   });
 });

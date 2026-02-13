@@ -12,7 +12,7 @@ import pc from 'picocolors';
 
 import { parseForm } from '../../engine/parse.js';
 import { SUGGESTED_LLMS, hasWebSearchSupport } from '../../llms.js';
-import { getProviderInfo, type ProviderName } from '../../harness/modelResolver.js';
+import { getProviderInfo, type BuiltInProviderName } from '../../harness/modelResolver.js';
 import { determineRunMode } from './runMode.js';
 import { readFile } from './shared.js';
 import { getExampleOrder } from '../examples/exampleRegistry.js';
@@ -108,7 +108,7 @@ export function buildModelOptions(webSearchOnly: boolean): ModelOption[] {
       continue;
     }
 
-    const info = getProviderInfo(provider as ProviderName);
+    const info = getProviderInfo(provider as BuiltInProviderName);
     const hasKey = !!process.env[info.envVar];
     const keyStatus = hasKey ? pc.green('✓') : '○';
 

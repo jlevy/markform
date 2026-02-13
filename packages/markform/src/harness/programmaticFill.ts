@@ -5,7 +5,7 @@
  * form-filling sessions with a single function call.
  */
 
-import type { LanguageModel } from 'ai';
+import type { LanguageModel, Tool } from 'ai';
 
 import { applyPatches } from '../engine/apply.js';
 import type {
@@ -460,12 +460,14 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   // 2. Resolve model if string (skip if _testAgent provided)
   let model: LanguageModel | undefined;
   let provider: string | undefined;
+  let providerTools: Record<string, Tool> | undefined;
   if (!options._testAgent) {
     try {
       if (typeof options.model === 'string') {
-        const resolved = await resolveModel(options.model);
+        const resolved = await resolveModel(options.model, options.providers);
         model = resolved.model;
         provider = resolved.provider;
+        providerTools = resolved.tools;
       } else {
         model = options.model;
         // When a LanguageModel is passed directly, we can't determine provider
@@ -549,6 +551,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       systemPromptAddition: options.systemPromptAddition,
       targetRole: targetRoles[0] ?? AGENT_ROLE,
       provider,
+      providerTools,
       enableWebSearch: options.enableWebSearch,
       additionalTools: options.additionalTools,
       callbacks: mergedCallbacks,
