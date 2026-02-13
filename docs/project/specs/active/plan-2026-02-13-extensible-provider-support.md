@@ -10,9 +10,10 @@
 
 ## Overview
 
-Add a `ProviderAdapter` interface and registration mechanism so that callers can bring
-their own `@ai-sdk/*` providers (e.g., DeepInfra, Together, Fireworks, Mistral) while
-preserving the existing 5 built-in providers as zero-config defaults.
+Add a `ProviderAdapter` interface and a `providers` option on `FillOptions` so that
+callers can bring their own `@ai-sdk/*` providers (e.g., DeepInfra, Together, Fireworks,
+Mistral) while preserving the existing 5 built-in providers as zero-config defaults.
+No global mutable registry — just pass providers per call.
 
 ## Goals
 
@@ -86,16 +87,40 @@ External consumers who need non-default providers must:
 
 Introduce a `ProviderAdapter` interface that captures a provider's two capabilities:
 (1) resolving model names to `LanguageModel` instances, and (2) optionally providing
-tools (e.g., web search). Adapters can be passed per-call via `FillOptions.providers`
-or registered at the module level for convenience.
+tools (e.g., web search). Adapters are passed per-call via `FillOptions.providers`.
+There is no global mutable registry — this keeps the API stateless, test-friendly, and
+free of shared mutable state.
+
+Built-in providers are exported as a constant (`BUILT_IN_PROVIDERS`) so callers can
+easily compose custom providers with the defaults:
+
+```typescript
+// Zero-config — built-ins used automatically when no providers specified
+await fillForm({ model: 'anthropic/claude-sonnet-4-5', ... });
+
+// Custom provider — just pass it
+import { createDeepInfra } from '@ai-sdk/deepinfra';
+await fillForm({
+  model: 'deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo',
+  providers: { deepinfra: createDeepInfra({ apiKey: '...' }) },
+  ...
+});
+
+// Override a built-in (e.g., custom OpenAI base URL)
+import { createOpenAI } from '@ai-sdk/openai';
+await fillForm({
+  model: 'openai/gpt-4o',
+  providers: { openai: createOpenAI({ baseURL: 'https://my-proxy/v1' }) },
+  ...
+});
+```
 
 The resolution priority is:
 
 ```
-1. options.providers[name]     per-call override (highest priority)
-2. globalProviderRegistry      registerProvider() (module-level convenience)
-3. BUILT_IN_PROVIDERS[name]    current 5 defaults (preserved as-is)
-4.                             actionable error with hint
+1. options.providers[name]     per-call providers (highest priority)
+2. BUILT_IN_PROVIDERS[name]    current 5 defaults (preserved as-is)
+3.                             actionable error with hint
 ```
 
 ### Core Types
@@ -156,12 +181,11 @@ provider has an unusual tool name, the consumer can use an explicit `ProviderAda
 | File | Change |
 |------|--------|
 | `src/harness/harnessTypes.ts` | Add `ProviderAdapter`, `ProviderInput` types; add `providers?` to `FillOptions`; widen `ProviderName` to `string` with built-in defaults |
-| `src/harness/modelResolver.ts` | Add provider registry; update `parseModelId()` to accept registered providers; add `registerProvider()`/`unregisterProvider()`/`getRegisteredProviders()` |
-| `src/harness/programmaticFill.ts` | Update `fillForm()` to merge per-call + registry + built-in providers; pass adapter tools to `LiveAgent` |
+| `src/harness/modelResolver.ts` | Export `BUILT_IN_PROVIDERS`; update `parseModelId()` to be a pure parser; update `resolveModel()` to accept `providers` map; add `normalizeProvider()` and `extractToolsFromProvider()` |
+| `src/harness/programmaticFill.ts` | Update `fillForm()` to merge per-call + built-in providers; pass adapter tools to `LiveAgent` |
 | `src/harness/liveAgent.ts` | Replace hard-coded `loadWebSearchTools()` switch with adapter-provided tools; remove top-level provider imports |
-| `src/llms.ts` | Keep `SUGGESTED_LLMS` and `WEB_SEARCH_CONFIG` for built-in providers; add helpers that include registered provider info |
-| `src/cli/commands/models.ts` | Show registered providers alongside built-ins |
-| `src/index.ts` | Export `ProviderAdapter`, `ProviderInput`, `registerProvider`, `unregisterProvider`, `getRegisteredProviders` |
+| `src/llms.ts` | Keep `SUGGESTED_LLMS` and `WEB_SEARCH_CONFIG` for built-in providers |
+| `src/index.ts` | Export `ProviderAdapter`, `ProviderInput`, `BUILT_IN_PROVIDERS` |
 
 ### API Changes
 
@@ -171,8 +195,8 @@ provider has an unusual tool name, the consumer can use an explicit `ProviderAda
 // Types
 export type { ProviderAdapter, ProviderInput } from './harness/harnessTypes.js';
 
-// Registration API (module-level convenience)
-export { registerProvider, unregisterProvider, getRegisteredProviders } from './harness/modelResolver.js';
+// Built-in provider list (for composing with custom providers)
+export { BUILT_IN_PROVIDERS } from './harness/modelResolver.js';
 ```
 
 #### Updated `FillOptions`
@@ -214,14 +238,26 @@ interface ResolvedModel {
 
 ### Design Decisions
 
-**1. Per-call `providers` is the primary API; global registry is convenience.**
+**1. Per-call `providers` only — no global registry.**
 
-The `FillOptions.providers` field is the cleanest API — no shared mutable state,
-explicit, test-friendly. The global `registerProvider()` is a convenience for scripts
-and CLI plugins where threading options through every call is cumbersome. Documentation
-should recommend `providers` for library usage.
+The `FillOptions.providers` field is the only way to add custom providers. There is no
+`registerProvider()` / global mutable state. This keeps the API stateless, explicit, and
+test-friendly. Callers who want to reuse a provider map across calls can simply hold it
+in a variable:
 
-**2. Adapter-provided tools replace hard-coded `loadWebSearchTools()`.**
+```typescript
+const myProviders = { deepinfra: createDeepInfra({ apiKey }) };
+await fillForm({ model: 'deepinfra/...', providers: myProviders, ... });
+await fillForm({ model: 'deepinfra/...', providers: myProviders, ... });
+```
+
+**2. `BUILT_IN_PROVIDERS` is exported as a constant.**
+
+Callers can inspect the default providers, compose with them, or override individual
+entries. This replaces the need for a registry — the caller controls the full provider
+map explicitly.
+
+**3. Adapter-provided tools replace hard-coded `loadWebSearchTools()`.**
 
 The current `loadWebSearchTools()` in `liveAgent.ts` imports 4 provider packages at the
 top level and uses a switch statement. With adapters, web search tools come from the
@@ -248,7 +284,7 @@ This means `parseModelId()` becomes a pure string parser, which is cleaner.
 
 ## Implementation Plan
 
-### Phase 1: Types, Registry, and Model Resolution
+### Phase 1: Types and Model Resolution
 
 Core infrastructure. No behavior changes for existing code paths yet.
 
@@ -260,17 +296,15 @@ Core infrastructure. No behavior changes for existing code paths yet.
   `tools`
 - [ ] Add `normalizeProvider()` function in `modelResolver.ts`
 - [ ] Add `extractToolsFromProvider()` for duck-typing AI SDK provider `.tools`
-- [ ] Add `registerProvider()`, `unregisterProvider()`, `getRegisteredProviders()` to
-  `modelResolver.ts`
 - [ ] Refactor `parseModelId()` to be a pure format parser (no provider validation)
-- [ ] Update `resolveModel()` to accept optional `providers` map, check merged
-  registry, and return adapter-provided tools in `ResolvedModel`
+- [ ] Update `resolveModel()` to accept optional `providers` map, merge with built-ins,
+  and return adapter-provided tools in `ResolvedModel`
 - [ ] Convert built-in providers to internal `ProviderAdapter` instances (wrapping
-  existing dynamic import + env var logic)
-- [ ] Export new types and functions from `src/index.ts`
+  existing dynamic import + env var logic); export as `BUILT_IN_PROVIDERS`
+- [ ] Export new types and `BUILT_IN_PROVIDERS` from `src/index.ts`
 - [ ] Write unit tests for all new functions: `normalizeProvider`,
-  `extractToolsFromProvider`, `registerProvider`/`unregisterProvider`, updated
-  `parseModelId`, updated `resolveModel` with custom providers
+  `extractToolsFromProvider`, updated `parseModelId`, updated `resolveModel` with
+  custom providers
 - [ ] Update existing `modelResolver.test.ts` tests for the new `parseModelId` behavior
   (no longer throws for unknown providers)
 - [ ] Update existing `llms.test.ts` if any interfaces changed
@@ -290,10 +324,8 @@ Wire the new resolution through the full fill pipeline.
   `@ai-sdk/google`, `@ai-sdk/xai` from `liveAgent.ts` (move into built-in adapter
   closures)
 - [ ] Update `fillFormParallel()` to pass adapter tools through to scoped agents
-- [ ] Update `models.ts` CLI command to show registered providers alongside built-ins
 - [ ] Write integration tests:
   - `fillForm()` with per-call custom provider (mock adapter)
-  - `fillForm()` with globally registered provider (mock adapter)
   - `fillForm()` where per-call overrides built-in provider
   - `fillForm()` with custom provider + web search tools
   - Verify built-in providers still work identically (regression)
@@ -311,9 +343,8 @@ Wire the new resolution through the full fill pipeline.
   for unknown providers
 - New tests for `normalizeProvider()` with both `ProviderAdapter` and callable inputs
 - New tests for `extractToolsFromProvider()` with various `.tools` shapes
-- New tests for `registerProvider()`/`unregisterProvider()`/`getRegisteredProviders()`
 - `resolveModel()` with custom providers in the `providers` map (using mock adapters)
-- Resolution priority: per-call > registry > built-in
+- Resolution priority: per-call providers > built-in
 - Error messages for truly unresolvable providers (not in any source)
 
 **`llms.test.ts` updates:**
@@ -328,7 +359,6 @@ Wire the new resolution through the full fill pipeline.
 - Web search tools from adapter are available to LiveAgent
 - Parallel fill with custom providers
 - Per-call providers override built-in (e.g., custom `openai` adapter wins)
-- Global registry cleanup between tests (isolation)
 
 ### Regression Tests
 
@@ -340,8 +370,7 @@ Wire the new resolution through the full fill pipeline.
 
 - Provider name with special characters (should be rejected at format level)
 - Empty provider name or model ID (existing validation preserved)
-- Registering a provider that shadows a built-in
-- Unregistering a provider that was never registered (no-op)
+- Per-call provider that shadows a built-in (should work — per-call wins)
 - Adapter `.model()` throws — error surfaces with context
 - Adapter `.tools` is empty object vs undefined
 - AI SDK callable without `.tools` property
@@ -357,13 +386,13 @@ This is a purely additive, backward-compatible change. No migration needed.
 
 ## Open Questions
 
-- **Should `registerProvider()` warn when shadowing a built-in?** Probably yes — a
-  `console.warn` helps users who accidentally override `openai` or `anthropic`.
 - **Should the CLI `fill` command accept `--provider name=package` flags?** Deferred to
   a follow-up issue. The programmatic API is the priority.
-- **Should `SUGGESTED_LLMS` be extensible via registration?** Custom providers could
-  optionally provide suggested models for the `models` command. Low priority — can add
-  later.
+- **Should `SUGGESTED_LLMS` be extensible?** Custom providers could optionally provide
+  suggested models for the `models` command. Low priority — can add later.
+- **Should `BUILT_IN_PROVIDERS` be a frozen object?** Probably yes —
+  `Object.freeze()` prevents accidental mutation. Callers who want to extend should
+  spread into a new object: `{ ...BUILT_IN_PROVIDERS, deepinfra: ... }`.
 
 ## References
 
