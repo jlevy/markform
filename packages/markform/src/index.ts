@@ -367,7 +367,12 @@ export type {
   TurnProgress,
   TurnStats,
   AgentResponse,
+  ProviderAdapter,
+  ProviderInput,
+  BuiltInProviderName,
 } from './harness/harnessTypes.js';
+
+export { BUILT_IN_PROVIDERS } from './harness/modelResolver.js';
 
 // =============================================================================
 // FillRecord Exports

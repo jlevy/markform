@@ -84,8 +84,14 @@ export class LiveAgent implements Agent {
     this.toolChoice = config.toolChoice ?? 'required';
 
     // Eagerly load web search tools to enable early logging
-    if (this.enableWebSearch && this.provider) {
-      this.webSearchTools = loadWebSearchTools(this.provider);
+    if (this.enableWebSearch) {
+      if (config.providerTools) {
+        // Custom provider supplied its own tools (from ProviderAdapter)
+        this.webSearchTools = config.providerTools;
+      } else if (this.provider) {
+        // Built-in provider — use existing loadWebSearchTools()
+        this.webSearchTools = loadWebSearchTools(this.provider);
+      }
     }
   }
 
