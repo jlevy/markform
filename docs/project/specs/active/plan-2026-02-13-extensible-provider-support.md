@@ -279,7 +279,7 @@ Code that uses `ProviderName` for type narrowing is updated to use `string`. The
 **5. `parseModelId()` no longer validates provider name against a fixed list.**
 
 Instead, it just parses the `provider/model-id` format. Provider validation moves to
-`resolveModel()`, which checks the merged provider map (per-call + registry + built-in).
+`resolveModel()`, which checks the merged provider map (per-call > built-in > error).
 This means `parseModelId()` becomes a pure string parser, which is cleaner.
 
 ## Implementation Plan
