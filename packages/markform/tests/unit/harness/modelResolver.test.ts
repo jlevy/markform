@@ -58,30 +58,26 @@ describe('modelResolver', () => {
       expect(() => parseModelId(input)).toThrow('Both provider and model ID are required');
     });
 
-    // Table-driven unknown providers
-    const unknownProviderCases = [
-      'mistral/mistral-large',
-      'cohere/command-r',
-      'meta/llama-3',
-      'unknown/some-model',
+    // Extensible providers — parseModelId accepts any provider string
+    const extensibleProviderCases = [
+      { input: 'mistral/mistral-large', provider: 'mistral', modelId: 'mistral-large' },
+      { input: 'cohere/command-r', provider: 'cohere', modelId: 'command-r' },
+      { input: 'meta/llama-3', provider: 'meta', modelId: 'llama-3' },
+      {
+        input: 'deepinfra/meta-llama/Llama-3.3-70B',
+        provider: 'deepinfra',
+        modelId: 'meta-llama/Llama-3.3-70B',
+      },
     ];
 
-    it.each(unknownProviderCases)('throws for unknown provider: "%s"', (input) => {
-      expect(() => parseModelId(input)).toThrow('Unknown provider');
-      expect(() => parseModelId(input)).toThrow('Supported providers:');
-    });
-
-    it('lists supported providers in error message', () => {
-      try {
-        parseModelId('badprovider/model');
-      } catch (e) {
-        expect((e as Error).message).toContain('anthropic');
-        expect((e as Error).message).toContain('openai');
-        expect((e as Error).message).toContain('google');
-        expect((e as Error).message).toContain('xai');
-        expect((e as Error).message).toContain('deepseek');
-      }
-    });
+    it.each(extensibleProviderCases)(
+      'parses extensible provider "$input" without throwing',
+      ({ input, provider, modelId }) => {
+        const result = parseModelId(input);
+        expect(result.provider).toBe(provider);
+        expect(result.modelId).toBe(modelId);
+      },
+    );
   });
 
   describe('getProviderNames', () => {

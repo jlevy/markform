@@ -95,22 +95,7 @@ export function parseModelId(modelIdString: string): ParsedModelId {
     );
   }
 
-  const supportedProviders = Object.keys(PROVIDERS);
-  if (!supportedProviders.includes(provider)) {
-    throw new MarkformConfigError(
-      `Unknown provider: "${provider}". Supported providers: ${supportedProviders.join(', ')}`,
-      {
-        option: 'model',
-        expectedType: `one of: ${supportedProviders.join(', ')}`,
-        receivedValue: provider,
-      },
-    );
-  }
-
-  return {
-    provider: provider as ProviderName,
-    modelId,
-  };
+  return { provider, modelId };
 }
 
 /**
