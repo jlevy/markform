@@ -184,6 +184,15 @@ export interface LiveAgentConfig {
    * @default 'required'
    */
   toolChoice?: 'auto' | 'required';
+
+  /**
+   * Maximum retries for transient API errors (429 rate limit, 503 service unavailable).
+   * Uses the Vercel AI SDK's built-in exponential backoff with jitter.
+   * Set to 0 to disable retries (useful for fast tests).
+   *
+   * @default 3
+   */
+  maxRetries?: number;
 }
 
 // =============================================================================
