@@ -373,6 +373,18 @@ export interface FillCallbacks {
     /** Execution thread ID for parallel tracking */
     executionId: string;
   }): void;
+
+  /**
+   * Called when an error occurs during the fill loop (agent threw during fillFormTool).
+   *
+   * Fires before the error is returned as part of FillResult, so consumers can
+   * log or report errors in real time during long-running fills.
+   *
+   * For MarkformLlmError instances, the error object carries `.statusCode`,
+   * `.responseBody`, `.provider`, `.model`, and `.retryable` properties.
+   * The full `.cause` chain is also preserved.
+   */
+  onError?(error: Error, context: { turnNumber: number }): void;
 }
 
 // =============================================================================
@@ -552,7 +564,22 @@ export interface TurnProgress {
  */
 export type FillStatus =
   | { ok: true }
-  | { ok: false; reason: 'max_turns' | 'batch_limit' | 'cancelled' | 'error'; message?: string };
+  | {
+      ok: false;
+      reason: 'max_turns' | 'batch_limit' | 'cancelled' | 'error';
+      message?: string;
+      /**
+       * The original Error object with its full cause chain preserved.
+       *
+       * Available when `reason` is `'error'` and the caught value was an Error instance.
+       * Consumers can inspect `.cause`, and for `MarkformLlmError` instances,
+       * `.statusCode`, `.responseBody`, `.provider`, `.model`, and `.retryable`.
+       *
+       * Not serialized into FillRecord — use for in-memory diagnostics, logging,
+       * and real-time error handling.
+       */
+      error?: Error;
+    };
 
 /**
  * Result of the fillForm operation.
