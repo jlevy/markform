@@ -29,6 +29,7 @@ import { registerRenderCommand } from './commands/render.js';
 import { registerResearchCommand } from './commands/research.js';
 import { registerSchemaCommand } from './commands/schema.js';
 import { registerServeCommand } from './commands/serve.js';
+import { registerSetCommand } from './commands/set.js';
 import { registerStatusCommand } from './commands/status.js';
 import { registerValidateCommand } from './commands/validate.js';
 import { OUTPUT_FORMATS } from './lib/shared.js';
@@ -86,6 +87,7 @@ function createProgram(): Command {
   registerRunCommand(program);
   registerSchemaCommand(program);
   registerServeCommand(program);
+  registerSetCommand(program);
   registerStatusCommand(program);
   registerValidateCommand(program);
 
