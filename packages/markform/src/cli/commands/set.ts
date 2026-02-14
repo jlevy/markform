@@ -233,12 +233,12 @@ export function registerSetCommand(program: Command): void {
               patches = [{ op: 'append_table', fieldId, value: rows as TableRowPatch[] }];
             } else if (field.kind === 'string_list') {
               const items = Array.isArray(rawValue)
-                ? (rawValue)
+                ? rawValue
                 : [typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue)];
               patches = [{ op: 'append_string_list', fieldId, value: items }];
             } else if (field.kind === 'url_list') {
               const items = Array.isArray(rawValue)
-                ? (rawValue)
+                ? rawValue
                 : [typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue)];
               patches = [{ op: 'append_url_list', fieldId, value: items }];
             } else {

@@ -15,7 +15,4 @@ data-sync/
 # Backups created by tbd doctor --fix
 backups/
 
-# Local outbox (created when sync can't push)
-workspaces/
-
 *.temp
