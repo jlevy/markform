@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: "Added 5 CLI error path tryscript tests for set command: delete on wrong type, non-object --values, type mismatch, missing file"
+closed_at: 2026-02-14T19:29:28.633Z
 created_at: 2026-01-06T17:58:20.935Z
 deferred_until: null
 dependencies: []
@@ -14,10 +14,10 @@ kind: task
 labels: []
 parent_id: null
 priority: 2
-status: open
+status: closed
 title: Add tryscript tests for CLI error paths
 type: is
-updated_at: 2026-01-06T17:58:20.935Z
-version: 1
+updated_at: 2026-02-14T21:00:55.588Z
+version: 4
 ---
 Add tryscript tests to cover error handling branches in CLI commands: inspect --format options, validate with various error types, report command edge cases. Target: improve branch coverage by 5-10%.

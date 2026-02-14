@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: "Added maxRetries to LiveAgentConfig (default: 3), passed through to AI SDK generateText(). SDK handles 429/503 with exponential backoff. Set to 0 to disable for tests."
+closed_at: 2026-02-14T19:56:35.631Z
 created_at: 2025-12-23T22:14:42.356Z
 deferred_until: null
 dependencies: []
@@ -14,11 +14,11 @@ kind: task
 labels: []
 parent_id: null
 priority: 4
-status: open
+status: closed
 title: "FILL-002: Specify retry/backoff policy for live agent"
 type: is
-updated_at: 2025-12-24T05:22:26.564Z
-version: 1
+updated_at: 2026-02-14T21:00:55.562Z
+version: 3
 ---
 Define and document the retry/backoff strategy for live agent API calls.
 

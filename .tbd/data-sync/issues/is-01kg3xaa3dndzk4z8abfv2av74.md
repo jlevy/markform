@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: Plumbed coercion warnings through TurnProgress → FillRecordCollector → TimelineEntry. Both serial and parallel fill paths now persist PatchWarning[] in fill record JSON.
+closed_at: 2026-02-14T20:09:53.591Z
 created_at: 2026-01-03T06:45:16.170Z
 deferred_until: null
 dependencies: []
@@ -14,9 +14,9 @@ kind: task
 labels: []
 parent_id: null
 priority: 4
-status: open
+status: closed
 title: Add coercion warnings to session file format
 type: is
-updated_at: 2026-01-29T06:36:02.810Z
-version: 2
+updated_at: 2026-02-14T21:00:55.599Z
+version: 4
 ---

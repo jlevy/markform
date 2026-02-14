@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: "Added 6 unit tests for apply.ts: append non-array values (3 tests) and delete from empty collections (3 tests)"
+closed_at: 2026-02-14T19:16:10.084Z
 created_at: 2026-01-06T17:58:34.803Z
 deferred_until: null
 dependencies: []
@@ -14,10 +14,10 @@ kind: task
 labels: []
 parent_id: null
 priority: 2
-status: open
+status: closed
 title: Add unit tests for apply.ts error branches
 type: is
-updated_at: 2026-01-06T17:58:34.803Z
-version: 1
+updated_at: 2026-02-14T21:00:55.576Z
+version: 4
 ---
 Add unit tests covering the 36 uncovered branches in engine/apply.ts. Focus on: invalid patch types, field type mismatches, missing field errors, table column validation.

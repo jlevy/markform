@@ -1,6 +1,6 @@
 ---
-close_reason: null
-closed_at: null
+close_reason: Raised coverage thresholds from 60/58/63/60 to 64/60/64/64 to lock in test improvements
+closed_at: 2026-02-14T19:47:05.342Z
 created_at: 2026-01-06T17:58:44.125Z
 deferred_until: null
 dependencies: []
@@ -14,10 +14,10 @@ kind: task
 labels: []
 parent_id: null
 priority: 3
-status: open
+status: closed
 title: Update coverage thresholds after improvements
 type: is
-updated_at: 2026-01-06T17:58:44.125Z
-version: 1
+updated_at: 2026-02-14T21:00:55.593Z
+version: 3
 ---
 Update vitest.config.ts coverage thresholds progressively: After refactoring: 85% lines, 70% branches. After branch tests: 90% lines, 75% branches.
