@@ -8,34 +8,16 @@
 import type { Command } from 'commander';
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 
+import { resolvePackagePath } from '../lib/paths.js';
 import { getCommandContext, logError, stripHtmlComments } from '../lib/shared.js';
-
-/**
- * Get the path to the README.md file.
- * Works both during development and when installed as a package.
- */
-function getReadmePath(): string {
-  const thisDir = dirname(fileURLToPath(import.meta.url));
-  const dirName = thisDir.split(/[/\\]/).pop();
-
-  if (dirName === 'dist') {
-    // Bundled: dist -> package root -> README.md
-    return join(dirname(thisDir), 'README.md');
-  }
-
-  // Development: src/cli/commands -> src/cli -> src -> package root -> README.md
-  return join(dirname(dirname(dirname(thisDir))), 'README.md');
-}
 
 /**
  * Load the README content.
  */
 function loadReadme(): string {
-  const readmePath = getReadmePath();
+  const readmePath = resolvePackagePath(import.meta.url, 'README.md');
   try {
     return readFileSync(readmePath, 'utf-8');
   } catch (error) {
