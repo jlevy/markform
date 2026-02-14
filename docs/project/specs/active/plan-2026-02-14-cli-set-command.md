@@ -487,24 +487,26 @@ the programmatic `fillForm({ inputContext })` API.
 
 ### Coercion behavior
 
-The `set` command receives `<value>` as a CLI string argument. Parsing order:
+The `set` command receives `<value>` as a CLI string argument. The CLI only does minimal
+pre-parsing — just enough to detect JSON objects/arrays for compound types. Everything
+else is passed as a string to `coerceToFieldPatch()`, which handles type conversion based
+on the field's kind from the schema.
+
+**CLI pre-parsing (`parseCliValue`):**
 
 ```
-1. If value starts with '[' or '{': parse as JSON
-2. If value is "true" or "false": pass as boolean
-3. If value is a valid number: pass as number
-4. Otherwise: pass as string
+1. If value starts with '[' or '{': parse as JSON → object/array
+2. Otherwise: pass as string (no number/boolean detection)
 ```
 
-The coercion layer then converts based on the field's kind from the schema:
+This avoids the ambiguity where numeric-looking strings (e.g., option ID `"1"`, zip code
+`"02101"`) would be incorrectly converted to numbers before the coercion layer sees them.
+The coercion layer knows the field kind and makes the right conversion.
 
-**Scalars:**
-- Strings pass through directly
-- Numbers: `"30"` string is coerced to `30` for number/year fields
-- Booleans: `"true"` stays as the string `"true"` for string fields
-
-**Selections:**
-- `single_select`: Raw string validated against option IDs. Error lists valid options.
+**Field-kind coercion (existing `coerceToFieldPatch`):**
+- `number`/`year` fields: `"30"` string → `30` number
+- `string` fields: `"30"` string stays as `"30"` string
+- `single_select`: string validated against option IDs (including numeric IDs like `"1"`)
 - `multi_select`: JSON array of option IDs. Single string coerced to `["string"]` with
   warning.
 
@@ -843,7 +845,7 @@ directly via `apply --patch` and by the AI SDK tools / harness.
 ### Phase 1: `set` command (single-field and batch)
 
 - [ ] Add `parseCliValue(rawString)` utility to parse CLI value argument
-  (JSON detect, number detect, boolean detect, string fallback)
+  (JSON detect for `[`/`{` prefixes, otherwise pass as string)
 - [ ] Add `registerSetCommand()` in `src/cli/commands/set.ts`
   - Parse `<fieldId>` and `<value>` args for single-field mode
   - Handle `--values` for batch mode (mutually exclusive with positional args)
@@ -903,7 +905,7 @@ directly via `apply --patch` and by the AI SDK tools / harness.
 
 ### Unit tests
 
-- `parseCliValue()`: number detection, JSON detection, boolean detection, string fallback
+- `parseCliValue()`: JSON detection for `[`/`{` prefixes, string passthrough otherwise
 - Issue filtering utility: order filtering, scope filtering, count cap
   (if extracted from harness)
 
