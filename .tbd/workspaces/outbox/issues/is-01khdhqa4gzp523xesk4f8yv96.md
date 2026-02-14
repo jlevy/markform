@@ -13,6 +13,6 @@ priority: 1
 status: closed
 title: Rename CLI apply command to patch (apply.ts → patch.ts)
 type: is
-updated_at: 2026-02-14T18:53:46.103Z
-version: 5
+updated_at: 2026-02-14T20:17:37.938Z
+version: 6
 ---
