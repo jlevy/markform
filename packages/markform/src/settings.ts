@@ -224,6 +224,13 @@ export const DEFAULT_MAX_ISSUES_PER_TURN = 10;
 export const DEFAULT_MAX_PARALLEL_AGENTS = 4;
 
 /**
+ * Default maximum AI SDK retries for transient API errors (429, 503, etc.).
+ * The Vercel AI SDK handles retry with exponential backoff automatically.
+ * Set to 0 to disable retries (useful for fast tests).
+ */
+export const DEFAULT_MAX_RETRIES = 3;
+
+/**
  * Default maximum AI SDK steps (tool call rounds) per harness turn.
  * Matches AI SDK's ToolLoopAgent default of 20.
  * @see https://ai-sdk.dev/docs/agents/loop-control

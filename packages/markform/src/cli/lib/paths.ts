@@ -6,12 +6,35 @@
  * library to remain Node.js-free.
  */
 
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_FORMS_DIR } from '../../settings.js';
 
 // Re-export for convenience - CLI code can import all path-related things from here
 export { DEFAULT_FORMS_DIR };
+
+/**
+ * Resolve a path relative to the package root, handling both dev and dist modes.
+ *
+ * In dist mode, commands run from `<pkg>/dist/` (1 level below root).
+ * In dev mode, commands run from `<pkg>/src/cli/commands/` or `<pkg>/src/cli/examples/`
+ * (3 levels below root).
+ *
+ * @param callerMetaUrl - The `import.meta.url` of the calling module
+ * @param relativePath - Path relative to the package root (e.g. 'docs/markform-reference.md')
+ */
+export function resolvePackagePath(callerMetaUrl: string, relativePath: string): string {
+  const thisDir = dirname(fileURLToPath(callerMetaUrl));
+  const dirName = thisDir.split(/[/\\]/).pop();
+
+  if (dirName === 'dist') {
+    return join(dirname(thisDir), relativePath);
+  }
+
+  // Dev: src/cli/commands or src/cli/examples — 3 levels up to package root
+  return join(dirname(dirname(dirname(thisDir))), relativePath);
+}
 
 /**
  * Resolve the forms directory path to an absolute path.

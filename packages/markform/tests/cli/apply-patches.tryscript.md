@@ -7,42 +7,42 @@ env:
 timeout: 30000
 ---
 
-# Apply Command Tests
+# Patch Command Tests
 
-Tests for the apply command with various patch operations.
+Tests for the patch command with various patch operations.
 
 ---
 
 ## Basic Patch Operations
 
-# Test: apply set_string patch
+# Test: patch set_string
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | grep "Test User"
+$ $CLI patch examples/simple/simple.form.md '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | grep "Test User"
 Test User
 ? 0
 ```
 
-# Test: apply set_number patch
+# Test: patch set_number
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_number","fieldId":"age","value":25}]' | grep "^25$"
+$ $CLI patch examples/simple/simple.form.md '[{"op":"set_number","fieldId":"age","value":25}]' | grep "^25$"
 25
 ? 0
 ```
 
-# Test: apply set_single_select patch
+# Test: patch set_single_select
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_single_select","fieldId":"priority","value":"high"}]' | grep "\[x\].*High"
+$ $CLI patch examples/simple/simple.form.md '[{"op":"set_single_select","fieldId":"priority","value":"high"}]' | grep "\[x\].*High"
 - [x] High <!-- #high -->
 ? 0
 ```
 
-# Test: apply multiple patches at once
+# Test: patch multiple patches at once
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Multi Test"},{"op":"set_string","fieldId":"email","value":"multi@test.com"}]' | grep -E "(Multi Test|multi@test.com)"
+$ $CLI patch examples/simple/simple.form.md '[{"op":"set_string","fieldId":"name","value":"Multi Test"},{"op":"set_string","fieldId":"email","value":"multi@test.com"}]' | grep -E "(Multi Test|multi@test.com)"
 Multi Test
 multi@test.com
 ? 0
@@ -50,48 +50,48 @@ multi@test.com
 
 ---
 
-## Apply with Output Options
+## Patch with Output Options
 
-# Test: apply --dry-run shows what would change
+# Test: patch --dry-run shows what would change
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Dry Run"}]' --dry-run 2>&1 | grep "DRY RUN"
+$ $CLI patch examples/simple/simple.form.md '[{"op":"set_string","fieldId":"name","value":"Dry Run"}]' --dry-run 2>&1 | grep "DRY RUN"
 [DRY RUN] Would apply 1 patches to examples/simple/simple.form.md
 ? 0
 ```
 
-# Test: apply with --output writes to file
+# Test: patch with --output writes to file
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Output Test"}]' --output /tmp/test-apply-output.form.md 2>&1 | grep "written"
-Modified form written to /tmp/test-apply-output.form.md
+$ $CLI patch examples/simple/simple.form.md '[{"op":"set_string","fieldId":"name","value":"Output Test"}]' --output /tmp/test-patch-output.form.md 2>&1 | grep "written"
+Modified form written to /tmp/test-patch-output.form.md
 ? 0
 ```
 
 ---
 
-## Apply Error Handling
+## Patch Error Handling
 
-# Test: apply with invalid JSON patch
+# Test: patch with invalid JSON
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch 'not valid json'
-Error: Invalid JSON in --patch option
+$ $CLI patch examples/simple/simple.form.md 'not valid json'
+Error: Invalid JSON in patch argument
 ? 1
 ```
 
-# Test: apply with non-array patch
+# Test: patch with non-array JSON
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '{"op":"set_string","fieldId":"name","value":"test"}'
-Error: --patch must be a JSON array
+$ $CLI patch examples/simple/simple.form.md '{"op":"set_string","fieldId":"name","value":"test"}'
+Error: Patch argument must be a JSON array
 ? 1
 ```
 
-# Test: apply to nonexistent field shows rejection
+# Test: patch to nonexistent field shows rejection
 
 ```console
-$ $CLI apply examples/simple/simple.form.md --patch '[{"op":"set_string","fieldId":"nonexistent_field","value":"test"}]' --dry-run 2>&1 | grep "DRY RUN"
+$ $CLI patch examples/simple/simple.form.md '[{"op":"set_string","fieldId":"nonexistent_field","value":"test"}]' --dry-run 2>&1 | grep "DRY RUN"
 [DRY RUN] Would apply 1 patches to examples/simple/simple.form.md
 ? 0
 ```

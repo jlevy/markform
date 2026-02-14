@@ -143,6 +143,76 @@ describe('FillRecordCollector', () => {
     });
   });
 
+  describe('coercion warnings in timeline', () => {
+    it('records coercion warnings from TurnProgress in timeline entries', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 2,
+        patchesApplied: 2,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        coercionWarnings: [
+          {
+            patchIndex: 0,
+            fieldId: 'tags',
+            message: 'Coerced single string to array',
+            coercion: 'string_to_list',
+          },
+        ],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.coercionWarnings).toHaveLength(1);
+      expect(record.timeline[0]!.coercionWarnings![0]!.fieldId).toBe('tags');
+      expect(record.timeline[0]!.coercionWarnings![0]!.coercion).toBe('string_to_list');
+    });
+
+    it('omits coercionWarnings from timeline when empty', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.coercionWarnings).toBeUndefined();
+    });
+  });
+
   describe('onLlmCallStart / onLlmCallEnd', () => {
     it('tracks LLM token usage', () => {
       const collector = new FillRecordCollector({

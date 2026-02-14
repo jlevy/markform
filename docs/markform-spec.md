@@ -2868,9 +2868,11 @@ This formula ensures:
 | Operation | CLI | AI SDK | MCP (MF/0.2) |
 | --- | --- | --- | --- |
 | inspect | `markform inspect` (prints YAML report) | `markform_inspect` | `markform.inspect` |
-| apply | `markform apply` | `markform_apply` | `markform.apply` |
+| patch | `markform patch` (raw typed patches) | `markform_apply` | `markform.apply` |
+| set | `markform set` (auto-coerced value setting) | — | — |
+| next | `markform next` (next-field advisor) | — | — |
 | export | `markform export --format=json` | `markform_export` | `markform.export` |
-| getMarkdown | `markform apply` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
+| getMarkdown | `markform patch` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
 | render | `markform render` (static HTML output) | — | — |
 | serve | `markform serve` (interactive web UI) | — | — |
 
@@ -2889,6 +2891,12 @@ type Patch =
   | { op: 'set_table'; fieldId: Id; value: PatchTableRow[] }
   | { op: 'set_date'; fieldId: Id; value: string | null }
   | { op: 'set_year'; fieldId: Id; value: number | null }
+  | { op: 'append_table'; fieldId: Id; value: PatchTableRow[] }
+  | { op: 'delete_table'; fieldId: Id; value: number[] }
+  | { op: 'append_string_list'; fieldId: Id; value: string[] }
+  | { op: 'delete_string_list'; fieldId: Id; value: string[] }
+  | { op: 'append_url_list'; fieldId: Id; value: string[] }
+  | { op: 'delete_url_list'; fieldId: Id; value: string[] }
   | { op: 'clear_field'; fieldId: Id }
   | { op: 'skip_field'; fieldId: Id; role: string; reason?: string }
   | { op: 'abort_field'; fieldId: Id; role: string; reason?: string }
@@ -3059,7 +3067,7 @@ This is the normal inspect/apply/fix workflow.
 
 **Patch conflict handling:**
 
-- Patches are applied in array order within a single `apply` call
+- Patches are applied in array order within a single `patch`/`applyPatches()` call
 
 - Later patches to the same field overwrite earlier ones (last-write-wins)
 

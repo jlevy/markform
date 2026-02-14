@@ -716,7 +716,22 @@ markform inspect form.md --format=json
 # Validate form (check for errors)
 markform validate form.md
 
-# Fill forms
+# Set field values (agent-friendly, auto-coerced)
+markform set form.md fieldId "value"              # Set a single field
+markform set form.md --values '{"name": "Alice", "age": 30}'  # Batch set
+markform set form.md fieldId --clear              # Clear a field
+markform set form.md fieldId --skip               # Skip a field
+markform set form.md fieldId --abort              # Abort a field
+markform set form.md tableId --append '[{"col": "val"}]'      # Append rows
+markform set form.md tableId --delete '[0, 2]'                # Delete rows by index
+
+# Get next field recommendation
+markform next form.md                             # What field to fill next
+
+# Apply raw typed patches (low-level)
+markform patch form.md '[{"op": "set_string", "fieldId": "name", "value": "Alice"}]'
+
+# Fill forms (harness-driven sessions)
 markform fill form.md --interactive              # Interactive prompts for user fields
 markform fill form.md --roles=user --interactive # Only fill user-role fields
 markform fill form.md --model anthropic/claude-sonnet-4-5  # AI fills agent fields
@@ -782,6 +797,16 @@ markform fill template.form.md --mock --mock-source filled.form.md
 5. **Assign roles**: Separate user input from agent research
 
 6. **Document thoroughly**: Use `{% instructions %}` for complex fields
+
+## Claude Code Skill Setup
+
+Install markform as a Claude Code skill so agents know how to use it:
+
+```bash
+markform setup --auto         # Non-interactive (for agents)
+markform setup --interactive  # Guided setup (for humans)
+markform skill                # View the skill content
+```
 
 ## Programmatic API
 

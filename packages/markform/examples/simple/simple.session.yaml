@@ -152,6 +152,19 @@ turns:
         | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
         | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
+        ## Incremental Operations (for collections)
+
+        Use these to add/remove items without replacing the entire collection:
+
+        | Type | Example |
+        |------|---------|
+        | append_table | `{ op: "append_table", fieldId: "team", value: [{ "name": "Bob", "role": "PM" }] }` |
+        | append_string_list | `{ op: "append_string_list", fieldId: "tags", value: ["new_tag"] }` |
+        | append_url_list | `{ op: "append_url_list", fieldId: "sources", value: ["https://new.com"] }` |
+        | delete_table | `{ op: "delete_table", fieldId: "team", value: 0 }` (0-based row index) |
+        | delete_string_list | `{ op: "delete_string_list", fieldId: "tags", value: 0 }` (0-based item index) |
+        | delete_url_list | `{ op: "delete_url_list", fieldId: "sources", value: 0 }` (0-based item index) |
+
         ## Important: checkboxes vs multi_select
 
         These two types look similar but have DIFFERENT value formats:
@@ -477,6 +490,19 @@ turns:
           | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
           | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
           | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
+
+          ## Incremental Operations (for collections)
+
+          Use these to add/remove items without replacing the entire collection:
+
+          | Type | Example |
+          |------|---------|
+          | append_table | `{ op: "append_table", fieldId: "team", value: [{ "name": "Bob", "role": "PM" }] }` |
+          | append_string_list | `{ op: "append_string_list", fieldId: "tags", value: ["new_tag"] }` |
+          | append_url_list | `{ op: "append_url_list", fieldId: "sources", value: ["https://new.com"] }` |
+          | delete_table | `{ op: "delete_table", fieldId: "team", value: 0 }` (0-based row index) |
+          | delete_string_list | `{ op: "delete_string_list", fieldId: "tags", value: 0 }` (0-based item index) |
+          | delete_url_list | `{ op: "delete_url_list", fieldId: "sources", value: 0 }` (0-based item index) |
 
           ## Important: checkboxes vs multi_select
 
@@ -980,6 +1006,19 @@ turns:
         | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
         | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
+        ## Incremental Operations (for collections)
+
+        Use these to add/remove items without replacing the entire collection:
+
+        | Type | Example |
+        |------|---------|
+        | append_table | `{ op: "append_table", fieldId: "team", value: [{ "name": "Bob", "role": "PM" }] }` |
+        | append_string_list | `{ op: "append_string_list", fieldId: "tags", value: ["new_tag"] }` |
+        | append_url_list | `{ op: "append_url_list", fieldId: "sources", value: ["https://new.com"] }` |
+        | delete_table | `{ op: "delete_table", fieldId: "team", value: 0 }` (0-based row index) |
+        | delete_string_list | `{ op: "delete_string_list", fieldId: "tags", value: 0 }` (0-based item index) |
+        | delete_url_list | `{ op: "delete_url_list", fieldId: "sources", value: 0 }` (0-based item index) |
+
         ## Important: checkboxes vs multi_select
 
         These two types look similar but have DIFFERENT value formats:
@@ -1329,6 +1368,19 @@ turns:
           | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
           | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
           | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
+
+          ## Incremental Operations (for collections)
+
+          Use these to add/remove items without replacing the entire collection:
+
+          | Type | Example |
+          |------|---------|
+          | append_table | `{ op: "append_table", fieldId: "team", value: [{ "name": "Bob", "role": "PM" }] }` |
+          | append_string_list | `{ op: "append_string_list", fieldId: "tags", value: ["new_tag"] }` |
+          | append_url_list | `{ op: "append_url_list", fieldId: "sources", value: ["https://new.com"] }` |
+          | delete_table | `{ op: "delete_table", fieldId: "team", value: 0 }` (0-based row index) |
+          | delete_string_list | `{ op: "delete_string_list", fieldId: "tags", value: 0 }` (0-based item index) |
+          | delete_url_list | `{ op: "delete_url_list", fieldId: "sources", value: 0 }` (0-based item index) |
 
           ## Important: checkboxes vs multi_select
 
@@ -1770,6 +1822,19 @@ turns:
         | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
         | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
 
+        ## Incremental Operations (for collections)
+
+        Use these to add/remove items without replacing the entire collection:
+
+        | Type | Example |
+        |------|---------|
+        | append_table | `{ op: "append_table", fieldId: "team", value: [{ "name": "Bob", "role": "PM" }] }` |
+        | append_string_list | `{ op: "append_string_list", fieldId: "tags", value: ["new_tag"] }` |
+        | append_url_list | `{ op: "append_url_list", fieldId: "sources", value: ["https://new.com"] }` |
+        | delete_table | `{ op: "delete_table", fieldId: "team", value: 0 }` (0-based row index) |
+        | delete_string_list | `{ op: "delete_string_list", fieldId: "tags", value: 0 }` (0-based item index) |
+        | delete_url_list | `{ op: "delete_url_list", fieldId: "sources", value: 0 }` (0-based item index) |
+
         ## Important: checkboxes vs multi_select
 
         These two types look similar but have DIFFERENT value formats:
@@ -2094,6 +2159,19 @@ turns:
           | multi_select | `{ op: "set_multi_select", fieldId: "categories", value: ["frontend", "backend"] }` |
           | checkboxes | `{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }` |
           | table | `{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }` |
+
+          ## Incremental Operations (for collections)
+
+          Use these to add/remove items without replacing the entire collection:
+
+          | Type | Example |
+          |------|---------|
+          | append_table | `{ op: "append_table", fieldId: "team", value: [{ "name": "Bob", "role": "PM" }] }` |
+          | append_string_list | `{ op: "append_string_list", fieldId: "tags", value: ["new_tag"] }` |
+          | append_url_list | `{ op: "append_url_list", fieldId: "sources", value: ["https://new.com"] }` |
+          | delete_table | `{ op: "delete_table", fieldId: "team", value: 0 }` (0-based row index) |
+          | delete_string_list | `{ op: "delete_string_list", fieldId: "tags", value: 0 }` (0-based item index) |
+          | delete_url_list | `{ op: "delete_url_list", fieldId: "sources", value: 0 }` (0-based item index) |
 
           ## Important: checkboxes vs multi_select
 

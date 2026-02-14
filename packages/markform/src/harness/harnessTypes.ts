@@ -18,6 +18,7 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  PatchWarning,
   // Wire format types (defined in coreTypes for session logging)
   WireFormat,
   WireRequestFormat,
@@ -184,6 +185,15 @@ export interface LiveAgentConfig {
    * @default 'required'
    */
   toolChoice?: 'auto' | 'required';
+
+  /**
+   * Maximum retries for transient API errors (429 rate limit, 503 service unavailable).
+   * Uses the Vercel AI SDK's built-in exponential backoff with jitter.
+   * Set to 0 to disable retries (useful for fast tests).
+   *
+   * @default 3
+   */
+  maxRetries?: number;
 }
 
 // =============================================================================
@@ -525,6 +535,8 @@ export interface TurnProgress {
   patches: Patch[];
   /** Empty if patches applied successfully, contains rejection details if failed */
   rejectedPatches: PatchRejection[];
+  /** Coercion warnings from patch normalization (e.g., string auto-wrapped to array) */
+  coercionWarnings?: PatchWarning[];
   /** Execution ID for parallel tracking (e.g., "1-batch-research-0") */
   executionId?: string;
 }

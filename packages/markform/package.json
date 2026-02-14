@@ -59,7 +59,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "copy-docs": "cp ../../README.md . && mkdir -p docs && cp ../../docs/markform-spec.md docs/ && cp ../../docs/markform-reference.md docs/ && cp ../../docs/markform-apis.md docs/",
+    "copy-docs": "cp ../../README.md . && mkdir -p docs docs/skill && cp ../../docs/markform-spec.md docs/ && cp ../../docs/markform-reference.md docs/ && cp ../../docs/markform-apis.md docs/ && cp ../../docs/skill/SKILL.md docs/skill/",
     "build": "pnpm run copy-docs && tsdown",
     "dev": "tsdown --watch",
     "prepare": "pnpm run copy-docs && tsdown",

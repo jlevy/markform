@@ -800,7 +800,7 @@ Thin wrapper around the tool contract:
   (structure summary, progress summary, form state, and all issues in priority order).
   This is the canonical way to check form status at any time.
 
-- `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
+- `markform patch <file.form.md> <json>` — apply raw typed patches, write canonical file
 
 - `markform export <file.form.md> --format=json` — print `{schema, values}`
 
@@ -864,6 +864,54 @@ Thin wrapper around the tool contract:
   - For research forms: uses web-search model selection and research workflow
 
   - For standard forms: uses interactive filling
+
+**CLI form-filling commands (agent-friendly):**
+
+- `markform set <file> <fieldId> [value]` — set a single field value with auto-coercion:
+
+  - Auto-detects value type from field schema (JSON, number, boolean, string)
+
+  - Supports all field kinds: string, number, url, date, year, single_select,
+    multi_select, string_list, url_list, checkboxes, table
+
+  - Meta operations: `--clear`, `--skip --reason "..."`, `--abort --reason "..."`
+
+  - Incremental: `--append` and `--delete` for tables and lists
+
+  - Batch: `--values '{"name":"Alice","age":30}'` for multiple fields at once
+
+  - Default: modifies in-place; `-o` for different output file
+
+  - `--report` outputs JSON with patch result status, progress, and issues
+
+  - **Does not produce fill records** (stateless CLI operation)
+
+- `markform next <file>` — CLI equivalent of `harness.step()`: returns the prioritized,
+  filtered list of fields to fill next:
+
+  - Applies three-stage filtering: order levels, scope limits, count cap
+
+  - Each issue enriched with field metadata (kind, options, columns, constraints)
+
+  - Concrete `set` command examples per issue
+
+  - Respects frontmatter `harnessConfig` defaults; CLI flags override
+
+  - JSON output for agents, console output for humans
+
+  - Read-only (does not modify the form)
+
+**CLI command abstraction levels:**
+
+| Command | What it does | Abstraction level |
+| --- | --- | --- |
+| `markform set` | Set values with auto-coercion | High — caller provides raw values |
+| `markform patch` | Apply typed patch objects | Low — caller provides patch JSON |
+
+**Fill record policy:** CLI form-filling commands (`set`, `next`) do not produce fill
+records. Fill records are exclusively for harness-driven filling via the `fill` command
+and programmatic `fillForm()` API. The `fill` command skips writing an empty `.fill.json`
+sidecar when no turns were executed (e.g., form was already complete).
 
 **Deferred to MF/0.2:**
 
@@ -1331,7 +1379,7 @@ Deliverable: `tests/goldenRunner.ts`
 
 ### 8) CLI
 
-`inspect`, `apply`, `export`, `render`, `serve`, `fill`
+`inspect`, `patch`, `set`, `next`, `export`, `render`, `serve`, `fill`
 
 Deliverable: `cli/commands/*`
 
@@ -1343,7 +1391,7 @@ Deliverable: `integrations/vercelAiSdkTools.ts`
 
 ### 10) MCP server mode (MF/0.2)
 
-MCP tools for inspect/apply/export using TS SDK, stdio transport
+MCP tools for inspect/patch/export using TS SDK, stdio transport
 
 Deliverable: `integrations/mcp.ts`
 

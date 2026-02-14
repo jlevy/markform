@@ -1,8 +1,9 @@
 /**
- * Apply command - Apply patches to a form.
+ * Patch command - Apply raw typed patches to a form.
  *
- * Reads patches from JSON and applies them to the form,
- * outputting the modified form or a report.
+ * Low-level command that takes a JSON array of typed patch objects
+ * and applies them to the form. For a higher-level interface with
+ * auto-coercion, use the `set` command instead.
  */
 
 import type { Command } from 'commander';
@@ -25,7 +26,7 @@ import {
   writeFile,
 } from '../lib/shared.js';
 
-interface ApplyReport {
+interface PatchReport {
   apply_status: 'applied' | 'partial' | 'rejected';
   form_state: ProgressState;
   is_complete: boolean;
@@ -49,9 +50,9 @@ function formatState(state: ProgressState, useColors: boolean): string {
 }
 
 /**
- * Format apply report for console output.
+ * Format patch report for console output.
  */
-function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
+function formatConsoleReport(report: PatchReport, useColors: boolean): string {
   const lines: string[] = [];
   const bold = useColors ? pc.bold : (s: string) => s;
   const dim = useColors ? pc.dim : (s: string) => s;
@@ -60,7 +61,7 @@ function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
   const red = useColors ? pc.red : (s: string) => s;
 
   // Header
-  lines.push(bold(cyan('Apply Result')));
+  lines.push(bold(cyan('Patch Result')));
   lines.push('');
 
   // Status
@@ -94,31 +95,25 @@ function formatConsoleReport(report: ApplyReport, useColors: boolean): string {
 }
 
 /**
- * Register the apply command.
+ * Register the patch command.
  */
-export function registerApplyCommand(program: Command): void {
+export function registerPatchCommand(program: Command): void {
   program
-    .command('apply <file>')
-    .description('Apply patches to a form')
-    .option('--patch <json>', 'JSON array of patches to apply')
+    .command('patch <file> <json>')
+    .description('Apply raw typed patches to a form')
     .option('-o, --output <file>', 'Output file (defaults to stdout)')
-    .option('--report', 'Output apply result report instead of modified form')
+    .option('--report', 'Output patch result report instead of modified form')
     .option('--normalize', 'Regenerate form without preserving external content')
     .action(
       async (
         file: string,
-        options: { patch?: string; output?: string; report?: boolean; normalize?: boolean },
+        json: string,
+        options: { output?: string; report?: boolean; normalize?: boolean },
         cmd: Command,
       ) => {
         const ctx = getCommandContext(cmd);
 
         try {
-          // Validate patch option
-          if (!options.patch) {
-            logError('--patch option is required');
-            process.exit(1);
-          }
-
           logVerbose(ctx, `Reading file: ${file}`);
           const content = await readFile(file);
 
@@ -128,14 +123,14 @@ export function registerApplyCommand(program: Command): void {
           logVerbose(ctx, 'Parsing patches...');
           let parsedJson: unknown;
           try {
-            parsedJson = JSON.parse(options.patch) as unknown;
+            parsedJson = JSON.parse(json) as unknown;
           } catch {
-            logError('Invalid JSON in --patch option');
+            logError('Invalid JSON in patch argument');
             process.exit(1);
           }
 
           if (!Array.isArray(parsedJson)) {
-            logError('--patch must be a JSON array');
+            logError('Patch argument must be a JSON array');
             process.exit(1);
           }
           const patches = parsedJson as unknown[];
@@ -165,7 +160,7 @@ export function registerApplyCommand(program: Command): void {
 
           if (result.applyStatus === 'rejected') {
             logError('Patches rejected - structural validation failed');
-            const report: ApplyReport = {
+            const report: PatchReport = {
               apply_status: result.applyStatus,
               form_state: result.formState,
               is_complete: result.isComplete,
@@ -174,7 +169,7 @@ export function registerApplyCommand(program: Command): void {
               issues: result.issues,
             };
             const output = formatOutput(ctx, report, (data, useColors) =>
-              formatConsoleReport(data as ApplyReport, useColors),
+              formatConsoleReport(data as PatchReport, useColors),
             );
             console.error(output);
             process.exit(1);
@@ -182,8 +177,7 @@ export function registerApplyCommand(program: Command): void {
 
           // Output result
           if (options.report) {
-            // Output apply result report
-            const report: ApplyReport = {
+            const report: PatchReport = {
               apply_status: result.applyStatus,
               form_state: result.formState,
               is_complete: result.isComplete,
@@ -193,7 +187,7 @@ export function registerApplyCommand(program: Command): void {
             };
 
             const output = formatOutput(ctx, report, (data, useColors) =>
-              formatConsoleReport(data as ApplyReport, useColors),
+              formatConsoleReport(data as PatchReport, useColors),
             );
             if (options.output) {
               await writeFile(options.output, output);

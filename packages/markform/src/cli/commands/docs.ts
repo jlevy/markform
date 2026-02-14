@@ -9,34 +9,16 @@
 import type { Command } from 'commander';
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
 
+import { resolvePackagePath } from '../lib/paths.js';
 import { getCommandContext, logError, stripHtmlComments } from '../lib/shared.js';
-
-/**
- * Get the path to the markform-reference.md file.
- * Works both during development and when installed as a package.
- */
-function getDocsPath(): string {
-  const thisDir = dirname(fileURLToPath(import.meta.url));
-  const dirName = thisDir.split(/[/\\]/).pop();
-
-  if (dirName === 'dist') {
-    // Bundled: dist -> package root -> docs/markform-reference.md
-    return join(dirname(thisDir), 'docs', 'markform-reference.md');
-  }
-
-  // Development: src/cli/commands -> src/cli -> src -> package root -> docs/markform-reference.md
-  return join(dirname(dirname(dirname(thisDir))), 'docs', 'markform-reference.md');
-}
 
 /**
  * Load the docs content.
  */
 function loadDocs(): string {
-  const docsPath = getDocsPath();
+  const docsPath = resolvePackagePath(import.meta.url, 'docs/markform-reference.md');
   try {
     return readFileSync(docsPath, 'utf-8');
   } catch (error) {

@@ -132,5 +132,34 @@ describe('LiveAgent', () => {
 
       expect(toolNames).toEqual(['fill_form']);
     });
+
+    it('accepts maxRetries configuration', () => {
+      const config: LiveAgentConfig = {
+        model: mockModel as any,
+        enableWebSearch: false,
+        maxRetries: 5,
+      };
+      // Should not throw — maxRetries is a valid config option
+      const agent = createLiveAgent(config);
+      expect(agent).toBeDefined();
+    });
+
+    it('accepts maxRetries: 0 to disable retries (for fast tests)', () => {
+      const config: LiveAgentConfig = {
+        model: mockModel as any,
+        enableWebSearch: false,
+        maxRetries: 0,
+      };
+      // Should not throw — 0 disables retries for fast test execution
+      const agent = createLiveAgent(config);
+      expect(agent).toBeDefined();
+    });
+  });
+});
+
+describe('DEFAULT_MAX_RETRIES', () => {
+  it('is 3 per retry/backoff policy', async () => {
+    const { DEFAULT_MAX_RETRIES } = await import('../../../src/settings.js');
+    expect(DEFAULT_MAX_RETRIES).toBe(3);
   });
 });

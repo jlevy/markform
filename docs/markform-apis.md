@@ -138,6 +138,12 @@ Each patch has an `op` and `fieldId`.
 | `set_date` | date | `{ "op": "set_date", "fieldId": "deadline", "value": "2024-06-15" }` |
 | `set_year` | year | `{ "op": "set_year", "fieldId": "founded", "value": 2015 }` |
 | `set_table` | table | `{ "op": "set_table", "fieldId": "data", "value": [{"col1": "v1"}] }` |
+| `append_table` | table | `{ "op": "append_table", "fieldId": "data", "value": [{"col1": "v2"}] }` |
+| `delete_table` | table | `{ "op": "delete_table", "fieldId": "data", "value": [0, 2] }` |
+| `append_string_list` | string_list | `{ "op": "append_string_list", "fieldId": "tags", "value": ["c"] }` |
+| `delete_string_list` | string_list | `{ "op": "delete_string_list", "fieldId": "tags", "value": ["a"] }` |
+| `append_url_list` | url_list | `{ "op": "append_url_list", "fieldId": "sources", "value": ["https://new"] }` |
+| `delete_url_list` | url_list | `{ "op": "delete_url_list", "fieldId": "sources", "value": ["https://old"] }` |
 | `clear_field` | any | `{ "op": "clear_field", "fieldId": "name" }` |
 | `skip_field` | optional | `{ "op": "skip_field", "fieldId": "notes", "reason": "Not applicable" }` |
 | `abort_field` | any | `{ "op": "abort_field", "fieldId": "data", "reason": "Unable to find" }` |

@@ -1,0 +1,1168 @@
+# Feature: CLI `set` Command, `next` Command, and Agent-Friendly CLI Workflow
+
+**Date:** 2026-02-14 (last updated 2026-02-14)
+
+**Author:** Joshua Levy / Claude
+
+**Status:** Phases 0-2 Implemented, Phase 3 Pending, Review Findings Added
+
+## Overview
+
+Add CLI commands that let an external agent (Claude Code skill, shell script, etc.) fill
+markform forms with the same power and guided workflow as the TypeScript harness + AI SDK
+tools, but entirely through shell invocations. Two new commands:
+
+1. **`markform set`** — Set field values with auto-coercion. Supports single-field
+   (positional args), batch (`--values`), append, delete, clear, skip, and abort.
+2. **`markform next`** — The CLI equivalent of `harness.step()`: returns the prioritized,
+   filtered list of fields to fill next, with concrete examples and field metadata.
+
+Together these give an external agent the same step-apply-step loop the internal harness
+uses, but decomposed into independent CLI calls that the agent orchestrates.
+
+## Goals
+
+- Single-field CLI set with auto-coercion: `markform set form.md name "Alice"`
+- Batch set via JSON: `markform set form.md --values '{"name":"Alice","age":30}'`
+- CLI equivalent of the harness step cycle (`next` -> `set` -> `next`)
+- Comprehensive operations table: every field kind × every operation
+- Compound value support (tables, checkboxes, multi-select) with clear CLI syntax
+- Incremental operations: append rows to tables, append items to lists
+- Structured JSON feedback after each operation (issues, progress, completion status)
+- Zero knowledge of internal patch types required by the caller
+- Harness-aware field ranking: order levels, priority, scope limits
+
+## Non-Goals
+
+- Replacing the `patch` command (it remains for full control over typed patches)
+- Interactive TTY prompts (that's `fill --interactive`)
+- LLM-based filling (that's `fill --model`)
+- File locking or distributed coordination (last-write-wins is acceptable)
+- Maintaining stateful session across CLI calls (each call is stateless; the form file
+  IS the state)
+- **Fill records from CLI operations** — CLI form-filling commands (`set`, `next`) do
+  NOT produce fill records. Fill records are exclusively for harness-driven filling via
+  the `fill` command and programmatic `fillForm()` API.
+  See [Fill Record Policy](#fill-record-policy) for rationale.
+
+---
+
+## Background
+
+### How the internal harness loop works today
+
+The internal harness (`FormHarness`) implements a state machine:
+
+```
+INIT -> STEP -> WAIT -> APPLY -> (repeat) -> COMPLETE
+```
+
+Each cycle:
+
+1. **`harness.step()`** — Inspects the form, computes all issues (missing required
+   fields, incomplete checkboxes, etc.), then applies a three-stage filtering pipeline:
+
+   a. **Order filtering** — Only surfaces issues for the lowest incomplete order level.
+      Fields at higher `order` levels are deferred until all lower-order fields complete.
+
+   b. **Scope filtering** — If `maxFieldsPerTurn` or `maxGroupsPerTurn` is configured,
+      limits how many distinct fields/groups appear in the issue set.
+
+   c. **Count cap** — `slice(0, maxIssuesPerTurn)` (default 10).
+
+   Returns a `StepResult` with filtered issues, step budget, completion status.
+
+2. **Agent generates patches** — The agent sees each issue enriched with:
+   - Field ID, kind, severity, priority (P1-P5)
+   - Option IDs (for select/checkbox fields)
+   - Checkbox mode (`simple`/`multi`/`explicit`)
+   - Column definitions (for table fields)
+   - Concrete patch format example with actual field IDs and option IDs
+   - Skip instruction for optional fields
+
+3. **`harness.apply(patches)`** — Applies patches with best-effort semantics (valid
+   patches succeed even if some fail). Re-inspects form. Returns updated `StepResult`
+   with `patchesApplied` count and `rejectedPatches` details.
+
+4. **Repeat** until `isComplete` (zero issues remain) or `maxTurns` reached.
+
+### Priority scoring
+
+Priority is computed from two factors:
+
+| Factor | Values |
+|---|---|
+| Field priority weight | high=3, medium=2 (default), low=1 |
+| Issue type score | required_missing=3, validation_error=2, checkbox_incomplete=2-3, min_items_not_met=2, optional_unanswered=1 |
+
+Total score maps to tiers: P1 (>=5), P2 (>=4), P3 (>=3), P4 (>=2), P5 (>=1).
+
+Within each tier: required before recommended, higher score first, then alphabetical.
+
+### What the AI SDK tools expose (for comparison)
+
+The standalone AI SDK integration (`vercelAiSdkTools.ts`) exposes four tools operating
+on a shared session store:
+
+| Tool | Purpose | Maps to CLI... |
+|---|---|---|
+| `markform_inspect` | Get structure, progress, issues, completion | `inspect --format json` |
+| `markform_apply` | Apply typed patches (1-20) | `patch` |
+| `markform_export` | Export schema + values as JSON | `inspect --format json` (values section) |
+| `markform_get_markdown` | Get canonical markdown | `cat form.md` |
+
+**What's missing from the CLI:** The AI SDK tools require the agent to know typed patch
+operations (`set_string`, `set_number`, etc.). The internal harness gives even more
+guidance: concrete patch examples per field, filtered/prioritized issue lists, and the
+step-by-step loop. Neither maps cleanly to the current CLI.
+
+### What the `inspect` command provides today
+
+`markform inspect form.md --format json` returns:
+
+```json
+{
+  "title": "...",
+  "structure": { "fields_by_id": { "name": "string", "age": "number", ... }, ... },
+  "progress": { "counts": { "total_fields": 21, "empty_required_fields": 12, ... }, ... },
+  "values": { ... },
+  "issues": [
+    { "ref": "name", "scope": "field", "reason": "required_missing",
+      "message": "Required field \"Name\" is empty", "priority": 1, "severity": "required" }
+  ],
+  "form_state": "empty"
+}
+```
+
+This is useful but lacks:
+- Harness-aware filtering (order levels, max fields/groups per turn)
+- Field metadata per issue (kind, options, checkbox mode, column defs)
+- Concrete `set` command examples
+- Step budget / turn guidance
+
+### Current CLI form-filling methods
+
+| Method | Requires | Agent-friendly? |
+|---|---|---|
+| `fill --interactive` | TTY, human at keyboard | No |
+| `fill --model <id>` | LLM API key, full harness | Overkill for known values |
+| `patch '<json>'` | Knowledge of patch ops, JSON construction | Functional but brittle |
+| Programmatic `fillForm()` | TypeScript runtime | Yes, but not CLI |
+| AI SDK tools | Vercel AI SDK runtime | Yes, but not CLI |
+| **`set` (proposed)** | Just field ID + value | **Yes** |
+| **`next` (proposed)** | Nothing (reads form) | **Yes** |
+
+---
+
+## Design
+
+### The CLI agent workflow: `next` -> `set` -> `next` -> ...
+
+The CLI agent workflow mirrors the internal harness loop but is stateless — the form
+file on disk IS the state. Each CLI call reads the latest form, operates, writes back.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 CLI Agent Loop                       │
+│                                                      │
+│  1. markform next form.md --format json              │
+│     ├── Returns: prioritized issues with metadata    │
+│     ├── Each issue has: fieldId, kind, options,      │
+│     │   concrete `set` example, severity, priority   │
+│     └── Also returns: step budget, completion status │
+│                                                      │
+│  2. Agent decides what to fill based on issues       │
+│                                                      │
+│  3. For each field (or batch):                       │
+│     ├── markform set form.md <fieldId> <value>       │
+│     └── or: markform set form.md --values '{...}'    │
+│                                                      │
+│  4. If not complete, go to 1                         │
+│                                                      │
+└─────────────────────────────────────────────────────┘
+```
+
+**Key difference from the internal harness:** The CLI workflow is stateless across calls.
+There is no persistent turn counter, session transcript, or harness state. Each `next`
+call is a fresh inspect + filter. This is simpler and more robust for external agents
+that may crash, retry, or interleave with other work.
+
+### New command: `markform next`
+
+The CLI equivalent of `harness.step()`. Inspects the form and returns the prioritized,
+filtered list of fields to fill, enriched with field metadata and concrete examples.
+
+```
+markform next <file> [options]
+
+Options:
+  --roles <roles>           Target roles (comma-separated, default: all)
+  --max-fields <n>          Max fields per batch (default: unlimited)
+  --max-groups <n>          Max groups per batch (default: unlimited)
+  --max-issues <n>          Max issues to return (default: 10)
+  --format <format>         Output format (default: console; json for agents)
+```
+
+#### JSON output format
+
+```json
+{
+  "is_complete": false,
+  "form_state": "incomplete",
+  "step_budget": 5,
+  "progress": {
+    "total_fields": 21,
+    "required_fields": 12,
+    "filled_fields": 7,
+    "empty_required_fields": 5
+  },
+  "issues": [
+    {
+      "ref": "age",
+      "scope": "field",
+      "reason": "required_missing",
+      "message": "Required field \"Age\" is empty",
+      "severity": "required",
+      "priority": 1,
+      "field": {
+        "kind": "number",
+        "required": true,
+        "label": "Age"
+      },
+      "set_example": "markform set form.md age 30",
+      "skip_example": null
+    },
+    {
+      "ref": "priority",
+      "scope": "field",
+      "reason": "required_missing",
+      "message": "Required field \"Priority\" has no selection",
+      "severity": "required",
+      "priority": 1,
+      "field": {
+        "kind": "single_select",
+        "required": true,
+        "label": "Priority",
+        "options": ["low", "medium", "high"]
+      },
+      "set_example": "markform set form.md priority high",
+      "skip_example": null
+    },
+    {
+      "ref": "confirmations",
+      "scope": "field",
+      "reason": "required_missing",
+      "message": "All items in \"Confirmations\" must be answered (2 unfilled)",
+      "severity": "required",
+      "priority": 1,
+      "field": {
+        "kind": "checkboxes",
+        "required": true,
+        "label": "Confirmations (Explicit Mode)",
+        "checkbox_mode": "explicit",
+        "options": ["backed_up", "notified_team"]
+      },
+      "set_example": "markform set form.md confirmations '{\"backed_up\":\"yes\",\"notified_team\":\"no\"}'",
+      "skip_example": null
+    },
+    {
+      "ref": "team_members",
+      "scope": "field",
+      "reason": "required_missing",
+      "message": "Required field \"Team Members\" is empty",
+      "severity": "required",
+      "priority": 1,
+      "field": {
+        "kind": "table",
+        "required": true,
+        "label": "Team Members",
+        "columns": [
+          { "id": "name", "type": "string", "required": true },
+          { "id": "role", "type": "string" },
+          { "id": "start_date", "type": "date" }
+        ],
+        "min_rows": 1,
+        "max_rows": 10
+      },
+      "set_example": "markform set form.md team_members '[{\"name\":\"Alice\",\"role\":\"Eng\",\"start_date\":\"2024-01-15\"}]'",
+      "skip_example": null
+    },
+    {
+      "ref": "notes",
+      "scope": "field",
+      "reason": "optional_unanswered",
+      "message": "Optional field not yet addressed",
+      "severity": "recommended",
+      "priority": 3,
+      "field": {
+        "kind": "string",
+        "required": false,
+        "label": "Notes"
+      },
+      "set_example": "markform set form.md notes \"Some notes here\"",
+      "skip_example": "markform set form.md notes --skip --reason \"Not applicable\""
+    }
+  ]
+}
+```
+
+#### Console output format
+
+For human use or quick inspection:
+
+```
+Form: Simple Test Form
+State: incomplete (7/21 fields filled, 5 required remaining)
+
+Next fields to fill (5 issues):
+
+  P1 [required] age (number)
+     Required field "Age" is empty
+     → markform set form.md age 30
+
+  P1 [required] priority (single_select: low, medium, high)
+     Required field "Priority" has no selection
+     → markform set form.md priority high
+
+  P1 [required] confirmations (checkboxes/explicit: backed_up, notified_team)
+     All items in "Confirmations" must be answered (2 unfilled)
+     → markform set form.md confirmations '{"backed_up":"yes","notified_team":"no"}'
+
+  P1 [required] team_members (table: name*, role, start_date)
+     Required field "Team Members" is empty
+     → markform set form.md team_members '[{"name":"Alice","role":"Eng"}]'
+
+  P3 [recommended] notes (string)
+     Optional field not yet addressed
+     → markform set form.md notes "Some notes here"
+     → markform set form.md notes --skip --reason "Not applicable"
+```
+
+#### How `next` relates to `inspect`
+
+| Aspect | `inspect` | `next` |
+|---|---|---|
+| Purpose | Full form report | Actionable next-step guidance |
+| Issues | All issues, flat list | Filtered by order/scope/count, enriched |
+| Field metadata | In `structure.fields_by_id` (separate) | Inline per issue |
+| Examples | None | Concrete `set` commands per issue |
+| Harness settings | None (raw inspect) | Respects max-fields, max-groups, order |
+| Completion | `form_state` + `is_complete` | Same, plus `step_budget` |
+| Values | Full values dump | Not included (use `inspect` for that) |
+
+`inspect` gives the full picture. `next` gives "what should I do right now?"
+
+### New command: `markform set`
+
+`set` is the single command for all auto-coerced value operations. It handles
+single-field (positional args), batch (`--values`), incremental (`--append`,
+`--delete`), and meta operations (`--clear`, `--skip`, `--abort`).
+
+```
+markform set <file> [fieldId] [value] [options]
+
+Arguments:
+  file                    Form file to modify
+  fieldId                 Field ID to set (required except with --values)
+  value                   Value to set (auto-parsed: JSON, number, boolean, string)
+
+Options:
+  --values <json>         Batch set: JSON object of {fieldId: rawValue} pairs
+  --append <value>        Append item/row to a collection field
+  --delete <n>            Delete item/row at index (0-based) from a collection field
+  -o, --output <file>     Output file (default: modify in place)
+  --clear                 Clear the field value
+  --skip                  Skip the field (marks as skipped)
+  --abort                 Abort the field (marks as unable to complete)
+  --role <role>           Role for skip/abort (default: "user")
+  --reason <text>         Reason for skip/abort
+  --report                Output JSON report after applying (issues, progress)
+  --format <format>       Output format for report (default: json)
+  --normalize             Regenerate form without preserving external content
+```
+
+**Design principle:** `set` owns all auto-coerced operations. `patch` remains
+for raw typed patches. No overlap, no confusion.
+
+| Command | What it does | Abstraction level |
+|---|---|---|
+| `markform set` | Set values with auto-coercion | High — caller provides raw values |
+| `markform patch` | Apply typed patch objects | Low — caller provides patch JSON |
+
+---
+
+### Comprehensive operations reference
+
+This table shows every operation available through `markform set`, organized by field
+kind. All examples assume the form file is `f.md`.
+
+#### Value set operations (full replacement)
+
+| Field Kind | Value Format | CLI Example |
+|---|---|---|
+| `string` | String | `set f.md name "Alice Smith"` |
+| `number` | Number | `set f.md age 30` |
+| `url` | URL string | `set f.md website "https://example.com"` |
+| `date` | ISO 8601 | `set f.md event_date "2025-06-15"` |
+| `year` | Integer | `set f.md founded_year 2020` |
+| `single_select` | Option ID | `set f.md priority high` |
+| `multi_select` | JSON array of option IDs | `set f.md categories '["frontend","backend"]'` |
+| `string_list` | JSON array of strings | `set f.md tags '["rust","wasm","perf"]'` |
+| `url_list` | JSON array of URLs | `set f.md refs '["https://a.com","https://b.com"]'` |
+| `checkboxes` (simple) | JSON object `{id: state}` | `set f.md tasks '{"a":"done","b":"todo"}'` |
+| `checkboxes` (simple) | JSON array (shorthand) | `set f.md tasks '["a","b"]'` — marks listed as done |
+| `checkboxes` (multi) | JSON object `{id: state}` | `set f.md tasks '{"research":"done","design":"active"}'` |
+| `checkboxes` (multi) | JSON array (shorthand) | `set f.md tasks '["research"]'` — marks listed as done |
+| `checkboxes` (explicit) | JSON object `{id: state}` | `set f.md confirms '{"backed_up":"yes","notified":"no"}'` |
+| `checkboxes` *(any)* | JSON object `{id: bool}` | `set f.md confirms '{"backed_up":true,"notified":false}'` |
+| `table` | JSON array of row objects | `set f.md members '[{"name":"Alice","role":"Eng"}]'` |
+
+#### Incremental operations (append and delete)
+
+All incremental operations are backed by primitive patch ops added in Phase 0. The CLI
+`--append` and `--delete` flags map directly to these ops. Naming convention:
+`<verb>_<field_kind>` (e.g., `append_table`, `delete_string_list`).
+
+**Patch operations for collections:**
+
+| Collection Kind | Set (replace all) | Append | Delete (by 0-based index) |
+|---|---|---|---|
+| `table` | `set_table` | `append_table` | `delete_table` |
+| `string_list` | `set_string_list` | `append_string_list` | `delete_string_list` |
+| `url_list` | `set_url_list` | `append_url_list` | `delete_url_list` |
+
+**CLI mapping:**
+
+| Field Kind | Operation | Patch Op | CLI Example |
+|---|---|---|---|
+| `table` | Append row | `append_table` | `set f.md members --append '{"name":"Bob","role":"PM"}'` |
+| `table` | Append multiple | `append_table` | `set f.md members --append '[{"name":"Bob"},{"name":"Carol"}]'` |
+| `table` | Delete row | `delete_table` | `set f.md members --delete 0` |
+| `string_list` | Append item | `append_string_list` | `set f.md tags --append "perf"` |
+| `string_list` | Delete item | `delete_string_list` | `set f.md tags --delete 2` |
+| `url_list` | Append item | `append_url_list` | `set f.md refs --append "https://c.com"` |
+| `url_list` | Delete item | `delete_url_list` | `set f.md refs --delete 0` |
+
+**Not supported for append/delete:**
+- Scalar fields (`string`, `number`, `url`, `date`, `year`) — no collection to modify
+- `single_select` — single value, not a collection
+- `multi_select` — use full replacement (the set of selected options is typically small)
+- `checkboxes` — set individual items via object syntax (only listed keys are changed,
+  unlisted keys are preserved)
+
+#### Meta operations (all field kinds)
+
+| Operation | CLI Example | Notes |
+|---|---|---|
+| Clear | `set f.md name --clear` | Removes value, field returns to empty |
+| Skip | `set f.md notes --skip --reason "N/A"` | Optional fields only; clears any existing value |
+| Abort | `set f.md score --abort --reason "Unavailable"` | Any field; blocks form completion |
+
+`add_note`/`remove_note` are excluded from `set` because they operate on form elements
+(not just fields) and use `ref`/`noteId` rather than `fieldId`. Use `markform patch` for
+note operations.
+
+#### Batch mode
+
+Set multiple fields in a single command using `--values`:
+
+```bash
+markform set f.md --values '{
+  "name": "Acme Corp",
+  "age": 15,
+  "priority": "high",
+  "categories": ["frontend", "backend"],
+  "confirmations": {"backed_up": "yes", "notified_team": "yes"},
+  "team_members": [{"name": "Alice", "role": "Eng"}]
+}'
+```
+
+`--values` calls `coerceInputContext()` internally — the same coercion layer used by
+the programmatic `fillForm({ inputContext })` API.
+
+`--values` is mutually exclusive with positional `fieldId`/`value` args and with
+`--append`/`--delete`/`--clear`/`--skip`/`--abort`.
+
+---
+
+### Coercion behavior
+
+The `set` command receives `<value>` as a CLI string argument. The CLI only does minimal
+pre-parsing — just enough to detect JSON objects/arrays for compound types. Everything
+else is passed as a string to `coerceToFieldPatch()`, which handles type conversion based
+on the field's kind from the schema.
+
+**CLI pre-parsing (`parseCliValue`):**
+
+```
+1. If value starts with '[' or '{': parse as JSON → object/array
+2. Otherwise: pass as string (no number/boolean detection)
+```
+
+This avoids the ambiguity where numeric-looking strings (e.g., option ID `"1"`, zip code
+`"02101"`) would be incorrectly converted to numbers before the coercion layer sees them.
+The coercion layer knows the field kind and makes the right conversion.
+
+**Field-kind coercion (existing `coerceToFieldPatch`):**
+- `number`/`year` fields: `"30"` string → `30` number
+- `string` fields: `"30"` string stays as `"30"` string
+- `single_select`: string validated against option IDs (including numeric IDs like `"1"`)
+- `multi_select`: JSON array of option IDs. Single string coerced to `["string"]` with
+  warning.
+
+**Lists:**
+- JSON array of strings passes through
+- Single string coerced to single-element array with warning
+- Non-string array items coerced to strings where possible
+
+**Checkboxes** — three input shapes are supported:
+
+1. **Object with state values** (explicit control):
+   `{"research": "done", "design": "active"}` — Valid states depend on `checkboxMode`:
+   multi=`todo|done|incomplete|active|na`, simple=`todo|done`, explicit=`unfilled|yes|no`
+
+2. **Array of option IDs** (shorthand for "mark these as done/yes"):
+   `["research", "design"]` — Listed options get `done`/`yes`. Unlisted stay unchanged.
+
+3. **Object with boolean values** (coerced to state strings):
+   `{"backed_up": true, "notified": false}` — `true` → `done`/`yes`, `false` →
+   `todo`/`no`
+
+**Tables:**
+- Value must be a JSON array of row objects
+- Each row is `Record<columnId, CellValue | null>`
+- Missing columns treated as empty/skipped
+- `null` values become `%SKIP%` sentinel on serialization
+- Cell values are `string | number` matching `columnTypes`
+- Empty array `[]` clears the table (valid when `minRows=0`)
+
+Table column types and per-cell coercion:
+
+| Column Type | Accepts | Coercion |
+|---|---|---|
+| `string` | String, number | `42` -> `"42"` |
+| `number` | Number, numeric string | `"9.3"` -> `9.3` |
+| `url` | String (URL format) | Pass-through |
+| `date` | String (ISO 8601) | Pass-through |
+
+---
+
+### Mapping: Harness cycle to CLI commands
+
+| Harness concept | Internal API | CLI equivalent |
+|---|---|---|
+| Initialize harness | `new FormHarness(form, config)` | (stateless — form file is the state) |
+| Step (get next issues) | `harness.step()` | `markform next form.md --format json` |
+| Agent generates patches | LLM tool call | Agent reads `next` output, decides values |
+| Apply patches | `harness.apply(patches)` | `markform set` (single or `--values` batch) |
+| Check completion | `stepResult.isComplete` | `next` output has `is_complete: true` |
+| Session transcript | `harness.getSessionTranscript()` | Not needed (agent has its own context) |
+| Turn budget | `stepResult.stepBudget` | `next` output `step_budget` |
+| Rejected patches feedback | `stepResult.rejectedPatches` | `set --report` shows errors inline |
+| Order-level gating | `filterIssuesByOrder()` | `next` applies same filter |
+| Scope limits | `maxFieldsPerTurn`, `maxGroupsPerTurn` | `next --max-fields`, `next --max-groups` |
+| Max issues | `maxIssuesPerTurn` | `next --max-issues` |
+| Max turns | `config.maxTurns` | Agent controls its own loop limit |
+| Fill mode (overwrite) | `fillMode: 'overwrite'` in config | Not needed (agent explicitly sets values) |
+
+### Example: Complete CLI agent session
+
+```bash
+# Step 1: Get the next batch of fields to fill
+NEXT=$(markform next form.md --format json --max-fields 5)
+
+# Step 2: Agent reads $NEXT, determines values, fills them one at a time
+markform set form.md name "Acme Corp"
+markform set form.md email "info@acme.com"
+markform set form.md age 15
+markform set form.md priority high
+markform set form.md categories '["frontend","backend"]'
+
+# Step 3: Check what's next
+NEXT=$(markform next form.md --format json)
+# -> issues now show checkboxes, tables, optional fields
+
+# Step 4: Fill compound fields
+markform set form.md confirmations '{"backed_up":"yes","notified_team":"yes"}'
+markform set form.md team_members '[{"name":"Alice","role":"Eng","start_date":"2024-01-15"}]'
+
+# Step 5: Append another row to the table
+markform set form.md team_members --append '{"name":"Bob","role":"PM"}'
+
+# Step 6: Skip optional fields
+markform set form.md notes --skip --reason "Not applicable"
+
+# Step 7: Check completion
+markform next form.md --format json
+# -> { "is_complete": true, "form_state": "complete", "issues": [] }
+```
+
+Or more efficiently with `--values` for batch operations:
+
+```bash
+# Bulk fill in one shot
+markform set form.md --values '{
+  "name": "Acme Corp",
+  "email": "info@acme.com",
+  "age": 15,
+  "priority": "high",
+  "categories": ["frontend", "backend"],
+  "confirmations": {"backed_up": "yes", "notified_team": "yes"},
+  "team_members": [{"name": "Alice", "role": "Eng"}]
+}' --report --format json
+
+# Check what remains
+markform next form.md --format json
+```
+
+### Comparison: All CLI form-filling approaches
+
+| Aspect | `set` (single) | `set --values` (batch) | `patch` | `fill --interactive` | `fill --model` |
+|---|---|---|---|---|---|
+| Agent-friendly | Yes | Yes | Yes (verbose) | No (TTY) | N/A (autonomous) |
+| Type knowledge | None | None | Full | None | None |
+| Field guidance | Via `next` | Via `next` | None | Prompts | Harness prompts |
+| Batch support | Per-field | N fields | N patches | Per-field | N per turn |
+| Compound types | JSON arg | Raw JSON | Full JSON | Prompts | Harness |
+| Append/delete | `--append`, `--delete` | No | No | No | No |
+| Meta ops | `--clear/skip/abort` | No | Full patch | Skip prompts | Harness |
+| Completion check | `next` | `--report` | Separate inspect | Automatic | Automatic |
+| Best for | CLI agents | Bulk pre-fill | Power users | Humans | LLM filling |
+
+---
+
+### Fill Record Policy
+
+CLI form-filling operations and harness-driven filling serve different purposes and have
+different observability needs. The design draws a clear boundary:
+
+**CLI operations (`set`, `next`) do NOT produce fill records.**
+
+| Path | Produces FillRecord? | Writes `.fill.json`? |
+|---|---|---|
+| `markform set` (any mode) | No | No |
+| `markform patch` | No | No |
+| `markform next` | No (read-only) | No |
+| `markform fill --model` (harness) | Yes (always, for summary) | Only with `--record-fill` |
+| Programmatic `fillForm()` | Yes (if `recordFill: true`) | Caller's responsibility |
+
+**Rationale:**
+
+1. **No session data to capture.** CLI operations are stateless one-shot commands. There
+   is no session, no turns, no LLM calls, no token usage — the data that makes fill
+   records valuable doesn't exist.
+
+2. **Maintenance burden.** Tracking CLI operations in a fill record would require
+   inventing a different schema (no LLM/tool timeline, no execution threads). This adds
+   complexity for little value.
+
+3. **The form file IS the audit trail.** After CLI operations, the form markdown contains
+   all values and state. `markform inspect` can show progress at any time. There's no
+   information loss.
+
+4. **The agent has its own context.** An external agent (Claude Code, shell script) that
+   orchestrates `next` -> `set` -> `next` loops already has its own execution context,
+   logs, and audit trail. Duplicating this in a markform-specific format is redundant.
+
+**Empty fill record guard (for the `fill` command):**
+
+When `--record-fill` is set on the `fill` command, the sidecar `.fill.json` file should
+NOT be written if the fill record is essentially empty — meaning no actual work was done.
+The check is: `timeline.length === 0`. This handles edge cases like:
+
+- Form was already complete when `fill` was invoked
+- Agent errored before any turns executed
+- Pre-fill configuration failed (already handled: no collector is created)
+
+If at least one turn executed (even if it applied zero patches), the record is written
+because the timeline contains useful debugging information.
+
+---
+
+### Workflow Walkthrough
+
+This section traces through the key workflows to show how CLI form filling fits into the
+broader system, and where fill records do and don't apply.
+
+#### Workflow 1: External agent fills a form via CLI
+
+An agent (Claude Code skill, shell script, etc.) fills a form using CLI commands. No fill
+record is produced — the form file is the state and the agent has its own context.
+
+```
+Agent context (Claude Code, script, etc.)
+│
+├── markform next form.md --format json
+│   └── Returns: prioritized issues, set_example per field
+│
+├── markform set form.md name "Acme Corp"
+│   └── Writes form.md in-place. No fill record.
+│
+├── markform set form.md age 15
+│   └── Writes form.md in-place. No fill record.
+│
+├── markform next form.md --format json
+│   └── Returns: remaining issues (name and age gone from list)
+│
+├── markform set form.md --values '{"priority":"high","categories":["a","b"]}'
+│   └── Bulk set. No fill record.
+│
+├── markform next form.md --format json
+│   └── is_complete: true? Done. Otherwise loop.
+│
+└── Agent's own audit trail captures the full session.
+    No markform fill record needed.
+```
+
+#### Workflow 2: Harness-driven fill (LLM agent)
+
+The `fill` command runs the full harness loop with an LLM. A fill record is produced
+because there is session/turn/LLM/tool data to capture.
+
+```
+markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
+│
+├── Harness creates FillRecordCollector
+├── Turn 1: step() → agent sees issues → generates patches → apply()
+│   └── Collector records: LLM tokens, tool calls, patches, timing
+├── Turn 2: step() → agent sees remaining issues → generates patches → apply()
+│   └── Collector records turn 2 data
+├── ...
+├── Complete: collector.getRecord() → FillRecord
+│
+├── If timeline.length > 0 AND --record-fill:
+│   └── Write form.fill.json (sidecar)
+├── If timeline.length === 0 AND --record-fill:
+│   └── Skip writing (empty record guard)
+│
+└── Form written to output path
+```
+
+#### Workflow 3: Bulk pre-fill then agent finish
+
+A common pattern: pre-fill known values via CLI, then let an LLM handle the rest.
+
+```
+# Phase 1: CLI pre-fill (no fill record)
+markform set form.md --values '{"company":"Acme","ticker":"ACME","sector":"Tech"}'
+
+# Phase 2: Agent finishes remaining fields (fill record captures LLM work)
+markform fill form.md --model openai/gpt-4o --record-fill
+```
+
+The fill record from Phase 2 accurately reflects only the LLM's work — not the pre-filled
+values. This is correct behavior: the record shows what the agent did, not what was given.
+
+#### Workflow 4: Form already complete
+
+```
+markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
+# Harness runs step() → isComplete=true → 0 turns → empty timeline
+# Empty record guard: .fill.json NOT written
+# Exit code 0 (form is complete)
+```
+
+---
+
+## Implementation Plan
+
+### Phase 0: New patch operations (append/delete for collections)
+
+Add `append_*` and `delete_*` as primitive patch operations for all collection types,
+following the same implementation pattern as `set_table`. Naming convention:
+`<verb>_<field_kind>`.
+
+**New patch operations:**
+
+| Op | Interface | Value |
+|---|---|---|
+| `append_table` | `AppendTablePatch` | `value: TableRowPatch[]` (array of rows; CLI auto-wraps single objects) |
+| `delete_table` | `DeleteTablePatch` | `value: number` (0-based row index) |
+| `append_string_list` | `AppendStringListPatch` | `value: string[]` (array of items; CLI auto-wraps single strings) |
+| `delete_string_list` | `DeleteStringListPatch` | `value: number` (0-based item index) |
+| `append_url_list` | `AppendUrlListPatch` | `value: string[]` (array of URLs; CLI auto-wraps single strings) |
+| `delete_url_list` | `DeleteUrlListPatch` | `value: number` (0-based item index) |
+
+These are prerequisites for `set --append` and `set --delete` CLI flags, but also usable
+directly via `markform patch` and by the AI SDK tools / harness.
+
+**Changes per file (6 files, following `set_table` pattern):**
+
+`src/engine/coreTypes.ts`:
+- [ ] Add 6 new TypeScript interfaces (see table above)
+- [ ] Add all 6 to the `Patch` union type (~line 962)
+- [ ] Add 6 new Zod schemas (reuse `TableRowPatchSchema` for table ops,
+  `z.string()` for list ops, `z.number().int().min(0)` for all delete index fields)
+- [ ] Add all 6 to `PatchSchema` discriminated union (~line 1878)
+
+`src/engine/apply.ts`:
+- [ ] Add all 6 ops to `PATCH_OP_TO_FIELD_KIND` map (~line 53):
+  `append_table` → `'table'`, `delete_table` → `'table'`,
+  `append_string_list` → `'string_list'`, etc.
+- [ ] Add `else if` validation branches in `validatePatch()` (~line 393):
+  - `append_table`: validate value is row object or array of row objects, validate
+    column IDs against field schema
+  - `delete_table`: validate index is non-negative, validate in bounds of current table
+  - `append_string_list` / `append_url_list`: validate value is string or string array
+  - `delete_string_list` / `delete_url_list`: validate index is non-negative, in bounds
+- [ ] Add `case` branches in `applyPatch()` switch (~line 569):
+  - `append_table`: read current table rows from responses, append new row(s), write back
+  - `delete_table`: read current rows, splice out at index, write back
+  - `append_string_list` / `append_url_list`: read current list, append item(s), write back
+  - `delete_string_list` / `delete_url_list`: read current list, splice out at index,
+    write back
+
+`src/harness/prompts.ts`:
+- [ ] Add examples for new ops to `PATCH_FORMATS` map and `DEFAULT_SYSTEM_PROMPT`
+  (~line 108, ~line 45)
+- [ ] Update `getPatchFormatHint()` to handle new ops if needed (~line 150)
+
+`src/harness/toolApi.ts`:
+- [ ] Add all 6 new op names to `PATCH_OPERATIONS` array (~line 29)
+
+`src/cli/lib/patchFormat.ts`:
+- [ ] Add `case` for each new op in `formatPatchValue()` switch (~line 57)
+- [ ] Add `case` for each new op in `formatPatchType()` switch (~line 99)
+
+**Tests:**
+- [ ] Unit test: `append_table` appends row to empty table
+- [ ] Unit test: `append_table` appends row to table with existing rows
+- [ ] Unit test: `append_table` with array of rows appends all
+- [ ] Unit test: `append_table` validates column IDs (rejects unknown columns)
+- [ ] Unit test: `delete_table` removes correct row by index
+- [ ] Unit test: `delete_table` rejects out-of-bounds index
+- [ ] Unit test: `delete_table` on single-row table produces empty table
+- [ ] Unit test: `append_string_list` appends item to empty list
+- [ ] Unit test: `append_string_list` appends to existing list
+- [ ] Unit test: `append_string_list` with array appends all
+- [ ] Unit test: `delete_string_list` removes item at index
+- [ ] Unit test: `delete_string_list` rejects out-of-bounds index
+- [ ] Unit test: `append_url_list` / `delete_url_list` (same patterns as string_list)
+- [ ] Unit test: all new ops work through `applyPatches()` with best-effort semantics
+- [ ] Golden test: verify canonical markdown output after append/delete operations
+- [ ] CLI test: `patch` with each new op
+
+### Phase 1: `set` command (single-field and batch)
+
+- [ ] Add `parseCliValue(rawString)` utility to parse CLI value argument
+  (JSON detect for `[`/`{` prefixes, otherwise pass as string)
+- [ ] Add `registerSetCommand()` in `src/cli/commands/set.ts`
+  - Parse `<fieldId>` and `<value>` args for single-field mode
+  - Handle `--values` for batch mode (mutually exclusive with positional args)
+  - Handle `--clear`, `--skip`, `--abort` flags with `--role` and `--reason`
+  - Handle `--append` for tables: generate `append_table` patch
+  - Handle `--append` for lists: generate `append_string_list` / `append_url_list` patch
+  - Handle `--delete` for tables: generate `delete_table` patch
+  - Handle `--delete` for lists: generate `delete_string_list` / `delete_url_list` patch
+  - Call `coerceToFieldPatch()` for single-field value operations
+  - Call `coerceInputContext()` for `--values` batch operations
+  - Default to in-place modification; `-o` for different output file
+  - Output modified form, or `--report` JSON with issues/progress
+  - **No fill record** — `set` is a stateless patch operation
+- [ ] Register `set` command in CLI program
+- [ ] Add unit tests for `parseCliValue()`
+- [ ] Add CLI tests for `set` command — all value set operations (per comprehensive table)
+- [ ] Add CLI tests for `set --values` batch mode
+- [ ] Add CLI tests for `set --append` (table row, string_list item, url_list item)
+- [ ] Add CLI tests for `set --delete` (table row, string_list item, url_list item)
+- [ ] Add CLI tests for `set --clear`, `--skip`, `--abort`
+- [ ] Add CLI tests for `set` error cases (bad field ID, bad option, bad coercion)
+
+### Phase 2: `next` command
+
+- [ ] Add `registerNextCommand()` in `src/cli/commands/next.ts`
+  - Read form, call `inspect()` with target roles
+  - Apply three-stage filtering (reuse harness logic or extract into shared utility):
+    order filtering, scope filtering, count cap
+  - Enrich each issue with field metadata: kind, label, options, checkbox_mode,
+    columns (for tables), min/max constraints
+  - Generate concrete `set_example` string for each issue based on field kind
+  - Generate `skip_example` for optional fields
+  - JSON output: `{ is_complete, form_state, step_budget, progress, issues }`
+  - Console output: human-readable priority list with `->` command examples
+- [ ] Extract issue filtering logic from `FormHarness` into a shared utility
+  (so `next` can reuse `filterIssuesByOrder()` and `filterIssuesByScope()` without
+  instantiating a full harness)
+- [ ] Add CLI flags: `--roles`, `--max-fields`, `--max-groups`, `--max-issues`
+- [ ] Add CLI tests for `next` (empty form, partially filled, complete form)
+- [ ] Add CLI tests for `next` with order-level gating
+- [ ] Update `markform docs` / quick reference to include `set` and `next` commands
+
+### Phase 3: Empty fill record guard (for `fill` command)
+
+- [ ] Add `isFillRecordEmpty(record: FillRecord): boolean` helper
+  - Returns `true` when `record.timeline.length === 0`
+- [ ] Guard the sidecar write in the serial path (`fill.ts` ~line 902):
+  skip `writeFileSync` if `isFillRecordEmpty(fillRecord)` and log info message
+- [ ] Guard the sidecar write in the parallel path (`fill.ts` ~line 457):
+  skip write if `result.record` timeline is empty
+- [ ] Guard the error handler path (`fill.ts` ~line 958):
+  skip write if collector has zero events (no turns started)
+- [ ] Add unit test: `fill` on already-complete form with `--record-fill` does not
+  write `.fill.json`
+
+## Testing Strategy
+
+### Unit tests
+
+- `parseCliValue()`: JSON detection for `[`/`{` prefixes, string passthrough otherwise
+- Issue filtering utility: order filtering, scope filtering, count cap
+  (if extracted from harness)
+
+### CLI tests
+
+**`set` command — value set operations (one per field kind):**
+```bash
+markform set form.md name "Alice" -o /tmp/test.md
+markform set form.md age 30 -o /tmp/test.md
+markform set form.md priority high -o /tmp/test.md
+markform set form.md categories '["frontend","backend"]' -o /tmp/test.md
+markform set form.md tags '["rust","wasm"]' -o /tmp/test.md
+markform set form.md tasks_multi '{"research":"done","design":"todo"}' -o /tmp/test.md
+markform set form.md tasks_simple '["task_a","task_b"]' -o /tmp/test.md
+markform set form.md confirmations '{"backed_up":"yes","notified_team":"no"}' -o /tmp/test.md
+markform set form.md website "https://example.com" -o /tmp/test.md
+markform set form.md references '["https://a.com","https://b.com"]' -o /tmp/test.md
+markform set form.md event_date "2025-06-15" -o /tmp/test.md
+markform set form.md founded_year 2020 -o /tmp/test.md
+markform set form.md team_members '[{"name":"Alice","role":"Eng"}]' -o /tmp/test.md
+```
+
+**`set` command — incremental operations:**
+```bash
+markform set form.md team_members --append '{"name":"Bob","role":"PM"}' -o /tmp/test.md
+markform set form.md team_members --delete 0 -o /tmp/test.md
+markform set form.md tags --append "perf" -o /tmp/test.md
+markform set form.md tags --delete 1 -o /tmp/test.md
+markform set form.md references --append "https://c.com" -o /tmp/test.md
+markform set form.md references --delete 0 -o /tmp/test.md
+```
+
+**`set` command — meta operations:**
+```bash
+markform set form.md name --clear -o /tmp/test.md
+markform set form.md notes --skip --reason "N/A" -o /tmp/test.md
+markform set form.md score --abort --reason "Unavailable" -o /tmp/test.md
+```
+
+**`set --values` — batch mode:**
+```bash
+markform set form.md --values '{"name":"Alice","age":30,"priority":"high"}' --report --format json
+```
+
+**`set` command — error cases:**
+```bash
+markform set form.md nonexistent_field "value"  # -> field not found
+markform set form.md priority "invalid_option"  # -> lists valid options
+markform set form.md age "not_a_number"         # -> coercion error
+markform set form.md name --append "x"          # -> append not supported for string
+markform set form.md priority --delete 0       # -> delete not supported for single_select
+```
+
+**`next` command:**
+```bash
+markform next form.md --format json                        # empty form -> all issues
+markform next partially-filled.md --format json            # -> only remaining issues
+markform next complete-form.md --format json               # -> is_complete: true
+markform next form.md --max-fields 3 --format json         # -> at most 3 fields
+markform next ordered-form.md --format json                # -> only lowest order level
+```
+
+**End-to-end workflow test:**
+```bash
+# Full cycle: next -> set -> next -> ... -> complete
+cp template.form.md /tmp/e2e.md
+markform next /tmp/e2e.md --format json  # get first batch
+markform set /tmp/e2e.md name "Test"
+markform set /tmp/e2e.md age 25
+# ... fill all required fields ...
+markform next /tmp/e2e.md --format json  # verify is_complete: true
+```
+
+## Resolved Questions
+
+1. **Should `next` show current values of partially-filled fields?**
+   **Yes.** Include `current_value` in the issue metadata when the field has a partial
+   value. This is especially useful for tables (some rows exist, more needed) and
+   checkboxes (some checked, some remaining). The value is already available from
+   `inspect()` — just include it inline.
+
+2. **Should `next` respect frontmatter `harnessConfig` settings as defaults?**
+   **Yes.** Read `maxFieldsPerTurn`, `maxGroupsPerTurn`, `maxIssuesPerTurn` from
+   frontmatter `markform.harness` as defaults. CLI flags (`--max-fields`, etc.) override.
+   This matches the internal harness behavior and means a form author's settings are
+   respected regardless of whether the form is filled via CLI or harness.
+
+3. **Should `set --report` output enriched issues like `next`?**
+   **No.** `set --report` outputs the basic patch result report (apply_status, progress,
+   issues as flat list). Use `next` for the enriched view with field metadata and
+   examples. Keeps each command focused: `set` mutates, `next` advises.
+
+4. **Should CLI form filling produce fill records?**
+   **No.** See [Fill Record Policy](#fill-record-policy). CLI operations are stateless
+   one-shot commands with no session/turn/LLM data. The form file is the audit trail.
+   Fill records are exclusively for harness-driven filling.
+
+5. **Why is batch set on `set --values` (not `patch`)?**
+   **`set --values`.** Both single-field and batch modes do the same thing (auto-coerced
+   value setting). They belong on the same command. `patch` stays focused on raw typed
+   patches. No overlap, no confusion.
+
+## Implementation Status
+
+Phases 0-2 are implemented. Phase 3 (empty fill record guard) is pending.
+
+### Phase 0: Append/delete patch operations — DONE
+
+All six append/delete patch types are implemented in the engine, with full test coverage
+(unit tests for each operation including bounds checking, best-effort semantics, and
+empty-after-delete behavior).
+
+### Phase 1: `set` command — DONE
+
+The `set` command is fully implemented with single-field, batch (`--values`), incremental
+(`--append`, `--delete`), and meta operations (`--clear`, `--skip`, `--abort`). Tryscript
+CLI tests cover all operations.
+
+### Phase 2: `next` command — DONE
+
+The `next` command is fully implemented with 3-stage filtering, field metadata enrichment,
+concrete `set` examples, and both console and JSON output formats. Golden-session tryscript
+tests cover the full `next` → `set` → `next` loop across all state transitions.
+
+### Phase 3: Empty fill record guard — PENDING
+
+---
+
+## Review Findings (2026-02-14)
+
+A review of the implemented CLI form filling loop revealed several gaps and consistency
+issues that need follow-up work.
+
+**Tracking issues:** mf-fv4b, mf-3gt7, mf-5e55, mf-hr1c
+
+### Finding 1: Append/delete operations invisible to LLMs
+
+The six append/delete patch operations exist in the engine and are accepted by the Zod
+schema, but:
+
+- `prompts.ts` `PATCH_FORMATS` dictionary does not mention them
+- AI SDK tool descriptions in `vercelAiSdkTools.ts` do not list them
+- The harness `getPatchFormatHint()` function has no knowledge of them
+
+**Impact:** LLMs using the harness or AI SDK must use `set_table` (full replace) instead of
+incremental `append_table`/`delete_table`, even when adding a single row.
+
+**Fix:** Add append/delete operations to `PATCH_FORMATS`, update AI SDK tool descriptions,
+and update `getPatchFormatHint()` to generate append examples for collection fields.
+
+### Finding 2: AI SDK `markform_inspect` lacks field advisor enrichment
+
+The three paths that provide "what to fill next" guidance have very different richness:
+
+| Path | Filtering | Enrichment | Examples |
+|------|-----------|------------|----------|
+| CLI `next` | 3-stage (order, scope, count) | Field metadata, step budget | `markform set ... age 42` |
+| Harness/liveAgent | Same 3-stage | Field metadata, step budget | `{ op: "set_number", ... }` |
+| AI SDK `markform_inspect` | None | None | None |
+
+**Impact:** An LLM using the AI SDK gets raw `InspectResult` with no filtering, enrichment,
+or examples. It must figure out what to do on its own.
+
+**Fix:** Extract the enrichment logic from `next.ts` into a shared `fieldAdvisor.ts` that
+both CLI and API can use. Add `exampleMode: 'cli' | 'patch'` to generate mode-appropriate
+examples (CLI commands vs JSON patch objects). Either augment `markform_inspect` or add a
+separate `markform_next` tool.
+
+### Finding 3: Append auto-wrapping inconsistency
+
+The CLI `--append` auto-wraps single items into arrays:
+- `--append '{"name":"Bob"}'` → wraps to `[{"name":"Bob"}]` for the engine
+- `--append "tag"` → wraps to `["tag"]` for the engine
+
+But the engine always requires arrays (`value: TableRowPatch[]`, `value: string[]`).
+
+**Issue:** This convenience is not documented in the CLI help text (`'Append item/row to a
+collection field'` doesn't mention multi-item support). And the TypeScript API layer does
+not provide similar coercion — callers must always pass arrays.
+
+**Fix:**
+- Update `--append` help text to: `'Append item(s) to a collection (single value or array)'`
+- Decide whether the engine should accept `T | T[]` and coerce internally (consistent
+  across CLI and TS API), or keep coercion at the boundary layer
+- Document the behavior clearly for both CLI and programmatic usage
+
+### Finding 4: `--delete` / `--append` argument asymmetry
+
+`--append` takes a value (what to add), `--delete` takes an index (where to remove). These
+are different kinds of arguments with no shared position concept.
+
+**Proposed improvement (future):** Add `--at <n>` option for position control:
+```
+--append <value> --at <n>   # Insert at position n (default: end)
+--delete --at <n>           # Delete at position n (default: last)
+```
+
+This would make `--delete` not need its own positional arg and let `--append` insert at
+arbitrary positions. This is a larger API change for separate follow-up.
+
+### Finding 5: `next` output size
+
+The `next` JSON output is 186 lines for 10 fields (simple form). The console output is ~40
+lines. For agent context windows, compact output matters.
+
+**Observations:**
+- Console format is already good: ~4 lines per issue, includes CLI command examples
+- JSON format includes per-issue field metadata, options, examples — useful but verbose
+- The golden-session tests now show full `next` console output at key state transitions,
+  making the output visible and regression-testable
+
+**Potential optimizations:**
+- A compact JSON format that omits derivable fields (e.g., `message` when `reason` suffices)
+- Ensuring console format is the primary format for CLI agents (JSON for programmatic use)
+
+### Finding 6: Test narrowness (fixed)
+
+The golden-session tryscript tests were using overly narrow `grep | wc -l` and
+`grep | head` assertions that hid actual CLI behavior. Fixed by:
+- Replacing `grep '"ref":' | wc -l` with showing actual ref lines
+- Replacing `dump | head -3` with full dump output
+- Replacing `validate | grep "Form State:"` with full validate output
+- Replacing two separate `grep` calls for status with full status JSON
+- Adding full `next` console output tests at empty, complete-with-optionals, and
+  fully-complete state transitions
+
+### Phase 4 (New): Follow-up improvements
+
+Based on review findings:
+
+- [ ] **4a.** Document append/delete in LLM prompts (mf-3gt7)
+  - Add to `PATCH_FORMATS` in `prompts.ts`
+  - Update AI SDK tool descriptions
+  - Update `getPatchFormatHint()` for collection fields
+- [ ] **4b.** Extract shared field advisor core (mf-5e55)
+  - Create `engine/fieldAdvisor.ts` with `exampleMode: 'cli' | 'patch'`
+  - Have `next.ts` use shared advisor
+  - Augment AI SDK tools to use shared advisor
+- [ ] **4c.** Append auto-wrapping consistency
+  - Update `--append` help text
+  - Decide on engine-level vs boundary-level coercion
+  - Document behavior for both CLI and TypeScript API
+- [ ] **4d.** Review `next` JSON output compactness (mf-hr1c)
+- [ ] **4e.** `--delete`/`--append` position redesign with `--at` (mf-fv4b) — separate follow-up
+
+---
+
+## References
+
+- `packages/markform/src/engine/valueCoercion.ts` — coercion layer (core of `set`/`--values`)
+- `packages/markform/src/harness/harness.ts` — FormHarness state machine, issue filtering
+- `packages/markform/src/harness/liveAgent.ts` — prompt building, field metadata enrichment
+- `packages/markform/src/harness/prompts.ts` — PATCH_FORMATS, getPatchFormatHint()
+- `packages/markform/src/harness/harnessConfigResolver.ts` — config merge precedence
+- `packages/markform/src/engine/inspect.ts` — inspect(), priority scoring
+- `packages/markform/src/engine/coreTypes.ts` — Patch types, StepResult, HarnessConfig
+- `packages/markform/src/integrations/vercelAiSdkTools.ts` — AI SDK tool patterns
+- `packages/markform/src/cli/commands/apply.ts` — existing apply command (to be renamed to `patch.ts`)
+- `packages/markform/src/cli/commands/inspect.ts` — existing inspect command
+- `packages/markform/src/cli/commands/fill.ts` — interactive and agent fill
