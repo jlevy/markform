@@ -75,11 +75,22 @@ Commands:
   serve [options] <file>                  Serve a file as a web page (forms are
                                           interactive, others are read-only)
   set [options] <file> [fieldId] [value]  Set field values with auto-coercion
+  setup [options]                         Install Markform as a Claude Code skill in the
+                                          current project
+  skill                                   Output SKILL.md content for Claude Code
+                                          integration
   status <file>                           Display form fill status with per-role
                                           breakdown
   validate [options] <file>               Validate a form and display summary and issues
                                           (no form content)
   help [command]                          display help for command
+
+Skill Setup:
+  To use Markform as a Claude Code skill, run: markform setup --auto
+  To view the skill content: markform skill
+
+Getting Started:
+  npm install -g markform && markform setup --auto
 ? 0
 ```
 
