@@ -798,6 +798,16 @@ markform fill template.form.md --mock --mock-source filled.form.md
 
 6. **Document thoroughly**: Use `{% instructions %}` for complex fields
 
+## Claude Code Skill Setup
+
+Install markform as a Claude Code skill so agents know how to use it:
+
+```bash
+markform setup --auto         # Non-interactive (for agents)
+markform setup --interactive  # Guided setup (for humans)
+markform skill                # View the skill content
+```
+
 ## Programmatic API
 
 For TypeScript and AI SDK integration, run `markform apis` or see

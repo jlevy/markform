@@ -31,6 +31,8 @@ import { registerResearchCommand } from './commands/research.js';
 import { registerSchemaCommand } from './commands/schema.js';
 import { registerServeCommand } from './commands/serve.js';
 import { registerSetCommand } from './commands/set.js';
+import { registerSetupCommand } from './commands/setup.js';
+import { registerSkillCommand } from './commands/skill.js';
 import { registerStatusCommand } from './commands/status.js';
 import { registerValidateCommand } from './commands/validate.js';
 import { OUTPUT_FORMATS } from './lib/shared.js';
@@ -64,7 +66,17 @@ function createProgram(): Command {
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--format <format>', `Output format: ${OUTPUT_FORMATS.join(', ')}`, 'console')
     .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`)
-    .option('--overwrite', 'Overwrite existing field values (default: continue/skip filled)');
+    .option('--overwrite', 'Overwrite existing field values (default: continue/skip filled)')
+    .addHelpText(
+      'after',
+      `
+Skill Setup:
+  To use Markform as a Claude Code skill, run: markform setup --auto
+  To view the skill content: markform skill
+
+Getting Started:
+  npm install -g markform && markform setup --auto`,
+    );
 
   // Register commands
   // Help/docs first
@@ -90,6 +102,8 @@ function createProgram(): Command {
   registerSchemaCommand(program);
   registerServeCommand(program);
   registerSetCommand(program);
+  registerSetupCommand(program);
+  registerSkillCommand(program);
   registerStatusCommand(program);
   registerValidateCommand(program);
 

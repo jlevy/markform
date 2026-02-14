@@ -330,6 +330,23 @@ npm install -g markform
 npm install markform
 ```
 
+### Use as a Claude Code Skill
+
+If you install markform globally (`npm install -g markform`), you can tell Claude to run
+`markform setup --auto` to install it as a Claude Code skill. This teaches Claude how to
+use markform commands when working with `.form.md` files in your project.
+
+```bash
+# Install as a Claude Code skill (non-interactive, for agents)
+markform setup --auto
+
+# Or guided setup with prompts (for humans)
+markform setup --interactive
+
+# View the skill content
+markform skill
+```
+
 ### More Example Forms
 
 The package includes example forms.
