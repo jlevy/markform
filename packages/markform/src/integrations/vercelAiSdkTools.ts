@@ -133,8 +133,10 @@ const ApplyInputSchema = z
       .max(20)
       .describe(
         'Array of patches to apply to the form. Each patch sets or clears a field value. ' +
-          'Operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, ' +
-          'set_checkboxes, set_url, set_url_list, set_date, set_year, set_table, clear_field, skip_field, abort_field. ' +
+          'Set operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, ' +
+          'set_checkboxes, set_url, set_url_list, set_date, set_year, set_table. ' +
+          'Incremental operations: append_table, delete_table, append_string_list, delete_string_list, append_url_list, delete_url_list. ' +
+          'Meta operations: clear_field, skip_field, abort_field. ' +
           'Example: [{ "op": "set_string", "fieldId": "name", "value": "Alice" }]',
       ),
   })
@@ -220,8 +222,10 @@ export function createMarkformTools(options: CreateMarkformToolsOptions): Markfo
       'Apply patches to update form field values. Valid patches are applied even if some fail. ' +
       'Single values are automatically coerced to arrays for list fields. ' +
       'Returns applied patches, warnings for coerced values, and rejected patches separately. ' +
-      'Patch operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, ' +
-      'set_checkboxes, set_url, set_url_list, set_date, set_year, set_table, clear_field, skip_field, abort_field.',
+      'Set operations: set_string, set_number, set_string_list, set_single_select, set_multi_select, ' +
+      'set_checkboxes, set_url, set_url_list, set_date, set_year, set_table. ' +
+      'Incremental: append_table, delete_table, append_string_list, delete_string_list, append_url_list, delete_url_list. ' +
+      'Meta: clear_field, skip_field, abort_field.',
     inputSchema: ApplyInputSchema,
     execute: ({ patches }) => {
       const form = sessionStore.getForm();

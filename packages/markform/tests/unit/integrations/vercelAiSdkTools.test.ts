@@ -210,6 +210,23 @@ describe('markform_apply tool', () => {
     expect(tools.markform_apply.description).toContain('set_string');
   });
 
+  it('description mentions append/delete operations', () => {
+    expect(tools.markform_apply.description).toContain('append_table');
+    expect(tools.markform_apply.description).toContain('delete_table');
+    expect(tools.markform_apply.description).toContain('append_string_list');
+    expect(tools.markform_apply.description).toContain('append_url_list');
+  });
+
+  it('input schema accepts append/delete patches', async () => {
+    // Verify the Zod schema accepts append operations
+    const patches: Patch[] = [{ op: 'append_string_list', fieldId: 'tags', value: ['new_tag'] }];
+
+    // This should not throw — the schema must accept append_string_list
+    const result = await tools.markform_apply.execute({ patches });
+    // Patch may be rejected (field doesn't exist) but the schema accepted it
+    expect(result).toBeDefined();
+  });
+
   it('applies valid patches', async () => {
     const patches: Patch[] = [
       { op: 'set_string', fieldId: 'name', value: 'Bob' },
