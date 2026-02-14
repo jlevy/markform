@@ -820,6 +820,7 @@ export function registerFillCommand(program: Command): void {
                 .length,
               isComplete: stepResult.isComplete,
               rejectedPatches,
+              coercionWarnings: stepResult.coercionWarnings,
               issues: stepResult.issues,
               patches,
             });

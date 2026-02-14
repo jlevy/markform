@@ -2507,4 +2507,154 @@ markform:
       }
     });
   });
+
+  // ===========================================================================
+  // Error branch coverage: append non-array values
+  // ===========================================================================
+
+  describe('append with non-array values', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data"
+   columnIds=["name", "role"]
+   columnLabels=["Name", "Role"]
+   columnTypes=["string", "string"] %}
+| Name | Role |
+|------|------|
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const stringListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const urlListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="url_list" id="refs" label="References" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    it('rejects append_table with non-array value', () => {
+      const form = parseForm(tableForm);
+      const patches = [
+        { op: 'append_table', fieldId: 'data', value: { name: 'Alice' } },
+      ] as unknown as Patch[];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(1);
+    });
+
+    it('rejects append_string_list with non-array value', () => {
+      const form = parseForm(stringListForm);
+      const patches = [
+        { op: 'append_string_list', fieldId: 'tags', value: 'single-string' },
+      ] as unknown as Patch[];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(1);
+    });
+
+    it('rejects append_url_list with non-array value', () => {
+      const form = parseForm(urlListForm);
+      const patches = [
+        { op: 'append_url_list', fieldId: 'refs', value: 'https://single.com' },
+      ] as unknown as Patch[];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(1);
+    });
+  });
+
+  // ===========================================================================
+  // Error branch coverage: delete from empty/unset collections
+  // ===========================================================================
+
+  describe('delete from empty collections', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data"
+   columnIds=["name"]
+   columnLabels=["Name"]
+   columnTypes=["string"] %}
+| Name |
+|------|
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const stringListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const urlListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="url_list" id="refs" label="References" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    it('rejects delete_table on field with no existing rows', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [{ op: 'delete_table', fieldId: 'data', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+
+    it('rejects delete_string_list on field with no existing items', () => {
+      const form = parseForm(stringListForm);
+      const patches: Patch[] = [{ op: 'delete_string_list', fieldId: 'tags', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+
+    it('rejects delete_url_list on field with no existing items', () => {
+      const form = parseForm(urlListForm);
+      const patches: Patch[] = [{ op: 'delete_url_list', fieldId: 'refs', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+  });
 });

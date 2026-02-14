@@ -15,6 +15,7 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  PatchWarning,
   SessionTurnContext,
   SessionTurnStats,
 } from '../engine/coreTypes.js';
@@ -736,6 +737,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           issues: turnIssues,
           patches,
           rejectedPatches: stepResult.rejectedPatches ?? [],
+          coercionWarnings: stepResult.coercionWarnings,
           executionId: '0-serial',
         });
       } catch {
@@ -1177,10 +1179,12 @@ async function runMultiTurnForItems(
     }
 
     // Apply patches
+    let lastCoercionWarnings: PatchWarning[] | undefined;
     if (response.patches.length > 0) {
       const applyResult = applyPatches(form, response.patches);
       patchesApplied += applyResult.appliedPatches.length;
       previousRejections = applyResult.rejectedPatches;
+      lastCoercionWarnings = applyResult.warnings;
     } else {
       previousRejections = undefined;
     }
@@ -1201,6 +1205,7 @@ async function runMultiTurnForItems(
         issues: scopedIssues,
         patches: response.patches,
         rejectedPatches: previousRejections ?? [],
+        coercionWarnings: lastCoercionWarnings,
         executionId,
       });
     } catch {

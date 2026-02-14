@@ -12,7 +12,11 @@
 
 import { z } from 'zod';
 
-import { ProgressCountsSchema, StructureSummarySchema } from '../engine/coreTypes.js';
+import {
+  PatchWarningSchema,
+  ProgressCountsSchema,
+  StructureSummarySchema,
+} from '../engine/coreTypes.js';
 
 // =============================================================================
 // Tool Statistics Schema
@@ -147,6 +151,9 @@ export const TimelineEntrySchema = z.object({
 
   /** Tool calls made during this turn */
   toolCalls: z.array(ToolCallRecordSchema),
+
+  /** Coercion warnings from patch normalization (e.g., string auto-wrapped to array) */
+  coercionWarnings: z.array(PatchWarningSchema).optional(),
 });
 
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;

@@ -33,12 +33,12 @@ export default defineConfig({
         // Research integration code (requires live API access)
         '**/research/runResearch.ts',
       ],
-      // Thresholds based on current coverage (~60%); will increase as coverage improves
+      // Thresholds locked to prevent coverage regression (actual ~65%)
       thresholds: {
-        statements: 60,
-        branches: 58,
-        functions: 63,
-        lines: 60,
+        statements: 64,
+        branches: 60,
+        functions: 64,
+        lines: 64,
       },
       // Generate reports even when thresholds fail (needed for PR comments)
       reportOnFailure: true,

@@ -13,6 +13,6 @@ priority: 1
 status: closed
 title: "Phase 2: Implement next command (field advisor with filtering)"
 type: is
-updated_at: 2026-02-14T18:53:46.121Z
-version: 5
+updated_at: 2026-02-14T20:17:37.958Z
+version: 6
 ---

@@ -11,6 +11,6 @@ priority: 2
 status: closed
 title: "Phase 3: Empty fill record guard"
 type: is
-updated_at: 2026-02-14T18:53:46.127Z
-version: 4
+updated_at: 2026-02-14T20:17:37.964Z
+version: 5
 ---

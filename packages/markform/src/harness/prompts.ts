@@ -44,6 +44,19 @@ Use the fill_form tool with patches in these formats:
 | checkboxes | \`{ op: "set_checkboxes", fieldId: "tasks", value: { "task1": "done", "task2": "todo" } }\` |
 | table | \`{ op: "set_table", fieldId: "team", value: [{ "name": "Alice", "role": "Engineer" }] }\` |
 
+## Incremental Operations (for collections)
+
+Use these to add/remove items without replacing the entire collection:
+
+| Type | Example |
+|------|---------|
+| append_table | \`{ op: "append_table", fieldId: "team", value: [{ "name": "Bob", "role": "PM" }] }\` |
+| append_string_list | \`{ op: "append_string_list", fieldId: "tags", value: ["new_tag"] }\` |
+| append_url_list | \`{ op: "append_url_list", fieldId: "sources", value: ["https://new.com"] }\` |
+| delete_table | \`{ op: "delete_table", fieldId: "team", value: 0 }\` (0-based row index) |
+| delete_string_list | \`{ op: "delete_string_list", fieldId: "tags", value: 0 }\` (0-based item index) |
+| delete_url_list | \`{ op: "delete_url_list", fieldId: "sources", value: 0 }\` (0-based item index) |
+
 ## Important: checkboxes vs multi_select
 
 These two types look similar but have DIFFERENT value formats:
@@ -117,6 +130,14 @@ export const PATCH_FORMATS: Record<string, string> = {
   date: '{ op: "set_date", fieldId: "...", value: "2024-06-15" }',
   year: '{ op: "set_year", fieldId: "...", value: 2024 }',
   table: '{ op: "set_table", fieldId: "...", value: [{ col1: "val1", col2: "val2" }] }',
+  // Append operations for collection types
+  append_table: '{ op: "append_table", fieldId: "...", value: [{ col1: "val1", col2: "val2" }] }',
+  append_string_list: '{ op: "append_string_list", fieldId: "...", value: ["new_item"] }',
+  append_url_list: '{ op: "append_url_list", fieldId: "...", value: ["https://new.com"] }',
+  // Delete operations for collection types (by 0-based index)
+  delete_table: '{ op: "delete_table", fieldId: "...", value: 0 }',
+  delete_string_list: '{ op: "delete_string_list", fieldId: "...", value: 0 }',
+  delete_url_list: '{ op: "delete_url_list", fieldId: "...", value: 0 }',
 };
 
 /**
@@ -192,8 +213,12 @@ export function getPatchFormatHint(
     format = format.replace('{ "opt1": "done", "opt2": "todo" }', valueExample);
   }
 
-  // For table fields, show actual column IDs if available
-  if (fieldKind === 'table' && options.columnIds && options.columnIds.length > 0) {
+  // For table and append_table fields, show actual column IDs if available
+  if (
+    (fieldKind === 'table' || fieldKind === 'append_table') &&
+    options.columnIds &&
+    options.columnIds.length > 0
+  ) {
     const colExample = options.columnIds.map((id) => `"${id}": "..."`).join(', ');
     format = format.replace('{ col1: "val1", col2: "val2" }', `{ ${colExample} }`);
   }
