@@ -354,6 +354,45 @@ describe('fillForm', () => {
       expect(result.status.ok).toBe(true);
     });
 
+    it('fires onError callback and preserves error when agent throws in serial mode', async () => {
+      const thrownError = new Error('serial fill failure');
+      const callbackErrors: Error[] = [];
+      const callbackTurns: number[] = [];
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError(error, context) {
+            callbackErrors.push(error);
+            callbackTurns.push(context.turnNumber);
+          },
+        },
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('error');
+        if (result.status.reason === 'error') {
+          expect(result.status.error).toBe(thrownError);
+        }
+      }
+
+      expect(callbackErrors).toEqual([thrownError]);
+      expect(callbackTurns).toEqual([1]);
+    });
+
     it('onTurnStart and onTurnComplete both called in order', async () => {
       const completedForm = parseForm(COMPLETED_FORM);
       const mockAgent = createMockAgent(completedForm);
@@ -602,6 +641,37 @@ describe('fillForm', () => {
       if (!result.status.ok) {
         expect(result.status.reason).toBe('error');
         expect(result.status.message).toContain('Model resolution error');
+      }
+    });
+
+    it('preserves Error object when provider resolution throws an Error', async () => {
+      const thrownError = new Error('custom provider failed');
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'custom/test-model',
+        providers: {
+          custom: {
+            model() {
+              throw thrownError;
+            },
+          },
+        },
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('error');
+        expect(result.status.message).toContain('Model resolution error');
+        if (result.status.reason === 'error') {
+          expect(result.status.error).toBeInstanceOf(Error);
+          if (result.status.error instanceof Error) {
+            expect(result.status.error.message).toContain('custom provider failed');
+          }
+        }
       }
     });
   });
@@ -1021,6 +1091,50 @@ Strong company
       if (!result.status.ok) {
         expect(result.status.reason).toBe('cancelled');
       }
+    });
+
+    it('fires onError callback and preserves error when agent throws in parallel mode', async () => {
+      const thrownError = new Error('parallel fill failure');
+      const callbackErrors: Error[] = [];
+      const callbackTurns: number[] = [];
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        inputContext: {
+          company_name: 'Acme Corp',
+          overall: 'Prefilled summary',
+        },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError(error, context) {
+            callbackErrors.push(error);
+            callbackTurns.push(context.turnNumber);
+          },
+        },
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('error');
+        if (result.status.reason === 'error') {
+          expect(result.status.error).toBe(thrownError);
+        }
+      }
+
+      expect(callbackErrors.length).toBeGreaterThan(0);
+      expect(callbackErrors.every((e) => e === thrownError)).toBe(true);
+      expect(callbackTurns.every((turn) => turn === 1)).toBe(true);
     });
   });
 
