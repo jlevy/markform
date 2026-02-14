@@ -158,8 +158,9 @@ pnpm markform inspect <file>
 pnpm markform export <file>
 pnpm markform dump <file>
 pnpm markform apply <file> --patch '<json>'
-pnpm markform apply <file> --context '{"name":"Alice","age":30}'
 pnpm markform set <file> <fieldId> <value>
+pnpm markform set <file> --values '{"name":"Alice","age":30}'
+pnpm markform set <file> <fieldId> --append '<value>'
 pnpm markform next <file> --format json
 pnpm markform serve <file>
 pnpm markform fill <file> --interactive  # Interactive mode for user role fields
@@ -187,8 +188,8 @@ pnpm markform:bin --help
 | `inspect <file>` | Display form structure, progress, and issues (YAML or JSON) |
 | `export <file>` | Export form schema and values as JSON |
 | `dump <file>` | Extract and display form values only (lightweight inspect) |
-| `apply <file>` | Apply JSON patches (`--patch`) or bulk-set fields (`--context`) |
-| `set <file> <fieldId> [value]` | Set a single field value with auto-coercion |
+| `apply <file>` | Apply raw JSON patches to update field values |
+| `set <file> [fieldId] [value]` | Set field values with auto-coercion (single, batch, append) |
 | `next <file>` | Show prioritized next fields to fill (agent-friendly) |
 | `serve <file>` | Start a web server to browse/edit the form |
 | `fill <file>` | Fill a form using an agent (mock or live LLM) |

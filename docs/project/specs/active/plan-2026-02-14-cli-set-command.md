@@ -1,4 +1,4 @@
-# Feature: CLI `set` Command, `apply --context`, and Agent-Friendly CLI Workflow
+# Feature: CLI `set` Command, `next` Command, and Agent-Friendly CLI Workflow
 
 **Date:** 2026-02-14 (last updated 2026-02-14)
 
@@ -10,11 +10,11 @@
 
 Add CLI commands that let an external agent (Claude Code skill, shell script, etc.) fill
 markform forms with the same power and guided workflow as the TypeScript harness + AI SDK
-tools, but entirely through shell invocations. Three new capabilities:
+tools, but entirely through shell invocations. Two new commands:
 
-1. **`markform set`** — Set a single field value with auto-coercion.
-2. **`markform apply --context`** — Bulk-set multiple fields from a JSON key-value map.
-3. **`markform next`** — The CLI equivalent of `harness.step()`: returns the prioritized,
+1. **`markform set`** — Set field values with auto-coercion. Supports single-field
+   (positional args), batch (`--values`), append, delete, clear, skip, and abort.
+2. **`markform next`** — The CLI equivalent of `harness.step()`: returns the prioritized,
    filtered list of fields to fill next, with concrete examples and field metadata.
 
 Together these give an external agent the same step-apply-step loop the internal harness
@@ -23,10 +23,11 @@ uses, but decomposed into independent CLI calls that the agent orchestrates.
 ## Goals
 
 - Single-field CLI set with auto-coercion: `markform set form.md name "Alice"`
-- Bulk set via input context: `markform apply form.md --context '{"name":"Alice","age":30}'`
-- CLI equivalent of the harness step cycle (`next` -> `set`/`apply --context` -> `next`)
-- Systematic mapping from all patch operations to CLI-friendly syntax
+- Batch set via JSON: `markform set form.md --values '{"name":"Alice","age":30}'`
+- CLI equivalent of the harness step cycle (`next` -> `set` -> `next`)
+- Comprehensive operations table: every field kind × every operation
 - Compound value support (tables, checkboxes, multi-select) with clear CLI syntax
+- Incremental operations: append rows to tables, append items to lists
 - Structured JSON feedback after each operation (issues, progress, completion status)
 - Zero knowledge of internal patch types required by the caller
 - Harness-aware field ranking: order levels, priority, scope limits
@@ -39,9 +40,9 @@ uses, but decomposed into independent CLI calls that the agent orchestrates.
 - File locking or distributed coordination (last-write-wins is acceptable)
 - Maintaining stateful session across CLI calls (each call is stateless; the form file
   IS the state)
-- **Fill records from CLI operations** — CLI form-filling commands (`set`,
-  `apply --context`, `next`) do NOT produce fill records. Fill records are exclusively
-  for harness-driven filling via the `fill` command and programmatic `fillForm()` API.
+- **Fill records from CLI operations** — CLI form-filling commands (`set`, `next`) do
+  NOT produce fill records. Fill records are exclusively for harness-driven filling via
+  the `fill` command and programmatic `fillForm()` API.
   See [Fill Record Policy](#fill-record-policy) for rationale.
 
 ---
@@ -174,7 +175,7 @@ file on disk IS the state. Each CLI call reads the latest form, operates, writes
 │                                                      │
 │  3. For each field (or batch):                       │
 │     ├── markform set form.md <fieldId> <value>       │
-│     └── or: markform apply form.md --context '{...}' │
+│     └── or: markform set form.md --values '{...}'    │
 │                                                      │
 │  4. If not complete, go to 1                         │
 │                                                      │
@@ -353,15 +354,22 @@ Next fields to fill (5 issues):
 
 ### New command: `markform set`
 
+`set` is the single command for all auto-coerced value operations. It handles
+single-field (positional args), batch (`--values`), incremental (`--append`,
+`--delete-row`), and meta operations (`--clear`, `--skip`, `--abort`).
+
 ```
-markform set <file> <fieldId> [value] [options]
+markform set <file> [fieldId] [value] [options]
 
 Arguments:
   file                    Form file to modify
-  fieldId                 Field ID to set
+  fieldId                 Field ID to set (required except with --values)
   value                   Value to set (auto-parsed: JSON, number, boolean, string)
 
 Options:
+  --values <json>         Batch set: JSON object of {fieldId: rawValue} pairs
+  --append <value>        Append to list or table (instead of replacing)
+  --delete-row <n>        Delete row at index from table (0-based)
   -o, --output <file>     Output file (default: modify in place)
   --clear                 Clear the field value
   --skip                  Skip the field (marks as skipped)
@@ -373,16 +381,154 @@ Options:
   --normalize             Regenerate form without preserving external content
 ```
 
-### New flag on `apply`: `--context`
+**Design principle:** `set` owns all auto-coerced operations. `apply --patch` remains
+for raw typed patches. No overlap, no confusion.
+
+| Command | What it does | Abstraction level |
+|---|---|---|
+| `markform set` | Set values with auto-coercion | High — caller provides raw values |
+| `markform apply --patch` | Apply typed patch objects | Low — caller provides patch JSON |
+
+---
+
+### Comprehensive operations reference
+
+This table shows every operation available through `markform set`, organized by field
+kind. All examples assume the form file is `f.md`.
+
+#### Value set operations (full replacement)
+
+| Field Kind | Value Format | CLI Example |
+|---|---|---|
+| `string` | String | `set f.md name "Alice Smith"` |
+| `number` | Number | `set f.md age 30` |
+| `url` | URL string | `set f.md website "https://example.com"` |
+| `date` | ISO 8601 | `set f.md event_date "2025-06-15"` |
+| `year` | Integer | `set f.md founded_year 2020` |
+| `single_select` | Option ID | `set f.md priority high` |
+| `multi_select` | JSON array of option IDs | `set f.md categories '["frontend","backend"]'` |
+| `string_list` | JSON array of strings | `set f.md tags '["rust","wasm","perf"]'` |
+| `url_list` | JSON array of URLs | `set f.md refs '["https://a.com","https://b.com"]'` |
+| `checkboxes` (simple) | JSON object `{id: state}` | `set f.md tasks '{"a":"done","b":"todo"}'` |
+| `checkboxes` (simple) | JSON array (shorthand) | `set f.md tasks '["a","b"]'` — marks listed as done |
+| `checkboxes` (multi) | JSON object `{id: state}` | `set f.md tasks '{"research":"done","design":"active"}'` |
+| `checkboxes` (multi) | JSON array (shorthand) | `set f.md tasks '["research"]'` — marks listed as done |
+| `checkboxes` (explicit) | JSON object `{id: state}` | `set f.md confirms '{"backed_up":"yes","notified":"no"}'` |
+| `checkboxes` *(any)* | JSON object `{id: bool}` | `set f.md confirms '{"backed_up":true,"notified":false}'` |
+| `table` | JSON array of row objects | `set f.md members '[{"name":"Alice","role":"Eng"}]'` |
+
+#### Incremental operations (append and delete)
+
+These avoid read-modify-write for the caller. The CLI reads the current value, applies
+the change, and writes back as a single atomic operation.
+
+| Field Kind | Operation | CLI Example |
+|---|---|---|
+| `table` | Append row | `set f.md members --append '{"name":"Bob","role":"PM"}'` |
+| `table` | Append multiple rows | `set f.md members --append '[{"name":"Bob"},{"name":"Carol"}]'` |
+| `table` | Delete row (0-based) | `set f.md members --delete-row 0` |
+| `string_list` | Append item | `set f.md tags --append "perf"` |
+| `url_list` | Append item | `set f.md refs --append "https://c.com"` |
+
+**Not supported for append/delete:**
+- Scalar fields (`string`, `number`, `url`, `date`, `year`) — no collection to modify
+- `single_select` — single value, not a collection
+- `multi_select` — use full replacement (the set of selected options is typically small)
+- `checkboxes` — set individual items via object syntax (only listed keys are changed,
+  unlisted keys are preserved)
+
+#### Meta operations (all field kinds)
+
+| Operation | CLI Example | Notes |
+|---|---|---|
+| Clear | `set f.md name --clear` | Removes value, field returns to empty |
+| Skip | `set f.md notes --skip --reason "N/A"` | Optional fields only; clears any existing value |
+| Abort | `set f.md score --abort --reason "Unavailable"` | Any field; blocks form completion |
+
+`add_note`/`remove_note` are excluded from `set` because they operate on form elements
+(not just fields) and use `ref`/`noteId` rather than `fieldId`. Use `apply --patch` for
+note operations.
+
+#### Batch mode
+
+Set multiple fields in a single command using `--values`:
+
+```bash
+markform set f.md --values '{
+  "name": "Acme Corp",
+  "age": 15,
+  "priority": "high",
+  "categories": ["frontend", "backend"],
+  "confirmations": {"backed_up": "yes", "notified_team": "yes"},
+  "team_members": [{"name": "Alice", "role": "Eng"}]
+}'
+```
+
+`--values` calls `coerceInputContext()` internally — the same coercion layer used by
+the programmatic `fillForm({ inputContext })` API.
+
+`--values` is mutually exclusive with positional `fieldId`/`value` args and with
+`--append`/`--delete-row`/`--clear`/`--skip`/`--abort`.
+
+---
+
+### Coercion behavior
+
+The `set` command receives `<value>` as a CLI string argument. Parsing order:
 
 ```
-markform apply <file> --context '<json>' [options]
-
-  --context <json>   JSON object of {fieldId: rawValue} pairs (auto-coerced)
+1. If value starts with '[' or '{': parse as JSON
+2. If value is "true" or "false": pass as boolean
+3. If value is a valid number: pass as number
+4. Otherwise: pass as string
 ```
 
-Mutually exclusive with `--patch`. When `--context` is used, values are coerced via
-`coerceInputContext()` instead of being validated as typed patches.
+The coercion layer then converts based on the field's kind from the schema:
+
+**Scalars:**
+- Strings pass through directly
+- Numbers: `"30"` string is coerced to `30` for number/year fields
+- Booleans: `"true"` stays as the string `"true"` for string fields
+
+**Selections:**
+- `single_select`: Raw string validated against option IDs. Error lists valid options.
+- `multi_select`: JSON array of option IDs. Single string coerced to `["string"]` with
+  warning.
+
+**Lists:**
+- JSON array of strings passes through
+- Single string coerced to single-element array with warning
+- Non-string array items coerced to strings where possible
+
+**Checkboxes** — three input shapes are supported:
+
+1. **Object with state values** (explicit control):
+   `{"research": "done", "design": "active"}` — Valid states depend on `checkboxMode`:
+   multi=`todo|done|incomplete|active|na`, simple=`todo|done`, explicit=`unfilled|yes|no`
+
+2. **Array of option IDs** (shorthand for "mark these as done/yes"):
+   `["research", "design"]` — Listed options get `done`/`yes`. Unlisted stay unchanged.
+
+3. **Object with boolean values** (coerced to state strings):
+   `{"backed_up": true, "notified": false}` — `true` → `done`/`yes`, `false` →
+   `todo`/`no`
+
+**Tables:**
+- Value must be a JSON array of row objects
+- Each row is `Record<columnId, CellValue | null>`
+- Missing columns treated as empty/skipped
+- `null` values become `%SKIP%` sentinel on serialization
+- Cell values are `string | number` matching `columnTypes`
+- Empty array `[]` clears the table (valid when `minRows=0`)
+
+Table column types and per-cell coercion:
+
+| Column Type | Accepts | Coercion |
+|---|---|---|
+| `string` | String, number | `42` -> `"42"` |
+| `number` | Number, numeric string | `"9.3"` -> `9.3` |
+| `url` | String (URL format) | Pass-through |
+| `date` | String (ISO 8601) | Pass-through |
 
 ---
 
@@ -393,7 +539,7 @@ Mutually exclusive with `--patch`. When `--context` is used, values are coerced 
 | Initialize harness | `new FormHarness(form, config)` | (stateless — form file is the state) |
 | Step (get next issues) | `harness.step()` | `markform next form.md --format json` |
 | Agent generates patches | LLM tool call | Agent reads `next` output, decides values |
-| Apply patches | `harness.apply(patches)` | `markform set` (single) or `apply --context` (batch) |
+| Apply patches | `harness.apply(patches)` | `markform set` (single or `--values` batch) |
 | Check completion | `stepResult.isComplete` | `next` output has `is_complete: true` |
 | Session transcript | `harness.getSessionTranscript()` | Not needed (agent has its own context) |
 | Turn budget | `stepResult.stepBudget` | `next` output `step_budget` |
@@ -410,7 +556,7 @@ Mutually exclusive with `--patch`. When `--context` is used, values are coerced 
 # Step 1: Get the next batch of fields to fill
 NEXT=$(markform next form.md --format json --max-fields 5)
 
-# Step 2: Agent reads $NEXT, determines values, fills them
+# Step 2: Agent reads $NEXT, determines values, fills them one at a time
 markform set form.md name "Acme Corp"
 markform set form.md email "info@acme.com"
 markform set form.md age 15
@@ -423,22 +569,24 @@ NEXT=$(markform next form.md --format json)
 
 # Step 4: Fill compound fields
 markform set form.md confirmations '{"backed_up":"yes","notified_team":"yes"}'
-markform set form.md team_members '[{"name":"Alice","role":"Eng","start_date":"2024-01-15"},{"name":"Bob","role":"PM"}]'
+markform set form.md team_members '[{"name":"Alice","role":"Eng","start_date":"2024-01-15"}]'
 
-# Step 5: Skip optional fields
+# Step 5: Append another row to the table
+markform set form.md team_members --append '{"name":"Bob","role":"PM"}'
+
+# Step 6: Skip optional fields
 markform set form.md notes --skip --reason "Not applicable"
-markform set form.md optional_number --skip --reason "No data"
 
-# Step 6: Check completion
+# Step 7: Check completion
 markform next form.md --format json
 # -> { "is_complete": true, "form_state": "complete", "issues": [] }
 ```
 
-Or more efficiently with `apply --context` for batch operations:
+Or more efficiently with `--values` for batch operations:
 
 ```bash
 # Bulk fill in one shot
-markform apply form.md --context '{
+markform set form.md --values '{
   "name": "Acme Corp",
   "email": "info@acme.com",
   "age": 15,
@@ -452,156 +600,19 @@ markform apply form.md --context '{
 markform next form.md --format json
 ```
 
----
-
-### Systematic mapping: Patch operations to `set` CLI syntax
-
-This is the complete mapping from every patch operation to its `set` command equivalent.
-The coercion layer handles type inference from the field schema.
-
-#### Scalar fields (value is a single CLI argument)
-
-| Field Kind | Patch Op | CLI `set` Syntax | Example |
-|---|---|---|---|
-| `string` | `set_string` | `set <file> <id> "<value>"` | `set f.md name "Alice Smith"` |
-| `number` | `set_number` | `set <file> <id> <value>` | `set f.md age 30` |
-| `url` | `set_url` | `set <file> <id> "<url>"` | `set f.md website "https://x.com"` |
-| `date` | `set_date` | `set <file> <id> "<YYYY-MM-DD>"` | `set f.md event_date "2025-06-15"` |
-| `year` | `set_year` | `set <file> <id> <YYYY>` | `set f.md founded_year 2020` |
-
-**Coercion behavior for scalars:**
-- Strings pass through directly
-- Numbers: `"30"` string is coerced to `30` for number/year fields
-- Booleans: `"true"` stays as the string `"true"` for string fields
-
-#### Selection fields (value is an option ID or list of IDs)
-
-| Field Kind | Patch Op | CLI `set` Syntax | Example |
-|---|---|---|---|
-| `single_select` | `set_single_select` | `set <file> <id> <optionId>` | `set f.md priority high` |
-| `multi_select` | `set_multi_select` | `set <file> <id> '<json-array>'` | `set f.md categories '["frontend","backend"]'` |
-
-**Coercion behavior for selections:**
-- `single_select`: Raw string validated against option IDs. Error lists valid options.
-- `multi_select`: JSON array of option IDs. Single string coerced to `["string"]` with warning.
-
-#### List fields (value is a JSON array)
-
-| Field Kind | Patch Op | CLI `set` Syntax | Example |
-|---|---|---|---|
-| `string_list` | `set_string_list` | `set <file> <id> '<json-array>'` | `set f.md tags '["rust","wasm","perf"]'` |
-| `url_list` | `set_url_list` | `set <file> <id> '<json-array>'` | `set f.md refs '["https://a.com","https://b.com"]'` |
-
-**Coercion behavior for lists:**
-- JSON array of strings passes through
-- Single string coerced to single-element array with warning
-- Non-string array items coerced to strings where possible
-
-#### Checkbox fields (value is a JSON object or array)
-
-| Field Kind | Patch Op | CLI `set` Syntax | Example |
-|---|---|---|---|
-| `checkboxes` (multi) | `set_checkboxes` | `set <file> <id> '<json-object>'` | `set f.md tasks '{"research":"done","design":"active"}'` |
-| `checkboxes` (simple) | `set_checkboxes` | `set <file> <id> '<json-object-or-array>'` | `set f.md agreements '["read_guidelines","agree_terms"]'` |
-| `checkboxes` (explicit) | `set_checkboxes` | `set <file> <id> '<json-object>'` | `set f.md confirms '{"backed_up":"yes","notified":"no"}'` |
-
-**Coercion behavior for checkboxes:**
-
-Three input shapes are supported:
-
-1. **Object with state values** (explicit control):
-   ```json
-   {"research": "done", "design": "active", "test": "todo"}
-   ```
-   Valid states depend on `checkboxMode`:
-   - `multi` (default): `todo`, `done`, `incomplete`, `active`, `na`
-   - `simple`: `todo`, `done`
-   - `explicit`: `unfilled`, `yes`, `no`
-
-2. **Array of option IDs** (shorthand for "mark these as done/yes"):
-   ```json
-   ["research", "design"]
-   ```
-   Listed options get `done` (multi/simple) or `yes` (explicit). Unlisted stay unchanged.
-
-3. **Object with boolean values** (coerced to state strings):
-   ```json
-   {"backed_up": true, "notified": false}
-   ```
-   `true` -> `done`/`yes`. `false` -> `todo`/`no`.
-
-#### Table fields (value is a JSON array of row objects)
-
-| Field Kind | Patch Op | CLI `set` Syntax | Example |
-|---|---|---|---|
-| `table` | `set_table` | `set <file> <id> '<json-array>'` | See below |
-
-**Table example (team_members with columns: name(string), role(string), start_date(date)):**
-
-```bash
-markform set form.md team_members '[
-  {"name": "Alice", "role": "Engineer", "start_date": "2024-01-15"},
-  {"name": "Bob", "role": "PM"}
-]'
-```
-
-**Coercion behavior for tables:**
-- Value must be a JSON array of row objects
-- Each row is `Record<columnId, CellValue | null>`
-- Missing columns treated as empty/skipped
-- `null` values become `%SKIP%` sentinel on serialization
-- Cell values are `string | number` matching `columnTypes`
-- Empty array `[]` clears the table (valid when `minRows=0`)
-
-**Table column types and per-cell coercion:**
-
-| Column Type | Accepts | Coercion |
-|---|---|---|
-| `string` | String, number | `42` -> `"42"` |
-| `number` | Number, numeric string | `"9.3"` -> `9.3` |
-| `url` | String (URL format) | Pass-through |
-| `date` | String (ISO 8601) | Pass-through |
-
-#### Meta operations (not value-setting)
-
-| Patch Op | CLI `set` Syntax | Example |
-|---|---|---|
-| `clear_field` | `set <file> <id> --clear` | `set f.md name --clear` |
-| `skip_field` | `set <file> <id> --skip [--reason "..."]` | `set f.md notes --skip --reason "N/A"` |
-| `abort_field` | `set <file> <id> --abort [--reason "..."]` | `set f.md score --abort --reason "Unavailable"` |
-| `add_note` | Not in `set` (use `apply --patch`) | Full patch syntax only |
-| `remove_note` | Not in `set` (use `apply --patch`) | Full patch syntax only |
-
-`add_note`/`remove_note` are excluded from `set` because they operate on form elements
-(not just fields) and use `ref`/`noteId` rather than `fieldId`.
-
-### Value parsing logic in `set` command
-
-The `set` command receives `<value>` as a CLI string argument. Parsing order:
-
-```
-1. If value starts with '[' or '{': parse as JSON
-2. If value is "true" or "false": pass as boolean
-3. If value is a valid number: pass as number
-4. Otherwise: pass as string
-```
-
-The coercion layer then converts based on the field's kind from the schema. Mismatches
-are either auto-converted (string "30" -> number 30 for a number field) or produce an
-error with helpful context (e.g., listing valid option IDs for a select field).
-
 ### Comparison: All CLI form-filling approaches
 
-| Aspect | `next` + `set` | `apply --patch` | `apply --context` | `fill --interactive` | `fill --model` |
+| Aspect | `set` (single) | `set --values` (batch) | `apply --patch` | `fill --interactive` | `fill --model` |
 |---|---|---|---|---|---|
-| Agent-friendly | Yes | Yes (verbose) | Yes | No (TTY) | N/A (autonomous) |
-| Type knowledge | None | Full | None | None | None |
-| Field guidance | Full (`next`) | None | None | Prompts | Harness prompts |
-| Batch support | Per-field | N patches | N fields | Per-field | N per turn |
-| Compound types | JSON arg | Full JSON | Raw JSON | Prompts | Harness |
-| Meta ops | Flags | Full patch | No | Skip prompts | Harness |
-| Completion check | `next` | Separate inspect | `--report` | Automatic | Automatic |
-| Best for | CLI agents | Power users | Bulk pre-fill | Humans | LLM filling |
+| Agent-friendly | Yes | Yes | Yes (verbose) | No (TTY) | N/A (autonomous) |
+| Type knowledge | None | None | Full | None | None |
+| Field guidance | Via `next` | Via `next` | None | Prompts | Harness prompts |
+| Batch support | Per-field | N fields | N patches | Per-field | N per turn |
+| Compound types | JSON arg | Raw JSON | Full JSON | Prompts | Harness |
+| Append/delete | `--append`, `--delete-row` | No | No | No | No |
+| Meta ops | `--clear/skip/abort` | No | Full patch | Skip prompts | Harness |
+| Completion check | `next` | `--report` | Separate inspect | Automatic | Automatic |
+| Best for | CLI agents | Bulk pre-fill | Power users | Humans | LLM filling |
 
 ---
 
@@ -610,12 +621,11 @@ error with helpful context (e.g., listing valid option IDs for a select field).
 CLI form-filling operations and harness-driven filling serve different purposes and have
 different observability needs. The design draws a clear boundary:
 
-**CLI operations (`set`, `apply --context`, `next`) do NOT produce fill records.**
+**CLI operations (`set`, `next`) do NOT produce fill records.**
 
 | Path | Produces FillRecord? | Writes `.fill.json`? |
 |---|---|---|
-| `markform set` | No | No |
-| `markform apply --context` | No | No |
+| `markform set` (any mode) | No | No |
 | `markform apply --patch` | No | No |
 | `markform next` | No (read-only) | No |
 | `markform fill --model` (harness) | Yes (always, for summary) | Only with `--record-fill` |
@@ -679,7 +689,7 @@ Agent context (Claude Code, script, etc.)
 ├── markform next form.md --format json
 │   └── Returns: remaining issues (name and age gone from list)
 │
-├── markform apply form.md --context '{"priority":"high","categories":["a","b"]}'
+├── markform set form.md --values '{"priority":"high","categories":["a","b"]}'
 │   └── Bulk set. No fill record.
 │
 ├── markform next form.md --format json
@@ -719,7 +729,7 @@ A common pattern: pre-fill known values via CLI, then let an LLM handle the rest
 
 ```
 # Phase 1: CLI pre-fill (no fill record)
-markform apply form.md --context '{"company":"Acme","ticker":"ACME","sector":"Tech"}'
+markform set form.md --values '{"company":"Acme","ticker":"ACME","sector":"Tech"}'
 
 # Phase 2: Agent finishes remaining fields (fill record captures LLM work)
 markform fill form.md --model openai/gpt-4o --record-fill
@@ -741,26 +751,29 @@ markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
 
 ## Implementation Plan
 
-### Phase 1: `set` command and `apply --context`
+### Phase 1: `set` command (single-field and batch)
 
 - [ ] Add `parseCliValue(rawString)` utility to parse CLI value argument
   (JSON detect, number detect, boolean detect, string fallback)
 - [ ] Add `registerSetCommand()` in `src/cli/commands/set.ts`
-  - Parse `<fieldId>` and `<value>` args
+  - Parse `<fieldId>` and `<value>` args for single-field mode
+  - Handle `--values` for batch mode (mutually exclusive with positional args)
   - Handle `--clear`, `--skip`, `--abort` flags with `--role` and `--reason`
-  - Call `coerceToFieldPatch()` for value operations
+  - Handle `--append` for tables and lists (read-modify-write)
+  - Handle `--delete-row` for tables (read-modify-write)
+  - Call `coerceToFieldPatch()` for single-field value operations
+  - Call `coerceInputContext()` for `--values` batch operations
   - Default to in-place modification; `-o` for different output file
   - Output modified form, or `--report` JSON with issues/progress
   - **No fill record** — `set` is a stateless patch operation
-- [ ] Add `--context` option to `registerApplyCommand()`
-  - Mutually exclusive with `--patch`
-  - Parse JSON, call `coerceInputContext()`
-  - Reuse existing apply + report logic
-  - **No fill record** — same as `--patch`
 - [ ] Register `set` command in CLI program
 - [ ] Add unit tests for `parseCliValue()`
-- [ ] Add CLI tests for `set` command (all field kinds including compound types)
-- [ ] Add CLI tests for `apply --context`
+- [ ] Add CLI tests for `set` command — all value set operations (per comprehensive table)
+- [ ] Add CLI tests for `set --values` batch mode
+- [ ] Add CLI tests for `set --append` (table row, string_list item, url_list item)
+- [ ] Add CLI tests for `set --delete-row` (table)
+- [ ] Add CLI tests for `set --clear`, `--skip`, `--abort`
+- [ ] Add CLI tests for `set` error cases (bad field ID, bad option, bad coercion)
 
 ### Phase 2: `next` command
 
@@ -805,7 +818,7 @@ markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
 
 ### CLI tests
 
-**`set` command — one per field kind:**
+**`set` command — value set operations (one per field kind):**
 ```bash
 markform set form.md name "Alice" -o /tmp/test.md
 markform set form.md age 30 -o /tmp/test.md
@@ -820,8 +833,26 @@ markform set form.md references '["https://a.com","https://b.com"]' -o /tmp/test
 markform set form.md event_date "2025-06-15" -o /tmp/test.md
 markform set form.md founded_year 2020 -o /tmp/test.md
 markform set form.md team_members '[{"name":"Alice","role":"Eng"}]' -o /tmp/test.md
+```
+
+**`set` command — incremental operations:**
+```bash
+markform set form.md team_members --append '{"name":"Bob","role":"PM"}' -o /tmp/test.md
+markform set form.md team_members --delete-row 0 -o /tmp/test.md
+markform set form.md tags --append "perf" -o /tmp/test.md
+markform set form.md references --append "https://c.com" -o /tmp/test.md
+```
+
+**`set` command — meta operations:**
+```bash
 markform set form.md name --clear -o /tmp/test.md
 markform set form.md notes --skip --reason "N/A" -o /tmp/test.md
+markform set form.md score --abort --reason "Unavailable" -o /tmp/test.md
+```
+
+**`set --values` — batch mode:**
+```bash
+markform set form.md --values '{"name":"Alice","age":30,"priority":"high"}' --report --format json
 ```
 
 **`set` command — error cases:**
@@ -829,11 +860,7 @@ markform set form.md notes --skip --reason "N/A" -o /tmp/test.md
 markform set form.md nonexistent_field "value"  # -> field not found
 markform set form.md priority "invalid_option"  # -> lists valid options
 markform set form.md age "not_a_number"         # -> coercion error
-```
-
-**`apply --context`:**
-```bash
-markform apply form.md --context '{"name":"Alice","age":30,"priority":"high"}' --report --format json
+markform set form.md name --append "x"          # -> append not supported for string
 ```
 
 **`next` command:**
@@ -880,9 +907,14 @@ markform next /tmp/e2e.md --format json  # verify is_complete: true
    one-shot commands with no session/turn/LLM data. The form file is the audit trail.
    Fill records are exclusively for harness-driven filling.
 
+5. **Should batch set be on `apply --context` or `set --values`?**
+   **`set --values`.** Both single-field and batch modes do the same thing (auto-coerced
+   value setting). They belong on the same command. `apply` stays focused on raw typed
+   patches via `--patch`. No overlap, no confusion.
+
 ## References
 
-- `packages/markform/src/engine/valueCoercion.ts` — coercion layer (core of `set`/`--context`)
+- `packages/markform/src/engine/valueCoercion.ts` — coercion layer (core of `set`/`--values`)
 - `packages/markform/src/harness/harness.ts` — FormHarness state machine, issue filtering
 - `packages/markform/src/harness/liveAgent.ts` — prompt building, field metadata enrichment
 - `packages/markform/src/harness/prompts.ts` — PATCH_FORMATS, getPatchFormatHint()
