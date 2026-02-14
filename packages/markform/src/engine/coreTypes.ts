@@ -1042,6 +1042,8 @@ export interface StepResult {
   patchesApplied?: number;
   /** Rejection details if patches failed (set by harness.apply, undefined for step-only results) */
   rejectedPatches?: PatchRejection[];
+  /** Coercion warnings from patch normalization (set by harness.apply, undefined for step-only results) */
+  coercionWarnings?: PatchWarning[];
 }
 
 // =============================================================================

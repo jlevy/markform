@@ -203,9 +203,10 @@ export class FormHarness {
     const result = inspect(this.form, { targetRoles: this.config.targetRoles });
     const stepResult = this.computeStepResult(result);
 
-    // Add actual patch count and rejection details to step result
+    // Add actual patch count, rejection details, and coercion warnings to step result
     stepResult.patchesApplied = patchesActuallyApplied;
     stepResult.rejectedPatches = applyResult.rejectedPatches;
+    stepResult.coercionWarnings = applyResult.warnings;
 
     // Record turn in session transcript (include rejections, warnings, and wire format)
     this.recordTurn(

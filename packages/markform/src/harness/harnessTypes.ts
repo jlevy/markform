@@ -18,6 +18,7 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  PatchWarning,
   // Wire format types (defined in coreTypes for session logging)
   WireFormat,
   WireRequestFormat,
@@ -534,6 +535,8 @@ export interface TurnProgress {
   patches: Patch[];
   /** Empty if patches applied successfully, contains rejection details if failed */
   rejectedPatches: PatchRejection[];
+  /** Coercion warnings from patch normalization (e.g., string auto-wrapped to array) */
+  coercionWarnings?: PatchWarning[];
   /** Execution ID for parallel tracking (e.g., "1-batch-research-0") */
   executionId?: string;
 }

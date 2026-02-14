@@ -12,7 +12,7 @@
  * @see docs/project/specs/active/plan-2026-01-29-fill-record.md
  */
 
-import type { ProgressCounts, StructureSummary } from '../engine/coreTypes.js';
+import type { PatchWarning, ProgressCounts, StructureSummary } from '../engine/coreTypes.js';
 import type { FillCallbacks, TurnProgress } from './harnessTypes.js';
 import type {
   FillRecord,
@@ -47,6 +47,7 @@ interface TurnCompleteEvent {
   patchesApplied: number;
   patchesRejected: number;
   issuesAddressed: number;
+  coercionWarnings?: PatchWarning[];
   executionId?: string;
 }
 
@@ -192,6 +193,7 @@ export class FillRecordCollector implements FillCallbacks {
   }
 
   onTurnComplete(progress: TurnProgress): void {
+    const warnings = progress.coercionWarnings;
     this.events.push({
       type: 'turn_complete',
       timestamp: currentTime(),
@@ -199,6 +201,7 @@ export class FillRecordCollector implements FillCallbacks {
       patchesApplied: progress.patchesApplied,
       patchesRejected: progress.rejectedPatches?.length ?? 0,
       issuesAddressed: progress.issuesShown,
+      ...(warnings && warnings.length > 0 && { coercionWarnings: warnings }),
       executionId: progress.executionId,
     });
   }
@@ -486,6 +489,10 @@ export class FillRecordCollector implements FillCallbacks {
           patchesRejected: completeEvent.patchesRejected,
           tokens,
           toolCalls,
+          ...(completeEvent.coercionWarnings &&
+            completeEvent.coercionWarnings.length > 0 && {
+              coercionWarnings: completeEvent.coercionWarnings,
+            }),
         };
         turns.set(key, entry);
       }
