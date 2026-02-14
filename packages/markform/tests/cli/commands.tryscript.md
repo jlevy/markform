@@ -36,37 +36,53 @@ Options:
   --verbose                               Enable verbose output
   --quiet                                 Suppress non-essential output
   --dry-run                               Show what would be done without making changes
-  --format <format>                       Output format: console, plaintext, yaml, json, markform, markdown (default: "console")
+  --format <format>                       Output format: console, plaintext, yaml, json,
+                                          markform, markdown (default: "console")
   --forms-dir <dir>                       Directory for form output (default: ./forms)
-  --overwrite                             Overwrite existing field values (default: continue/skip filled)
+  --overwrite                             Overwrite existing field values (default:
+                                          continue/skip filled)
   -h, --help                              display help for command
 
 Commands:
   readme [options]                        ✨Display README documentation ← START HERE!
-  docs [options]                          Display concise Markform syntax reference (agent-friendly)
+  docs [options]                          Display concise Markform syntax reference
+                                          (agent-friendly)
   spec [options]                          Display the Markform specification
-  apis [options]                          Display Markform TypeScript and AI SDK API documentation
+  apis [options]                          Display Markform TypeScript and AI SDK API
+                                          documentation
   patch [options] <file> <json>           Apply raw typed patches to a form
   browse [options]                        Browse and view files in the forms directory
-  dump <file>                             Extract and display form values with state (lightweight inspect)
-  examples [options]                      Copy bundled example forms to the forms directory
-  export [options] <file>                 Export form as markform (default), markdown (readable), or json/yaml for structured data
+  dump <file>                             Extract and display form values with state
+                                          (lightweight inspect)
+  examples [options]                      Copy bundled example forms to the forms
+                                          directory
+  export [options] <file>                 Export form as markform (default), markdown
+                                          (readable), or json/yaml for structured data
   fill [options] <file>                   Run an agent to autonomously fill a form
-  inspect [options] <file>                Inspect a form and display its structure, progress, and issues
+  inspect [options] <file>                Inspect a form and display its structure,
+                                          progress, and issues
   models [options]                        List available AI providers and example models
-  next [options] <file>                   Show prioritized next fields to fill (field advisor for CLI form filling)
-  plan <file>                             Show the idealized execution plan for a form (parallel batches, order levels)
+  next [options] <file>                   Show prioritized next fields to fill (field
+                                          advisor for CLI form filling)
+  plan <file>                             Show the idealized execution plan for a form
+                                          (parallel batches, order levels)
   render [options] <file>                 Render a form as static HTML output
-  report [options] <file>                 Generate filtered markdown report (excludes instructions, report=false elements)
+  report [options] <file>                 Generate filtered markdown report (excludes
+                                          instructions, report=false elements)
   research [options] <input>              Fill a form using a web-search-enabled model
   run [options] [file]                    Browse and run forms from the forms directory
   schema [options] <file>                 Export form structure as JSON Schema
-  serve [options] <file>                  Serve a file as a web page (forms are interactive, others are read-only)
+  serve [options] <file>                  Serve a file as a web page (forms are
+                                          interactive, others are read-only)
   set [options] <file> [fieldId] [value]  Set field values with auto-coercion
-  setup [options]                         Install Markform as a Claude Code skill in the current project
-  skill                                   Output SKILL.md content for Claude Code integration
-  status <file>                           Display form fill status with per-role breakdown
-  validate [options] <file>               Validate a form and display summary and issues (no form content)
+  setup [options]                         Install Markform as a Claude Code skill in the
+                                          current project
+  skill                                   Output SKILL.md content for Claude Code
+                                          integration
+  status <file>                           Display form fill status with per-role
+                                          breakdown
+  validate [options] <file>               Validate a form and display summary and issues
+                                          (no form content)
   help [command]                          display help for command
 
 Skill Setup:

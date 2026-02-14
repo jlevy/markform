@@ -17,6 +17,6 @@ priority: 1
 status: closed
 title: "Spec: CLI set/next/patch commands for agent-friendly form filling"
 type: is
-updated_at: 2026-02-14T09:11:16.536Z
-version: 8
+updated_at: 2026-02-14T18:53:46.093Z
+version: 9
 ---
