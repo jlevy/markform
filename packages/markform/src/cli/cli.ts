@@ -42,6 +42,7 @@ import { OUTPUT_FORMATS } from './lib/shared.js';
  */
 function withColoredHelp<T extends Command>(cmd: T): T {
   cmd.configureHelp({
+    helpWidth: 88,
     styleTitle: (str) => pc.bold(pc.cyan(str)),
     styleCommandText: (str) => pc.green(str),
     styleOptionText: (str) => pc.yellow(str),
