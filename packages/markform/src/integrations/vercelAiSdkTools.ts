@@ -21,11 +21,20 @@
  */
 
 import { z } from 'zod';
-import type { ParsedForm, Patch, ValidatorRegistry } from '../engine/coreTypes.js';
+import type {
+  Field,
+  InspectIssue,
+  ParsedForm,
+  Patch,
+  ValidatorRegistry,
+} from '../engine/coreTypes.js';
 import { inspect } from '../engine/inspect.js';
 import { applyPatches } from '../engine/apply.js';
 import { serializeForm } from '../engine/serialize.js';
 import { PatchSchema } from '../engine/coreTypes.js';
+import { getFieldIdFromRef } from '../engine/issueFiltering.js';
+import { findFieldById } from '../engine/valueCoercion.js';
+import { getPatchFormatHint } from '../harness/prompts.js';
 
 // =============================================================================
 // Session Store
@@ -161,6 +170,85 @@ const GetMarkdownInputSchema = z
   );
 
 // =============================================================================
+// Issue Enrichment
+// =============================================================================
+
+interface EnrichedFieldMeta {
+  kind: string;
+  label: string;
+  required: boolean;
+  options?: string[];
+  checkbox_mode?: string;
+  columns?: { id: string; type: string; required: boolean }[];
+}
+
+function buildFieldMeta(field: Field): EnrichedFieldMeta {
+  const meta: EnrichedFieldMeta = {
+    kind: field.kind,
+    label: field.label,
+    required: field.required,
+  };
+
+  if (field.kind === 'single_select' || field.kind === 'multi_select') {
+    meta.options = field.options.map((o) => o.id);
+  } else if (field.kind === 'checkboxes') {
+    meta.options = field.options.map((o) => o.id);
+    meta.checkbox_mode = field.checkboxMode;
+  } else if (field.kind === 'table') {
+    meta.columns = field.columns.map((c) => ({
+      id: c.id,
+      type: c.type,
+      required: c.required,
+    }));
+  }
+
+  return meta;
+}
+
+function generatePatchExample(field: Field): string {
+  const opts: {
+    fieldId: string;
+    columnIds?: string[];
+    checkboxMode?: 'simple' | 'multi' | 'explicit';
+    optionIds?: string[];
+  } = {
+    fieldId: field.id,
+  };
+
+  if (field.kind === 'table') {
+    opts.columnIds = field.columns.map((c) => c.id);
+  } else if (field.kind === 'checkboxes') {
+    opts.checkboxMode = field.checkboxMode;
+    opts.optionIds = field.options.map((o) => o.id);
+  }
+
+  return getPatchFormatHint(field.kind, opts);
+}
+
+function enrichIssue(
+  issue: InspectIssue,
+  form: ParsedForm,
+): InspectIssue & {
+  field?: EnrichedFieldMeta;
+  set_example?: string;
+  skip_example?: string | null;
+} {
+  const fieldId = getFieldIdFromRef(issue.ref, issue.scope);
+  const field = fieldId ? findFieldById(form, fieldId) : undefined;
+
+  if (!field) return issue;
+
+  return {
+    ...issue,
+    field: buildFieldMeta(field),
+    set_example: generatePatchExample(field),
+    skip_example: field.required
+      ? null
+      : `{ op: "skip_field", fieldId: "${field.id}", reason: "Not applicable" }`,
+  };
+}
+
+// =============================================================================
 // Tool Factory
 // =============================================================================
 
@@ -203,6 +291,9 @@ export function createMarkformTools(options: CreateMarkformToolsOptions): Markfo
       const form = sessionStore.getForm();
       const result = inspect(form);
 
+      // Enrich issues with field metadata and patch examples
+      const enrichedIssues = result.issues.map((issue) => enrichIssue(issue, form));
+
       const requiredCount = result.issues.filter((i) => i.severity === 'required').length;
       const message = result.isComplete
         ? 'Form is complete. All required fields are filled.'
@@ -210,7 +301,7 @@ export function createMarkformTools(options: CreateMarkformToolsOptions): Markfo
 
       return Promise.resolve({
         success: true,
-        data: result,
+        data: { ...result, issues: enrichedIssues },
         message,
       });
     },
