@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy / Claude
 
-**Status:** Draft
+**Status:** Ready for Review
 
 ## Overview
 
@@ -39,6 +39,10 @@ uses, but decomposed into independent CLI calls that the agent orchestrates.
 - File locking or distributed coordination (last-write-wins is acceptable)
 - Maintaining stateful session across CLI calls (each call is stateless; the form file
   IS the state)
+- **Fill records from CLI operations** — CLI form-filling commands (`set`,
+  `apply --context`, `next`) do NOT produce fill records. Fill records are exclusively
+  for harness-driven filling via the `fill` command and programmatic `fillForm()` API.
+  See [Fill Record Policy](#fill-record-policy) for rationale.
 
 ---
 
@@ -601,6 +605,140 @@ error with helpful context (e.g., listing valid option IDs for a select field).
 
 ---
 
+### Fill Record Policy
+
+CLI form-filling operations and harness-driven filling serve different purposes and have
+different observability needs. The design draws a clear boundary:
+
+**CLI operations (`set`, `apply --context`, `next`) do NOT produce fill records.**
+
+| Path | Produces FillRecord? | Writes `.fill.json`? |
+|---|---|---|
+| `markform set` | No | No |
+| `markform apply --context` | No | No |
+| `markform apply --patch` | No | No |
+| `markform next` | No (read-only) | No |
+| `markform fill --model` (harness) | Yes (always, for summary) | Only with `--record-fill` |
+| Programmatic `fillForm()` | Yes (if `recordFill: true`) | Caller's responsibility |
+
+**Rationale:**
+
+1. **No session data to capture.** CLI operations are stateless one-shot commands. There
+   is no session, no turns, no LLM calls, no token usage — the data that makes fill
+   records valuable doesn't exist.
+
+2. **Maintenance burden.** Tracking CLI operations in a fill record would require
+   inventing a different schema (no LLM/tool timeline, no execution threads). This adds
+   complexity for little value.
+
+3. **The form file IS the audit trail.** After CLI operations, the form markdown contains
+   all values and state. `markform inspect` can show progress at any time. There's no
+   information loss.
+
+4. **The agent has its own context.** An external agent (Claude Code, shell script) that
+   orchestrates `next` -> `set` -> `next` loops already has its own execution context,
+   logs, and audit trail. Duplicating this in a markform-specific format is redundant.
+
+**Empty fill record guard (for the `fill` command):**
+
+When `--record-fill` is set on the `fill` command, the sidecar `.fill.json` file should
+NOT be written if the fill record is essentially empty — meaning no actual work was done.
+The check is: `timeline.length === 0`. This handles edge cases like:
+
+- Form was already complete when `fill` was invoked
+- Agent errored before any turns executed
+- Pre-fill configuration failed (already handled: no collector is created)
+
+If at least one turn executed (even if it applied zero patches), the record is written
+because the timeline contains useful debugging information.
+
+---
+
+### Workflow Walkthrough
+
+This section traces through the key workflows to show how CLI form filling fits into the
+broader system, and where fill records do and don't apply.
+
+#### Workflow 1: External agent fills a form via CLI
+
+An agent (Claude Code skill, shell script, etc.) fills a form using CLI commands. No fill
+record is produced — the form file is the state and the agent has its own context.
+
+```
+Agent context (Claude Code, script, etc.)
+│
+├── markform next form.md --format json
+│   └── Returns: prioritized issues, set_example per field
+│
+├── markform set form.md name "Acme Corp"
+│   └── Writes form.md in-place. No fill record.
+│
+├── markform set form.md age 15
+│   └── Writes form.md in-place. No fill record.
+│
+├── markform next form.md --format json
+│   └── Returns: remaining issues (name and age gone from list)
+│
+├── markform apply form.md --context '{"priority":"high","categories":["a","b"]}'
+│   └── Bulk set. No fill record.
+│
+├── markform next form.md --format json
+│   └── is_complete: true? Done. Otherwise loop.
+│
+└── Agent's own audit trail captures the full session.
+    No markform fill record needed.
+```
+
+#### Workflow 2: Harness-driven fill (LLM agent)
+
+The `fill` command runs the full harness loop with an LLM. A fill record is produced
+because there is session/turn/LLM/tool data to capture.
+
+```
+markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
+│
+├── Harness creates FillRecordCollector
+├── Turn 1: step() → agent sees issues → generates patches → apply()
+│   └── Collector records: LLM tokens, tool calls, patches, timing
+├── Turn 2: step() → agent sees remaining issues → generates patches → apply()
+│   └── Collector records turn 2 data
+├── ...
+├── Complete: collector.getRecord() → FillRecord
+│
+├── If timeline.length > 0 AND --record-fill:
+│   └── Write form.fill.json (sidecar)
+├── If timeline.length === 0 AND --record-fill:
+│   └── Skip writing (empty record guard)
+│
+└── Form written to output path
+```
+
+#### Workflow 3: Bulk pre-fill then agent finish
+
+A common pattern: pre-fill known values via CLI, then let an LLM handle the rest.
+
+```
+# Phase 1: CLI pre-fill (no fill record)
+markform apply form.md --context '{"company":"Acme","ticker":"ACME","sector":"Tech"}'
+
+# Phase 2: Agent finishes remaining fields (fill record captures LLM work)
+markform fill form.md --model openai/gpt-4o --record-fill
+```
+
+The fill record from Phase 2 accurately reflects only the LLM's work — not the pre-filled
+values. This is correct behavior: the record shows what the agent did, not what was given.
+
+#### Workflow 4: Form already complete
+
+```
+markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
+# Harness runs step() → isComplete=true → 0 turns → empty timeline
+# Empty record guard: .fill.json NOT written
+# Exit code 0 (form is complete)
+```
+
+---
+
 ## Implementation Plan
 
 ### Phase 1: `set` command and `apply --context`
@@ -613,10 +751,12 @@ error with helpful context (e.g., listing valid option IDs for a select field).
   - Call `coerceToFieldPatch()` for value operations
   - Default to in-place modification; `-o` for different output file
   - Output modified form, or `--report` JSON with issues/progress
+  - **No fill record** — `set` is a stateless patch operation
 - [ ] Add `--context` option to `registerApplyCommand()`
   - Mutually exclusive with `--patch`
   - Parse JSON, call `coerceInputContext()`
   - Reuse existing apply + report logic
+  - **No fill record** — same as `--patch`
 - [ ] Register `set` command in CLI program
 - [ ] Add unit tests for `parseCliValue()`
 - [ ] Add CLI tests for `set` command (all field kinds including compound types)
@@ -641,6 +781,19 @@ error with helpful context (e.g., listing valid option IDs for a select field).
 - [ ] Add CLI tests for `next` (empty form, partially filled, complete form)
 - [ ] Add CLI tests for `next` with order-level gating
 - [ ] Update `markform docs` / quick reference to include `set` and `next` commands
+
+### Phase 3: Empty fill record guard (for `fill` command)
+
+- [ ] Add `isFillRecordEmpty(record: FillRecord): boolean` helper
+  - Returns `true` when `record.timeline.length === 0`
+- [ ] Guard the sidecar write in the serial path (`fill.ts` ~line 902):
+  skip `writeFileSync` if `isFillRecordEmpty(fillRecord)` and log info message
+- [ ] Guard the sidecar write in the parallel path (`fill.ts` ~line 457):
+  skip write if `result.record` timeline is empty
+- [ ] Guard the error handler path (`fill.ts` ~line 958):
+  skip write if collector has zero events (no turns started)
+- [ ] Add unit test: `fill` on already-complete form with `--record-fill` does not
+  write `.fill.json`
 
 ## Testing Strategy
 
@@ -703,22 +856,29 @@ markform set /tmp/e2e.md age 25
 markform next /tmp/e2e.md --format json  # verify is_complete: true
 ```
 
-## Open Questions
+## Resolved Questions
 
-- Should `next` also show the current value of partially-filled fields? (Useful for
-  tables where some rows exist but more are needed.)
-  Tentative: Yes, include `current_value` in the issue metadata when the field has a
-  partial value.
+1. **Should `next` show current values of partially-filled fields?**
+   **Yes.** Include `current_value` in the issue metadata when the field has a partial
+   value. This is especially useful for tables (some rows exist, more needed) and
+   checkboxes (some checked, some remaining). The value is already available from
+   `inspect()` — just include it inline.
 
-- Should `next` respect form frontmatter `harnessConfig` settings (maxFieldsPerTurn,
-  maxGroupsPerTurn, etc.) as defaults, just like the internal harness does?
-  Tentative: Yes, read from frontmatter as defaults, CLI flags override.
+2. **Should `next` respect frontmatter `harnessConfig` settings as defaults?**
+   **Yes.** Read `maxFieldsPerTurn`, `maxGroupsPerTurn`, `maxIssuesPerTurn` from
+   frontmatter `markform.harness` as defaults. CLI flags (`--max-fields`, etc.) override.
+   This matches the internal harness behavior and means a form author's settings are
+   respected regardless of whether the form is filled via CLI or harness.
 
-- Should `set --report` output the full `next`-style enriched issues, or just the
-  basic `apply` report? If enriched, every `set` call also gives the agent its next
-  step without a separate `next` call.
-  Tentative: Basic `apply` report by default. Use `next` for the enriched view.
-  Keeps each command focused.
+3. **Should `set --report` output enriched issues like `next`?**
+   **No.** `set --report` outputs the basic `apply` report (apply_status, progress,
+   issues as flat list). Use `next` for the enriched view with field metadata and
+   examples. Keeps each command focused: `set` mutates, `next` advises.
+
+4. **Should CLI form filling produce fill records?**
+   **No.** See [Fill Record Policy](#fill-record-policy). CLI operations are stateless
+   one-shot commands with no session/turn/LLM data. The form file is the audit trail.
+   Fill records are exclusively for harness-driven filling.
 
 ## References
 

@@ -865,6 +865,54 @@ Thin wrapper around the tool contract:
 
   - For standard forms: uses interactive filling
 
+**CLI form-filling commands (agent-friendly):**
+
+- `markform set <file> <fieldId> [value]` — set a single field value with auto-coercion:
+
+  - Auto-detects value type from field schema (JSON, number, boolean, string)
+
+  - Supports all field kinds: string, number, url, date, year, single_select,
+    multi_select, string_list, url_list, checkboxes, table
+
+  - Meta operations: `--clear`, `--skip --reason "..."`, `--abort --reason "..."`
+
+  - Default: modifies in-place; `-o` for different output file
+
+  - `--report` outputs JSON with apply status, progress, and issues
+
+  - **Does not produce fill records** (stateless CLI operation)
+
+- `markform apply <file> --context '<json>'` — bulk-set multiple fields from a JSON
+  key-value map:
+
+  - Mutually exclusive with `--patch`
+
+  - Values are auto-coerced via `coerceInputContext()` (same as programmatic API)
+
+  - Example: `--context '{"name":"Alice","age":30,"priority":"high"}'`
+
+  - **Does not produce fill records** (stateless CLI operation)
+
+- `markform next <file>` — CLI equivalent of `harness.step()`: returns the prioritized,
+  filtered list of fields to fill next:
+
+  - Applies three-stage filtering: order levels, scope limits, count cap
+
+  - Each issue enriched with field metadata (kind, options, columns, constraints)
+
+  - Concrete `set` command examples per issue
+
+  - Respects frontmatter `harnessConfig` defaults; CLI flags override
+
+  - JSON output for agents, console output for humans
+
+  - Read-only (does not modify the form)
+
+**Fill record policy:** CLI form-filling commands (`set`, `apply --context`, `next`) do
+not produce fill records. Fill records are exclusively for harness-driven filling via the
+`fill` command and programmatic `fillForm()` API. The `fill` command skips writing an
+empty `.fill.json` sidecar when no turns were executed (e.g., form was already complete).
+
 **Deferred to MF/0.2:**
 
 - **Validation in serve** — Run engine validation from the UI with a “Validate” button.
