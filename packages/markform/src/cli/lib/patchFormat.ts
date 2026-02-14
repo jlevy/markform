@@ -58,6 +58,20 @@ export function formatPatchValue(patch: Patch): string {
       const rowCount = patch.value?.length ?? 0;
       return rowCount > 0 ? truncate(`[${rowCount} rows]`) : '(empty)';
     }
+    case 'append_table': {
+      const appendCount = patch.value?.length ?? 0;
+      return truncate(`+[${appendCount} rows]`);
+    }
+    case 'delete_table':
+      return `(delete row ${patch.value})`;
+    case 'append_string_list':
+      return truncate(`+[${patch.value.join(', ')}]`);
+    case 'delete_string_list':
+      return `(delete item ${patch.value})`;
+    case 'append_url_list':
+      return truncate(`+[${patch.value.join(', ')}]`);
+    case 'delete_url_list':
+      return `(delete item ${patch.value})`;
     case 'add_note':
       return truncate(`note: ${patch.text}`);
     case 'remove_note':
@@ -98,6 +112,18 @@ export function formatPatchType(patch: Patch): string {
       return 'year';
     case 'set_table':
       return 'table';
+    case 'append_table':
+      return 'append_table';
+    case 'delete_table':
+      return 'delete_table';
+    case 'append_string_list':
+      return 'append_string_list';
+    case 'delete_string_list':
+      return 'delete_string_list';
+    case 'append_url_list':
+      return 'append_url_list';
+    case 'delete_url_list':
+      return 'delete_url_list';
     case 'add_note':
       return 'note';
     case 'remove_note':
