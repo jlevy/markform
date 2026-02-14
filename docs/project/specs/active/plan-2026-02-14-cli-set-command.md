@@ -1003,7 +1003,7 @@ markform next /tmp/e2e.md --format json  # verify is_complete: true
    one-shot commands with no session/turn/LLM data. The form file is the audit trail.
    Fill records are exclusively for harness-driven filling.
 
-5. **Should batch set be on `apply --context` or `set --values`?**
+5. **Why is batch set on `set --values` (not `apply`)?**
    **`set --values`.** Both single-field and batch modes do the same thing (auto-coerced
    value setting). They belong on the same command. `apply` stays focused on raw typed
    patches via `--patch`. No overlap, no confusion.
