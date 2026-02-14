@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy / Claude
 
-**Status:** Ready for Review
+**Status:** Phases 0-2 Implemented, Phase 3 Pending, Review Findings Added
 
 ## Overview
 
@@ -776,12 +776,12 @@ following the same implementation pattern as `set_table`. Naming convention:
 
 | Op | Interface | Value |
 |---|---|---|
-| `append_table` | `AppendTablePatch` | `value: TableRowPatch \| TableRowPatch[]` (single or array of rows) |
-| `delete_table` | `DeleteTablePatch` | `index: number` (0-based row index) |
-| `append_string_list` | `AppendStringListPatch` | `value: string \| string[]` (single or array of items) |
-| `delete_string_list` | `DeleteStringListPatch` | `index: number` (0-based item index) |
-| `append_url_list` | `AppendUrlListPatch` | `value: string \| string[]` (single or array of URLs) |
-| `delete_url_list` | `DeleteUrlListPatch` | `index: number` (0-based item index) |
+| `append_table` | `AppendTablePatch` | `value: TableRowPatch[]` (array of rows; CLI auto-wraps single objects) |
+| `delete_table` | `DeleteTablePatch` | `value: number` (0-based row index) |
+| `append_string_list` | `AppendStringListPatch` | `value: string[]` (array of items; CLI auto-wraps single strings) |
+| `delete_string_list` | `DeleteStringListPatch` | `value: number` (0-based item index) |
+| `append_url_list` | `AppendUrlListPatch` | `value: string[]` (array of URLs; CLI auto-wraps single strings) |
+| `delete_url_list` | `DeleteUrlListPatch` | `value: number` (0-based item index) |
 
 These are prerequisites for `set --append` and `set --delete` CLI flags, but also usable
 directly via `markform patch` and by the AI SDK tools / harness.
@@ -1007,6 +1007,151 @@ markform next /tmp/e2e.md --format json  # verify is_complete: true
    **`set --values`.** Both single-field and batch modes do the same thing (auto-coerced
    value setting). They belong on the same command. `patch` stays focused on raw typed
    patches. No overlap, no confusion.
+
+## Implementation Status
+
+Phases 0-2 are implemented. Phase 3 (empty fill record guard) is pending.
+
+### Phase 0: Append/delete patch operations — DONE
+
+All six append/delete patch types are implemented in the engine, with full test coverage
+(unit tests for each operation including bounds checking, best-effort semantics, and
+empty-after-delete behavior).
+
+### Phase 1: `set` command — DONE
+
+The `set` command is fully implemented with single-field, batch (`--values`), incremental
+(`--append`, `--delete`), and meta operations (`--clear`, `--skip`, `--abort`). Tryscript
+CLI tests cover all operations.
+
+### Phase 2: `next` command — DONE
+
+The `next` command is fully implemented with 3-stage filtering, field metadata enrichment,
+concrete `set` examples, and both console and JSON output formats. Golden-session tryscript
+tests cover the full `next` → `set` → `next` loop across all state transitions.
+
+### Phase 3: Empty fill record guard — PENDING
+
+---
+
+## Review Findings (2026-02-14)
+
+A review of the implemented CLI form filling loop revealed several gaps and consistency
+issues that need follow-up work.
+
+**Tracking issues:** mf-fv4b, mf-3gt7, mf-5e55, mf-hr1c
+
+### Finding 1: Append/delete operations invisible to LLMs
+
+The six append/delete patch operations exist in the engine and are accepted by the Zod
+schema, but:
+
+- `prompts.ts` `PATCH_FORMATS` dictionary does not mention them
+- AI SDK tool descriptions in `vercelAiSdkTools.ts` do not list them
+- The harness `getPatchFormatHint()` function has no knowledge of them
+
+**Impact:** LLMs using the harness or AI SDK must use `set_table` (full replace) instead of
+incremental `append_table`/`delete_table`, even when adding a single row.
+
+**Fix:** Add append/delete operations to `PATCH_FORMATS`, update AI SDK tool descriptions,
+and update `getPatchFormatHint()` to generate append examples for collection fields.
+
+### Finding 2: AI SDK `markform_inspect` lacks field advisor enrichment
+
+The three paths that provide "what to fill next" guidance have very different richness:
+
+| Path | Filtering | Enrichment | Examples |
+|------|-----------|------------|----------|
+| CLI `next` | 3-stage (order, scope, count) | Field metadata, step budget | `markform set ... age 42` |
+| Harness/liveAgent | Same 3-stage | Field metadata, step budget | `{ op: "set_number", ... }` |
+| AI SDK `markform_inspect` | None | None | None |
+
+**Impact:** An LLM using the AI SDK gets raw `InspectResult` with no filtering, enrichment,
+or examples. It must figure out what to do on its own.
+
+**Fix:** Extract the enrichment logic from `next.ts` into a shared `fieldAdvisor.ts` that
+both CLI and API can use. Add `exampleMode: 'cli' | 'patch'` to generate mode-appropriate
+examples (CLI commands vs JSON patch objects). Either augment `markform_inspect` or add a
+separate `markform_next` tool.
+
+### Finding 3: Append auto-wrapping inconsistency
+
+The CLI `--append` auto-wraps single items into arrays:
+- `--append '{"name":"Bob"}'` → wraps to `[{"name":"Bob"}]` for the engine
+- `--append "tag"` → wraps to `["tag"]` for the engine
+
+But the engine always requires arrays (`value: TableRowPatch[]`, `value: string[]`).
+
+**Issue:** This convenience is not documented in the CLI help text (`'Append item/row to a
+collection field'` doesn't mention multi-item support). And the TypeScript API layer does
+not provide similar coercion — callers must always pass arrays.
+
+**Fix:**
+- Update `--append` help text to: `'Append item(s) to a collection (single value or array)'`
+- Decide whether the engine should accept `T | T[]` and coerce internally (consistent
+  across CLI and TS API), or keep coercion at the boundary layer
+- Document the behavior clearly for both CLI and programmatic usage
+
+### Finding 4: `--delete` / `--append` argument asymmetry
+
+`--append` takes a value (what to add), `--delete` takes an index (where to remove). These
+are different kinds of arguments with no shared position concept.
+
+**Proposed improvement (future):** Add `--at <n>` option for position control:
+```
+--append <value> --at <n>   # Insert at position n (default: end)
+--delete --at <n>           # Delete at position n (default: last)
+```
+
+This would make `--delete` not need its own positional arg and let `--append` insert at
+arbitrary positions. This is a larger API change for separate follow-up.
+
+### Finding 5: `next` output size
+
+The `next` JSON output is 186 lines for 10 fields (simple form). The console output is ~40
+lines. For agent context windows, compact output matters.
+
+**Observations:**
+- Console format is already good: ~4 lines per issue, includes CLI command examples
+- JSON format includes per-issue field metadata, options, examples — useful but verbose
+- The golden-session tests now show full `next` console output at key state transitions,
+  making the output visible and regression-testable
+
+**Potential optimizations:**
+- A compact JSON format that omits derivable fields (e.g., `message` when `reason` suffices)
+- Ensuring console format is the primary format for CLI agents (JSON for programmatic use)
+
+### Finding 6: Test narrowness (fixed)
+
+The golden-session tryscript tests were using overly narrow `grep | wc -l` and
+`grep | head` assertions that hid actual CLI behavior. Fixed by:
+- Replacing `grep '"ref":' | wc -l` with showing actual ref lines
+- Replacing `dump | head -3` with full dump output
+- Replacing `validate | grep "Form State:"` with full validate output
+- Replacing two separate `grep` calls for status with full status JSON
+- Adding full `next` console output tests at empty, complete-with-optionals, and
+  fully-complete state transitions
+
+### Phase 4 (New): Follow-up improvements
+
+Based on review findings:
+
+- [ ] **4a.** Document append/delete in LLM prompts (mf-3gt7)
+  - Add to `PATCH_FORMATS` in `prompts.ts`
+  - Update AI SDK tool descriptions
+  - Update `getPatchFormatHint()` for collection fields
+- [ ] **4b.** Extract shared field advisor core (mf-5e55)
+  - Create `engine/fieldAdvisor.ts` with `exampleMode: 'cli' | 'patch'`
+  - Have `next.ts` use shared advisor
+  - Augment AI SDK tools to use shared advisor
+- [ ] **4c.** Append auto-wrapping consistency
+  - Update `--append` help text
+  - Decide on engine-level vs boundary-level coercion
+  - Document behavior for both CLI and TypeScript API
+- [ ] **4d.** Review `next` JSON output compactness (mf-hr1c)
+- [ ] **4e.** `--delete`/`--append` position redesign with `--at` (mf-fv4b) — separate follow-up
+
+---
 
 ## References
 
