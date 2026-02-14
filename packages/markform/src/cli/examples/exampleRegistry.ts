@@ -7,13 +7,13 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 import Markdoc from '@markdoc/markdoc';
 import YAML from 'yaml';
 
 import type { ExampleDefinition } from '../lib/cliTypes.js';
+import { resolvePackagePath } from '../lib/paths.js';
 
 // Re-export types for backwards compatibility
 export type { ExampleDefinition } from '../lib/cliTypes.js';
@@ -66,21 +66,7 @@ export function getExampleOrder(filename: string): number {
  * Works both during development and when installed as a package.
  */
 function getExamplesDir(): string {
-  // Get the directory of this file
-  // - Bundled mode: thisDir is /path/to/package/dist
-  // - Dev mode: thisDir is /path/to/package/src/cli/examples
-  const thisDir = dirname(fileURLToPath(import.meta.url));
-
-  // Check if we're in the dist directory (bundled mode)
-  // Use basename to check the directory name, not a substring match
-  const dirName = thisDir.split(/[/\\]/).pop();
-  if (dirName === 'dist') {
-    // Bundled: dist -> package root -> examples
-    return join(dirname(thisDir), 'examples');
-  }
-
-  // Development mode: src/cli/examples -> src/cli -> src -> package root -> examples
-  return join(dirname(dirname(dirname(thisDir))), 'examples');
+  return resolvePackagePath(import.meta.url, 'examples');
 }
 
 /**

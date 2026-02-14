@@ -8,33 +8,15 @@
 import type { Command } from 'commander';
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import { resolvePackagePath } from '../lib/paths.js';
 import { logError } from '../lib/shared.js';
-
-/**
- * Get the path to the SKILL.md file.
- * Works both during development and when installed as a package.
- */
-function getSkillPath(): string {
-  const thisDir = dirname(fileURLToPath(import.meta.url));
-  const dirName = thisDir.split(/[/\\]/).pop();
-
-  if (dirName === 'dist') {
-    // Bundled: dist -> package root -> docs/skill/SKILL.md
-    return join(dirname(thisDir), 'docs', 'skill', 'SKILL.md');
-  }
-
-  // Development: src/cli/commands -> src/cli -> src -> package root -> docs/skill/SKILL.md
-  return join(dirname(dirname(dirname(thisDir))), 'docs', 'skill', 'SKILL.md');
-}
 
 /**
  * Load the SKILL.md content.
  */
 function loadSkillContent(): string {
-  const skillPath = getSkillPath();
+  const skillPath = resolvePackagePath(import.meta.url, 'docs/skill/SKILL.md');
   try {
     return readFileSync(skillPath, 'utf-8');
   } catch (error) {
