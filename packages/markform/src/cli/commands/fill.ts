@@ -32,7 +32,7 @@ import type {
 } from '../../engine/coreTypes.js';
 import type { TurnProgress } from '../../harness/harnessTypes.js';
 import { FillRecordCollector } from '../../harness/fillRecordCollector.js';
-import { stripUnstableFillRecordFields } from '../../harness/fillRecord.js';
+import { isEmptyFillRecord, stripUnstableFillRecordFields } from '../../harness/fillRecord.js';
 import { formatFillRecordSummary } from '../../harness/formatFillRecordSummary.js';
 import { createHarness } from '../../harness/harness.js';
 import { resolveHarnessConfig } from '../../harness/harnessConfigResolver.js';
@@ -453,18 +453,22 @@ export function registerFillCommand(program: Command): void {
               console.error(summary);
             }
 
-            // Write fill record sidecar
+            // Write fill record sidecar (skip if no turns were executed)
             if ((options.recordFill || options.recordFillStable) && result.record) {
-              const sidecarPath = deriveFillRecordPath(outputPath);
-              const recordToWrite = options.recordFillStable
-                ? stripUnstableFillRecordFields(result.record)
-                : result.record;
-
-              if (ctx.dryRun) {
-                logInfo(ctx, `[DRY RUN] Would write fill record to: ${sidecarPath}`);
+              if (isEmptyFillRecord(result.record)) {
+                logVerbose(ctx, 'Skipping fill record: no turns were executed');
               } else {
-                writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
-                logSuccess(ctx, `Fill record written to: ${sidecarPath}`);
+                const sidecarPath = deriveFillRecordPath(outputPath);
+                const recordToWrite = options.recordFillStable
+                  ? stripUnstableFillRecordFields(result.record)
+                  : result.record;
+
+                if (ctx.dryRun) {
+                  logInfo(ctx, `[DRY RUN] Would write fill record to: ${sidecarPath}`);
+                } else {
+                  writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
+                  logSuccess(ctx, `Fill record written to: ${sidecarPath}`);
+                }
               }
             }
 
@@ -900,19 +904,24 @@ export function registerFillCommand(program: Command): void {
           }
 
           // Write FillRecord sidecar file if recordFill or recordFillStable is enabled
+          // Skip if no turns were executed (empty session)
           if (options.recordFill || options.recordFillStable) {
-            const sidecarPath = deriveFillRecordPath(outputPath);
-
-            // Strip unstable fields for golden tests
-            const recordToWrite = options.recordFillStable
-              ? stripUnstableFillRecordFields(fillRecord)
-              : fillRecord;
-
-            if (ctx.dryRun) {
-              logInfo(ctx, `[DRY RUN] Would write fill record to: ${sidecarPath}`);
+            if (isEmptyFillRecord(fillRecord)) {
+              logVerbose(ctx, 'Skipping fill record: no turns were executed');
             } else {
-              writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
-              logSuccess(ctx, `Fill record written to: ${sidecarPath}`);
+              const sidecarPath = deriveFillRecordPath(outputPath);
+
+              // Strip unstable fields for golden tests
+              const recordToWrite = options.recordFillStable
+                ? stripUnstableFillRecordFields(fillRecord)
+                : fillRecord;
+
+              if (ctx.dryRun) {
+                logInfo(ctx, `[DRY RUN] Would write fill record to: ${sidecarPath}`);
+              } else {
+                writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
+                logSuccess(ctx, `Fill record written to: ${sidecarPath}`);
+              }
             }
           }
 
@@ -977,15 +986,17 @@ export function registerFillCommand(program: Command): void {
               collector.setStatus('failed', message);
               const fillRecord = collector.getRecord(progressSummary.counts);
 
-              // Write sidecar file
-              const outputPath = resolve(options.output);
-              const sidecarPath = deriveFillRecordPath(outputPath);
-              const recordToWrite = options.recordFillStable
-                ? stripUnstableFillRecordFields(fillRecord)
-                : fillRecord;
+              // Skip if no turns were executed (empty session)
+              if (!isEmptyFillRecord(fillRecord)) {
+                const outputPath = resolve(options.output);
+                const sidecarPath = deriveFillRecordPath(outputPath);
+                const recordToWrite = options.recordFillStable
+                  ? stripUnstableFillRecordFields(fillRecord)
+                  : fillRecord;
 
-              writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
-              logWarn(ctx, `Partial fill record written to: ${sidecarPath}`);
+                writeFileSync(sidecarPath, JSON.stringify(recordToWrite, null, 2));
+                logWarn(ctx, `Partial fill record written to: ${sidecarPath}`);
+              }
             } catch {
               // Ignore errors writing partial record - the main error is more important
             }

@@ -394,6 +394,15 @@ export type StableFillRecord = Omit<
  * - toolSummary: call counts and success rates (without timing)
  * - execution: turn counts, parallel settings (deterministic)
  */
+/**
+ * Check if a fill record represents an empty session with no actual work.
+ * Returns true if the timeline has zero entries (no turns were executed).
+ * Used to skip writing .fill.json when no form-filling work was done.
+ */
+export function isEmptyFillRecord(record: FillRecord): boolean {
+  return record.timeline.length === 0;
+}
+
 export function stripUnstableFillRecordFields(record: FillRecord): StableFillRecord {
   // Strip timing from each tool's stats
   const stableByTool: StableToolStats[] = record.toolSummary.byTool.map((toolStats) => {
