@@ -1,7 +1,7 @@
 /**
  * CLI implementation for markform.
  *
- * Provides commands for inspecting, applying patches, exporting,
+ * Provides commands for inspecting, patching, exporting,
  * serving, and running harness loops on .form.md files.
  */
 
@@ -11,7 +11,7 @@ import pc from 'picocolors';
 import { CLI_VERSION } from './lib/cliVersion.js';
 import { DEFAULT_FORMS_DIR } from './lib/paths.js';
 import { registerApisCommand } from './commands/apis.js';
-import { registerApplyCommand } from './commands/apply.js';
+import { registerPatchCommand } from './commands/patch.js';
 import { registerBrowseCommand } from './commands/browse.js';
 import { registerDocsCommand } from './commands/docs.js';
 import { registerDumpCommand } from './commands/dump.js';
@@ -71,7 +71,7 @@ function createProgram(): Command {
   registerSpecCommand(program);
   registerApisCommand(program);
   // Rest alphabetical for help display
-  registerApplyCommand(program);
+  registerPatchCommand(program);
   registerBrowseCommand(program);
   registerDumpCommand(program);
   registerExamplesCommand(program);
