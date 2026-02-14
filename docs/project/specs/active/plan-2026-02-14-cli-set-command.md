@@ -356,7 +356,7 @@ Next fields to fill (5 issues):
 
 `set` is the single command for all auto-coerced value operations. It handles
 single-field (positional args), batch (`--values`), incremental (`--append`,
-`--delete-row`), and meta operations (`--clear`, `--skip`, `--abort`).
+`--delete`), and meta operations (`--clear`, `--skip`, `--abort`).
 
 ```
 markform set <file> [fieldId] [value] [options]
@@ -368,8 +368,8 @@ Arguments:
 
 Options:
   --values <json>         Batch set: JSON object of {fieldId: rawValue} pairs
-  --append <value>        Append to list or table (instead of replacing)
-  --delete-row <n>        Delete row at index from table (0-based)
+  --append <value>        Append item/row to a collection field
+  --delete <n>            Delete item/row at index (0-based) from a collection field
   -o, --output <file>     Output file (default: modify in place)
   --clear                 Clear the field value
   --skip                  Skip the field (marks as skipped)
@@ -419,16 +419,29 @@ kind. All examples assume the form file is `f.md`.
 
 #### Incremental operations (append and delete)
 
-These avoid read-modify-write for the caller. The CLI reads the current value, applies
-the change, and writes back as a single atomic operation.
+All incremental operations are backed by primitive patch ops added in Phase 0. The CLI
+`--append` and `--delete` flags map directly to these ops. Naming convention:
+`<verb>_<field_kind>` (e.g., `append_table`, `delete_string_list`).
 
-| Field Kind | Operation | CLI Example |
-|---|---|---|
-| `table` | Append row | `set f.md members --append '{"name":"Bob","role":"PM"}'` |
-| `table` | Append multiple rows | `set f.md members --append '[{"name":"Bob"},{"name":"Carol"}]'` |
-| `table` | Delete row (0-based) | `set f.md members --delete-row 0` |
-| `string_list` | Append item | `set f.md tags --append "perf"` |
-| `url_list` | Append item | `set f.md refs --append "https://c.com"` |
+**Patch operations for collections:**
+
+| Collection Kind | Set (replace all) | Append | Delete (by 0-based index) |
+|---|---|---|---|
+| `table` | `set_table` | `append_table` | `delete_table` |
+| `string_list` | `set_string_list` | `append_string_list` | `delete_string_list` |
+| `url_list` | `set_url_list` | `append_url_list` | `delete_url_list` |
+
+**CLI mapping:**
+
+| Field Kind | Operation | Patch Op | CLI Example |
+|---|---|---|---|
+| `table` | Append row | `append_table` | `set f.md members --append '{"name":"Bob","role":"PM"}'` |
+| `table` | Append multiple | `append_table` | `set f.md members --append '[{"name":"Bob"},{"name":"Carol"}]'` |
+| `table` | Delete row | `delete_table` | `set f.md members --delete 0` |
+| `string_list` | Append item | `append_string_list` | `set f.md tags --append "perf"` |
+| `string_list` | Delete item | `delete_string_list` | `set f.md tags --delete 2` |
+| `url_list` | Append item | `append_url_list` | `set f.md refs --append "https://c.com"` |
+| `url_list` | Delete item | `delete_url_list` | `set f.md refs --delete 0` |
 
 **Not supported for append/delete:**
 - Scalar fields (`string`, `number`, `url`, `date`, `year`) — no collection to modify
@@ -468,7 +481,7 @@ markform set f.md --values '{
 the programmatic `fillForm({ inputContext })` API.
 
 `--values` is mutually exclusive with positional `fieldId`/`value` args and with
-`--append`/`--delete-row`/`--clear`/`--skip`/`--abort`.
+`--append`/`--delete`/`--clear`/`--skip`/`--abort`.
 
 ---
 
@@ -609,7 +622,7 @@ markform next form.md --format json
 | Field guidance | Via `next` | Via `next` | None | Prompts | Harness prompts |
 | Batch support | Per-field | N fields | N patches | Per-field | N per turn |
 | Compound types | JSON arg | Raw JSON | Full JSON | Prompts | Harness |
-| Append/delete | `--append`, `--delete-row` | No | No | No | No |
+| Append/delete | `--append`, `--delete` | No | No | No | No |
 | Meta ops | `--clear/skip/abort` | No | Full patch | Skip prompts | Harness |
 | Completion check | `next` | `--report` | Separate inspect | Automatic | Automatic |
 | Best for | CLI agents | Bulk pre-fill | Power users | Humans | LLM filling |
@@ -751,6 +764,82 @@ markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
 
 ## Implementation Plan
 
+### Phase 0: New patch operations (append/delete for collections)
+
+Add `append_*` and `delete_*` as primitive patch operations for all collection types,
+following the same implementation pattern as `set_table`. Naming convention:
+`<verb>_<field_kind>`.
+
+**New patch operations:**
+
+| Op | Interface | Value |
+|---|---|---|
+| `append_table` | `AppendTablePatch` | `value: TableRowPatch \| TableRowPatch[]` (single or array of rows) |
+| `delete_table` | `DeleteTablePatch` | `index: number` (0-based row index) |
+| `append_string_list` | `AppendStringListPatch` | `value: string \| string[]` (single or array of items) |
+| `delete_string_list` | `DeleteStringListPatch` | `index: number` (0-based item index) |
+| `append_url_list` | `AppendUrlListPatch` | `value: string \| string[]` (single or array of URLs) |
+| `delete_url_list` | `DeleteUrlListPatch` | `index: number` (0-based item index) |
+
+These are prerequisites for `set --append` and `set --delete` CLI flags, but also usable
+directly via `apply --patch` and by the AI SDK tools / harness.
+
+**Changes per file (6 files, following `set_table` pattern):**
+
+`src/engine/coreTypes.ts`:
+- [ ] Add 6 new TypeScript interfaces (see table above)
+- [ ] Add all 6 to the `Patch` union type (~line 962)
+- [ ] Add 6 new Zod schemas (reuse `TableRowPatchSchema` for table ops,
+  `z.string()` for list ops, `z.number().int().min(0)` for all delete index fields)
+- [ ] Add all 6 to `PatchSchema` discriminated union (~line 1878)
+
+`src/engine/apply.ts`:
+- [ ] Add all 6 ops to `PATCH_OP_TO_FIELD_KIND` map (~line 53):
+  `append_table` → `'table'`, `delete_table` → `'table'`,
+  `append_string_list` → `'string_list'`, etc.
+- [ ] Add `else if` validation branches in `validatePatch()` (~line 393):
+  - `append_table`: validate value is row object or array of row objects, validate
+    column IDs against field schema
+  - `delete_table`: validate index is non-negative, validate in bounds of current table
+  - `append_string_list` / `append_url_list`: validate value is string or string array
+  - `delete_string_list` / `delete_url_list`: validate index is non-negative, in bounds
+- [ ] Add `case` branches in `applyPatch()` switch (~line 569):
+  - `append_table`: read current table rows from responses, append new row(s), write back
+  - `delete_table`: read current rows, splice out at index, write back
+  - `append_string_list` / `append_url_list`: read current list, append item(s), write back
+  - `delete_string_list` / `delete_url_list`: read current list, splice out at index,
+    write back
+
+`src/harness/prompts.ts`:
+- [ ] Add examples for new ops to `PATCH_FORMATS` map and `DEFAULT_SYSTEM_PROMPT`
+  (~line 108, ~line 45)
+- [ ] Update `getPatchFormatHint()` to handle new ops if needed (~line 150)
+
+`src/harness/toolApi.ts`:
+- [ ] Add all 6 new op names to `PATCH_OPERATIONS` array (~line 29)
+
+`src/cli/lib/patchFormat.ts`:
+- [ ] Add `case` for each new op in `formatPatchValue()` switch (~line 57)
+- [ ] Add `case` for each new op in `formatPatchType()` switch (~line 99)
+
+**Tests:**
+- [ ] Unit test: `append_table` appends row to empty table
+- [ ] Unit test: `append_table` appends row to table with existing rows
+- [ ] Unit test: `append_table` with array of rows appends all
+- [ ] Unit test: `append_table` validates column IDs (rejects unknown columns)
+- [ ] Unit test: `delete_table` removes correct row by index
+- [ ] Unit test: `delete_table` rejects out-of-bounds index
+- [ ] Unit test: `delete_table` on single-row table produces empty table
+- [ ] Unit test: `append_string_list` appends item to empty list
+- [ ] Unit test: `append_string_list` appends to existing list
+- [ ] Unit test: `append_string_list` with array appends all
+- [ ] Unit test: `delete_string_list` removes item at index
+- [ ] Unit test: `delete_string_list` rejects out-of-bounds index
+- [ ] Unit test: `append_url_list` / `delete_url_list` (same patterns as string_list)
+- [ ] Unit test: all new ops work through `applyPatches()` with best-effort semantics
+- [ ] Golden test: verify canonical markdown output after append/delete operations
+- [ ] CLI test: `apply --patch` with each new op
+
 ### Phase 1: `set` command (single-field and batch)
 
 - [ ] Add `parseCliValue(rawString)` utility to parse CLI value argument
@@ -759,8 +848,10 @@ markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
   - Parse `<fieldId>` and `<value>` args for single-field mode
   - Handle `--values` for batch mode (mutually exclusive with positional args)
   - Handle `--clear`, `--skip`, `--abort` flags with `--role` and `--reason`
-  - Handle `--append` for tables and lists (read-modify-write)
-  - Handle `--delete-row` for tables (read-modify-write)
+  - Handle `--append` for tables: generate `append_table` patch
+  - Handle `--append` for lists: generate `append_string_list` / `append_url_list` patch
+  - Handle `--delete` for tables: generate `delete_table` patch
+  - Handle `--delete` for lists: generate `delete_string_list` / `delete_url_list` patch
   - Call `coerceToFieldPatch()` for single-field value operations
   - Call `coerceInputContext()` for `--values` batch operations
   - Default to in-place modification; `-o` for different output file
@@ -771,7 +862,7 @@ markform fill form.md --model anthropic/claude-sonnet-4-5 --record-fill
 - [ ] Add CLI tests for `set` command — all value set operations (per comprehensive table)
 - [ ] Add CLI tests for `set --values` batch mode
 - [ ] Add CLI tests for `set --append` (table row, string_list item, url_list item)
-- [ ] Add CLI tests for `set --delete-row` (table)
+- [ ] Add CLI tests for `set --delete` (table row, string_list item, url_list item)
 - [ ] Add CLI tests for `set --clear`, `--skip`, `--abort`
 - [ ] Add CLI tests for `set` error cases (bad field ID, bad option, bad coercion)
 
@@ -838,9 +929,11 @@ markform set form.md team_members '[{"name":"Alice","role":"Eng"}]' -o /tmp/test
 **`set` command — incremental operations:**
 ```bash
 markform set form.md team_members --append '{"name":"Bob","role":"PM"}' -o /tmp/test.md
-markform set form.md team_members --delete-row 0 -o /tmp/test.md
+markform set form.md team_members --delete 0 -o /tmp/test.md
 markform set form.md tags --append "perf" -o /tmp/test.md
+markform set form.md tags --delete 1 -o /tmp/test.md
 markform set form.md references --append "https://c.com" -o /tmp/test.md
+markform set form.md references --delete 0 -o /tmp/test.md
 ```
 
 **`set` command — meta operations:**
@@ -861,6 +954,7 @@ markform set form.md nonexistent_field "value"  # -> field not found
 markform set form.md priority "invalid_option"  # -> lists valid options
 markform set form.md age "not_a_number"         # -> coercion error
 markform set form.md name --append "x"          # -> append not supported for string
+markform set form.md priority --delete 0       # -> delete not supported for single_select
 ```
 
 **`next` command:**

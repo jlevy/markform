@@ -876,7 +876,7 @@ Thin wrapper around the tool contract:
 
   - Meta operations: `--clear`, `--skip --reason "..."`, `--abort --reason "..."`
 
-  - Incremental: `--append` for tables/lists, `--delete-row` for tables
+  - Incremental: `--append` and `--delete` for tables and lists
 
   - Batch: `--values '{"name":"Alice","age":30}'` for multiple fields at once
 
