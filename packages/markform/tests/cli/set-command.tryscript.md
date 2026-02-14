@@ -189,6 +189,38 @@ Error: --delete requires a non-negative integer index, got "-1"
 ? 1
 ```
 
+# Test: set --delete on unsupported field type shows error
+
+```console
+$ $CLI set examples/simple/simple.form.md name --delete 0 2>&1
+Error: --delete is not supported for string fields (only table, string_list, url_list)
+? 1
+```
+
+# Test: set --values rejects non-object JSON
+
+```console
+$ $CLI set examples/simple/simple.form.md --values '"just a string"' 2>&1
+Error: --values must be a JSON object
+? 1
+```
+
+# Test: set type mismatch reports patch rejection
+
+```console
+$ $CLI set examples/simple/simple.form.md age "not_a_number" 2>&1
+Error: [..]
+? 1
+```
+
+# Test: set on nonexistent file shows error
+
+```console
+$ $CLI set /tmp/nonexistent-form-12345.form.md name "Alice" 2>&1
+Error: [..]
+? 1
+```
+
 ---
 
 ## Report Mode
