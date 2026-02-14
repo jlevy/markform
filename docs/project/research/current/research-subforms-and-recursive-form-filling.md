@@ -593,7 +593,7 @@ For tables, an explicit ref column:
 
 **Pros:**
 - Respects Markform's global-unique ID rule (each file is its own namespace)
-- Compatible with existing tool API (`inspect`/`apply`/`export` per form)
+- Compatible with existing tool API (`inspect`/`patch`/`export` per form)
 - Scales to many subforms without one enormous file
 - Avoids reinventing row identity inside Markform
 - Easy to parallelize—each subform is independent

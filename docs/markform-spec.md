@@ -2868,11 +2868,11 @@ This formula ensures:
 | Operation | CLI | AI SDK | MCP (MF/0.2) |
 | --- | --- | --- | --- |
 | inspect | `markform inspect` (prints YAML report) | `markform_inspect` | `markform.inspect` |
-| apply | `markform apply --patch` (raw typed patches) | `markform_apply` | `markform.apply` |
+| patch | `markform patch` (raw typed patches) | `markform_apply` | `markform.apply` |
 | set | `markform set` (auto-coerced value setting) | — | — |
 | next | `markform next` (next-field advisor) | — | — |
 | export | `markform export --format=json` | `markform_export` | `markform.export` |
-| getMarkdown | `markform apply` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
+| getMarkdown | `markform patch` (writes file) | `markform_get_markdown` | `markform.get_markdown` |
 | render | `markform render` (static HTML output) | — | — |
 | serve | `markform serve` (interactive web UI) | — | — |
 
@@ -3067,7 +3067,7 @@ This is the normal inspect/apply/fix workflow.
 
 **Patch conflict handling:**
 
-- Patches are applied in array order within a single `apply` call
+- Patches are applied in array order within a single `patch`/`applyPatches()` call
 
 - Later patches to the same field overwrite earlier ones (last-write-wins)
 

@@ -800,7 +800,7 @@ Thin wrapper around the tool contract:
   (structure summary, progress summary, form state, and all issues in priority order).
   This is the canonical way to check form status at any time.
 
-- `markform apply <file.form.md> --patch <json>` — apply patches, write canonical file
+- `markform patch <file.form.md> <json>` — apply raw typed patches, write canonical file
 
 - `markform export <file.form.md> --format=json` — print `{schema, values}`
 
@@ -882,7 +882,7 @@ Thin wrapper around the tool contract:
 
   - Default: modifies in-place; `-o` for different output file
 
-  - `--report` outputs JSON with apply status, progress, and issues
+  - `--report` outputs JSON with patch result status, progress, and issues
 
   - **Does not produce fill records** (stateless CLI operation)
 
@@ -906,7 +906,7 @@ Thin wrapper around the tool contract:
 | Command | What it does | Abstraction level |
 | --- | --- | --- |
 | `markform set` | Set values with auto-coercion | High — caller provides raw values |
-| `markform apply --patch` | Apply typed patch objects | Low — caller provides patch JSON |
+| `markform patch` | Apply typed patch objects | Low — caller provides patch JSON |
 
 **Fill record policy:** CLI form-filling commands (`set`, `next`) do not produce fill
 records. Fill records are exclusively for harness-driven filling via the `fill` command
@@ -1379,7 +1379,7 @@ Deliverable: `tests/goldenRunner.ts`
 
 ### 8) CLI
 
-`inspect`, `apply`, `export`, `render`, `serve`, `fill`
+`inspect`, `patch`, `set`, `next`, `export`, `render`, `serve`, `fill`
 
 Deliverable: `cli/commands/*`
 
@@ -1391,7 +1391,7 @@ Deliverable: `integrations/vercelAiSdkTools.ts`
 
 ### 10) MCP server mode (MF/0.2)
 
-MCP tools for inspect/apply/export using TS SDK, stdio transport
+MCP tools for inspect/patch/export using TS SDK, stdio transport
 
 Deliverable: `integrations/mcp.ts`
 

@@ -729,7 +729,7 @@ markform set form.md tableId --delete '[0, 2]'                # Delete rows by i
 markform next form.md                             # What field to fill next
 
 # Apply raw typed patches (low-level)
-markform apply form.md --patch '[{"op": "set_string", "fieldId": "name", "value": "Alice"}]'
+markform patch form.md '[{"op": "set_string", "fieldId": "name", "value": "Alice"}]'
 
 # Fill forms (harness-driven sessions)
 markform fill form.md --interactive              # Interactive prompts for user fields

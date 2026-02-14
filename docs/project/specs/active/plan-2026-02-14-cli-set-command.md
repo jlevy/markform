@@ -34,7 +34,7 @@ uses, but decomposed into independent CLI calls that the agent orchestrates.
 
 ## Non-Goals
 
-- Replacing `apply --patch` (it remains for full control over typed patches)
+- Replacing the `patch` command (it remains for full control over typed patches)
 - Interactive TTY prompts (that's `fill --interactive`)
 - LLM-based filling (that's `fill --model`)
 - File locking or distributed coordination (last-write-wins is acceptable)
@@ -107,7 +107,7 @@ on a shared session store:
 | Tool | Purpose | Maps to CLI... |
 |---|---|---|
 | `markform_inspect` | Get structure, progress, issues, completion | `inspect --format json` |
-| `markform_apply` | Apply typed patches (1-20) | `apply --patch` |
+| `markform_apply` | Apply typed patches (1-20) | `patch` |
 | `markform_export` | Export schema + values as JSON | `inspect --format json` (values section) |
 | `markform_get_markdown` | Get canonical markdown | `cat form.md` |
 
@@ -146,7 +146,7 @@ This is useful but lacks:
 |---|---|---|
 | `fill --interactive` | TTY, human at keyboard | No |
 | `fill --model <id>` | LLM API key, full harness | Overkill for known values |
-| `apply --patch '<json>'` | Knowledge of patch ops, JSON construction | Functional but brittle |
+| `patch '<json>'` | Knowledge of patch ops, JSON construction | Functional but brittle |
 | Programmatic `fillForm()` | TypeScript runtime | Yes, but not CLI |
 | AI SDK tools | Vercel AI SDK runtime | Yes, but not CLI |
 | **`set` (proposed)** | Just field ID + value | **Yes** |
@@ -381,13 +381,13 @@ Options:
   --normalize             Regenerate form without preserving external content
 ```
 
-**Design principle:** `set` owns all auto-coerced operations. `apply --patch` remains
+**Design principle:** `set` owns all auto-coerced operations. `patch` remains
 for raw typed patches. No overlap, no confusion.
 
 | Command | What it does | Abstraction level |
 |---|---|---|
 | `markform set` | Set values with auto-coercion | High — caller provides raw values |
-| `markform apply --patch` | Apply typed patch objects | Low — caller provides patch JSON |
+| `markform patch` | Apply typed patch objects | Low — caller provides patch JSON |
 
 ---
 
@@ -459,7 +459,7 @@ All incremental operations are backed by primitive patch ops added in Phase 0. T
 | Abort | `set f.md score --abort --reason "Unavailable"` | Any field; blocks form completion |
 
 `add_note`/`remove_note` are excluded from `set` because they operate on form elements
-(not just fields) and use `ref`/`noteId` rather than `fieldId`. Use `apply --patch` for
+(not just fields) and use `ref`/`noteId` rather than `fieldId`. Use `markform patch` for
 note operations.
 
 #### Batch mode
@@ -617,7 +617,7 @@ markform next form.md --format json
 
 ### Comparison: All CLI form-filling approaches
 
-| Aspect | `set` (single) | `set --values` (batch) | `apply --patch` | `fill --interactive` | `fill --model` |
+| Aspect | `set` (single) | `set --values` (batch) | `patch` | `fill --interactive` | `fill --model` |
 |---|---|---|---|---|---|
 | Agent-friendly | Yes | Yes | Yes (verbose) | No (TTY) | N/A (autonomous) |
 | Type knowledge | None | None | Full | None | None |
@@ -641,7 +641,7 @@ different observability needs. The design draws a clear boundary:
 | Path | Produces FillRecord? | Writes `.fill.json`? |
 |---|---|---|
 | `markform set` (any mode) | No | No |
-| `markform apply --patch` | No | No |
+| `markform patch` | No | No |
 | `markform next` | No (read-only) | No |
 | `markform fill --model` (harness) | Yes (always, for summary) | Only with `--record-fill` |
 | Programmatic `fillForm()` | Yes (if `recordFill: true`) | Caller's responsibility |
@@ -784,7 +784,7 @@ following the same implementation pattern as `set_table`. Naming convention:
 | `delete_url_list` | `DeleteUrlListPatch` | `index: number` (0-based item index) |
 
 These are prerequisites for `set --append` and `set --delete` CLI flags, but also usable
-directly via `apply --patch` and by the AI SDK tools / harness.
+directly via `markform patch` and by the AI SDK tools / harness.
 
 **Changes per file (6 files, following `set_table` pattern):**
 
@@ -840,7 +840,7 @@ directly via `apply --patch` and by the AI SDK tools / harness.
 - [ ] Unit test: `append_url_list` / `delete_url_list` (same patterns as string_list)
 - [ ] Unit test: all new ops work through `applyPatches()` with best-effort semantics
 - [ ] Golden test: verify canonical markdown output after append/delete operations
-- [ ] CLI test: `apply --patch` with each new op
+- [ ] CLI test: `patch` with each new op
 
 ### Phase 1: `set` command (single-field and batch)
 
@@ -994,7 +994,7 @@ markform next /tmp/e2e.md --format json  # verify is_complete: true
    respected regardless of whether the form is filled via CLI or harness.
 
 3. **Should `set --report` output enriched issues like `next`?**
-   **No.** `set --report` outputs the basic `apply` report (apply_status, progress,
+   **No.** `set --report` outputs the basic patch result report (apply_status, progress,
    issues as flat list). Use `next` for the enriched view with field metadata and
    examples. Keeps each command focused: `set` mutates, `next` advises.
 
@@ -1003,10 +1003,10 @@ markform next /tmp/e2e.md --format json  # verify is_complete: true
    one-shot commands with no session/turn/LLM data. The form file is the audit trail.
    Fill records are exclusively for harness-driven filling.
 
-5. **Why is batch set on `set --values` (not `apply`)?**
+5. **Why is batch set on `set --values` (not `patch`)?**
    **`set --values`.** Both single-field and batch modes do the same thing (auto-coerced
-   value setting). They belong on the same command. `apply` stays focused on raw typed
-   patches via `--patch`. No overlap, no confusion.
+   value setting). They belong on the same command. `patch` stays focused on raw typed
+   patches. No overlap, no confusion.
 
 ## References
 
@@ -1018,6 +1018,6 @@ markform next /tmp/e2e.md --format json  # verify is_complete: true
 - `packages/markform/src/engine/inspect.ts` — inspect(), priority scoring
 - `packages/markform/src/engine/coreTypes.ts` — Patch types, StepResult, HarnessConfig
 - `packages/markform/src/integrations/vercelAiSdkTools.ts` — AI SDK tool patterns
-- `packages/markform/src/cli/commands/apply.ts` — existing apply command
+- `packages/markform/src/cli/commands/apply.ts` — existing apply command (to be renamed to `patch.ts`)
 - `packages/markform/src/cli/commands/inspect.ts` — existing inspect command
 - `packages/markform/src/cli/commands/fill.ts` — interactive and agent fill
