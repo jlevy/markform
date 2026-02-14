@@ -159,6 +159,16 @@ export function registerSetCommand(program: Command): void {
               logError('Cannot use --values with positional fieldId/value arguments');
               process.exit(1);
             }
+            if (
+              options.clear ||
+              options.skip ||
+              options.abort ||
+              options.append !== undefined ||
+              options.delete !== undefined
+            ) {
+              logError('Cannot use --values with --clear, --skip, --abort, --append, or --delete');
+              process.exit(1);
+            }
 
             let inputContext: InputContext;
             try {
@@ -188,8 +198,16 @@ export function registerSetCommand(program: Command): void {
             logError('Either <fieldId> or --values is required');
             process.exit(1);
           } else if (options.clear) {
+            if (!findFieldById(form, fieldId)) {
+              logError(`Field "${fieldId}" not found in form`);
+              process.exit(1);
+            }
             patches = [{ op: 'clear_field', fieldId }];
           } else if (options.skip) {
+            if (!findFieldById(form, fieldId)) {
+              logError(`Field "${fieldId}" not found in form`);
+              process.exit(1);
+            }
             patches = [
               {
                 op: 'skip_field',
@@ -199,6 +217,10 @@ export function registerSetCommand(program: Command): void {
               },
             ];
           } else if (options.abort) {
+            if (!findFieldById(form, fieldId)) {
+              logError(`Field "${fieldId}" not found in form`);
+              process.exit(1);
+            }
             patches = [
               {
                 op: 'abort_field',

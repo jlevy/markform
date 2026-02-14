@@ -72,11 +72,11 @@ markform set form.md age 30
 # Single select (by option ID)
 markform set form.md rating high
 
-# Multi select (comma-separated option IDs)
-markform set form.md categories "frontend,backend"
+# Multi select (JSON array of option IDs)
+markform set form.md categories '["frontend","backend"]'
 
-# Checkboxes (set individual items)
-markform set form.md tasks.research done
+# Checkboxes (JSON object of {itemId: value})
+markform set form.md tasks '{"research":"done","testing":"done"}'
 
 # Table (append rows as JSON)
 markform set form.md team --append '[{"name": "Alice", "title": "Engineer"}]'

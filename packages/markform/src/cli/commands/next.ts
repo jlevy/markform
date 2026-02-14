@@ -320,6 +320,16 @@ export function registerNextCommand(program: Command): void {
           // Parse numeric options
           const maxFields = options.maxFields ? parseInt(options.maxFields, 10) : undefined;
           const maxGroups = options.maxGroups ? parseInt(options.maxGroups, 10) : undefined;
+          const maxIssuesParsed = options.maxIssues ? parseInt(options.maxIssues, 10) : undefined;
+
+          if (
+            (maxFields !== undefined && isNaN(maxFields)) ||
+            (maxGroups !== undefined && isNaN(maxGroups)) ||
+            (maxIssuesParsed !== undefined && isNaN(maxIssuesParsed))
+          ) {
+            logError('--max-fields, --max-groups, and --max-issues must be numeric');
+            process.exit(1);
+          }
 
           logVerbose(ctx, `Reading file: ${file}`);
           const content = await readFile(file);
@@ -329,9 +339,8 @@ export function registerNextCommand(program: Command): void {
 
           // Read harness config from frontmatter for defaults
           const harnessConfig = form.metadata?.harnessConfig;
-          const effectiveMaxIssues = options.maxIssues
-            ? parseInt(options.maxIssues, 10)
-            : (harnessConfig?.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES);
+          const effectiveMaxIssues =
+            maxIssuesParsed ?? harnessConfig?.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES;
           const effectiveMaxFields = maxFields ?? undefined;
           const effectiveMaxGroups = maxGroups ?? undefined;
 
