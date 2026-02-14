@@ -311,6 +311,9 @@ export interface FillCallbacks {
   /** Called when a turn completes */
   onTurnComplete?(progress: TurnProgress): void;
 
+  /** Called when a fill turn fails due to an agent or provider error */
+  onError?(error: Error, context: { turnNumber: number }): void;
+
   /** Called before a tool executes */
   onToolStart?(call: {
     name: string;
@@ -548,11 +551,12 @@ export interface TurnProgress {
  * - `max_turns` - Hit overall maxTurnsTotal safety limit
  * - `batch_limit` - Hit maxTurnsThisCall per-call limit (resume by calling again)
  * - `cancelled` - Aborted via signal
- * - `error` - Unexpected error
+ * - `error` - Unexpected error (`error` carries the original Error when available)
  */
 export type FillStatus =
   | { ok: true }
-  | { ok: false; reason: 'max_turns' | 'batch_limit' | 'cancelled' | 'error'; message?: string };
+  | { ok: false; reason: 'max_turns' | 'batch_limit' | 'cancelled'; message?: string }
+  | { ok: false; reason: 'error'; message?: string; error?: Error };
 
 /**
  * Result of the fillForm operation.
