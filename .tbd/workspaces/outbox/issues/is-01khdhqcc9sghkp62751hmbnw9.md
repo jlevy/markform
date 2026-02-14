@@ -11,6 +11,6 @@ priority: 1
 status: closed
 title: "Golden test: multi-turn CLI form filling session (set/next end-to-end)"
 type: is
-updated_at: 2026-02-14T09:11:16.120Z
-version: 3
+updated_at: 2026-02-14T18:53:46.133Z
+version: 4
 ---

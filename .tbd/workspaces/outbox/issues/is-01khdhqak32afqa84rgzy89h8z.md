@@ -13,6 +13,6 @@ priority: 1
 status: closed
 title: "Phase 0: Add 6 append/delete patch ops for collections"
 type: is
-updated_at: 2026-02-14T08:09:03.060Z
-version: 4
+updated_at: 2026-02-14T18:53:46.109Z
+version: 5
 ---
