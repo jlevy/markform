@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.24
+
+### Patch Changes
+
+- a048f20: CLI form-filling commands (set, next, patch), append/delete patch ops, Claude Code skill integration, fill record improvements, and test coverage enhancements
+
 ## 0.1.23
 
 ### Patch Changes
