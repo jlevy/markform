@@ -54,6 +54,7 @@ Commands:
   fill [options] <file>                   Run an agent to autonomously fill a form
   inspect [options] <file>                Inspect a form and display its structure, progress, and issues
   models [options]                        List available AI providers and example models
+  next [options] <file>                   Show prioritized next fields to fill (field advisor for CLI form filling)
   plan <file>                             Show the idealized execution plan for a form (parallel batches, order levels)
   render [options] <file>                 Render a form as static HTML output
   report [options] <file>                 Generate filtered markdown report (excludes instructions, report=false elements)
