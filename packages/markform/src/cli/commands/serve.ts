@@ -99,7 +99,7 @@ function openBrowser(url: string): void {
 // =============================================================================
 
 /** Represents a tab for navigation */
-interface Tab {
+export interface Tab {
   id: 'view' | 'form' | 'source' | 'report' | 'values' | 'schema' | 'fill-record';
   label: string;
   path: string | null; // Source file path (for source tab) or null for dynamically generated
@@ -108,16 +108,16 @@ interface Tab {
 /**
  * Build tabs for a form file.
  * All tabs are always present - content is generated dynamically from the form.
- * Tab order: View, Edit, Source, Report, Values, Schema, Fill Record (if sidecar exists)
+ * Tab order: Form, Report, Edit, Source, Values, Schema, Fill Record (if sidecar exists)
  */
-function buildFormTabs(formPath: string): Tab[] {
+export function buildFormTabs(formPath: string): Tab[] {
   const tabs: Tab[] = [
-    { id: 'view', label: 'View', path: null }, // Generated from form
+    { id: 'view', label: 'Form', path: null }, // Rendered form view
+    { id: 'report', label: 'Report', path: null }, // Clean report (no instructions)
     { id: 'form', label: 'Edit', path: formPath }, // Interactive editor
     { id: 'source', label: 'Source', path: formPath }, // Form source
-    { id: 'report', label: 'Report', path: null }, // Generated from form
-    { id: 'values', label: 'Values', path: null }, // Generated from form
-    { id: 'schema', label: 'Schema', path: null }, // Generated from form
+    { id: 'values', label: 'Values', path: null }, // Exported values as YAML
+    { id: 'schema', label: 'Schema', path: null }, // JSON Schema
   ];
 
   // Add Fill Record tab if sidecar file exists
@@ -1147,10 +1147,10 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
               if (response.ok) {
                 tabCache[tabId] = await response.text();
               } else {
-                tabCache[tabId] = '<div class="error">Failed to load content</div>';
+                tabCache[tabId] = '<div class="error">No content available for this tab.</div>';
               }
             } catch (err) {
-              tabCache[tabId] = '<div class="error">Failed to load content</div>';
+              tabCache[tabId] = '<div class="error">No content available for this tab.</div>';
             }
           }
           tabViewContent.innerHTML = tabCache[tabId];
@@ -1167,10 +1167,10 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
               if (response.ok) {
                 tabCache[tabId] = await response.text();
               } else {
-                tabCache[tabId] = '<div class="error">Failed to load content</div>';
+                tabCache[tabId] = '<div class="error">No content available for this tab.</div>';
               }
             } catch (err) {
-              tabCache[tabId] = '<div class="error">Failed to load content</div>';
+              tabCache[tabId] = '<div class="error">No content available for this tab.</div>';
             }
           }
           tabOtherContent.innerHTML = tabCache[tabId];
@@ -1178,20 +1178,30 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
       }
     }
 
+    // Navigate to a tab by id, updating the button state and hash
+    async function navigateToTab(tabId) {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      const btn = document.querySelector('[data-tab="' + tabId + '"]');
+      if (btn) btn.classList.add('active');
+      location.hash = tabId;
+      await showTab(tabId);
+    }
+
     tabButtons.forEach(btn => {
       btn.addEventListener('click', async () => {
-        const tabId = btn.dataset.tab;
-
-        // Update active button
-        tabButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        await showTab(tabId);
+        await navigateToTab(btn.dataset.tab);
       });
     });
 
-    // Load View tab on page load (it's the default tab)
-    showTab('view');
+    // Handle hash-based navigation (back/forward, direct URL)
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.slice(1);
+      if (hash) navigateToTab(hash);
+    });
+
+    // Load initial tab from hash or default to Form (view) tab
+    const initialTab = window.location.hash.slice(1) || 'view';
+    navigateToTab(initialTab);
 
     // URL copy tooltip functionality - initialize once
     (function initUrlCopyTooltip() {

@@ -916,7 +916,12 @@ function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): Documentat
         }
       }
       if (node.children && Array.isArray(node.children)) {
-        for (const child of node.children) {
+        for (let ci = 0; ci < node.children.length; ci++) {
+          const child = node.children[ci]!;
+          // Add paragraph breaks between block-level children (e.g., paragraphs)
+          if (ci > 0 && child.type === 'paragraph') {
+            bodyMarkdown += '\n\n';
+          }
           extractText(child);
         }
       }

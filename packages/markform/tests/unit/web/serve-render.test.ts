@@ -16,6 +16,7 @@ import {
   renderJsonContent,
   renderViewContent,
   renderSourceContent,
+  buildFormTabs,
 } from '../../../src/cli/commands/serve.js';
 
 // Helper to check if HTML contains an element with attributes (unused but kept for future use)
@@ -44,6 +45,32 @@ import {
 //   return match ? match[1] : null;
 // }
 
+describe('buildFormTabs', () => {
+  it('should use "Form" label for view tab and place Report second', () => {
+    const tabs = buildFormTabs('/tmp/test.form.md');
+    const labels = tabs.map((t) => t.label);
+    const ids = tabs.map((t) => t.id);
+
+    expect(tabs).toHaveLength(6);
+
+    // View tab renamed to "Form"
+    expect(ids[0]).toBe('view');
+    expect(labels[0]).toBe('Form');
+
+    // Report should be second
+    expect(ids[1]).toBe('report');
+    expect(labels[1]).toBe('Report');
+
+    // Edit third
+    expect(ids[2]).toBe('form');
+    expect(labels[2]).toBe('Edit');
+
+    // Full order
+    expect(ids).toEqual(['view', 'report', 'form', 'source', 'values', 'schema']);
+    expect(labels).toEqual(['Form', 'Report', 'Edit', 'Source', 'Values', 'Schema']);
+  });
+});
+
 describe('serve HTML rendering', () => {
   describe('tab bar rendering', () => {
     const formContent = `---
@@ -62,7 +89,8 @@ markform:
 
       // Should not have the actual tab-bar div (CSS class definitions are always present)
       expect(html).not.toContain('<div class="tab-bar">');
-      expect(html).not.toContain('data-tab=');
+      // No tab buttons should be rendered (data-tab= may appear in JS code)
+      expect(html).not.toContain('<button class="tab-btn');
     });
 
     it('should not render tab bar with single tab', () => {
@@ -76,7 +104,8 @@ markform:
     it('should render tab bar with multiple tabs', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
+        { id: 'report' as const, label: 'Report', path: null },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
@@ -85,9 +114,11 @@ markform:
       expect(html).toContain('tab-bar');
       expect(html).toContain('tab-btn');
       expect(html).toContain('data-tab="view"');
+      expect(html).toContain('data-tab="report"');
       expect(html).toContain('data-tab="form"');
       expect(html).toContain('data-tab="values"');
-      expect(html).toContain('>View</button>');
+      expect(html).toContain('>Form</button>');
+      expect(html).toContain('>Report</button>');
       expect(html).toContain('>Edit</button>');
       expect(html).toContain('>Values</button>');
     });
@@ -95,7 +126,7 @@ markform:
     it('should mark first tab as active', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'report' as const, label: 'Report', path: '/test.report.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
@@ -109,7 +140,7 @@ markform:
     it('should include tab content containers', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
@@ -124,7 +155,7 @@ markform:
     it('should include tab switching JavaScript', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
@@ -134,6 +165,37 @@ markform:
       expect(html).toContain('tabCache');
       expect(html).toContain('/tab/');
       expect(html).toContain('showTab');
+    });
+
+    it('should show informative message when tab content is unavailable', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
+        { id: 'report' as const, label: 'Report', path: null },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      // Should show a descriptive "no data" message instead of generic error
+      expect(html).toContain('No content available');
+      expect(html).not.toContain('Failed to load content');
+    });
+
+    it('should include hash route support for tabs', () => {
+      const form = parseForm(formContent);
+      const tabs = [
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
+        { id: 'report' as const, label: 'Report', path: null },
+        { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
+      ];
+      const html = renderFormHtml(form, tabs);
+
+      // Should set hash on tab click
+      expect(html).toContain('location.hash');
+      // Should read hash on page load
+      expect(html).toContain('window.location.hash');
+      // Should listen for hashchange
+      expect(html).toContain('hashchange');
     });
   });
 
@@ -151,7 +213,7 @@ markform:
     it('should include CSS classes for syntax highlighting in tabbed forms', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'values' as const, label: 'Values', path: '/test.yml' },
       ];
@@ -168,7 +230,7 @@ markform:
     it('should include Jinja/MarkDoc syntax highlighting CSS classes', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'source' as const, label: 'Source', path: '/test.form.md' },
       ];
@@ -183,7 +245,7 @@ markform:
     it('should include markdown content styles in tabbed forms', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
         { id: 'report' as const, label: 'Report', path: '/test.report.md' },
       ];
@@ -200,7 +262,7 @@ markform:
     it('should include View tab content styles', () => {
       const form = parseForm(formContent);
       const tabs = [
-        { id: 'view' as const, label: 'View', path: '/test.form.md' },
+        { id: 'view' as const, label: 'Form', path: '/test.form.md' },
         { id: 'form' as const, label: 'Edit', path: '/test.form.md' },
       ];
       const html = renderFormHtml(form, tabs);
