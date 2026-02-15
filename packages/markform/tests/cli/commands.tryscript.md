@@ -6,12 +6,11 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Markform CLI Command Tests
 
 This file tests all Markform CLI commands for correct output and exit codes.
 
----
+* * *
 
 ## Global Options
 
@@ -94,7 +93,7 @@ Getting Started:
 ? 0
 ```
 
----
+* * *
 
 ## Inspection Commands
 
@@ -194,7 +193,7 @@ optional_year: (unanswered)
 ? 0
 ```
 
----
+* * *
 
 ## Documentation Commands
 
@@ -204,7 +203,7 @@ optional_year: (unanswered)
 $ $CLI readme | head -5
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)][..]
+[![Follow @ojoshe on X][..]][..]
 ...
 ? 0
 ```
@@ -226,7 +225,7 @@ Forms render cleanly on GitHub since structure is hidden in comments.
 ? 0
 ```
 
----
+* * *
 
 ## Export Commands
 
@@ -269,7 +268,7 @@ $ $CLI schema examples/simple/simple.form.md | head -10
 ? 0
 ```
 
----
+* * *
 
 ## Utility Commands
 
@@ -293,7 +292,7 @@ anthropic/
 ? 0
 ```
 
----
+* * *
 
 ## Report Command
 
@@ -329,7 +328,7 @@ Generate filtered markdown report (excludes instructions, report=false elements)
 ? 0
 ```
 
----
+* * *
 
 ## Render Command
 
@@ -352,7 +351,7 @@ $ $CLI render examples/simple/simple.form.md --dry-run
 ? 0
 ```
 
----
+* * *
 
 ## Spec Command
 
@@ -373,7 +372,7 @@ humans.
 ? 0
 ```
 
----
+* * *
 
 ## APIs Command
 
@@ -388,7 +387,7 @@ programmatically.
 ? 0
 ```
 
----
+* * *
 
 ## Validate Command --syntax Option
 

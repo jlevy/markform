@@ -454,7 +454,7 @@ flowchart LR
         subgraph ENGINE["<b>CORE TYPESCRIPT APIS</b><br/>Markdoc parser, serializer,<br/>patch application,<br/>validation (jiti for rules)"]
         end
 
-        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing<br/>(.session.yaml transcripts)"]
+        subgraph PARSER["<b>PARSER</b><br/>Markform language<br/>parser/serializer"]
         end
 
         CLI --> ENGINE
@@ -462,7 +462,7 @@ flowchart LR
         AGENT --> HARNESS
         AGENT --> ENGINE
         HARNESS --> ENGINE
-        ENGINE --> TEST
+        ENGINE --> PARSER
     end
 
     SPEC ~~~ IMPL
@@ -477,7 +477,7 @@ flowchart LR
     style CLI fill:#ffe8cc,stroke:#fb8500
     style AGENT fill:#ffe8cc,stroke:#fb8500
     style HARNESS fill:#ffe8cc,stroke:#fb8500
-    style TEST fill:#ffe8cc,stroke:#fb8500
+    style PARSER fill:#ffe8cc,stroke:#fb8500
 ```
 
 ## CLI Commands
