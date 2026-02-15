@@ -604,6 +604,34 @@ describe('fillForm', () => {
         expect(result.status.message).toContain('Model resolution error');
       }
     });
+
+    it('preserves Error object when provider resolution throws', async () => {
+      const thrownError = new Error('custom provider failed');
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'custom/test-model',
+        providers: {
+          custom: {
+            model() {
+              throw thrownError;
+            },
+          },
+        },
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.message).toContain('Model resolution error');
+        expect(result.status.error).toBeInstanceOf(Error);
+        expect(result.status.error?.message).toContain('custom provider failed');
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
   });
 
   describe('fill modes', () => {
@@ -1022,6 +1050,45 @@ Strong company
         expect(result.status.reason).toBe('cancelled');
       }
     });
+
+    it('fires onError callback when agent throws in parallel mode', async () => {
+      const thrownError = new Error('parallel fill failure');
+      const callbackErrors: Error[] = [];
+      const callbackTurns: number[] = [];
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        inputContext: {
+          company_name: 'Acme Corp',
+          overall: 'Prefilled summary',
+        },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError(error, context) {
+            callbackErrors.push(error);
+            callbackTurns.push(context.turnNumber);
+          },
+        },
+      });
+
+      // The fill should fail (form incomplete due to errors)
+      expect(result.status.ok).toBe(false);
+
+      // onError callback should have fired for each parallel item that threw
+      expect(callbackErrors.length).toBeGreaterThan(0);
+      expect(callbackErrors.every((e) => e === thrownError)).toBe(true);
+    });
   });
 
   describe('fill record on errors', () => {
@@ -1207,6 +1274,255 @@ Strong company
         recordFill: false,
       });
       expect(result.status.ok).toBe(true);
+    });
+  });
+
+  describe('error object preservation', () => {
+    it('preserves Error object in FillStatus when agent throws', async () => {
+      const cause = new SyntaxError('Unexpected token at position 0');
+      const thrownError = new Error('API call failed: HTTP 200', { cause });
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.message).toContain('API call failed');
+        // The original Error object is preserved with its cause chain
+        expect(result.status.error).toBe(thrownError);
+        expect(result.status.error?.cause).toBe(cause);
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
+
+    it('sets error to undefined when agent throws non-Error', async () => {
+      const errorAgent = {
+        fillFormTool() {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw 'string error';
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.message).toBe('string error');
+        expect(result.status.error).toBeUndefined();
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
+
+    it('preserves Error object for form parse errors', async () => {
+      const result = await fillForm({
+        form: 'not valid markform content {{{{',
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.message).toContain('Form parse error');
+        // Parse errors produce an Error instance
+        expect(result.status.error).toBeInstanceOf(Error);
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
+  });
+
+  describe('onError callback', () => {
+    it('fires onError callback when agent throws an Error', async () => {
+      const thrownError = new Error('Rate limit exceeded');
+      let callbackError: Error | undefined;
+      let callbackContext: { turnNumber: number } | undefined;
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError(error, context) {
+            callbackError = error;
+            callbackContext = context;
+          },
+        },
+      });
+
+      expect(callbackError).toBe(thrownError);
+      expect(callbackContext).toEqual({ turnNumber: 1 });
+    });
+
+    it('does not fire onError callback when agent throws non-Error', async () => {
+      let callbackFired = false;
+
+      const errorAgent = {
+        fillFormTool() {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw 'string error';
+        },
+      };
+
+      await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError() {
+            callbackFired = true;
+          },
+        },
+      });
+
+      // onError should not fire for non-Error thrown values
+      expect(callbackFired).toBe(false);
+    });
+
+    it('onError callback exceptions are caught and do not affect fill result', async () => {
+      const thrownError = new Error('API error');
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError() {
+            throw new Error('callback bug');
+          },
+        },
+      });
+
+      // Fill result should still be returned correctly despite callback throwing
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.error).toBe(thrownError);
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
+
+    it('fires onError with correct turnNumber on second turn failure', async () => {
+      let callCount = 0;
+      let callbackTurnNumber: number | undefined;
+
+      const partialErrorAgent = {
+        fillFormTool() {
+          callCount++;
+          if (callCount === 1) {
+            return Promise.resolve({
+              patches: [{ op: 'set_number' as const, fieldId: 'age', value: 25 }],
+            });
+          }
+          throw new Error('Second turn failure');
+        },
+      };
+
+      await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        maxIssuesPerTurn: 1,
+        _testAgent: partialErrorAgent,
+        callbacks: {
+          onError(_error, context) {
+            callbackTurnNumber = context.turnNumber;
+          },
+        },
+      });
+
+      // Error happened on the second turn
+      expect(callbackTurnNumber).toBe(2);
+    });
+
+    it('fires onError callback when recordFill is enabled (mergeCallbacks path)', async () => {
+      const thrownError = new Error('API failure with recording');
+      let callbackError: Error | undefined;
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true, // This triggers mergeCallbacks
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError(error) {
+            callbackError = error;
+          },
+        },
+      });
+
+      // onError should fire even when recordFill is enabled
+      expect(callbackError).toBe(thrownError);
+
+      // Result should still have the error and record
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.error).toBe(thrownError);
+      } else {
+        throw new Error('Expected error status');
+      }
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('failed');
     });
   });
 });

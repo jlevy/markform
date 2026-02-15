@@ -239,8 +239,8 @@ const result = await fillForm({
 **Behavior:**
 - `enableParallel: false` (default): All fields filled serially, `parallel` attributes
   ignored. The `order` attribute still controls issue filtering.
-- `enableParallel: true`: Batch items run concurrently (up to `maxParallelAgents`).
-  Each agent runs a multi-turn loop with rejection feedback, same as the serial path.
+- `enableParallel: true`: Batch items run concurrently (up to `maxParallelAgents`). Each
+  agent runs a multi-turn loop with rejection feedback, same as the serial path.
 - If the form has no `parallel` batches, falls back to serial automatically.
 - `FillResult` shape is identical regardless of serial or parallel execution.
 
@@ -255,6 +255,16 @@ The `status` field in `FillResult` indicates success or failure:
 | `{ ok: false, reason: 'batch_limit' }` | Hit `maxTurnsThisCall` per-call limit |
 | `{ ok: false, reason: 'cancelled' }` | Aborted via signal |
 | `{ ok: false, reason: 'error' }` | Unexpected error |
+
+When `ok` is `false`, the status also includes:
+
+- `message?: string` — Human-readable error description
+- `error?: Error` — The original Error object with its full cause chain preserved (when
+  the caught value was an Error instance).
+  For `MarkformLlmError` instances, this carries `.statusCode`, `.responseBody`,
+  `.provider`, `.model`, and `.retryable` properties.
+  Not serialized into FillRecord — use for in-memory diagnostics and real-time error
+  handling.
 
 ### Resumable Form Fills
 
@@ -351,6 +361,7 @@ await fillForm({
 | `onLlmCallStart` | `{ model }` | Called before an LLM request |
 | `onLlmCallEnd` | `{ model, inputTokens, outputTokens }` | Called after an LLM response |
 | `onWebSearch` | `{ query, resultCount, provider }` | Called when a web search is performed |
+| `onError` | `(error: Error, { turnNumber })` | Called when an error occurs during the fill loop |
 
 **TurnProgress fields:**
 
@@ -376,8 +387,9 @@ interface PatchRejection {
 
 ### FillRecord
 
-When `recordFill: true`, the `FillResult.record` contains a complete record of everything
-that happened during the fill operation. Useful for cost analysis, debugging, and auditing.
+When `recordFill: true`, the `FillResult.record` contains a complete record of
+everything that happened during the fill operation.
+Useful for cost analysis, debugging, and auditing.
 
 ```typescript
 const result = await fillForm({
@@ -503,10 +515,10 @@ interface HeadingInfo {
 
 ### findEnclosingHeadings(markdown: string, line: number): HeadingInfo[]
 
-Find all headings that enclose a given line position. Returns headings from innermost
-(most specific) to outermost (least specific).
+Find all headings that enclose a given line position.
+Returns headings from innermost (most specific) to outermost (least specific).
 
-A heading "encloses" a line if the heading appears before the line and no heading of
+A heading “encloses” a line if the heading appears before the line and no heading of
 equal or higher level appears between them.
 
 ### findAllCheckboxes(markdown: string): CheckboxInfo[]
