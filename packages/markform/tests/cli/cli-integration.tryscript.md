@@ -231,6 +231,11 @@ Available examples:
     Fully interactive demo - no LLM required. Demonstrates all Markform field types.
     Source: ./examples/simple/simple.form.md
 
+  twitter-thread [fill]
+    Content to Twitter Thread
+    Transform raw content into an engaging Twitter/X thread through structured analysis, prioritization, and iterative refinement.
+    Source: ./examples/twitter-thread/twitter-thread.form.md
+
   movie-deep-research [research]
     Movie Deep Research
     Comprehensive movie research form with ratings, box office, cast/crew, technical specs, streaming availability, and cultural analysis.
@@ -240,6 +245,9 @@ Available examples:
     Startup Deep Research
     Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.
     Source: ./examples/startup-deep-research/startup-deep-research.form.md
+
+Tip: For a comprehensive end-to-end walkthrough, ask your coding agent
+to run the Markform QA playbook (tests/qa/markform-full-walkthrough.qa.md).
 ? 0
 ```
 
