@@ -12,10 +12,10 @@ distribution.** The user-facing playbook is
 
 ## How to Run
 
-1. Read the demo playbook at `examples/markform-demo-playbook.md` (in the package's
+1. Read the demo playbook at `examples/markform-demo-playbook.md` (in the package’s
    examples directory).
 2. Execute it end-to-end using **Apple Inc.
-   (AAPL)** as the company, with the **step-by-step** filling approach.
+   (AAPL)** as the company.
 3. Do not ask the user for confirmations — proceed through all phases automatically.
 4. After the demo playbook is complete, return here and continue with the QA
    verification below.
@@ -28,8 +28,6 @@ After completing all phases of the demo playbook, verify the following.
 
 **QA checkpoint:** Verify the server started and the URL is accessible.
 Review at least the View, Source, and Values tabs.
-If automated filling was used, verify the Fill Record tab is visible and shows execution
-data.
 
 Stop the server when done (Ctrl+C).
 
@@ -51,9 +49,6 @@ Stop the server when done (Ctrl+C).
 - [ ] Markdown report rendered in chat as formatted output
 - [ ] `markform serve` → opens in browser
 - [ ] Source provenance table populated with at least one entry per research group
-- [ ] *(Automated flow)* `markform fill --model` → completes without errors
-- [ ] *(Automated flow)* `.fill.json` sidecar created by `--record-fill`
-- [ ] *(Automated flow)* Fill Record tab visible in `markform serve`
 
 ## Features Exercised
 
@@ -61,31 +56,27 @@ Stop the server when done (Ctrl+C).
 | --- | --- |
 | `docs` | Phase 3 |
 | `examples` | Phase 3 |
-| `validate` | Phase 3, 6 |
+| `validate` | Phase 3, 5 |
 | `inspect` | Phase 3 |
-| `models` | Phase 0 |
-| `next` | Phase 4, 5 |
-| `status` | Phase 4, 5 |
+| `next` | Phase 4 |
+| `status` | Phase 4 |
 | `set`: single | Phase 4 |
 | `set`: batch `--values` | Phase 4 |
 | `set`: `--append` (table) | Phase 4 |
 | `set`: `--delete` (table) | Phase 4 |
-| `set`: `--append` (list) | Phase 7 |
-| `set`: `--delete` (list) | Phase 7 |
-| `set`: `--clear` | Phase 7 |
+| `set`: `--append` (list) | Phase 6 |
+| `set`: `--delete` (list) | Phase 6 |
+| `set`: `--clear` | Phase 6 |
 | `set`: `--skip` | Phase 4 |
-| `set`: `--report` | Phase 7 |
+| `set`: `--report` | Phase 6 |
 | `set`: validation error | Phase 4 |
-| `fill --model` | Phase 5 |
-| `fill --record-fill` | Phase 5 |
-| `dump` | Phase 6 |
-| `export`: markdown | Phase 6 |
-| `report` | Phase 9 |
-| `export`: json | Phase 6 |
-| `export`: yaml | Phase 6, 9 |
-| `schema --pure` | Phase 6 |
-| `serve` | Phase 9 |
-| Fill Record in `serve` | Phase 9 |
+| `dump` | Phase 5 |
+| `export`: markdown | Phase 5 |
+| `report` | Phase 8 |
+| `export`: json | Phase 5 |
+| `export`: yaml | Phase 5, 8 |
+| `schema --pure` | Phase 5 |
+| `serve` | Phase 8 |
 | All 11 field kinds | Phase 3 |
 | Source provenance table | Phase 3, 4 |
 

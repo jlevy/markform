@@ -6,15 +6,16 @@
 
 ## Prerequisites
 
-- **Node.js 20+** — We recommend v24 (current) or v22 LTS.
-  Minimum supported is v20. [nodejs.org](https://nodejs.org/)
+- **Node.js 20+** — We recommend v24 (current) or v22 LTS. Minimum supported is v20.
+  [nodejs.org](https://nodejs.org/)
 
 - **pnpm 10.x** — Install via `corepack enable` or `npm install -g pnpm`
 
 ### Node.js Setup
 
-This project requires Node.js 20 or higher. We recommend Node 24 (current) for best
-performance. Setup depends on your environment:
+This project requires Node.js 20 or higher.
+We recommend Node 24 (current) for best performance.
+Setup depends on your environment:
 
 #### Claude Code on the Web (Automatic)
 
@@ -79,8 +80,8 @@ markform/
   .github/workflows/    # CI/CD
 ```
 
-See [Architecture Design](project/architecture/current/arch-markform-design.md.md) for
-full technical specification.
+See [Architecture Design](project/architecture/current/arch-markform-design.md) for full
+technical specification.
 
 ## Common Commands
 
@@ -248,9 +249,9 @@ Session files are in `examples/*/` directories.
 pnpm test:tryscript
 ```
 
-Tryscript tests verify CLI commands produce correct output. Test files are Markdown
-documents with console code blocks that capture expected command output. See
-[tryscript](https://github.com/jlevy/tryscript) for format details.
+Tryscript tests verify CLI commands produce correct output.
+Test files are Markdown documents with console code blocks that capture expected command
+output. See [tryscript](https://github.com/jlevy/tryscript) for format details.
 
 ### Updating Tryscript Tests
 
@@ -316,14 +317,15 @@ These tests verify the complete form filling pipeline including FillRecord captu
 - After changes to FillRecord, harness, or agent code
 - When adding new provider integrations
 
-See `packages/markform/tests/qa/live-fill-manual-test.qa.md` for the complete test suite.
+See `packages/markform/tests/qa/live-fill-manual-test.qa.md` for the complete test
+suite.
 
 ### Full QA Walkthrough
 
 A comprehensive end-to-end QA playbook exercises all Markform CLI commands and field
-types through a guided agent walkthrough. An agent follows the demo playbook to build,
-fill, validate, export, and serve a complete form, then verifies all features against an
-18-item checklist covering 28 features.
+types through a guided agent walkthrough.
+An agent follows the demo playbook to build, fill, validate, export, and serve a
+complete form, then verifies all features against a checklist.
 
 ```bash
 # Location: packages/markform/tests/qa/markform-full-walkthrough.qa.md
@@ -333,19 +335,19 @@ fill, validate, export, and serve a complete form, then verifies all features ag
 **How it works:**
 
 1. An agent reads the QA playbook, which instructs it to execute the demo playbook
-2. The demo playbook walks through all phases: install, form design, filling (step-by-step
-   or automated), validation, export, and serve
+2. The demo playbook walks through all phases: install, form design, filling
+   (step-by-step or automated), validation, export, and serve
 3. After completion, the agent returns to the QA playbook to verify all features were
    exercised and report any issues
 
 **When to run:**
 
-- Before releases (covers commands that automated tests don't reach)
+- Before releases (covers commands that automated tests don’t reach)
 - After significant CLI, engine, or harness changes
 - When validating a new environment or setup
 
-This is the most thorough manual test available — it exercises every CLI command and all 11
-field kinds in a single run.
+This is the most thorough manual test available — it exercises every CLI command and all
+11 field kinds in a single run.
 
 ### Regenerating Golden Tests
 
@@ -400,8 +402,8 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
    ```
 
    Look for changes in `wire.request.system` and `wire.request.prompt` sections.
-   The session files capture the complete LLM request/response format, making it easy
-   to verify exactly what agents see.
+   The session files capture the complete LLM request/response format, making it easy to
+   verify exactly what agents see.
 
 4. **Run golden tests** to verify the form filling logic still works:
 
@@ -438,8 +440,8 @@ To match CI behavior locally, run `pnpm precommit` which executes the same check
 
 ### Code Coverage
 
-Coverage is collected using Vitest with the v8 provider. Reports are generated in multiple
-formats for different use cases.
+Coverage is collected using Vitest with the v8 provider.
+Reports are generated in multiple formats for different use cases.
 
 **Before submitting a PR**, review coverage for your changes:
 
@@ -451,7 +453,8 @@ pnpm --filter markform test:coverage
 open packages/markform/coverage/index.html
 ```
 
-The HTML report shows line-by-line coverage highlighting. Use it to:
+The HTML report shows line-by-line coverage highlighting.
+Use it to:
 
 - Identify untested code paths in your changes
 - Verify edge cases are covered
@@ -475,8 +478,8 @@ The HTML report shows line-by-line coverage highlighting. Use it to:
 | Functions | 49% | 80% |
 | Lines | 50% | 80% |
 
-Thresholds will be increased as coverage improves. CI will fail if coverage drops below
-thresholds.
+Thresholds will be increased as coverage improves.
+CI will fail if coverage drops below thresholds.
 
 **CI coverage visibility:**
 
@@ -548,9 +551,9 @@ npx tsx packages/markform/scripts/test-live-agent.ts path/to/form.md
 
 ## Rendering API
 
-Markform exports HTML rendering functions via the `markform/render` subpath. These
-produce the same output as `markform serve` but as HTML fragments (not full pages),
-suitable for embedding in external applications.
+Markform exports HTML rendering functions via the `markform/render` subpath.
+These produce the same output as `markform serve` but as HTML fragments (not full
+pages), suitable for embedding in external applications.
 
 ### Usage
 
