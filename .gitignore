@@ -6,6 +6,9 @@ packages/**/.beads/
 # User-generated forms output directory
 forms/
 
+# Test output directory
+test-output/
+
 # README.md and docs/ are copied from root at build time
 packages/markform/README.md
 packages/markform/docs/

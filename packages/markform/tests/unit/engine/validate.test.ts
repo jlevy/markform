@@ -1519,6 +1519,232 @@ markform:
       expect(result.isValid).toBe(false);
       expect(result.issues[0]?.message).toContain('must be a valid URL');
     });
+
+    describe('per-column constraints', () => {
+      it('validates string column enum constraint', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["name", "status"] columnTypes=["string", {"type": "string", "enum": ["active", "inactive"]}] %}
+| name | status |
+|------|--------|
+| Item1 | unknown |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(false);
+        expect(result.issues[0]?.message).toContain('must be one of: active, inactive');
+      });
+
+      it('passes when string column enum value is valid', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["name", "status"] columnTypes=["string", {"type": "string", "enum": ["active", "inactive"]}] %}
+| name | status |
+|------|--------|
+| Item1 | active |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(true);
+      });
+
+      it('validates string column minLength constraint', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["name"] columnTypes=[{"type": "string", "minLength": 5}] %}
+| name |
+|------|
+| ab |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(false);
+        expect(result.issues[0]?.message).toContain('at least 5 characters');
+      });
+
+      it('validates string column maxLength constraint', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["name"] columnTypes=[{"type": "string", "maxLength": 3}] %}
+| name |
+|------|
+| toolong |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(false);
+        expect(result.issues[0]?.message).toContain('at most 3 characters');
+      });
+
+      it('validates string column pattern constraint', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["code"] columnTypes=[{"type": "string", "pattern": "^[A-Z]{3}$"}] %}
+| code |
+|------|
+| abc |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(false);
+        expect(result.issues[0]?.message).toContain('does not match required pattern');
+      });
+
+      it('validates number column min/max constraints', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="scores" label="Scores" columnIds=["rank"] columnTypes=[{"type": "number", "min": 1, "max": 10}] %}
+| rank |
+|------|
+| 15 |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(false);
+        expect(result.issues[0]?.message).toContain('at most 10');
+      });
+
+      it('validates number column integer constraint', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="scores" label="Scores" columnIds=["rank"] columnTypes=[{"type": "number", "integer": true}] %}
+| rank |
+|------|
+| 3.5 |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(false);
+        expect(result.issues[0]?.message).toContain('must be an integer');
+      });
+
+      it('validates year column min/max constraints', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="timeline" label="Timeline" columnIds=["yr"] columnTypes=[{"type": "year", "min": 2000, "max": 2030}] %}
+| yr |
+|----|
+| 1999 |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(false);
+        expect(result.issues[0]?.message).toContain('at least 2000');
+      });
+
+      it('passes with valid constrained values', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["name", "rank", "status"] columnTypes=[{"type": "string", "minLength": 2}, {"type": "number", "min": 1, "max": 100}, {"type": "string", "enum": ["yes", "no"]}] %}
+| name | rank | status |
+|------|------|--------|
+| Alice | 5 | yes |
+| Bob | 10 | no |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const result = validate(form);
+
+        expect(result.isValid).toBe(true);
+      });
+    });
   });
 
   describe('group validators', () => {

@@ -781,7 +781,7 @@ function validateCellValue(
     return issues;
   }
 
-  // Type-specific validation
+  // Type-specific validation + per-column constraints
   switch (column.type) {
     case 'number':
       if (typeof cell.value !== 'number') {
@@ -791,6 +791,32 @@ function validateCellValue(
           ref: cellRef,
           source: 'builtin',
         });
+      } else {
+        // Per-column number constraints
+        if (column.integer && !Number.isInteger(cell.value)) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be an integer (got ${cell.value})`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+        if (typeof column.min === 'number' && cell.value < column.min) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be at least ${column.min} (got ${cell.value})`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+        if (typeof column.max === 'number' && cell.value > column.max) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be at most ${column.max} (got ${cell.value})`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
       }
       break;
 
@@ -802,6 +828,24 @@ function validateCellValue(
           ref: cellRef,
           source: 'builtin',
         });
+      } else {
+        // Per-column year constraints
+        if (typeof column.min === 'number' && cell.value < column.min) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be at least ${column.min} (got ${cell.value})`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+        if (typeof column.max === 'number' && cell.value > column.max) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be at most ${column.max} (got ${cell.value})`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
       }
       break;
 
@@ -822,21 +866,90 @@ function validateCellValue(
 
     case 'date':
       if (typeof cell.value === 'string') {
-        // Basic ISO date validation (YYYY-MM-DD)
-        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
-        if (!datePattern.test(cell.value)) {
+        if (!isValidDate(cell.value)) {
           issues.push({
             severity: 'error',
             message: `Cell "${column.label}" in row ${rowIndex + 1} must be a valid date in YYYY-MM-DD format (got "${cell.value}")`,
             ref: cellRef,
             source: 'builtin',
           });
+        } else {
+          // Per-column date constraints
+          const cellDateTime = parseDateForComparison(cell.value);
+          if (typeof column.min === 'string') {
+            const minTime = parseDateForComparison(column.min);
+            if (minTime !== null && cellDateTime !== null && cellDateTime < minTime) {
+              issues.push({
+                severity: 'error',
+                message: `Cell "${column.label}" in row ${rowIndex + 1} must be on or after ${column.min} (got ${cell.value})`,
+                ref: cellRef,
+                source: 'builtin',
+              });
+            }
+          }
+          if (typeof column.max === 'string') {
+            const maxTime = parseDateForComparison(column.max);
+            if (maxTime !== null && cellDateTime !== null && cellDateTime > maxTime) {
+              issues.push({
+                severity: 'error',
+                message: `Cell "${column.label}" in row ${rowIndex + 1} must be on or before ${column.max} (got ${cell.value})`,
+                ref: cellRef,
+                source: 'builtin',
+              });
+            }
+          }
         }
       }
       break;
 
     case 'string':
-      // String type accepts any value
+      if (typeof cell.value === 'string') {
+        // Per-column string constraints
+        if (column.minLength !== undefined && cell.value.length < column.minLength) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be at least ${column.minLength} characters (got ${cell.value.length})`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+        if (column.maxLength !== undefined && cell.value.length > column.maxLength) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be at most ${column.maxLength} characters (got ${cell.value.length})`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+        if (column.pattern) {
+          try {
+            const regex = new RegExp(column.pattern);
+            if (!regex.test(cell.value)) {
+              issues.push({
+                severity: 'error',
+                message: `Cell "${column.label}" in row ${rowIndex + 1} does not match required pattern`,
+                ref: cellRef,
+                source: 'builtin',
+              });
+            }
+          } catch {
+            issues.push({
+              severity: 'error',
+              message: `Invalid pattern "${column.pattern}" for column "${column.label}"`,
+              ref: cellRef,
+              source: 'builtin',
+            });
+          }
+        }
+        if (column.enum && column.enum.length > 0 && !column.enum.includes(cell.value)) {
+          issues.push({
+            severity: 'error',
+            message: `Cell "${column.label}" in row ${rowIndex + 1} must be one of: ${column.enum.join(', ')} (got "${cell.value}")`,
+            ref: cellRef,
+            source: 'builtin',
+          });
+        }
+      }
       break;
   }
 

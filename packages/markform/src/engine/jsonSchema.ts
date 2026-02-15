@@ -561,9 +561,16 @@ function columnToJsonSchema(col: TableColumn): JsonSchemaProperty {
   switch (col.type) {
     case 'string':
       schema.type = 'string';
+      if (col.minLength !== undefined) schema.minLength = col.minLength;
+      if (col.maxLength !== undefined) schema.maxLength = col.maxLength;
+      if (col.pattern !== undefined) schema.pattern = col.pattern;
+      if (col.enum !== undefined && col.enum.length > 0) schema.enum = col.enum;
       break;
     case 'number':
       schema.type = 'number';
+      if (col.integer) schema.type = 'integer';
+      if (typeof col.min === 'number') schema.minimum = col.min;
+      if (typeof col.max === 'number') schema.maximum = col.max;
       break;
     case 'url':
       schema.type = 'string';
@@ -572,9 +579,13 @@ function columnToJsonSchema(col: TableColumn): JsonSchemaProperty {
     case 'date':
       schema.type = 'string';
       schema.format = 'date';
+      if (typeof col.min === 'string') schema.formatMinimum = col.min;
+      if (typeof col.max === 'string') schema.formatMaximum = col.max;
       break;
     case 'year':
       schema.type = 'integer';
+      if (typeof col.min === 'number') schema.minimum = col.min;
+      if (typeof col.max === 'number') schema.maximum = col.max;
       break;
   }
 

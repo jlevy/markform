@@ -96,10 +96,14 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
     };
   }
 
+  // Unescape pipes and convert <br> back to newlines for string content.
+  // This reverses the escaping done during serialization.
+  const unescaped = trimmed.replace(/\\[|]/g, '|').replace(/<br\s*\/?>/gi, '\n');
+
   // Parse based on column type
   switch (columnType) {
     case 'string':
-      return { state: 'answered', value: trimmed };
+      return { state: 'answered', value: unescaped };
 
     case 'number': {
       const num = parseFloat(trimmed);

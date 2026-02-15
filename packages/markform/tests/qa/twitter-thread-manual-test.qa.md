@@ -21,7 +21,8 @@ Markform. It enforces quality through structured stages:
 
 Each stage produces structured output that feeds the next stage.
 
-The form template is at `examples/twitter-thread/twitter-thread.form.md`.
+The form template is at
+`packages/markform/examples/twitter-thread/twitter-thread.form.md`.
 
 ## Prerequisites
 
@@ -87,7 +88,7 @@ Uses `--roles "*"` to fill all fields (including user-role input fields) and
 ### Command
 
 ```bash
-pnpm markform fill examples/twitter-thread/twitter-thread.form.md \
+pnpm markform fill packages/markform/examples/twitter-thread/twitter-thread.form.md \
   --model anthropic/claude-sonnet-4-5 \
   --roles "*" \
   --output test-output/twitter-filled.form.md \
@@ -98,7 +99,7 @@ pnpm markform fill examples/twitter-thread/twitter-thread.form.md \
 ### Expected Output Structure
 
 ```
-Filling form: .../examples/twitter-thread/twitter-thread.form.md
+Filling form: .../packages/markform/examples/twitter-thread/twitter-thread.form.md
 Agent: live (anthropic/claude-sonnet-4-5)
 Turn 1: 11 issue(s): cleaned_content (missing), insights_table (missing), ...
   → X patches (tokens: ↓XXXX ↑XXX):
@@ -206,7 +207,7 @@ Test with different content to verify form generality.
 ### Command
 
 ```bash
-pnpm markform fill examples/twitter-thread/twitter-thread.form.md \
+pnpm markform fill packages/markform/examples/twitter-thread/twitter-thread.form.md \
   --model anthropic/claude-sonnet-4-5 \
   --roles "*" \
   --output test-output/twitter-technical-filled.form.md \

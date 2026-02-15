@@ -154,7 +154,7 @@ Extract every insight, claim, or idea worth sharing.
 <!-- field kind="table" id="insights_table" label="Insights" role="agent" required=true
    columnIds=["insight", "why_matters", "type"]
    columnLabels=["Insight/Claim", "Why It Matters", "Type"]
-   columnTypes=["string", "string", "string"]
+   columnTypes=["string", "string", {"type": "string", "enum": ["thesis", "supporting", "example", "context", "contrarian", "actionable"]}]
    minRows=5 maxRows=20 -->
 
 | Insight/Claim | Why It Matters | Type |
@@ -188,7 +188,7 @@ Not every insight makes the thread. Rank by impact and assign roles.
 <!-- field kind="table" id="priority_table" label="Ranked Insights" role="agent" required=true
    columnIds=["rank", "insight_summary", "role", "include"]
    columnLabels=["Rank", "Insight (summary)", "Thread Role", "Include?"]
-   columnTypes=["number", "string", "string", "string"]
+   columnTypes=[{"type": "number", "min": 1, "integer": true}, "string", {"type": "string", "enum": ["hook", "context", "main_point", "example", "pivot", "summary", "cta"]}, {"type": "string", "enum": ["yes", "no"]}]
    minRows=5 maxRows=15 -->
 
 | Rank | Insight (summary) | Thread Role | Include? |
@@ -237,7 +237,7 @@ Map the prioritized insights into a tweet-by-tweet structure.
 <!-- field kind="table" id="structure_table" label="Thread Structure" role="agent" required=true
    columnIds=["tweet_num", "role", "content_plan", "source_insight"]
    columnLabels=["#", "Role", "Content Plan", "From Insight"]
-   columnTypes=["number", "string", "string", "string"]
+   columnTypes=[{"type": "number", "min": 1, "integer": true}, {"type": "string", "enum": ["hook", "context", "main_point", "example", "pivot", "summary", "cta"]}, "string", "string"]
    minRows=5 maxRows=20 -->
 
 | # | Role | Content Plan | From Insight |
@@ -266,7 +266,7 @@ Write each tweet following the structure plan.
 <!-- field kind="table" id="drafts_table" label="Tweet Drafts" role="agent" required=true
    columnIds=["tweet_num", "draft_content", "char_count", "issues"]
    columnLabels=["#", "Draft Content", "Chars", "Issues"]
-   columnTypes=["number", "string", "number", "string"]
+   columnTypes=[{"type": "number", "min": 1, "integer": true}, {"type": "string", "maxLength": 280}, {"type": "number", "min": 1, "max": 280, "integer": true}, "string"]
    minRows=5 maxRows=20 -->
 
 | # | Draft Content | Chars | Issues |
@@ -299,7 +299,7 @@ Verify each tweet against quality criteria.
 <!-- field kind="table" id="review_table" label="Tweet Review" role="agent" required=true
    columnIds=["tweet_num", "under_280", "clear", "flows", "standalone", "revision_needed"]
    columnLabels=["#", "≤280?", "Clear?", "Flows?", "Standalone?", "Revision"]
-   columnTypes=["number", "string", "string", "string", "string", "string"]
+   columnTypes=[{"type": "number", "min": 1, "integer": true}, {"type": "string", "enum": ["yes", "no"]}, {"type": "string", "enum": ["yes", "no"]}, {"type": "string", "enum": ["yes", "no", "na"]}, {"type": "string", "enum": ["yes", "no"]}, "string"]
    minRows=5 maxRows=20 -->
 
 | # | ≤280? | Clear? | Flows? | Standalone? | Revision |

@@ -1088,7 +1088,9 @@ function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): st
   }
   // URL columns: keep bare URL for round-trip safety
   // (HTML rendering handles abbreviated display via formatBareUrlsAsHtmlLinks)
-  return cell.value;
+  // Replace newlines with <br> to prevent breaking the markdown table structure.
+  // Pipes must also be escaped to prevent column misalignment.
+  return String(cell.value).replace(/\|/g, '\\|').replace(/\n/g, '<br>');
 }
 
 /**
@@ -1147,8 +1149,25 @@ function serializeTableField(field: TableField, response: FieldResponse | undefi
   attrs.columnIds = field.columns.map((c) => c.id);
   attrs.columnLabels = field.columns.map((c) => c.label);
   attrs.columnTypes = field.columns.map((c) => {
-    if (c.required) {
-      return { type: c.type, required: true };
+    const hasConstraints =
+      c.minLength !== undefined ||
+      c.maxLength !== undefined ||
+      c.pattern !== undefined ||
+      c.enum !== undefined ||
+      c.min !== undefined ||
+      c.max !== undefined ||
+      c.integer !== undefined;
+    if (c.required || hasConstraints) {
+      const spec: Record<string, unknown> = { type: c.type };
+      if (c.required) spec.required = true;
+      if (c.minLength !== undefined) spec.minLength = c.minLength;
+      if (c.maxLength !== undefined) spec.maxLength = c.maxLength;
+      if (c.pattern !== undefined) spec.pattern = c.pattern;
+      if (c.enum !== undefined) spec.enum = c.enum;
+      if (c.min !== undefined) spec.min = c.min;
+      if (c.max !== undefined) spec.max = c.max;
+      if (c.integer !== undefined) spec.integer = c.integer;
+      return spec;
     }
     return c.type;
   });
