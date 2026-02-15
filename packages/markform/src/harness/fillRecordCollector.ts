@@ -656,6 +656,7 @@ export class FillRecordCollector implements FillCallbacks {
       failedCalls,
       successRate: totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0,
       totalDurationMs,
+      avgDurationMs: totalCalls > 0 ? totalDurationMs / totalCalls : 0,
       byTool,
     };
   }
@@ -694,7 +695,11 @@ export class FillRecordCollector implements FillCallbacks {
     llmTimeMs: number,
     toolTimeMs: number,
   ): TimingBreakdown {
-    const overheadMs = Math.max(0, totalMs - llmTimeMs - toolTimeMs);
+    // Under parallelism, llmTimeMs can exceed totalMs (since it's the sum of
+    // individual generateText() durations, not de-overlapped). Clamp overhead to 0.
+    // Note: llmTimeMs includes tool execution time within each generateText() call,
+    // so toolTimeMs is a subset of llmTimeMs, not additive.
+    const overheadMs = Math.max(0, totalMs - llmTimeMs);
 
     const breakdown: TimingBreakdownItem[] = [
       {
@@ -723,6 +728,11 @@ export class FillRecordCollector implements FillCallbacks {
       toolTimeMs,
       overheadMs,
       breakdown,
+      // LLM parallelism: ratio of sum of individual generateText() durations to
+      // wall-clock time. Each generateText() duration includes its own tool execution,
+      // so this measures LLM call concurrency, not tool-level concurrency.
+      // Values > 1.0 indicate multiple generateText() calls ran concurrently.
+      llmParallelism: totalMs > 0 ? llmTimeMs / totalMs : 0,
     };
   }
 
