@@ -513,7 +513,7 @@ function tableFieldToJsonSchema(
   const requiredColumns: string[] = [];
 
   for (const col of field.columns) {
-    rowProperties[col.id] = columnToJsonSchema(col);
+    rowProperties[col.id] = columnToJsonSchema(col, options);
     if (col.required) {
       requiredColumns.push(col.id);
     }
@@ -553,7 +553,10 @@ function tableFieldToJsonSchema(
   return schema;
 }
 
-function columnToJsonSchema(col: TableColumn): JsonSchemaProperty {
+function columnToJsonSchema(
+  col: TableColumn,
+  options: Required<JsonSchemaOptions>,
+): JsonSchemaProperty {
   const schema: JsonSchemaProperty = {
     title: col.label,
   };
@@ -561,9 +564,16 @@ function columnToJsonSchema(col: TableColumn): JsonSchemaProperty {
   switch (col.type) {
     case 'string':
       schema.type = 'string';
+      if (col.minLength !== undefined) schema.minLength = col.minLength;
+      if (col.maxLength !== undefined) schema.maxLength = col.maxLength;
+      if (col.pattern !== undefined) schema.pattern = col.pattern;
+      if (col.enum !== undefined && col.enum.length > 0) schema.enum = col.enum;
       break;
     case 'number':
       schema.type = 'number';
+      if (col.integer) schema.type = 'integer';
+      if (typeof col.min === 'number') schema.minimum = col.min;
+      if (typeof col.max === 'number') schema.maximum = col.max;
       break;
     case 'url':
       schema.type = 'string';
@@ -572,9 +582,16 @@ function columnToJsonSchema(col: TableColumn): JsonSchemaProperty {
     case 'date':
       schema.type = 'string';
       schema.format = 'date';
+      // formatMinimum/formatMaximum are 2019-09/2020-12 keywords, not valid in draft-07
+      if (options.draft !== 'draft-07') {
+        if (typeof col.min === 'string') schema.formatMinimum = col.min;
+        if (typeof col.max === 'string') schema.formatMaximum = col.max;
+      }
       break;
     case 'year':
       schema.type = 'integer';
+      if (typeof col.min === 'number') schema.minimum = col.min;
+      if (typeof col.max === 'number') schema.maximum = col.max;
       break;
   }
 

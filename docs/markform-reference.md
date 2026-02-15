@@ -416,7 +416,7 @@ Structured tabular data with typed columns. Uses standard markdown table syntax.
 | --- | --- | --- | --- |
 | `columnIds` | string[] | Yes | Array of snake_case column identifiers |
 | `columnLabels` | string[] | No | Display labels (defaults to header row) |
-| `columnTypes` | string[] | No | Column types (defaults to all `string`) |
+| `columnTypes` | (string \| object)[] | No | Column types with optional constraints (defaults to all `string`) |
 | `minRows` | number | No | Minimum row count (default: 0) |
 | `maxRows` | number | No | Maximum row count (default: unlimited) |
 
@@ -424,11 +424,28 @@ Structured tabular data with typed columns. Uses standard markdown table syntax.
 
 | Type | Description | Validation |
 | --- | --- | --- |
-| `string` | Any text value | None |
+| `string` | Any text value | None (unless constraints specified) |
 | `number` | Numeric value | Integer or float |
 | `url` | URL value | Valid URL format |
 | `date` | Date value | ISO 8601 (YYYY-MM-DD) |
 | `year` | Year value | Integer (1000-9999) |
+
+**Per-column constraints:** Each column type can be an object with constraints:
+
+```markdown
+<!-- field kind="table" id="items" label="Items"
+   columnIds=["name", "rank", "status"]
+   columnTypes=[{"type": "string", "minLength": 2}, {"type": "number", "min": 1, "max": 100, "integer": true}, {"type": "string", "enum": ["active", "inactive"]}] -->
+```
+
+| Constraint | Types | Description |
+| --- | --- | --- |
+| `required` | all | Cell must have a value |
+| `minLength` / `maxLength` | `string` | String length bounds |
+| `pattern` | `string` | Regex pattern match |
+| `enum` | `string` | Allowed values (controlled vocabulary) |
+| `min` / `max` | `number`, `year`, `date` | Value bounds |
+| `integer` | `number` | Must be integer |
 
 **Sentinel values in cells:** Use `%SKIP%` or `%ABORT%` with optional reasons:
 
@@ -437,6 +454,7 @@ Structured tabular data with typed columns. Uses standard markdown table syntax.
 ```
 
 **Cell escaping:** Use `\|` for literal pipe characters in cell values.
+Multi-line content in cells is encoded as `<br>` in markdown table format.
 
 ## Common Attributes
 

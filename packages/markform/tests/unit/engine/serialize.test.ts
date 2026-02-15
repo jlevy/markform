@@ -1853,4 +1853,56 @@ Please include middle name.
       expect(output).toContain('Enter your full legal name.\n\nThis should be on a new paragraph.');
     });
   });
+
+  describe('column constraints round-trip', () => {
+    it('preserves per-column constraints through parse → serialize', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data"
+   columnIds=["name", "rank", "status"]
+   columnLabels=["Name", "Rank", "Status"]
+   columnTypes=[{"type": "string", "minLength": 2, "maxLength": 50}, {"type": "number", "min": 1, "max": 100, "integer": true}, {"type": "string", "enum": ["active", "inactive"]}] %}
+| Name | Rank | Status |
+|------|------|--------|
+| Alice | 5 | active |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+
+      // Verify constraints are parsed
+      const field = parsed.schema.groups[0]?.children[0];
+      expect(field?.kind).toBe('table');
+      if (field?.kind === 'table') {
+        expect(field.columns[0]?.minLength).toBe(2);
+        expect(field.columns[0]?.maxLength).toBe(50);
+        expect(field.columns[1]?.min).toBe(1);
+        expect(field.columns[1]?.max).toBe(100);
+        expect(field.columns[1]?.integer).toBe(true);
+        expect(field.columns[2]?.enum).toEqual(['active', 'inactive']);
+      }
+
+      // Serialize and re-parse to verify round-trip
+      const output = serializeForm(parsed);
+      const reparsed = parseForm(output);
+      const field2 = reparsed.schema.groups[0]?.children[0];
+      expect(field2?.kind).toBe('table');
+      if (field2?.kind === 'table') {
+        expect(field2.columns[0]?.minLength).toBe(2);
+        expect(field2.columns[0]?.maxLength).toBe(50);
+        expect(field2.columns[1]?.min).toBe(1);
+        expect(field2.columns[1]?.max).toBe(100);
+        expect(field2.columns[1]?.integer).toBe(true);
+        expect(field2.columns[2]?.enum).toEqual(['active', 'inactive']);
+      }
+    });
+  });
 });

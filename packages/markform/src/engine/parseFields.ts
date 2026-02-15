@@ -962,6 +962,15 @@ function parseColumnsFromAttributes(
     let type: ColumnTypeName = 'string'; // default
     let required = false;
 
+    // Per-column constraints
+    let minLength: number | undefined;
+    let maxLength: number | undefined;
+    let pattern: string | undefined;
+    let enumValues: string[] | undefined;
+    let min: number | string | undefined;
+    let max: number | string | undefined;
+    let integer: boolean | undefined;
+
     if (typeSpec !== undefined) {
       if (typeof typeSpec === 'string') {
         if (!isValidColumnType(typeSpec)) {
@@ -972,7 +981,18 @@ function parseColumnsFromAttributes(
         }
         type = typeSpec;
       } else if (typeof typeSpec === 'object' && typeSpec !== null) {
-        const typeObj = typeSpec as { type?: unknown; required?: boolean };
+        // ColumnTypeSpec object form: { type, required?, ...constraints }
+        const typeObj = typeSpec as {
+          type?: unknown;
+          required?: boolean;
+          minLength?: number;
+          maxLength?: number;
+          pattern?: string;
+          enum?: string[];
+          min?: number | string;
+          max?: number | string;
+          integer?: boolean;
+        };
         if (!isValidColumnType(typeObj.type)) {
           throw new MarkformParseError(
             `table-field '${fieldId}' has invalid column type '${String(typeObj.type)}' for column '${id}'. ` +
@@ -981,13 +1001,75 @@ function parseColumnsFromAttributes(
         }
         type = typeObj.type;
         required = typeObj.required ?? false;
+
+        // Extract per-column constraints
+        if (typeof typeObj.minLength === 'number') minLength = typeObj.minLength;
+        if (typeof typeObj.maxLength === 'number') maxLength = typeObj.maxLength;
+        if (typeof typeObj.pattern === 'string') pattern = typeObj.pattern;
+        if (Array.isArray(typeObj.enum)) enumValues = typeObj.enum;
+        if (typeObj.min !== undefined) min = typeObj.min;
+        if (typeObj.max !== undefined) max = typeObj.max;
+        if (typeof typeObj.integer === 'boolean') integer = typeObj.integer;
+
+        // Validate constraints match the column type
+        validateColumnConstraints(fieldId, id, type, typeObj);
       }
     }
 
-    columns.push({ id, label, type, required });
+    const col: TableColumn = { id, label, type, required };
+    if (minLength !== undefined) col.minLength = minLength;
+    if (maxLength !== undefined) col.maxLength = maxLength;
+    if (pattern !== undefined) col.pattern = pattern;
+    if (enumValues !== undefined) col.enum = enumValues;
+    if (min !== undefined) col.min = min;
+    if (max !== undefined) col.max = max;
+    if (integer !== undefined) col.integer = integer;
+    columns.push(col);
   }
 
   return columns;
+}
+
+/** String-only constraints. */
+const STRING_ONLY_CONSTRAINTS = ['minLength', 'maxLength', 'pattern', 'enum'] as const;
+
+/** Number-only constraints. */
+const NUMBER_ONLY_CONSTRAINTS = ['integer'] as const;
+
+/** Constraints valid per column type. */
+const VALID_CONSTRAINTS_BY_TYPE: Record<ColumnTypeName, readonly string[]> = {
+  string: [...STRING_ONLY_CONSTRAINTS],
+  number: ['min', 'max', ...NUMBER_ONLY_CONSTRAINTS],
+  date: ['min', 'max'],
+  year: ['min', 'max'],
+  url: [],
+};
+
+/**
+ * Validate that per-column constraints are appropriate for the column type.
+ * Throws MarkformParseError for mismatched constraints (e.g. minLength on a number column).
+ */
+function validateColumnConstraints(
+  fieldId: string,
+  columnId: string,
+  type: ColumnTypeName,
+  typeObj: Record<string, unknown>,
+): void {
+  const allConstraintKeys = [
+    ...STRING_ONLY_CONSTRAINTS,
+    ...NUMBER_ONLY_CONSTRAINTS,
+    'min',
+    'max',
+  ] as const;
+  const validKeys = VALID_CONSTRAINTS_BY_TYPE[type];
+  for (const key of allConstraintKeys) {
+    if (typeObj[key] !== undefined && !validKeys.includes(key)) {
+      throw new MarkformParseError(
+        `table-field '${fieldId}' column '${columnId}': constraint '${key}' is not valid for type '${type}'. ` +
+          `Valid constraints for '${type}': ${validKeys.length > 0 ? validKeys.join(', ') : 'none'}`,
+      );
+    }
+  }
 }
 
 /**

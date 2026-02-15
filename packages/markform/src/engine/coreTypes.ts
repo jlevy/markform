@@ -127,20 +127,62 @@ export type FieldKind =
 export type ColumnTypeName = 'string' | 'number' | 'url' | 'date' | 'year';
 
 /**
- * Column type specification in attributes.
- * Can be a simple string or an object with required flag.
+ * Per-column constraints by type.
+ * These mirror the top-level field constraints but apply at the column level.
  */
-export type ColumnTypeSpec = ColumnTypeName | { type: ColumnTypeName; required: boolean };
+export interface StringColumnConstraints {
+  minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  /** Allowed values (controlled vocabulary). Column value must be one of these. */
+  enum?: string[];
+}
+
+export interface NumberColumnConstraints {
+  min?: number;
+  max?: number;
+  integer?: boolean;
+}
+
+export interface DateColumnConstraints {
+  min?: string; // ISO 8601 date string (YYYY-MM-DD)
+  max?: string;
+}
+
+export interface YearColumnConstraints {
+  min?: number;
+  max?: number;
+}
+
+/**
+ * Column type specification in attributes.
+ * Can be a simple string, or an object with type, required flag, and optional constraints.
+ */
+export type ColumnTypeSpec =
+  | ColumnTypeName
+  | ({ type: ColumnTypeName; required?: boolean } & StringColumnConstraints &
+      NumberColumnConstraints &
+      DateColumnConstraints &
+      YearColumnConstraints);
 
 /**
  * Column definition - derived from columnIds, columnLabels, columnTypes attributes.
  * After parsing, columns always have explicit required flag (default: false).
+ * May include per-column constraints matching the column type.
  */
 export interface TableColumn {
   id: Id; // from columnIds array
   label: string; // from columnLabels array (defaults to id)
   type: ColumnTypeName; // from columnTypes array (defaults to 'string')
   required: boolean; // from columnTypes object or default false
+  // Per-column constraints (type-specific)
+  minLength?: number; // string
+  maxLength?: number; // string
+  pattern?: string; // string
+  enum?: string[]; // string (controlled vocabulary)
+  min?: number | string; // number: number, date: string, year: number
+  max?: number | string; // number: number, date: string, year: number
+  integer?: boolean; // number
 }
 
 /** Field priority level for issue scoring */
@@ -1317,25 +1359,42 @@ export const ColumnTypeNameSchema = z.enum(['string', 'number', 'url', 'date', '
 
 /**
  * Column type specification schema (for parsing attributes).
- * Either a simple type name or an object with type and required.
+ * Either a simple type name or an object with type, required, and optional constraints.
  */
 export const ColumnTypeSpecSchema = z.union([
   ColumnTypeNameSchema,
   z.object({
     type: ColumnTypeNameSchema,
-    required: z.boolean(),
+    required: z.boolean().optional(),
+    // String constraints
+    minLength: z.number().int().nonnegative().optional(),
+    maxLength: z.number().int().nonnegative().optional(),
+    pattern: z.string().optional(),
+    enum: z.array(z.string()).optional(),
+    // Number/year/date constraints
+    min: z.union([z.number(), z.string()]).optional(),
+    max: z.union([z.number(), z.string()]).optional(),
+    integer: z.boolean().optional(),
   }),
 ]);
 
 /**
  * Table column schema (normalized form after parsing).
- * Always has explicit required flag.
+ * Always has explicit required flag. May include per-column constraints.
  */
 export const TableColumnSchema = z.object({
   id: IdSchema,
   label: z.string(),
   type: ColumnTypeNameSchema,
   required: z.boolean(),
+  // Per-column constraints (type-specific)
+  minLength: z.number().int().nonnegative().optional(),
+  maxLength: z.number().int().nonnegative().optional(),
+  pattern: z.string().optional(),
+  enum: z.array(z.string()).optional(),
+  min: z.union([z.number(), z.string()]).optional(),
+  max: z.union([z.number(), z.string()]).optional(),
+  integer: z.boolean().optional(),
 });
 
 /** Cell value schema (never null - use sentinels for skipped) */
