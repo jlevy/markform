@@ -4,6 +4,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseCliValue } from '../../../src/cli/commands/set.js';
+import { parseForm } from '../../../src/engine/parse.js';
+import { applyPatches } from '../../../src/engine/apply.js';
 
 describe('parseCliValue', () => {
   it('passes plain strings through unchanged', () => {
@@ -51,5 +53,29 @@ describe('parseCliValue', () => {
   it('parses JSON array of objects', () => {
     const input = '[{"col":"val"}]';
     expect(parseCliValue(input)).toEqual([{ col: 'val' }]);
+  });
+});
+
+describe('set validation warnings', () => {
+  it('should return validation_error issues when value violates pattern constraint', () => {
+    const formContent = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" title="G1" %}
+{% field kind="string" id="ticker" label="Ticker" pattern="^[A-Z]{1,5}$" %}{% /field %}
+{% /group %}
+{% /form %}`;
+
+    const form = parseForm(formContent);
+    // Set a lowercase value that violates the pattern — applyPatches accepts the value
+    // but validate() flags it, so issues should contain a validation_error
+    const result = applyPatches(form, [{ op: 'set_string', fieldId: 'ticker', value: 'aapl' }]);
+
+    expect(result.applyStatus).toBe('applied');
+    const validationIssues = result.issues.filter((i) => i.reason === 'validation_error');
+    expect(validationIssues.length).toBeGreaterThan(0);
+    expect(validationIssues[0]!.message).toContain('pattern');
   });
 });

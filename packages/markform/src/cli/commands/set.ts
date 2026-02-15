@@ -31,6 +31,7 @@ import {
   logError,
   logSuccess,
   logVerbose,
+  logWarn,
   readFile,
   writeFile,
 } from '../lib/shared.js';
@@ -328,6 +329,25 @@ export function registerSetCommand(program: Command): void {
               logError(`  ${rp.message}`);
             }
             process.exit(1);
+          }
+
+          // Surface validation issues for the fields that were just set
+          // Skip warnings for meta operations (clear/skip/abort/delete) where emptiness is expected
+          const isMetaOp =
+            Boolean(options.clear) ||
+            Boolean(options.skip) ||
+            Boolean(options.abort) ||
+            options.delete !== undefined;
+          if (!isMetaOp) {
+            const patchedFieldIds = new Set(
+              patches.map((p) => ('fieldId' in p ? p.fieldId : '')).filter(Boolean),
+            );
+            const relevantIssues = applyResult.issues.filter(
+              (i) => i.reason === 'validation_error' && patchedFieldIds.has(i.ref),
+            );
+            for (const issue of relevantIssues) {
+              logWarn(ctx, issue.message);
+            }
           }
 
           // Output

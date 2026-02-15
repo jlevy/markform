@@ -1797,4 +1797,60 @@ markform:
       expect(output).toContain('spec: MF/0.2');
     });
   });
+
+  describe('explicit checkboxes in report', () => {
+    it('renders yes/no text instead of GFM checkboxes for explicit mode', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" title="G1" %}
+{% field kind="checkboxes" id="confirm" label="Confirmations" checkboxMode="explicit" %}
+- [y] Accept Terms {% #terms %}
+- [n] Privacy Policy {% #privacy %}
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+
+      const report = serializeReport(parsed);
+
+      // Explicit checkboxes should show "Yes"/"No" not "[x]"/"[ ]"
+      expect(report).toContain('Accept Terms: Yes');
+      expect(report).toContain('Privacy Policy: No');
+      expect(report).not.toContain('[x]');
+      expect(report).not.toContain('[ ]');
+    });
+  });
+
+  describe('instructions round-trip', () => {
+    it('preserves line breaks in multi-paragraph instructions', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" title="G1" %}
+{% field kind="string" id="name" label="Name" %}
+
+{% instructions ref="name" %}
+Enter your full legal name.
+
+This should be on a new paragraph.
+Please include middle name.
+{% /instructions %}
+
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeForm(parsed);
+
+      // The blank line between paragraphs must be preserved
+      expect(output).toContain('Enter your full legal name.\n\nThis should be on a new paragraph.');
+    });
+  });
 });

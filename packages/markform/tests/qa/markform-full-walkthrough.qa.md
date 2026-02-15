@@ -26,10 +26,32 @@ After completing all phases of the demo playbook, verify the following.
 
 ### Serve Verification
 
-**QA checkpoint:** Verify the server started and the URL is accessible.
-Review at least the View, Source, and Values tabs.
+**QA checkpoint:** Verify the server started and all tabs are accessible.
 
-Stop the server when done (Ctrl+C).
+Start the server (with `--no-open` to skip the browser) and programmatically verify each
+tab returns content:
+
+```bash
+markform serve /tmp/markform-qa/sp500-research.form.md --no-open --port 3456 &
+sleep 1
+
+# Verify each tab endpoint returns content (HTTP 200, non-empty body)
+for tab in view report source values schema; do
+  curl -sf http://localhost:3456/tab/$tab | head -c 100
+  echo "  ← /tab/$tab OK"
+done
+
+# Verify the main page loads with tab bar
+curl -sf http://localhost:3456/ | grep -q 'tab-bar' && echo "Main page: tab bar present"
+
+# Verify hash routes are supported (page contains hashchange listener)
+curl -sf http://localhost:3456/ | grep -q 'hashchange' && echo "Hash routes: supported"
+
+kill %1 2>/dev/null
+```
+
+Each tab should return valid HTML content.
+If any tab fails, it indicates missing data or a server error.
 
 ### QA Checklist
 
@@ -39,15 +61,20 @@ Stop the server when done (Ctrl+C).
 - [ ] `markform export --format=markdown` → full rendered form with instructions
 - [ ] `markform report` → clean results only, no instructions
 - [ ] `markform schema --pure` → valid JSON Schema
-- [ ] `markform serve` → web UI accessible with multiple tabs
+- [ ] `markform serve` → web UI accessible with tabs: Form, Report, Edit, Source,
+  Values, Schema
 - [ ] All 11 field kinds used in form design
-- [ ] Validation error rejected, original value preserved
+- [ ] Validation error: `set` stored the value, `validate` shows `invalid=1`, fix
+  restored `invalid=0`
 - [ ] Clear + re-fill worked
 - [ ] Append/delete on lists worked
 - [ ] Explicit checkboxes show yes/no
 - [ ] `next` → form is complete
 - [ ] Markdown report rendered in chat as formatted output
 - [ ] `markform serve` → opens in browser
+- [ ] Serve: all tab endpoints (`/tab/view`, `/tab/report`, etc.)
+  return HTTP 200
+- [ ] Serve: hash routes work (URL updates on tab click)
 - [ ] Source provenance table populated with at least one entry per research group
 
 ## Features Exercised

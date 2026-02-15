@@ -1883,10 +1883,20 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
     }
     case 'checkboxes': {
       const cbValue = value as CheckboxesValue | undefined;
-      for (const opt of field.options) {
-        const state = cbValue?.values[opt.id] ?? 'todo';
-        const marker = STATE_TO_GFM_MARKER[state] ?? ' ';
-        lines.push(`- [${marker}] ${opt.label}`);
+      if (field.checkboxMode === 'explicit') {
+        // Explicit mode: show "Yes"/"No" text for clarity
+        for (const opt of field.options) {
+          const state = cbValue?.values[opt.id] ?? 'unfilled';
+          const label = state === 'yes' ? 'Yes' : state === 'no' ? 'No' : '_(unanswered)_';
+          lines.push(`- ${opt.label}: ${label}`);
+        }
+      } else {
+        // Multi/simple mode: use GFM checkbox markers
+        for (const opt of field.options) {
+          const state = cbValue?.values[opt.id] ?? 'todo';
+          const marker = STATE_TO_GFM_MARKER[state] ?? ' ';
+          lines.push(`- [${marker}] ${opt.label}`);
+        }
       }
       break;
     }

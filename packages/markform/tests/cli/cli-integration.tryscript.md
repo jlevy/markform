@@ -6,13 +6,12 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # CLI Integration Tests
 
 Additional CLI integration tests covering format options, flags, and error handling.
 Complements commands.tryscript.md with deeper coverage of specific options.
 
----
+* * *
 
 ## Help and Version
 
@@ -35,7 +34,7 @@ $ $CLI --version
 ? 0
 ```
 
----
+* * *
 
 ## Inspect Command Options
 
@@ -51,14 +50,14 @@ $ $CLI inspect --format json examples/simple/simple.form.md | head -5
 ? 0
 ```
 
----
+* * *
 
 ## Validate Command Options
 
 # Test: validate with --verbose shows details
 
 ```console
-$ $CLI validate --verbose examples/simple/simple.form.md
+$ $CLI validate --verbose examples/simple/simple.form.md 2>&1
 Reading file: examples/simple/simple.form.md
 Parsing form...
 Running validation...
@@ -105,7 +104,7 @@ Issues (21):
 ? 0
 ```
 
----
+* * *
 
 ## Status Command Options
 
@@ -126,7 +125,7 @@ $ $CLI status --format json examples/simple/simple.form.md | head -10
 ? 0
 ```
 
----
+* * *
 
 ## Dump Command
 
@@ -140,7 +139,7 @@ email: (unanswered)
 ? 0
 ```
 
----
+* * *
 
 ## Export Command Options
 
@@ -164,7 +163,7 @@ $ $CLI export --format json examples/simple/simple.form.md | head -3
 ? 0
 ```
 
----
+* * *
 
 ## Schema Command Options
 
@@ -188,7 +187,7 @@ No x-markform found
 ? 0
 ```
 
----
+* * *
 
 ## Documentation Commands
 
@@ -211,7 +210,7 @@ $ $CLI readme | head -3
 ? 0
 ```
 
----
+* * *
 
 ## Examples Command
 
@@ -251,7 +250,7 @@ to run the Markform QA playbook (tests/qa/markform-full-walkthrough.qa.md).
 ? 0
 ```
 
----
+* * *
 
 ## Error Handling
 

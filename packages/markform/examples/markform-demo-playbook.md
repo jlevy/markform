@@ -208,15 +208,17 @@ This ensures every fact in the form is traceable.
 | Table append | `markform set <file> <tableId> --append '{"col": "val"}'` |
 | Table batch set | `markform set <file> <tableId> '[{...}, {...}]'` |
 | Table delete + re-append | `--delete <index>` then `--append` replacement |
-| Validation error | Set an invalid value (e.g., lowercase ticker): verify rejection |
+| Validation error | Set an invalid value (e.g., lowercase ticker): verify it's stored but flagged invalid |
 | String list | `markform set <file> <id> '["a", "b", "c"]'` |
 | Multi-select | `markform set <file> <id> '["opt1", "opt2"]'` |
 | Explicit checkboxes | `markform set <file> <id> '{"item1": "yes", "item2": "no"}'` |
 | Skip optional field | `markform set <file> <id> --skip --reason "..."` |
 
-> **Tell the user:** After the validation error: “Rejected: validation catches errors
-> before they enter the form.
-> The original value is untouched.”
+> **Tell the user:** After the validation error: "`set` stores the value but `validate`
+> flags it as invalid.
+> Some constraints (like pattern matching) are checked eagerly by `validate`; semantic
+> issues may surface later.
+> Fix the value and confirm with `validate`."
 
 ### Step 4.3: Confirm Completion
 
@@ -330,9 +332,11 @@ markform serve /tmp/markform-qa/sp500-research.form.md
 
 > **Tell the user:** "I’ve also opened the report in your web browser.
 > You can browse it in several tabs:
-> - **View:** the rendered form as it appears on GitHub
+> - **Form:** the rendered form as it appears on GitHub
+> - **Report:** a filtered view that strips instructions and internal markup
 > - **Edit:** an interactive version where fields can be filled in the browser
 > - **Source:** the raw `.form.md` with all Markform tags visible
-> - **Report:** a filtered view that strips instructions and internal markup
 > - **Values:** exported field values as YAML
-> - **Schema:** the JSON Schema describing the form structure"
+> - **Schema:** the JSON Schema describing the form structure
+> 
+> Each tab has a unique URL (hash route) so you can link directly to a specific view."
