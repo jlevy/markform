@@ -5,11 +5,12 @@ id: is-01khfg3hyrgqj1za2bac11acmn
 kind: feature
 labels: []
 priority: 2
+spec_path: docs/project/specs/active/plan-2026-02-14-tiered-validation-model.md
 status: open
 title: set command should surface semantic validation issues and spec should distinguish eager vs deferred validation
 type: is
-updated_at: 2026-02-15T01:55:54.266Z
-version: 3
+updated_at: 2026-02-15T03:18:11.120Z
+version: 4
 ---
 ## Notes
 
