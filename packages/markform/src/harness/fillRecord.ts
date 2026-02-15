@@ -188,6 +188,12 @@ export const TimingBreakdownSchema = z.object({
   overheadMs: z.number().int().nonnegative(),
   /** Percentage breakdown for visualization */
   breakdown: z.array(TimingBreakdownItemSchema),
+  /**
+   * Effective parallelism: (llmTimeMs + toolTimeMs) / totalMs.
+   * Shows how much concurrent work happened relative to wall-clock time.
+   * < 1.0 = idle time/overhead, 1.0 = fully utilized, > 1.0 = parallel execution.
+   */
+  effectiveParallelism: z.number().nonnegative(),
 });
 
 export type TimingBreakdown = z.infer<typeof TimingBreakdownSchema>;
@@ -210,6 +216,8 @@ export const ToolSummarySchema = z.object({
   successRate: z.number().nonnegative(),
   /** Total time spent in tool execution (ms) */
   totalDurationMs: z.number().int().nonnegative(),
+  /** Average duration per tool call (ms): totalDurationMs / totalCalls */
+  avgDurationMs: z.number().nonnegative(),
   /** Per-tool statistics */
   byTool: z.array(ToolStatsSchema),
 });
@@ -364,7 +372,10 @@ export type StableToolStats = Omit<ToolStats, 'timing'>;
 /**
  * Stripped ToolSummary without timing information.
  */
-export type StableToolSummary = Omit<ToolSummary, 'totalDurationMs' | 'byTool'> & {
+export type StableToolSummary = Omit<
+  ToolSummary,
+  'totalDurationMs' | 'avgDurationMs' | 'byTool'
+> & {
   byTool: StableToolStats[];
 };
 

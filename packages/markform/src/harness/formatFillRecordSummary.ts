@@ -45,6 +45,23 @@ function formatDuration(ms: number): string {
 }
 
 /**
+ * Format a rate value (like s/field or s/turn) with appropriate significant figures.
+ * >= 10s: 1 decimal (e.g., 12.3s/field)
+ * >= 1s: 2 decimals (e.g., 3.45s/field)
+ * < 1s: show as ms (e.g., 450ms/field)
+ */
+function formatRate(ms: number, unit: string): string {
+  const seconds = ms / 1000;
+  if (seconds >= 10) {
+    return `${seconds.toFixed(1)}s/${unit}`;
+  }
+  if (seconds >= 1) {
+    return `${seconds.toFixed(2)}s/${unit}`;
+  }
+  return `${Math.round(ms)}ms/${unit}`;
+}
+
+/**
  * Format a percentage.
  */
 function formatPercent(value: number, total: number): string {
@@ -75,10 +92,18 @@ export function formatFillRecordSummary(
   const { verbose = false } = options;
   const lines: string[] = [];
 
-  // Status line
+  // Status line with rates
   const statusText = record.status === 'completed' ? 'Fill completed' : 'Fill incomplete';
   const turnsText = `${record.execution.totalTurns} turn${record.execution.totalTurns !== 1 ? 's' : ''}`;
-  let statusLine = `${statusText} in ${formatDuration(record.durationMs)} (${turnsText})`;
+  const rateParts: string[] = [];
+  if (record.execution.totalTurns > 0) {
+    rateParts.push(formatRate(record.durationMs / record.execution.totalTurns, 'turn'));
+  }
+  if (record.formProgress.answeredFields > 0) {
+    rateParts.push(formatRate(record.durationMs / record.formProgress.answeredFields, 'field'));
+  }
+  const ratesText = rateParts.length > 0 ? `, ${rateParts.join(', ')}` : '';
+  let statusLine = `${statusText} in ${formatDuration(record.durationMs)} (${turnsText}${ratesText})`;
   if (record.status !== 'completed' && record.statusDetail) {
     statusLine += ` - ${record.statusDetail}`;
   }
@@ -108,6 +133,7 @@ export function formatFillRecordSummary(
       toolLine += `, ${formatNumber(toolSummary.failedCalls)} failed`;
     }
     toolLine += ')';
+    toolLine += `, avg ${formatDuration(toolSummary.avgDurationMs)} each`;
   }
   lines.push(toolLine);
 
@@ -123,16 +149,39 @@ export function formatFillRecordSummary(
     }
   }
 
-  // Timing breakdown (verbose mode)
-  if (verbose) {
-    lines.push('');
-    const { timingBreakdown } = record;
-    const llmPct = timingBreakdown.breakdown.find((b) => b.category === 'llm')?.percentage ?? 0;
-    const toolPct = timingBreakdown.breakdown.find((b) => b.category === 'tools')?.percentage ?? 0;
-    const overheadPct =
-      timingBreakdown.breakdown.find((b) => b.category === 'overhead')?.percentage ?? 0;
+  // Timing breakdown (always shown)
+  const { timingBreakdown } = record;
+  const llmPct = Math.round(
+    timingBreakdown.breakdown.find((b) => b.category === 'llm')?.percentage ?? 0,
+  );
+  const toolPct = Math.round(
+    timingBreakdown.breakdown.find((b) => b.category === 'tools')?.percentage ?? 0,
+  );
+  const overheadPct = Math.round(
+    timingBreakdown.breakdown.find((b) => b.category === 'overhead')?.percentage ?? 0,
+  );
 
+  if (verbose) {
+    // Verbose: show percentages with absolute durations
     const timingLine = `Timing:  ${llmPct}% LLM (${formatDuration(timingBreakdown.llmTimeMs)}) | ${toolPct}% tools (${formatDuration(timingBreakdown.toolTimeMs)}) | ${overheadPct}% overhead (${formatDuration(timingBreakdown.overheadMs)})`;
+    lines.push(timingLine);
+
+    // Effective parallelism in verbose mode
+    const ep = timingBreakdown.effectiveParallelism;
+    if (record.execution.parallelEnabled) {
+      // Always show for parallel fills
+      const threadCount = record.execution.executionThreads.length;
+      const orderCount = record.execution.orderLevels.length;
+      lines.push(
+        `         Effective parallelism: ${ep.toFixed(1)}x (${threadCount} threads, ${orderCount} order level${orderCount !== 1 ? 's' : ''})`,
+      );
+    } else if (ep < 0.8) {
+      // Show for serial fills only when overhead is significant
+      lines.push(`         Effective parallelism: ${ep.toFixed(1)}x`);
+    }
+  } else {
+    // Non-verbose: one-line timing split with percentages only
+    const timingLine = `Timing:  ${llmPct}% LLM | ${toolPct}% tools | ${overheadPct}% overhead`;
     lines.push(timingLine);
   }
 

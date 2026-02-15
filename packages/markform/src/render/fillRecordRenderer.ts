@@ -55,6 +55,23 @@ function frHideTip() {
 // =============================================================================
 
 /**
+ * Format a rate value for HTML display with appropriate significant figures.
+ * >= 10s: 1 decimal (e.g., 12.3s/field)
+ * >= 1s: 2 decimals (e.g., 3.45s/field)
+ * < 1s: show as ms (e.g., 450ms/field)
+ */
+function formatRateHtml(ms: number, unit: string): string {
+  const seconds = ms / 1000;
+  if (seconds >= 10) {
+    return `${seconds.toFixed(1)}s/${unit}`;
+  }
+  if (seconds >= 1) {
+    return `${seconds.toFixed(2)}s/${unit}`;
+  }
+  return `${Math.round(ms)}ms/${unit}`;
+}
+
+/**
  * Format a patch value for display.
  * Shows full content - the container has max-height with scroll for long values.
  */
@@ -682,6 +699,31 @@ export function renderFillRecordContent(record: FillRecord): string {
   const badgeIcon = { completed: '✓', partial: '⚠', cancelled: '⊘', failed: '✕' }[status] ?? '?';
   const badgeLabel = status.charAt(0).toUpperCase() + status.slice(1);
 
+  // Compute display rates for duration card
+  const durationSubParts: string[] = [];
+  if (record.execution.totalTurns > 0) {
+    durationSubParts.push(formatRateHtml(durationMs / record.execution.totalTurns, 'turn'));
+  }
+  if (formProgress.answeredFields > 0) {
+    durationSubParts.push(formatRateHtml(durationMs / formProgress.answeredFields, 'field'));
+  }
+  const durationSubHtml =
+    durationSubParts.length > 0
+      ? `<div class="fr-card__sub">${durationSubParts.join(' · ')}</div>`
+      : '';
+
+  // Effective parallelism card
+  const ep = record.timingBreakdown.effectiveParallelism;
+  const parallelismCard =
+    ep > 0
+      ? `
+      <div class="fr-card">
+        <div class="fr-card__label">Parallelism</div>
+        <div class="fr-card__value">${ep.toFixed(1)}x</div>
+        <div class="fr-card__sub">${record.execution.parallelEnabled ? `${record.execution.executionThreads.length} threads` : 'serial'}</div>
+      </div>`
+      : '';
+
   const summaryCards = `
     <div class="fr-cards">
       <div class="fr-card">
@@ -691,6 +733,7 @@ export function renderFillRecordContent(record: FillRecord): string {
       <div class="fr-card">
         <div class="fr-card__label">Duration</div>
         <div class="fr-card__value">${formatDuration(durationMs)}</div>
+        ${durationSubHtml}
       </div>
       <div class="fr-card">
         <div class="fr-card__label">Turns</div>
@@ -701,6 +744,7 @@ export function renderFillRecordContent(record: FillRecord): string {
         <div class="fr-card__value">${formatTokens(totalTokens)}</div>
         <div class="fr-card__sub">${formatTokens(llm.inputTokens)} in / ${formatTokens(llm.outputTokens)} out</div>
       </div>
+      ${parallelismCard}
     </div>
   `;
 
@@ -909,9 +953,14 @@ export function renderFillRecordContent(record: FillRecord): string {
       )
       .join('');
 
+    const avgToolDuration =
+      toolSummary.avgDurationMs > 0
+        ? ` · avg ${formatDuration(toolSummary.avgDurationMs)} each`
+        : '';
+
     toolSection = `
       <details class="fr-details fr-section" open>
-        <summary>Tool Summary</summary>
+        <summary>Tool Summary (${toolSummary.totalCalls} calls${avgToolDuration})</summary>
         <div style="overflow-x: auto; margin-top: 8px;">
           <table class="fr-table">
             <thead><tr><th>Tool</th><th>Calls</th><th>Success</th><th>Avg</th><th>p95</th></tr></thead>

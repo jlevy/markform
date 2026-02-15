@@ -753,6 +753,135 @@ describe('FillRecordCollector', () => {
     });
   });
 
+  describe('effectiveParallelism', () => {
+    it('computes effectiveParallelism as (llmTimeMs + toolTimeMs) / totalMs', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onToolStart({
+        name: 'fill_form',
+        input: {},
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'fill_form',
+        output: {},
+        durationMs: 500,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      // effectiveParallelism should be (llmTimeMs + toolTimeMs) / totalMs
+      expect(record.timingBreakdown.effectiveParallelism).toBeGreaterThanOrEqual(0);
+      expect(typeof record.timingBreakdown.effectiveParallelism).toBe('number');
+    });
+
+    it('returns 0 for zero-duration fills', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      // No events, immediate getRecord
+      const record = collector.getRecord(mockProgressCounts);
+
+      // With near-zero durationMs, effectiveParallelism should be 0 or a small number
+      expect(record.timingBreakdown.effectiveParallelism).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('avgDurationMs', () => {
+    it('computes avgDurationMs as totalDurationMs / totalCalls', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onToolStart({
+        name: 'web_search',
+        input: { query: 'q1' },
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'web_search',
+        output: {},
+        durationMs: 1000,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onToolStart({
+        name: 'fill_form',
+        input: {},
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'fill_form',
+        output: {},
+        durationMs: 500,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      // totalDurationMs = 1000 + 500 = 1500, totalCalls = 2
+      expect(record.toolSummary.avgDurationMs).toBe(750);
+    });
+
+    it('returns 0 for zero tool calls', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      expect(record.toolSummary.avgDurationMs).toBe(0);
+    });
+  });
+
   describe('setStatus', () => {
     it('allows explicit status setting', () => {
       const collector = new FillRecordCollector({

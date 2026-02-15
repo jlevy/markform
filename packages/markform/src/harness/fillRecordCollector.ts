@@ -656,6 +656,7 @@ export class FillRecordCollector implements FillCallbacks {
       failedCalls,
       successRate: totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0,
       totalDurationMs,
+      avgDurationMs: totalCalls > 0 ? totalDurationMs / totalCalls : 0,
       byTool,
     };
   }
@@ -723,6 +724,7 @@ export class FillRecordCollector implements FillCallbacks {
       toolTimeMs,
       overheadMs,
       breakdown,
+      effectiveParallelism: totalMs > 0 ? (llmTimeMs + toolTimeMs) / totalMs : 0,
     };
   }
 

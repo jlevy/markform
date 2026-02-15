@@ -54,6 +54,7 @@ function createTestRecord(overrides: Partial<FillRecord> = {}): FillRecord {
       failedCalls: 1,
       successRate: 91.7,
       totalDurationMs: 5100,
+      avgDurationMs: 425,
       byTool: [
         {
           toolName: 'web_search',
@@ -97,6 +98,7 @@ function createTestRecord(overrides: Partial<FillRecord> = {}): FillRecord {
         { category: 'tools', label: 'Tools', ms: 5100, percentage: 41 },
         { category: 'overhead', label: 'Overhead', ms: 480, percentage: 4 },
       ],
+      effectiveParallelism: 0.96,
     },
     formProgress: {
       totalFields: 20,
@@ -147,13 +149,14 @@ describe('formatFillRecordSummary', () => {
     expect(summary).toContain('anthropic/claude-sonnet-4-5');
   });
 
-  it('shows tool summary', () => {
+  it('shows tool summary with avg duration', () => {
     const record = createTestRecord();
     const summary = formatFillRecordSummary(record);
 
     expect(summary).toContain('12 calls');
     expect(summary).toContain('11 succeeded');
     expect(summary).toContain('1 failed');
+    expect(summary).toContain('avg 425ms each');
   });
 
   it('shows progress percentage', () => {
@@ -183,6 +186,7 @@ describe('formatFillRecordSummary', () => {
         failedCalls: 0,
         successRate: 0,
         totalDurationMs: 0,
+        avgDurationMs: 0,
         byTool: [],
       },
     });
@@ -268,6 +272,173 @@ describe('formatFillRecordSummary', () => {
 
     expect(summary).toContain('0/20');
     expect(summary).toContain('0%');
+  });
+
+  describe('rate metrics on status line', () => {
+    it('shows s/turn and s/field rates', () => {
+      const record = createTestRecord();
+      const summary = formatFillRecordSummary(record);
+
+      // 12400ms / 5 turns = 2480ms/turn = 2.48s/turn
+      expect(summary).toContain('2.48s/turn');
+      // 12400ms / 18 answered fields = 688.9ms/field
+      expect(summary).toContain('689ms/field');
+    });
+
+    it('formats rate >= 10s with 1 decimal', () => {
+      const record = createTestRecord({
+        durationMs: 60000, // 60s / 5 turns = 12s/turn
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).toContain('12.0s/turn');
+    });
+
+    it('formats rate >= 1s with 2 decimals', () => {
+      const record = createTestRecord({
+        durationMs: 12400, // 12400ms / 5 turns = 2480ms = 2.48s/turn
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).toContain('2.48s/turn');
+    });
+
+    it('formats rate < 1s as ms', () => {
+      const record = createTestRecord({
+        durationMs: 2000, // 2000ms / 5 turns = 400ms/turn
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).toContain('400ms/turn');
+    });
+
+    it('omits s/field rate when no fields answered', () => {
+      const record = createTestRecord({
+        formProgress: {
+          totalFields: 20,
+          requiredFields: 20,
+          unansweredFields: 20,
+          answeredFields: 0,
+          skippedFields: 0,
+          abortedFields: 0,
+          validFields: 0,
+          invalidFields: 0,
+          emptyFields: 20,
+          filledFields: 0,
+          emptyRequiredFields: 20,
+          totalNotes: 0,
+        },
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).not.toContain('s/field');
+    });
+
+    it('omits s/turn rate when no turns', () => {
+      const record = createTestRecord({
+        execution: {
+          totalTurns: 0,
+          parallelEnabled: false,
+          orderLevels: [0],
+          executionThreads: ['main'],
+        },
+      });
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).not.toContain('s/turn');
+    });
+  });
+
+  describe('timing split in non-verbose mode', () => {
+    it('shows one-line timing split', () => {
+      const record = createTestRecord();
+      const summary = formatFillRecordSummary(record);
+
+      expect(summary).toContain('Timing:');
+      expect(summary).toContain('55% LLM');
+      expect(summary).toContain('41% tools');
+      expect(summary).toContain('4% overhead');
+    });
+
+    it('does not show absolute durations in non-verbose mode', () => {
+      const record = createTestRecord();
+      const summary = formatFillRecordSummary(record);
+
+      // Non-verbose should NOT have duration values in the timing line
+      const timingLine = summary.split('\n').find((l) => l.startsWith('Timing:'));
+      expect(timingLine).not.toContain('6.8s');
+    });
+  });
+
+  describe('verbose parallelism info', () => {
+    it('shows parallelism details for parallel fills', () => {
+      const record = createTestRecord({
+        execution: {
+          totalTurns: 5,
+          parallelEnabled: true,
+          maxParallelAgents: 4,
+          orderLevels: [0, 1],
+          executionThreads: ['eid:serial:o0', 'eid:batch:o1:t:i0', 'eid:batch:o1:t:i1'],
+        },
+        timingBreakdown: {
+          totalMs: 12400,
+          llmTimeMs: 6820,
+          toolTimeMs: 5100,
+          overheadMs: 480,
+          breakdown: [
+            { category: 'llm', label: 'LLM', ms: 6820, percentage: 55 },
+            { category: 'tools', label: 'Tools', ms: 5100, percentage: 41 },
+            { category: 'overhead', label: 'Overhead', ms: 480, percentage: 4 },
+          ],
+          effectiveParallelism: 2.1,
+        },
+      });
+      const summary = formatFillRecordSummary(record, { verbose: true });
+
+      expect(summary).toContain('Effective parallelism: 2.1x');
+      expect(summary).toContain('3 threads');
+      expect(summary).toContain('2 order levels');
+    });
+
+    it('shows parallelism for serial fills with high overhead', () => {
+      const record = createTestRecord({
+        timingBreakdown: {
+          totalMs: 12400,
+          llmTimeMs: 4000,
+          toolTimeMs: 3000,
+          overheadMs: 5400,
+          breakdown: [
+            { category: 'llm', label: 'LLM', ms: 4000, percentage: 32 },
+            { category: 'tools', label: 'Tools', ms: 3000, percentage: 24 },
+            { category: 'overhead', label: 'Overhead', ms: 5400, percentage: 44 },
+          ],
+          effectiveParallelism: 0.56,
+        },
+      });
+      const summary = formatFillRecordSummary(record, { verbose: true });
+
+      expect(summary).toContain('Effective parallelism: 0.6x');
+    });
+
+    it('omits parallelism for serial fills with normal overhead', () => {
+      const record = createTestRecord({
+        timingBreakdown: {
+          totalMs: 12400,
+          llmTimeMs: 6820,
+          toolTimeMs: 5100,
+          overheadMs: 480,
+          breakdown: [
+            { category: 'llm', label: 'LLM', ms: 6820, percentage: 55 },
+            { category: 'tools', label: 'Tools', ms: 5100, percentage: 41 },
+            { category: 'overhead', label: 'Overhead', ms: 480, percentage: 4 },
+          ],
+          effectiveParallelism: 0.96,
+        },
+      });
+      const summary = formatFillRecordSummary(record, { verbose: true });
+
+      expect(summary).not.toContain('Effective parallelism');
+    });
   });
 
   describe('empty timeline warnings', () => {
