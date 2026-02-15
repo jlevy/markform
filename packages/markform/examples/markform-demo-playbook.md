@@ -19,7 +19,7 @@ Markform.
 This playbook works in two ways:
 
 1. **Agent instructions:** Steps an agent can follow start to finish.
-2. **User narration:** "Tell the user" blocks keep the user informed at each phase.
+2. **User narration:** “Tell the user” blocks keep the user informed at each phase.
 
 Notes:
 - An agent must have access to use `markform` as a CLI.
