@@ -695,6 +695,9 @@ export class FillRecordCollector implements FillCallbacks {
     llmTimeMs: number,
     toolTimeMs: number,
   ): TimingBreakdown {
+    // Under parallelism, llmTimeMs + toolTimeMs can exceed totalMs (since they're
+    // sums of individual durations, not de-overlapped). Clamp overhead to 0 in that case.
+    // This means percentage breakdowns may exceed 100% for parallel fills.
     const overheadMs = Math.max(0, totalMs - llmTimeMs - toolTimeMs);
 
     const breakdown: TimingBreakdownItem[] = [

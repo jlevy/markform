@@ -32,7 +32,7 @@ function formatNumber(n: number): string {
  */
 function formatDuration(ms: number): string {
   if (ms < 1000) {
-    return `${ms}ms`;
+    return `${Math.round(ms)}ms`;
   }
   const seconds = ms / 1000;
   if (seconds < 60) {
