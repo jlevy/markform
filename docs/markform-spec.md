@@ -1,12 +1,12 @@
-<!--
-SPDX-License-Identifier: CC-BY-4.0
+<!-- SPDX-License-Identifier: CC-BY-4.0
 
 Markform Specification - Licensed under Creative Commons Attribution 4.0 International
 https://creativecommons.org/licenses/by/4.0/
 
 You may freely implement this specification in your own software under any license.
-The reference implementation at https://github.com/jlevy/markform is separately
-licensed under AGPL-3.0-or-later. Contact the author for commercial licensing options.
+The reference implementation at https://github.com/jlevy/markform is separately licensed
+under AGPL-3.0-or-later.
+Contact the author for commercial licensing options.
 -->
 
 # Markform Specification
@@ -145,17 +145,17 @@ markform:
   This is a hint for tooling, not enforced by the engine.
 
 - `harness` (*optional*): A map of harness configuration hints that suggest execution
-  parameters to harness implementations. These are suggestions — a harness MAY ignore
-  them or override them via API options.
+  parameters to harness implementations.
+  These are suggestions — a harness MAY ignore them or override them via API options.
 
   Supported keys (all values must be numbers, all keys must be `snake_case`):
 
-  | Key | Description |
-  | --- | --- |
-  | `max_turns` | Suggested maximum turns before stopping |
-  | `max_patches_per_turn` | Suggested maximum patches per turn |
-  | `max_issues_per_turn` | Suggested maximum issues surfaced per turn |
-  | `max_parallel_agents` | Suggested maximum concurrent agents for parallel execution |
+| Key | Description |
+| --- | --- |
+| `max_turns` | Suggested maximum turns before stopping |
+| `max_patches_per_turn` | Suggested maximum patches per turn |
+| `max_issues_per_turn` | Suggested maximum issues surfaced per turn |
+| `max_parallel_agents` | Suggested maximum concurrent agents for parallel execution |
 
   Unrecognized keys or non-numeric values are parse errors.
 
@@ -225,8 +225,8 @@ Markform defines its own scoping rules where option IDs are field-scoped.
 
 - Duplicate `(ref, tag)` pairs are an error
 
-- Multiple doc blocks can reference the same target with different tags (e.g., both `{%
-  description ref="foo" %}` and `{% instructions ref="foo" %}` are allowed)
+- Multiple doc blocks can reference the same target with different tags (e.g., both
+  `{% description ref="foo" %}` and `{% instructions ref="foo" %}` are allowed)
 
 - To reference an option, use qualified form: `ref="{fieldId}.{optionId}"`
 
@@ -298,8 +298,8 @@ parse error.
 
 **Nesting constraints:**
 - Field tags MUST NOT be nested inside other field tags
-- Nested field tags produce a parse error:
-  `Field tags cannot be nested. Found 'inner_id' inside 'outer_id'`
+- Nested field tags produce a parse error: `Field tags cannot be nested.
+  Found 'inner_id' inside 'outer_id'`
 
 **Example with placeholder and examples:**
 ```md
@@ -409,9 +409,11 @@ Type: `integer`, default: `-1` (require all).
 Example with partial completion allowed:
 ```md
 {% field kind="checkboxes" id="optional_tasks" label="Optional tasks" required=true minDone=1 %}
+
 - [ ] Task A {% #task_a %}
 - [ ] Task B {% #task_b %}
 - [ ] Task C {% #task_c %}
+
 {% /field %}
 ```
 
@@ -456,7 +458,7 @@ type.
 | --- | --- | --- | --- |
 | `columnIds` | string[] | Yes | Array of snake_case column identifiers |
 | `columnLabels` | string[] | No | Array of display labels (backfilled from table header row if omitted) |
-| `columnTypes` | string[] | No | Array of column types (defaults to all `'string'`) |
+| `columnTypes` | (string \| object)[] | No | Array of column types with optional constraints (defaults to all `'string'`) |
 | `minRows` | number | No | Minimum row count (default: 0) |
 | `maxRows` | number | No | Maximum row count (default: unlimited) |
 
@@ -464,15 +466,41 @@ type.
 
 | Type | Description | Validation |
 | --- | --- | --- |
-| `string` | Any text value | None |
+| `string` | Any text value | None (unless constraints specified) |
 | `number` | Numeric value | Integer or float |
 | `url` | URL value | Valid URL format |
 | `date` | Date value | ISO 8601 format (YYYY-MM-DD) |
 | `year` | Year value | Integer (1000-9999) |
 
-**Per-column required setting:** Column types can optionally specify a `required` flag:
+**Per-column required setting and constraints:** Column types can be specified as a
+simple type name or an object with type, required flag, and optional constraints:
 ```md
 columnTypes=[{type: "string", required: true}, "number", "url"]
+```
+
+**Per-column constraints by type:**
+
+| Constraint | Applies to | Description |
+| --- | --- | --- |
+| `required` | all types | Cell must have a value |
+| `minLength` | `string` | Minimum string length |
+| `maxLength` | `string` | Maximum string length |
+| `pattern` | `string` | Regex pattern the value must match |
+| `enum` | `string` | Array of allowed values (controlled vocabulary) |
+| `min` | `number`, `year`, `date` | Minimum value (number for number/year, ISO date string for date) |
+| `max` | `number`, `year`, `date` | Maximum value |
+| `integer` | `number` | Value must be an integer |
+
+**Example with per-column constraints:**
+```md
+{% field kind="table" id="priority_table" label="Ranked Insights"
+   columnIds=["rank", "summary", "role"]
+   columnTypes=[{"type": "number", "min": 1, "integer": true}, "string", {"type": "string", "enum": ["hook", "context", "example", "summary"]}]
+   minRows=3 maxRows=15 %}
+| Rank | Summary | Role |
+|------|---------|------|
+
+{% /field %}
 ```
 
 **Basic table-field (columnLabels backfilled from header row):**
@@ -481,6 +509,7 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
    columnIds=["name", "title", "department"] %}
 | Name | Title | Department |
 |------|-------|------------|
+
 {% /field %}
 ```
 
@@ -492,6 +521,7 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
    columnTypes=["string", "string", "string"] %}
 | Full Name | Job Title | Department |
 |-----------|-----------|------------|
+
 {% /field %}
 ```
 
@@ -506,6 +536,7 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
 |------|-------|----------|-----------------|
 | 2023 | Barbie | 88 | 1441.8 |
 | 2019 | Once Upon a Time in Hollywood | 85 | 374.3 |
+
 {% /field %}
 ```
 
@@ -564,11 +595,11 @@ without filtering out nested doc blocks.
 
 - Doc blocks do not have their own IDs
 
-- *required:* `(ref, tag)` combination must be unique (e.g., only one `{% instructions
-  ref="foo" %}`)
+- *required:* `(ref, tag)` combination must be unique (e.g., only one
+  `{% instructions ref="foo" %}`)
 
-- Multiple doc blocks with different tags can reference the same target (e.g., both `{%
-  description ref="foo" %}` and `{% instructions ref="foo" %}` are allowed)
+- Multiple doc blocks with different tags can reference the same target (e.g., both
+  `{% description ref="foo" %}` and `{% instructions ref="foo" %}` are allowed)
 
 #### Field Values
 
@@ -614,9 +645,11 @@ Values are encoded **inline** via `[x]` marker—at most one option may be selec
 `required=true`, exactly one must be selected):
 ```md
 {% field kind="single_select" id="rating" label="Rating" %}
+
 - [ ] Bullish {% #bullish %}
 - [x] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
+
 {% /field %}
 ````
 
@@ -627,9 +660,11 @@ Option IDs are scoped to the field—reference as `rating.bullish`, `rating.neut
 Values are encoded **inline** via `[x]` markers—no separate value fence:
 ```md
 {% field kind="multi_select" id="categories" label="Categories" %}
+
 - [x] Technology {% #tech %}
 - [ ] Healthcare {% #health %}
 - [x] Finance {% #finance %}
+
 {% /field %}
 ```
 
@@ -638,28 +673,34 @@ Values are encoded **inline** via `[x]` markers—no separate value fence:
 Values are encoded **inline** via state markers—no separate value fence:
 ```md
 {% field kind="checkboxes" id="tasks" label="Tasks" %}
+
 - [x] Review docs {% #review %}
 - [/] Write tests {% #tests %}
 - [*] Run CI {% #ci %}
 - [ ] Deploy {% #deploy %}
 - [-] Manual QA {% #manual_qa %}
+
 {% /field %}
 ```
 
 For simple two-state checkboxes:
 ```md
 {% field kind="checkboxes" id="agreements" label="Agreements" checkboxMode="simple" %}
+
 - [x] I agree to terms {% #terms %}
 - [ ] Subscribe to newsletter {% #newsletter %}
+
 {% /field %}
 ```
 
 For explicit yes/no checkboxes (requires answer for each):
 ```md
 {% field kind="checkboxes" id="risk_factors" label="Risk Assessment" checkboxMode="explicit" required=true %}
+
 - [y] Market volatility risk assessed {% #market %}
 - [n] Regulatory risk assessed {% #regulatory %}
 - [ ] Currency risk assessed {% #currency %}
+
 {% /field %}
 ```
 
@@ -669,8 +710,8 @@ answers.
 
 ##### Implicit Checkboxes (Plan Documents)
 
-Forms designed as task lists or plans can omit explicit field wrappers. When a form
-contains:
+Forms designed as task lists or plans can omit explicit field wrappers.
+When a form contains:
 - A `{% form %}` wrapper (or `<!-- form ... -->`)
 - No explicit `{% field %}` tags
 - Standard markdown checkboxes with ID annotations
@@ -882,7 +923,7 @@ Analysis completed with partial data due to API limitations.
 ```value
 %SKIP% (Not applicable for this analysis type)
 ````
-{% /field %} {% /group %}
+{% /field %}{% /group %}
 
 {% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
 data due to API limitations.
@@ -961,10 +1002,12 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 
 {% group id="source_docs" title="Source Documents" %}
 {% field kind="checkboxes" id="docs_reviewed" label="Documents reviewed" required=true %}
+
 - [ ] 10-K {% #ten_k %}
 - [ ] 10-Q {% #ten_q %}
 - [ ] Earnings release {% #earnings_release %}
 - [ ] Earnings call transcript {% #call_transcript %}
+
 {% /field %}
 {% /group %}
 
@@ -976,9 +1019,11 @@ Prepare an earnings-call brief by extracting key financials and writing a thesis
 
 {% group id="analysis" title="Analysis" %}
 {% field kind="single_select" id="rating" label="Overall rating" required=true %}
+
 - [ ] Bullish {% #bullish %}
 - [ ] Neutral {% #neutral %}
 - [ ] Bearish {% #bearish %}
+
 {% /field %}
 {% field kind="string" id="thesis" label="Investment thesis" required=true %}{% /field %}
 {% /group %}
@@ -998,15 +1043,16 @@ Hand-authored forms only need the `spec` field.
 ```value
 ACME Corp
 ````
-{% /field %} {% field kind="string" id="ticker" label="Ticker" required=true %}
+{% /field %}{% field kind="string" id="ticker" label="Ticker" required=true %}
 ```value
 ACME
 ```
-{% /field %} {% field kind="string" id="fiscal_period" label="Fiscal period"
-required=true %}{% /field %} {% /group %}
+{% /field %}
+{% field kind="string" id="fiscal_period" label="Fiscal period" required=true %}{% /field %}
+{% /group %}
 
-{% group id="source_docs" title="Source Documents" %} {% checkboxes id="docs_reviewed"
-label="Documents reviewed" required=true %}
+{% group id="source_docs" title="Source Documents" %}
+{% checkboxes id="docs_reviewed" label="Documents reviewed" required=true %}
 
 - [x] 10-K {% #ten_k %}
 
@@ -1014,7 +1060,7 @@ label="Documents reviewed" required=true %}
 
 - [/] Earnings release {% #earnings_release %}
 
-- [ ] Earnings call transcript {% #call_transcript %} {% /field %} {% /group %}
+- [ ] Earnings call transcript {% #call_transcript %}{% /field %}{% /group %}
 ````
 
 Notes:
@@ -1268,9 +1314,11 @@ markform:
 <!-- group id="ratings" -->
 
 <!-- field kind="single_select" id="quality" label="Quality Rating" -->
+
 - [ ] Excellent <!-- #excellent -->
 - [ ] Good <!-- #good -->
 - [ ] Fair <!-- #fair -->
+
 <!-- /field -->
 
 <!-- /group -->
@@ -1368,7 +1416,7 @@ classification) and **data types** (the underlying value representation).
 | **Data Type** | TypeScript/JSON type of the value. | `string`, `number`, `string[]` |
 | **Value Type** | Complete type expression including nullability. | `string \| null`, `OptionId[]` |
 | **Scalar Type** | Single atomic value (optionally format-constrained). | `string`, `url`, `date` |
-| **Column Type** | Type of a cell in a table field (subset of scalar types). | `string`, `number`, `url` |
+| **Column Type** | Type of a cell in a table field (subset of scalar types). Supports per-column constraints (minLength, maxLength, pattern, enum, min, max, integer). | `string`, `number`, `url` |
 
 ##### Data Type Taxonomy
 
