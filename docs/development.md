@@ -72,6 +72,7 @@ markform/
         integrations/   # AI SDK tools
         web/            # Serve UI
       tests/
+        qa/             # Manual QA: walkthrough playbook, live fill tests
       examples/
   docs/                 # Project documentation
   .changeset/           # Version management
@@ -276,7 +277,7 @@ For final QA validation before releases, run manual end-to-end tests with live A
 These tests verify the complete form filling pipeline including FillRecord capture.
 
 ```bash
-# Location: packages/markform/tests/manual/live-fill-manual-test.md
+# Location: packages/markform/tests/qa/live-fill-manual-test.qa.md
 ```
 
 **Why manual tests?**
@@ -293,7 +294,7 @@ These tests verify the complete form filling pipeline including FillRecord captu
    # Or: ANTHROPIC_API_KEY=sk-ant-...
    ```
 
-2. Run tests from `tests/manual/live-fill-manual-test.md`:
+2. Run tests from `tests/qa/live-fill-manual-test.qa.md`:
    ```bash
    ./dist/bin.mjs fill examples/simple/simple.form.md \
      --model openai/gpt-5-mini \
@@ -315,7 +316,36 @@ These tests verify the complete form filling pipeline including FillRecord captu
 - After changes to FillRecord, harness, or agent code
 - When adding new provider integrations
 
-See `packages/markform/tests/manual/live-fill-manual-test.md` for the complete test suite.
+See `packages/markform/tests/qa/live-fill-manual-test.qa.md` for the complete test suite.
+
+### Full QA Walkthrough
+
+A comprehensive end-to-end QA playbook exercises all Markform CLI commands and field
+types through a guided agent walkthrough. An agent follows the demo playbook to build,
+fill, validate, export, and serve a complete form, then verifies all features against an
+18-item checklist covering 28 features.
+
+```bash
+# Location: packages/markform/tests/qa/markform-full-walkthrough.qa.md
+# Demo playbook: packages/markform/examples/markform-demo-playbook.md
+```
+
+**How it works:**
+
+1. An agent reads the QA playbook, which instructs it to execute the demo playbook
+2. The demo playbook walks through all phases: install, form design, filling (step-by-step
+   or automated), validation, export, and serve
+3. After completion, the agent returns to the QA playbook to verify all features were
+   exercised and report any issues
+
+**When to run:**
+
+- Before releases (covers commands that automated tests don't reach)
+- After significant CLI, engine, or harness changes
+- When validating a new environment or setup
+
+This is the most thorough manual test available — it exercises every CLI command and all 11
+field kinds in a single run.
 
 ### Regenerating Golden Tests
 
