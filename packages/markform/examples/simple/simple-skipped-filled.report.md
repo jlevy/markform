@@ -57,8 +57,8 @@ High
 
 **Confirmations (Explicit Mode):**
 
-- [x] Data has been backed up
-- [ ] Stakeholders notified
+- Data has been backed up: Yes
+- Stakeholders notified: No
 
 ## URL Fields
 

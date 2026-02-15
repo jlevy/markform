@@ -6,13 +6,12 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # CLI Integration Tests
 
 Additional CLI integration tests covering format options, flags, and error handling.
 Complements commands.tryscript.md with deeper coverage of specific options.
 
----
+* * *
 
 ## Help and Version
 
@@ -35,7 +34,7 @@ $ $CLI --version
 ? 0
 ```
 
----
+* * *
 
 ## Inspect Command Options
 
@@ -51,14 +50,14 @@ $ $CLI inspect --format json examples/simple/simple.form.md | head -5
 ? 0
 ```
 
----
+* * *
 
 ## Validate Command Options
 
 # Test: validate with --verbose shows details
 
 ```console
-$ $CLI validate --verbose examples/simple/simple.form.md
+$ $CLI validate --verbose examples/simple/simple.form.md 2>&1
 Reading file: examples/simple/simple.form.md
 Parsing form...
 Running validation...
@@ -105,7 +104,7 @@ Issues (21):
 ? 0
 ```
 
----
+* * *
 
 ## Status Command Options
 
@@ -126,7 +125,7 @@ $ $CLI status --format json examples/simple/simple.form.md | head -10
 ? 0
 ```
 
----
+* * *
 
 ## Dump Command
 
@@ -140,7 +139,7 @@ email: (unanswered)
 ? 0
 ```
 
----
+* * *
 
 ## Export Command Options
 
@@ -164,7 +163,7 @@ $ $CLI export --format json examples/simple/simple.form.md | head -3
 ? 0
 ```
 
----
+* * *
 
 ## Schema Command Options
 
@@ -188,7 +187,7 @@ No x-markform found
 ? 0
 ```
 
----
+* * *
 
 ## Documentation Commands
 
@@ -211,7 +210,7 @@ $ $CLI readme | head -3
 ? 0
 ```
 
----
+* * *
 
 ## Examples Command
 
@@ -231,6 +230,11 @@ Available examples:
     Fully interactive demo - no LLM required. Demonstrates all Markform field types.
     Source: ./examples/simple/simple.form.md
 
+  twitter-thread [fill]
+    Content to Twitter Thread
+    Transform raw content into an engaging Twitter/X thread through structured analysis, prioritization, and iterative refinement.
+    Source: ./examples/twitter-thread/twitter-thread.form.md
+
   movie-deep-research [research]
     Movie Deep Research
     Comprehensive movie research form with ratings, box office, cast/crew, technical specs, streaming availability, and cultural analysis.
@@ -240,10 +244,13 @@ Available examples:
     Startup Deep Research
     Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.
     Source: ./examples/startup-deep-research/startup-deep-research.form.md
+
+Tip: For a comprehensive end-to-end walkthrough, ask your coding agent
+to run the Markform QA playbook (tests/qa/markform-full-walkthrough.qa.md).
 ? 0
 ```
 
----
+* * *
 
 ## Error Handling
 

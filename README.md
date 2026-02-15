@@ -50,8 +50,11 @@ place.
   on GitHub, so **forms look like regular Markdown**. (Jinja-style tag syntax also works
   if you prefer.)
 
-- Optionally, **a fill record** of the form-filling process is kept, so you can see and
-  debug exactly how forms are filled by agents, tool usage, LLM call time, etc.
+- Form-filling can scale to **hundreds of fields** in a form filled by **dozens of
+  concurrent LLM requests** which makes it possible to systemetize large, complex
+  research processes or workflows.
+  (And **a fill record** of the form-filling process is kept, so you can see and debug
+  exactly how forms are filled by agents, tool usage, LLM call time, etc.)
 
 - The CLI has a built-in web renderer, **`markform serve`**, for easy viewing and
   debugging of forms (including a form web UI, the form schema, and a waterfall-style
