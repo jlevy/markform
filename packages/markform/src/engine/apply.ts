@@ -62,6 +62,12 @@ const PATCH_OP_TO_FIELD_KIND: Record<string, string> = {
   set_date: 'date',
   set_year: 'year',
   set_table: 'table',
+  append_table: 'table',
+  delete_table: 'table',
+  append_string_list: 'string_list',
+  delete_string_list: 'string_list',
+  append_url_list: 'url_list',
+  delete_url_list: 'url_list',
 };
 
 /**
@@ -415,6 +421,66 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
         }
       }
     }
+  } else if (patch.op === 'append_table' && field.kind === 'table') {
+    const columnIds = field.columns.map((c) => c.id);
+    if (!Array.isArray(patch.value)) {
+      return {
+        patchIndex: index,
+        message: `Invalid append_table patch for field "${field.id}": value must be an array of row objects. Columns: [${columnIds.join(', ')}]`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+        columnIds,
+      };
+    }
+    const validColumns = new Set(columnIds);
+    for (const row of patch.value) {
+      if (row != null) {
+        for (const colId of Object.keys(row)) {
+          if (!validColumns.has(colId)) {
+            return {
+              patchIndex: index,
+              message: `Invalid column "${colId}" for table field "${field.id}"`,
+            };
+          }
+        }
+      }
+    }
+  } else if (patch.op === 'delete_table' && field.kind === 'table') {
+    const currentValue = form.responsesByFieldId[field.id]?.value;
+    const rowCount = currentValue?.kind === 'table' ? currentValue.rows.length : 0;
+    if (patch.value >= rowCount) {
+      return {
+        patchIndex: index,
+        message: `Index ${patch.value} out of bounds for table field "${field.id}" (${rowCount} rows)`,
+      };
+    }
+  } else if (
+    (patch.op === 'append_string_list' || patch.op === 'append_url_list') &&
+    (field.kind === 'string_list' || field.kind === 'url_list')
+  ) {
+    if (!Array.isArray(patch.value)) {
+      return {
+        patchIndex: index,
+        message: `Invalid ${patch.op} patch for field "${field.id}": value must be an array`,
+        fieldId: field.id,
+        fieldKind: field.kind,
+      };
+    }
+  } else if (
+    (patch.op === 'delete_string_list' || patch.op === 'delete_url_list') &&
+    (field.kind === 'string_list' || field.kind === 'url_list')
+  ) {
+    const currentValue = form.responsesByFieldId[field.id]?.value;
+    const itemCount =
+      currentValue?.kind === 'string_list' || currentValue?.kind === 'url_list'
+        ? currentValue.items.length
+        : 0;
+    if (patch.value >= itemCount) {
+      return {
+        patchIndex: index,
+        message: `Index ${patch.value} out of bounds for ${field.kind} field "${field.id}" (${itemCount} items)`,
+      };
+    }
   } else if (patch.op === 'skip_field' && field.required) {
     return { patchIndex: index, message: `Cannot skip required field "${field.id}"` };
   }
@@ -579,6 +645,87 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
       responses[patch.fieldId] = {
         state: 'answered',
         value: { kind: 'table', rows } as TableValue,
+      };
+      break;
+    }
+
+    // Append rows to table
+    case 'append_table': {
+      const existing = responses[patch.fieldId]?.value;
+      const currentRows: TableRowResponse[] = existing?.kind === 'table' ? [...existing.rows] : [];
+      const newRows: TableRowResponse[] = (patch.value ?? []).map((patchRow) => {
+        const row: TableRowResponse = {};
+        if (patchRow != null) {
+          for (const [colId, cellValue] of Object.entries(patchRow)) {
+            row[colId] = patchValueToCell(cellValue);
+          }
+        }
+        return row;
+      });
+      responses[patch.fieldId] = {
+        state: 'answered',
+        value: { kind: 'table', rows: [...currentRows, ...newRows] } as TableValue,
+      };
+      break;
+    }
+
+    // Delete row from table by index
+    case 'delete_table': {
+      const existingTbl = responses[patch.fieldId]?.value;
+      const rows: TableRowResponse[] = existingTbl?.kind === 'table' ? [...existingTbl.rows] : [];
+      rows.splice(patch.value, 1);
+      responses[patch.fieldId] = {
+        state: rows.length > 0 ? 'answered' : 'unanswered',
+        ...(rows.length > 0 && { value: { kind: 'table', rows } as TableValue }),
+      };
+      break;
+    }
+
+    // Append items to string_list
+    case 'append_string_list': {
+      const existingList = responses[patch.fieldId]?.value;
+      const currentItems: string[] =
+        existingList?.kind === 'string_list' ? [...existingList.items] : [];
+      responses[patch.fieldId] = {
+        state: 'answered',
+        value: { kind: 'string_list', items: [...currentItems, ...patch.value] } as FieldValue,
+      };
+      break;
+    }
+
+    // Delete item from string_list by index
+    case 'delete_string_list': {
+      const existingSl = responses[patch.fieldId]?.value;
+      const items: string[] = existingSl?.kind === 'string_list' ? [...existingSl.items] : [];
+      items.splice(patch.value, 1);
+      responses[patch.fieldId] = {
+        state: items.length > 0 ? 'answered' : 'unanswered',
+        ...(items.length > 0 && {
+          value: { kind: 'string_list', items } as FieldValue,
+        }),
+      };
+      break;
+    }
+
+    // Append items to url_list
+    case 'append_url_list': {
+      const existingUl = responses[patch.fieldId]?.value;
+      const currentUrls: string[] = existingUl?.kind === 'url_list' ? [...existingUl.items] : [];
+      responses[patch.fieldId] = {
+        state: 'answered',
+        value: { kind: 'url_list', items: [...currentUrls, ...patch.value] } as FieldValue,
+      };
+      break;
+    }
+
+    // Delete item from url_list by index
+    case 'delete_url_list': {
+      const existingUlDel = responses[patch.fieldId]?.value;
+      const urls: string[] = existingUlDel?.kind === 'url_list' ? [...existingUlDel.items] : [];
+      urls.splice(patch.value, 1);
+      responses[patch.fieldId] = {
+        state: urls.length > 0 ? 'answered' : 'unanswered',
+        ...(urls.length > 0 && { value: { kind: 'url_list', items: urls } as FieldValue }),
       };
       break;
     }

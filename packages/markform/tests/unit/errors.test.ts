@@ -19,6 +19,7 @@ import {
   isConfigError,
   isAbortError,
   isRetryableError,
+  wrapApiError,
 } from '../../src/errors.js';
 
 describe('MarkformError', () => {
@@ -167,6 +168,141 @@ describe('MarkformLlmError', () => {
   it('defaults retryable to false', () => {
     const error = new MarkformLlmError('Unknown error', {});
     expect(error.retryable).toBe(false);
+  });
+
+  it('includes responseBody when provided', () => {
+    const error = new MarkformLlmError('API error', {
+      provider: 'openai',
+      model: 'gpt-4o',
+      statusCode: 404,
+      responseBody: '{"error": {"message": "Model not found"}}',
+    });
+    expect(error.responseBody).toBe('{"error": {"message": "Model not found"}}');
+  });
+});
+
+describe('wrapApiError', () => {
+  it('wraps a plain error with model context', () => {
+    const originalError = new Error('Not Found');
+    const wrapped = wrapApiError(originalError, 'anthropic', 'claude-opus-4-5');
+
+    expect(wrapped).toBeInstanceOf(MarkformLlmError);
+    expect(wrapped.provider).toBe('anthropic');
+    expect(wrapped.model).toBe('claude-opus-4-5');
+    expect(wrapped.message).toContain('anthropic/claude-opus-4-5');
+    expect(wrapped.message).toContain('Not Found');
+    expect(wrapped.cause).toBe(originalError);
+  });
+
+  it('extracts statusCode from APICallError-like errors', () => {
+    const apiError = Object.assign(new Error('Forbidden'), {
+      statusCode: 403,
+      isRetryable: false,
+    });
+    const wrapped = wrapApiError(apiError, 'google', 'gemini-3-pro');
+
+    expect(wrapped.statusCode).toBe(403);
+    expect(wrapped.retryable).toBe(false);
+    expect(wrapped.message).toContain('HTTP 403');
+  });
+
+  it('extracts responseBody from APICallError-like errors', () => {
+    const apiError = Object.assign(new Error('Bad Request'), {
+      statusCode: 400,
+      responseBody: '{"error": {"message": "Invalid model"}}',
+      isRetryable: false,
+    });
+    const wrapped = wrapApiError(apiError, 'openai', 'invalid-model');
+
+    expect(wrapped.responseBody).toBe('{"error": {"message": "Invalid model"}}');
+    expect(wrapped.message).toContain('Response:');
+    expect(wrapped.message).toContain('Invalid model');
+  });
+
+  it('truncates long response bodies', () => {
+    const longBody = 'x'.repeat(500);
+    const apiError = Object.assign(new Error('Error'), {
+      responseBody: longBody,
+    });
+    const wrapped = wrapApiError(apiError, 'anthropic', 'test-model');
+
+    expect(wrapped.message).toContain('...');
+    expect(wrapped.responseBody).toBe(longBody); // Full body preserved in property
+  });
+
+  it('handles retryable errors', () => {
+    const apiError = Object.assign(new Error('Rate limited'), {
+      statusCode: 429,
+      isRetryable: true,
+    });
+    const wrapped = wrapApiError(apiError, 'anthropic', 'claude-sonnet-4-5');
+
+    expect(wrapped.retryable).toBe(true);
+    expect(wrapped.statusCode).toBe(429);
+  });
+
+  it('handles non-Error values', () => {
+    const wrapped = wrapApiError('string error', 'xai', 'grok-4');
+
+    expect(wrapped.message).toContain('string error');
+    expect(wrapped.provider).toBe('xai');
+    expect(wrapped.model).toBe('grok-4');
+  });
+
+  describe('troubleshooting hints', () => {
+    it('adds hints for 404 Not Found errors', () => {
+      const apiError = Object.assign(new Error('Not Found'), { statusCode: 404 });
+      const wrapped = wrapApiError(apiError, 'anthropic', 'claude-opus-4-5');
+
+      expect(wrapped.message).toContain('Troubleshooting');
+      expect(wrapped.message).toContain('Check if model');
+      expect(wrapped.message).toContain('Verify the model ID');
+    });
+
+    it('adds hints for 403 Forbidden errors', () => {
+      const apiError = Object.assign(new Error('Forbidden'), { statusCode: 403 });
+      const wrapped = wrapApiError(apiError, 'google', 'gemini-3-pro');
+
+      expect(wrapped.message).toContain('Troubleshooting');
+      expect(wrapped.message).toContain('permission');
+      expect(wrapped.message).toContain('access tier');
+    });
+
+    it('adds hints for 401 Unauthorized errors', () => {
+      const apiError = Object.assign(new Error('Unauthorized'), { statusCode: 401 });
+      const wrapped = wrapApiError(apiError, 'openai', 'gpt-5');
+
+      expect(wrapped.message).toContain('Troubleshooting');
+      expect(wrapped.message).toContain('API key');
+      expect(wrapped.message).toContain('OPENAI_API_KEY');
+    });
+
+    it('adds hints for 429 Rate Limit errors', () => {
+      const apiError = Object.assign(new Error('Rate limited'), { statusCode: 429 });
+      const wrapped = wrapApiError(apiError, 'anthropic', 'claude-sonnet-4-5');
+
+      expect(wrapped.message).toContain('Troubleshooting');
+      expect(wrapped.message).toContain('rate limit');
+      expect(wrapped.message).toContain('retry');
+    });
+
+    it('adds hints for 5xx server errors', () => {
+      const apiError = Object.assign(new Error('Internal Server Error'), { statusCode: 500 });
+      const wrapped = wrapApiError(apiError, 'xai', 'grok-4');
+
+      expect(wrapped.message).toContain('Troubleshooting');
+      expect(wrapped.message).toContain('experiencing issues');
+      expect(wrapped.message).toContain('status page');
+    });
+
+    it('adds generic hints for unknown errors', () => {
+      const apiError = new Error('Something went wrong');
+      const wrapped = wrapApiError(apiError, 'deepseek', 'deepseek-chat');
+
+      expect(wrapped.message).toContain('Troubleshooting');
+      expect(wrapped.message).toContain('API key');
+      expect(wrapped.message).toContain('markform models');
+    });
   });
 });
 

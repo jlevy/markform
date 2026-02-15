@@ -37,7 +37,13 @@ const typedStylistic = tseslint.configs.stylisticTypeChecked.map((cfg) => ({
 export default [
   // Global ignores
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.pnpm-store/**', 'eslint.config.*'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/.pnpm-store/**',
+      'attic/**',
+      'eslint.config.*',
+    ],
   },
 
   // Base JS rules

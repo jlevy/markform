@@ -12,7 +12,11 @@
 
 import { z } from 'zod';
 
-import { ProgressCountsSchema, StructureSummarySchema } from '../engine/coreTypes.js';
+import {
+  PatchWarningSchema,
+  ProgressCountsSchema,
+  StructureSummarySchema,
+} from '../engine/coreTypes.js';
 
 // =============================================================================
 // Tool Statistics Schema
@@ -147,6 +151,9 @@ export const TimelineEntrySchema = z.object({
 
   /** Tool calls made during this turn */
   toolCalls: z.array(ToolCallRecordSchema),
+
+  /** Coercion warnings from patch normalization (e.g., string auto-wrapped to array) */
+  coercionWarnings: z.array(PatchWarningSchema).optional(),
 });
 
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
@@ -177,10 +184,18 @@ export const TimingBreakdownSchema = z.object({
   llmTimeMs: z.number().int().nonnegative(),
   /** Time spent executing tools (ms) */
   toolTimeMs: z.number().int().nonnegative(),
-  /** Overhead time (total - llm - tools) */
+  /** Overhead time (total - llm) — time not spent in generateText() calls */
   overheadMs: z.number().int().nonnegative(),
   /** Percentage breakdown for visualization */
   breakdown: z.array(TimingBreakdownItemSchema),
+  /**
+   * Effective concurrency of LLM calls: llmTimeMs / totalMs.
+   * Measures how many generateText() calls were active on average.
+   * Each generateText() duration includes tool execution within it, so this
+   * reflects LLM call concurrency, not tool-level concurrency.
+   * < 1.0 = idle time/overhead, 1.0 = fully utilized, > 1.0 = parallel execution.
+   */
+  llmParallelism: z.number().nonnegative(),
 });
 
 export type TimingBreakdown = z.infer<typeof TimingBreakdownSchema>;
@@ -203,6 +218,8 @@ export const ToolSummarySchema = z.object({
   successRate: z.number().nonnegative(),
   /** Total time spent in tool execution (ms) */
   totalDurationMs: z.number().int().nonnegative(),
+  /** Average duration per tool call (ms): totalDurationMs / totalCalls */
+  avgDurationMs: z.number().nonnegative(),
   /** Per-tool statistics */
   byTool: z.array(ToolStatsSchema),
 });
@@ -357,7 +374,10 @@ export type StableToolStats = Omit<ToolStats, 'timing'>;
 /**
  * Stripped ToolSummary without timing information.
  */
-export type StableToolSummary = Omit<ToolSummary, 'totalDurationMs' | 'byTool'> & {
+export type StableToolSummary = Omit<
+  ToolSummary,
+  'totalDurationMs' | 'avgDurationMs' | 'byTool'
+> & {
   byTool: StableToolStats[];
 };
 
@@ -394,6 +414,15 @@ export type StableFillRecord = Omit<
  * - toolSummary: call counts and success rates (without timing)
  * - execution: turn counts, parallel settings (deterministic)
  */
+/**
+ * Check if a fill record represents an empty session with no actual work.
+ * Returns true if the timeline has zero entries (no turns were executed).
+ * Used to skip writing .fill.json when no form-filling work was done.
+ */
+export function isEmptyFillRecord(record: FillRecord): boolean {
+  return record.timeline.length === 0;
+}
+
 export function stripUnstableFillRecordFields(record: FillRecord): StableFillRecord {
   // Strip timing from each tool's stats
   const stableByTool: StableToolStats[] = record.toolSummary.byTool.map((toolStats) => {

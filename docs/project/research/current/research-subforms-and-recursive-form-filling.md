@@ -593,7 +593,7 @@ For tables, an explicit ref column:
 
 **Pros:**
 - Respects Markform's global-unique ID rule (each file is its own namespace)
-- Compatible with existing tool API (`inspect`/`apply`/`export` per form)
+- Compatible with existing tool API (`inspect`/`patch`/`export` per form)
 - Scales to many subforms without one enormous file
 - Avoids reinventing row identity inside Markform
 - Easy to parallelize—each subform is independent
@@ -876,8 +876,8 @@ The caller (Claude Code, custom agent, etc.) drives execution via CLI or tools:
 markform next parent.form.md
 # Returns: { "action": "fill_subform", "row": 0, "formRef": "company-research.form.md", "context": {...} }
 
-# Caller fills subform
-markform fill subforms/acme.form.md --context '{"company": "Acme", ...}'
+# Caller pre-fills subform with parent context
+markform set subforms/acme.form.md --values '{"company": "Acme", ...}'
 
 # Caller marks complete
 markform complete-subform parent.form.md --row 0 --subformPath subforms/acme.form.md
@@ -2000,7 +2000,7 @@ Instead of extending the harness, expose a "next action" CLI command that caller
 markform next parent.form.md
 # Returns: { "action": "fill_subform", "row": 0, "formRef": "...", "context": {...} }
 
-markform fill subforms/acme.form.md --context '{"company": "Acme", ...}'
+markform set subforms/acme.form.md --values '{"company": "Acme", ...}'
 
 markform complete-subform parent.form.md --row 0 --subformPath subforms/acme.form.md
 ```

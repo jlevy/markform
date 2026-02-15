@@ -1,7 +1,7 @@
 /**
  * CLI implementation for markform.
  *
- * Provides commands for inspecting, applying patches, exporting,
+ * Provides commands for inspecting, patching, exporting,
  * serving, and running harness loops on .form.md files.
  */
 
@@ -11,7 +11,7 @@ import pc from 'picocolors';
 import { CLI_VERSION } from './lib/cliVersion.js';
 import { DEFAULT_FORMS_DIR } from './lib/paths.js';
 import { registerApisCommand } from './commands/apis.js';
-import { registerApplyCommand } from './commands/apply.js';
+import { registerPatchCommand } from './commands/patch.js';
 import { registerBrowseCommand } from './commands/browse.js';
 import { registerDocsCommand } from './commands/docs.js';
 import { registerDumpCommand } from './commands/dump.js';
@@ -24,11 +24,15 @@ import { registerReportCommand } from './commands/report.js';
 import { registerRunCommand } from './commands/run.js';
 import { registerSpecCommand } from './commands/spec.js';
 import { registerModelsCommand } from './commands/models.js';
+import { registerNextCommand } from './commands/next.js';
 import { registerPlanCommand } from './commands/plan.js';
 import { registerRenderCommand } from './commands/render.js';
 import { registerResearchCommand } from './commands/research.js';
 import { registerSchemaCommand } from './commands/schema.js';
 import { registerServeCommand } from './commands/serve.js';
+import { registerSetCommand } from './commands/set.js';
+import { registerSetupCommand } from './commands/setup.js';
+import { registerSkillCommand } from './commands/skill.js';
 import { registerStatusCommand } from './commands/status.js';
 import { registerValidateCommand } from './commands/validate.js';
 import { OUTPUT_FORMATS } from './lib/shared.js';
@@ -38,6 +42,7 @@ import { OUTPUT_FORMATS } from './lib/shared.js';
  */
 function withColoredHelp<T extends Command>(cmd: T): T {
   cmd.configureHelp({
+    helpWidth: 88,
     styleTitle: (str) => pc.bold(pc.cyan(str)),
     styleCommandText: (str) => pc.green(str),
     styleOptionText: (str) => pc.yellow(str),
@@ -62,7 +67,17 @@ function createProgram(): Command {
     .option('--dry-run', 'Show what would be done without making changes')
     .option('--format <format>', `Output format: ${OUTPUT_FORMATS.join(', ')}`, 'console')
     .option('--forms-dir <dir>', `Directory for form output (default: ${DEFAULT_FORMS_DIR})`)
-    .option('--overwrite', 'Overwrite existing field values (default: continue/skip filled)');
+    .option('--overwrite', 'Overwrite existing field values (default: continue/skip filled)')
+    .addHelpText(
+      'after',
+      `
+Skill Setup:
+  To use Markform as a Claude Code skill, run: markform setup --auto
+  To view the skill content: markform skill
+
+Getting Started:
+  npm install -g markform && markform setup --auto`,
+    );
 
   // Register commands
   // Help/docs first
@@ -71,7 +86,7 @@ function createProgram(): Command {
   registerSpecCommand(program);
   registerApisCommand(program);
   // Rest alphabetical for help display
-  registerApplyCommand(program);
+  registerPatchCommand(program);
   registerBrowseCommand(program);
   registerDumpCommand(program);
   registerExamplesCommand(program);
@@ -79,6 +94,7 @@ function createProgram(): Command {
   registerFillCommand(program);
   registerInspectCommand(program);
   registerModelsCommand(program);
+  registerNextCommand(program);
   registerPlanCommand(program);
   registerRenderCommand(program);
   registerReportCommand(program);
@@ -86,6 +102,9 @@ function createProgram(): Command {
   registerRunCommand(program);
   registerSchemaCommand(program);
   registerServeCommand(program);
+  registerSetCommand(program);
+  registerSetupCommand(program);
+  registerSkillCommand(program);
   registerStatusCommand(program);
   registerValidateCommand(program);
 

@@ -188,6 +188,48 @@ describe('markform_inspect tool', () => {
     expect(result.data.structureSummary.fieldCount).toBe(2);
     expect(result.data.progressSummary).toBeDefined();
   });
+
+  it('enriches issues with patch format examples', async () => {
+    const result = await tools.markform_inspect.execute({});
+    const nameIssue = result.data.issues.find((i) => i.ref === 'name');
+    const ageIssue = result.data.issues.find((i) => i.ref === 'age');
+
+    // Each issue should have a set_example with the correct patch format
+    expect((nameIssue as any).set_example).toContain('set_string');
+    expect((nameIssue as any).set_example).toContain('name');
+    expect((ageIssue as any).set_example).toContain('set_number');
+    expect((ageIssue as any).set_example).toContain('age');
+  });
+
+  it('enriches issues with field metadata', async () => {
+    const result = await tools.markform_inspect.execute({});
+    const nameIssue = result.data.issues.find((i) => i.ref === 'name');
+
+    expect((nameIssue as any).field).toBeDefined();
+    expect((nameIssue as any).field.kind).toBe('string');
+    expect((nameIssue as any).field.label).toBe('Name');
+    expect((nameIssue as any).field.required).toBe(true);
+  });
+
+  it('enriches optional fields with skip examples', async () => {
+    const optionalForm = parseForm(`---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g" %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+{% /form %}
+`);
+    const optStore = new MarkformSessionStore(optionalForm);
+    const optTools = createMarkformTools({ sessionStore: optStore });
+    const result = await optTools.markform_inspect.execute({});
+    const notesIssue = result.data.issues.find((i) => i.ref === 'notes');
+
+    expect((notesIssue as any).skip_example).toContain('skip_field');
+  });
 });
 
 // =============================================================================
@@ -208,6 +250,23 @@ describe('markform_apply tool', () => {
   it('has correct description', () => {
     expect(tools.markform_apply.description).toContain('Apply patches');
     expect(tools.markform_apply.description).toContain('set_string');
+  });
+
+  it('description mentions append/delete operations', () => {
+    expect(tools.markform_apply.description).toContain('append_table');
+    expect(tools.markform_apply.description).toContain('delete_table');
+    expect(tools.markform_apply.description).toContain('append_string_list');
+    expect(tools.markform_apply.description).toContain('append_url_list');
+  });
+
+  it('input schema accepts append/delete patches', async () => {
+    // Verify the Zod schema accepts append operations
+    const patches: Patch[] = [{ op: 'append_string_list', fieldId: 'tags', value: ['new_tag'] }];
+
+    // This should not throw — the schema must accept append_string_list
+    const result = await tools.markform_apply.execute({ patches });
+    // Patch may be rejected (field doesn't exist) but the schema accepted it
+    expect(result).toBeDefined();
   });
 
   it('applies valid patches', async () => {

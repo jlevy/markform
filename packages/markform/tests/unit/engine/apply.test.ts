@@ -2143,4 +2143,518 @@ markform:
       });
     });
   });
+
+  // ===========================================================================
+  // Append/Delete Operations
+  // ===========================================================================
+
+  describe('append_table patch', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "role"] %}
+| Name | Role |
+|------|------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('appends row to empty table', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [
+        { op: 'append_table', fieldId: 'data', value: [{ name: 'Alice', role: 'Eng' }] },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      expect(value?.kind).toBe('table');
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(1);
+        expect(value.rows[0]?.name).toEqual({ state: 'answered', value: 'Alice' });
+      }
+    });
+
+    it('appends row to table with existing rows', () => {
+      const form = parseForm(tableForm);
+      applyPatches(form, [
+        { op: 'set_table', fieldId: 'data', value: [{ name: 'Alice', role: 'Eng' }] },
+      ]);
+      const patches: Patch[] = [
+        { op: 'append_table', fieldId: 'data', value: [{ name: 'Bob', role: 'PM' }] },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(2);
+        expect(value.rows[0]?.name).toEqual({ state: 'answered', value: 'Alice' });
+        expect(value.rows[1]?.name).toEqual({ state: 'answered', value: 'Bob' });
+      }
+    });
+
+    it('appends multiple rows at once', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [
+        {
+          op: 'append_table',
+          fieldId: 'data',
+          value: [
+            { name: 'Alice', role: 'Eng' },
+            { name: 'Bob', role: 'PM' },
+          ],
+        },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(2);
+      }
+    });
+
+    it('rejects append_table with invalid column', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [
+        { op: 'append_table', fieldId: 'data', value: [{ name: 'Alice', bad_col: 'x' }] },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('bad_col');
+    });
+  });
+
+  describe('delete_table patch', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "role"] %}
+| Name | Role |
+|------|------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('deletes row by index', () => {
+      const form = parseForm(tableForm);
+      applyPatches(form, [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          value: [
+            { name: 'Alice', role: 'Eng' },
+            { name: 'Bob', role: 'PM' },
+            { name: 'Carol', role: 'Design' },
+          ],
+        },
+      ]);
+      const patches: Patch[] = [{ op: 'delete_table', fieldId: 'data', value: 1 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(2);
+        expect(value.rows[0]?.name).toEqual({ state: 'answered', value: 'Alice' });
+        expect(value.rows[1]?.name).toEqual({ state: 'answered', value: 'Carol' });
+      }
+    });
+
+    it('rejects out-of-bounds index', () => {
+      const form = parseForm(tableForm);
+      applyPatches(form, [
+        { op: 'set_table', fieldId: 'data', value: [{ name: 'Alice', role: 'Eng' }] },
+      ]);
+      const patches: Patch[] = [{ op: 'delete_table', fieldId: 'data', value: 5 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+
+    it('produces empty table on last row delete', () => {
+      const form = parseForm(tableForm);
+      applyPatches(form, [
+        { op: 'set_table', fieldId: 'data', value: [{ name: 'Alice', role: 'Eng' }] },
+      ]);
+      const patches: Patch[] = [{ op: 'delete_table', fieldId: 'data', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.data?.state).toBe('unanswered');
+    });
+  });
+
+  describe('append_string_list patch', () => {
+    const listForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('appends item to empty list', () => {
+      const form = parseForm(listForm);
+      const patches: Patch[] = [{ op: 'append_string_list', fieldId: 'tags', value: ['rust'] }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.tags?.value;
+      if (value?.kind === 'string_list') {
+        expect(value.items).toEqual(['rust']);
+      }
+    });
+
+    it('appends items to existing list', () => {
+      const form = parseForm(listForm);
+      applyPatches(form, [{ op: 'set_string_list', fieldId: 'tags', value: ['rust', 'wasm'] }]);
+      const patches: Patch[] = [{ op: 'append_string_list', fieldId: 'tags', value: ['perf'] }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.tags?.value;
+      if (value?.kind === 'string_list') {
+        expect(value.items).toEqual(['rust', 'wasm', 'perf']);
+      }
+    });
+
+    it('appends multiple items at once', () => {
+      const form = parseForm(listForm);
+      const patches: Patch[] = [
+        { op: 'append_string_list', fieldId: 'tags', value: ['a', 'b', 'c'] },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.tags?.value;
+      if (value?.kind === 'string_list') {
+        expect(value.items).toEqual(['a', 'b', 'c']);
+      }
+    });
+  });
+
+  describe('delete_string_list patch', () => {
+    const listForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('deletes item at index', () => {
+      const form = parseForm(listForm);
+      applyPatches(form, [
+        { op: 'set_string_list', fieldId: 'tags', value: ['rust', 'wasm', 'perf'] },
+      ]);
+      const patches: Patch[] = [{ op: 'delete_string_list', fieldId: 'tags', value: 1 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.tags?.value;
+      if (value?.kind === 'string_list') {
+        expect(value.items).toEqual(['rust', 'perf']);
+      }
+    });
+
+    it('rejects out-of-bounds index', () => {
+      const form = parseForm(listForm);
+      applyPatches(form, [{ op: 'set_string_list', fieldId: 'tags', value: ['rust'] }]);
+      const patches: Patch[] = [{ op: 'delete_string_list', fieldId: 'tags', value: 5 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+
+    it('produces empty list on last item delete', () => {
+      const form = parseForm(listForm);
+      applyPatches(form, [{ op: 'set_string_list', fieldId: 'tags', value: ['only'] }]);
+      const patches: Patch[] = [{ op: 'delete_string_list', fieldId: 'tags', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.tags?.state).toBe('unanswered');
+    });
+  });
+
+  describe('append_url_list patch', () => {
+    const urlListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url_list" id="refs" label="References" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('appends URL to empty list', () => {
+      const form = parseForm(urlListForm);
+      const patches: Patch[] = [
+        { op: 'append_url_list', fieldId: 'refs', value: ['https://a.com'] },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.refs?.value;
+      if (value?.kind === 'url_list') {
+        expect(value.items).toEqual(['https://a.com']);
+      }
+    });
+
+    it('appends URL to existing list', () => {
+      const form = parseForm(urlListForm);
+      applyPatches(form, [{ op: 'set_url_list', fieldId: 'refs', value: ['https://a.com'] }]);
+      const patches: Patch[] = [
+        { op: 'append_url_list', fieldId: 'refs', value: ['https://b.com'] },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.refs?.value;
+      if (value?.kind === 'url_list') {
+        expect(value.items).toEqual(['https://a.com', 'https://b.com']);
+      }
+    });
+  });
+
+  describe('delete_url_list patch', () => {
+    const urlListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="url_list" id="refs" label="References" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('deletes URL at index', () => {
+      const form = parseForm(urlListForm);
+      applyPatches(form, [
+        { op: 'set_url_list', fieldId: 'refs', value: ['https://a.com', 'https://b.com'] },
+      ]);
+      const patches: Patch[] = [{ op: 'delete_url_list', fieldId: 'refs', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.refs?.value;
+      if (value?.kind === 'url_list') {
+        expect(value.items).toEqual(['https://b.com']);
+      }
+    });
+
+    it('rejects out-of-bounds index', () => {
+      const form = parseForm(urlListForm);
+      applyPatches(form, [{ op: 'set_url_list', fieldId: 'refs', value: ['https://a.com'] }]);
+      const patches: Patch[] = [{ op: 'delete_url_list', fieldId: 'refs', value: 3 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+  });
+
+  describe('append/delete with best-effort semantics', () => {
+    it('applies valid append alongside invalid delete', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% field kind="string_list" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      applyPatches(form, [{ op: 'set_string_list', fieldId: 'tags', value: ['existing'] }]);
+      const patches: Patch[] = [
+        { op: 'append_string_list', fieldId: 'tags', value: ['new'] },
+        { op: 'delete_string_list', fieldId: 'notes', value: 99 }, // out of bounds
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('partial');
+      const value = form.responsesByFieldId.tags?.value;
+      if (value?.kind === 'string_list') {
+        expect(value.items).toEqual(['existing', 'new']);
+      }
+    });
+  });
+
+  // ===========================================================================
+  // Error branch coverage: append non-array values
+  // ===========================================================================
+
+  describe('append with non-array values', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data"
+   columnIds=["name", "role"]
+   columnLabels=["Name", "Role"]
+   columnTypes=["string", "string"] %}
+| Name | Role |
+|------|------|
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const stringListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const urlListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="url_list" id="refs" label="References" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    it('rejects append_table with non-array value', () => {
+      const form = parseForm(tableForm);
+      const patches = [
+        { op: 'append_table', fieldId: 'data', value: { name: 'Alice' } },
+      ] as unknown as Patch[];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(1);
+    });
+
+    it('rejects append_string_list with non-array value', () => {
+      const form = parseForm(stringListForm);
+      const patches = [
+        { op: 'append_string_list', fieldId: 'tags', value: 'single-string' },
+      ] as unknown as Patch[];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(1);
+    });
+
+    it('rejects append_url_list with non-array value', () => {
+      const form = parseForm(urlListForm);
+      const patches = [
+        { op: 'append_url_list', fieldId: 'refs', value: 'https://single.com' },
+      ] as unknown as Patch[];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches).toHaveLength(1);
+    });
+  });
+
+  // ===========================================================================
+  // Error branch coverage: delete from empty/unset collections
+  // ===========================================================================
+
+  describe('delete from empty collections', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data"
+   columnIds=["name"]
+   columnLabels=["Name"]
+   columnTypes=["string"] %}
+| Name |
+|------|
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const stringListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string_list" id="tags" label="Tags" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    const urlListForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="url_list" id="refs" label="References" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+
+    it('rejects delete_table on field with no existing rows', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [{ op: 'delete_table', fieldId: 'data', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+
+    it('rejects delete_string_list on field with no existing items', () => {
+      const form = parseForm(stringListForm);
+      const patches: Patch[] = [{ op: 'delete_string_list', fieldId: 'tags', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+
+    it('rejects delete_url_list on field with no existing items', () => {
+      const form = parseForm(urlListForm);
+      const patches: Patch[] = [{ op: 'delete_url_list', fieldId: 'refs', value: 0 }];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('rejected');
+      expect(result.rejectedPatches[0]?.message).toContain('out of bounds');
+    });
+  });
 });

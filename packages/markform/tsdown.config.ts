@@ -60,6 +60,7 @@ export default defineConfig({
     cli: 'src/cli/cli.ts',
     bin: 'src/cli/bin.ts',
     'ai-sdk': 'src/integrations/vercelAiSdkTools.ts',
+    render: 'src/render/index.ts',
   },
   format: ['esm'],
   platform: 'node',

@@ -1,9 +1,10 @@
 # Markform
 
-[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/runs/21559895603)
-[![Coverage](https://raw.githubusercontent.com/jlevy/markform/main/badges/packages/markform/coverage-total.svg)](https://github.com/jlevy/markform/actions/runs/21559895603)
+[![CI](https://github.com/jlevy/markform/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/markform/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/markform)](https://www.npmjs.com/package/markform)
 [![X Follow](https://img.shields.io/twitter/follow/ojoshe)](https://x.com/ojoshe)
+
+### What if your Markdown docs had an agent-friendly semantic API?
 
 **Markform** is a text format for defining structured forms that humans can read,
 machines can parse, and agents can fill via tool calls.
@@ -13,12 +14,14 @@ Agents fill forms incrementally via patches.
 Fields are validated, so errors are caught early and can be corrected.
 Humans can review or intervene at any point.
 
-**Why forms?** For deep research or complex AI tasks, you need more than just prompts or
-flow: you need *structure*, which is precise control over agent output at every stage of
-a workflow. A well-designed form combines instructions, structured data, and validations
-in one place.
+### Why forms?
 
-**How it works:**
+For deep research or complex AI tasks, you need more than just prompts or flow: you need
+*structure*, which is precise control over agent output at every stage of a workflow.
+A well-designed form combines instructions, structured data, and validations in one
+place.
+
+### How it Works
 
 - A Markform document exposes a programmatic interface: users fill fields via CLI or web
   UI, agents fill via tool calls ([Vercel AI SDK](https://github.com/vercel/ai)
@@ -33,9 +36,29 @@ in one place.
   [precise specification](https://github.com/jlevy/markform/blob/main/docs/markform-spec.md).
   Export Markform syntax to JSON, YAML, JSON Schema, or plain Markdown reports.
 
-Markform syntax is a good source format: token-efficient text you can read, diff, and
-version control. Structure is defined with HTML comment tags (`<!-- field -->`) that
-render invisibly on GitHub, so forms look like regular Markdown.
+- Optionally, the whole thing is wrapped in a harness where large forms can be filled
+  concurrently by any LLM in a structured agentic loop.
+
+### Useful details
+
+- Markform syntax is a good source format: it is **token-efficient text** you can read,
+  diff, and version control and it is **ideal for context engineering** because it
+  combines document context, data schema, and memory (data filled so far).
+
+- Structure is defined with HTML comment tags (`<!-- field -->`) that render invisibly
+  on GitHub, so **forms look like regular Markdown**. (Jinja-style tag syntax also works
+  if you prefer.)
+
+- Form-filling can scale to **hundreds of fields** in a form filled by **dozens of
+  concurrent LLM requests** which makes it possible to systemetize large, complex
+  research processes or workflows.
+  (And **a fill record** of the form-filling process is kept, so you can see and debug
+  exactly how forms are filled by agents, tool usage, LLM call time, etc.)
+
+- The CLI has a built-in web renderer, **`markform serve`**, for easy viewing and
+  debugging of forms (including a form web UI, the form schema, and a waterfall-style
+  overview of the fill record, including performance details, which is useful for large,
+  concurrently filled forms).
 
 ## Simple Example: Research a Movie
 
@@ -282,21 +305,40 @@ See [the FAQ](#faq) for more on the design.
 
 ## Quick Start
 
-```bash
-# Copy example forms to ./forms/ and run one interactively.
-# Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env) for research examples
-npx markform@latest examples
+There are three ways to get started, from quickest to most thorough:
 
+**1. Run an example automatically** — copy bundled forms and let an LLM fill one:
+
+```bash
+# Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env)
+npx markform@latest examples
+```
+
+Pick `movie-research-demo.form.md` for a quick demo.
+
+**2. Agent-guided tour** — ask a coding agent (like Claude Code) to walk you through a
+specific example step by step.
+The agent copies the form, explains the structure, fills fields, validates, and exports:
+
+```bash
+# List available examples
+markform examples --list
+# Copy one to work with
+markform examples --name movie-research-demo
+```
+
+**3. End-to-end walkthrough** — have a coding agent follow the
+[demo playbook](packages/markform/examples/markform-demo-playbook.md) to design a
+research form from scratch, fill it with real data, validate, export, and browse.
+This is the most thorough tour of all Markform features.
+
+```bash
 # Read the docs (tell your agents to run these; they are agent-friendly!)
 npx markform  # CLI help
 npx markform readme   # This file
 npx markform docs  # Quick reference for writing Markforms
 npx markform spec  # Read the full spec
 ```
-
-The `markform examples` command copies some sample forms to `./forms` and prompts you to
-fill in a form interactively and then optionally have an agent complete it.
-Pick `movie-research-demo.form.md` for a quick example.
 
 ## Installation
 
@@ -308,6 +350,24 @@ npm install -g markform
 
 # Or as a project dependency
 npm install markform
+```
+
+### Use as a Claude Code Skill
+
+If you install markform globally (`npm install -g markform`), you can tell Claude to run
+`markform setup --auto` to install it as a Claude Code skill.
+This teaches Claude how to use markform commands when working with `.form.md` files in
+your project.
+
+```bash
+# Install as a Claude Code skill (non-interactive, for agents)
+markform setup --auto
+
+# Or guided setup with prompts (for humans)
+markform setup --interactive
+
+# View the skill content
+markform skill
 ```
 
 ### More Example Forms
@@ -364,16 +424,16 @@ flowchart LR
     subgraph SPEC["<b>MARKFORM SPEC</b>"]
         direction TB
 
-        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax and frontmatter (form, group, string-field, checkboxes, etc.)"]
+        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax<br/>and frontmatter (form,<br/>group, string-field, <br/>checkboxes, etc.)"]
         end
 
-        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for forms, fields, values (in Zod but mappable to JSON Schema or Pydantic)"]
+        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions<br/>for forms, fields, values"]
         end
 
-        subgraph L3["<b>LAYER 3: VALIDATION & FORM FILLING</b><br/>Rules for filling forms via patches, field ids, required field semantics, validation hooks"]
+        subgraph L3["<b>LAYER 3: VALIDATION <br/>AND PATCHES</b><br/>Rules for filling forms<br/>via patches, required<br/>field semantics, validation"]
         end
 
-        subgraph L4["<b>LAYER 4: TOOL API & INTERFACES</b><br/>Abstract API for agents and humans (TypeScript and AI SDK integration)"]
+        subgraph L4["<b>LAYER 4: TOOL API <br/>AND INTERFACES</b><br/>Abstract form-filling<br/>loop, concurrency<br/>model, tool layer"]
         end
 
         L4 --> L3 --> L2 --> L1
@@ -382,19 +442,19 @@ flowchart LR
     subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
         direction TB
 
-        subgraph CLI["<b>`markform` CLI</b><br/>Command-line interface to all features"]
+        subgraph CLI["<b>`markform` CLI</b><br/>Command-line interface<br/>to all features"]
         end
 
-        subgraph AGENT["<b>AGENT TOOL INTERFACE</b><br/>Tool API library using AI SDK tools"]
+        subgraph AGENT["<b>AGENT TOOL INTERFACE</b><br/>Tool API library><br/>(AI SDK tools)"]
         end
 
-        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Step-by-step form-filling agentic loop"]
+        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Concurrent form-filling<br/>agentic loop<br/>(AI SDK)"]
         end
 
-        subgraph ENGINE["<b>CORE TYPESCRIPT APIS</b><br/>Markdoc parser, serializer, patch application, validation (uses jiti for TypeScript rules)"]
+        subgraph ENGINE["<b>CORE TYPESCRIPT APIS</b><br/>Markdoc parser, serializer,<br/>patch application,<br/>validation (jiti for rules)"]
         end
 
-        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing with .session.yaml transcripts"]
+        subgraph TEST["<b>TESTING FRAMEWORK</b><br/>Golden session testing<br/>(.session.yaml transcripts)"]
         end
 
         CLI --> ENGINE
@@ -551,8 +611,8 @@ If unsure, try `gpt-5-mini` first as it’s fast and supports web search.
 
 ## Programmatic Usage
 
-Markform exports a parsing engine and AI SDK integration for use in your own
-applications.
+Markform exports a parsing engine, rendering functions, and AI SDK integration for use
+in your own applications.
 
 ### Basic Parsing
 
@@ -593,6 +653,34 @@ if (result.status.ok) {
 See the
 [API documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md)
 for options like parallel execution, callbacks, and checkpointing.
+
+### Rendering API
+
+Import from the `markform/render` subpath to render forms and fill records as HTML
+fragments — the same output as `markform serve`, without pulling in CLI/server
+dependencies:
+
+```typescript
+import {
+  renderViewContent,
+  renderFillRecordContent,
+  FILL_RECORD_STYLES,
+  FILL_RECORD_SCRIPTS,
+} from "markform/render";
+
+// Render a filled form as read-only HTML
+const formHtml = renderViewContent(parsedForm);
+
+// Render a fill record dashboard
+const dashboardHtml = renderFillRecordContent(fillRecord);
+```
+
+Also exports `renderSourceContent`, `renderMarkdownContent`, `renderYamlContent`,
+`renderJsonContent`, `escapeHtml`, `formatDuration`, and `formatTokens`.
+
+See the
+[API documentation](https://github.com/jlevy/markform/blob/main/docs/markform-apis.md#rendering-api)
+for full details.
 
 ### AI SDK Integration
 

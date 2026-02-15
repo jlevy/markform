@@ -284,6 +284,11 @@ export function extractTableContent(node: Node): string | null {
     if (n.type === 'text' && typeof n.attributes?.content === 'string') {
       return n.attributes.content;
     }
+    // Handle link nodes - reconstruct as markdown link [text](url)
+    if (n.type === 'link' && typeof n.attributes?.href === 'string') {
+      const linkText = n.children?.map(extractTextFromNode).join('') ?? '';
+      return `[${linkText}](${n.attributes.href})`;
+    }
     if (n.children && Array.isArray(n.children)) {
       return n.children.map(extractTextFromNode).join('');
     }

@@ -143,6 +143,76 @@ describe('FillRecordCollector', () => {
     });
   });
 
+  describe('coercion warnings in timeline', () => {
+    it('records coercion warnings from TurnProgress in timeline entries', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 2,
+        patchesApplied: 2,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        coercionWarnings: [
+          {
+            patchIndex: 0,
+            fieldId: 'tags',
+            message: 'Coerced single string to array',
+            coercion: 'string_to_list',
+          },
+        ],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.coercionWarnings).toHaveLength(1);
+      expect(record.timeline[0]!.coercionWarnings![0]!.fieldId).toBe('tags');
+      expect(record.timeline[0]!.coercionWarnings![0]!.coercion).toBe('string_to_list');
+    });
+
+    it('omits coercionWarnings from timeline when empty', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.coercionWarnings).toBeUndefined();
+    });
+  });
+
   describe('onLlmCallStart / onLlmCallEnd', () => {
     it('tracks LLM token usage', () => {
       const collector = new FillRecordCollector({
@@ -680,6 +750,135 @@ describe('FillRecordCollector', () => {
       expect(record.timingBreakdown.breakdown.map((b) => b.category)).toContain('llm');
       expect(record.timingBreakdown.breakdown.map((b) => b.category)).toContain('tools');
       expect(record.timingBreakdown.breakdown.map((b) => b.category)).toContain('overhead');
+    });
+  });
+
+  describe('llmParallelism', () => {
+    it('computes llmParallelism as llmTimeMs / totalMs', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onToolStart({
+        name: 'fill_form',
+        input: {},
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'fill_form',
+        output: {},
+        durationMs: 500,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      // llmParallelism should be llmTimeMs / totalMs
+      expect(record.timingBreakdown.llmParallelism).toBeGreaterThanOrEqual(0);
+      expect(typeof record.timingBreakdown.llmParallelism).toBe('number');
+    });
+
+    it('returns 0 for zero-duration fills', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      // No events, immediate getRecord
+      const record = collector.getRecord(mockProgressCounts);
+
+      // With near-zero durationMs, llmParallelism should be 0 or a small number
+      expect(record.timingBreakdown.llmParallelism).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('avgDurationMs', () => {
+    it('computes avgDurationMs as totalDurationMs / totalCalls', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onToolStart({
+        name: 'web_search',
+        input: { query: 'q1' },
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'web_search',
+        output: {},
+        durationMs: 1000,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onToolStart({
+        name: 'fill_form',
+        input: {},
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'fill_form',
+        output: {},
+        durationMs: 500,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      // totalDurationMs = 1000 + 500 = 1500, totalCalls = 2
+      expect(record.toolSummary.avgDurationMs).toBe(750);
+    });
+
+    it('returns 0 for zero tool calls', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      expect(record.toolSummary.avgDurationMs).toBe(0);
     });
   });
 

@@ -41,12 +41,12 @@ Error: ENOENT: no such file or directory, open '/nonexistent/file.form.md'
 
 ---
 
-## Apply Command
+## Patch Command
 
-# Test: apply patches a form field
+# Test: patch applies patches to a form field
 
 ```console
-$ cp examples/simple/simple.form.md /tmp/test-apply.form.md && $CLI apply /tmp/test-apply.form.md --patch '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | grep -A 1 'id="name"'
+$ cp examples/simple/simple.form.md /tmp/test-patch.form.md && $CLI patch /tmp/test-patch.form.md '[{"op":"set_string","fieldId":"name","value":"Test User"}]' | grep -A 1 'id="name"'
 <!-- field kind="string" id="name" role="user" examples=["John Smith", "Jane Doe"] label="Name" maxLength=50 minLength=2 placeholder="Enter your name" required=true -->
 [..]value
 ? 0

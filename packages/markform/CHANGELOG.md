@@ -1,5 +1,29 @@
 # markform
 
+## 0.1.24
+
+### Patch Changes
+
+- a048f20: CLI form-filling commands (set, next, patch), append/delete patch ops, Claude Code skill integration, fill record improvements, and test coverage enhancements
+
+## 0.1.23
+
+### Patch Changes
+
+- 5ed47e2: Extensible provider support via ProviderAdapter; fix skip reason display in badge pill
+
+## 0.1.22
+
+### Patch Changes
+
+- a8738d4: Render subpath export, skip reason display, URL parsing fix, API error improvements
+
+## 0.1.21
+
+### Patch Changes
+
+- e445541: Bug fixes for parallel execution tracking and YAML formatting improvements
+
 ## 0.1.20
 
 ### Patch Changes

@@ -138,6 +138,12 @@ Each patch has an `op` and `fieldId`.
 | `set_date` | date | `{ "op": "set_date", "fieldId": "deadline", "value": "2024-06-15" }` |
 | `set_year` | year | `{ "op": "set_year", "fieldId": "founded", "value": 2015 }` |
 | `set_table` | table | `{ "op": "set_table", "fieldId": "data", "value": [{"col1": "v1"}] }` |
+| `append_table` | table | `{ "op": "append_table", "fieldId": "data", "value": [{"col1": "v2"}] }` |
+| `delete_table` | table | `{ "op": "delete_table", "fieldId": "data", "value": [0, 2] }` |
+| `append_string_list` | string_list | `{ "op": "append_string_list", "fieldId": "tags", "value": ["c"] }` |
+| `delete_string_list` | string_list | `{ "op": "delete_string_list", "fieldId": "tags", "value": ["a"] }` |
+| `append_url_list` | url_list | `{ "op": "append_url_list", "fieldId": "sources", "value": ["https://new"] }` |
+| `delete_url_list` | url_list | `{ "op": "delete_url_list", "fieldId": "sources", "value": ["https://old"] }` |
 | `clear_field` | any | `{ "op": "clear_field", "fieldId": "name" }` |
 | `skip_field` | optional | `{ "op": "skip_field", "fieldId": "notes", "reason": "Not applicable" }` |
 | `abort_field` | any | `{ "op": "abort_field", "fieldId": "data", "reason": "Unable to find" }` |
@@ -233,8 +239,8 @@ const result = await fillForm({
 **Behavior:**
 - `enableParallel: false` (default): All fields filled serially, `parallel` attributes
   ignored. The `order` attribute still controls issue filtering.
-- `enableParallel: true`: Batch items run concurrently (up to `maxParallelAgents`).
-  Each agent runs a multi-turn loop with rejection feedback, same as the serial path.
+- `enableParallel: true`: Batch items run concurrently (up to `maxParallelAgents`). Each
+  agent runs a multi-turn loop with rejection feedback, same as the serial path.
 - If the form has no `parallel` batches, falls back to serial automatically.
 - `FillResult` shape is identical regardless of serial or parallel execution.
 
@@ -249,6 +255,16 @@ The `status` field in `FillResult` indicates success or failure:
 | `{ ok: false, reason: 'batch_limit' }` | Hit `maxTurnsThisCall` per-call limit |
 | `{ ok: false, reason: 'cancelled' }` | Aborted via signal |
 | `{ ok: false, reason: 'error' }` | Unexpected error |
+
+When `ok` is `false`, the status also includes:
+
+- `message?: string` — Human-readable error description
+- `error?: Error` — The original Error object with its full cause chain preserved (when
+  the caught value was an Error instance).
+  For `MarkformLlmError` instances, this carries `.statusCode`, `.responseBody`,
+  `.provider`, `.model`, and `.retryable` properties.
+  Not serialized into FillRecord — use for in-memory diagnostics and real-time error
+  handling.
 
 ### Resumable Form Fills
 
@@ -345,6 +361,7 @@ await fillForm({
 | `onLlmCallStart` | `{ model }` | Called before an LLM request |
 | `onLlmCallEnd` | `{ model, inputTokens, outputTokens }` | Called after an LLM response |
 | `onWebSearch` | `{ query, resultCount, provider }` | Called when a web search is performed |
+| `onError` | `(error: Error, { turnNumber })` | Called when an error occurs during the fill loop |
 
 **TurnProgress fields:**
 
@@ -370,8 +387,9 @@ interface PatchRejection {
 
 ### FillRecord
 
-When `recordFill: true`, the `FillResult.record` contains a complete record of everything
-that happened during the fill operation. Useful for cost analysis, debugging, and auditing.
+When `recordFill: true`, the `FillResult.record` contains a complete record of
+everything that happened during the fill operation.
+Useful for cost analysis, debugging, and auditing.
 
 ```typescript
 const result = await fillForm({
@@ -497,10 +515,10 @@ interface HeadingInfo {
 
 ### findEnclosingHeadings(markdown: string, line: number): HeadingInfo[]
 
-Find all headings that enclose a given line position. Returns headings from innermost
-(most specific) to outermost (least specific).
+Find all headings that enclose a given line position.
+Returns headings from innermost (most specific) to outermost (least specific).
 
-A heading "encloses" a line if the heading appears before the line and no heading of
+A heading “encloses” a line if the heading appears before the line and no heading of
 equal or higher level appears between them.
 
 ### findAllCheckboxes(markdown: string): CheckboxInfo[]
@@ -545,6 +563,59 @@ interface InjectHeaderIdsOptions {
   levels?: number[];      // Default: [1, 2, 3, 4, 5, 6]
 }
 ```
+
+## Rendering API
+
+Import from the render subpath for HTML rendering functions that produce the same output
+as `markform serve`:
+
+```typescript
+import {
+  renderViewContent,
+  renderSourceContent,
+  renderMarkdownContent,
+  renderYamlContent,
+  renderJsonContent,
+  renderFillRecordContent,
+  FILL_RECORD_STYLES,
+  FILL_RECORD_SCRIPTS,
+  escapeHtml,
+  formatDuration,
+  formatTokens,
+} from 'markform/render';
+```
+
+These functions produce HTML fragments (not full pages), so consumers can embed them in
+their own page shell with their own layout, CSS reset, and surrounding UI.
+
+### Content Renderers
+
+| Function | Input | Description |
+| --- | --- | --- |
+| `renderViewContent(form)` | `ParsedForm` | Render a form as a read-only HTML view |
+| `renderSourceContent(content)` | `string` | Render Jinja-style form source with syntax highlighting |
+| `renderMarkdownContent(content)` | `string` | Render markdown as HTML |
+| `renderYamlContent(content)` | `string` | Render YAML with syntax highlighting |
+| `renderJsonContent(content)` | `string` | Render JSON with syntax highlighting |
+| `renderFillRecordContent(record)` | `FillRecord` | Render a fill record as an interactive dashboard |
+
+### CSS and JavaScript Constants
+
+| Export | Description |
+| --- | --- |
+| `FILL_RECORD_STYLES` | `<style>` block with CSS for the fill record dashboard |
+| `FILL_RECORD_SCRIPTS` | JavaScript providing `frShowTip()`, `frHideTip()`, `frCopyYaml()` for fill record interactivity |
+
+Include `FILL_RECORD_STYLES` in your page `<head>` and `FILL_RECORD_SCRIPTS` in a
+`<script>` tag when using `renderFillRecordContent()`.
+
+### Utility Functions
+
+| Function | Description |
+| --- | --- |
+| `escapeHtml(str)` | Escape HTML special characters |
+| `formatDuration(ms)` | Format milliseconds as human-readable duration (e.g., `"1m 5s"`) |
+| `formatTokens(count)` | Format token counts with k suffix (e.g., `"1.5k"`) |
 
 ## Type Exports
 

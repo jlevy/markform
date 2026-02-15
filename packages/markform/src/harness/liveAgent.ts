@@ -24,8 +24,14 @@ import type {
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 import { serializeForm } from '../engine/serialize.js';
-import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, DEFAULT_MAX_STEPS_PER_TURN } from '../settings.js';
+import {
+  DEFAULT_ROLE_INSTRUCTIONS,
+  AGENT_ROLE,
+  DEFAULT_MAX_STEPS_PER_TURN,
+  DEFAULT_MAX_RETRIES,
+} from '../settings.js';
 import { getWebSearchConfig } from '../llms.js';
+import { wrapApiError } from '../errors.js';
 import type {
   Agent,
   AgentResponse,
@@ -66,6 +72,7 @@ export class LiveAgent implements Agent {
   private callbacks?: FillCallbacks;
   private executionId: string;
   private toolChoice: 'auto' | 'required';
+  private maxRetries: number;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -77,14 +84,21 @@ export class LiveAgent implements Agent {
     this.additionalTools = config.additionalTools ?? {};
     this.callbacks = config.callbacks;
     this.executionId = config.executionId ?? '0-serial';
+    this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
     // TODO: Make toolChoice configurable per-model or per-form in the future.
     // For now, 'required' is always safe since Markform agents must use tools.
     // Some models (e.g., gpt-5-mini) don't reliably call tools with 'auto'.
     this.toolChoice = config.toolChoice ?? 'required';
 
     // Eagerly load web search tools to enable early logging
-    if (this.enableWebSearch && this.provider) {
-      this.webSearchTools = loadWebSearchTools(this.provider);
+    if (this.enableWebSearch) {
+      if (config.providerTools) {
+        // Custom provider supplied its own tools (from ProviderAdapter)
+        this.webSearchTools = config.providerTools;
+      } else if (this.provider) {
+        // Built-in provider — use existing loadWebSearchTools()
+        this.webSearchTools = loadWebSearchTools(this.provider);
+      }
     }
   }
 
@@ -182,14 +196,21 @@ export class LiveAgent implements Agent {
     }
 
     // Call the model (stateless - full context provided each turn)
-    const result = await generateText({
-      model: this.model,
-      system: systemPrompt,
-      prompt: contextPrompt,
-      tools,
-      toolChoice: this.toolChoice,
-      stopWhen: stepCountIs(this.maxStepsPerTurn),
-    });
+    let result;
+    try {
+      result = await generateText({
+        model: this.model,
+        system: systemPrompt,
+        prompt: contextPrompt,
+        tools,
+        toolChoice: this.toolChoice,
+        maxRetries: this.maxRetries,
+        stopWhen: stepCountIs(this.maxStepsPerTurn),
+      });
+    } catch (error) {
+      // Wrap API errors with rich context for debugging
+      throw wrapApiError(error, this.provider ?? 'unknown', modelId);
+    }
 
     // Call onLlmCallEnd callback (errors don't abort)
     if (this.callbacks?.onLlmCallEnd) {

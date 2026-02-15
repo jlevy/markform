@@ -88,10 +88,11 @@ Form completed in 3 turn(s)
 ⏰ Fill time: [..]
 Form written to: /tmp/test-fill-full.form.md
 
-Fill completed in [..] (3 turns)
+Fill completed in [..] (3 turns, [..]/turn, [..]/field)
 
 Tokens:  0 input / 0 output (mock/mock)
 Tools:   0 calls
+Timing:  0% LLM | 0% tools | 100% overhead
 
 Progress: 17/21 fields filled (81%)
 Fill record written to: /tmp/test-fill-full.fill.json

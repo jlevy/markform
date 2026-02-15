@@ -5,7 +5,7 @@
  * form-filling sessions with a single function call.
  */
 
-import type { LanguageModel } from 'ai';
+import type { LanguageModel, Tool } from 'ai';
 
 import { applyPatches } from '../engine/apply.js';
 import type {
@@ -15,6 +15,7 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  PatchWarning,
   SessionTurnContext,
   SessionTurnStats,
 } from '../engine/coreTypes.js';
@@ -306,6 +307,16 @@ function mergeCallbacks(
         warnCallbackError('onWebSearch', e);
       }
     },
+    // Forward onError to user only (collector doesn't handle this)
+    onError: userCallbacks.onError
+      ? (error, context) => {
+          try {
+            userCallbacks.onError?.(error, context);
+          } catch (e) {
+            warnCallbackError('onError', e);
+          }
+        }
+      : undefined,
   };
 }
 
@@ -314,6 +325,7 @@ function buildErrorResult(
   errors: string[],
   warnings: string[],
   record?: FillRecord,
+  sourceError?: Error,
 ): FillResult {
   // Extract values from responses
   const values: Record<string, FieldValue> = {};
@@ -328,6 +340,7 @@ function buildErrorResult(
       ok: false,
       reason: 'error',
       message: errors.join('; '),
+      error: sourceError,
     },
     markdown: serializeForm(form),
     values,
@@ -441,7 +454,12 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     // Return error result for parse failures
     const message = error instanceof Error ? error.message : String(error);
     return {
-      status: { ok: false, reason: 'error', message: `Form parse error: ${message}` },
+      status: {
+        ok: false,
+        reason: 'error',
+        message: `Form parse error: ${message}`,
+        error: error instanceof Error ? error : undefined,
+      },
       markdown: typeof options.form === 'string' ? options.form : '',
       values: {},
       form: {
@@ -460,12 +478,14 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   // 2. Resolve model if string (skip if _testAgent provided)
   let model: LanguageModel | undefined;
   let provider: string | undefined;
+  let providerTools: Record<string, Tool> | undefined;
   if (!options._testAgent) {
     try {
       if (typeof options.model === 'string') {
-        const resolved = await resolveModel(options.model);
+        const resolved = await resolveModel(options.model, options.providers);
         model = resolved.model;
         provider = resolved.provider;
+        providerTools = resolved.tools;
       } else {
         model = options.model;
         // When a LanguageModel is passed directly, we can't determine provider
@@ -474,7 +494,13 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     } catch (error) {
       // Model resolution is a pre-fill configuration error - fail fast without FillRecord
       const message = error instanceof Error ? error.message : String(error);
-      return buildErrorResult(form, [`Model resolution error: ${message}`], []);
+      return buildErrorResult(
+        form,
+        [`Model resolution error: ${message}`],
+        [],
+        undefined,
+        error instanceof Error ? error : undefined,
+      );
     }
   } else if (typeof options.model === 'string' && options.model.includes('/')) {
     // For test agent, extract provider from model string (e.g., "mock/model" -> "mock")
@@ -549,6 +575,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       systemPromptAddition: options.systemPromptAddition,
       targetRole: targetRoles[0] ?? AGENT_ROLE,
       provider,
+      providerTools,
       enableWebSearch: options.enableWebSearch,
       additionalTools: options.additionalTools,
       callbacks: mergedCallbacks,
@@ -641,16 +668,25 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     } catch (error) {
       // Agent threw an error - capture it in fill record and return
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorObj = error instanceof Error ? error : undefined;
       let record: FillRecord | undefined;
       if (collector) {
         collector.setStatus('failed', errorMessage);
         record = collector.getRecord(getProgressCounts(form, targetRoles));
       }
+      // Fire onError callback so consumers can log/report in real time
+      if (errorObj && mergedCallbacks?.onError) {
+        try {
+          mergedCallbacks.onError(errorObj, { turnNumber: turnCount + 1 });
+        } catch (cbError) {
+          warnCallbackError('onError', cbError);
+        }
+      }
       return buildResult(
         form,
         turnCount,
         totalPatches,
-        { ok: false, reason: 'error', message: errorMessage },
+        { ok: false, reason: 'error', message: errorMessage, error: errorObj },
         inputContextWarnings,
         turnIssues,
         record,
@@ -733,6 +769,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           issues: turnIssues,
           patches,
           rejectedPatches: stepResult.rejectedPatches ?? [],
+          coercionWarnings: stepResult.coercionWarnings,
           executionId: '0-serial',
         });
       } catch {
@@ -1165,19 +1202,30 @@ async function runMultiTurnForItems(
     } catch (error) {
       // Return early with error result so it can be tracked by the parallel harness
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorObj = error instanceof Error ? error : undefined;
+      // Fire onError callback so consumers can log/report in real time
+      if (errorObj && mergedCallbacks?.onError) {
+        try {
+          mergedCallbacks.onError(errorObj, { turnNumber: startTurn + turnsUsed + 1 });
+        } catch (cbError) {
+          warnCallbackError('onError', cbError);
+        }
+      }
       return {
         patchesApplied,
         turnsUsed,
         aborted: true,
-        status: { ok: false, reason: 'error', message: errorMessage },
+        status: { ok: false, reason: 'error', message: errorMessage, error: errorObj },
       };
     }
 
     // Apply patches
+    let lastCoercionWarnings: PatchWarning[] | undefined;
     if (response.patches.length > 0) {
       const applyResult = applyPatches(form, response.patches);
       patchesApplied += applyResult.appliedPatches.length;
       previousRejections = applyResult.rejectedPatches;
+      lastCoercionWarnings = applyResult.warnings;
     } else {
       previousRejections = undefined;
     }
@@ -1198,6 +1246,7 @@ async function runMultiTurnForItems(
         issues: scopedIssues,
         patches: response.patches,
         rejectedPatches: previousRejections ?? [],
+        coercionWarnings: lastCoercionWarnings,
         executionId,
       });
     } catch {

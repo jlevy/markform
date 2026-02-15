@@ -29,6 +29,7 @@ import {
 import { getFormsDir } from '../lib/paths.js';
 import {
   ensureFormsDir,
+  formatOutput,
   formatPath,
   getCommandContext,
   logError,
@@ -38,24 +39,52 @@ import {
 import { formatFormLogLine, formatFormLabel, formatFormHint } from '../lib/formatting.js';
 import { parseForm } from '../../engine/parse.js';
 import { determineRunMode } from '../lib/runMode.js';
-import type { FormDisplayInfo, FormRunMode } from '../lib/cliTypes.js';
+import type { CommandContext, FormDisplayInfo, FormRunMode } from '../lib/cliTypes.js';
 import { runForm } from './run.js';
 import { browseOutputFiles } from './browse.js';
 
 /**
  * Print non-interactive list of examples.
+ * Supports --format=json and --format=yaml via formatOutput().
  */
-function printExamplesList(): void {
-  console.log(pc.bold('Available examples:\n'));
+function printExamplesList(ctx: CommandContext): void {
   const examples = getAllExamplesWithMetadata();
-  for (const example of examples) {
-    const typeLabel = example.type === 'research' ? pc.magenta('[research]') : pc.blue('[fill]');
-    console.log(`  ${pc.cyan(example.id)} ${typeLabel}`);
-    console.log(`    ${pc.bold(example.title ?? example.id)}`);
-    console.log(`    ${example.description ?? 'No description'}`);
-    console.log(`    Source: ${formatPath(getExamplePath(example.id))}`);
-    console.log('');
-  }
+
+  const data = examples.map((example) => ({
+    id: example.id,
+    filename: example.filename,
+    type: example.type,
+    title: example.title ?? example.id,
+    description: example.description ?? '',
+  }));
+
+  const output = formatOutput(ctx, data, (_data, useColors) => {
+    const c = useColors
+      ? pc
+      : {
+          bold: (s: string) => s,
+          cyan: (s: string) => s,
+          magenta: (s: string) => s,
+          blue: (s: string) => s,
+          dim: (s: string) => s,
+        };
+    const lines: string[] = [c.bold('Available examples:'), ''];
+    for (const example of examples) {
+      const typeLabel = example.type === 'research' ? c.magenta('[research]') : c.blue('[fill]');
+      lines.push(`  ${c.cyan(example.id)} ${typeLabel}`);
+      lines.push(`    ${c.bold(example.title ?? example.id)}`);
+      lines.push(`    ${example.description ?? 'No description'}`);
+      lines.push(`    Source: ${formatPath(getExamplePath(example.id))}`);
+      lines.push('');
+    }
+    lines.push(c.dim('Tip: For a comprehensive end-to-end walkthrough, ask your coding agent'));
+    lines.push(
+      c.dim('to run the Markform QA playbook (tests/qa/markform-full-walkthrough.qa.md).'),
+    );
+    return lines.join('\n');
+  });
+
+  console.log(output);
 }
 
 /**
@@ -279,7 +308,7 @@ export function registerExamplesCommand(program: Command): void {
       try {
         // --list mode: just print examples and exit
         if (options.list) {
-          printExamplesList();
+          printExamplesList(ctx);
           return;
         }
 

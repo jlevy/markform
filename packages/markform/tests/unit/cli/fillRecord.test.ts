@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { FillRecordCollector } from '../../../src/harness/fillRecordCollector.js';
+import { isEmptyFillRecord } from '../../../src/harness/fillRecord.js';
 import type { StructureSummary, ProgressCounts } from '../../../src/engine/coreTypes.js';
 
 // Mock form metadata for testing
@@ -326,6 +327,47 @@ describe('FillRecord CLI helpers', () => {
 
       // Total turns is 0 because no turns were recorded
       expect(record.execution.totalTurns).toBe(0);
+    });
+  });
+
+  describe('isEmptyFillRecord', () => {
+    it('returns true for record with empty timeline', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'test',
+        model: 'test-model',
+      });
+      collector.setStatus('completed');
+      const record = collector.getRecord(mockProgressCounts);
+      expect(isEmptyFillRecord(record)).toBe(true);
+    });
+
+    it('returns false for record with timeline entries', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'test',
+        model: 'test-model',
+      });
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        rejectedPatches: [],
+        issues: [],
+        patches: [],
+        executionId: 'eid:serial:o0',
+      });
+      collector.setStatus('completed');
+      const record = collector.getRecord(mockProgressCounts);
+      expect(isEmptyFillRecord(record)).toBe(false);
     });
   });
 });

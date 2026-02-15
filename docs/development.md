@@ -6,15 +6,16 @@
 
 ## Prerequisites
 
-- **Node.js 20+** — We recommend v24 (current) or v22 LTS.
-  Minimum supported is v20. [nodejs.org](https://nodejs.org/)
+- **Node.js 20+** — We recommend v24 (current) or v22 LTS. Minimum supported is v20.
+  [nodejs.org](https://nodejs.org/)
 
 - **pnpm 10.x** — Install via `corepack enable` or `npm install -g pnpm`
 
 ### Node.js Setup
 
-This project requires Node.js 20 or higher. We recommend Node 24 (current) for best
-performance. Setup depends on your environment:
+This project requires Node.js 20 or higher.
+We recommend Node 24 (current) for best performance.
+Setup depends on your environment:
 
 #### Claude Code on the Web (Automatic)
 
@@ -72,14 +73,15 @@ markform/
         integrations/   # AI SDK tools
         web/            # Serve UI
       tests/
+        qa/             # Manual QA: walkthrough playbook, live fill tests
       examples/
   docs/                 # Project documentation
   .changeset/           # Version management
   .github/workflows/    # CI/CD
 ```
 
-See [Architecture Design](project/architecture/current/arch-markform-design.md.md) for
-full technical specification.
+See [Architecture Design](project/architecture/current/arch-markform-design.md) for full
+technical specification.
 
 ## Common Commands
 
@@ -157,7 +159,11 @@ pnpm markform --help
 pnpm markform inspect <file>
 pnpm markform export <file>
 pnpm markform dump <file>
-pnpm markform apply <file> --patch '<json>'
+pnpm markform patch <file> '<json>'
+pnpm markform set <file> <fieldId> <value>
+pnpm markform set <file> --values '{"name":"Alice","age":30}'
+pnpm markform set <file> <fieldId> --append '<value>'
+pnpm markform next <file> --format json
 pnpm markform serve <file>
 pnpm markform fill <file> --interactive  # Interactive mode for user role fields
 pnpm markform fill <file> --mock --mock-source <mock-file>
@@ -184,7 +190,9 @@ pnpm markform:bin --help
 | `inspect <file>` | Display form structure, progress, and issues (YAML or JSON) |
 | `export <file>` | Export form schema and values as JSON |
 | `dump <file>` | Extract and display form values only (lightweight inspect) |
-| `apply <file>` | Apply JSON patches to update field values |
+| `patch <file> <json>` | Apply raw JSON patches to update field values |
+| `set <file> [fieldId] [value]` | Set field values with auto-coercion (single, batch, append) |
+| `next <file>` | Show prioritized next fields to fill (agent-friendly) |
 | `serve <file>` | Start a web server to browse/edit the form |
 | `fill <file>` | Fill a form using an agent (mock or live LLM) |
 | `research <file>` | Fill a form using a web-search-enabled model |
@@ -241,9 +249,9 @@ Session files are in `examples/*/` directories.
 pnpm test:tryscript
 ```
 
-Tryscript tests verify CLI commands produce correct output. Test files are Markdown
-documents with console code blocks that capture expected command output. See
-[tryscript](https://github.com/jlevy/tryscript) for format details.
+Tryscript tests verify CLI commands produce correct output.
+Test files are Markdown documents with console code blocks that capture expected command
+output. See [tryscript](https://github.com/jlevy/tryscript) for format details.
 
 ### Updating Tryscript Tests
 
@@ -270,7 +278,7 @@ For final QA validation before releases, run manual end-to-end tests with live A
 These tests verify the complete form filling pipeline including FillRecord capture.
 
 ```bash
-# Location: packages/markform/tests/manual/live-fill-manual-test.md
+# Location: packages/markform/tests/qa/live-fill-manual-test.qa.md
 ```
 
 **Why manual tests?**
@@ -287,7 +295,7 @@ These tests verify the complete form filling pipeline including FillRecord captu
    # Or: ANTHROPIC_API_KEY=sk-ant-...
    ```
 
-2. Run tests from `tests/manual/live-fill-manual-test.md`:
+2. Run tests from `tests/qa/live-fill-manual-test.qa.md`:
    ```bash
    ./dist/bin.mjs fill examples/simple/simple.form.md \
      --model openai/gpt-5-mini \
@@ -309,7 +317,37 @@ These tests verify the complete form filling pipeline including FillRecord captu
 - After changes to FillRecord, harness, or agent code
 - When adding new provider integrations
 
-See `packages/markform/tests/manual/live-fill-manual-test.md` for the complete test suite.
+See `packages/markform/tests/qa/live-fill-manual-test.qa.md` for the complete test
+suite.
+
+### Full QA Walkthrough
+
+A comprehensive end-to-end QA playbook exercises all Markform CLI commands and field
+types through a guided agent walkthrough.
+An agent follows the demo playbook to build, fill, validate, export, and serve a
+complete form, then verifies all features against a checklist.
+
+```bash
+# Location: packages/markform/tests/qa/markform-full-walkthrough.qa.md
+# Demo playbook: packages/markform/examples/markform-demo-playbook.md
+```
+
+**How it works:**
+
+1. An agent reads the QA playbook, which instructs it to execute the demo playbook
+2. The demo playbook walks through all phases: install, form design, filling
+   (step-by-step or automated), validation, export, and serve
+3. After completion, the agent returns to the QA playbook to verify all features were
+   exercised and report any issues
+
+**When to run:**
+
+- Before releases (covers commands that automated tests don’t reach)
+- After significant CLI, engine, or harness changes
+- When validating a new environment or setup
+
+This is the most thorough manual test available — it exercises every CLI command and all
+11 field kinds in a single run.
 
 ### Regenerating Golden Tests
 
@@ -364,8 +402,8 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
    ```
 
    Look for changes in `wire.request.system` and `wire.request.prompt` sections.
-   The session files capture the complete LLM request/response format, making it easy
-   to verify exactly what agents see.
+   The session files capture the complete LLM request/response format, making it easy to
+   verify exactly what agents see.
 
 4. **Run golden tests** to verify the form filling logic still works:
 
@@ -402,8 +440,8 @@ To match CI behavior locally, run `pnpm precommit` which executes the same check
 
 ### Code Coverage
 
-Coverage is collected using Vitest with the v8 provider. Reports are generated in multiple
-formats for different use cases.
+Coverage is collected using Vitest with the v8 provider.
+Reports are generated in multiple formats for different use cases.
 
 **Before submitting a PR**, review coverage for your changes:
 
@@ -415,7 +453,8 @@ pnpm --filter markform test:coverage
 open packages/markform/coverage/index.html
 ```
 
-The HTML report shows line-by-line coverage highlighting. Use it to:
+The HTML report shows line-by-line coverage highlighting.
+Use it to:
 
 - Identify untested code paths in your changes
 - Verify edge cases are covered
@@ -439,13 +478,12 @@ The HTML report shows line-by-line coverage highlighting. Use it to:
 | Functions | 49% | 80% |
 | Lines | 50% | 80% |
 
-Thresholds will be increased as coverage improves. CI will fail if coverage drops below
-thresholds.
+Thresholds will be increased as coverage improves.
+CI will fail if coverage drops below thresholds.
 
 **CI coverage visibility:**
 
 - PRs automatically receive coverage comments with summary and changed-file coverage
-- Coverage badge in README updates after merges to main
 - Run `pnpm --filter markform test:coverage` locally to match CI behavior
 
 ## AI SDK Integration
@@ -509,6 +547,46 @@ ANTHROPIC_API_KEY=your-key npx tsx packages/markform/scripts/test-live-agent.ts
 # Specify a different form
 npx tsx packages/markform/scripts/test-live-agent.ts path/to/form.md
 ```
+
+## Rendering API
+
+Markform exports HTML rendering functions via the `markform/render` subpath.
+These produce the same output as `markform serve` but as HTML fragments (not full
+pages), suitable for embedding in external applications.
+
+### Usage
+
+```typescript
+import {
+  renderViewContent,
+  renderSourceContent,
+  renderMarkdownContent,
+  renderYamlContent,
+  renderJsonContent,
+  renderFillRecordContent,
+  FILL_RECORD_STYLES,
+  FILL_RECORD_SCRIPTS,
+  escapeHtml,
+  formatDuration,
+  formatTokens,
+} from "markform/render";
+```
+
+### Module Structure
+
+The render module lives in `packages/markform/src/render/`:
+
+| File | Contents |
+| --- | --- |
+| `renderUtils.ts` | `escapeHtml`, `formatDuration`, `formatTokens` |
+| `contentRenderers.ts` | View, source, markdown, YAML, JSON renderers + private helpers |
+| `fillRecordRenderer.ts` | Fill record dashboard renderer + `FILL_RECORD_STYLES` + `FILL_RECORD_SCRIPTS` |
+| `index.ts` | Public API re-exports |
+
+These functions were extracted from `src/cli/commands/serve.ts`, which now imports from
+`render/` and re-exports for backward compatibility.
+
+See [markform-apis.md](markform-apis.md#rendering-api) for full API documentation.
 
 * * *
 

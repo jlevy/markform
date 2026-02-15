@@ -1,6 +1,6 @@
 {
   "name": "markform",
-  "version": "0.1.20",
+  "version": "0.1.24",
   "description": "Markdown forms for token-friendly workflows",
   "license": "AGPL-3.0-or-later",
   "author": "Joshua Levy",
@@ -40,6 +40,10 @@
       "types": "./dist/ai-sdk.d.mts",
       "default": "./dist/ai-sdk.mjs"
     },
+    "./render": {
+      "types": "./dist/render.d.mts",
+      "default": "./dist/render.mjs"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -55,7 +59,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "copy-docs": "cp ../../README.md . && mkdir -p docs && cp ../../docs/markform-spec.md docs/ && cp ../../docs/markform-reference.md docs/ && cp ../../docs/markform-apis.md docs/",
+    "copy-docs": "cp ../../README.md . && mkdir -p docs docs/skill && cp ../../docs/markform-spec.md docs/ && cp ../../docs/markform-reference.md docs/ && cp ../../docs/markform-apis.md docs/ && cp ../../docs/skill/SKILL.md docs/skill/",
     "build": "pnpm run copy-docs && tsdown",
     "dev": "tsdown --watch",
     "prepare": "pnpm run copy-docs && tsdown",

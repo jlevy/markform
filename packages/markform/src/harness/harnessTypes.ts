@@ -5,7 +5,7 @@
  * - programmaticFill.ts: FillOptions, TurnProgress, FillStatus, FillResult
  * - mockAgent.ts: Agent interface
  * - liveAgent.ts: LiveAgentConfig
- * - modelResolver.ts: ProviderName, ParsedModelId, ResolvedModel, ProviderInfo
+ * - modelResolver.ts: BuiltInProviderName, ParsedModelId, ResolvedModel, ProviderInfo
  */
 
 import type { LanguageModel, Tool } from 'ai';
@@ -18,6 +18,7 @@ import type {
   ParsedForm,
   Patch,
   PatchRejection,
+  PatchWarning,
   // Wire format types (defined in coreTypes for session logging)
   WireFormat,
   WireRequestFormat,
@@ -134,6 +135,8 @@ export interface LiveAgentConfig {
   targetRole?: string;
   /** Provider name (needed for web search tool selection) */
   provider?: string;
+  /** Provider-adapter-supplied tools (e.g., web search from custom providers). */
+  providerTools?: Record<string, Tool>;
   /**
    * Execution thread ID for parallel tracking.
    * Used to associate LLM calls, tool calls, and events with the correct execution thread.
@@ -182,6 +185,15 @@ export interface LiveAgentConfig {
    * @default 'required'
    */
   toolChoice?: 'auto' | 'required';
+
+  /**
+   * Maximum retries for transient API errors (429 rate limit, 503 service unavailable).
+   * Uses the Vercel AI SDK's built-in exponential backoff with jitter.
+   * Set to 0 to disable retries (useful for fast tests).
+   *
+   * @default 3
+   */
+  maxRetries?: number;
 }
 
 // =============================================================================
@@ -189,11 +201,14 @@ export interface LiveAgentConfig {
 // =============================================================================
 
 /**
- * Supported provider names.
- *
- * These correspond to the @ai-sdk/* packages from Vercel AI SDK.
+ * Built-in provider names corresponding to the @ai-sdk/* packages from Vercel AI SDK.
  */
-export type ProviderName = 'anthropic' | 'openai' | 'google' | 'xai' | 'deepseek';
+export type BuiltInProviderName = 'anthropic' | 'openai' | 'google' | 'xai' | 'deepseek';
+
+/**
+ * Any provider name — built-in or custom. Provides autocomplete for built-in names.
+ */
+export type ProviderName = BuiltInProviderName | (string & {});
 
 /**
  * Parsed model identifier.
@@ -210,6 +225,8 @@ export interface ResolvedModel {
   model: LanguageModel;
   provider: ProviderName;
   modelId: string;
+  /** Adapter-provided tools (e.g., web search) */
+  tools?: Record<string, Tool>;
 }
 
 /**
@@ -219,6 +236,34 @@ export interface ProviderInfo {
   package: string;
   envVar: string;
 }
+
+/**
+ * Adapter for an AI provider. Clients import their own @ai-sdk/* package,
+ * configure it, and pass the adapter to markform.
+ *
+ * The interface matches the AI SDK provider shape so providers can often
+ * be passed directly without wrapping.
+ */
+export interface ProviderAdapter {
+  /** Resolve a model name to a LanguageModel instance. */
+  model(modelId: string): LanguageModel;
+  /** Optional provider-specific tools (e.g., web search). */
+  tools?: Record<string, Tool>;
+}
+
+/**
+ * AI SDK providers are callable: provider(modelId) => LanguageModel.
+ * They may also have a .tools property with tool factories.
+ */
+export type AiSdkProviderCallable = ((modelId: string) => LanguageModel) & {
+  tools?: Record<string, (...args: unknown[]) => Tool>;
+};
+
+/**
+ * A ProviderInput is either a ProviderAdapter (with `.model()` method)
+ * or an AI SDK provider callable (auto-normalized via `normalizeProvider()`).
+ */
+export type ProviderInput = ProviderAdapter | AiSdkProviderCallable;
 
 // =============================================================================
 // Fill Callbacks
@@ -265,6 +310,18 @@ export interface FillCallbacks {
 
   /** Called when a turn completes */
   onTurnComplete?(progress: TurnProgress): void;
+
+  /**
+   * Called when an error occurs during the fill loop (agent threw during fillFormTool).
+   *
+   * Fires before the error is returned as part of FillResult, so consumers can
+   * log or report errors in real time during long-running fills.
+   *
+   * For MarkformLlmError instances, the error object carries `.statusCode`,
+   * `.responseBody`, `.provider`, `.model`, and `.retryable` properties.
+   * The full `.cause` chain is also preserved.
+   */
+  onError?(error: Error, context: { turnNumber: number }): void;
 
   /** Called before a tool executes */
   onToolStart?(call: {
@@ -417,6 +474,14 @@ export interface FillOptions {
   additionalTools?: Record<string, Tool>;
 
   /**
+   * Additional providers for string-based model resolution.
+   * Keys are provider names (the part before the `/` in model IDs).
+   * Values are ProviderAdapter objects or AI SDK provider callables.
+   * These take priority over built-in providers.
+   */
+  providers?: Record<string, ProviderInput>;
+
+  /**
    * TEST ONLY: Override agent for testing with MockAgent.
    * When provided, model is ignored and this agent is used instead.
    */
@@ -482,6 +547,8 @@ export interface TurnProgress {
   patches: Patch[];
   /** Empty if patches applied successfully, contains rejection details if failed */
   rejectedPatches: PatchRejection[];
+  /** Coercion warnings from patch normalization (e.g., string auto-wrapped to array) */
+  coercionWarnings?: PatchWarning[];
   /** Execution ID for parallel tracking (e.g., "1-batch-research-0") */
   executionId?: string;
 }
@@ -493,11 +560,27 @@ export interface TurnProgress {
  * - `max_turns` - Hit overall maxTurnsTotal safety limit
  * - `batch_limit` - Hit maxTurnsThisCall per-call limit (resume by calling again)
  * - `cancelled` - Aborted via signal
- * - `error` - Unexpected error
+ * - `error` - Unexpected error (`error` carries the original Error when available)
  */
 export type FillStatus =
   | { ok: true }
-  | { ok: false; reason: 'max_turns' | 'batch_limit' | 'cancelled' | 'error'; message?: string };
+  | { ok: false; reason: 'max_turns' | 'batch_limit' | 'cancelled'; message?: string }
+  | {
+      ok: false;
+      reason: 'error';
+      message?: string;
+      /**
+       * The original Error object with its full cause chain preserved.
+       *
+       * Available when the caught value was an Error instance.
+       * Consumers can inspect `.cause`, and for `MarkformLlmError` instances,
+       * `.statusCode`, `.responseBody`, `.provider`, `.model`, and `.retryable`.
+       *
+       * Not serialized into FillRecord — use for in-memory diagnostics, logging,
+       * and real-time error handling.
+       */
+      error?: Error;
+    };
 
 /**
  * Result of the fillForm operation.

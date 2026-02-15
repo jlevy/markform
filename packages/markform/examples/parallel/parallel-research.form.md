@@ -11,12 +11,11 @@ markform:
   role_instructions:
     agent: Research the company and fill in all fields.
 ---
-
 <!-- form id="company_research" title="Company Research (Parallel)" -->
 
 <!-- description ref="company_research" -->
-A company research form that uses  for concurrent deep research
-and  to sequence synthesis after data gathering.
+A company research form that uses `parallel` for concurrent deep research and `order` to
+sequence synthesis after data gathering.
 <!-- /description -->
 
 <!-- group id="overview" order=0 -->
@@ -56,6 +55,3 @@ and  to sequence synthesis after data gathering.
 <!-- /group -->
 
 <!-- /form -->
-
-
-

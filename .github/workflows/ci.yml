@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -41,28 +41,3 @@ jobs:
           json-final-path: coverage/coverage-final.json
           # Only show changed files on PRs, show all on main
           file-coverage-mode: ${{ github.event_name == 'pull_request' && 'changes' || 'all' }}
-
-      # Generate and commit coverage badges (main branch only)
-      - name: Coverage Badges
-        uses: jpb06/coverage-badges-action@v1.4.6
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        with:
-          coverage-summary-path: packages/markform/coverage/coverage-summary.json
-          output-folder: ./badges
-          branches: main
-
-      - name: Update badge links to this run
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        env:
-          GITHUB_SERVER_URL: ${{ github.server_url }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-        run: |
-          # Update badge links using the standalone script
-          ./scripts/update-badge-links.sh
-          # Commit the README change
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git diff --staged --quiet || git commit -m "chore: update badge links to run #${{ github.run_number }}"
-          git push

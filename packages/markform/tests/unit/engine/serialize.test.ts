@@ -1604,5 +1604,253 @@ markform:
       expect(output).toContain('## Empty But Visible');
       expect(output).not.toContain('Hidden');
     });
+
+    it('shows skip reason in report for skipped fields', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" title="Skip Report" %}
+
+{% group id="g1" title="Section" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      parsed.responsesByFieldId = {
+        name: { state: 'skipped', reason: 'Not applicable to this company' },
+        notes: { state: 'skipped' },
+      };
+      const output = serializeReport(parsed);
+
+      // Field with reason should show the reason
+      expect(output).toContain('**Name:**');
+      expect(output).toContain('skipped');
+      expect(output).toContain('Not applicable to this company');
+
+      // Field without reason should just show skipped
+      expect(output).toContain('**Notes:**');
+      expect(output).toMatch(/skipped/i);
+    });
+  });
+
+  // ===========================================================================
+  // Edge case coverage
+  // ===========================================================================
+
+  describe('serialize edge cases', () => {
+    it('round-trips checkboxMode="simple"', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="simple" %}
+- [ ] Task A {% #task_a %}
+- [ ] Task B {% #task_b %}
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeForm(parsed);
+      const reparsed = parseForm(output);
+      const field = reparsed.schema.groups[0]?.children.find((f) => f.id === 'tasks');
+      expect(field?.kind).toBe('checkboxes');
+      if (field?.kind === 'checkboxes') {
+        expect(field.checkboxMode).toBe('simple');
+      }
+    });
+
+    it('serializes table rows with missing cells as %SKIP%', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data"
+   columnIds=["name", "role", "email"]
+   columnLabels=["Name", "Role", "Email"]
+   columnTypes=["string", "string", "string"] %}
+| Name | Role | Email |
+|------|------|-------|
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      // Set table with a row missing the "email" column
+      parsed.responsesByFieldId.data = {
+        state: 'answered',
+        value: {
+          kind: 'table',
+          rows: [
+            {
+              name: { state: 'answered', value: 'Alice' },
+              role: { state: 'answered', value: 'Engineer' },
+              // email column missing — should become %SKIP%
+            },
+          ],
+        },
+      };
+      const output = serializeForm(parsed);
+      expect(output).toContain('Alice');
+      expect(output).toContain('Engineer');
+      // Missing cell serialized as sentinel
+      expect(output).toContain('%SKIP%');
+
+      // Verify round-trip
+      const reparsed = parseForm(output);
+      const value = reparsed.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(1);
+        expect(value.rows[0]?.name?.value).toBe('Alice');
+        expect(value.rows[0]?.email?.state).toBe('skipped');
+      }
+    });
+
+    it('serializes table cell skip/abort with reasons', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data"
+   columnIds=["name", "notes"]
+   columnLabels=["Name", "Notes"]
+   columnTypes=["string", "string"] %}
+| Name | Notes |
+|------|-------|
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      parsed.responsesByFieldId.data = {
+        state: 'answered',
+        value: {
+          kind: 'table',
+          rows: [
+            {
+              name: { state: 'answered', value: 'Alice' },
+              notes: { state: 'skipped', reason: 'N/A' },
+            },
+            {
+              name: { state: 'answered', value: 'Bob' },
+              notes: { state: 'aborted', reason: 'Confidential' },
+            },
+          ],
+        },
+      };
+      const output = serializeForm(parsed);
+      expect(output).toContain('%SKIP:N/A%');
+      expect(output).toContain('%ABORT:Confidential%');
+    });
+
+    it('serializes aborted number field with reason', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="number" id="score" label="Score" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      parsed.responsesByFieldId.score = {
+        state: 'aborted',
+        reason: 'Data unavailable',
+      };
+      const output = serializeForm(parsed);
+      expect(output).toContain('state="aborted"');
+      expect(output).toContain('%ABORT%');
+      expect(output).toContain('Data unavailable');
+    });
+
+    it('round-trips specVersion override', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="string" id="name" label="Name" %}{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeForm(parsed, { specVersion: 'MF/0.2' });
+      expect(output).toContain('spec: MF/0.2');
+    });
+  });
+
+  describe('explicit checkboxes in report', () => {
+    it('renders yes/no text instead of GFM checkboxes for explicit mode', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" title="G1" %}
+{% field kind="checkboxes" id="confirm" label="Confirmations" checkboxMode="explicit" %}
+- [y] Accept Terms {% #terms %}
+- [n] Privacy Policy {% #privacy %}
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+
+      const report = serializeReport(parsed);
+
+      // Explicit checkboxes should show "Yes"/"No" not "[x]"/"[ ]"
+      expect(report).toContain('Accept Terms: Yes');
+      expect(report).toContain('Privacy Policy: No');
+      expect(report).not.toContain('[x]');
+      expect(report).not.toContain('[ ]');
+    });
+  });
+
+  describe('instructions round-trip', () => {
+    it('preserves line breaks in multi-paragraph instructions', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+{% form id="test" %}
+{% group id="g1" title="G1" %}
+{% field kind="string" id="name" label="Name" %}
+
+{% instructions ref="name" %}
+Enter your full legal name.
+
+This should be on a new paragraph.
+Please include middle name.
+{% /instructions %}
+
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const output = serializeForm(parsed);
+
+      // The blank line between paragraphs must be preserved
+      expect(output).toContain('Enter your full legal name.\n\nThis should be on a new paragraph.');
+    });
   });
 });

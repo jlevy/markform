@@ -923,6 +923,48 @@ export interface SetTablePatch {
   value: TableRowPatch[];
 }
 
+/** Append rows to a table field */
+export interface AppendTablePatch {
+  op: 'append_table';
+  fieldId: Id;
+  value: TableRowPatch[];
+}
+
+/** Delete a row from a table field by index */
+export interface DeleteTablePatch {
+  op: 'delete_table';
+  fieldId: Id;
+  value: number; // 0-based row index
+}
+
+/** Append items to a string_list field */
+export interface AppendStringListPatch {
+  op: 'append_string_list';
+  fieldId: Id;
+  value: string[];
+}
+
+/** Delete an item from a string_list field by index */
+export interface DeleteStringListPatch {
+  op: 'delete_string_list';
+  fieldId: Id;
+  value: number; // 0-based item index
+}
+
+/** Append items to a url_list field */
+export interface AppendUrlListPatch {
+  op: 'append_url_list';
+  fieldId: Id;
+  value: string[];
+}
+
+/** Delete an item from a url_list field by index */
+export interface DeleteUrlListPatch {
+  op: 'delete_url_list';
+  fieldId: Id;
+  value: number; // 0-based item index
+}
+
 /** Clear field value */
 export interface ClearFieldPatch {
   op: 'clear_field';
@@ -972,6 +1014,12 @@ export type Patch =
   | SetDatePatch
   | SetYearPatch
   | SetTablePatch
+  | AppendTablePatch
+  | DeleteTablePatch
+  | AppendStringListPatch
+  | DeleteStringListPatch
+  | AppendUrlListPatch
+  | DeleteUrlListPatch
   | ClearFieldPatch
   | SkipFieldPatch
   | AbortFieldPatch
@@ -994,6 +1042,8 @@ export interface StepResult {
   patchesApplied?: number;
   /** Rejection details if patches failed (set by harness.apply, undefined for step-only results) */
   rejectedPatches?: PatchRejection[];
+  /** Coercion warnings from patch normalization (set by harness.apply, undefined for step-only results) */
+  coercionWarnings?: PatchWarning[];
 }
 
 // =============================================================================
@@ -1844,6 +1894,42 @@ export const SetTablePatchSchema = z.object({
   value: z.array(TableRowPatchSchema),
 });
 
+export const AppendTablePatchSchema = z.object({
+  op: z.literal('append_table'),
+  fieldId: IdSchema,
+  value: z.array(TableRowPatchSchema),
+});
+
+export const DeleteTablePatchSchema = z.object({
+  op: z.literal('delete_table'),
+  fieldId: IdSchema,
+  value: z.number().int().min(0),
+});
+
+export const AppendStringListPatchSchema = z.object({
+  op: z.literal('append_string_list'),
+  fieldId: IdSchema,
+  value: z.array(z.string()),
+});
+
+export const DeleteStringListPatchSchema = z.object({
+  op: z.literal('delete_string_list'),
+  fieldId: IdSchema,
+  value: z.number().int().min(0),
+});
+
+export const AppendUrlListPatchSchema = z.object({
+  op: z.literal('append_url_list'),
+  fieldId: IdSchema,
+  value: z.array(z.string()),
+});
+
+export const DeleteUrlListPatchSchema = z.object({
+  op: z.literal('delete_url_list'),
+  fieldId: IdSchema,
+  value: z.number().int().min(0),
+});
+
 export const ClearFieldPatchSchema = z.object({
   op: z.literal('clear_field'),
   fieldId: IdSchema,
@@ -1887,6 +1973,12 @@ export const PatchSchema = z.discriminatedUnion('op', [
   SetDatePatchSchema,
   SetYearPatchSchema,
   SetTablePatchSchema,
+  AppendTablePatchSchema,
+  DeleteTablePatchSchema,
+  AppendStringListPatchSchema,
+  DeleteStringListPatchSchema,
+  AppendUrlListPatchSchema,
+  DeleteUrlListPatchSchema,
   ClearFieldPatchSchema,
   SkipFieldPatchSchema,
   AbortFieldPatchSchema,

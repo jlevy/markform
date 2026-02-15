@@ -10,19 +10,19 @@ import type { InspectIssue, Patch } from '../../../src/engine/coreTypes.js';
 import type { TurnStats } from '../../../src/harness/harnessTypes.js';
 
 describe('fillLogging', () => {
-  // Capture console.log output
+  // Capture console.error output (diagnostic log functions write to stderr)
   let consoleOutput: string[];
-  const originalLog = console.log;
+  const originalError = console.error;
 
   beforeEach(() => {
     consoleOutput = [];
-    console.log = vi.fn((...args: unknown[]) => {
+    console.error = vi.fn((...args: unknown[]) => {
       consoleOutput.push(args.map(String).join(' '));
     });
   });
 
   afterEach(() => {
-    console.log = originalLog;
+    console.error = originalError;
   });
 
   describe('createFillLoggingCallbacks', () => {

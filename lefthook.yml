@@ -15,6 +15,20 @@ pre-commit:
       stage_fixed: true
       priority: 1
 
+    # Auto-format markdown with flowmark (~500ms)
+    format-md:
+      glob: '*.md'
+      exclude:
+        - 'tests/cli/**'
+        - '**/examples/**'
+        - 'CHANGELOG.md'
+        - '.tbd/**'
+        - '.claude/skills/**'
+        - 'AGENTS.md'
+      run: flowmark --auto -i {staged_files}
+      stage_fixed: true
+      priority: 1
+
     # Lint with auto-fix and caching (~1s first, ~200ms cached)
     lint:
       glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
@@ -31,6 +45,11 @@ pre-commit:
       glob: '*.{ts,tsx}'
       run: pnpm typecheck
       priority: 3
+
+commit-msg:
+  scripts:
+    'check-co-author.sh':
+      runner: sh
 
 pre-push:
   commands:

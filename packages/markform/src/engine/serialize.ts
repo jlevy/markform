@@ -1070,9 +1070,9 @@ function serializeYearField(field: YearField, response: FieldResponse | undefine
 
 /**
  * Serialize a cell value for table output.
- * URL-typed columns are formatted as markdown links with domain as display text.
+ * Values are serialized as-is; HTML rendering handles display formatting.
  */
-function serializeCellValue(cell: CellResponse, columnType: ColumnTypeName): string {
+function serializeCellValue(cell: CellResponse, _columnType: ColumnTypeName): string {
   if (cell.state === 'skipped') {
     return cell.reason ? `%SKIP:${cell.reason}%` : '%SKIP%';
   }
@@ -1086,10 +1086,8 @@ function serializeCellValue(cell: CellResponse, columnType: ColumnTypeName): str
   if (typeof cell.value === 'number') {
     return String(cell.value);
   }
-  // Format URL columns as markdown links
-  if (columnType === 'url') {
-    return formatUrlAsMarkdownLink(cell.value);
-  }
+  // URL columns: keep bare URL for round-trip safety
+  // (HTML rendering handles abbreviated display via formatBareUrlsAsHtmlLinks)
   return cell.value;
 }
 
@@ -1818,6 +1816,18 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
   // Blank line after label to ensure new paragraph (and prevent Flowmark merging)
   lines.push('');
 
+  // Handle skipped/aborted states before checking value
+  if (response?.state === 'skipped') {
+    const text = response.reason ? `_(skipped: ${response.reason})_` : '_(skipped)_';
+    lines.push(text);
+    return lines.join('\n');
+  }
+  if (response?.state === 'aborted') {
+    const text = response.reason ? `_(aborted: ${response.reason})_` : '_(aborted)_';
+    lines.push(text);
+    return lines.join('\n');
+  }
+
   // Extract value from response if state is "answered"
   const value = response?.state === 'answered' ? response.value : undefined;
 
@@ -1873,10 +1883,20 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
     }
     case 'checkboxes': {
       const cbValue = value as CheckboxesValue | undefined;
-      for (const opt of field.options) {
-        const state = cbValue?.values[opt.id] ?? 'todo';
-        const marker = STATE_TO_GFM_MARKER[state] ?? ' ';
-        lines.push(`- [${marker}] ${opt.label}`);
+      if (field.checkboxMode === 'explicit') {
+        // Explicit mode: show "Yes"/"No" text for clarity
+        for (const opt of field.options) {
+          const state = cbValue?.values[opt.id] ?? 'unfilled';
+          const label = state === 'yes' ? 'Yes' : state === 'no' ? 'No' : '_(unanswered)_';
+          lines.push(`- ${opt.label}: ${label}`);
+        }
+      } else {
+        // Multi/simple mode: use GFM checkbox markers
+        for (const opt of field.options) {
+          const state = cbValue?.values[opt.id] ?? 'todo';
+          const marker = STATE_TO_GFM_MARKER[state] ?? ' ';
+          lines.push(`- [${marker}] ${opt.label}`);
+        }
       }
       break;
     }

@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_SYSTEM_PROMPT,
   PATCH_FORMAT_INSTRUCTIONS,
   getPatchFormatHint,
   getIssuesIntro,
@@ -57,6 +58,28 @@ describe('PATCH_FORMAT_INSTRUCTIONS', () => {
     expect(PATCH_FORMAT_INSTRUCTIONS).toContain('column');
     // The guidance mentions "Each row is an object with column ID keys"
     expect(PATCH_FORMAT_INSTRUCTIONS).toContain('row');
+  });
+
+  it('includes append/delete operations for collection types', () => {
+    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('append_table');
+    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('delete_table');
+    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('append_string_list');
+    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('delete_string_list');
+    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('append_url_list');
+    expect(PATCH_FORMAT_INSTRUCTIONS).toContain('delete_url_list');
+  });
+});
+
+// =============================================================================
+// DEFAULT_SYSTEM_PROMPT Tests
+// =============================================================================
+
+describe('DEFAULT_SYSTEM_PROMPT', () => {
+  it('includes append/delete operations in the patch format table', () => {
+    expect(DEFAULT_SYSTEM_PROMPT).toContain('append_table');
+    expect(DEFAULT_SYSTEM_PROMPT).toContain('delete_table');
+    expect(DEFAULT_SYSTEM_PROMPT).toContain('append_string_list');
+    expect(DEFAULT_SYSTEM_PROMPT).toContain('append_url_list');
   });
 });
 
@@ -327,6 +350,24 @@ describe('PATCH_FORMATS', () => {
       expect(PATCH_FORMATS[kind], `Missing PATCH_FORMATS entry for: ${kind}`).toBeDefined();
     }
   });
+
+  it('has append entries for collection types', () => {
+    const appendKinds = ['append_table', 'append_string_list', 'append_url_list'];
+
+    for (const kind of appendKinds) {
+      expect(PATCH_FORMATS[kind], `Missing PATCH_FORMATS entry for: ${kind}`).toBeDefined();
+      expect(PATCH_FORMATS[kind]).toContain(kind);
+    }
+  });
+
+  it('has delete entries for collection types', () => {
+    const deleteKinds = ['delete_table', 'delete_string_list', 'delete_url_list'];
+
+    for (const kind of deleteKinds) {
+      expect(PATCH_FORMATS[kind], `Missing PATCH_FORMATS entry for: ${kind}`).toBeDefined();
+      expect(PATCH_FORMATS[kind]).toContain(kind);
+    }
+  });
 });
 
 describe('getPatchFormatHint', () => {
@@ -354,6 +395,34 @@ describe('getPatchFormatHint', () => {
     const hint = getPatchFormatHint('unknown_kind');
     expect(hint).toContain('correct');
     expect(hint).toContain('set_unknown_kind');
+  });
+
+  it('returns append hints for collection types', () => {
+    expect(getPatchFormatHint('append_table')).toContain('append_table');
+    expect(getPatchFormatHint('append_string_list')).toContain('append_string_list');
+    expect(getPatchFormatHint('append_url_list')).toContain('append_url_list');
+  });
+
+  it('returns delete hints for collection types', () => {
+    expect(getPatchFormatHint('delete_table')).toContain('delete_table');
+    expect(getPatchFormatHint('delete_string_list')).toContain('delete_string_list');
+    expect(getPatchFormatHint('delete_url_list')).toContain('delete_url_list');
+  });
+
+  it('substitutes fieldId in append hint', () => {
+    const hint = getPatchFormatHint('append_table', 'team_members');
+    expect(hint).toContain('append_table');
+    expect(hint).toContain('fieldId: "team_members"');
+  });
+
+  it('substitutes column IDs in append_table hint', () => {
+    const hint = getPatchFormatHint('append_table', {
+      fieldId: 'members',
+      columnIds: ['name', 'role'],
+    });
+    expect(hint).toContain('append_table');
+    expect(hint).toContain('"name"');
+    expect(hint).toContain('"role"');
   });
 });
 
