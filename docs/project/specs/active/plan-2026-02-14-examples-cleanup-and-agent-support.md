@@ -7,7 +7,7 @@ author: Joshua Levy (github.com/jlevy) with LLM assistance
 
 **Date:** 2026-02-14
 
-**Status:** Draft
+**Status:** Implemented
 
 ## Overview
 
@@ -130,25 +130,25 @@ example, add JSON output to `--list`, update docs.
 
 ### Phase 1: Cleanup, Registration, and Agent Support
 
-- [ ] Update README Quick Start to present all three getting-started paths: (1)
+- [x] Update README Quick Start to present all three getting-started paths: (1)
   automated `markform examples` + `markform run`, (2) agent-guided example tour, (3)
   end-to-end walkthrough playbook
-- [ ] Delete `examples/earnings-analysis/` (empty directory)
-- [ ] Delete `examples/startup-research/` (redundant with startup-deep-research)
-- [ ] Update `tests/qa/live-fill-manual-test.qa.md` reference from startup-research to
+- [x] Delete `examples/earnings-analysis/` (empty directory)
+- [x] Delete `examples/startup-research/` (redundant with startup-deep-research)
+- [x] Update `tests/qa/live-fill-manual-test.qa.md` reference from startup-research to
   startup-deep-research
-- [ ] Fix `examples/parallel/parallel-research.form.md` description: fill in blank
+- [x] Fix `examples/parallel/parallel-research.form.md` description: fill in blank
   template variables (`parallel` and `order`)
-- [ ] Add `twitter-thread` to `EXAMPLE_DEFINITIONS` in `exampleRegistry.ts` (type:
+- [x] Add `twitter-thread` to `EXAMPLE_DEFINITIONS` in `exampleRegistry.ts` (type:
   `fill`)
-- [ ] Reorder `EXAMPLE_DEFINITIONS` for complexity ramp: movie-research-demo, simple,
+- [x] Reorder `EXAMPLE_DEFINITIONS` for complexity ramp: movie-research-demo, simple,
   twitter-thread, movie-deep-research, startup-deep-research
-- [ ] Add `--format=json` support to `printExamplesList()` using existing
+- [x] Add `--format=json` support to `printExamplesList()` using existing
   `formatOutput()` pattern
-- [ ] Move `getCommandContext(cmd)` before the `--list` check in the action handler
-- [ ] Add cross-reference note in console `--list` output pointing to the QA playbook
-- [ ] Add examples cross-reference tip in QA playbook Phase 3.2
-- [ ] Update SKILL.md: add “Getting Started” section with all three paths, examples
+- [x] Move `getCommandContext(cmd)` before the `--list` check in the action handler
+- [x] Add cross-reference note in console `--list` output pointing to the QA playbook
+- [x] Add examples cross-reference tip in QA playbook Phase 3.2
+- [x] Update SKILL.md: add “Getting Started” section with all three paths, examples
   table with descriptions, API key setup (providers, env vars, `markform models`), and
   reference to walkthrough playbook.
   An agent reading this should be able to guide a new user through setup and choose the

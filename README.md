@@ -17,10 +17,10 @@ Humans can review or intervene at any point.
 
 ### Why forms?
 
-For deep research or complex AI tasks, you need more than just prompts or
-flow: you need *structure*, which is precise control over agent output at every stage of
-a workflow. A well-designed form combines instructions, structured data, and validations
-in one place.
+For deep research or complex AI tasks, you need more than just prompts or flow: you need
+*structure*, which is precise control over agent output at every stage of a workflow.
+A well-designed form combines instructions, structured data, and validations in one
+place.
 
 ### How it Works
 
@@ -42,20 +42,21 @@ in one place.
 
 ### Useful details
 
-- Markform syntax is a good source format: it is **token-efficient text** you can read, diff, and
-  version control and it is **ideal for context engineering** because it combines
-  document context, data schema, and memory (data filled so far).
+- Markform syntax is a good source format: it is **token-efficient text** you can read,
+  diff, and version control and it is **ideal for context engineering** because it
+  combines document context, data schema, and memory (data filled so far).
 
-- Structure is defined with HTML comment tags (`<!-- field -->`) that
-  render invisibly on GitHub, so **forms look like regular Markdown**. (Jinja-style
-  tag syntax also works if you prefer.)
+- Structure is defined with HTML comment tags (`<!-- field -->`) that render invisibly
+  on GitHub, so **forms look like regular Markdown**. (Jinja-style tag syntax also works
+  if you prefer.)
 
-- Optionally, **a fill record** of the form-filling process is kept, so you can see
-  and debug exactly how forms are filled by agents, tool usage, LLM call time, etc.
+- Optionally, **a fill record** of the form-filling process is kept, so you can see and
+  debug exactly how forms are filled by agents, tool usage, LLM call time, etc.
 
-- The CLI has a built-in web renderer, **`markform serve`**, for easy viewing and debugging
-  of forms (including a form web UI, the form schema, and a waterfall-style overview of the
-  fill record, including performance details, which is useful for large, concurrently filled forms).
+- The CLI has a built-in web renderer, **`markform serve`**, for easy viewing and
+  debugging of forms (including a form web UI, the form schema, and a waterfall-style
+  overview of the fill record, including performance details, which is useful for large,
+  concurrently filled forms).
 
 ## Simple Example: Research a Movie
 
@@ -302,21 +303,40 @@ See [the FAQ](#faq) for more on the design.
 
 ## Quick Start
 
-```bash
-# Copy example forms to ./forms/ and run one interactively.
-# Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env) for research examples
-npx markform@latest examples
+There are three ways to get started, from quickest to most thorough:
 
+**1. Run an example automatically** — copy bundled forms and let an LLM fill one:
+
+```bash
+# Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or put in .env)
+npx markform@latest examples
+```
+
+Pick `movie-research-demo.form.md` for a quick demo.
+
+**2. Agent-guided tour** — ask a coding agent (like Claude Code) to walk you through a
+specific example step by step.
+The agent copies the form, explains the structure, fills fields, validates, and exports:
+
+```bash
+# List available examples
+markform examples --list
+# Copy one to work with
+markform examples --name movie-research-demo
+```
+
+**3. End-to-end walkthrough** — have a coding agent follow the
+[demo playbook](packages/markform/examples/markform-demo-playbook.md) to design a
+research form from scratch, fill it with real data, validate, export, and browse.
+This is the most thorough tour of all Markform features.
+
+```bash
 # Read the docs (tell your agents to run these; they are agent-friendly!)
 npx markform  # CLI help
 npx markform readme   # This file
 npx markform docs  # Quick reference for writing Markforms
 npx markform spec  # Read the full spec
 ```
-
-The `markform examples` command copies some sample forms to `./forms` and prompts you to
-fill in a form interactively and then optionally have an agent complete it.
-Pick `movie-research-demo.form.md` for a quick example.
 
 ## Installation
 
@@ -333,8 +353,9 @@ npm install markform
 ### Use as a Claude Code Skill
 
 If you install markform globally (`npm install -g markform`), you can tell Claude to run
-`markform setup --auto` to install it as a Claude Code skill. This teaches Claude how to
-use markform commands when working with `.form.md` files in your project.
+`markform setup --auto` to install it as a Claude Code skill.
+This teaches Claude how to use markform commands when working with `.form.md` files in
+your project.
 
 ```bash
 # Install as a Claude Code skill (non-interactive, for agents)
@@ -588,8 +609,8 @@ If unsure, try `gpt-5-mini` first as it’s fast and supports web search.
 
 ## Programmatic Usage
 
-Markform exports a parsing engine, rendering functions, and AI SDK integration for use in
-your own applications.
+Markform exports a parsing engine, rendering functions, and AI SDK integration for use
+in your own applications.
 
 ### Basic Parsing
 

@@ -6,8 +6,7 @@
 
 This playbook walks an agent through a complete Markform workflow to demonstrate its
 features: from a research idea to a validated, filled, exported structured report with
-typed JSON/YAML data, a JSON Schema, and a fill record documenting the LLM calls and
-execution history.
+typed JSON/YAML data and a JSON Schema.
 
 ### Playbook Format
 
@@ -33,14 +32,14 @@ Notes:
 company name; the agent designs a form from scratch, fills it with researched data,
 validates, and exports.
 
-**Filling approaches:** This playbook supports two filling approaches that can be run
-independently or in sequence:
+This playbook has the agent *manually* fill each field the granular `next` → `set` loop,
+researching data along the way.
+This exercises all CLI operations and `set` capabilities.
 
-- **Step-by-step:** The agent fills each field manually using `next` → `set`,
-  researching data along the way.
-  Best for learning the CLI and exercising all `set` operations.
-- **Automated:** Markform drives filling via `markform fill --model <model>`. Requires
-  an API key. Best for seeing the harness in action and generating a fill record.
+Markform also supports fully automated filling via `markform fill`, where an LLM drives
+the `next` → `set` loop autonomously.
+That’s out of scope here — this playbook is about the agent researching and filling each
+field itself. Run `markform examples` to see automated filling in action.
 
 ## Phase 0: Prerequisites
 
@@ -49,15 +48,12 @@ Before proceeding, confirm you have what’s needed:
 1. **Shell access** to run `npm` and `markform` CLI commands
 2. **Web search** or other research tools to look up company data
 3. **File read/write** access to create and edit form files in `/tmp/markform-qa/`
-4. **(Automated filling only)** An LLM API key (e.g., `ANTHROPIC_API_KEY` set in the
-   environment) and a model name.
-   Run `markform models` to see supported providers.
 
 If anything is missing, tell the user what’s needed before continuing.
 
-### Choose the Filling Approach
+### Choose the Company
 
-If the user has already specified a company and filling approach, skip to Phase 1.
+If the user has already specified a company, skip to Phase 1.
 
 Otherwise:
 
@@ -66,28 +62,11 @@ Otherwise:
 > I’ll design a research form for an S&P 500 company, fill it with real data, validate
 > it, and export the results.
 > 
-> There are two ways to fill the form:
-> - **Step-by-step (default):** I fill each field manually using `next` → `set`,
->   researching data along the way.
->   This exercises all CLI operations.
-> - **Automated:** Markform drives filling via `markform fill --model <model>`. This
->   requires an API key but shows the harness and fill record features.
-> - **Both:** Step-by-step first, then clear and re-fill with automated filling to
->   compare approaches. Exercises the most features.
-> 
-> Which approach would you like?
-> And is there a company you’d like me to research?
+> Is there a company you’d like me to research?
 > If you aren’t sure, I’ll just pick Apple (AAPL) as an example."
 
 Wait for the user’s response.
-Use their chosen company (default: Apple Inc.)
-and filling approach (default: step-by-step).
-
-Record the chosen approach:
-
-- **Step-by-step:** Execute Phase 4 only, skip Phase 5.
-- **Automated:** Skip Phase 4, execute Phase 5 only.
-- **Both:** Execute Phase 4, then Phase 5 (on a fresh copy of the form).
+Use their chosen company (default: Apple Inc.).
 
 ## Phase 1: Install Markform
 
@@ -151,6 +130,10 @@ markform examples --name simple --forms-dir /tmp/markform-qa/ref
 
 Read the example form to see how field kinds, groups, and validation look in practice.
 
+> **Tip:** Run `markform examples --list` to see all bundled examples.
+> You can copy any example with `markform examples --name <id>` for additional
+> reference.
+
 ### Step 3.3: Convert to Markform
 
 > **Tell the user:** “I’ll convert the outline into a Markform using the field kinds and
@@ -184,9 +167,7 @@ markform inspect /tmp/markform-qa/sp500-research.form.md
 > **Tell the user:** “Form structure is valid: [N] fields across [N] groups, ready to
 > fill.”
 
-## Phase 4: Fill the Form (Step-by-Step)
-
-**Execute this phase if the chosen approach is “step-by-step” or “both.”**
+## Phase 4: Fill the Form
 
 The core workflow: run `next` to see what to fill, use `set` to fill it, repeat.
 
@@ -245,67 +226,7 @@ markform next /tmp/markform-qa/sp500-research.form.md
 
 **Checkpoint:** Should report form complete, 0 required fields remaining.
 
-## Phase 5: Fill the Form (Automated)
-
-**Execute this phase if the chosen approach is “automated” or “both.”**
-
-If running “both,” first make a fresh copy of the form so automated filling starts
-clean:
-
-```bash
-cp /tmp/markform-qa/sp500-research.form.md /tmp/markform-qa/sp500-research-auto.form.md
-```
-
-Use the copy (`sp500-research-auto.form.md`) for automated filling.
-If running “automated” only, use the original form.
-
-> **Tell the user:** "Now I’ll use Markform’s automated fill harness.
-> Instead of manually calling `next` → `set`, `markform fill` drives an LLM to fill all
-> agent-role fields autonomously, recording every step in a fill record."
-
-### Step 5.1: Set the User Input
-
-The user-role field still needs to be set manually before automated filling:
-
-```bash
-markform set <form_path> <company_name_id> "Apple Inc."
-```
-
-### Step 5.2: Run Automated Fill
-
-```bash
-markform fill <form_path> --model <model> --record-fill
-```
-
-Replace `<model>` with the user’s chosen model (e.g., `anthropic/claude-sonnet-4-5`).
-
-The `--record-fill` flag creates a `.fill.json` sidecar file that records the execution
-timeline: which model was used, how many turns it took, token counts, and the patch
-history for each field.
-
-> **Tell the user:** "The harness is filling the form.
-> It follows the same `next` → `set` loop internally, but an LLM drives the decisions.
-> The fill record captures everything."
-
-### Step 5.3: Review Progress
-
-```bash
-markform status <form_path>
-```
-
-### Step 5.4: Confirm Completion
-
-```bash
-markform next <form_path>
-```
-
-**Checkpoint:** Should report form complete, 0 required fields remaining.
-
-> **Tell the user:** "Automated filling is complete.
-> The fill record at `<form_path>.fill.json` logs every LLM call, patch, and validation
-> result."
-
-## Phase 6: Validate and Export
+## Phase 5: Validate and Export
 
 > **Tell the user:** “Form is complete.
 > Let me validate and export.”
@@ -336,22 +257,22 @@ markform schema /tmp/markform-qa/sp500-research.form.md --pure
 > piece of information came from, with validated URLs.
 > The form doesn’t just add structure — it adds reliability."
 
-## Phase 7: Advanced Operations
+## Phase 6: Advanced Operations
 
-### Step 7.1: Clear and Re-fill
+### Step 6.1: Clear and Re-fill
 
 > **Tell the user:** “Any field can be cleared and re-filled for corrections.”
 
 Clear a number field, verify it shows as unanswered, then set a new value.
 
-### Step 7.2: List Append and Delete
+### Step 6.2: List Append and Delete
 
 > **Tell the user:** “Lists support incremental append and delete without replacing the
 > whole list.”
 
 Append a URL to the source list, then delete an entry by index.
 
-### Step 7.3: Set with --report
+### Step 6.3: Set with --report
 
 > **Tell the user:** "`--report` returns JSON with apply status, form state, progress,
 > and remaining issues after each change."
@@ -360,7 +281,7 @@ Append a URL to the source list, then delete an entry by index.
 markform set /tmp/markform-qa/sp500-research.form.md <url_list_id> --append "https://example.com" --report --format json
 ```
 
-### Step 7.4: Confirm Still Complete
+### Step 6.4: Confirm Still Complete
 
 ```bash
 markform next /tmp/markform-qa/sp500-research.form.md
@@ -368,7 +289,7 @@ markform next /tmp/markform-qa/sp500-research.form.md
 
 **Expected:** Form is complete.
 
-## Phase 8: Review the Source
+## Phase 7: Review the Source
 
 > **Tell the user:** "The filled `.form.md` is both human-readable and
 > machine-parseable. On GitHub, comment tags are invisible: it looks like a clean
@@ -378,7 +299,7 @@ markform next /tmp/markform-qa/sp500-research.form.md
 cat /tmp/markform-qa/sp500-research.form.md
 ```
 
-## Phase 9: Present the Report
+## Phase 8: Present the Report
 
 > **Tell the user:** “Here’s the completed research report.”
 
@@ -414,7 +335,4 @@ markform serve /tmp/markform-qa/sp500-research.form.md
 > - **Source:** the raw `.form.md` with all Markform tags visible
 > - **Report:** a filtered view that strips instructions and internal markup
 > - **Values:** exported field values as YAML
-> - **Schema:** the JSON Schema describing the form structure
-> 
-> If a `.fill.json` sidecar exists (created by `markform fill --record-fill`), a **Fill
-> Record** tab shows the execution timeline, LLM token usage, and patch history."
+> - **Schema:** the JSON Schema describing the form structure"

@@ -27,8 +27,8 @@
    The CLI automatically loads `.env` files from the current working directory.
    Loading order (highest priority first): shell env vars > `.env.local` > `.env`.
 
-Note: Output files go to `test-output/` which is gitignored. Parent directories are
-created automatically.
+Note: Output files go to `test-output/` which is gitignored.
+Parent directories are created automatically.
 
 * * *
 
@@ -131,7 +131,7 @@ Fill the startup research form which requires web search capabilities.
 ### Command
 
 ```bash
-pnpm markform research examples/startup-research/startup-research.form.md \
+pnpm markform research examples/startup-deep-research/startup-deep-research.form.md \
   --model openai/gpt-5-mini \
   --company "Anthropic" \
   --output test-output/startup-anthropic.form.md \
@@ -142,7 +142,7 @@ pnpm markform research examples/startup-research/startup-research.form.md \
 
 ```bash
 # If research command not available, use fill with pre-filled company name
-pnpm markform fill examples/startup-research/startup-research.form.md \
+pnpm markform fill examples/startup-deep-research/startup-deep-research.form.md \
   --model openai/gpt-5-mini \
   --output test-output/startup-filled.form.md \
   --record-fill
@@ -151,7 +151,7 @@ pnpm markform fill examples/startup-research/startup-research.form.md \
 ### Expected Output Structure
 
 ```
-Filling form: .../startup-research.form.md
+Filling form: .../startup-deep-research.form.md
 Agent: openai/gpt-5-mini
 Turn 1: X issues
 ...

@@ -13,6 +13,46 @@ Markform is structured Markdown for forms.
 Files combine YAML frontmatter with HTML comment tags to define typed, validated fields.
 Forms render cleanly on GitHub since structure is hidden in comments.
 
+## Getting Started
+
+There are three ways to help a user get started with Markform:
+
+1. **Run an example automatically:** `markform examples` copies bundled forms, then
+   `markform run <form>` fills one end-to-end with an LLM. Quickest demo.
+2. **Agent-guided example tour:** Walk the user through a specific bundled example step
+   by step—copy it, inspect the structure, fill fields, validate, and export.
+   Use `markform examples --list` to pick an example, then `--name <id>` to copy it.
+3. **End-to-end walkthrough playbook:** Follow `examples/markform-demo-playbook.md` to
+   design a research form from scratch, fill it with real data, validate, export, and
+   browse. The most thorough tour of all Markform features.
+
+### API Key Setup
+
+Automated filling (`markform fill --model`, `markform run`) requires an LLM API key.
+Set one of these environment variables (or add to `.env`):
+
+- `OPENAI_API_KEY` — for OpenAI models (e.g., `openai/gpt-4o`)
+- `ANTHROPIC_API_KEY` — for Anthropic models (e.g.,
+  `anthropic/claude-sonnet-4-5-20250929`)
+
+Run `markform models` to see available providers and configured keys.
+
+### Bundled Examples
+
+| Example | Type | Description |
+| --- | --- | --- |
+| `movie-research-demo` | research | Quick movie ratings lookup (IMDB, Rotten Tomatoes) |
+| `simple` | fill | Interactive demo of all field types |
+| `twitter-thread` | fill | Multi-stage content-to-Twitter-thread transformation |
+| `movie-deep-research` | research | Comprehensive movie analysis with multiple sources |
+| `startup-deep-research` | research | Startup intelligence: funding, team, market, press |
+
+```bash
+markform examples --list                        # See all examples
+markform examples --list --format=json          # Structured output for agents
+markform examples --name <id> --forms-dir ./    # Copy a specific example
+```
+
 ## What Markform Does
 
 1. **Structured Forms:** Define typed fields (string, number, select, table, etc.)
@@ -118,3 +158,4 @@ All commands support:
 - Full specification: `markform spec`
 - API documentation: `markform apis`
 - Example forms: `markform examples`
+- End-to-end walkthrough: `examples/markform-demo-playbook.md`

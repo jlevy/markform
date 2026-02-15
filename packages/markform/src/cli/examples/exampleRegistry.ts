@@ -36,6 +36,12 @@ export const EXAMPLE_DEFINITIONS: ExampleDefinition[] = [
     type: 'fill',
   },
   {
+    id: 'twitter-thread',
+    filename: 'twitter-thread.form.md',
+    path: 'twitter-thread/twitter-thread.form.md',
+    type: 'fill',
+  },
+  {
     id: 'movie-deep-research',
     filename: 'movie-deep-research.form.md',
     path: 'movie-research/movie-deep-research.form.md',
