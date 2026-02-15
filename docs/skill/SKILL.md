@@ -7,22 +7,21 @@ description: >-
   or when the user mentions markform, forms, form filling, structured data, or field validation.
 allowed-tools: Bash(markform:*)
 ---
+# Markform Agent Skill
 
-# Markform — Agent Skill
-
-Markform is structured Markdown for forms. Files combine YAML frontmatter with HTML
-comment tags to define typed, validated fields. Forms render cleanly on GitHub since
-structure is hidden in comments.
+Markform is structured Markdown for forms.
+Files combine YAML frontmatter with HTML comment tags to define typed, validated fields.
+Forms render cleanly on GitHub since structure is hidden in comments.
 
 ## What Markform Does
 
-1. **Structured Forms**: Define typed fields (string, number, select, table, etc.) in
-   Markdown with validation constraints
-2. **Role-Based Filling**: Separate fields for humans (`role="user"`) and AI agents
+1. **Structured Forms:** Define typed fields (string, number, select, table, etc.)
+   in Markdown with validation constraints
+2. **Role-Based Filling:** Separate fields for humans (`role="user"`) and AI agents
    (`role="agent"`)
-3. **Incremental Filling**: Fill fields one at a time with immediate validation
-4. **Agent-Driven Workflows**: AI agents fill forms via CLI or programmatic API
-5. **Multi-Format Export**: Export filled data as JSON, YAML, or Markdown
+3. **Incremental Filling:** Fill fields one at a time with immediate validation
+4. **Agent-Driven Workflows:** AI agents fill forms via CLI or programmatic API
+5. **Multi-Format Export:** Export filled data as JSON, YAML, or Markdown
 
 ## Core CLI Commands
 
@@ -37,6 +36,8 @@ structure is hidden in comments.
 | `markform fill <form> --model <model>` | AI agent fills form fields |
 | `markform export <form> --format=json` | Export values as JSON |
 | `markform export <form> --format=yaml` | Export values as YAML |
+| `markform export <form> --format=markdown` | Full rendered markdown (includes instructions) |
+| `markform report <form>` | Clean report markdown (values only, no instructions) |
 | `markform schema <form>` | Export JSON Schema for form structure |
 | `markform dump <form>` | Quick dump of current field values |
 | `markform status <form>` | Show fill progress per role |
@@ -48,19 +49,19 @@ structure is hidden in comments.
 
 When working with markform files:
 
-1. **Inspect first**: `markform inspect form.md` to understand the form structure,
-   see which fields exist, their types, constraints, and current fill progress
-2. **Check what's next**: `markform next form.md` to see which field should be
-   filled next (respects priority, order, and role)
-3. **Set values**: `markform set form.md field_id "value"` to fill fields one at
-   a time, or use `--values` for batch updates
-4. **Validate**: `markform validate form.md` to check all constraints are met
-5. **Export**: `markform export form.md --format=json` to extract filled data
+1. **Inspect first:** `markform inspect form.md` to understand the form structure, see
+   which fields exist, their types, constraints, and current fill progress
+2. **Check what’s next:** `markform next form.md` to see which field should be filled
+   next (respects priority, order, and role)
+3. **Set values:** `markform set form.md field_id "value"` to fill fields one at a time,
+   or use `--values` for batch updates
+4. **Validate:** `markform validate form.md` to check all constraints are met
+5. **Export:** `markform export form.md --format=json` to extract filled data
 
 ## Setting Field Values
 
-The `set` command is the primary way to fill fields. It auto-coerces values to
-the correct type:
+The `set` command is the primary way to fill fields.
+It auto-coerces values to the correct type:
 
 ```bash
 # String fields

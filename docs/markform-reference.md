@@ -1,12 +1,12 @@
-<!--
-SPDX-License-Identifier: CC-BY-4.0
+<!-- SPDX-License-Identifier: CC-BY-4.0
 
 Markform Quick Reference - Licensed under Creative Commons Attribution 4.0 International
 https://creativecommons.org/licenses/by/4.0/
 
 You may freely implement this specification in your own software under any license.
-The reference implementation at https://github.com/jlevy/markform is separately
-licensed under AGPL-3.0-or-later. Contact the author for commercial licensing options.
+The reference implementation at https://github.com/jlevy/markform is separately licensed
+under AGPL-3.0-or-later.
+Contact the author with licensing questions or for other licensing options.
 -->
 
 # Markform Quick Reference
@@ -64,14 +64,15 @@ markform:
 ### File Extensions
 
 | File Type | Extension | Description |
-|-----------|-----------|-------------|
+| --- | --- | --- |
 | Form | `.form.md` | Markform source and filled forms |
 | Fill Record | `.fill.json` | Execution metadata (sidecar file) |
 | Report | `.report.md` | Filtered human-readable output |
 | Schema | `.schema.json` | JSON Schema for form structure |
 | Values | `.yml` or `.json` | Exported field values |
 
-**Recommended:** Use `.form.md` for all Markform files. This enables:
+**Recommended:** Use `.form.md` for all Markform files.
+This enables:
 - Auto-discovery of fill records by `markform serve`
 - Consistent tooling behavior across CLI commands
 - Clear distinction from regular markdown files
@@ -80,10 +81,12 @@ Markform uses HTML comment syntax for structure tags, which render invisibly on 
 
 ### Syntax
 
-**Primary syntax** uses HTML comments:
+**Default:** Always use HTML comment syntax for new forms.
+This renders invisibly in Markdown renderers (including GitHub) and is the recommended
+style for all Markform files.
 
 | Element | Syntax | Notes |
-|---------|--------|-------|
+| --- | --- | --- |
 | Opening tag | `<!-- form id="x" -->` | Tag name directly after `<!--` |
 | Closing tag | `<!-- /form -->` | Closing tags |
 | Self-closing | `<!-- field ... /-->` | Self-closing tags |
@@ -97,8 +100,10 @@ Markform uses HTML comment syntax for structure tags, which render invisibly on 
 <!-- group id="basics" -->
 <!-- field kind="string" id="name" label="Name" --><!-- /field -->
 <!-- field kind="single_select" id="rating" label="Rating" -->
+
 - [ ] Good <!-- #good -->
 - [ ] Bad <!-- #bad -->
+
 <!-- /field -->
 <!-- /group -->
 <!-- /form -->
@@ -107,16 +112,18 @@ Markform uses HTML comment syntax for structure tags, which render invisibly on 
 ### Alternative Syntax (Markdoc Tags)
 
 Markform also supports **Markdoc tag syntax** (`{% tag %}`), which is the underlying
-format used internally:
+format used internally.
+Use HTML comments unless you have a specific reason to prefer Markdoc tags.
 
 | HTML Comment | Markdoc Tag |
-|--------------|-------------|
+| --- | --- |
 | `<!-- form id="x" -->` | `{% form id="x" %}` |
 | `<!-- /form -->` | `{% /form %}` |
 | `<!-- #id -->` | `{% #id %}` |
 | `<!-- .class -->` | `{% .class %}` |
 
-Both syntaxes are always supported. Files preserve their original syntax on round-trip.
+Both syntaxes are always supported.
+Files preserve their original syntax on round-trip.
 
 ## Field Kinds
 
@@ -129,14 +136,14 @@ representation. See the Type System section in SPEC.md for full details.
 Single-line or multi-line text.
 
 ````markdown
-{% field kind="string" id="name" label="Name" required=true minLength=2 maxLength=100 %}{% /field %}
+<!-- field kind="string" id="name" label="Name" required=true minLength=2 maxLength=100 --><!-- /field -->
 
-{% field kind="string" id="bio" label="Biography" pattern="^[A-Z].*" %}
+<!-- field kind="string" id="bio" label="Biography" pattern="^[A-Z].*" -->
 ```value
 Existing value here
 ````
-{% /field %}
-````
+<!-- /field -->
+`````
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -148,15 +155,15 @@ Existing value here
 
 Numeric values with optional constraints.
 
-```markdown
-{% field kind="number" id="age" label="Age" required=true min=0 max=150 integer=true %}{% /field %}
+````markdown
+<!-- field kind="number" id="age" label="Age" required=true min=0 max=150 integer=true --><!-- /field -->
 
-{% field kind="number" id="price" label="Price" min=0.01 max=999999.99 %}
+<!-- field kind="number" id="price" label="Price" min=0.01 max=999999.99 -->
 ```value
 49.99
-````
-{% /field %}
-````
+`````
+<!-- /field -->
+`````
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -168,16 +175,16 @@ Numeric values with optional constraints.
 
 Array of strings, one per line.
 
-```markdown
-{% field kind="string_list" id="tags" label="Tags" required=true minItems=1 maxItems=10 uniqueItems=true %}{% /field %}
+````markdown
+<!-- field kind="string_list" id="tags" label="Tags" required=true minItems=1 maxItems=10 uniqueItems=true --><!-- /field -->
 
-{% field kind="string_list" id="features" label="Key Features" minItems=3 itemMinLength=10 %}
+<!-- field kind="string_list" id="features" label="Key Features" minItems=3 itemMinLength=10 -->
 ```value
 Feature one description
 Feature two description
 Feature three description
-````
-{% /field %}
+`````
+<!-- /field -->
 ````
 
 | Attribute | Type | Description |
@@ -193,27 +200,31 @@ Feature three description
 Choose exactly one option.
 
 ```markdown
-{% field kind="single_select" id="rating" label="Rating" required=true %}
-- [ ] Low {% #low %}
-- [ ] Medium {% #medium %}
-- [x] High {% #high %}
-{% /field %}
+<!-- field kind="single_select" id="rating" label="Rating" required=true -->
+
+- [ ] Low <!-- #low -->
+- [ ] Medium <!-- #medium -->
+- [x] High <!-- #high -->
+
+<!-- /field -->
 ````
 
 Options use `[ ]` (unselected) or `[x]` (selected).
-Each option needs `{% #id %}`.
+Each option needs `<!-- #id -->`.
 
 ### Multi Select
 
 Choose multiple options.
 
 ```markdown
-{% field kind="multi_select" id="categories" label="Categories" required=true minSelections=1 maxSelections=3 %}
-- [x] Frontend {% #frontend %}
-- [x] Backend {% #backend %}
-- [ ] Database {% #database %}
-- [ ] DevOps {% #devops %}
-{% /field %}
+<!-- field kind="multi_select" id="categories" label="Categories" required=true minSelections=1 maxSelections=3 -->
+
+- [x] Frontend <!-- #frontend -->
+- [x] Backend <!-- #backend -->
+- [ ] Database <!-- #database -->
+- [ ] DevOps <!-- #devops -->
+
+<!-- /field -->
 ```
 
 | Attribute | Type | Description |
@@ -228,13 +239,15 @@ Stateful checklists with three modes.
 **Multi Mode** (default) - 5 states for workflow tracking:
 
 ```markdown
-{% field kind="checkboxes" id="tasks" label="Tasks" required=true checkboxMode="multi" %}
-- [ ] Research {% #research %}
-- [x] Design {% #design %}
-- [/] Implementation {% #impl %}
-- [*] Testing {% #test %}
-- [-] N/A item {% #na %}
-{% /field %}
+<!-- field kind="checkboxes" id="tasks" label="Tasks" required=true checkboxMode="multi" -->
+
+- [ ] Research <!-- #research -->
+- [x] Design <!-- #design -->
+- [/] Implementation <!-- #impl -->
+- [*] Testing <!-- #test -->
+- [-] N/A item <!-- #na -->
+
+<!-- /field -->
 ```
 
 | Token | State | Meaning |
@@ -248,20 +261,24 @@ Stateful checklists with three modes.
 **Simple Mode** - 2 states (GFM compatible):
 
 ```markdown
-{% field kind="checkboxes" id="agreements" label="Agreements" checkboxMode="simple" required=true %}
-- [x] I agree to terms {% #terms %}
-- [ ] Subscribe to newsletter {% #news %}
-{% /field %}
+<!-- field kind="checkboxes" id="agreements" label="Agreements" checkboxMode="simple" required=true -->
+
+- [x] I agree to terms <!-- #terms -->
+- [ ] Subscribe to newsletter <!-- #news -->
+
+<!-- /field -->
 ```
 
 **Explicit Mode** - Requires yes/no for each:
 
 ```markdown
-{% field kind="checkboxes" id="confirmations" label="Confirmations" checkboxMode="explicit" required=true %}
-- [y] Backup completed {% #backup %}
-- [n] Stakeholders notified {% #notify %}
-- [ ] Deployment ready {% #deploy %}
-{% /field %}
+<!-- field kind="checkboxes" id="confirmations" label="Confirmations" checkboxMode="explicit" required=true -->
+
+- [y] Backup completed <!-- #backup -->
+- [n] Stakeholders notified <!-- #notify -->
+- [ ] Deployment ready <!-- #deploy -->
+
+<!-- /field -->
 ```
 
 | Token | Value | Meaning |
@@ -272,30 +289,30 @@ Stateful checklists with three modes.
 
 ### Implicit Checkboxes (Plan Documents)
 
-Forms designed as task lists can omit explicit field wrappers. When a form has a
-`{% form %}` tag but no `{% field %}` tags, checkboxes are automatically wrapped in
-an implicit checkboxes field.
+Forms designed as task lists can omit explicit field wrappers.
+When a form has a `<!-- form -->` tag but no `<!-- field -->` tags, checkboxes are
+automatically wrapped in an implicit checkboxes field.
 
 ```markdown
 ---
 markform:
   spec: MF/0.1
 ---
-{% form id="plan" title="Project Plan" %}
+<!-- form id="plan" title="Project Plan" -->
 
 ## Phase 1: Research
-- [ ] Literature review {% #lit_review %}
-- [ ] Competitive analysis {% #comp %}
+- [ ] Literature review <!-- #lit_review -->
+- [ ] Competitive analysis <!-- #comp -->
 
 ## Phase 2: Design
-- [x] Architecture doc {% #arch %}
-- [/] API design {% #api %}
+- [x] Architecture doc <!-- #arch -->
+- [/] API design <!-- #api -->
 
-{% /form %}
+<!-- /form -->
 ```
 
 **Requirements:**
-- Each checkbox MUST have an ID annotation (`{% #id %}` or `<!-- #id -->`)
+- Each checkbox MUST have an ID annotation (`<!-- #id -->`)
 - IDs must be unique (same rules as explicit checkboxes fields)
 - The implicit field uses ID `checkboxes` (reserved)
 - Always uses `checkboxMode="multi"` (5-state)
@@ -306,26 +323,26 @@ markform:
 Single URL with format validation.
 
 ````markdown
-{% field kind="url" id="website" label="Website" required=true %}{% /field %}
+<!-- field kind="url" id="website" label="Website" required=true --><!-- /field -->
 
-{% field kind="url" id="repo" label="Repository" %}
+<!-- field kind="url" id="repo" label="Repository" -->
 ```value
 https://github.com/example/repo
 ````
-{% /field %}
-````
+<!-- /field -->
+`````
 
 ### URL List
 
 Array of URLs.
 
-```markdown
-{% field kind="url_list" id="sources" label="Sources" required=true minItems=1 maxItems=10 uniqueItems=true %}
+````markdown
+<!-- field kind="url_list" id="sources" label="Sources" required=true minItems=1 maxItems=10 uniqueItems=true -->
 ```value
 https://example.com/source1
 https://example.com/source2
-````
-{% /field %}
+`````
+<!-- /field -->
 `````
 
 ### Date Field
@@ -333,13 +350,13 @@ https://example.com/source2
 Date value in ISO 8601 format (YYYY-MM-DD).
 
 ````markdown
-{% field kind="date" id="deadline" label="Deadline" required=true %}{% /field %}
+<!-- field kind="date" id="deadline" label="Deadline" required=true --><!-- /field -->
 
-{% field kind="date" id="start_date" label="Start Date" min="2020-01-01" max="2030-12-31" %}
+<!-- field kind="date" id="start_date" label="Start Date" min="2020-01-01" max="2030-12-31" -->
 ```value
 2024-06-15
 `````
-{% /field %}
+<!-- /field -->
 `````
 
 | Attribute | Type | Description |
@@ -352,13 +369,13 @@ Date value in ISO 8601 format (YYYY-MM-DD).
 Integer year with optional constraints.
 
 ````markdown
-{% field kind="year" id="release_year" label="Release Year" required=true min=1888 max=2030 %}{% /field %}
+<!-- field kind="year" id="release_year" label="Release Year" required=true min=1888 max=2030 --><!-- /field -->
 
-{% field kind="year" id="founded" label="Year Founded" %}
+<!-- field kind="year" id="founded" label="Year Founded" -->
 ```value
 2015
 `````
-{% /field %}
+<!-- /field -->
 `````
 
 | Attribute | Type | Description |
@@ -371,26 +388,28 @@ Integer year with optional constraints.
 Structured tabular data with typed columns. Uses standard markdown table syntax.
 
 ````markdown
-{% field kind="table" id="team" label="Team Members" required=true
+<!-- field kind="table" id="team" label="Team Members" required=true
    columnIds=["name", "title", "start_date"]
    columnLabels=["Name", "Job Title", "Start Date"]
    columnTypes=["string", "string", "date"]
-   minRows=1 maxRows=20 %}
+   minRows=1 maxRows=20 -->
 | Name | Job Title | Start Date |
 |------|-----------|------------|
 | Alice Smith | Engineer | 2023-01-15 |
 | Bob Jones | Designer | 2022-06-01 |
-{% /field %}
+
+<!-- /field -->
 `````
 
 **Basic table (columnLabels backfilled from header row):**
 
 ```markdown
-{% field kind="table" id="items" label="Items"
-   columnIds=["name", "quantity", "price"] %}
+<!-- field kind="table" id="items" label="Items"
+   columnIds=["name", "quantity", "price"] -->
 | Name | Quantity | Price |
 |------|----------|-------|
-{% /field %}
+
+<!-- /field -->
 ```
 
 | Attribute | Type | Required | Description |
@@ -441,8 +460,8 @@ All fields support these attributes:
 | `examples` | string[] | Example values (helps LLMs understand expected format) |
 
 ```markdown
-{% field kind="string" id="name" label="Name" placeholder="Enter your name" examples=["John Doe", "Jane Smith"] %}{% /field %}
-{% field kind="number" id="revenue" label="Revenue" placeholder="1000000" examples=["500000", "1000000"] %}{% /field %}
+<!-- field kind="string" id="name" label="Name" placeholder="Enter your name" examples=["John Doe", "Jane Smith"] --><!-- /field -->
+<!-- field kind="number" id="revenue" label="Revenue" placeholder="1000000" examples=["500000", "1000000"] --><!-- /field -->
 ```
 
 Note: `placeholder` and `examples` are NOT valid on chooser fields (single-select,
@@ -450,8 +469,8 @@ multi-select, checkboxes).
 
 ## Harness Configuration
 
-Optional harness hints can be set in YAML frontmatter under `markform.harness`.
-All keys must be `snake_case` and all values must be numbers.
+Optional harness hints can be set in YAML frontmatter under `markform.harness`. All keys
+must be `snake_case` and all values must be numbers.
 These are suggestions — a harness may ignore or override them via API options.
 
 | Key | Type | Description |
@@ -478,21 +497,21 @@ Unrecognized keys or non-numeric values cause parse errors.
 Add context to fields, groups, or the form.
 
 ```markdown
-{% description ref="form_id" %}
+<!-- description ref="form_id" -->
 Overall form description and purpose.
-{% /description %}
+<!-- /description -->
 
-{% instructions ref="field_id" %}
+<!-- instructions ref="field_id" -->
 Step-by-step guidance for filling this field.
-{% /instructions %}
+<!-- /instructions -->
 
-{% notes ref="field_id" %}
+<!-- notes ref="field_id" -->
 Additional context or caveats.
-{% /notes %}
+<!-- /notes -->
 
-{% examples ref="field_id" %}
+<!-- examples ref="field_id" -->
 Example values: "AAPL", "GOOGL", "MSFT"
-{% /examples %}
+<!-- /examples -->
 ```
 
 Place doc blocks after the element they reference.
@@ -501,7 +520,7 @@ Place doc blocks after the element they reference.
 
 - **Form/Group/Field IDs**: Globally unique, `snake_case`
 
-- **Option IDs**: Unique within field, `snake_case`, use `{% #id %}` syntax
+- **Option IDs**: Unique within field, `snake_case`, use `<!-- #id -->` syntax
 
 - **Qualified refs**: `field_id.option_id` for external references
 
@@ -516,8 +535,8 @@ roles:
 ```
 
 ```markdown
-{% field kind="string" id="query" label="Search Query" role="user" %}{% /field %}
-{% field kind="string" id="summary" label="AI Summary" role="agent" %}{% /field %}
+<!-- field kind="string" id="query" label="Search Query" role="user" --><!-- /field -->
+<!-- field kind="string" id="summary" label="AI Summary" role="agent" --><!-- /field -->
 ```
 
 ## Value Encoding
@@ -525,17 +544,17 @@ roles:
 Values use fenced code blocks with language `value`:
 
 ````markdown
-{% field kind="string" id="name" label="Name" %}
+<!-- field kind="string" id="name" label="Name" -->
 ```value
 John Smith
 ````
-{% /field %}
+<!-- /field -->
 ````
 
 Empty fields omit the value block entirely:
 
 ```markdown
-{% field kind="string" id="name" label="Name" %}{% /field %}
+<!-- field kind="string" id="name" label="Name" --><!-- /field -->
 ````
 
 ## Complete Example
@@ -569,141 +588,143 @@ markform:
     max_patches_per_turn: 8
 ---
 
-{% form id="movie_research" title="Movie Research" %}
+<!-- form id="movie_research" title="Movie Research" -->
 
-{% description ref="movie_research" %}
+<!-- description ref="movie_research" -->
 A focused research form for gathering ratings and key statistics for any film.
 Pulls from IMDB, Rotten Tomatoes, and Metacritic.
-{% /description %}
+<!-- /description -->
 
-{% group id="movie_input" title="Movie Identification" %}
+<!-- group id="movie_input" title="Movie Identification" -->
 
-{% field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 %}{% /field %}
+<!-- field kind="string" id="movie" label="Movie" role="user" required=true minLength=1 maxLength=300 --><!-- /field -->
 
-{% instructions ref="movie" %}
+<!-- instructions ref="movie" -->
 Enter the movie title (add any details to help identify, like "Barbie 2023" or "the Batman movie with Robert Pattinson")
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="title_identification" title="Title Identification" %}
+<!-- group id="title_identification" title="Title Identification" -->
 
-{% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
+<!-- field kind="string" id="full_title" label="Full Title" role="agent" required=true --><!-- /field -->
 
-{% instructions ref="full_title" %}
+<!-- instructions ref="full_title" -->
 Look up what film the user had in mind and fill in the official title including subtitle if any (e.g., "The Lord of the Rings: The Fellowship of the Ring").
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="sources" title="Sources" %}
+<!-- group id="sources" title="Sources" -->
 
-{% field kind="url" id="imdb_url" label="IMDB URL" role="agent" required=true %}{% /field %}
+<!-- field kind="url" id="imdb_url" label="IMDB URL" role="agent" required=true --><!-- /field -->
 
-{% instructions ref="imdb_url" %}
+<!-- instructions ref="imdb_url" -->
 Direct link to the movie's IMDB page (e.g., https://www.imdb.com/title/tt0111161/).
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /field %}
+<!-- field kind="url" id="rt_url" label="Rotten Tomatoes URL" role="agent" --><!-- /field -->
 
-{% instructions ref="rt_url" %}
+<!-- instructions ref="rt_url" -->
 Direct link to the movie's Rotten Tomatoes page.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="url" id="metacritic_url" label="Metacritic URL" role="agent" %}{% /field %}
+<!-- field kind="url" id="metacritic_url" label="Metacritic URL" role="agent" --><!-- /field -->
 
-{% instructions ref="metacritic_url" %}
+<!-- instructions ref="metacritic_url" -->
 Direct link to the movie's Metacritic page.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="basic_details" title="Basic Details" %}
+<!-- group id="basic_details" title="Basic Details" -->
 
-{% field kind="number" id="year" label="Release Year" role="agent" required=true min=1888 max=2030 %}{% /field %}
+<!-- field kind="number" id="year" label="Release Year" role="agent" required=true min=1888 max=2030 --><!-- /field -->
 
-{% field kind="string_list" id="directors" label="Director(s)" role="agent" required=true %}{% /field %}
+<!-- field kind="string_list" id="directors" label="Director(s)" role="agent" required=true --><!-- /field -->
 
-{% instructions ref="directors" %}
+<!-- instructions ref="directors" -->
 One director per line. Most films have one; some have two or more co-directors.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="number" id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 %}{% /field %}
+<!-- field kind="number" id="runtime_minutes" label="Runtime (minutes)" role="agent" min=1 max=1000 --><!-- /field -->
 
-{% field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" %}
-- [ ] G {% #g %}
-- [ ] PG {% #pg %}
-- [ ] PG-13 {% #pg_13 %}
-- [ ] R {% #r %}
-- [ ] NC-17 {% #nc_17 %}
-- [ ] NR/Unrated {% #nr %}
-{% /field %}
+<!-- field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" -->
 
-{% /group %}
+- [ ] G <!-- #g -->
+- [ ] PG <!-- #pg -->
+- [ ] PG-13 <!-- #pg_13 -->
+- [ ] R <!-- #r -->
+- [ ] NC-17 <!-- #nc_17 -->
+- [ ] NR/Unrated <!-- #nr -->
 
-{% group id="imdb_ratings" title="IMDB Ratings" %}
+<!-- /field -->
 
-{% field kind="number" id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 %}{% /field %}
+<!-- /group -->
 
-{% instructions ref="imdb_rating" %}
+<!-- group id="imdb_ratings" title="IMDB Ratings" -->
+
+<!-- field kind="number" id="imdb_rating" label="IMDB Rating" role="agent" min=1.0 max=10.0 --><!-- /field -->
+
+<!-- instructions ref="imdb_rating" -->
 IMDB user rating (1.0-10.0 scale).
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="number" id="imdb_votes" label="IMDB Vote Count" role="agent" min=0 %}{% /field %}
+<!-- field kind="number" id="imdb_votes" label="IMDB Vote Count" role="agent" min=0 --><!-- /field -->
 
-{% instructions ref="imdb_votes" %}
+<!-- instructions ref="imdb_votes" -->
 Number of IMDB user votes (e.g., 2800000 for a popular film).
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" %}
+<!-- group id="rotten_tomatoes_ratings" title="Rotten Tomatoes Ratings" -->
 
-{% field kind="number" id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 %}{% /field %}
+<!-- field kind="number" id="rt_critics_score" label="Tomatometer (Critics)" role="agent" min=0 max=100 --><!-- /field -->
 
-{% instructions ref="rt_critics_score" %}
+<!-- instructions ref="rt_critics_score" -->
 Tomatometer percentage (0-100).
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="number" id="rt_critics_count" label="Critics Review Count" role="agent" min=0 %}{% /field %}
+<!-- field kind="number" id="rt_critics_count" label="Critics Review Count" role="agent" min=0 --><!-- /field -->
 
-{% field kind="number" id="rt_audience_score" label="Audience Score" role="agent" min=0 max=100 %}{% /field %}
+<!-- field kind="number" id="rt_audience_score" label="Audience Score" role="agent" min=0 max=100 --><!-- /field -->
 
-{% instructions ref="rt_audience_score" %}
+<!-- instructions ref="rt_audience_score" -->
 Audience Score percentage (0-100).
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="metacritic_ratings" title="Metacritic Ratings" %}
+<!-- group id="metacritic_ratings" title="Metacritic Ratings" -->
 
-{% field kind="number" id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 %}{% /field %}
+<!-- field kind="number" id="metacritic_score" label="Metacritic Score" role="agent" min=0 max=100 --><!-- /field -->
 
-{% instructions ref="metacritic_score" %}
+<!-- instructions ref="metacritic_score" -->
 Metascore (0-100 scale). Leave empty if not available.
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% group id="summary" title="Summary" %}
+<!-- group id="summary" title="Summary" -->
 
-{% field kind="string" id="logline" label="One-Line Summary" role="agent" maxLength=300 %}{% /field %}
+<!-- field kind="string" id="logline" label="One-Line Summary" role="agent" maxLength=300 --><!-- /field -->
 
-{% instructions ref="logline" %}
+<!-- instructions ref="logline" -->
 Brief plot summary in 1-2 sentences, no spoilers.
-{% /instructions %}
+<!-- /instructions -->
 
-{% field kind="string_list" id="notable_awards" label="Notable Awards" role="agent" %}{% /field %}
+<!-- field kind="string_list" id="notable_awards" label="Notable Awards" role="agent" --><!-- /field -->
 
-{% instructions ref="notable_awards" %}
+<!-- instructions ref="notable_awards" -->
 Major awards won. One per line.
 Format: Award | Category | Year
 Example: "Oscar | Best Picture | 1995"
-{% /instructions %}
+<!-- /instructions -->
 
-{% /group %}
+<!-- /group -->
 
-{% /form %}
+<!-- /form -->
 ```
 
 ## CLI Quick Reference
@@ -737,9 +758,10 @@ markform fill form.md --roles=user --interactive # Only fill user-role fields
 markform fill form.md --model anthropic/claude-sonnet-4-5  # AI fills agent fields
 
 # Export data
-markform export form.md --format=json    # Export values as JSON
-markform export form.md --format=yaml    # Export values as YAML
-markform export form.md --format=markdown  # Readable markdown (strips tags)
+markform export form.md --format=json      # Export values as JSON
+markform export form.md --format=yaml      # Export values as YAML
+markform export form.md --format=markdown  # Full rendered markdown (includes instructions)
+markform report form.md                    # Clean report markdown (values only, no instructions)
 
 # Export form structure as JSON Schema
 markform schema form.md                  # Full schema with x-markform extensions
@@ -784,6 +806,35 @@ markform fill template.form.md --mock --mock-source filled.form.md
 
 5. Use `markform inspect` to verify progress and completion
 
+## Form Design Guide
+
+When designing a form, match each piece of data to the most specific field kind:
+
+| Data | Field Kind | When to Use |
+| --- | --- | --- |
+| Free text | `string` | Names, descriptions, summaries |
+| Numeric values | `number` | Financial figures, counts, scores |
+| Year values | `year` | Founding year, release year |
+| Calendar dates | `date` | Deadlines, event dates (YYYY-MM-DD) |
+| Single URL | `url` | Website, profile page |
+| Multiple URLs | `url_list` | Sources, references |
+| List of text items | `string_list` | Tags, competitors, skills |
+| One-of-many choice | `single_select` | Category, status, rating level |
+| Multiple choices | `multi_select` | Features, capabilities, sectors |
+| Structured rows | `table` | Team members, line items, history |
+| Verification items | `checkboxes` | Task lists, checklists, approvals |
+
+**Tips:**
+
+- Use `required=true` for fields essential to the form’s purpose
+- Add `pattern` for structured strings (tickers, IDs, codes)
+- Use `integer=true` on number fields for counts
+- Set `min`/`max` bounds on numbers and dates when valid ranges are important
+- Use `checkboxMode="explicit"` when every item needs a yes/no answer
+- Add `role="user"` for human-provided inputs, `role="agent"` for AI-researched data
+- Include `<!-- instructions -->` blocks to guide agents on format and sources
+- Organize related fields into `<!-- group -->` blocks
+
 ## Best Practices
 
 1. **Use descriptive IDs**: `company_revenue_m` not `rev` or `field1`
@@ -796,7 +847,7 @@ markform fill template.form.md --mock --mock-source filled.form.md
 
 5. **Assign roles**: Separate user input from agent research
 
-6. **Document thoroughly**: Use `{% instructions %}` for complex fields
+6. **Document thoroughly**: Use `<!-- instructions -->` for complex fields
 
 ## Claude Code Skill Setup
 
