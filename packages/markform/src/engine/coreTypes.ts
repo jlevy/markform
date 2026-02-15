@@ -1363,21 +1363,19 @@ export const ColumnTypeNameSchema = z.enum(['string', 'number', 'url', 'date', '
  */
 export const ColumnTypeSpecSchema = z.union([
   ColumnTypeNameSchema,
-  z
-    .object({
-      type: ColumnTypeNameSchema,
-      required: z.boolean().optional(),
-      // String constraints
-      minLength: z.number().int().nonnegative().optional(),
-      maxLength: z.number().int().nonnegative().optional(),
-      pattern: z.string().optional(),
-      enum: z.array(z.string()).optional(),
-      // Number/year constraints
-      min: z.union([z.number(), z.string()]).optional(),
-      max: z.union([z.number(), z.string()]).optional(),
-      integer: z.boolean().optional(),
-    })
-    .passthrough(),
+  z.object({
+    type: ColumnTypeNameSchema,
+    required: z.boolean().optional(),
+    // String constraints
+    minLength: z.number().int().nonnegative().optional(),
+    maxLength: z.number().int().nonnegative().optional(),
+    pattern: z.string().optional(),
+    enum: z.array(z.string()).optional(),
+    // Number/year/date constraints
+    min: z.union([z.number(), z.string()]).optional(),
+    max: z.union([z.number(), z.string()]).optional(),
+    integer: z.boolean().optional(),
+  }),
 ]);
 
 /**

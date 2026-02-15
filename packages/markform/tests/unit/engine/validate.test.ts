@@ -1874,4 +1874,178 @@ markform:
       expect(result.issues.some((i) => i.message === 'From validator2')).toBe(true);
     });
   });
+
+  describe('column constraint-type mismatch detection', () => {
+    it('rejects minLength on a number column', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["val"] columnTypes=[{"type": "number", "minLength": 5}] %}
+| val |
+|-----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(
+        /constraint 'minLength' is not valid for type 'number'/,
+      );
+    });
+
+    it('rejects pattern on a number column', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["val"] columnTypes=[{"type": "number", "pattern": "^[0-9]+$"}] %}
+| val |
+|-----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(
+        /constraint 'pattern' is not valid for type 'number'/,
+      );
+    });
+
+    it('rejects enum on a number column', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["val"] columnTypes=[{"type": "number", "enum": ["a", "b"]}] %}
+| val |
+|-----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(/constraint 'enum' is not valid for type 'number'/);
+    });
+
+    it('rejects integer on a string column', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["val"] columnTypes=[{"type": "string", "integer": true}] %}
+| val |
+|-----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(
+        /constraint 'integer' is not valid for type 'string'/,
+      );
+    });
+
+    it('rejects min/max on a string column', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["val"] columnTypes=[{"type": "string", "min": 1}] %}
+| val |
+|-----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(/constraint 'min' is not valid for type 'string'/);
+    });
+
+    it('rejects minLength on a date column', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["val"] columnTypes=[{"type": "date", "minLength": 5}] %}
+| val |
+|-----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(
+        /constraint 'minLength' is not valid for type 'date'/,
+      );
+    });
+
+    it('rejects minLength on a url column', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["val"] columnTypes=[{"type": "url", "minLength": 5}] %}
+| val |
+|-----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).toThrow(
+        /constraint 'minLength' is not valid for type 'url'/,
+      );
+    });
+
+    it('allows valid constraints for their types', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items"
+   columnIds=["name", "rank", "status", "event_date", "yr"]
+   columnTypes=[{"type": "string", "minLength": 2, "maxLength": 50, "pattern": "^[A-Za-z]+$"}, {"type": "number", "min": 1, "max": 100, "integer": true}, {"type": "string", "enum": ["active", "inactive"]}, {"type": "date", "min": "2020-01-01", "max": "2030-12-31"}, {"type": "year", "min": 2000, "max": 2030}] %}
+| name | rank | status | event_date | yr |
+|------|------|--------|------------|----|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      expect(() => parseForm(markdown)).not.toThrow();
+    });
+  });
 });

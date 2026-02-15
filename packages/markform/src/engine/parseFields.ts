@@ -1010,6 +1010,9 @@ function parseColumnsFromAttributes(
         if (typeObj.min !== undefined) min = typeObj.min;
         if (typeObj.max !== undefined) max = typeObj.max;
         if (typeof typeObj.integer === 'boolean') integer = typeObj.integer;
+
+        // Validate constraints match the column type
+        validateColumnConstraints(fieldId, id, type, typeObj);
       }
     }
 
@@ -1025,6 +1028,48 @@ function parseColumnsFromAttributes(
   }
 
   return columns;
+}
+
+/** String-only constraints. */
+const STRING_ONLY_CONSTRAINTS = ['minLength', 'maxLength', 'pattern', 'enum'] as const;
+
+/** Number-only constraints. */
+const NUMBER_ONLY_CONSTRAINTS = ['integer'] as const;
+
+/** Constraints valid per column type. */
+const VALID_CONSTRAINTS_BY_TYPE: Record<ColumnTypeName, readonly string[]> = {
+  string: [...STRING_ONLY_CONSTRAINTS],
+  number: ['min', 'max', ...NUMBER_ONLY_CONSTRAINTS],
+  date: ['min', 'max'],
+  year: ['min', 'max'],
+  url: [],
+};
+
+/**
+ * Validate that per-column constraints are appropriate for the column type.
+ * Throws MarkformParseError for mismatched constraints (e.g. minLength on a number column).
+ */
+function validateColumnConstraints(
+  fieldId: string,
+  columnId: string,
+  type: ColumnTypeName,
+  typeObj: Record<string, unknown>,
+): void {
+  const allConstraintKeys = [
+    ...STRING_ONLY_CONSTRAINTS,
+    ...NUMBER_ONLY_CONSTRAINTS,
+    'min',
+    'max',
+  ] as const;
+  const validKeys = VALID_CONSTRAINTS_BY_TYPE[type];
+  for (const key of allConstraintKeys) {
+    if (typeObj[key] !== undefined && !validKeys.includes(key)) {
+      throw new MarkformParseError(
+        `table-field '${fieldId}' column '${columnId}': constraint '${key}' is not valid for type '${type}'. ` +
+          `Valid constraints for '${type}': ${validKeys.length > 0 ? validKeys.join(', ') : 'none'}`,
+      );
+    }
+  }
 }
 
 /**
