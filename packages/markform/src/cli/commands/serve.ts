@@ -1179,12 +1179,15 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
     }
 
     // Navigate to a tab by id, updating the button state and hash
+    let navigating = false;
     async function navigateToTab(tabId) {
+      navigating = true;
       tabButtons.forEach(b => b.classList.remove('active'));
       const btn = document.querySelector('[data-tab="' + tabId + '"]');
       if (btn) btn.classList.add('active');
       location.hash = tabId;
       await showTab(tabId);
+      navigating = false;
     }
 
     tabButtons.forEach(btn => {
@@ -1195,6 +1198,7 @@ export function renderFormHtml(form: ParsedForm, tabs?: Tab[] | null): string {
 
     // Handle hash-based navigation (back/forward, direct URL)
     window.addEventListener('hashchange', () => {
+      if (navigating) return;
       const hash = window.location.hash.slice(1);
       if (hash) navigateToTab(hash);
     });

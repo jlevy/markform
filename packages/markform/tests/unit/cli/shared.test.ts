@@ -231,7 +231,7 @@ describe('shared utilities', () => {
     });
 
     it('logWarn respects quiet mode', () => {
-      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
       logWarn(baseCtx, 'warning');
       expect(spy).toHaveBeenCalled();
       spy.mockClear();

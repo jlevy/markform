@@ -332,7 +332,7 @@ export function logTiming(ctx: CommandContext, label: string, durationMs: number
  */
 export function logWarn(ctx: CommandContext, message: string): void {
   if (!ctx.quiet) {
-    console.log(pc.yellow(`⚠️  ${message}`));
+    console.error(pc.yellow(`⚠️  ${message}`));
   }
 }
 
