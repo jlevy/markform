@@ -513,7 +513,7 @@ function tableFieldToJsonSchema(
   const requiredColumns: string[] = [];
 
   for (const col of field.columns) {
-    rowProperties[col.id] = columnToJsonSchema(col);
+    rowProperties[col.id] = columnToJsonSchema(col, options);
     if (col.required) {
       requiredColumns.push(col.id);
     }
@@ -553,7 +553,10 @@ function tableFieldToJsonSchema(
   return schema;
 }
 
-function columnToJsonSchema(col: TableColumn): JsonSchemaProperty {
+function columnToJsonSchema(
+  col: TableColumn,
+  options: Required<JsonSchemaOptions>,
+): JsonSchemaProperty {
   const schema: JsonSchemaProperty = {
     title: col.label,
   };
@@ -579,8 +582,11 @@ function columnToJsonSchema(col: TableColumn): JsonSchemaProperty {
     case 'date':
       schema.type = 'string';
       schema.format = 'date';
-      if (typeof col.min === 'string') schema.formatMinimum = col.min;
-      if (typeof col.max === 'string') schema.formatMaximum = col.max;
+      // formatMinimum/formatMaximum are 2019-09/2020-12 keywords, not valid in draft-07
+      if (options.draft !== 'draft-07') {
+        if (typeof col.min === 'string') schema.formatMinimum = col.min;
+        if (typeof col.max === 'string') schema.formatMaximum = col.max;
+      }
       break;
     case 'year':
       schema.type = 'integer';

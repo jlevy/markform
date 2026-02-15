@@ -612,5 +612,33 @@ markform:
       expect(dateProp?.formatMinimum).toBe('2020-01-01');
       expect(dateProp?.formatMaximum).toBe('2030-12-31');
     });
+
+    it('omits date column formatMinimum/formatMaximum for draft-07', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="events" label="Events"
+   columnIds=["event_date"]
+   columnLabels=["Date"]
+   columnTypes=[{"type": "date", "min": "2020-01-01", "max": "2030-12-31"}] %}
+| Date |
+|------|
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = formToJsonSchema(form, { draft: 'draft-07' });
+
+      const eventsProp = result.schema.properties?.events;
+      const dateProp = eventsProp?.items?.properties?.event_date;
+      expect(dateProp?.format).toBe('date');
+      expect(dateProp?.formatMinimum).toBeUndefined();
+      expect(dateProp?.formatMaximum).toBeUndefined();
+    });
   });
 });
