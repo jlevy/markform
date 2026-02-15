@@ -52,7 +52,7 @@ metrics that Arena computes from raw FillRecord data that should live upstream:
 
 | Metric | How Arena Computes It | Why Upstream |
 | --- | --- | --- |
-| Avg concurrency | `(llmTimeMs + toolTimeMs) / totalMs` | Every consumer reinvents this |
+| Avg concurrency | `llmTimeMs / totalMs` | Every consumer reinvents this |
 | Avg tool duration | `totalDurationMs / totalCalls` | Per-tool avg exists; aggregate doesn't |
 
 Rate metrics like s/field and s/turn are trivially derived from existing fields
@@ -65,12 +65,21 @@ compute their own display.
 
 ### Key Insight: Timing Values Under Parallelism
 
-`llmTimeMs` and `toolTimeMs` are **sums of individual durations** (not de-overlapped
-wall-clock segments).
-They represent “total work time” and can exceed wall-clock `totalMs` when operations run
-concurrently. This is the foundation of the concurrency metric:
-`effectiveParallelism = totalWorkMs / totalMs`. A value of 2.1x means that on average,
-2.1 units of work were happening simultaneously.
+`llmTimeMs` is the **sum of individual `generateText()` call durations** (not
+de-overlapped wall-clock time).
+Each `generateText()` duration includes tool execution within it, so `toolTimeMs` is a
+subset of `llmTimeMs`, not additive.
+
+Under parallelism (multiple concurrent `generateText()` calls), `llmTimeMs` can exceed
+wall-clock `totalMs`. This is the foundation of the concurrency metric:
+`effectiveParallelism = llmTimeMs / totalMs`. A value of 2.1x means that on average, 2.1
+`generateText()` calls were active simultaneously.
+
+Note: The AI SDK executes multiple tool calls within a single step concurrently via
+`Promise.all`, so intra-step tool parallelism exists but is already captured within each
+`generateText()` wall-clock duration.
+The `effectiveParallelism` metric measures LLM call concurrency (thread-level
+parallelism), not tool-level concurrency.
 
 ## Design
 
@@ -80,18 +89,18 @@ Add a single computed field:
 
 ```typescript
 // In TimingBreakdownSchema
-effectiveParallelism: z.number().nonnegative(),  // (llmTimeMs + toolTimeMs) / totalMs
+effectiveParallelism: z.number().nonnegative(),  // llmTimeMs / totalMs
 ```
 
 **Why:** All raw data already exists.
 This one-line ratio is the single metric every consumer computes downstream.
-It’s not obvious from the existing fields that `llmTimeMs + toolTimeMs` can exceed
-`totalMs`, so making it explicit is self-documenting.
+It’s not obvious from the existing fields that `llmTimeMs` can exceed `totalMs` under
+parallelism, so making it explicit is self-documenting.
 
 **Interpretation:**
-- `< 1.0x` — idle time / overhead between operations (common in serial mode)
-- `1.0x` — all time spent doing useful work, no idle gaps
-- `> 1.0x` — parallelism, multiple operations overlapping in time
+- `< 1.0x` — idle time / overhead between `generateText()` calls (common in serial mode)
+- `1.0x` — all wall-clock time spent in `generateText()` calls, no idle gaps
+- `> 1.0x` — multiple `generateText()` calls active concurrently
 
 **Computed in:** `calculateTimingBreakdown()` in `fillRecordCollector.ts`.
 

@@ -754,7 +754,7 @@ describe('FillRecordCollector', () => {
   });
 
   describe('effectiveParallelism', () => {
-    it('computes effectiveParallelism as (llmTimeMs + toolTimeMs) / totalMs', () => {
+    it('computes effectiveParallelism as llmTimeMs / totalMs', () => {
       const collector = new FillRecordCollector({
         form: mockFormMetadata,
         provider: 'anthropic',
@@ -793,7 +793,7 @@ describe('FillRecordCollector', () => {
 
       const record = collector.getRecord(mockProgressCounts);
 
-      // effectiveParallelism should be (llmTimeMs + toolTimeMs) / totalMs
+      // effectiveParallelism should be llmTimeMs / totalMs
       expect(record.timingBreakdown.effectiveParallelism).toBeGreaterThanOrEqual(0);
       expect(typeof record.timingBreakdown.effectiveParallelism).toBe('number');
     });

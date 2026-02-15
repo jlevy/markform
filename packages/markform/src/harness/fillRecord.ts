@@ -184,13 +184,15 @@ export const TimingBreakdownSchema = z.object({
   llmTimeMs: z.number().int().nonnegative(),
   /** Time spent executing tools (ms) */
   toolTimeMs: z.number().int().nonnegative(),
-  /** Overhead time (total - llm - tools) */
+  /** Overhead time (total - llm) — time not spent in generateText() calls */
   overheadMs: z.number().int().nonnegative(),
   /** Percentage breakdown for visualization */
   breakdown: z.array(TimingBreakdownItemSchema),
   /**
-   * Effective parallelism: (llmTimeMs + toolTimeMs) / totalMs.
-   * Shows how much concurrent work happened relative to wall-clock time.
+   * Effective concurrency of LLM calls: llmTimeMs / totalMs.
+   * Measures how many generateText() calls were active on average.
+   * Each generateText() duration includes tool execution within it, so this
+   * reflects LLM call concurrency, not tool-level concurrency.
    * < 1.0 = idle time/overhead, 1.0 = fully utilized, > 1.0 = parallel execution.
    */
   effectiveParallelism: z.number().nonnegative(),

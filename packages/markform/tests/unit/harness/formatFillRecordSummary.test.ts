@@ -90,15 +90,15 @@ function createTestRecord(overrides: Partial<FillRecord> = {}): FillRecord {
     },
     timingBreakdown: {
       totalMs: 12400,
-      llmTimeMs: 6820,
+      llmTimeMs: 11400,
       toolTimeMs: 5100,
-      overheadMs: 480,
+      overheadMs: 1000,
       breakdown: [
-        { category: 'llm', label: 'LLM', ms: 6820, percentage: 55 },
+        { category: 'llm', label: 'LLM', ms: 11400, percentage: 92 },
         { category: 'tools', label: 'Tools', ms: 5100, percentage: 41 },
-        { category: 'overhead', label: 'Overhead', ms: 480, percentage: 4 },
+        { category: 'overhead', label: 'Overhead', ms: 1000, percentage: 8 },
       ],
-      effectiveParallelism: 0.96,
+      effectiveParallelism: 0.92,
     },
     formProgress: {
       totalFields: 20,
@@ -200,7 +200,7 @@ describe('formatFillRecordSummary', () => {
     const summary = formatFillRecordSummary(record, { verbose: true });
 
     expect(summary).toContain('Timing');
-    expect(summary).toContain('55%');
+    expect(summary).toContain('92%');
     expect(summary).toContain('LLM');
     expect(summary).toContain('41%');
     expect(summary).toContain('tools');
@@ -355,9 +355,9 @@ describe('formatFillRecordSummary', () => {
       const summary = formatFillRecordSummary(record);
 
       expect(summary).toContain('Timing:');
-      expect(summary).toContain('55% LLM');
+      expect(summary).toContain('92% LLM');
       expect(summary).toContain('41% tools');
-      expect(summary).toContain('4% overhead');
+      expect(summary).toContain('8% overhead');
     });
 
     it('does not show absolute durations in non-verbose mode', () => {
@@ -366,7 +366,7 @@ describe('formatFillRecordSummary', () => {
 
       // Non-verbose should NOT have duration values in the timing line
       const timingLine = summary.split('\n').find((l) => l.startsWith('Timing:'));
-      expect(timingLine).not.toContain('6.8s');
+      expect(timingLine).not.toContain('11.4s');
     });
   });
 
