@@ -195,7 +195,7 @@ export const TimingBreakdownSchema = z.object({
    * reflects LLM call concurrency, not tool-level concurrency.
    * < 1.0 = idle time/overhead, 1.0 = fully utilized, > 1.0 = parallel execution.
    */
-  effectiveParallelism: z.number().nonnegative(),
+  llmParallelism: z.number().nonnegative(),
 });
 
 export type TimingBreakdown = z.infer<typeof TimingBreakdownSchema>;

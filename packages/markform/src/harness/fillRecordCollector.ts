@@ -728,11 +728,11 @@ export class FillRecordCollector implements FillCallbacks {
       toolTimeMs,
       overheadMs,
       breakdown,
-      // Effective parallelism of LLM calls: ratio of sum of individual generateText()
-      // durations to wall-clock time. Each generateText() duration includes its own tool
-      // execution, so this measures LLM call concurrency, not tool-level concurrency.
+      // LLM parallelism: ratio of sum of individual generateText() durations to
+      // wall-clock time. Each generateText() duration includes its own tool execution,
+      // so this measures LLM call concurrency, not tool-level concurrency.
       // Values > 1.0 indicate multiple generateText() calls ran concurrently.
-      effectiveParallelism: totalMs > 0 ? llmTimeMs / totalMs : 0,
+      llmParallelism: totalMs > 0 ? llmTimeMs / totalMs : 0,
     };
   }
 

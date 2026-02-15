@@ -696,7 +696,7 @@ export function renderFillRecordContent(record: FillRecord): string {
       : '';
 
   // Effective parallelism card
-  const ep = record.timingBreakdown.effectiveParallelism;
+  const ep = record.timingBreakdown.llmParallelism;
   const parallelismCard =
     ep > 0
       ? `

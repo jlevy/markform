@@ -98,7 +98,7 @@ function createTestRecord(overrides: Partial<FillRecord> = {}): FillRecord {
         { category: 'tools', label: 'Tools', ms: 5100, percentage: 41 },
         { category: 'overhead', label: 'Overhead', ms: 1000, percentage: 8 },
       ],
-      effectiveParallelism: 0.92,
+      llmParallelism: 0.92,
     },
     formProgress: {
       totalFields: 20,
@@ -390,7 +390,7 @@ describe('formatFillRecordSummary', () => {
             { category: 'tools', label: 'Tools', ms: 5100, percentage: 41 },
             { category: 'overhead', label: 'Overhead', ms: 480, percentage: 4 },
           ],
-          effectiveParallelism: 2.1,
+          llmParallelism: 2.1,
         },
       });
       const summary = formatFillRecordSummary(record, { verbose: true });
@@ -412,7 +412,7 @@ describe('formatFillRecordSummary', () => {
             { category: 'tools', label: 'Tools', ms: 3000, percentage: 24 },
             { category: 'overhead', label: 'Overhead', ms: 5400, percentage: 44 },
           ],
-          effectiveParallelism: 0.56,
+          llmParallelism: 0.56,
         },
       });
       const summary = formatFillRecordSummary(record, { verbose: true });
@@ -432,7 +432,7 @@ describe('formatFillRecordSummary', () => {
             { category: 'tools', label: 'Tools', ms: 5100, percentage: 41 },
             { category: 'overhead', label: 'Overhead', ms: 480, percentage: 4 },
           ],
-          effectiveParallelism: 0.96,
+          llmParallelism: 0.96,
         },
       });
       const summary = formatFillRecordSummary(record, { verbose: true });

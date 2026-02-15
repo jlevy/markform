@@ -167,7 +167,7 @@ export function formatFillRecordSummary(
     lines.push(timingLine);
 
     // Effective parallelism in verbose mode
-    const ep = timingBreakdown.effectiveParallelism;
+    const ep = timingBreakdown.llmParallelism;
     if (record.execution.parallelEnabled) {
       // Always show for parallel fills
       const threadCount = record.execution.executionThreads.length;

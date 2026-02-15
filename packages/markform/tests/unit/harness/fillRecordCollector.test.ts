@@ -753,8 +753,8 @@ describe('FillRecordCollector', () => {
     });
   });
 
-  describe('effectiveParallelism', () => {
-    it('computes effectiveParallelism as llmTimeMs / totalMs', () => {
+  describe('llmParallelism', () => {
+    it('computes llmParallelism as llmTimeMs / totalMs', () => {
       const collector = new FillRecordCollector({
         form: mockFormMetadata,
         provider: 'anthropic',
@@ -793,9 +793,9 @@ describe('FillRecordCollector', () => {
 
       const record = collector.getRecord(mockProgressCounts);
 
-      // effectiveParallelism should be llmTimeMs / totalMs
-      expect(record.timingBreakdown.effectiveParallelism).toBeGreaterThanOrEqual(0);
-      expect(typeof record.timingBreakdown.effectiveParallelism).toBe('number');
+      // llmParallelism should be llmTimeMs / totalMs
+      expect(record.timingBreakdown.llmParallelism).toBeGreaterThanOrEqual(0);
+      expect(typeof record.timingBreakdown.llmParallelism).toBe('number');
     });
 
     it('returns 0 for zero-duration fills', () => {
@@ -808,8 +808,8 @@ describe('FillRecordCollector', () => {
       // No events, immediate getRecord
       const record = collector.getRecord(mockProgressCounts);
 
-      // With near-zero durationMs, effectiveParallelism should be 0 or a small number
-      expect(record.timingBreakdown.effectiveParallelism).toBeGreaterThanOrEqual(0);
+      // With near-zero durationMs, llmParallelism should be 0 or a small number
+      expect(record.timingBreakdown.llmParallelism).toBeGreaterThanOrEqual(0);
     });
   });
 

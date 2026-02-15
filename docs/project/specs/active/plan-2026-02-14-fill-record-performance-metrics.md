@@ -72,24 +72,24 @@ subset of `llmTimeMs`, not additive.
 
 Under parallelism (multiple concurrent `generateText()` calls), `llmTimeMs` can exceed
 wall-clock `totalMs`. This is the foundation of the concurrency metric:
-`effectiveParallelism = llmTimeMs / totalMs`. A value of 2.1x means that on average, 2.1
+`llmParallelism = llmTimeMs / totalMs`. A value of 2.1x means that on average, 2.1
 `generateText()` calls were active simultaneously.
 
 Note: The AI SDK executes multiple tool calls within a single step concurrently via
 `Promise.all`, so intra-step tool parallelism exists but is already captured within each
 `generateText()` wall-clock duration.
-The `effectiveParallelism` metric measures LLM call concurrency (thread-level
-parallelism), not tool-level concurrency.
+The `llmParallelism` metric measures LLM call concurrency (thread-level parallelism),
+not tool-level concurrency.
 
 ## Design
 
-### 1. Add `effectiveParallelism` to `TimingBreakdown`
+### 1. Add `llmParallelism` to `TimingBreakdown`
 
 Add a single computed field:
 
 ```typescript
 // In TimingBreakdownSchema
-effectiveParallelism: z.number().nonnegative(),  // llmTimeMs / totalMs
+llmParallelism: z.number().nonnegative(),  // llmTimeMs / totalMs
 ```
 
 **Why:** All raw data already exists.
@@ -188,7 +188,7 @@ Timing:  62% LLM (28.3s) | 30% tools (14.1s) | 8% overhead (3.8s)
 
 Update `fillRecordRenderer.ts` to display the new metrics in the summary cards section:
 
-- Add an “Effective Parallelism” card when `effectiveParallelism` is available
+- Add an “Effective Parallelism” card when `llmParallelism` is available
 - Add s/field and s/turn rates to the existing duration card (computed at render time)
 - Show avg tool duration in the tool summary table header
 
@@ -198,9 +198,9 @@ Update `fillRecordRenderer.ts` to display the new metrics in the summary cards s
 
 Files: `fillRecord.ts`, `fillRecordCollector.ts`
 
-- [ ] Add `effectiveParallelism` field to `TimingBreakdownSchema` (dimensionless ratio)
+- [ ] Add `llmParallelism` field to `TimingBreakdownSchema` (dimensionless ratio)
 - [ ] Add `avgDurationMs` field to `ToolSummarySchema` (milliseconds)
-- [ ] Update `calculateTimingBreakdown()` to compute `effectiveParallelism`
+- [ ] Update `calculateTimingBreakdown()` to compute `llmParallelism`
 - [ ] Update `calculateToolSummary()` to compute `avgDurationMs`
 
 ### Phase 2: Text Summary Improvements
@@ -226,7 +226,7 @@ File: `fillRecordRenderer.ts`
 
 ### Phase 4: Tests & Golden File Updates
 
-- [ ] Add unit tests for new computed fields (`effectiveParallelism`, `avgDurationMs`)
+- [ ] Add unit tests for new computed fields (`llmParallelism`, `avgDurationMs`)
 - [ ] Test edge cases: zero duration, zero tool calls, zero fields, serial vs.
   parallel
 - [ ] Test significant figures formatting for s/field and s/turn display
@@ -239,8 +239,8 @@ File: `fillRecordRenderer.ts`
 Not a concern for this change.
 FillRecord is still evolving and downstream consumers can adapt.
 Prioritize clear, consistent naming over additive-only constraints.
-New fields (`effectiveParallelism`, `avgDurationMs`) will appear in `.fill.json` sidecar
-files and the text/HTML summaries will show additional information.
+New fields (`llmParallelism`, `avgDurationMs`) will appear in `.fill.json` sidecar files
+and the text/HTML summaries will show additional information.
 
 ## Testing Strategy
 
