@@ -604,6 +604,34 @@ describe('fillForm', () => {
         expect(result.status.message).toContain('Model resolution error');
       }
     });
+
+    it('preserves Error object when provider resolution throws', async () => {
+      const thrownError = new Error('custom provider failed');
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'custom/test-model',
+        providers: {
+          custom: {
+            model() {
+              throw thrownError;
+            },
+          },
+        },
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.message).toContain('Model resolution error');
+        expect(result.status.error).toBeInstanceOf(Error);
+        expect(result.status.error?.message).toContain('custom provider failed');
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
   });
 
   describe('fill modes', () => {
@@ -1022,6 +1050,45 @@ Strong company
         expect(result.status.reason).toBe('cancelled');
       }
     });
+
+    it('fires onError callback when agent throws in parallel mode', async () => {
+      const thrownError = new Error('parallel fill failure');
+      const callbackErrors: Error[] = [];
+      const callbackTurns: number[] = [];
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: PARALLEL_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        enableParallel: true,
+        inputContext: {
+          company_name: 'Acme Corp',
+          overall: 'Prefilled summary',
+        },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError(error, context) {
+            callbackErrors.push(error);
+            callbackTurns.push(context.turnNumber);
+          },
+        },
+      });
+
+      // The fill should fail (form incomplete due to errors)
+      expect(result.status.ok).toBe(false);
+
+      // onError callback should have fired for each parallel item that threw
+      expect(callbackErrors.length).toBeGreaterThan(0);
+      expect(callbackErrors.every((e) => e === thrownError)).toBe(true);
+    });
   });
 
   describe('fill record on errors', () => {
@@ -1232,12 +1299,13 @@ Strong company
       });
 
       expect(result.status.ok).toBe(false);
-      if (!result.status.ok) {
-        expect(result.status.reason).toBe('error');
+      if (!result.status.ok && result.status.reason === 'error') {
         expect(result.status.message).toContain('API call failed');
         // The original Error object is preserved with its cause chain
         expect(result.status.error).toBe(thrownError);
         expect(result.status.error?.cause).toBe(cause);
+      } else {
+        throw new Error('Expected error status');
       }
     });
 
@@ -1260,10 +1328,11 @@ Strong company
       });
 
       expect(result.status.ok).toBe(false);
-      if (!result.status.ok) {
-        expect(result.status.reason).toBe('error');
+      if (!result.status.ok && result.status.reason === 'error') {
         expect(result.status.message).toBe('string error');
         expect(result.status.error).toBeUndefined();
+      } else {
+        throw new Error('Expected error status');
       }
     });
 
@@ -1277,11 +1346,12 @@ Strong company
       });
 
       expect(result.status.ok).toBe(false);
-      if (!result.status.ok) {
-        expect(result.status.reason).toBe('error');
+      if (!result.status.ok && result.status.reason === 'error') {
         expect(result.status.message).toContain('Form parse error');
         // Parse errors produce an Error instance
         expect(result.status.error).toBeInstanceOf(Error);
+      } else {
+        throw new Error('Expected error status');
       }
     });
   });
@@ -1373,8 +1443,10 @@ Strong company
 
       // Fill result should still be returned correctly despite callback throwing
       expect(result.status.ok).toBe(false);
-      if (!result.status.ok) {
+      if (!result.status.ok && result.status.reason === 'error') {
         expect(result.status.error).toBe(thrownError);
+      } else {
+        throw new Error('Expected error status');
       }
     });
 
@@ -1444,8 +1516,10 @@ Strong company
 
       // Result should still have the error and record
       expect(result.status.ok).toBe(false);
-      if (!result.status.ok) {
+      if (!result.status.ok && result.status.reason === 'error') {
         expect(result.status.error).toBe(thrownError);
+      } else {
+        throw new Error('Expected error status');
       }
       expect(result.record).toBeDefined();
       expect(result.record?.status).toBe('failed');
