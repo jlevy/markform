@@ -32,6 +32,11 @@ pre-commit:
       run: pnpm typecheck
       priority: 3
 
+commit-msg:
+  scripts:
+    'check-co-author.sh':
+      runner: sh
+
 pre-push:
   commands:
     test:
