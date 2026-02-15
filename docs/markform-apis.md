@@ -256,6 +256,11 @@ The `status` field in `FillResult` indicates success or failure:
 | `{ ok: false, reason: 'cancelled' }` | Aborted via signal |
 | `{ ok: false, reason: 'error' }` | Unexpected error |
 
+When `ok` is `false`, the status also includes:
+
+- `message?: string` — Human-readable error description
+- `error?: Error` — The original Error object with its full cause chain preserved (when the caught value was an Error instance). For `MarkformLlmError` instances, this carries `.statusCode`, `.responseBody`, `.provider`, `.model`, and `.retryable` properties. Not serialized into FillRecord — use for in-memory diagnostics and real-time error handling.
+
 ### Resumable Form Fills
 
 For orchestrated environments with timeout constraints (e.g., Convex, AWS Step
@@ -351,6 +356,7 @@ await fillForm({
 | `onLlmCallStart` | `{ model }` | Called before an LLM request |
 | `onLlmCallEnd` | `{ model, inputTokens, outputTokens }` | Called after an LLM response |
 | `onWebSearch` | `{ query, resultCount, provider }` | Called when a web search is performed |
+| `onError` | `(error: Error, { turnNumber })` | Called when an error occurs during the fill loop |
 
 **TurnProgress fields:**
 

@@ -1413,5 +1413,42 @@ Strong company
       // Error happened on the second turn
       expect(callbackTurnNumber).toBe(2);
     });
+
+    it('fires onError callback when recordFill is enabled (mergeCallbacks path)', async () => {
+      const thrownError = new Error('API failure with recording');
+      let callbackError: Error | undefined;
+
+      const errorAgent = {
+        fillFormTool() {
+          throw thrownError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true, // This triggers mergeCallbacks
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+        callbacks: {
+          onError(error) {
+            callbackError = error;
+          },
+        },
+      });
+
+      // onError should fire even when recordFill is enabled
+      expect(callbackError).toBe(thrownError);
+
+      // Result should still have the error and record
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.error).toBe(thrownError);
+      }
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('failed');
+    });
   });
 });

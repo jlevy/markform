@@ -307,6 +307,16 @@ function mergeCallbacks(
         warnCallbackError('onWebSearch', e);
       }
     },
+    // Forward onError to user only (collector doesn't handle this)
+    onError: userCallbacks.onError
+      ? (error, context) => {
+          try {
+            userCallbacks.onError?.(error, context);
+          } catch (e) {
+            warnCallbackError('onError', e);
+          }
+        }
+      : undefined,
   };
 }
 
