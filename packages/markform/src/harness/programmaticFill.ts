@@ -298,15 +298,6 @@ function mergeCallbacks(
           }
         }
       : undefined,
-    onError: userCallbacks.onError
-      ? (error, context) => {
-          try {
-            userCallbacks.onError?.(error, context);
-          } catch (e) {
-            warnCallbackError('onError', e);
-          }
-        }
-      : undefined,
     // Forward onWebSearch to both collector (directly) and user (safely)
     onWebSearch: (info) => {
       collector.onWebSearch(info);
@@ -323,7 +314,6 @@ function buildErrorResult(
   form: ParsedForm,
   errors: string[],
   warnings: string[],
-  error?: Error,
   record?: FillRecord,
 ): FillResult {
   // Extract values from responses
@@ -339,7 +329,6 @@ function buildErrorResult(
       ok: false,
       reason: 'error',
       message: errors.join('; '),
-      error,
     },
     markdown: serializeForm(form),
     values,
@@ -452,14 +441,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
   } catch (error) {
     // Return error result for parse failures
     const message = error instanceof Error ? error.message : String(error);
-    const statusError = error instanceof Error ? error : undefined;
     return {
-      status: {
-        ok: false,
-        reason: 'error',
-        message: `Form parse error: ${message}`,
-        error: statusError,
-      },
+      status: { ok: false, reason: 'error', message: `Form parse error: ${message}` },
       markdown: typeof options.form === 'string' ? options.form : '',
       values: {},
       form: {
@@ -494,12 +477,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     } catch (error) {
       // Model resolution is a pre-fill configuration error - fail fast without FillRecord
       const message = error instanceof Error ? error.message : String(error);
-      return buildErrorResult(
-        form,
-        [`Model resolution error: ${message}`],
-        [],
-        error instanceof Error ? error : undefined,
-      );
+      return buildErrorResult(form, [`Model resolution error: ${message}`], []);
     }
   } else if (typeof options.model === 'string' && options.model.includes('/')) {
     // For test agent, extract provider from model string (e.g., "mock/model" -> "mock")
@@ -667,14 +645,6 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     } catch (error) {
       // Agent threw an error - capture it in fill record and return
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const statusError = error instanceof Error ? error : undefined;
-      if (statusError) {
-        try {
-          mergedCallbacks?.onError?.(statusError, { turnNumber: turnCount + 1 });
-        } catch {
-          // Ignore callback errors
-        }
-      }
       let record: FillRecord | undefined;
       if (collector) {
         collector.setStatus('failed', errorMessage);
@@ -684,7 +654,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         form,
         turnCount,
         totalPatches,
-        { ok: false, reason: 'error', message: errorMessage, error: statusError },
+        { ok: false, reason: 'error', message: errorMessage },
         inputContextWarnings,
         turnIssues,
         record,
@@ -1007,36 +977,29 @@ async function fillFormParallel(
 
       let batchPatches = 0;
       const batchErrors: string[] = [];
-      const batchAbortStatuses: Extract<FillStatus, { ok: false }>[] = [];
       for (const result of results) {
         if (result.status === 'fulfilled') {
           totalPatches += result.value.patchesApplied;
           batchPatches += result.value.patchesApplied;
           turnCount += result.value.turnsUsed;
-          // Track aborted items (error/cancelled) so we can return a non-success status.
+          // Track errors from aborted items (agent threw an error)
           const itemStatus = result.value.status;
-          if (result.value.aborted && itemStatus && !itemStatus.ok) {
-            batchAbortStatuses.push(itemStatus);
-            if (itemStatus.message) {
-              batchErrors.push(itemStatus.message);
-            }
+          if (result.value.aborted && itemStatus && !itemStatus.ok && itemStatus.message) {
+            batchErrors.push(itemStatus.message);
           }
         } else {
           // Promise itself was rejected (shouldn't happen with new error handling, but defensive)
           const reason: unknown = result.reason;
           const errorMsg = reason instanceof Error ? reason.message : String(reason);
-          const message = `Parallel agent error: ${errorMsg}`;
-          batchErrors.push(message);
-          batchAbortStatuses.push({
-            ok: false,
-            reason: 'error',
-            message,
-            error: reason instanceof Error ? reason : undefined,
-          });
+          batchErrors.push(`Parallel agent error: ${errorMsg}`);
         }
       }
 
+      // If any batch items had errors, record them (but continue processing)
+      // The form may still be partially filled even with some errors
       if (batchErrors.length > 0 && collector) {
+        // Don't set failed status yet - we may still complete. Just log the errors.
+        // The final status will be set at the end based on form completeness.
         console.warn(`[markform] Parallel batch ${batch.batchId} had errors:`, batchErrors);
       }
 
@@ -1047,39 +1010,6 @@ async function fillFormParallel(
         });
       } catch {
         /* ignore */
-      }
-
-      // Surface batch aborts as top-level fill failure so callers can inspect status.error.
-      if (batchAbortStatuses.length > 0) {
-        const first = batchAbortStatuses[0]!;
-        let status: Extract<FillStatus, { ok: false }> = first;
-        if (batchAbortStatuses.length > 1) {
-          const details = first.message ?? first.reason;
-          const suffix = `(+${batchAbortStatuses.length - 1} more parallel errors)`;
-          status = { ...first, message: `${details} ${suffix}` };
-        }
-
-        let record: FillRecord | undefined;
-        if (collector) {
-          if (status.reason === 'cancelled') {
-            collector.setStatus('cancelled');
-          } else if (status.reason === 'error') {
-            collector.setStatus('failed', status.message);
-          } else {
-            collector.setStatus('partial', status.reason);
-          }
-          record = collector.getRecord(getProgressCounts(form, targetRoles));
-        }
-
-        return buildResult(
-          form,
-          turnCount,
-          totalPatches,
-          status,
-          inputContextWarnings,
-          undefined,
-          record,
-        );
       }
     }
 
@@ -1240,19 +1170,11 @@ async function runMultiTurnForItems(
     } catch (error) {
       // Return early with error result so it can be tracked by the parallel harness
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const statusError = error instanceof Error ? error : undefined;
-      if (statusError) {
-        try {
-          mergedCallbacks?.onError?.(statusError, { turnNumber: startTurn + turnsUsed + 1 });
-        } catch {
-          /* ignore */
-        }
-      }
       return {
         patchesApplied,
         turnsUsed,
         aborted: true,
-        status: { ok: false, reason: 'error', message: errorMessage, error: statusError },
+        status: { ok: false, reason: 'error', message: errorMessage },
       };
     }
 
