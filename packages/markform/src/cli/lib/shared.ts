@@ -277,9 +277,9 @@ export function formatOutput(
  * Log a dry-run message.
  */
 export function logDryRun(message: string, details?: unknown): void {
-  console.log(pc.yellow(`[DRY RUN] ${message}`));
+  console.error(pc.yellow(`[DRY RUN] ${message}`));
   if (details) {
-    console.log(pc.dim(JSON.stringify(details, null, 2)));
+    console.error(pc.dim(JSON.stringify(details, null, 2)));
   }
 }
 
@@ -288,7 +288,7 @@ export function logDryRun(message: string, details?: unknown): void {
  */
 export function logVerbose(ctx: CommandContext, message: string): void {
   if (ctx.verbose) {
-    console.log(pc.dim(message));
+    console.error(pc.dim(message));
   }
 }
 
@@ -297,7 +297,7 @@ export function logVerbose(ctx: CommandContext, message: string): void {
  */
 export function logInfo(ctx: CommandContext, message: string): void {
   if (!ctx.quiet) {
-    console.log(message);
+    console.error(message);
   }
 }
 
@@ -313,7 +313,7 @@ export function logError(message: string): void {
  */
 export function logSuccess(ctx: CommandContext, message: string): void {
   if (!ctx.quiet) {
-    console.log(pc.green(message));
+    console.error(pc.green(message));
   }
 }
 
@@ -323,7 +323,7 @@ export function logSuccess(ctx: CommandContext, message: string): void {
 export function logTiming(ctx: CommandContext, label: string, durationMs: number): void {
   if (!ctx.quiet) {
     const seconds = (durationMs / 1000).toFixed(1);
-    console.log(pc.cyan(`⏰ ${label}: ${seconds}s`));
+    console.error(pc.cyan(`⏰ ${label}: ${seconds}s`));
   }
 }
 

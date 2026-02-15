@@ -163,7 +163,7 @@ describe('shared utilities', () => {
     const noop = (): void => {};
 
     it('logDryRun outputs message', () => {
-      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
       logDryRun('test message');
       expect(spy).toHaveBeenCalled();
       const output = spy.mock.calls[0]?.[0] as string;
@@ -173,14 +173,14 @@ describe('shared utilities', () => {
     });
 
     it('logDryRun outputs details when provided', () => {
-      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
       logDryRun('test', { key: 'value' });
       expect(spy).toHaveBeenCalledTimes(2);
       spy.mockRestore();
     });
 
     it('logVerbose only outputs in verbose mode', () => {
-      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
       logVerbose(baseCtx, 'not shown');
       expect(spy).not.toHaveBeenCalled();
       logVerbose({ ...baseCtx, verbose: true }, 'shown');
@@ -189,7 +189,7 @@ describe('shared utilities', () => {
     });
 
     it('logInfo respects quiet mode', () => {
-      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
       logInfo(baseCtx, 'shown');
       expect(spy).toHaveBeenCalled();
       spy.mockClear();
@@ -208,7 +208,7 @@ describe('shared utilities', () => {
     });
 
     it('logSuccess respects quiet mode', () => {
-      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
       logSuccess(baseCtx, 'success');
       expect(spy).toHaveBeenCalled();
       spy.mockClear();
@@ -218,7 +218,7 @@ describe('shared utilities', () => {
     });
 
     it('logTiming respects quiet mode and formats duration', () => {
-      const spy = vi.spyOn(console, 'log').mockImplementation(noop);
+      const spy = vi.spyOn(console, 'error').mockImplementation(noop);
       logTiming(baseCtx, 'operation', 1500);
       expect(spy).toHaveBeenCalled();
       const output = spy.mock.calls[0]?.[0] as string;

@@ -57,7 +57,7 @@ $ $CLI inspect --format json examples/simple/simple.form.md | head -5
 # Test: validate with --verbose shows details
 
 ```console
-$ $CLI validate --verbose examples/simple/simple.form.md
+$ $CLI validate --verbose examples/simple/simple.form.md 2>&1
 Reading file: examples/simple/simple.form.md
 Parsing form...
 Running validation...
