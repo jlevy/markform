@@ -484,7 +484,6 @@ CI will fail if coverage drops below thresholds.
 **CI coverage visibility:**
 
 - PRs automatically receive coverage comments with summary and changed-file coverage
-- Coverage badge in README updates after merges to main
 - Run `pnpm --filter markform test:coverage` locally to match CI behavior
 
 ## AI SDK Integration
