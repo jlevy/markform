@@ -244,6 +244,9 @@ Available examples:
     Startup Deep Research
     Comprehensive startup intelligence gathering with company info, founders, funding, competitors, social media, and community presence.
     Source: ./examples/startup-deep-research/startup-deep-research.form.md
+
+Tip: For a comprehensive end-to-end walkthrough, ask your coding agent
+to run the Markform QA playbook (tests/qa/markform-full-walkthrough.qa.md).
 ? 0
 ```
 
