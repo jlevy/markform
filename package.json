@@ -19,7 +19,7 @@
     "test:unit": "pnpm --filter markform test:unit",
     "test:golden": "pnpm --filter markform test:golden",
     "publint": "pnpm -r publint",
-    "format": "prettier --write --log-level warn .",
+    "format": "prettier --write --log-level warn . && flowmark --auto -i $(git ls-files '*.md' | grep -v -E '(tests/cli/|/examples/|CHANGELOG\\.md|/\\.tbd/|/\\.claude/skills/|AGENTS\\.md)')",
     "format:check": "prettier --check --log-level warn .",
     "lint": "eslint . --fix && pnpm typecheck && eslint . --max-warnings 0",
     "lint:check": "pnpm typecheck && eslint . --max-warnings 0",
