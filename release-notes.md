@@ -1,33 +1,36 @@
-## What's Changed
+## What’s Changed
 
 ### Features
 
-- **Frontmatter validation**: Added MarkformSectionInputSchema with Zod validation for more reliable frontmatter parsing
-- **Timing metrics**: Added startMs to timeline entries and tool calls for relative timing analysis in FillRecords
+- **Per-column constraints for table fields**: Table columns now support type-specific
+  constraints (`minLength`, `maxLength`, `pattern`, `enum` for strings; `min`, `max`,
+  `integer` for numbers; `min`/`max` for dates and years).
+  Specified via `columnTypes` attributes, enforced during validation, preserved through
+  round-trips, and mapped to JSON Schema.
+- **FillRecord performance metrics**: FillRecord now includes `llmParallelism`,
+  `llmTimeMs`/`totalMs` timing breakdown, and `avgDurationMs` per tool.
+  Text summaries show s/turn and s/field rates.
+  HTML dashboard gains a parallelism card and duration rates.
+- **`onError` callback and error preservation**: New `onError` callback in
+  `FillCallbacks` for real-time error reporting with turn context.
+  `FillStatus` now preserves the full Error object (cause chain, statusCode, etc.)
+  as a discriminated union.
+- **Agent-friendly `examples --list`**: `markform examples --list` now supports
+  `--format=json`. Examples reordered by complexity with twitter-thread registered.
 
 ### Fixes
 
-- **Reliable tool calling**: Default toolChoice to 'required' for consistent agent behavior
-- **Parallel execution tracking**: Fixed executionId passing and per-execution turn tracking for correct tool call matching
-- **Frontmatter round-trips**: Preserve title/description fields when serializing forms
-- **Concurrency handling**: Corrected parallel execution concurrency and FillRecord tracking
-
-### Refactoring
-
-- **YAML formatting**: Centralized stringify options and improved output readability
-- **HTML comment syntax**: Migrated all forms to HTML comment syntax for field attributes
-- **Config handling**: Centralized harness config snake_case/camelCase mapping
-- **Execution IDs**: Self-documenting format with eid: prefix
-
-### Testing
-
-- Comprehensive frontmatter unit tests
-- Parallel execution integration and tracking tests
-- Updated test expectations for HTML comment syntax
+- **Serve UI**: Tabs reorganized (Form, Report, Source, ...) with hash-based routing for
+  direct linking
+- **`set` command**: Now surfaces validation warnings for patched fields
+- **Parse/serialize**: Fixed instruction line-break loss during round-trip; explicit
+  checkboxes render as Yes/No in reports
+- **CLI logging**: All diagnostic log functions now write to stderr for pipeline
+  compatibility
 
 ### Documentation
 
-- Clarified .env file loading behavior
-- Updated manual test docs and gitignore patterns
+- Per-column constraints documented in spec and reference
+- QA and manual tests consolidated into `tests/qa/`
 
-**Full commit history**: https://github.com/jlevy/markform/compare/v0.1.20...v0.1.21
+**Full commit history**: https://github.com/jlevy/markform/compare/v0.1.24...v0.1.25
