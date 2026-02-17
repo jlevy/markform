@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.26
+
+### Patch Changes
+
+- b95f40a: Fix tool error handling and parallel fill path
+
 ## 0.1.25
 
 ### Patch Changes
