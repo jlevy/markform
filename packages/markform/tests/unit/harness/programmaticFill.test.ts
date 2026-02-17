@@ -1,9 +1,10 @@
-import type { LanguageModel } from 'ai';
-import { describe, expect, it } from 'vitest';
+import type { LanguageModel, Tool } from 'ai';
+import { describe, expect, it, vi } from 'vitest';
 
 import { parseForm } from '../../../src/engine/parse.js';
 import { fillForm, type TurnProgress } from '../../../src/harness/programmaticFill.js';
 import { createMockAgent } from '../../../src/harness/mockAgent.js';
+import type { LiveAgentConfig } from '../../../src/harness/harnessTypes.js';
 
 // Simple test form
 const SIMPLE_FORM = `---
@@ -1523,6 +1524,153 @@ Strong company
       }
       expect(result.record).toBeDefined();
       expect(result.record?.status).toBe('failed');
+    });
+  });
+
+  describe('providerTools in parallel path (#154)', () => {
+    // Form with parallel batches
+    const PARALLEL_FORM = `---
+markform:
+  spec: MF/0.1
+  roles:
+    - agent
+---
+
+{% form id="parallel_test" title="Parallel Test" %}
+
+{% group id="overview" order=0 %}
+
+{% field kind="string" id="company_name" label="Company Name" role="agent" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="financials" parallel="research" order=0 %}
+
+{% field kind="string" id="revenue" label="Revenue" role="agent" required=true %}{% /field %}
+
+{% /group %}
+
+{% group id="team" parallel="research" order=0 %}
+
+{% field kind="string" id="leadership" label="Leadership" role="agent" required=true %}{% /field %}
+
+{% /group %}
+
+{% /form %}
+`;
+
+    it('passes providerTools to parallel sub-agents via createLiveAgent', async () => {
+      // Track all createLiveAgent calls to verify providerTools is passed
+      const capturedConfigs: LiveAgentConfig[] = [];
+
+      // Mock createLiveAgent to capture configs and return a test agent
+      const liveAgentModule = await import('../../../src/harness/liveAgent.js');
+      type CreateLiveAgentReturn = ReturnType<typeof liveAgentModule.createLiveAgent>;
+      const spy = vi.spyOn(liveAgentModule, 'createLiveAgent').mockImplementation((config) => {
+        capturedConfigs.push({ ...config });
+        // Return an agent that produces patches to fill the form
+        return {
+          fillFormTool: () =>
+            Promise.resolve({
+              patches: [
+                { op: 'set_string' as const, fieldId: 'company_name', value: 'Test Corp' },
+                { op: 'set_string' as const, fieldId: 'revenue', value: '$5M' },
+                { op: 'set_string' as const, fieldId: 'leadership', value: 'CEO' },
+              ],
+            }),
+          getAvailableToolNames: () => ['fill_form'],
+        } as unknown as CreateLiveAgentReturn;
+      });
+
+      try {
+        const customWebSearchTool = {
+          description: 'Custom web search',
+          inputSchema: {},
+          execute: () => Promise.resolve({ results: [] }),
+        } as unknown as Tool;
+
+        await fillForm({
+          form: PARALLEL_FORM,
+          model: 'custom/test-model',
+          providers: {
+            custom: {
+              model: () => ({ modelId: 'test-model' }) as LanguageModel,
+              tools: { web_search: customWebSearchTool },
+            },
+          },
+          enableWebSearch: true,
+          enableParallel: true,
+          captureWireFormat: false,
+          recordFill: false,
+        });
+
+        // createLiveAgent should have been called (at least once for parallel agents)
+        expect(capturedConfigs.length).toBeGreaterThan(0);
+
+        // All createLiveAgent calls should receive providerTools
+        for (const config of capturedConfigs) {
+          expect(config.providerTools).toBeDefined();
+          expect(config.providerTools).toHaveProperty('web_search');
+        }
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('passes providerTools in serial path (baseline)', async () => {
+      const capturedConfigs: LiveAgentConfig[] = [];
+
+      const liveAgentModule = await import('../../../src/harness/liveAgent.js');
+      type CreateLiveAgentReturn = ReturnType<typeof liveAgentModule.createLiveAgent>;
+      const spy = vi.spyOn(liveAgentModule, 'createLiveAgent').mockImplementation((config) => {
+        capturedConfigs.push({ ...config });
+        return {
+          fillFormTool: () =>
+            Promise.resolve({
+              patches: [
+                { op: 'set_string' as const, fieldId: 'company_name', value: 'Test Corp' },
+                { op: 'set_string' as const, fieldId: 'revenue', value: '$5M' },
+                { op: 'set_string' as const, fieldId: 'leadership', value: 'CEO' },
+              ],
+            }),
+          getAvailableToolNames: () => ['fill_form'],
+        } as unknown as CreateLiveAgentReturn;
+      });
+
+      try {
+        const customWebSearchTool = {
+          description: 'Custom web search',
+          inputSchema: {},
+          execute: () => Promise.resolve({ results: [] }),
+        } as unknown as Tool;
+
+        // Serial path (enableParallel: false)
+        await fillForm({
+          form: PARALLEL_FORM,
+          model: 'custom/test-model',
+          providers: {
+            custom: {
+              model: () => ({ modelId: 'test-model' }) as LanguageModel,
+              tools: { web_search: customWebSearchTool },
+            },
+          },
+          enableWebSearch: true,
+          enableParallel: false,
+          captureWireFormat: false,
+          recordFill: false,
+        });
+
+        // createLiveAgent should have been called
+        expect(capturedConfigs.length).toBeGreaterThan(0);
+
+        // Serial path already passes providerTools correctly
+        for (const config of capturedConfigs) {
+          expect(config.providerTools).toBeDefined();
+          expect(config.providerTools).toHaveProperty('web_search');
+        }
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 });

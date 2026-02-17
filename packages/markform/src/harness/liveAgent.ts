@@ -637,17 +637,13 @@ function findField(form: ParsedForm, fieldId: string) {
  * Only wraps tools that have an execute function.
  * Declarative tools (schema only) are passed through unchanged.
  */
-function wrapToolsWithCallbacks(
+/** @internal Exported for testing only. */
+export function wrapToolsWithCallbacks(
   tools: Record<string, Tool>,
   callbacks?: FillCallbacks,
   provider?: string,
   executionId = '0-serial',
 ): Record<string, Tool> {
-  // Skip wrapping if no tool callbacks
-  if (!callbacks?.onToolStart && !callbacks?.onToolEnd && !callbacks?.onWebSearch) {
-    return tools;
-  }
-
   const wrapped: Record<string, Tool> = {};
   for (const [name, tool] of Object.entries(tools)) {
     // Check if tool has an execute function we can wrap
@@ -671,7 +667,7 @@ function wrapTool(
   name: string,
   tool: Tool,
   originalExecute: (input: unknown) => Promise<unknown>,
-  callbacks: FillCallbacks,
+  callbacks: FillCallbacks | undefined,
   provider: string | undefined,
   executionId: string,
 ): Tool {
@@ -681,7 +677,7 @@ function wrapTool(
       const startTime = Date.now();
 
       // Call onToolStart (errors don't abort)
-      if (callbacks.onToolStart) {
+      if (callbacks?.onToolStart) {
         try {
           callbacks.onToolStart({ name, input, executionId });
         } catch {
@@ -693,7 +689,7 @@ function wrapTool(
         const output = await originalExecute(input);
 
         // Call onToolEnd on success (errors don't abort)
-        if (callbacks.onToolEnd) {
+        if (callbacks?.onToolEnd) {
           try {
             callbacks.onToolEnd({
               name,
@@ -707,7 +703,7 @@ function wrapTool(
         }
 
         // Check if this is a web search tool and call onWebSearch
-        if (callbacks.onWebSearch && isWebSearchTool(name)) {
+        if (callbacks?.onWebSearch && isWebSearchTool(name)) {
           try {
             const webSearchInfo = extractWebSearchInfo(input, output, provider ?? 'unknown');
             if (webSearchInfo) {
@@ -721,7 +717,7 @@ function wrapTool(
         return output;
       } catch (error) {
         // Call onToolEnd on error (errors don't abort)
-        if (callbacks.onToolEnd) {
+        if (callbacks?.onToolEnd) {
           try {
             callbacks.onToolEnd({
               name,
@@ -734,7 +730,14 @@ function wrapTool(
             // Ignore callback errors
           }
         }
-        throw error;
+        // Re-throw with a guaranteed non-empty message.
+        // The AI SDK catches thrown errors and sends them as tool_result with
+        // is_error: true. If the error message is empty, the Anthropic API rejects
+        // with HTTP 400: "content cannot be empty if is_error is true".
+        // Ensure the thrown error always has a non-empty message. (Fixes #153)
+        const message =
+          (error instanceof Error ? error.message : String(error)) || 'Tool call failed';
+        throw new Error(message);
       }
     },
   };
