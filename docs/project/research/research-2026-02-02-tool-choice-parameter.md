@@ -1,6 +1,6 @@
 # Research: Tool Choice Parameter in AI SDK and Major LLM Providers
 
-**Date:** 2026-02-02 (last updated 2026-02-02)
+**Date:** 2026-02-02 (last updated 2026-02-17)
 
 **Author:** AI Research
 
@@ -470,75 +470,59 @@ used in a specific call, use prompting instead: "Do not use any tools for this r
 
 ---
 
-## Options Considered
+## Recommendations for Markform
 
-### Option A: Use `toolChoice: 'required'` Everywhere
+Based on this research and confirmed by reviewing the Markform harness architecture
+(stateless turns with multi-step tool loops within each turn):
 
-**Description:** Force tool use on every step until completion.
+### Recommended: `toolChoice: 'required'` as Default
 
-**Pros:**
-- Guarantees tools are called
-- Prevents hallucination of tool results
+Use `toolChoice: 'required'` (mapped to AI SDK `require_tools` policy) as the default
+for all form filling. This:
+- Prevents "analysis paralysis" where models describe what they'd do without acting
+- Works across OpenAI, Anthropic (→ `any`), Google (→ `ANY`), and xAI
+- Already set as default in `liveAgent.ts:91`
+- Uses `stopWhen: stepCountIs(maxStepsPerTurn)` to prevent infinite loops
 
-**Cons:**
-- Can cause infinite loops without proper termination
-- May force unnecessary tool calls
-- Not compatible with Anthropic extended thinking
+### For Guaranteed Web Search: `prepareStep` with Forced First Step
 
-### Option B: Use `toolChoice: 'auto'` with Strong Prompting
+When forms require factual research, use AI SDK's `prepareStep` callback to force
+`web_search` on step 0, then `'required'` for subsequent steps. This works because
+within a single `generateText()` call, the model accumulates context across steps—
+search results from step 0 are visible when calling `fill_form` in step 1.
 
-**Description:** Rely on system prompts to guide tool use.
+```typescript
+prepareStep: ({ steps }) => {
+  const hasSearched = steps.some(step =>
+    step.toolCalls.some(tc => isWebSearchTool(tc.toolName))
+  );
+  if (!hasSearched) {
+    return { toolChoice: { type: 'tool', toolName: 'web_search' } };
+  }
+  return { toolChoice: 'required' };
+},
+```
 
-**Pros:**
-- More flexible
-- Works with all features (extended thinking, etc.)
-- Natural conversation flow
+**Critical architecture note:** Markform turns are stateless—web search results do NOT
+persist across turns. All tool policies must operate at the **step** level (within a
+single `generateText()` call), not at the turn level.
 
-**Cons:**
-- Model may ignore prompts and skip tools
-- Reliability degrades over long conversations
-- Harder to guarantee tool usage
+### Future: Harness-Level Research Injection
 
-### Option C: Hybrid Approach with `prepareStep`
+For maximum reliability (not dependent on model behavior), the harness could run web
+searches itself before calling the LLM, injecting results into the context prompt.
+This is the most provider-agnostic approach and decouples research quality from
+model tool-calling behavior. See the plan spec for details.
 
-**Description:** Use `toolChoice: 'required'` initially, switch to `'auto'` for final
-response.
+### Provider-Specific Notes
 
-**Pros:**
-- Best of both worlds
-- Guarantees initial research
-- Allows natural completion
-
-**Cons:**
-- More complex implementation
-- Requires careful step management
-
----
-
-## Recommendations
-
-1. **For form-filling with mandatory research:** Use Option C (Hybrid) with:
-   - `toolChoice: 'required'` for first N steps
-   - An answer tool without execute function
-   - `stopWhen: hasToolCall('submitForm')`
-
-2. **For simpler tool integration:** Use Option A with proper termination:
-   - Define a clear termination tool
-   - Use `stopWhen` to prevent infinite loops
-
-3. **For conversation-like interfaces:** Use Option B with:
-   - Strong system prompts
-   - Explicit tool-use instructions in user messages
-   - Periodic context compaction
-
----
-
-## Next Steps
-
-- [ ] Implement the recommended hybrid pattern in markform
-- [ ] Add tool input validation for form fields
-- [ ] Create a verification step for critical data
-- [ ] Test across multiple providers for consistency
+| Provider | `'required'` | Forced specific tool | Caveat |
+|----------|-------------|---------------------|--------|
+| OpenAI | Works directly | Works directly | — |
+| Anthropic | → `any` | → `{ type: 'tool' }` | Not compatible with extended thinking |
+| Google | → `ANY` | → `allowedFunctionNames` | Limit to 10-20 tools |
+| DeepSeek | Needs testing | Needs testing | Unreliable multi-turn calling |
+| xAI | Works | Can't force server-side tools | Use grok-4-1-fast |
 
 ---
 
