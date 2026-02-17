@@ -49,16 +49,17 @@ place.
   on GitHub, so **forms look like regular Markdown**. (Jinja-style tag syntax also works
   if you prefer.)
 
-- Form-filling can scale to **hundreds of fields** in a form filled by **dozens of
-  concurrent LLM requests** which makes it possible to systemetize large, complex
-  research processes or workflows.
-  (And **a fill record** of the form-filling process is kept, so you can see and debug
-  exactly how forms are filled by agents, tool usage, LLM call time, etc.)
+- Form-filling can scale to **hundreds of fields** and complex tabular data.
+  A form can be filled by **dozens of concurrent LLM requests**, which makes it possible
+  to systemetize extensive research processes or workflows.
+  (Also, a a detailed **JSON fill record** of the form-filling process is kept, so you
+  can review or debug agent behavior and tool usage.)
 
-- The CLI has a built-in web renderer, **`markform serve`**, for easy viewing and
-  debugging of forms (including a form web UI, the form schema, and a waterfall-style
-  overview of the fill record, including performance details, which is useful for large,
-  concurrently filled forms).
+- The optional CLI has a small, built-in web server, **`markform serve`**, for easy
+  viewing and debugging of forms.
+  It including a form web UI, the form schema, and a waterfall-style overview of the
+  fill record, including performance details, which is useful for large, concurrently
+  filled forms).
 
 ## Simple Example: Research a Movie
 
