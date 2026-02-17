@@ -67,33 +67,40 @@ lost for parallel sub-agents.
 
 ### Approach
 
-#### Fix #153: Catch tool errors and return as result
+#### Fix #153: Re-throw tool errors with guaranteed non-empty message
 
-Instead of re-throwing errors in `wrapTool()`, catch them and return a descriptive error
-string. This makes the AI SDK send a normal `tool_result` (without `is_error: true`) so
-the LLM sees the error message as a result and can adapt.
+In `wrapTool()`, catch errors and re-throw with a guaranteed non-empty message.
+This preserves the AI SDK’s proper error handling path — the SDK catches thrown errors,
+sends them as `tool_result` with `is_error: true`, and the Anthropic provider uses
+`getErrorMessage(error)` to extract `error.message` as the content string.
+
+The root cause is that when a tool throws `new Error('')` or `new Error()`, the SDK’s
+`getErrorMessage()` returns an empty string, producing `is_error: true` with empty
+content — which the Anthropic API rejects.
 
 **In `liveAgent.ts` `wrapTool()`:**
 
 ```typescript
-// Before (line 722-737):
+// Before:
 } catch (error) {
   // ... callbacks ...
-  throw error;  // AI SDK catches this → is_error: true → may be empty
+  throw error;  // May re-throw Error('') → empty content with is_error: true
 }
 
 // After:
 } catch (error) {
   // ... callbacks ...
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  return `Tool error: ${errorMessage || 'Tool call failed'}`;
+  const message =
+    (error instanceof Error ? error.message : String(error)) || 'Tool call failed';
+  throw new Error(message);  // Guaranteed non-empty → safe for Anthropic API
 }
 ```
 
 This ensures:
-- The error message is always non-empty
-- The AI SDK sends it as a normal result, not `is_error: true`
-- The LLM can see and react to the error
+- The error message is always non-empty (falls back to `'Tool call failed'`)
+- The AI SDK’s `is_error: true` semantics are preserved (errors stay as errors)
+- The LLM correctly sees the tool result as failed, not successful
+- SDK telemetry/tracing correctly classifies errors
 
 #### Fix #154: Pass providerTools through parallel path
 
@@ -110,7 +117,7 @@ Add `providerTools` as a parameter to `fillFormParallel()` and thread it through
 
 | File | Change |
 | --- | --- |
-| `src/harness/liveAgent.ts` | `wrapTool()`: return error string instead of throwing |
+| `src/harness/liveAgent.ts` | `wrapTool()`: re-throw with guaranteed non-empty message |
 | `src/harness/programmaticFill.ts` | `fillFormParallel()`: add and pass `providerTools` |
 | `tests/unit/harness/liveAgent.test.ts` | Add tests for tool error handling |
 | `tests/unit/harness/programmaticFill.test.ts` | Add tests for providerTools in parallel |
@@ -123,17 +130,17 @@ None. Both fixes are internal behavior changes with no public API modifications.
 
 ### Phase 1: Fix tool error handling and parallel provider tools
 
-- [ ] Write failing test for #153: tool error produces non-empty result (not throw)
-- [ ] Fix `wrapTool()` in `liveAgent.ts` to return error string instead of throwing
-- [ ] Write failing test for #154: parallel agents receive providerTools
-- [ ] Fix `fillFormParallel()` to accept and pass `providerTools`
-- [ ] Run full test suite and quality gates
-- [ ] Update golden tests if needed
+- [x] Write failing test for #153: tool error throws with non-empty message
+- [x] Fix `wrapTool()` in `liveAgent.ts` to re-throw with guaranteed non-empty message
+- [x] Write failing test for #154: parallel agents receive providerTools
+- [x] Fix `fillFormParallel()` to accept and pass `providerTools`
+- [x] Run full test suite and quality gates
+- [x] Update golden tests if needed (none needed)
 
 ## Testing Strategy
 
-- **Unit tests**: Add tests in `liveAgent.test.ts` verifying that `wrapTool()` returns
-  error strings instead of throwing
+- **Unit tests**: Add tests in `liveAgent.test.ts` verifying that `wrapTool()` re-throws
+  with guaranteed non-empty messages
 - **Unit tests**: Add tests in `programmaticFill.test.ts` verifying that parallel agents
   receive `providerTools`
 - **Existing tests**: Ensure all existing tests continue to pass (golden tests,
