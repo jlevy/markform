@@ -174,7 +174,7 @@ describe('wrapToolsWithCallbacks', () => {
     (tool as unknown as { execute: (input: unknown) => Promise<unknown> }).execute;
 
   describe('tool error handling (#153)', () => {
-    it('returns error string instead of throwing when tool execute fails', async () => {
+    it('re-throws with original message when tool execute fails', async () => {
       const failingTool = {
         description: 'A tool that throws',
         inputSchema: {},
@@ -183,13 +183,10 @@ describe('wrapToolsWithCallbacks', () => {
 
       const wrapped = wrapToolsWithCallbacks({ failing: failingTool });
 
-      // Should NOT throw — should return an error string
-      const result = await getExecute(wrapped.failing)({});
-      expect(typeof result).toBe('string');
-      expect(result as string).toContain('Network timeout');
+      await expect(getExecute(wrapped.failing)({})).rejects.toThrow('Network timeout');
     });
 
-    it('returns fallback message when error has empty message', async () => {
+    it('re-throws with non-empty fallback when error has empty message', async () => {
       const failingTool = {
         description: 'A tool that throws empty error',
         inputSchema: {},
@@ -198,13 +195,11 @@ describe('wrapToolsWithCallbacks', () => {
 
       const wrapped = wrapToolsWithCallbacks({ failing: failingTool });
 
-      const result = await getExecute(wrapped.failing)({});
-      expect(typeof result).toBe('string');
-      expect((result as string).length).toBeGreaterThan(0);
-      expect(result as string).toContain('Tool call failed');
+      // Must throw with a non-empty message (empty would cause Anthropic API 400)
+      await expect(getExecute(wrapped.failing)({})).rejects.toThrow('Tool call failed');
     });
 
-    it('returns error string for non-Error thrown values', async () => {
+    it('re-throws with stringified message for non-Error thrown values', async () => {
       const failingTool = {
         description: 'A tool that throws a string',
         inputSchema: {},
@@ -214,12 +209,10 @@ describe('wrapToolsWithCallbacks', () => {
 
       const wrapped = wrapToolsWithCallbacks({ failing: failingTool });
 
-      const result = await getExecute(wrapped.failing)({});
-      expect(typeof result).toBe('string');
-      expect(result as string).toContain('string error from tool');
+      await expect(getExecute(wrapped.failing)({})).rejects.toThrow('string error from tool');
     });
 
-    it('still calls onToolEnd callback with error on failure', async () => {
+    it('calls onToolEnd callback with error before re-throwing', async () => {
       const failingTool = {
         description: 'A tool that throws',
         inputSchema: {},
@@ -236,7 +229,7 @@ describe('wrapToolsWithCallbacks', () => {
         },
       );
 
-      await getExecute(wrapped.failing)({});
+      await expect(getExecute(wrapped.failing)({})).rejects.toThrow('API error');
       expect(capturedError).toBe('API error');
     });
 

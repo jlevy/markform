@@ -730,14 +730,14 @@ function wrapTool(
             // Ignore callback errors
           }
         }
-        // Return error as a string result instead of throwing.
-        // When a tool's execute() throws, the AI SDK constructs a tool_result with
-        // is_error: true. If the content is empty, the Anthropic API rejects with
-        // HTTP 400: "content cannot be empty if is_error is true".
-        // By returning the error as a normal result, the LLM sees the error message
-        // and can adapt its behavior. (Fixes #153)
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return `Tool error: ${errorMessage || 'Tool call failed'}`;
+        // Re-throw with a guaranteed non-empty message.
+        // The AI SDK catches thrown errors and sends them as tool_result with
+        // is_error: true. If the error message is empty, the Anthropic API rejects
+        // with HTTP 400: "content cannot be empty if is_error is true".
+        // Ensure the thrown error always has a non-empty message. (Fixes #153)
+        const message =
+          (error instanceof Error ? error.message : String(error)) || 'Tool call failed';
+        throw new Error(message);
       }
     },
   };
