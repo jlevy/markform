@@ -8,7 +8,8 @@ This is a validation spec for the serve command improvements, covering:
 2. Tabbed interface for related files when serving a `.form.md` file
 3. Enhanced markdown rendering for report files
 
-**Feature Plan:** [plan-2026-01-01-serve-improvements.md](plan-2026-01-01-serve-improvements.md)
+**Feature Plan:**
+[plan-2026-01-01-serve-improvements.md](plan-2026-01-01-serve-improvements.md)
 
 ## Stage 4: Validation Stage
 
@@ -82,7 +83,7 @@ pnpm markform serve packages/markform/examples/simple/simple-mock-filled.form.md
 **Verify:**
 
 - [ ] Tab bar appears at the top (if related files exist)
-- [ ] "Markform" tab is selected by default
+- [ ] “Markform” tab is selected by default
 - [ ] Clicking other tabs (Report, Values, Schema) loads content
 - [ ] Tab content is cached (no flicker on switching back)
 - [ ] Tabs for missing files are hidden

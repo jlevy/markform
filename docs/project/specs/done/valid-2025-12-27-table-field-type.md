@@ -2,11 +2,12 @@
 
 ## Purpose
 
-This validation spec documents the testing and validation performed for the `table-field`
-type implementation, which adds support for structured tabular data with typed columns
-to Markform.
+This validation spec documents the testing and validation performed for the
+`table-field` type implementation, which adds support for structured tabular data with
+typed columns to Markform.
 
-**Feature Plan:** [plan-2025-12-27-table-field-type.md](plan-2025-12-27-table-field-type.md)
+**Feature Plan:**
+[plan-2025-12-27-table-field-type.md](plan-2025-12-27-table-field-type.md)
 
 **Implementation Plan:** N/A (implemented directly from plan spec)
 
@@ -30,7 +31,7 @@ The table-field feature is a comprehensive addition requiring validation of:
 
 **All 639 tests pass.** Key test coverage includes:
 
----
+* * *
 
 #### Type System Tests (`coreTypes.test.ts`)
 
@@ -39,21 +40,21 @@ The table-field feature is a comprehensive addition requiring validation of:
 - `TableField` schema validation with all required and optional attributes
 - `TableColumn` schema with id, label, type, and required fields
 - `TableValue` schema with kind='table' and rows array
-- `CellResponse` schema with state ('answered', 'skipped', 'aborted') and value
+- `CellResponse` schema with state ('answered', ‘skipped’, ‘aborted’) and value
 - `TableRowPatch` schema for row objects in patches
 - `SetTablePatch` schema with op='set_table', fieldId, and rows
-- `ColumnTypeName` enum validation ('string', 'number', 'url', 'date', 'year')
+- `ColumnTypeName` enum validation ('string', ‘number’, ‘url’, ‘date’, ‘year’)
 
----
+* * *
 
 #### Field Registry Tests (`fieldRegistry.test.ts`)
 
 **Registry includes table field support:**
 
-- 'table' field kind is registered
+- ‘table’ field kind is registered
 - `createEmptyValue('table')` returns `{ kind: 'table', rows: [] }`
 
----
+* * *
 
 #### Table Parsing Tests (`parse.test.ts`)
 
@@ -94,7 +95,7 @@ The table-field feature is a comprehensive addition requiring validation of:
 - Header reordering with attribute columns maps values by header name
 - Invalid separator rejection with attribute columns
 
----
+* * *
 
 #### Table Serialization Tests (`serialize.test.ts`)
 
@@ -120,11 +121,11 @@ The table-field feature is a comprehensive addition requiring validation of:
 
 - columnIds array formatting
 - columnLabels array formatting
-- columnTypes array (omitted if all 'string')
+- columnTypes array (omitted if all ‘string’)
 - minRows, maxRows constraints
 - required, role, priority, report attributes
 
----
+* * *
 
 #### Table Validation Tests (`validate.test.ts`)
 
@@ -152,7 +153,7 @@ The table-field feature is a comprehensive addition requiring validation of:
 - REQUIRED_CELL_SKIPPED error when required column has %SKIP%
 - Required flag respected from columnTypes attribute
 
----
+* * *
 
 #### Apply/Patch Tests (`apply.test.ts`)
 
@@ -173,7 +174,7 @@ The table-field feature is a comprehensive addition requiring validation of:
 - Number values stored as numbers
 - Null values preserved for optional cells
 
----
+* * *
 
 #### Session Tests (`session.test.ts`)
 
@@ -188,7 +189,7 @@ The table-field feature is a comprehensive addition requiring validation of:
 - YAML snake_case conversion preserves user-defined IDs
 - Round-trip serialization maintains column ID integrity
 
----
+* * *
 
 #### Value Coercion Tests (`valueCoercion.test.ts`)
 
@@ -199,7 +200,7 @@ The table-field feature is a comprehensive addition requiring validation of:
 - Invalid input (non-array) rejection
 - Nested object row structure preserved
 
----
+* * *
 
 #### Harness/Fill Tests
 
@@ -215,7 +216,7 @@ The table-field feature is a comprehensive addition requiring validation of:
 - Table values coerced to patches
 - Fill completion with table fields
 
----
+* * *
 
 #### Golden Tests (`golden.test.ts`)
 
@@ -227,15 +228,15 @@ The table-field feature is a comprehensive addition requiring validation of:
 - `simple/simple-with-skips.session.yaml` - Mock fill with table skips
   - Table field with skip_field patch
 
----
+* * *
 
 #### Summary Tests (`summaries.test.ts`)
 
 **Structure summary with table fields:**
 
 - columnCount: total columns across all table fields
-- columnsById: map of qualified refs (e.g., "people.name") to column metadata
-- fieldCountByKind includes 'table' count
+- columnsById: map of qualified refs (e.g., “people.name”) to column metadata
+- fieldCountByKind includes ‘table’ count
 
 ### Integration and End-to-End Testing
 
@@ -256,7 +257,7 @@ node dist/bin.mjs inspect examples/simple/simple.form.md
 ```
 
 **Expected output includes:**
-- "Table Fields" section showing team_members and project_tasks
+- “Table Fields” section showing team_members and project_tasks
 - Proper field counts: 21 fields, 8 groups
 - Table field labels and constraints (minRows, maxRows)
 

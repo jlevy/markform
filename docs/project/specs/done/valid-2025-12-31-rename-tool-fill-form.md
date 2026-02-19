@@ -2,16 +2,18 @@
 
 ## Purpose
 
-Validation spec for the rename of `generatePatches` LLM tool to `fill_form`, consolidating
-tool definitions into a new `toolApi.ts` file.
+Validation spec for the rename of `generatePatches` LLM tool to `fill_form`,
+consolidating tool definitions into a new `toolApi.ts` file.
 
-**Feature Plan:** [plan-2025-12-31-rename-tool-fill-form.md](plan-2025-12-31-rename-tool-fill-form.md)
+**Feature Plan:**
+[plan-2025-12-31-rename-tool-fill-form.md](plan-2025-12-31-rename-tool-fill-form.md)
 
 ## Stage 4: Validation Stage
 
 ## Validation Planning
 
-This is a refactoring change with no new functionality. Validation focuses on:
+This is a refactoring change with no new functionality.
+Validation focuses on:
 1. No regressions in existing behavior
 2. Complete removal of old naming
 3. Proper functioning of renamed tool

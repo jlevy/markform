@@ -146,7 +146,7 @@ tbd dep add <child_id> <parent_id>
 # Repeat for each issue
 ```
 
-> **Tell the user:** "I’ve filed [N] issues from this run under a parent tracking bead.
-> Here’s a summary: [list the issues briefly]. You can review them with `tbd list`."
+> **Tell the user:** “I’ve filed [N] issues from this run under a parent tracking bead.
+> Here’s a summary: [list the issues briefly]. You can review them with `tbd list`.”
 
 If no issues were found, skip issue creation and tell the user the run was clean.

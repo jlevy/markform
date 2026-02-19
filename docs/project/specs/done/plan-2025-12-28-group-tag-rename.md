@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Simplify the Markform syntax by renaming the `{% field-group %}` tag to just `{% group %}`.
-This is a cleaner, shorter name that is still clear in context.
+Simplify the Markform syntax by renaming the `{% field-group %}` tag to just
+`{% group %}`. This is a cleaner, shorter name that is still clear in context.
 
 **Current syntax:**
 
@@ -23,17 +23,19 @@ This is a cleaner, shorter name that is still clear in context.
 
 ## Background
 
-Markform forms are structured with fields organized into groups. Currently, groups use the
-`field-group` tag, which is verbose. Since the context is always clear (groups contain
-fields), the shorter `group` tag is preferred.
+Markform forms are structured with fields organized into groups.
+Currently, groups use the `field-group` tag, which is verbose.
+Since the context is always clear (groups contain fields), the shorter `group` tag is
+preferred.
 
 This is a simple tag rename, similar in structure to the unified field tag migration
-(see `plan-2025-12-28-unified-field-tag.md`), but much smaller in scope since there's
+(see `plan-2025-12-28-unified-field-tag.md`), but much smaller in scope since there’s
 only one tag to change.
 
 **Related docs:**
 
-- `plan-2025-12-28-unified-field-tag.md` - Similar migration pattern (many tags → unified)
+- `plan-2025-12-28-unified-field-tag.md` - Similar migration pattern (many tags →
+  unified)
 - `docs/markform-spec.md` - Full specification with `field-group` examples
 - `docs/markform-reference.md` - User-facing quick reference
 
@@ -91,13 +93,14 @@ Rename the `{% field-group %}` tag to `{% group %}` everywhere:
 
 ### Decisions
 
-1. **No backward compatibility**: Hard cut to new syntax only. Pre-1.0, we can break freely.
+1. **No backward compatibility**: Hard cut to new syntax only.
+   Pre-1.0, we can break freely.
 
 2. **TypeScript type name unchanged**: `FieldGroup` interface keeps its name.
    The type name describes what the object represents; the tag name is just syntax.
 
-3. **Legacy tag produces parse error**: The parser will produce explicit `ParseError` when
-   `field-group` is encountered, with a clear migration hint.
+3. **Legacy tag produces parse error**: The parser will produce explicit `ParseError`
+   when `field-group` is encountered, with a clear migration hint.
 
 ### Error Semantics
 
@@ -111,7 +114,8 @@ Rename the `{% field-group %}` tag to `{% group %}` everywhere:
 
 **Engine (parsing/serializing):**
 
-- `packages/markform/src/engine/parse.ts` - Change tag check from `field-group` to `group`
+- `packages/markform/src/engine/parse.ts` - Change tag check from `field-group` to
+  `group`
 - `packages/markform/src/engine/serialize.ts` - Change output tag to `group`
 
 **Documentation:**
@@ -157,8 +161,8 @@ Rename the `{% field-group %}` tag to `{% group %}` everywhere:
 
 The change is primarily in two places:
 
-1. **Parser** (~5 lines): Change `isTagNode(child, 'field-group')` to `isTagNode(child, 'group')`
-   and add legacy tag error handling
+1. **Parser** (~5 lines): Change `isTagNode(child, 'field-group')` to
+   `isTagNode(child, 'group')` and add legacy tag error handling
 
 2. **Serializer** (~5 lines): Change `{% field-group %}` to `{% group %}` and
    `{% /field-group %}` to `{% /group %}`
@@ -207,11 +211,13 @@ Update all unit tests that contain inline form markdown with old tag syntax.
 
 - [ ] Modify parser in `parse.ts`:
   - Change `isTagNode(child, 'field-group')` to `isTagNode(child, 'group')`
-  - Update error message from "field-group missing required 'id'" to "group missing required 'id'"
+  - Update error message from “field-group missing required 'id'” to “group missing
+    required 'id'”
 
 - [ ] Add explicit `ParseError` for legacy tag:
-  - Check if `isTagNode(child, 'field-group')` and throw:
-    `Legacy tag 'field-group' is no longer supported. Use {% group %} instead`
+  - Check if `isTagNode(child, 'field-group')` and throw: `Legacy tag 'field-group' is
+    no longer supported.
+    Use {% group %} instead`
 
 ### Phase 5: Documentation
 
@@ -233,7 +239,8 @@ Update all unit tests that contain inline form markdown with old tag syntax.
   ```bash
   find . -name '*.form.md' -exec grep -l 'field-group' {} \;
   ```
-- [ ] Exceptions allowed: CHANGELOG.md, docs/project/specs/done/*, comments explaining migration
+- [ ] Exceptions allowed: CHANGELOG.md, docs/project/specs/done/*, comments explaining
+  migration
 
 ## Stage 5: Validation
 

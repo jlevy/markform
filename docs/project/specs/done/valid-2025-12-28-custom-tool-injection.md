@@ -2,11 +2,12 @@
 
 ## Purpose
 
-This validation spec documents the testing performed and manual validation needed for the
-custom tool injection feature, which allows callers to inject custom Vercel AI SDK tools
-into the live agent and explicitly control web search behavior.
+This validation spec documents the testing performed and manual validation needed for
+the custom tool injection feature, which allows callers to inject custom Vercel AI SDK
+tools into the live agent and explicitly control web search behavior.
 
-**Feature Plan:** [plan-2025-12-28-custom-tool-injection.md](../completed/plan-2025-12-28-custom-tool-injection.md)
+**Feature Plan:**
+[plan-2025-12-28-custom-tool-injection.md](../completed/plan-2025-12-28-custom-tool-injection.md)
 
 **Implementation Plan:** N/A (Plan spec includes implementation details)
 
@@ -16,7 +17,8 @@ into the live agent and explicitly control web search behavior.
 
 This feature adds two key changes to the TypeScript API:
 
-1. `enableWebSearch` is now **required** (not optional) in `LiveAgentConfig` and `FillOptions`
+1. `enableWebSearch` is now **required** (not optional) in `LiveAgentConfig` and
+   `FillOptions`
 2. `additionalTools?: Record<string, Tool>` allows injecting custom tools
 
 All acceptance criteria from the plan spec have been implemented and tested.
@@ -25,7 +27,8 @@ All acceptance criteria from the plan spec have been implemented and tested.
 
 ### Unit Testing
 
-The following unit tests were added in `packages/markform/tests/unit/harness/liveAgent.test.ts`:
+The following unit tests were added in
+`packages/markform/tests/unit/harness/liveAgent.test.ts`:
 
 | Test | Description | Status |
 | --- | --- | --- |
@@ -38,7 +41,8 @@ The following unit tests were added in `packages/markform/tests/unit/harness/liv
 
 ### Integration and End-to-End Testing
 
-The following integration tests verify the feature works end-to-end via the `fillForm()` API:
+The following integration tests verify the feature works end-to-end via the `fillForm()`
+API:
 
 **File:** `packages/markform/tests/integration/programmaticFill.test.ts`
 
@@ -58,7 +62,8 @@ All tests pass (671 total tests in the test suite).
 ### Type Checking Validation
 
 - TypeScript compilation succeeds with strict mode
-- Omitting `enableWebSearch` from `LiveAgentConfig` or `FillOptions` produces a compiler error
+- Omitting `enableWebSearch` from `LiveAgentConfig` or `FillOptions` produces a compiler
+  error
 - `Tool` type correctly imported from `ai` package
 - All call sites updated to pass `enableWebSearch` explicitly
 
@@ -136,7 +141,8 @@ const agent = createLiveAgent({
 
 ### 3. Documentation Review
 
-- Review JSDoc comments on `LiveAgentConfig.enableWebSearch` and `LiveAgentConfig.additionalTools`
+- Review JSDoc comments on `LiveAgentConfig.enableWebSearch` and
+  `LiveAgentConfig.additionalTools`
 - Verify examples in JSDoc are accurate and helpful
 
 ## Post-Implementation Review

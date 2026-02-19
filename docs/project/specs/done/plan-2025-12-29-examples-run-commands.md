@@ -50,8 +50,8 @@ When set, overwrites existing values instead of continuing.
 
 - Remove any confirmation prompts for pre-filled forms
 
-- Log info when form has pre-filled values: `ℹ Form has 5 pre-filled fields
-  (continuing)` or `(overwriting)`
+- Log info when form has pre-filled values:
+  `ℹ Form has 5 pre-filled fields (continuing)` or `(overwriting)`
 
 * * *
 

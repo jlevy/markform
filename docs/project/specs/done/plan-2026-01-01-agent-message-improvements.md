@@ -2,17 +2,19 @@
 
 ## Purpose
 
-This is a technical design doc for improving the clarity and correctness of messages sent
-to LLM agents during form filling. These improvements were identified through review of
-the wire format golden tests which now capture the complete LLM request/response format.
+This is a technical design doc for improving the clarity and correctness of messages
+sent to LLM agents during form filling.
+These improvements were identified through review of the wire format golden tests which
+now capture the complete LLM request/response format.
 
 ## Background
 
 ### The Wire Format Golden Tests
 
-The enhanced session golden tests (implemented in `plan-2025-12-31-enhanced-session-golden-tests.md`)
-now capture the complete wire format of LLM interactions. This enables systematic review
-of the prompts and error messages agents receive.
+The enhanced session golden tests (implemented in
+`plan-2025-12-31-enhanced-session-golden-tests.md`) now capture the complete wire format
+of LLM interactions.
+This enables systematic review of the prompts and error messages agents receive.
 
 Reviewing the wire format in session files like `simple.session.yaml` revealed several
 issues with message clarity and correctness that should be addressed.
@@ -22,25 +24,26 @@ issues with message clarity and correctness that should be addressed.
 - `packages/markform/src/harness/prompts.ts` - Centralized prompt definitions
 - `packages/markform/src/harness/liveAgent.ts` - Context prompt building
 - `packages/markform/examples/simple/simple.session.yaml` - Wire format test fixture
-- `packages/markform/examples/rejection-test/rejection-test.session.yaml` - Rejection feedback test
+- `packages/markform/examples/rejection-test/rejection-test.session.yaml` - Rejection
+  feedback test
 
 ### Related Documentation
 
-- [plan-2025-12-31-enhanced-session-golden-tests.md](plan-2025-12-31-enhanced-session-golden-tests.md) -
-  Wire format capture that enables this review
+- [plan-2025-12-31-enhanced-session-golden-tests.md](plan-2025-12-31-enhanced-session-golden-tests.md)
+  \- Wire format capture that enables this review
 
 ## Summary of Task
 
 Improve agent-facing messages for clarity and correctness:
 
-1. **Fix issue count inconsistency** - The prompt says "up to 20 issues" but only 10 are
+1. **Fix issue count inconsistency** - The prompt says “up to 20 issues” but only 10 are
    shown (due to `max_issues_per_turn: 10`)
 
 2. **Improve validation error messages** - When an agent uses the wrong patch operation
    for a field type, the error message should clearly state:
    - What operation was used incorrectly
    - What operation SHOULD be used
-   - The field's actual type
+   - The field’s actual type
 
 3. **Add validation workflow documentation** - Document how to use wire format golden
    tests to validate prompt changes
@@ -60,7 +63,7 @@ export function getIssuesIntro(maxPatches: number): string {
 **Problem:** The function receives `maxPatches` (default: 20) but the actual issues list
 is limited by `max_issues_per_turn` (default: 10). This creates confusion:
 
-- Message says: "You need to address up to 20 issues"
+- Message says: “You need to address up to 20 issues”
 - Actual issues shown: 10 (or fewer)
 
 **Evidence from wire format:**
@@ -226,7 +229,7 @@ Update `prompts.ts:DEFAULT_SYSTEM_PROMPT`:
 ### File Changes
 
 | File | Changes |
-|------|---------|
+| --- | --- |
 | `src/harness/prompts.ts` | Fix `getIssuesIntro()` parameter, update checkbox instructions |
 | `src/harness/liveAgent.ts` | Pass `issues.length` to `getIssuesIntro()`, improve rejection format |
 | `examples/**/*.session.yaml` | Regenerate with new message format |
@@ -235,7 +238,7 @@ Update `prompts.ts:DEFAULT_SYSTEM_PROMPT`:
 
 Add to `docs/development.md` a section on validating prompt changes:
 
-```markdown
+````markdown
 ### Validating Prompt Changes
 
 When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`:
@@ -245,7 +248,7 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
 2. **Regenerate golden tests** to capture the new message format:
    ```bash
    pnpm --filter markform test:golden:regen
-   ```
+````
 
 3. **Review the wire format diffs** to verify changes are correct:
    ```bash
@@ -358,35 +361,32 @@ Add inline instructions immediately after each issue, showing:
 
 **Before:**
 ```
-- **ratings** (field): Required field "Ratings" is empty
-  Severity: required, Priority: P1
-  Type: table
-  Columns: source, score, votes
 
-- **title** (field): Recommended field "Title" is empty
-  Severity: recommended, Priority: P2
-  Type: string
+- **ratings** (field): Required field “Ratings” is empty Severity: required, Priority:
+  P1 Type: table Columns: source, score, votes
+
+- **title** (field): Recommended field “Title” is empty Severity: recommended, Priority:
+  P2 Type: string
 
 # Instructions
+
 [generic list of all patch formats at bottom]
 ```
 
 **After:**
 ```
-- **ratings** (field): Required field "Ratings" is empty
-  Severity: required, Priority: P1
-  Type: table
-  Columns: source, score, votes
-  Set: { op: "set_table", fieldId: "ratings", rows: [{ "source": "...", "score": "...", "votes": "..." }, ...] }
-  This field is required.
 
-- **title** (field): Recommended field "Title" is empty
-  Severity: recommended, Priority: P2
-  Type: string
-  Set: { op: "set_string", fieldId: "title", value: "..." }
-  Skip: { op: "skip_field", fieldId: "title", reason: "..." }
+- **ratings** (field): Required field “Ratings” is empty Severity: required, Priority:
+  P1 Type: table Columns: source, score, votes Set: { op: “set_table”, fieldId:
+  “ratings”, rows: [{ “source”: “...”, “score”: “...”, “votes”: “...” }, ...] } This
+  field is required.
+
+- **title** (field): Recommended field “Title” is empty Severity: recommended, Priority:
+  P2 Type: string Set: { op: “set_string”, fieldId: “title”, value: “...” } Skip: { op:
+  “skip_field”, fieldId: “title”, reason: “...” }
 
 # General Instructions
+
 Use the generatePatches tool to submit patches for the fields above.
 For table fields, each row is an object with column ID keys.
 ```
@@ -411,3 +411,4 @@ For table fields, each row is an object with column ID keys.
 - Prompt definitions: `packages/markform/src/harness/prompts.ts`
 - Session test fixtures: `packages/markform/examples/*/`
 - Golden test runner: `packages/markform/tests/golden/runner.ts`
+```

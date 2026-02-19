@@ -2,9 +2,12 @@
 
 ## Purpose
 
-This validation spec documents the testing performed and manual validation needed for the JSON Schema export feature, which enables exporting Markform form structures as standard JSON Schema.
+This validation spec documents the testing performed and manual validation needed for
+the JSON Schema export feature, which enables exporting Markform form structures as
+standard JSON Schema.
 
-**Feature Plan:** [plan-2025-12-28-json-schema-export.md](./plan-2025-12-28-json-schema-export.md)
+**Feature Plan:**
+[plan-2025-12-28-json-schema-export.md](./plan-2025-12-28-json-schema-export.md)
 
 **Implementation Plan:** N/A (implementation followed plan spec directly)
 
@@ -29,14 +32,15 @@ This validation spec documents the testing performed and manual validation neede
 - Generates valid JSON Schema with `$schema` and `$id`
 - Includes form title and description from doc blocks
 - Generates `required` array from required fields
-- Includes `x-markform` extension at schema level with spec, roles, roleInstructions, groups
+- Includes `x-markform` extension at schema level with spec, roles, roleInstructions,
+  groups
 - Excludes `x-markform` when `includeExtensions: false`
 - Uses correct `$schema` URL for different drafts (2020-12, 2019-09, draft-07)
 
 **Field Type Mapping Tests (all 11 types):**
 
 | Field Type | Tests |
-|------------|-------|
+| --- | --- |
 | `string` | Schema with constraints (minLength, maxLength), pattern for regex, x-markform with role/placeholder/examples |
 | `number` | Integer schema for `integer=true`, number schema for floating point, priority in x-markform |
 | `string_list` | Array schema with string items, minItems/maxItems/uniqueItems, item constraints (itemMinLength/itemMaxLength) |
@@ -63,37 +67,47 @@ This validation spec documents the testing performed and manual validation neede
 
 The JSON Schema testing was refactored to use file-based golden tests:
 
-1. **Schema Snapshot Test** - `tests/unit/jsonSchema.test.ts` now includes a golden schema comparison test that compares the generated schema against `examples/simple/simple.schema.json`
+1. **Schema Snapshot Test** - `tests/unit/jsonSchema.test.ts` now includes a golden
+   schema comparison test that compares the generated schema against
+   `examples/simple/simple.schema.json`
 
-2. **File-Based Test Data** - Replaced 118-line hardcoded `TEST_FORM_MD` with the actual `simple.form.md` example form, providing:
+2. **File-Based Test Data** - Replaced 118-line hardcoded `TEST_FORM_MD` with the actual
+   `simple.form.md` example form, providing:
    - Single source of truth for test data
    - Consistent test data across session and schema tests
    - Full diffability of schema changes in code review
 
-3. **Schema Regeneration Script** - Extended `scripts/regen-golden-sessions.ts` to also regenerate schema snapshots:
-   - Run `pnpm --filter markform test:golden:regen` to regenerate both session transcripts AND schema snapshots
+3. **Schema Regeneration Script** - Extended `scripts/regen-golden-sessions.ts` to also
+   regenerate schema snapshots:
+   - Run `pnpm --filter markform test:golden:regen` to regenerate both session
+     transcripts AND schema snapshots
    - New `SCHEMAS` configuration array for forms with schema snapshots
 
-4. **Documentation Updated** - `docs/development.md` now documents the schema regeneration process alongside session transcript regeneration
+4. **Documentation Updated** - `docs/development.md` now documents the schema
+   regeneration process alongside session transcript regeneration
 
 ### Multi-Format Schema Export
 
-The `exportMultiFormat()` function now includes JSON Schema in its output alongside other formats:
+The `exportMultiFormat()` function now includes JSON Schema in its output alongside
+other formats:
 
 - `.report.md` - filtered markdown report
 - `.yml` - YAML values export
 - `.form.md` - canonical markform source
 - `.schema.json` - JSON Schema for form structure (NEW)
 
-This integrates with the `markform examples` command and other CLI workflows that use multi-format export.
+This integrates with the `markform examples` command and other CLI workflows that use
+multi-format export.
 
 ### Not Implemented (From Plan Spec)
 
 The following items from the plan spec were not implemented:
 
-1. **DOCS.md update** - Documentation update was not performed (the CLI command is discoverable via `--help`)
+1. **DOCS.md update** - Documentation update was not performed (the CLI command is
+   discoverable via `--help`)
 
-2. **zod-to-json-schema dependency** - Not needed as the implementation converts from `ParsedForm` directly
+2. **zod-to-json-schema dependency** - Not needed as the implementation converts from
+   `ParsedForm` directly
 
 ## Manual Testing Needed
 
@@ -114,7 +128,7 @@ markform schema packages/markform/examples/simple/simple.form.md
 markform schema --pure packages/markform/examples/simple/simple.form.md
 ```
 - Verify NO `x-markform` properties appear anywhere in output
-- Confirm it's still valid JSON Schema
+- Confirm it’s still valid JSON Schema
 
 **3. Different Draft Versions:**
 ```bash
@@ -174,7 +188,7 @@ For the simple.form.md output, verify:
 
 3. **Extension data is correct:**
    - Each field has correct `role`
-   - `priority` only appears when not "medium"
+   - `priority` only appears when not “medium”
    - `group` shows the parent group ID
    - Checkbox fields have `checkboxMode`
 

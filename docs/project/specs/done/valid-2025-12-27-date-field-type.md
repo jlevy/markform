@@ -2,23 +2,25 @@
 
 ## Purpose
 
-This validation spec documents the testing performed for the `date-field` and `year-field`
-implementations, and lists remaining manual validation steps for the reviewer.
+This validation spec documents the testing performed for the `date-field` and
+`year-field` implementations, and lists remaining manual validation steps for the
+reviewer.
 
-**Feature Plan:** [plan-2025-12-27-date-field-type.md](plan-2025-12-27-date-field-type.md)
+**Feature Plan:**
+[plan-2025-12-27-date-field-type.md](plan-2025-12-27-date-field-type.md)
 
 ## Stage 4: Validation Stage
 
 ## Automated Validation (Testing Performed)
 
-The implementation includes comprehensive unit test coverage across all engine components.
-All 618 tests pass.
+The implementation includes comprehensive unit test coverage across all engine
+components. All 618 tests pass.
 
 ### Unit Testing
 
 #### Field Registry (`tests/unit/engine/fieldRegistry.test.ts`)
 
-- ✅ FIELD_KINDS array includes 'date' and 'year'
+- ✅ FIELD_KINDS array includes ‘date’ and ‘year’
 - ✅ `createEmptyValue('date')` returns `{ kind: 'date', value: null }`
 - ✅ `createEmptyValue('year')` returns `{ kind: 'year', value: null }`
 - ✅ Exhaustiveness checks cover date and year kinds
@@ -31,7 +33,7 @@ All 618 tests pass.
 - ✅ `YearValueSchema` validates correctly
 - ✅ `SetDatePatchSchema` validates correctly
 - ✅ `SetYearPatchSchema` validates correctly
-- ✅ FieldKind union includes 'date' and 'year'
+- ✅ FieldKind union includes ‘date’ and ‘year’
 - ✅ Field, FieldValue, and Patch unions include new types
 
 #### Parser (`src/engine/parse.ts`)
@@ -102,14 +104,14 @@ All 618 tests pass.
 
 - ✅ Date field renders as `<input type="date">` element
 - ✅ Date field includes min/max attributes when specified
-- ✅ Date field shows type badge as "date"
+- ✅ Date field shows type badge as “date”
 - ✅ Date field pre-fills existing values
 - ✅ Date field respects required attribute
 - ✅ Year field renders as `<input type="number">` element
 - ✅ Year field includes step="1" for integer input
 - ✅ Year field includes placeholder="YYYY"
 - ✅ Year field includes min/max attributes
-- ✅ Year field shows type badge as "year"
+- ✅ Year field shows type badge as “year”
 - ✅ Year field pre-fills existing values
 - ✅ Year field respects required attribute
 - ✅ `formDataToPatches()` handles date field form data
@@ -197,7 +199,7 @@ pnpm --filter=markform exec markform validate /tmp/test-date.form.md
 **Expected behavior:**
 - Parse should succeed and show date fields with correct attributes
 - Inspect should show date fields with their constraints
-- Validate should report "deadline" as empty (required field)
+- Validate should report “deadline” as empty (required field)
 
 ### 2. CLI Commands - Year Field
 
@@ -235,7 +237,7 @@ pnpm --filter=markform exec markform validate /tmp/test-year.form.md
 **Expected behavior:**
 - Parse should succeed and show year fields with correct attributes
 - Inspect should show year fields with their constraints
-- Validate should report "founded_year" as empty (required field)
+- Validate should report “founded_year” as empty (required field)
 
 ### 3. Apply Patches
 
@@ -260,7 +262,7 @@ echo '{"op":"set_year","fieldId":"founded_year","value":2015}' | \
 
 Test that validation properly enforces constraints:
 
-```bash
+````bash
 # Create form with filled values
 cat > /tmp/test-validation.form.md << 'EOF'
 ---
@@ -274,7 +276,7 @@ markform:
 {% date-field id="date1" label="Date" min="2025-01-01" max="2025-12-31" %}
 ```value
 2024-06-15
-```
+````
 {% /date-field %}
 
 {% year-field id="year1" label="Year" min=2020 max=2030 %}
@@ -288,8 +290,9 @@ markform:
 EOF
 
 # Validate (should report out-of-range errors)
+
 pnpm --filter=markform exec markform validate /tmp/test-validation.form.md
-```
+````
 
 **Expected behavior:**
 - Validation should report date1 is before minimum (2025-01-01)
@@ -312,7 +315,7 @@ markform:
 {% date-field id="bad_date" label="Bad Date" %}
 ```value
 not-a-date
-```
+````
 {% /date-field %}
 
 {% date-field id="impossible_date" label="Impossible Date" %}
@@ -326,7 +329,7 @@ not-a-date
 EOF
 
 pnpm --filter=markform exec markform validate /tmp/test-invalid-date.form.md
-```
+````
 
 **Expected behavior:**
 - bad_date should be flagged as invalid format
@@ -346,7 +349,7 @@ pnpm --filter=markform exec markform fill examples/simple/simple.form.md --inter
 # - Invalid date format (e.g., "not-a-date") shows validation error
 # - Invalid year (e.g., "abc") shows validation error
 # - Skip option appears for optional date/year fields
-```
+````
 
 **Expected behavior:**
 - Date prompts accept YYYY-MM-DD format and reject invalid dates

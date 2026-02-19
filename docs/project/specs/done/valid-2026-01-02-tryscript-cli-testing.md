@@ -4,7 +4,8 @@
 
 Validate that tryscript-based CLI testing is correctly implemented and integrated.
 
-**Feature Plan:** [plan-2026-01-02-tryscript-cli-testing.md](../done/plan-2026-01-02-tryscript-cli-testing.md)
+**Feature Plan:**
+[plan-2026-01-02-tryscript-cli-testing.md](../done/plan-2026-01-02-tryscript-cli-testing.md)
 
 ## Status
 
@@ -86,7 +87,8 @@ cd packages/markform
 pnpm test:tryscript:update
 ```
 
-**Expected:** Command runs successfully. No changes if tests already match.
+**Expected:** Command runs successfully.
+No changes if tests already match.
 
 ### 3. Review Test Output
 

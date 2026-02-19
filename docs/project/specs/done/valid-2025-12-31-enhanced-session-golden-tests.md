@@ -23,6 +23,7 @@ All 800 tests pass. Key test coverage includes:
 - Optional wire field on SessionTurn validates correctly
 
 **Session Serialization** (`tests/unit/engine/session.test.ts`):
+
 - **NEW**: `preserves wire format through round-trip` - Comprehensive test that:
   - Creates a session with full wire format (request with system/prompt/tools, response
     with steps/toolCalls/toolResults/usage)
@@ -33,6 +34,7 @@ All 800 tests pass. Key test coverage includes:
   - Verifies tool names in `wire.request.tools` are preserved as-is (not case-converted)
 
 - Existing round-trip tests continue to pass (backward compatibility)
+
 - Sessions without wire format parse correctly
 
 **Golden Tests** (`tests/golden/golden.test.ts`):
@@ -61,7 +63,8 @@ All 800 tests pass. Key test coverage includes:
 
 ### 1. Live Agent Wire Format Capture
 
-The automated tests use mock agents. To validate wire format capture with a real LLM:
+The automated tests use mock agents.
+To validate wire format capture with a real LLM:
 
 ```bash
 # Run a live fill (requires API key)
@@ -76,7 +79,8 @@ cat examples/simple/simple.session.yaml
 - [ ] Session file contains a `wire:` section in each turn
 - [ ] `wire.request.system` contains the system prompt
 - [ ] `wire.request.prompt` contains the context prompt with form state
-- [ ] `wire.request.tools` contains tool definitions with `description` and `input_schema`
+- [ ] `wire.request.tools` contains tool definitions with `description` and
+  `input_schema`
 - [ ] `wire.response.steps` contains array of steps
 - [ ] Each step has `tool_calls` with `tool_name` and `input`
 - [ ] `wire.response.usage` shows `input_tokens` and `output_tokens`
@@ -92,7 +96,8 @@ pnpm markform fill examples/rejection-test/rejection-test.form.md --mock
 ```
 
 **Verify:**
-- [ ] When patches are rejected, the next turn's `wire.request.prompt` shows error messages
+- [ ] When patches are rejected, the next turn’s `wire.request.prompt` shows error
+  messages
 - [ ] Error messages include field-specific hints
 
 ### 3. Deterministic Output Stability
@@ -130,7 +135,7 @@ Make a small change to a prompt and verify it shows in diff:
 ### Files Changed
 
 | File | Changes |
-|------|---------|
+| --- | --- |
 | `src/engine/coreTypes.ts` | Added WireFormat types and Zod schemas, added `wire?` to SessionTurn |
 | `src/harness/harnessTypes.ts` | Re-exports WireFormat, added `wire?` to TurnStats |
 | `src/harness/liveAgent.ts` | Added wire format capture in generatePatches() |

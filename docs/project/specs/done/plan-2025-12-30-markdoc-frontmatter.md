@@ -2,15 +2,16 @@
 
 ## Summary
 
-Refactor frontmatter parsing to use Markdoc's built-in frontmatter extraction instead of
-duplicate regex-based extraction. This consolidates frontmatter handling and leverages
-Markdoc's robust parsing.
+Refactor frontmatter parsing to use Markdoc’s built-in frontmatter extraction instead of
+duplicate regex-based extraction.
+This consolidates frontmatter handling and leverages Markdoc’s robust parsing.
 
 ## Problem
 
 Currently there are **two places** with duplicate regex-based frontmatter extraction:
 
-1. `packages/markform/src/engine/parse.ts:56` - `FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/`
+1. `packages/markform/src/engine/parse.ts:56` -
+   `FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/`
 2. `packages/markform/src/cli/examples/exampleRegistry.ts:153` - Similar regex pattern
 
 The current flow in `parse.ts`:
@@ -24,7 +25,8 @@ const ast = Markdoc.parse(body);
 
 ## Solution
 
-Markdoc natively handles frontmatter extraction. When you call `Markdoc.parse(doc)`:
+Markdoc natively handles frontmatter extraction.
+When you call `Markdoc.parse(doc)`:
 
 1. It automatically detects YAML frontmatter (between `---` delimiters)
 2. Stores the raw YAML string in `ast.attributes.frontmatter`

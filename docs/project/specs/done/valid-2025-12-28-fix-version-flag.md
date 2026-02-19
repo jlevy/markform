@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This is a validation spec for the bug fix that corrects the `--version` flag behavior and
-removes the `-V` short option.
+This is a validation spec for the bug fix that corrects the `--version` flag behavior
+and removes the `-V` short option.
 
 **Feature Plan:** N/A (bug fix, no plan spec)
 
@@ -16,8 +16,8 @@ removes the `-V` short option.
 
 2. **Removed `-V` short option**: Only `--version` is now supported for consistency.
 
-3. **Updated test**: Changed test to verify VERSION matches semver format rather than
-   a specific version number.
+3. **Updated test**: Changed test to verify VERSION matches semver format rather than a
+   specific version number.
 
 ## Stage 4: Validation Stage
 

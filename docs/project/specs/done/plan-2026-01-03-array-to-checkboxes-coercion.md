@@ -64,14 +64,17 @@ The coercion converts `["opt1", "opt2"]` to `{"opt1": "done", "opt2": "done"}` (
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
 - **Code types, methods, and function signatures**: KEEP DEPRECATED - Adding a new
-  coercion type enum value is additive. Existing code continues to work.
+  coercion type enum value is additive.
+  Existing code continues to work.
 
-- **Library APIs**: KEEP DEPRECATED - No signature changes. Behavior change is strictly
-  more permissive (accepts inputs that were previously rejected).
+- **Library APIs**: KEEP DEPRECATED - No signature changes.
+  Behavior change is strictly more permissive (accepts inputs that were previously
+  rejected).
 
 - **Server APIs**: N/A - No server APIs affected.
 
-- **File formats**: N/A - Patch format unchanged. This is input coercion only.
+- **File formats**: N/A - Patch format unchanged.
+  This is input coercion only.
 
 - **Database schemas**: N/A - No database.
 
@@ -134,8 +137,8 @@ This test will change from rejection to coercion with warning.
 | `multi` | `'done'` (completed) |
 | `explicit` | `'yes'` (confirmed) |
 
-**Rationale:** When an LLM sends `["opt1", "opt2"]`, it means "these should be checked/
-done/yes". The array format implies positive selection.
+**Rationale:** When an LLM sends `["opt1", "opt2"]`, it means “these should be checked/
+done/yes”. The array format implies positive selection.
 
 **Nice to Have:**
 
@@ -316,7 +319,7 @@ After the existing coercion table (around line ~2700), add:
 | Array of option IDs | `checkboxes` | Convert to object with default state | `["a", "b"]` → `{ a: "done", b: "done" }` |
 ```
 
-And update the "Coercions NOT recommended" section to clarify:
+And update the “Coercions NOT recommended” section to clarify:
 
 ```markdown
 | Array to checkboxes | ✅ Recommended | Preserves intent (array = selected/done) |
@@ -387,12 +390,12 @@ The change is minimal:
 
 ### Phase 4: Tests
 
-- [x] Update `apply.test.ts` "rejects array instead of object" to expect coercion
+- [x] Update `apply.test.ts` “rejects array instead of object” to expect coercion
 - [x] Add test: array coercion produces warning with correct type
 - [x] Add test: empty array coerces to empty object without warning
 - [x] Add test: array with invalid option ID still produces error
 - [x] Add test: array with non-string items produces error
-- [x] Add test: explicit mode uses 'yes' as default state
+- [x] Add test: explicit mode uses ‘yes’ as default state
 - [x] Add test in `valueCoercion.test.ts` for array input coercion
 - [x] Add test: verify coerced values appear in `appliedPatches`
 

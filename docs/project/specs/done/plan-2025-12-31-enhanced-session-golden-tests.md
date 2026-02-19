@@ -11,7 +11,8 @@ and prompt engineering visibility.
 ### The Session Testing Methodology
 
 Session golden tests are a powerful testing methodology that captures the complete
-execution trace of an agent session and replays it for verification. This approach:
+execution trace of an agent session and replays it for verification.
+This approach:
 
 1. **Records everything** - All input, output, and intermediate states are serialized to
    a `.session.yaml` file alongside each test form
@@ -28,7 +29,8 @@ execution trace of an agent session and replays it for verification. This approa
 ### Why Capture Everything?
 
 The key insight of session testing is that the session log should be the **single source
-of truth** for all LLM interactions. By capturing the complete wire format:
+of truth** for all LLM interactions.
+By capturing the complete wire format:
 
 - **Prompt changes are visible** - If someone edits a system prompt or error message,
   the exact change appears in git diff
@@ -66,7 +68,7 @@ turns:
 This captures the **semantic** content but not the **exact wire format** as sent to and
 received from the LLM.
 
-### What's Missing
+### What’s Missing
 
 The current approach does NOT capture:
 
@@ -79,8 +81,8 @@ The current approach does NOT capture:
 ### Related Documentation
 
 - [development.md](../../development.md) - Development guide and testing overview
-- [general-tdd-guidelines.md](../../general/agent-guidelines/general-tdd-guidelines.md) -
-  Golden test methodology
+- [general-tdd-guidelines.md](../../general/agent-guidelines/general-tdd-guidelines.md)
+  \- Golden test methodology
 - [plan-2025-12-30-unified-fill-logging.md](plan-2025-12-30-unified-fill-logging.md) -
   Related logging improvements
 - [plan-2025-12-29-fill-callbacks.md](../done/plan-2025-12-29-fill-callbacks.md) -
@@ -99,8 +101,8 @@ includes:
 ### Key Example: Validation Error Messages
 
 When an agent sends invalid patches (wrong field type, invalid column IDs, etc.), the
-system returns error messages to help the agent correct its mistakes. These messages
-are constructed in `buildContextPrompt()` in `liveAgent.ts`:
+system returns error messages to help the agent correct its mistakes.
+These messages are constructed in `buildContextPrompt()` in `liveAgent.ts`:
 
 ```typescript
 if (previousRejections && previousRejections.length > 0) {
@@ -128,7 +130,8 @@ With the enhanced session logging, we can:
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
 - **Code types, methods, and function signatures**: DO NOT MAINTAIN - All changes are
-  additive (new optional fields). Existing code continues to work unchanged.
+  additive (new optional fields).
+  Existing code continues to work unchanged.
 
 - **Library APIs**: N/A - This is an internal enhancement to session logging, not a
   public API change.
@@ -136,7 +139,8 @@ With the enhanced session logging, we can:
 - **Server APIs**: N/A - No server component.
 
 - **File formats**: SUPPORT BOTH - Session files with or without `wire` section are
-  valid. The new `wire` field is optional. Existing session files remain valid.
+  valid. The new `wire` field is optional.
+  Existing session files remain valid.
 
 - **Database schemas**: N/A - No database component.
 
@@ -146,8 +150,8 @@ With the enhanced session logging, we can:
 
 The project uses **AI SDK v6.0.3** (`"ai": "^6.0.3"` in package.json).
 
-The `generateText` function returns a result object with the following structure
-(from [AI SDK documentation](https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text)):
+The `generateText` function returns a result object with the following structure (from
+[AI SDK documentation](https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text)):
 
 ```typescript
 const result = await generateText({
@@ -252,7 +256,7 @@ interface WireFormat {
 **Stability Requirements:**
 
 | Field | Stability | Handling |
-|-------|-----------|----------|
+| --- | --- | --- |
 | Timestamps | Unstable | Omit (not present in relevant data) |
 | Tool call IDs | Unstable | Omit from wire format |
 | Token counts | Stable | Include (deterministic for same input) |
@@ -323,7 +327,7 @@ SessionTranscript
 ### File Changes
 
 | File | Changes |
-|------|---------|
+| --- | --- |
 | `src/harness/harnessTypes.ts` | Add `WireFormat` interface, add `wire?: WireFormat` to `TurnStats` |
 | `src/harness/liveAgent.ts` | Capture wire format after `generateText()`, return in stats |
 | `src/engine/coreTypes.ts` | Add `wire?: WireFormat` to `SessionTurn`, update Zod schemas |
@@ -347,8 +351,9 @@ function extractToolSchemas(tools: Record<string, Tool>): Record<string, { descr
 }
 ```
 
-Note: The AI SDK's `Tool` interface has `description?: string` and `inputSchema` (the
-Zod-wrapped schema). We capture the raw schema for the wire format.
+Note: The AI SDK’s `Tool` interface has `description?: string` and `inputSchema` (the
+Zod-wrapped schema).
+We capture the raw schema for the wire format.
 
 ### Deterministic Serialization
 
@@ -374,30 +379,33 @@ This is applied to wire format data before adding to TurnStats.
 ### Reusable Components
 
 1. **Existing session serialization** (`session.ts`) - Already handles snake_case
-   conversion and YAML output. Wire format will flow through this.
+   conversion and YAML output.
+   Wire format will flow through this.
 
 2. **Existing TurnStats flow** - Already captures prompts via `stats.prompts`. Wire
    format is a superset that includes prompts plus tool schemas and response steps.
 
-3. **Existing step iteration** - `liveAgent.ts` already iterates over `result.steps`
-   to extract patches. We extend this to capture the full step data.
+3. **Existing step iteration** - `liveAgent.ts` already iterates over `result.steps` to
+   extract patches. We extend this to capture the full step data.
 
 ### Simplifications
 
 1. **Reuse prompts data** - The wire format includes system/prompt which overlaps with
-   existing `context` section. We can either:
+   existing `context` section.
+   We can either:
    - Keep both (wire is complete, context is convenient shorthand)
    - Remove context in favor of wire (breaking change, not recommended)
 
-   **Decision:** Keep both. Wire is for comprehensive capture; context is for quick
-   reference. They should match.
+   **Decision:** Keep both.
+   Wire is for comprehensive capture; context is for quick reference.
+   They should match.
 
 2. **Skip tool results for declarative tools** - The `generatePatches` tool is
-   declarative (no execute function), so `toolResults` will be empty for it. Other
-   tools (like web search) have actual results to capture.
+   declarative (no execute function), so `toolResults` will be empty for it.
+   Other tools (like web search) have actual results to capture.
 
-3. **No separate wire format file** - Wire format is embedded in session YAML, not
-   a separate file. This keeps everything in one place for easy diffing.
+3. **No separate wire format file** - Wire format is embedded in session YAML, not a
+   separate file. This keeps everything in one place for easy diffing.
 
 ### Implementation Phases
 
@@ -443,7 +451,8 @@ This is applied to wire format data before adding to TurnStats.
 - [x] Review diffs to verify wire format content is correct and stable
 - [x] Run `pnpm test:golden` twice to verify identical output (stability)
 - [x] Commit regenerated session files
-- [ ] Document wire format in session file header comments (not needed - wire format is self-documenting)
+- [ ] Document wire format in session file header comments (not needed - wire format is
+  self-documenting)
 
 ## Stage 4: Validation Stage
 
@@ -503,5 +512,6 @@ This is applied to wire format data before adding to TurnStats.
 - Live agent implementation: `packages/markform/src/harness/liveAgent.ts`
 - Harness recording: `packages/markform/src/harness/harness.ts`
 - Golden test runner: `packages/markform/tests/golden/runner.ts`
-- Vercel AI SDK generateText: [ai-sdk.dev/docs/reference/ai-sdk-core/generate-text](https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text)
+- Vercel AI SDK generateText:
+  [ai-sdk.dev/docs/reference/ai-sdk-core/generate-text](https://ai-sdk.dev/docs/reference/ai-sdk-core/generate-text)
 - AI SDK GitHub: [github.com/vercel/ai](https://github.com/vercel/ai)

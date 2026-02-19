@@ -31,8 +31,8 @@ webview and markdown export, including:
 
 All 1454 tests pass:
 
-- **serve-render.test.ts**: Updated test for `renderMarkdownContent` to verify links have
-  `class="url-link"` and `data-url` attributes for copy tooltip support
+- **serve-render.test.ts**: Updated test for `renderMarkdownContent` to verify links
+  have `class="url-link"` and `data-url` attributes for copy tooltip support
 - **Golden tests**: Regenerated to reflect new markdown link format in report output
   - `simple-mock-filled.report.md`
   - `simple-skipped-filled.report.md`
@@ -68,7 +68,8 @@ pnpm markform serve packages/markform/examples/simple/simple-mock-filled.form.md
 ```
 
 In the View tab, verify:
-- [ ] URL fields show domain only as clickable link (e.g., "example.com" instead of full URL)
+- [ ] URL fields show domain only as clickable link (e.g., “example.com” instead of full
+  URL)
 - [ ] URLs are clickable and open in new tab
 - [ ] Hovering over URL link shows a copy icon tooltip
 - [ ] Clicking the copy icon copies the full URL to clipboard

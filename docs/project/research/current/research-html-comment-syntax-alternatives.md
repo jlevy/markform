@@ -247,8 +247,8 @@ Markform usage patterns.
 
 **Status**: Complete
 
-This section evaluates multiple syntax alternatives, including HTML comment-based approaches
-and XML/HTML tag approaches.
+This section evaluates multiple syntax alternatives, including HTML comment-based
+approaches and XML/HTML tag approaches.
 
 * * *
 
@@ -259,8 +259,10 @@ and XML/HTML tag approaches.
 ```markdown
 <!--% form id="my_form" -->
 <!--% field kind="single_select" id="rating" -->
+
 - [ ] Good <!--% #good -->
 - [ ] Bad <!--% #bad -->
+
 <!--% /field -->
 <!--% /form -->
 ```
@@ -274,9 +276,9 @@ Mapping:
 
 | Pros | Cons |
 | --- | --- |
-| Highly distinctive—won't conflict with regular comments | `%` character feels arbitrary/ugly |
+| Highly distinctive—won’t conflict with regular comments | `%` character feels arbitrary/ugly |
 | Simple, consistent transformation rule | All elements need the `%` prefix |
-| Unambiguous parsing | |
+| Unambiguous parsing |  |
 
 * * *
 
@@ -294,7 +296,7 @@ Preserves literal Markdoc syntax inside the comment.
 | --- | --- |
 | Preserves exact Markdoc syntax inside | Very verbose |
 | Easy transmapping (just strip wrapper) | Harder to read |
-| Could enable Markdoc syntax highlighting | |
+| Could enable Markdoc syntax highlighting |  |
 
 * * *
 
@@ -305,8 +307,10 @@ Uses a short namespace prefix for tags, with plain annotations:
 ```markdown
 <!-- f:form id="my_form" -->
 <!-- f:field kind="single_select" id="rating" -->
+
 - [ ] Good <!-- #good -->
 - [ ] Bad <!-- #bad -->
+
 <!-- /f:field -->
 <!-- /f:form -->
 ```
@@ -322,13 +326,13 @@ Mapping:
 | --- | --- |
 | Clean, readable syntax | Requires recognizing `f:` as special |
 | Follows WordPress Gutenberg pattern (`wp:`) | Slightly more complex transformation |
-| `f:` suggests "form" semantically | |
-| Annotations (`#id`, `.class`) naturally distinctive | |
-| Minimal overhead (2 chars for tags, 0 for annotations) | |
+| `f:` suggests “form” semantically |  |
+| Annotations (`#id`, `.class`) naturally distinctive |  |
+| Minimal overhead (2 chars for tags, 0 for annotations) |  |
 
-**Why annotations don't need a prefix**: The `#identifier` and `.classname` patterns look
-like CSS selectors and are unlikely to appear in regular HTML comments. A comment like
-`<!-- #good -->` is clearly an ID reference, not prose.
+**Why annotations don’t need a prefix**: The `#identifier` and `.classname` patterns
+look like CSS selectors and are unlikely to appear in regular HTML comments.
+A comment like `<!-- #good -->` is clearly an ID reference, not prose.
 
 **Alternative namespace prefixes considered**:
 - `m:` (Markform) — ties to project name, follows `wp:` pattern
@@ -341,8 +345,10 @@ like CSS selectors and are unlikely to appear in regular HTML comments. A commen
 ```markdown
 <!-- form id="my_form" -->
 <!-- field kind="single_select" id="rating" -->
+
 - [ ] Good <!-- #good -->
 - [ ] Bad <!-- #bad -->
+
 <!-- /field -->
 <!-- /form -->
 ```
@@ -383,7 +389,8 @@ attributes, but the `f:` namespace (Option C) eliminates this risk entirely.
 **Critical Issue — Blank Line Requirement**:
 
 Per CommonMark spec, custom HTML elements like `<mf-field>` are type 6/7 HTML blocks.
-Their end condition is a **blank line**, not the closing tag. Without blank lines:
+Their end condition is a **blank line**, not the closing tag.
+Without blank lines:
 
 ```markdown
 <mf-field kind="single_select" id="rating">
@@ -405,7 +412,8 @@ Blank lines are required for correct parsing:
 </mf-field>
 ```
 
-This is error-prone. Users will forget blank lines and get broken rendering.
+This is error-prone.
+Users will forget blank lines and get broken rendering.
 
 * * *
 
@@ -423,8 +431,8 @@ This is error-prone. Users will forget blank lines and get broken rendering.
 | Avoids blank line issue | Non-standard—`/>` ignored on non-void elements |
 | Clear markers | Requires awkward `<mf-end-field />` pattern |
 
-**Note**: In HTML5, self-closing syntax (`/>`) is only valid on void elements like `<br/>`.
-On non-void elements, `/` is ignored: `<div/>` parses as `<div>`.
+**Note**: In HTML5, self-closing syntax (`/>`) is only valid on void elements like
+`<br/>`. On non-void elements, `/` is ignored: `<div/>` parses as `<div>`.
 
 * * *
 
@@ -732,7 +740,8 @@ Alternative considered: `
 
 ### Summary
 
-**Recommended approach: Preprocessor (Approach 1) with Option C syntax (`<!-- f:tag -->`)**
+**Recommended approach: Preprocessor (Approach 1) with Option C syntax
+(`<!-- f:tag -->`)**
 
 This provides the best balance of:
 
@@ -760,8 +769,10 @@ This provides the best balance of:
 ```markdown
 <!-- f:form id="example" -->
 <!-- f:field kind="single_select" id="rating" -->
+
 - [ ] Good <!-- #good -->
 - [ ] Bad <!-- #bad -->
+
 <!-- /f:field -->
 <!-- /f:form -->
 ```
@@ -769,8 +780,8 @@ This provides the best balance of:
 **Why Option C over Option A (`<!--%`)**:
 
 - `f:` is more semantically meaningful ("form")
-- Follows WordPress Gutenberg's established `wp:` pattern
-- Annotations (`#id`, `.class`) don't need prefixes—they're naturally distinctive
+- Follows WordPress Gutenberg’s established `wp:` pattern
+- Annotations (`#id`, `.class`) don’t need prefixes—they’re naturally distinctive
 - Cleaner overall appearance
 
 ### Recommended Implementation
@@ -785,24 +796,27 @@ Implement a **Markdown-aware preprocessor** that is **always enabled**:
 
 **Key Design Decision**: The `f:` namespace prefix and `#`/`.` annotation patterns are
 distinctive enough that they will never conflict with regular HTML comments or existing
-Markdoc syntax. The preprocessor should **always be active** with no configuration needed.
+Markdoc syntax. The preprocessor should **always be active** with no configuration
+needed.
 
 ### Alternative Syntaxes
 
-1. **Option A (`<!--% ... -->`)**: Viable but the `%` feels arbitrary. Use if you prefer
-   a single consistent prefix for all elements.
+1. **Option A (`<!--% ... -->`)**: Viable but the `%` feels arbitrary.
+   Use if you prefer a single consistent prefix for all elements.
 
-2. **Option D (Plain comments)**: Cleanest look but has false-positive risk. Use only
-   if you're confident your documents won't contain conflicting comment patterns.
+2. **Option D (Plain comments)**: Cleanest look but has false-positive risk.
+   Use only if you’re confident your documents won’t contain conflicting comment
+   patterns.
 
-3. **HTML tag options (E, F)**: Not recommended due to CommonMark blank line requirements.
+3. **HTML tag options (E, F)**: Not recommended due to CommonMark blank line
+   requirements.
 
 ### Implementation Approaches (Not Recommended)
 
 1. **Patch Markdoc**: Consider only if source mapping for errors becomes critical.
 
 2. **Full rewrite**: Consider only if Markdoc becomes unmaintained or major new
-   requirements arise that Markdoc can't support.
+   requirements arise that Markdoc can’t support.
 
 * * *
 
@@ -1018,8 +1032,10 @@ function preprocessMarkform(input: string): string {
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
 {% field kind="single_select" id="rating" label="Rating" %}
+
 - [ ] Good {% #good %}
 - [ ] Bad {% #bad %}
+
 {% /field %}
 
 {% /group %}
@@ -1035,8 +1051,10 @@ function preprocessMarkform(input: string): string {
 <!-- f:field kind="string" id="name" label="Name" required=true --><!-- /f:field -->
 
 <!-- f:field kind="single_select" id="rating" label="Rating" -->
+
 - [ ] Good <!-- #good -->
 - [ ] Bad <!-- #bad -->
+
 <!-- /f:field -->
 
 <!-- /f:group -->
@@ -1059,8 +1077,10 @@ Only the checkboxes are visible:
 <!--% field kind="string" id="name" label="Name" required=true --><!--% /field -->
 
 <!--% field kind="single_select" id="rating" label="Rating" -->
+
 - [ ] Good <!--% #good -->
 - [ ] Bad <!--% #bad -->
+
 <!--% /field -->
 
 <!--% /group -->

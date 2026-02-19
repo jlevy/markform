@@ -40,8 +40,8 @@ Users who want to:
 
 ## Summary of Task
 
-Add `additionalTools` option and make `enableWebSearch` required in `LiveAgentConfig` and
-`FillOptions` to allow callers to:
+Add `additionalTools` option and make `enableWebSearch` required in `LiveAgentConfig`
+and `FillOptions` to allow callers to:
 
 1. Inject custom Vercel AI SDK tools
 
@@ -51,13 +51,15 @@ Add `additionalTools` option and make `enableWebSearch` required in `LiveAgentCo
 
 - **Essential tool**: `generatePatches` — Always included, required for form filling
 
-- **Web search tools**: Provider-specific (OpenAI, Anthropic, etc.) — Controlled by `enableWebSearch`
+- **Web search tools**: Provider-specific (OpenAI, Anthropic, etc.)
+  — Controlled by `enableWebSearch`
 
 - **Custom tools**: User-provided via `additionalTools`
 
 **Key behaviors:**
 
-1. `enableWebSearch` is **required** — forces explicit choice, no accidental tool exposure
+1. `enableWebSearch` is **required** — forces explicit choice, no accidental tool
+   exposure
 
 2. `additionalTools` are merged with enabled tools (custom wins on name collision)
 
@@ -511,6 +513,8 @@ describe('LiveAgent additionalTools', () => {
 
 - [ ] JSDoc comments render correctly
 
-- [ ] Manual test: create agent with `additionalTools`, verify in `getAvailableToolNames()`
+- [ ] Manual test: create agent with `additionalTools`, verify in
+  `getAvailableToolNames()`
 
-- [ ] Manual test: create agent with `enableWebSearch: false`, verify only essential tools
+- [ ] Manual test: create agent with `enableWebSearch: false`, verify only essential
+  tools

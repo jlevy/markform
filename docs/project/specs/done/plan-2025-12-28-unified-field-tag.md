@@ -13,8 +13,10 @@ kinds.
 {% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
 {% url-field id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /url-field %}
 {% single-select id="mpaa_rating" label="MPAA Rating" role="agent" %}
+
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
+
 {% /single-select %}
 ```
 
@@ -24,8 +26,10 @@ kinds.
 {% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
 {% field kind="url" id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /field %}
 {% field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" %}
+
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
+
 {% /field %}
 ```
 

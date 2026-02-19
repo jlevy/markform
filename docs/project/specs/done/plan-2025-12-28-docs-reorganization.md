@@ -291,8 +291,8 @@ return join(dirname(thisDir), 'markform-apis.md');
 
 **Tasks:**
 
-- [ ] Add prominent note at top of `docs/markform-reference.md` pointing to `markform
-  apis`
+- [ ] Add prominent note at top of `docs/markform-reference.md` pointing to
+  `markform apis`
 
 - [ ] Remove “Programmatic API (AI SDK Tools)” section from reference doc (move to apis
   doc)

@@ -10,16 +10,19 @@ Improve the `markform serve` command with:
 
 ## Background
 
-The `markform serve` command provides a web-based viewer for markform files. Currently:
+The `markform serve` command provides a web-based viewer for markform files.
+Currently:
 
 - It uses dark-themed syntax highlighting (dark background) for JSON/YAML, which clashes
   with the light page background
 - When serving a `.form.md` file, it only shows that single file, even though related
   files (`.report.md`, `.yml`, `.schema.json`) often exist alongside it
-- Markdown rendering for `.report.md` files is very basic (simple header/paragraph parsing)
+- Markdown rendering for `.report.md` files is very basic (simple header/paragraph
+  parsing)
 
-The settings module (`src/settings.ts`) already provides utilities for detecting file types
-and deriving paths to related files (`deriveReportPath`, `deriveSchemaPath`, etc.).
+The settings module (`src/settings.ts`) already provides utilities for detecting file
+types and deriving paths to related files (`deriveReportPath`, `deriveSchemaPath`,
+etc.).
 
 ## Summary of Task
 
@@ -28,19 +31,21 @@ and deriving paths to related files (`deriveReportPath`, `deriveSchemaPath`, etc
 
 2. **Multi-file tabs**: When serving a `.form.md` file, discover related files
    (`*.report.md`, `*.yml`, `*.schema.json`) and show tabs to switch between them:
-   - "Markform" - the form itself (interactive)
-   - "Report" - rendered report markdown (if exists)
-   - "Values" - YAML values (if exists)
-   - "Schema" - JSON Schema (if exists)
+   - “Markform” - the form itself (interactive)
+   - “Report” - rendered report markdown (if exists)
+   - “Values” - YAML values (if exists)
+   - “Schema” - JSON Schema (if exists)
 
-   Hide tabs for missing files. If only one file exists, show single tab or no tabs.
+   Hide tabs for missing files.
+   If only one file exists, show single tab or no tabs.
 
 3. **Improved markdown rendering**: Use a proper markdown rendering approach for
    `.report.md` files (lists, code blocks, links, etc.)
 
 ## Backward Compatibility
 
-No breaking changes. This is purely additive UI enhancement:
+No breaking changes.
+This is purely additive UI enhancement:
 
 - Existing serve behavior preserved for single files
 - No API changes
@@ -70,10 +75,10 @@ The serve command (`src/cli/commands/serve.ts`):
 2. **Tabbed interface**:
    - Only activate when serving a `.form.md` file
    - Discover related files by replacing `.form.md` with other extensions
-   - Tab labels: "Markform", "Report", "Values", "Schema"
+   - Tab labels: “Markform”, “Report”, “Values”, “Schema”
    - Current tab highlighted
    - Click tab to switch content (client-side navigation)
-   - If file doesn't exist, hide that tab
+   - If file doesn’t exist, hide that tab
 
 3. **Markdown rendering**:
    - Parse and render: headers (h1-h6), paragraphs, lists (ul/ol), code blocks, inline
@@ -147,13 +152,14 @@ Client-side: Use JavaScript to fetch tab content via new `/tab/:id` endpoint.
 
 Options:
 
-A. **Use marked library** - Full-featured, battle-tested, small bundle
-B. **Improve existing parser** - No new dependencies, but more work
+A. **Use marked library** - Full-featured, battle-tested, small bundle B. **Improve
+existing parser** - No new dependencies, but more work
 
-Recommendation: Option A (marked) - It's widely used, well-maintained, and handles edge
+Recommendation: Option A (marked) - It’s widely used, well-maintained, and handles edge
 cases properly. Can import just the parser for minimal footprint.
 
-However, to avoid adding dependencies, we can enhance the existing simple parser to handle:
+However, to avoid adding dependencies, we can enhance the existing simple parser to
+handle:
 - Lists (ul/ol)
 - Code blocks (fenced with ```)
 - Inline formatting (bold, italic, code)

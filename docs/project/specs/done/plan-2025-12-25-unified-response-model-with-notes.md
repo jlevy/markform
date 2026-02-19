@@ -81,7 +81,7 @@ markdown syntax issues.
 | `coreTypes.ts` | No formal error types | Add `ParseError` and `ValidationError` types with location info |
 | `parse.ts` | Uses generic errors | Distinguish parse vs validation errors; throw appropriate type |
 | `arch-markform-design.md.md` | No error taxonomy | Add section on error types and when each applies |
-| Error messages | Inconsistent terminology | Use "parse error" only for syntax; "validation error" for semantics |
+| Error messages | Inconsistent terminology | Use “parse error” only for syntax; “validation error” for semantics |
 
 **Error Type Definitions (to add to `coreTypes.ts`):**
 
@@ -399,8 +399,10 @@ Any mismatch between `state` attribute and field content is a **validation error
 {% /number-field %}
 
 {% checkboxes id="docs_reviewed" label="Documents reviewed" state="skipped" %}
+
 - [ ] 10-K {% #ten_k %}
 - [ ] 10-Q {% #ten_q %}
+
 {% /checkboxes %}
 ```
 
@@ -415,7 +417,7 @@ The `state` attribute is the source of truth.
 | `undefined` or `{ state: 'empty' }` | no value fence, no state attr |
 | `{ state: 'skipped' }` | `state="skipped"`, no value fence |
 | `{ state: 'aborted' }` | `state="aborted"`, no value fence |
-| `{ state: 'answered', value }` | value fence with content (state attr omitted, defaults to 'answered') |
+| `{ state: 'answered', value }` | value fence with content (state attr omitted, defaults to ‘answered’) |
 
 #### Parsing: Sentinel Values in Text Value Fences
 
@@ -605,8 +607,8 @@ interface ProgressCounts {
 }
 ```
 
-**Invariant:** `answeredFields + skippedFields + abortedFields + emptyFields ==
-totalFields`
+**Invariant:**
+`answeredFields + skippedFields + abortedFields + emptyFields == totalFields`
 
 **Removed:** The `submitted` and `submittedFields` properties are removed.
 Use `responseState` and the four state counts instead.
@@ -2264,8 +2266,10 @@ String field skipped:
 Checkboxes aborted (inline markers remain as schema defaults):
 \`\`\`md
 {% checkboxes id="docs_reviewed" label="Documents reviewed" state="aborted" %}
+
 - [ ] 10-K {% #ten_k %}
 - [ ] 10-Q {% #ten_q %}
+
 {% /checkboxes %}
 \`\`\`
 
@@ -2515,11 +2519,11 @@ XX. **Unified response model with notes** — The form response model separates 
 | 2025-12-25 | Claude | Added detailed completion logic implementation changes (summaries.ts) |
 | 2025-12-25 | Claude | Added comprehensive completion logic tests; expanded acceptance criteria |
 | 2025-12-25 | Claude | Redesigned serialization: state attr on field tags (markform), sentinels for value export only |
-| 2025-12-25 | Claude | Added FieldSyntax ('text' \| 'checkboxes') type; sentinel in value fence accepted and normalized |
+| 2025-12-25 | Claude | Added FieldSyntax ('text' \| ‘checkboxes’) type; sentinel in value fence accepted and normalized |
 | 2025-12-25 | Claude | Added comprehensive parse vs validation error section with type definitions and architecture changes |
 | 2025-12-25 | Claude | Ensured url and url_list field kinds included in all Patch unions; added type-safe field registry design decision |
 | 2025-12-25 | Claude | **Major revision:** Replaced sentinel kinds with FieldResponse wrapper (state + optional value); kept FieldValue.kind strictly for field types |
-| 2025-12-25 | Claude | Categorized select fields under 'checkboxes' syntax (they use [ ]/[x] markers like checkboxes) |
+| 2025-12-25 | Claude | Categorized select fields under ‘checkboxes’ syntax (they use [ ]/[x] markers like checkboxes) |
 | 2025-12-25 | Claude | Clarified note ID format is implementation detail (n1, n2, n3 not required by spec) |
 | 2025-12-25 | Claude | Clarified concurrency: library handles async within single process; multi-process is out of scope |
 | 2025-12-25 | Claude | Changed JSON/YAML export to structured format by default; friendly sentinel format is optional |

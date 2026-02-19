@@ -1,12 +1,13 @@
 # Plan: Tryscript CLI End-to-End Testing
 
-**Status: COMPLETE** - All 5 phases complete. 18 CLI tests passing with tryscript v0.1.0.
+**Status: COMPLETE** - All 5 phases complete.
+18 CLI tests passing with tryscript v0.1.0.
 
 ## Summary
 
 This plan covers implementing end-to-end CLI testing for markform using tryscript.
-During implementation, several bugs and limitations in tryscript were discovered
-and documented in `tryscript-bug-report.md`.
+During implementation, several bugs and limitations in tryscript were discovered and
+documented in `tryscript-bug-report.md`.
 
 **Update (2026-01-04):** Tryscript v0.1.0 released with fixes for all critical issues.
 Now upgrading markform tests to use the cleaner format.
@@ -35,9 +36,10 @@ This should be:
 $ markform inspect examples/simple/simple.form.md
 ```
 
-**Root cause**: Tryscript runs commands in a temp directory, so relative paths don't resolve correctly.
+**Root cause**: Tryscript runs commands in a temp directory, so relative paths don’t
+resolve correctly.
 
-### 2. The `bin` Config Doesn't Work As Expected
+### 2. The `bin` Config Doesn’t Work As Expected
 
 The README suggests:
 ```yaml
@@ -47,19 +49,21 @@ bin: ./my-cli
 $ my-cli --help
 ```
 
-But this doesn't work because:
+But this doesn’t work because:
 1. The bin path is resolved relative to the temp dir (not test file)
 2. The command name replacement logic may have issues
 
 ### 3. Verbose and Duplicated Output
 
-The tests capture a lot of output that could be elided. For example, `validate` and `inspect` both show the same 21-line Issues section.
+The tests capture a lot of output that could be elided.
+For example, `validate` and `inspect` both show the same 21-line Issues section.
 
 ### 4. ~3,400 Lines of Unit Tests Could Be Simplified
 
-Many CLI unit tests (formatting, colors, etc.) test internal utilities that are implicitly tested by end-to-end CLI tests.
+Many CLI unit tests (formatting, colors, etc.)
+test internal utilities that are implicitly tested by end-to-end CLI tests.
 
----
+* * *
 
 ## Proposed Tryscript Framework Improvements
 
@@ -82,7 +86,8 @@ cwd: /home/user/markform/packages/markform
 $ markform inspect examples/simple/simple.form.md
 ```
 
-**Implementation**: In `createExecutionContext`, use `cwd` as the working directory for `child_process.spawn`.
+**Implementation**: In `createExecutionContext`, use `cwd` as the working directory for
+`child_process.spawn`.
 
 ### 2. Add `binName` Option (High Value)
 
@@ -116,7 +121,7 @@ chdir: false  # Don't copy to temp, run in place
 ---
 ```
 
----
+* * *
 
 ## Proposed Markform Test Improvements
 
@@ -209,7 +214,7 @@ Form Content:
 **Candidates for replacement:**
 
 | Unit Test | Lines | Can Replace With Tryscript? |
-|-----------|-------|----------------------------|
+| --- | --- | --- |
 | formatting.test.ts | 387 | Partial - test via CLI output |
 | patchFormat.test.ts | 261 | Partial - test via `dump` output |
 | exportHelpers.test.ts | 255 | Yes - test via `export` command |
@@ -218,18 +223,18 @@ Form Content:
 **Keep as unit tests:**
 
 | Unit Test | Lines | Reason |
-|-----------|-------|--------|
+| --- | --- | --- |
 | interactivePrompts.test.ts | 1,184 | Requires TTY mocking |
 | fillLogging.test.ts | 377 | Tests callback internals |
 | runMode.test.ts | 232 | Tests edge cases |
 
----
+* * *
 
 ## Ideal End State
 
 ### Test File Structure
 
-```markdown
+````markdown
 ---
 bin: markform
 cwd: .
@@ -247,7 +252,7 @@ env:
 $ markform --version
 [VERSION]
 ? 0
-```
+````
 
 ### help
 
@@ -280,7 +285,7 @@ Form Validation Report
 Issues (0):
 ? 0
 ```
-```
+````
 
 ### Benefits
 
@@ -328,7 +333,7 @@ upgrades our tests to use the cleaner format and enables CI.
 env:
   NO_COLOR: "1"
 ---
-```
+````
 ```console
 $ /home/user/markform/packages/markform/dist/bin.mjs --help
 ```
@@ -349,10 +354,10 @@ $ $CLI --help
 ### New Features Used
 
 | Feature | Usage | Benefit |
-|---------|-------|---------|
+| --- | --- | --- |
 | `cwd: ../..` | Run from package dir | Relative paths work |
 | `env.CLI` | Define CLI path | Shell expands `$CLI` |
-| `sandbox: false` | Don't use temp dir | Default, explicit for clarity |
+| `sandbox: false` | Don’t use temp dir | Default, explicit for clarity |
 | `[CWD]` | Built-in pattern | Match current directory |
 | `before` | Setup command | Build before tests if needed |
 
@@ -398,7 +403,8 @@ $ $CLI status examples/simple/simple.form.md
 
 #### 5.3. Rewrite workflows.tryscript.md
 
-Convert all 6 tests similarly. For the apply test, use sandbox:
+Convert all 6 tests similarly.
+For the apply test, use sandbox:
 
 ```yaml
 ---

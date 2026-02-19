@@ -27,8 +27,8 @@ This will prompt for web-based authentication in your browser.
 
 1. Go to https://www.npmjs.com/package/PACKAGE/access
 
-2. Under "Publishing access", click "Add a trusted publisher" or "Configure Trusted
-   Publishing"
+2. Under “Publishing access”, click “Add a trusted publisher” or “Configure Trusted
+   Publishing”
 
 3. Select **GitHub Actions** as the publisher
 
@@ -38,10 +38,10 @@ This will prompt for web-based authentication in your browser.
    - **Workflow filename**: `release.yml`
    - **Environment name**: Leave blank (not required unless using GitHub environments)
 
-5. For **Publishing access**, select **"Require two-factor authentication and disallow
-   tokens (recommended)"** - OIDC trusted publishers work regardless of this setting
+5. For **Publishing access**, select **“Require two-factor authentication and disallow
+   tokens (recommended)”** - OIDC trusted publishers work regardless of this setting
 
-6. Click "Set up connection"
+6. Click “Set up connection”
 
 ### 3. Verify Repository is Public
 
@@ -120,8 +120,8 @@ git commit -m "chore: release PACKAGE v0.2.0"
 
 ### Step 5: Write Release Notes
 
-**Before pushing**, write release notes following the "Writing Release Notes" section below.
-These notes will be used for both the PR body and the GitHub release.
+**Before pushing**, write release notes following the “Writing Release Notes” section
+below. These notes will be used for both the PR body and the GitHub release.
 
 ```bash
 # Review changes since last release
@@ -165,11 +165,13 @@ gh api repos/OWNER/PACKAGE/git/refs -X POST \
   -f sha="$MERGE_SHA"
 ```
 
-The release workflow will automatically create the GitHub Release when the tag is pushed.
+The release workflow will automatically create the GitHub Release when the tag is
+pushed.
 
 ### Step 7: Update GitHub Release
 
-After the release workflow completes, update the GitHub release with the full release notes:
+After the release workflow completes, update the GitHub release with the full release
+notes:
 
 ```bash
 # Wait for release workflow to complete
@@ -190,9 +192,9 @@ The GitHub Actions workflow will build and publish to npm using OIDC authenticat
 
 ## Writing Release Notes
 
-Each release should include clear, human-readable release notes that summarize what changed.
-This is a manual process—not automated parsing of commit messages—so the notes are readable
-and meaningful.
+Each release should include clear, human-readable release notes that summarize what
+changed. This is a manual process—not automated parsing of commit messages—so the notes
+are readable and meaningful.
 
 ### Step 1: Review Changes
 
@@ -203,20 +205,21 @@ pnpm release:changes
 ```
 
 This outputs all commits since the last release tag, grouped by conventional commit type
-(features, fixes, refactoring, tests, docs, other). Use this as input for writing the
-release notes summary.
+(features, fixes, refactoring, tests, docs, other).
+Use this as input for writing the release notes summary.
 
 ### Step 2: Categorize and Summarize
 
-Group changes thematically, not by individual commit. Categories to use:
+Group changes thematically, not by individual commit.
+Categories to use:
 
 - **Features**: New capabilities, significant enhancements
 - **Fixes**: Bug fixes, corrections
 - **Refactoring**: Internal improvements, code quality (if notable)
 - **Documentation**: Significant doc changes (skip trivial updates)
 
-Write concise descriptions that explain what changed from the user's perspective. Multiple
-related commits should be combined into a single bullet point.
+Write concise descriptions that explain what changed from the user’s perspective.
+Multiple related commits should be combined into a single bullet point.
 
 ### Step 3: Format the Release Notes
 
@@ -248,7 +251,7 @@ Use this format for the PR body and GitHub release:
 
 ### Example Release Notes
 
-Here's an example of good release notes (from v0.1.15):
+Here’s an example of good release notes (from v0.1.15):
 
 ```markdown
 ## What's Changed
@@ -280,9 +283,10 @@ Here's an example of good release notes (from v0.1.15):
 ### Tips
 
 - **Be concise**: Each bullet should be one line
-- **Focus on impact**: What can users do now? What's fixed?
-- **Group related commits**: "Fixed 5 coverage bugs" not 5 separate bullets
-- **Skip trivial changes**: Badge updates, typo fixes don't need mention
+- **Focus on impact**: What can users do now?
+  What’s fixed?
+- **Group related commits**: “Fixed 5 coverage bugs” not 5 separate bullets
+- **Skip trivial changes**: Badge updates, typo fixes don’t need mention
 - **Link to full history**: Always include the compare URL for those who want details
 
 ## Quick Reference
@@ -358,17 +362,18 @@ The release workflow automatically creates a GitHub Release when a tag is pushed
 
 - **Release name**: Matches the tag (e.g., `v0.1.1`)
 
-- **Release notes**: Initially extracted from CHANGELOG; update manually with formatted notes
-  (see "Writing Release Notes" section)
+- **Release notes**: Initially extracted from CHANGELOG; update manually with formatted
+  notes (see “Writing Release Notes” section)
 
-- **Pre-release flag**: Automatically set for versions containing `-` (e.g., `1.0.0-beta.1`)
+- **Pre-release flag**: Automatically set for versions containing `-` (e.g.,
+  `1.0.0-beta.1`)
 
 After pushing a tag:
 
 1. Verify the release appears at: `https://github.com/OWNER/PACKAGE/releases`
 
-2. Edit the release to add properly formatted release notes following the "Writing Release
-   Notes" section format
+2. Edit the release to add properly formatted release notes following the “Writing
+   Release Notes” section format
 
 3. The release PR body should already contain the notes—copy them to the GitHub release
 
@@ -384,7 +389,7 @@ After pushing a tag:
 
 - Verify OIDC is configured: https://www.npmjs.com/package/PACKAGE/access
 
-- Check repository is listed under "Trusted Publishing"
+- Check repository is listed under “Trusted Publishing”
 
 - Ensure the repository is public
 

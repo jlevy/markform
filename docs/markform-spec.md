@@ -67,7 +67,7 @@ In this specification we use these keywords:
 | Term | Definition |
 | --- | --- |
 | **Field** | A single data entry point within a form. Fields have a kind (type), label, and optional constraints. |
-| **Kind** | The type of a field. One of: `string`, `number`, `string_list`, `checkboxes`, `single_select`, `multi_select`, `url`, `url_list`. Determines the field's value structure, input behavior, and validation rules. |
+| **Kind** | The type of a field. One of: `string`, `number`, `string_list`, `checkboxes`, `single_select`, `multi_select`, `url`, `url_list`. Determines the field’s value structure, input behavior, and validation rules. |
 | **Field group** | A container that organizes related fields together. Groups have an id, optional title, and may have custom validators. Currently (MF/0.1), groups contain only fields (they are not nested groups). |
 | **Template form** | A form with no values filled in (schema only). Starting point for filling. |
 | **Incomplete form** | A form with some values but not yet complete or valid. |
@@ -79,7 +79,7 @@ In this specification we use these keywords:
 | --- | --- |
 | **Simple checkbox** | Checkbox mode with 2 states: `todo` and `done`. GFM-compatible. |
 | **Multi checkbox** | Checkbox mode with 5 states: `todo`, `done`, `incomplete`, `active`, `na`. Default mode. |
-| **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit "unchecked = no". |
+| **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit “unchecked = no”. |
 
 **Field state concepts:**
 
@@ -94,7 +94,7 @@ In this specification we use these keywords:
 
 | Term | Definition |
 | --- | --- |
-| **Harness loop** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. Also called just "harness" or "loop" — these refer to the same component. |
+| **Harness loop** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. Also called just “harness” or “loop” — these refer to the same component. |
 | **Session** | A single execution run from template form to completed form (or abandonment). |
 | **Turn** | One iteration of the harness loop: inspect → recommend → apply patches → validate. |
 | **Patch** | A single atomic change operation applied to form values (e.g., setting a string field, toggling checkboxes). |
@@ -103,8 +103,8 @@ In this specification we use these keywords:
 
 | Term | Definition |
 | --- | --- |
-| **Session transcript** | YAML serialization of a session's turns for golden testing (`.session.yaml`). |
-| **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic "correct" values for testing. |
+| **Session transcript** | YAML serialization of a session’s turns for golden testing (`.session.yaml`). |
+| **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic “correct” values for testing. |
 | **Sidecar file** | A companion file with the same basename but different extension (e.g., `X.form.md` → `X.valid.ts`). |
 
 * * *
@@ -157,16 +157,16 @@ markform:
 | `max_issues_per_turn` | Suggested maximum issues surfaced per turn |
 | `max_parallel_agents` | Suggested maximum concurrent agents for parallel execution |
 
-  Unrecognized keys or non-numeric values are parse errors.
+Unrecognized keys or non-numeric values are parse errors.
 
-  Example:
-  ```yaml
-  markform:
-    spec: MF/0.1
-    harness:
-      max_turns: 50
-      max_parallel_agents: 4
-  ```
+Example:
+```yaml
+markform:
+  spec: MF/0.1
+  harness:
+    max_turns: 50
+    max_parallel_agents: 4
+```
 
 **Behavioral rules (*required*):**
 
@@ -364,7 +364,7 @@ Markform supports three checkbox modes:
 | `[ ]` | todo | Not started. Standard GFM ([spec][gfm-tasklists], [GitHub docs][github-tasklists]) |
 | `[x]` | done | Completed. Standard GFM |
 | `[/]` | incomplete | Work started but not finished. Obsidian convention ([discussion][obsidian-tasks-discussion]) |
-| `[*]` | active | Currently being worked on (current focus). Useful for agents to indicate which step they're executing |
+| `[*]` | active | Currently being worked on (current focus). Useful for agents to indicate which step they’re executing |
 | `[-]` | na | Not applicable / skipped. Obsidian convention ([guide][obsidian-tasks-guide]) |
 
 **`checkboxMode="simple"`** — 2 states for GFM compatibility:
@@ -895,9 +895,9 @@ Analysis completed with partial data due to API limitations.
 
 | Attribute | Required | Description |
 | --- | --- | --- |
-| `id` | Yes | Unique note identifier (implementation uses n1, n2, n3...) |
+| `id` | Yes | Unique note identifier (implementation uses n1, n2, n3 …) |
 | `ref` | Yes | Target element ID (field, group, or form) |
-| `role` | Yes | Who created the note (e.g., 'agent', 'user') |
+| `role` | Yes | Who created the note (e.g., ‘agent’, ‘user’) |
 
 > **Note (markform-254):** Notes no longer support a `state` attribute.
 > Skip/abort reasons are now embedded directly in the field value using sentinel syntax

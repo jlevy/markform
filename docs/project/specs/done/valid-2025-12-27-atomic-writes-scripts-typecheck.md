@@ -16,11 +16,14 @@ This validation spec documents the implementation of two maintenance improvement
 
 #### markform-259: Atomic File Writes
 
-Replaced all `writeFileSync` and non-atomic `writeFile` calls with the `atomically` library to prevent partial or corrupted files during write operations.
+Replaced all `writeFileSync` and non-atomic `writeFile` calls with the `atomically`
+library to prevent partial or corrupted files during write operations.
 
 **Files Modified:**
-- `packages/markform/src/cli/lib/shared.ts` - Updated `writeFile` helper to use `atomically`
-- `packages/markform/src/cli/lib/exportHelpers.ts` - Made export functions async, use shared helper
+- `packages/markform/src/cli/lib/shared.ts` - Updated `writeFile` helper to use
+  `atomically`
+- `packages/markform/src/cli/lib/exportHelpers.ts` - Made export functions async, use
+  shared helper
 - `packages/markform/src/cli/commands/examples.ts` - Await async export functions
 - `packages/markform/src/cli/commands/fill.ts` - Await async export functions
 - `packages/markform/scripts/regen-golden-sessions.ts` - Import from `atomically`
@@ -30,7 +33,8 @@ Replaced all `writeFileSync` and non-atomic `writeFile` calls with the `atomical
 
 #### markform-260: Scripts Type Checking
 
-Added `scripts/` directory to TypeScript type checking scope and fixed resulting type errors.
+Added `scripts/` directory to TypeScript type checking scope and fixed resulting type
+errors.
 
 **Files Modified:**
 - `packages/markform/tsconfig.json` - Added `scripts` to include array

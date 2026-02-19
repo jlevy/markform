@@ -63,11 +63,11 @@ Add two new field types to markform:
 
 **Example filled values:**
 
-```markdown
+````markdown
 {% url-field id="website" label="Company Website" required=true %}
 ```value
 https://example.com
-```
+````
 {% /url-field %}
 
 {% url-list id="sources" label="Source Citations" minItems=1 %}
@@ -76,7 +76,7 @@ https://en.wikipedia.org/wiki/Example
 https://www.crunchbase.com/organization/example
 ```
 {% /url-list %}
-```
+````
 
 ## Backward Compatibility
 
@@ -278,7 +278,7 @@ export type FieldValue =
   | MultiSelectValue
   | UrlValue       // NEW
   | UrlListValue;  // NEW
-```
+````
 
 #### New Patches
 
@@ -431,47 +431,59 @@ Add relevant reference URLs. At least one is required.
 {% form id="startup_research" title="Startup Research Form" %}
 
 {% field-group id="basic_info" title="Basic Information" %}
+
   - company_name (string, user-provided)
   - company_website (url, required)
   - founded_year (string, pattern YYYY)
   - hq_location (string)
   - one_liner (string, max 200 chars)
   - basic_info_sources (url-list, minItems=1)
+
 {% /field-group %}
 
 {% field-group id="founders" title="Founders" %}
+
   - founder_names (string-list)
   - founder_linkedin_urls (url-list)
   - founder_backgrounds (string, multiline)
   - founder_sources (url-list)
+
 {% /field-group %}
 
 {% field-group id="funding" title="Funding History" %}
+
   - total_raised (string, e.g., "$50M")
   - last_round (string, e.g., "Series B - $25M")
   - last_round_date (string, YYYY-MM)
   - key_investors (string-list)
   - funding_sources (url-list, minItems=1, required)
+
 {% /field-group %}
 
 {% field-group id="product" title="Product & Market" %}
+
   - product_description (string, multiline)
   - target_market (string)
   - competitors (string-list)
   - product_sources (url-list)
+
 {% /field-group %}
 
 {% field-group id="community" title="Community Presence" %}
+
   - hacker_news_posts (url-list) - HN submission/discussion links
   - product_hunt_launches (url-list)
   - notable_press (url-list)
+
 {% /field-group %}
 
 {% field-group id="assessment" title="Assessment" %}
+
   - strengths (string-list)
   - risks (string-list)
   - overall_rating (single-select: bullish/neutral/bearish)
   - assessment_notes (string, multiline)
+
 {% /field-group %}
 
 {% /form %}

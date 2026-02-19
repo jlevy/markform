@@ -222,8 +222,8 @@ interface ProgressCounts {
 }
 ```
 
-**Invariant:** `answeredFields + skippedFields + abortedFields + emptyFields ==
-totalFields`
+**Invariant:**
+`answeredFields + skippedFields + abortedFields + emptyFields == totalFields`
 
 **Remove:** `submittedFields` property (use `answeredFields` instead).
 
@@ -269,8 +269,8 @@ type MarkformError = ParseError | ValidationError;
 
 ### Summary
 
-Parse the `state` attribute on field tags, sentinel values in text value fences, and `{%
-note %}` tags. Add validation for state vs filled consistency.
+Parse the `state` attribute on field tags, sentinel values in text value fences, and
+`{% note %}` tags. Add validation for state vs filled consistency.
 
 ### Beads
 
@@ -358,13 +358,13 @@ function parseNoteTag(node: Tag, idIndex: Map<Id, IdIndexEntry>): Note {
 
 | Scenario | Error Type | Message |
 | --- | --- | --- |
-| `state="skipped"` on filled field | Validation | "state='skipped' not allowed on filled field" |
-| `state="aborted"` on filled field | Validation | "state='aborted' not allowed on filled field" |
-| `state="skipped"` on required field | Validation | "Cannot skip required field" |
-| `state` attribute on field-group | Validation | "state attribute not allowed on field-groups" |
-| Sentinel with conflicting state attr | Validation | "conflicting state='X' with \|Y\| sentinel" |
-| Note with invalid ref | Validation | "Note references unknown ID: X" |
-| Note missing id/ref/role | Validation | "Note missing required X attribute" |
+| `state="skipped"` on filled field | Validation | “state='skipped' not allowed on filled field” |
+| `state="aborted"` on filled field | Validation | “state='aborted' not allowed on filled field” |
+| `state="skipped"` on required field | Validation | “Cannot skip required field” |
+| `state` attribute on field-group | Validation | “state attribute not allowed on field-groups” |
+| Sentinel with conflicting state attr | Validation | “conflicting state='X' with \|Y\| sentinel” |
+| Note with invalid ref | Validation | “Note references unknown ID: X” |
+| Note missing id/ref/role | Validation | “Note missing required X attribute” |
 
 ### Automated Testing Strategy
 
@@ -444,8 +444,8 @@ function serializeFieldTag(field: Field, response: FieldResponse | undefined): s
 **Serialization mapping:** | Internal FieldResponse | → markform format |
 |------------------------|-------------------| | `undefined` or `{ state: 'empty' }` |
 no value fence, no state attr | | `{ state: 'skipped' }` | `state="skipped"`, no value
-fence | | `{ state: 'aborted' }` | `state="aborted"`, no value fence | | `{ state:
-'answered', value }` | value fence with content |
+fence | | `{ state: 'aborted' }` | `state="aborted"`, no value fence | |
+`{ state: 'answered', value }` | value fence with content |
 
 #### markform-217: Serialize notes
 

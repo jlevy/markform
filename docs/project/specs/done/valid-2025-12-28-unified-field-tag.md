@@ -5,7 +5,8 @@
 This is a validation spec documenting the post-testing validation performed and any
 remaining manual validation needed to confirm the unified field tag syntax migration.
 
-**Feature Plan:** [plan-2025-12-28-unified-field-tag.md](plan-2025-12-28-unified-field-tag.md)
+**Feature Plan:**
+[plan-2025-12-28-unified-field-tag.md](plan-2025-12-28-unified-field-tag.md)
 
 **Implementation Plan:** N/A (implementation details included in feature plan)
 
@@ -14,7 +15,8 @@ remaining manual validation needed to confirm the unified field tag syntax migra
 ## Validation Planning
 
 The unified field tag migration replaces 11 distinct field tags (`{% string-field %}`,
-`{% number-field %}`, etc.) with a single unified `{% field kind="..." %}` syntax.
+`{% number-field %}`, etc.)
+with a single unified `{% field kind="..." %}` syntax.
 
 ### Scope of Changes
 
@@ -33,7 +35,8 @@ The unified field tag migration replaces 11 distinct field tags (`{% string-fiel
 
 All 653 unit tests pass, including:
 
-- **Parse tests** (`parse.test.ts`): 75 tests covering all field kinds with unified syntax
+- **Parse tests** (`parse.test.ts`): 75 tests covering all field kinds with unified
+  syntax
 - **Serialize tests** (`serialize.test.ts`): 38 tests verifying correct output format
 - **Validate tests** (`validate.test.ts`): 41 tests for field validation
 - **Apply tests** (`apply.test.ts`): 28 tests for patch application
@@ -41,16 +44,19 @@ All 653 unit tests pass, including:
 - **Golden tests** (`golden.test.ts`): 3 tests validating session round-trip
 
 **New Error Case Tests Added** (6 tests in `parse.test.ts`):
-- `{% field %}` without `kind` attribute throws `"field tag missing required 'kind' attribute"`
+- `{% field %}` without `kind` attribute throws
+  `"field tag missing required 'kind' attribute"`
 - `{% field kind="invalid" %}` throws error with valid kinds list
-- `{% string-field %}` throws `"Legacy field tag 'string-field' is no longer supported. Use {% field kind="string" %} instead"`
+- `{% string-field %}` throws `"Legacy field tag 'string-field' is no longer supported.
+  Use {% field kind="string" %} instead"`
 - `{% number-field %}` throws legacy rejection error
 - `{% single-select %}` throws legacy rejection error
 - `{% table-field %}` throws legacy rejection error
 
 ### Integration and End-to-End Testing
 
-- **Golden session tests**: Verified parse-serialize round-trip with regenerated golden files
+- **Golden session tests**: Verified parse-serialize round-trip with regenerated golden
+  files
 - **Programmatic fill tests**: 8 tests validating end-to-end form filling
 - **CLI examples tests**: 18 tests validating example forms parse correctly
 

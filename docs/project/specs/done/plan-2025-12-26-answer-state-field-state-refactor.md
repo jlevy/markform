@@ -37,8 +37,8 @@ Problems:
 2. **`ProgressCounts` mixes concepts**: `emptyFields` counts `ResponseState.empty`, not
    `ProgressState.empty`
 
-3. **Redundant `valid` boolean**: `FieldProgress.valid` is always equivalent to `state
-   !== 'invalid'`
+3. **Redundant `valid` boolean**: `FieldProgress.valid` is always equivalent to
+   `state !== 'invalid'`
 
 4. **`ProgressState` conflates dimensions**: Mixes answer status, validity, and
    completeness into one enum
@@ -218,8 +218,8 @@ Based on grep analysis:
 
 6. Update `InspectResult` and `ApplyResult`:
 
-   - Replace `formState: ProgressState` with `formValid: boolean` + `formComplete:
-     boolean`
+   - Replace `formState: ProgressState` with `formValid: boolean` +
+     `formComplete: boolean`
 
 7. Update Zod schemas for all changed types
 
@@ -241,8 +241,8 @@ Based on grep analysis:
 
 **Type renames:**
 
-1. `AnswerState` type exported with values `'unanswered' | 'answered' | 'skipped' |
-   'aborted'`
+1. `AnswerState` type exported with values
+   `'unanswered' | 'answered' | 'skipped' | 'aborted'`
 
 2. `AnswerStateSchema` Zod schema validates correctly
 

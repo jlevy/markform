@@ -371,11 +371,11 @@ Add `markform research <file>` command that:
 
    ```
    {% string-list id="core_biography_sources" label="Core Bio Sources" %}{% /string-list %}
-   
+
    {% instructions ref="core_biography_sources" %}
    URLs used as sources for this section. One URL per line.
    {% /instructions %}
-   
+
    {% /field-group %}
    ```
 

@@ -2,14 +2,15 @@
 
 ## Purpose
 
-This technical design document defines the implementation of **full content preservation**
-during Markform canonical serialization. The goal is to ensure that all markdown content
-outside of Markform tags is preserved through parse → serialize round-trips, maintaining
-document structure and semantic equivalence.
+This technical design document defines the implementation of **full content
+preservation** during Markform canonical serialization.
+The goal is to ensure that all markdown content outside of Markform tags is preserved
+through parse → serialize round-trips, maintaining document structure and semantic
+equivalence.
 
-This addresses a gap between the Markform specification (which requires content preservation)
-and the current implementation (which only preserves HTML comments and content within
-Markform tags).
+This addresses a gap between the Markform specification (which requires content
+preservation) and the current implementation (which only preserves HTML comments and
+content within Markform tags).
 
 ## Background
 
@@ -17,12 +18,12 @@ The Markform specification (MF/0.1) was recently clarified to explicitly require
 preservation:
 
 > **Content preservation semantics (*required*):**
->
+> 
 > - *required:* All markdown content outside of Markform tags MUST be preserved on
 >   canonical serialization
 >
-> - *required:* The markdown structure MUST be equivalent after round-trip (same headings,
->   paragraphs, lists, code blocks, etc.)
+> - *required:* The markdown structure MUST be equivalent after round-trip (same
+>   headings, paragraphs, lists, code blocks, etc.)
 >
 > - *recommended:* Visual appearance SHOULD be preserved (same rendering output)
 
@@ -38,20 +39,24 @@ However, the current implementation does NOT preserve this content:
 
 **Related Documentation:**
 
-- [Markform Specification](../../../markform-spec.md) - Section "Non-Markform content policy"
+- [Markform Specification](../../../markform-spec.md) - Section “Non-Markform content
+  policy”
 - [Current Parser](../../../../packages/markform/src/engine/parse.ts)
 - [Current Serializer](../../../../packages/markform/src/engine/serialize.ts)
-- [Core Types](../../../../packages/markform/src/engine/coreTypes.ts) - `ParsedForm` interface
+- [Core Types](../../../../packages/markform/src/engine/coreTypes.ts) - `ParsedForm`
+  interface
 
 ## Summary of Task
 
-Implement **raw slicing** to preserve all markdown content outside of Markform tags during
-canonical serialization:
+Implement **raw slicing** to preserve all markdown content outside of Markform tags
+during canonical serialization:
 
 1. **Raw Content Storage**: Store original markdown text alongside parsed structure
 2. **Position Tracking**: Track byte/character positions of Markform tags in source
-3. **Splice-based Serialization**: Replace only Markform tag regions during serialization
-4. **Structure Equivalence**: Ensure round-trip produces structurally equivalent markdown
+3. **Splice-based Serialization**: Replace only Markform tag regions during
+   serialization
+4. **Structure Equivalence**: Ensure round-trip produces structurally equivalent
+   markdown
 
 **Core Approach - Raw Slicing:**
 
@@ -96,10 +101,14 @@ canonical Markform tag formatting.
 
 1. **Preserve all markdown content** - Headings, paragraphs, lists, code blocks outside
    form tags must survive round-trip
-2. **Structural equivalence** - The markdown structure must be equivalent after round-trip
-3. **Visual appearance preservation** - Rendering output should be identical (recommended)
-4. **Backward compatible API** - Existing code using `parseForm`/`serializeForm` works unchanged
-5. **Opt-out capability** - Allow regeneration from scratch when needed (e.g., normalization)
+2. **Structural equivalence** - The markdown structure must be equivalent after
+   round-trip
+3. **Visual appearance preservation** - Rendering output should be identical
+   (recommended)
+4. **Backward compatible API** - Existing code using `parseForm`/`serializeForm` works
+   unchanged
+5. **Opt-out capability** - Allow regeneration from scratch when needed (e.g.,
+   normalization)
 
 **Acceptance Criteria:**
 
@@ -135,32 +144,36 @@ canonical Markform tag formatting.
 1. **Granularity of preservation**: Should we preserve at form-level (before/after form)
    or at tag-level (between every tag)?
 
-   **Decision**: Tag-level for maximum fidelity. Store positions for all Markform tags.
+   **Decision**: Tag-level for maximum fidelity.
+   Store positions for all Markform tags.
 
 2. **Handling of tag modifications**: When a field is added/removed/reordered, how do we
    handle the surrounding content?
 
-   **Decision**: Content between tags is associated with preceding tag. New tags
-   get minimal spacing. Removed tags' trailing content attaches to previous tag.
+   **Decision**: Content between tags is associated with preceding tag.
+   New tags get minimal spacing.
+   Removed tags’ trailing content attaches to previous tag.
    Reordering falls back to regeneration mode.
 
 3. **Frontmatter handling**: Frontmatter is already handled specially - should it be
    part of raw slicing or remain separate?
 
-   **Decision**: Keep frontmatter handling separate (already works well). The
-   `rawSource` stores post-frontmatter content; frontmatter is managed independently.
+   **Decision**: Keep frontmatter handling separate (already works well).
+   The `rawSource` stores post-frontmatter content; frontmatter is managed
+   independently.
 
-4. **Doc block content preservation**: Should content within `{% documentation %}` blocks
-   be preserved verbatim?
+4. **Doc block content preservation**: Should content within `{% documentation %}`
+   blocks be preserved verbatim?
 
-   **Decision**: Yes. Doc blocks already store `bodyMarkdown` as raw text. The raw
-   slicing approach naturally preserves this since doc block regions are replaced
-   with their canonical serialization which includes the stored `bodyMarkdown`.
+   **Decision**: Yes. Doc blocks already store `bodyMarkdown` as raw text.
+   The raw slicing approach naturally preserves this since doc block regions are
+   replaced with their canonical serialization which includes the stored `bodyMarkdown`.
 
 5. **Programmatically created forms**: How to handle forms with no source?
 
-   **Decision**: Always regenerate. If `rawSource` is undefined, fall back to
-   current regeneration behavior. This is the existing behavior and remains correct.
+   **Decision**: Always regenerate.
+   If `rawSource` is undefined, fall back to current regeneration behavior.
+   This is the existing behavior and remains correct.
 
 6. **CLI normalization option**: Should there be an option to force regeneration?
 
@@ -349,7 +362,7 @@ function hasStructuralChanges(form: ParsedForm): boolean {
 3. **`postprocessToCommentSyntax()`** - Reverse transform for output
 4. **Markdoc AST** - Has position information via `node.location`
 
-**Key insight**: Markdoc's AST contains `location` information for each node:
+**Key insight**: Markdoc’s AST contains `location` information for each node:
 
 ```typescript
 interface Location {
@@ -358,8 +371,8 @@ interface Location {
 }
 ```
 
-We leverage this for position tracking. The `offset` field provides byte positions
-directly usable for slicing.
+We leverage this for position tracking.
+The `offset` field provides byte positions directly usable for slicing.
 
 ### Position Tracking Strategy
 
@@ -380,13 +393,15 @@ directly usable for slicing.
 - **CPU**: Splice-based serialization is O(n × m) where n = tags, m = source length
 - **Mitigation**: For very large forms (>100KB), could add size threshold for fallback
 
-**Decision**: No performance concern for typical forms. Defer optimization until needed.
+**Decision**: No performance concern for typical forms.
+Defer optimization until needed.
 
 ## Stage 4: Implementation Plan
 
 ### Phase 1: Core Infrastructure
 
-**Goal**: Add raw source storage and position tracking without changing serialization behavior.
+**Goal**: Add raw source storage and position tracking without changing serialization
+behavior.
 
 **Tasks:**
 
@@ -632,8 +647,8 @@ describe('CLI --normalize flag', () => {
 
 ### Tryscript Tests: CLI Output
 
-Add tryscript test verifying `markform inspect` and `markform apply` work correctly
-with content-preserving forms.
+Add tryscript test verifying `markform inspect` and `markform apply` work correctly with
+content-preserving forms.
 
 ## Appendix: Test Cases
 
@@ -702,4 +717,5 @@ All markdown structure must be preserved through round-trip.
 <!-- /form -->
 ```
 
-The code block content must be preserved verbatim; only the real form tags are processed.
+The code block content must be preserved verbatim; only the real form tags are
+processed.

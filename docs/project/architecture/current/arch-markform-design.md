@@ -98,7 +98,7 @@ The **Implementation Components** are specific to this TypeScript codebase:
 | Term | Definition |
 | --- | --- |
 | **Field** | A single data entry point within a form. Fields have a kind (type), label, and optional constraints. |
-| **Kind** | The type of a field. One of: `string`, `number`, `string_list`, `checkboxes`, `single_select`, `multi_select`, `url`, `url_list`. Determines the field's value structure, input behavior, and validation rules. |
+| **Kind** | The type of a field. One of: `string`, `number`, `string_list`, `checkboxes`, `single_select`, `multi_select`, `url`, `url_list`. Determines the field’s value structure, input behavior, and validation rules. |
 | **Field group** | A container that organizes related fields together. Groups have an id, optional title, and may have custom validators. Currently (MF/0.1), groups contain only fields (they are not nested groups). |
 | **Template form** | A form with no values filled in (schema only). Starting point for filling. |
 | **Incomplete form** | A form with some values but not yet complete or valid. |
@@ -110,7 +110,7 @@ The **Implementation Components** are specific to this TypeScript codebase:
 | --- | --- |
 | **Simple checkbox** | Checkbox mode with 2 states: `todo` and `done`. GFM-compatible. |
 | **Multi checkbox** | Checkbox mode with 5 states: `todo`, `done`, `incomplete`, `active`, `na`. Default mode. |
-| **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit "unchecked = no". |
+| **Explicit checkbox** | Checkbox mode requiring explicit `yes`/`no` answer for each option. No implicit “unchecked = no”. |
 
 **Field state concepts:**
 
@@ -125,7 +125,7 @@ The **Implementation Components** are specific to this TypeScript codebase:
 
 | Term | Definition |
 | --- | --- |
-| **Harness loop** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. Also called just "harness" or "loop" — these refer to the same component. |
+| **Harness loop** | The execution wrapper that manages step-by-step form filling, tracking state and suggesting next actions. Also called just “harness” or “loop” — these refer to the same component. |
 | **Session** | A single execution run from template form to completed form (or abandonment). |
 | **Turn** | One iteration of the harness loop: inspect → recommend → apply patches → validate. |
 | **Patch** | A single atomic change operation applied to form values (e.g., setting a string field, toggling checkboxes). |
@@ -134,8 +134,8 @@ The **Implementation Components** are specific to this TypeScript codebase:
 
 | Term | Definition |
 | --- | --- |
-| **Session transcript** | YAML serialization of a session's turns for golden testing (`.session.yaml`). |
-| **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic "correct" values for testing. |
+| **Session transcript** | YAML serialization of a session’s turns for golden testing (`.session.yaml`). |
+| **Completed mock** | A pre-filled completed form file used in mock mode to provide deterministic “correct” values for testing. |
 | **Sidecar file** | A companion file with the same basename but different extension (e.g., `X.form.md` → `X.valid.ts`). |
 
 ### Future: Extracting the Core Specification
@@ -643,8 +643,9 @@ sequenceDiagram
 
 #### Execution IDs
 
-Execution IDs uniquely identify each execution thread during form filling. They enable
-proper tracking of LLM calls, tool calls, and events in parallel execution scenarios.
+Execution IDs uniquely identify each execution thread during form filling.
+They enable proper tracking of LLM calls, tool calls, and events in parallel execution
+scenarios.
 
 **Format:**
 
@@ -695,8 +696,8 @@ parseExecutionId(id: string):
 
 Execution IDs are passed to all harness callbacks (`onLlmCallStart`, `onLlmCallEnd`,
 `onToolStart`, `onToolEnd`, `onTurnStart`, `onTurnComplete`) to associate events with
-their execution thread. This enables accurate timing analysis and debugging for parallel
-executions.
+their execution thread.
+This enables accurate timing analysis and debugging for parallel executions.
 
 #### Research Workflow
 
@@ -910,8 +911,8 @@ Thin wrapper around the tool contract:
 
 **Fill record policy:** CLI form-filling commands (`set`, `next`) do not produce fill
 records. Fill records are exclusively for harness-driven filling via the `fill` command
-and programmatic `fillForm()` API. The `fill` command skips writing an empty `.fill.json`
-sidecar when no turns were executed (e.g., form was already complete).
+and programmatic `fillForm()` API. The `fill` command skips writing an empty
+`.fill.json` sidecar when no turns were executed (e.g., form was already complete).
 
 **Deferred to MF/0.2:**
 
@@ -1147,9 +1148,9 @@ Markform MCP server.
 
 ### Rendering API (`markform/render`)
 
-Extracted rendering functions available as a standalone subpath export, enabling external
-applications to render forms and fill records with visual parity to `markform serve`
-without depending on CLI/server code.
+Extracted rendering functions available as a standalone subpath export, enabling
+external applications to render forms and fill records with visual parity to
+`markform serve` without depending on CLI/server code.
 
 **Module structure (`src/render/`):**
 
@@ -1164,8 +1165,8 @@ without depending on CLI/server code.
 
 - Render module has **no dependencies on CLI or server code** (one-way: serve.ts imports
   from render/, not the reverse)
-- Functions produce **HTML fragments**, not full pages — consumers provide their own page
-  shell
+- Functions produce **HTML fragments**, not full pages — consumers provide their own
+  page shell
 - `serve.ts` re-exports from render/ for backward compatibility
 
 **Subpath export:** `markform/render` (configured in package.json exports and
@@ -1353,8 +1354,8 @@ Deliverable: `engine/serialize.ts`
 ### 4) Built-in validation + inspect heuristic + summaries
 
 Required, numeric, select constraints, completion stats, issue prioritization.
-Implement `computeStructureSummary(schema)` and `computeProgressSummary(schema, values,
-issues)`.
+Implement `computeStructureSummary(schema)` and
+`computeProgressSummary(schema, values, issues)`.
 
 Deliverable: `engine/validate.ts` + `engine/inspect.ts` + `engine/summaries.ts`
 
@@ -1416,9 +1417,7 @@ Full specification included above.
      `quarterly-v1.form.md`); run `markform inspect` separately at any time to check
      status
 
-   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --mock
-     --mock-source examples/earnings-analysis/earnings-analysis.mock.filled.form.md
-     --record examples/earnings-analysis/earnings-analysis.session.yaml`
+   - `markform fill examples/earnings-analysis/earnings-analysis.form.md --mock --mock-source examples/earnings-analysis/earnings-analysis.mock.filled.form.md --record examples/earnings-analysis/earnings-analysis.session.yaml`
 
 3. Run tests:
 
@@ -1512,10 +1511,10 @@ Specified in this document but deferred from MF/0.1 proof of concept:
     min?: string;              // minimum date in same format
     max?: string;              // maximum date in same format
   }
-  
+
   // FieldValue
   | { kind: 'date'; value: string | null }  // stored in normalized ISO format
-  
+
   // Patch
   | { op: 'set_date'; fieldId: Id; value: string | null }
   ```
@@ -1881,9 +1880,11 @@ custom value not in the predefined list.
 
 ```md
 {% field kind="single_select" id="delivery_type" label="Delivery type" allowOther=true %}
+
 - [ ] Physical {% #physical %}
 - [ ] Digital {% #digital %}
 - [ ] Hybrid {% #hybrid %}
+
 {% /field %}
 ```
 

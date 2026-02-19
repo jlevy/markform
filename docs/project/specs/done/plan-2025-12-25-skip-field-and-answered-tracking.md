@@ -13,8 +13,8 @@ This feature adds:
 
 2. Tracking of “answered” (has value) and “skipped” (explicitly skipped) fields
 
-3. Updated completion semantics: form is complete when `answered + skipped ==
-   totalFields`
+3. Updated completion semantics: form is complete when
+   `answered + skipped == totalFields`
 
 ## Background
 
@@ -114,8 +114,8 @@ interface SkipFieldPatch {
 
 - **skipped** = field was explicitly skipped via `skip_field` patch
 
-- **complete** = all fields are either answered or skipped (`answered + skipped ==
-  total`)
+- **complete** = all fields are either answered or skipped
+  (`answered + skipped == total`)
 
 Add new fields to `FieldProgress`:
 
@@ -170,8 +170,8 @@ never complete when running with a subset of roles.
 
 **Current Implementation Bug (2025-12-25):** The `isFormComplete()` function in
 `summaries.ts` uses global `counts.totalFields` instead of role-filtered counts.
-When `skippedFields > 0`, calling `isFormComplete(progressSummary)` compares `answered +
-skipped` against ALL fields, not just target-role fields.
+When `skippedFields > 0`, calling `isFormComplete(progressSummary)` compares
+`answered + skipped` against ALL fields, not just target-role fields.
 This bug doesn’t manifest when `skippedFields === 0` because the fallback is
 `noRequiredIssues` which IS role-filtered.
 
@@ -842,8 +842,7 @@ Update the `isComplete` definition from:
 
 To:
 
-> `isComplete: boolean; // true when (answered + skipped == total target-role fields)
-> AND no issues with severity: 'required'`
+> `isComplete: boolean; // true when (answered + skipped == total target-role fields) AND no issues with severity: 'required'`
 
 Add explanation:
 
@@ -954,7 +953,9 @@ describe("checkbox mode/required constraints", () => {
   it("rejects explicit mode with required=false", () => {
     const md = `
 {% checkboxes id="test" label="Test" checkboxMode="explicit" required=false %}
+
 - [ ] Option 1 {% #opt1 %}
+
 {% /checkboxes %}
 `;
     expect(() => parseMarkformMarkdown(md)).toThrow(/explicit.*inherently required/i);
@@ -963,7 +964,9 @@ describe("checkbox mode/required constraints", () => {
   it("accepts explicit mode without required attribute (defaults to true)", () => {
     const md = `
 {% checkboxes id="test" label="Test" checkboxMode="explicit" %}
+
 - [ ] Option 1 {% #opt1 %}
+
 {% /checkboxes %}
 `;
     const result = parseMarkformMarkdown(md);
@@ -974,7 +977,9 @@ describe("checkbox mode/required constraints", () => {
   it("accepts explicit mode with required=true (redundant but valid)", () => {
     const md = `
 {% checkboxes id="test" label="Test" checkboxMode="explicit" required=true %}
+
 - [ ] Option 1 {% #opt1 %}
+
 {% /checkboxes %}
 `;
     const result = parseMarkformMarkdown(md);
@@ -985,7 +990,9 @@ describe("checkbox mode/required constraints", () => {
   it("multi mode defaults to optional", () => {
     const md = `
 {% checkboxes id="test" label="Test" checkboxMode="multi" %}
+
 - [ ] Option 1 {% #opt1 %}
+
 {% /checkboxes %}
 `;
     const result = parseMarkformMarkdown(md);
@@ -996,7 +1003,9 @@ describe("checkbox mode/required constraints", () => {
   it("simple mode defaults to optional", () => {
     const md = `
 {% checkboxes id="test" label="Test" checkboxMode="simple" %}
+
 - [ ] Option 1 {% #opt1 %}
+
 {% /checkboxes %}
 `;
     const result = parseMarkformMarkdown(md);

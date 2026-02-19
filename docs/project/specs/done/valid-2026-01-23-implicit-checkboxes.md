@@ -5,12 +5,14 @@
 This validation spec documents the testing performed for the Implicit Checkboxes feature
 and the manual validation steps for final review.
 
-**Feature Plan:** [plan-2026-01-23-implicit-checkboxes.md](./plan-2026-01-23-implicit-checkboxes.md)
+**Feature Plan:**
+[plan-2026-01-23-implicit-checkboxes.md](./plan-2026-01-23-implicit-checkboxes.md)
 
 ## Validation Planning
 
-This feature enables "plan documents" — markdown documents with checkboxes but without
-explicit field wrappers — to be parsed as valid Markforms. It includes:
+This feature enables “plan documents” — markdown documents with checkboxes but without
+explicit field wrappers — to be parsed as valid Markforms.
+It includes:
 
 1. Implicit checkboxes field when form has no explicit field tags
 2. `findAllHeadings()` and `findEnclosingHeadings()` utility functions
@@ -119,7 +121,9 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" title="Test" %}
+
 - [ ] Task without ID
+
 {% /form %}
 EOF
 
