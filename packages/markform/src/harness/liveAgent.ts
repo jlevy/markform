@@ -73,6 +73,7 @@ export class LiveAgent implements Agent {
   private executionId: string;
   private toolChoice: 'auto' | 'required';
   private maxRetries: number;
+  private signal?: AbortSignal;
 
   constructor(config: LiveAgentConfig) {
     this.model = config.model;
@@ -85,6 +86,7 @@ export class LiveAgent implements Agent {
     this.callbacks = config.callbacks;
     this.executionId = config.executionId ?? '0-serial';
     this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
+    this.signal = config.signal;
     // TODO: Make toolChoice configurable per-model or per-form in the future.
     // For now, 'required' is always safe since Markform agents must use tools.
     // Some models (e.g., gpt-5-mini) don't reliably call tools with 'auto'.
@@ -197,6 +199,7 @@ export class LiveAgent implements Agent {
 
     // Call the model (stateless - full context provided each turn)
     let result;
+    const llmCallStartMs = Date.now();
     try {
       result = await generateText({
         model: this.model,
@@ -206,13 +209,20 @@ export class LiveAgent implements Agent {
         toolChoice: this.toolChoice,
         maxRetries: this.maxRetries,
         stopWhen: stepCountIs(this.maxStepsPerTurn),
+        abortSignal: this.signal,
       });
     } catch (error) {
+      // Let AbortError propagate unwrapped so programmaticFill.ts
+      // can detect cancellation vs. API failure
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
+      }
       // Wrap API errors with rich context for debugging
       throw wrapApiError(error, this.provider ?? 'unknown', modelId);
     }
 
-    // Call onLlmCallEnd callback (errors don't abort)
+    // Call onLlmCallEnd callback with timing and provider metadata (errors don't abort)
+    const llmCallDurationMs = Date.now() - llmCallStartMs;
     if (this.callbacks?.onLlmCallEnd) {
       try {
         this.callbacks.onLlmCallEnd({
@@ -220,6 +230,9 @@ export class LiveAgent implements Agent {
           inputTokens: result.usage?.inputTokens ?? 0,
           outputTokens: result.usage?.outputTokens ?? 0,
           executionId: this.executionId,
+          durationMs: llmCallDurationMs,
+          responseId: result.response?.id,
+          requestId: result.response?.headers?.['x-request-id'],
         });
       } catch {
         // Ignore callback errors

@@ -194,6 +194,12 @@ export interface LiveAgentConfig {
    * @default 3
    */
   maxRetries?: number;
+
+  /**
+   * AbortSignal for cancelling in-flight LLM calls.
+   * Propagated from FillOptions.signal through to generateText().
+   */
+  signal?: AbortSignal;
 }
 
 // =============================================================================
@@ -355,6 +361,12 @@ export interface FillCallbacks {
     outputTokens: number;
     /** Execution thread ID for parallel tracking */
     executionId: string;
+    /** Duration of the generateText() call in milliseconds */
+    durationMs?: number;
+    /** Provider response ID (e.g., "chatcmpl-..." for OpenAI) */
+    responseId?: string;
+    /** Provider request ID from response headers (e.g., x-request-id) */
+    requestId?: string;
   }): void;
 
   /** Called when a parallel batch starts execution */
@@ -564,7 +576,15 @@ export interface TurnProgress {
  */
 export type FillStatus =
   | { ok: true }
-  | { ok: false; reason: 'max_turns' | 'batch_limit' | 'cancelled'; message?: string }
+  | {
+      ok: false;
+      reason: 'max_turns' | 'batch_limit' | 'cancelled';
+      message?: string;
+      /** Error class name (e.g., 'AbortError' for signal cancellation) */
+      errorType?: string;
+      /** HTTP status code or error code, if available */
+      errorCode?: string;
+    }
   | {
       ok: false;
       reason: 'error';
@@ -580,6 +600,10 @@ export type FillStatus =
        * and real-time error handling.
        */
       error?: Error;
+      /** Error class name (e.g., 'AbortError', 'APICallError', 'MarkformLlmError') */
+      errorType?: string;
+      /** HTTP status code or error code, if available */
+      errorCode?: string;
     };
 
 /**

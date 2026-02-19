@@ -582,6 +582,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       callbacks: mergedCallbacks,
       maxStepsPerTurn: options.maxStepsPerTurn,
       toolChoice: options.toolChoice,
+      signal: options.signal,
     });
 
   // 7. Run harness loop
@@ -667,12 +668,34 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     try {
       response = await agent.fillFormTool(turnIssues, form, maxPatchesPerTurn, previousRejections);
     } catch (error) {
+      // Check if this is a signal-triggered abort — return 'cancelled', not 'error'
+      if (options.signal?.aborted) {
+        let record: FillRecord | undefined;
+        if (collector) {
+          collector.setStatus('cancelled');
+          record = collector.getRecord(getProgressCounts(form, targetRoles));
+        }
+        return buildResult(
+          form,
+          turnCount,
+          totalPatches,
+          { ok: false, reason: 'cancelled' },
+          inputContextWarnings,
+          turnIssues,
+          record,
+        );
+      }
       // Agent threw an error - capture it in fill record and return
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorObj = error instanceof Error ? error : undefined;
+      const errorType = error instanceof Error ? error.name : undefined;
+      const errorCode =
+        (error as { statusCode?: number })?.statusCode?.toString() ??
+        (error as { code?: string })?.code ??
+        undefined;
       let record: FillRecord | undefined;
       if (collector) {
-        collector.setStatus('failed', errorMessage);
+        collector.setStatus('failed', errorMessage, { errorType, errorCode });
         record = collector.getRecord(getProgressCounts(form, targetRoles));
       }
       // Fire onError callback so consumers can log/report in real time
@@ -687,7 +710,14 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         form,
         turnCount,
         totalPatches,
-        { ok: false, reason: 'error', message: errorMessage, error: errorObj },
+        {
+          ok: false,
+          reason: 'error',
+          message: errorMessage,
+          error: errorObj,
+          errorType,
+          errorCode,
+        },
         inputContextWarnings,
         turnIssues,
         record,
@@ -869,6 +899,7 @@ async function fillFormParallel(
         maxStepsPerTurn: options.maxStepsPerTurn,
         executionId,
         toolChoice: options.toolChoice,
+        signal: options.signal,
       })
     );
   };
@@ -1203,9 +1234,23 @@ async function runMultiTurnForItems(
         previousRejections,
       );
     } catch (error) {
+      // Check if this is a signal-triggered abort — return 'cancelled', not 'error'
+      if (options.signal?.aborted) {
+        return {
+          patchesApplied,
+          turnsUsed,
+          aborted: true,
+          status: { ok: false, reason: 'cancelled' },
+        };
+      }
       // Return early with error result so it can be tracked by the parallel harness
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorObj = error instanceof Error ? error : undefined;
+      const errorType = error instanceof Error ? error.name : undefined;
+      const errorCode =
+        (error as { statusCode?: number })?.statusCode?.toString() ??
+        (error as { code?: string })?.code ??
+        undefined;
       // Fire onError callback so consumers can log/report in real time
       if (errorObj && mergedCallbacks?.onError) {
         try {
@@ -1218,7 +1263,14 @@ async function runMultiTurnForItems(
         patchesApplied,
         turnsUsed,
         aborted: true,
-        status: { ok: false, reason: 'error', message: errorMessage, error: errorObj },
+        status: {
+          ok: false,
+          reason: 'error',
+          message: errorMessage,
+          error: errorObj,
+          errorType,
+          errorCode,
+        },
       };
     }
 

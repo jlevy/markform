@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy with LLM assistance
 
-**Status:** Draft
+**Status:** Ready
 
 **Related:**
 
@@ -760,24 +760,11 @@ Use MF-2’s explicit `durationMs` for per-turn `llmCallDurationMs` (more precis
 Leave fill-level `TimingBreakdown.llmTimeMs` using timestamp pairs (no regression risk).
 Document the two sources in code comments.
 
-## Open Questions
+### 6. Event Log Schema Location — RESOLVED: Option (a)
 
-### 6. Event Log Schema Location
-
-Should the Zod schemas for the 7 event types in MF-5 live in `fillRecord.ts` alongside
-the rest of the FillRecord schema, or in a separate `eventLogSchema.ts` file?
-The 7 event schemas add ~50 lines.
-
-**Options:**
-
-- **(a) In `fillRecord.ts`** — Keeps all FillRecord schema in one file.
-  The file is already ~300 lines; adding ~50 more is manageable.
-- **(b) In a separate `eventLogSchema.ts`** — Better separation of concerns.
-  The event types mirror the `CollectorEvent` interfaces in `fillRecordCollector.ts`.
-
-**Recommendation:** Option (a) — keep in `fillRecord.ts` for simplicity.
-The event schemas are part of the FillRecord contract and belong with the rest of the
-schema.
+Keep Zod schemas in `fillRecord.ts`. The event schemas are part of the FillRecord
+contract and belong with the rest of the schema.
+The file is ~300 lines; adding ~75 more is manageable.
 
 ## Senior Engineering Review Notes
 

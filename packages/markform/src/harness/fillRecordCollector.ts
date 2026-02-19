@@ -65,6 +65,12 @@ interface LlmCallEndEvent {
   inputTokens: number;
   outputTokens: number;
   executionId: string;
+  /** Duration of the generateText() call in milliseconds */
+  durationMs?: number;
+  /** Provider response ID (e.g., "chatcmpl-..." for OpenAI) */
+  responseId?: string;
+  /** Provider request ID from response headers (e.g., x-request-id) */
+  requestId?: string;
 }
 
 interface ToolStartEvent {
@@ -94,7 +100,8 @@ interface WebSearchEvent {
   executionId: string;
 }
 
-type CollectorEvent =
+/** Union of all event types captured during a fill operation. */
+export type CollectorEvent =
   | TurnStartEvent
   | TurnCompleteEvent
   | LlmCallStartEvent
@@ -154,6 +161,8 @@ export class FillRecordCollector implements FillCallbacks {
   // Explicit status override
   private explicitStatus?: FillRecordStatus;
   private explicitStatusDetail?: string;
+  private explicitErrorType?: string;
+  private explicitErrorCode?: string;
 
   // Track pending tool calls by name (for matching start/end)
   private pendingToolCalls = new Map<string, ToolStartEvent>();
@@ -222,6 +231,9 @@ export class FillRecordCollector implements FillCallbacks {
     inputTokens: number;
     outputTokens: number;
     executionId: string;
+    durationMs?: number;
+    responseId?: string;
+    requestId?: string;
   }): void {
     this.events.push({
       type: 'llm_call_end',
@@ -230,6 +242,9 @@ export class FillRecordCollector implements FillCallbacks {
       inputTokens: call.inputTokens,
       outputTokens: call.outputTokens,
       executionId: call.executionId,
+      durationMs: call.durationMs,
+      responseId: call.responseId,
+      requestId: call.requestId,
     });
     this.pendingLlmCalls.delete(call.executionId);
   }
@@ -298,9 +313,15 @@ export class FillRecordCollector implements FillCallbacks {
   /**
    * Set explicit status (overrides auto-detection from progress).
    */
-  setStatus(status: FillRecordStatus, detail?: string): void {
+  setStatus(
+    status: FillRecordStatus,
+    detail?: string,
+    errorInfo?: { errorType?: string; errorCode?: string },
+  ): void {
     this.explicitStatus = status;
     this.explicitStatusDetail = detail;
+    this.explicitErrorType = errorInfo?.errorType;
+    this.explicitErrorCode = errorInfo?.errorCode;
   }
 
   /**
@@ -340,6 +361,8 @@ export class FillRecordCollector implements FillCallbacks {
       form: this.form,
       status,
       statusDetail: this.explicitStatusDetail,
+      errorType: this.explicitErrorType,
+      errorCode: this.explicitErrorCode,
       formProgress,
       llm: {
         provider: this.provider,
@@ -353,6 +376,7 @@ export class FillRecordCollector implements FillCallbacks {
       timeline,
       execution,
       customData: Object.keys(this.customData).length > 0 ? this.customData : undefined,
+      eventLog: this.events,
     };
   }
 
@@ -371,6 +395,11 @@ export class FillRecordCollector implements FillCallbacks {
     const turnStartEvents = new Map<string, TurnStartEvent>();
     const turnToolCalls = new Map<string, ToolCallRecord[]>();
     const turnTokens = new Map<string, { input: number; output: number }>();
+    // Per-turn LLM call tracking (MF-3: duration, count, provider IDs)
+    const turnLlmDurationMs = new Map<string, number>();
+    const turnLlmCallCount = new Map<string, number>();
+    const turnResponseIds = new Map<string, string[]>();
+    const turnRequestIds = new Map<string, string[]>();
 
     // First pass: collect turn start events and tool calls
     for (const event of this.events) {
@@ -444,6 +473,21 @@ export class FillRecordCollector implements FillCallbacks {
             tokens.input += event.inputTokens;
             tokens.output += event.outputTokens;
           }
+          // Accumulate per-turn LLM call details (MF-3)
+          turnLlmCallCount.set(tk, (turnLlmCallCount.get(tk) ?? 0) + 1);
+          if (event.durationMs !== undefined) {
+            turnLlmDurationMs.set(tk, (turnLlmDurationMs.get(tk) ?? 0) + event.durationMs);
+          }
+          if (event.responseId) {
+            const ids = turnResponseIds.get(tk) ?? [];
+            ids.push(event.responseId);
+            turnResponseIds.set(tk, ids);
+          }
+          if (event.requestId) {
+            const ids = turnRequestIds.get(tk) ?? [];
+            ids.push(event.requestId);
+            turnRequestIds.set(tk, ids);
+          }
         }
       }
     }
@@ -488,6 +532,10 @@ export class FillRecordCollector implements FillCallbacks {
           patchesApplied: completeEvent.patchesApplied,
           patchesRejected: completeEvent.patchesRejected,
           tokens,
+          llmCallDurationMs: turnLlmDurationMs.get(key),
+          llmCallCount: turnLlmCallCount.get(key),
+          responseIds: turnResponseIds.get(key)?.length ? turnResponseIds.get(key) : undefined,
+          requestIds: turnRequestIds.get(key)?.length ? turnRequestIds.get(key) : undefined,
           toolCalls,
           ...(completeEvent.coercionWarnings &&
             completeEvent.coercionWarnings.length > 0 && {
