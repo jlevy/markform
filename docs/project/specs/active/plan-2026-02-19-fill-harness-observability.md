@@ -168,10 +168,36 @@ In-flight LLM calls cannot be interrupted.
    }
    ```
 
-   This ensures the existing between-turn signal checks in `programmaticFill.ts` handle
-   mid-call aborts as `cancelled` status (not `error`).
+5. **`programmaticFill.ts`** — Update catch blocks (serial at line 669, parallel at line
+   1205\) to detect signal-triggered aborts.
+   When `AbortError` propagates from `liveAgent.ts`, it’s caught by the `fillFormTool()`
+   catch block — which currently returns `reason: 'error'`. The between-turn signal
+   check (line 712) never fires because the catch already returns.
+   Fix: check signal state in the catch:
 
-**Impact:** ~10 lines across 3 files.
+   ```typescript
+   // Serial path, catch block (line 669-694):
+   } catch (error) {
+     // Check if this is a signal-triggered abort — return 'cancelled', not 'error'
+     if (options.signal?.aborted) {
+       let record: FillRecord | undefined;
+       if (collector) {
+         collector.setStatus('cancelled');
+         record = collector.getRecord(getProgressCounts(form, targetRoles));
+       }
+       return buildResult(
+         form, turnCount, totalPatches,
+         { ok: false, reason: 'cancelled' },
+         inputContextWarnings, turnIssues, record,
+       );
+     }
+     // ... existing error handling unchanged ...
+   }
+   ```
+
+   Same pattern for the parallel catch at line 1205-1222.
+
+**Impact:** ~20 lines across 3 files.
 Fully backward-compatible — `signal` is already optional everywhere.
 
 ### MF-2. Extend `onLlmCallEnd` with Duration and Provider Metadata
@@ -267,14 +293,14 @@ FillRecord to support the fill record browser and post-hoc debugging of stalled 
 
 **Changes:**
 
-1. **`fillRecord.ts`** — Add optional fields to `TimelineEntrySchema` (after line ~149,
-   after `tokens`):
+1. **`fillRecord.ts`** — Add optional fields to `TimelineEntrySchema` (after line 150,
+   after the `tokens` field, before `toolCalls` at line 152):
 
    ```typescript
    /** Total LLM call duration in milliseconds (sum of all generateText() calls this turn) */
-   llmCallDurationMs: z.number().int().nonneg().optional(),
+   llmCallDurationMs: z.number().int().nonnegative().optional(),
    /** Number of LLM calls made this turn */
-   llmCallCount: z.number().int().nonneg().optional(),
+   llmCallCount: z.number().int().nonnegative().optional(),
    /** Provider response IDs for this turn (e.g., "chatcmpl-..." for OpenAI) */
    responseIds: z.array(z.string()).optional(),
    /** Provider request IDs for this turn (e.g., x-request-id header values) */
@@ -339,7 +365,7 @@ use (`error?: Error` at `harnessTypes.ts:582`). However:
 **Changes:**
 
 1. **`harnessTypes.ts`** — Add serializable error fields to the error case of
-   `FillStatus` (lines 568-583):
+   `FillStatus` (lines 565-583):
 
    ```typescript
    | {
@@ -395,8 +421,29 @@ use (`error?: Error` at `harnessTypes.ts:582`). However:
    errorCode: z.string().optional(),
    ```
 
-4. **`fillRecordCollector.ts`** — When `setStatus('failed', ...)` is called, accept and
-   store the structured error fields.
+4. **`fillRecordCollector.ts`** — Extend `setStatus()` (line 301-303) to accept optional
+   structured error fields.
+   Change from positional args to an options object:
+
+   ```typescript
+   // Before:
+   setStatus(status: FillRecordStatus, detail?: string): void
+
+   // After:
+   setStatus(
+     status: FillRecordStatus,
+     detail?: string,
+     errorInfo?: { errorType?: string; errorCode?: string },
+   ): void {
+     this.explicitStatus = status;
+     this.explicitStatusDetail = detail;
+     this.explicitErrorType = errorInfo?.errorType;
+     this.explicitErrorCode = errorInfo?.errorCode;
+   }
+   ```
+
+   Note: Using a third parameter (not changing `detail` to an object) preserves backward
+   compatibility with existing `setStatus('failed', message)` calls.
 
 5. **`harnessTypes.ts`** — Also add `errorType`/`errorCode` to the `cancelled` reason
    case. Cancellation via `AbortSignal` produces an `AbortError`, and storing this in the
@@ -452,8 +499,8 @@ The change is simply to stop discarding them.
    corresponding Zod schema:
 
    ```typescript
-   // Define Zod schemas for each event type
-   const TurnStartEventSchema = z.object({
+   // Define Zod schemas for each event type (mirror interfaces in fillRecordCollector.ts:34-104)
+   const EventTurnStartSchema = z.object({
      type: z.literal('turn_start'),
      timestamp: z.string().datetime(),
      turnNumber: z.number().int().positive(),
@@ -461,26 +508,77 @@ The change is simply to stop discarding them.
      order: z.number().int().nonnegative(),
      executionId: z.string(),
    });
-
-   // ... similar for other 6 event types ...
+   const EventTurnCompleteSchema = z.object({
+     type: z.literal('turn_complete'),
+     timestamp: z.string().datetime(),
+     turnNumber: z.number().int().positive(),
+     patchesApplied: z.number().int().nonnegative(),
+     patchesRejected: z.number().int().nonnegative(),
+     issuesAddressed: z.number().int().nonnegative(),
+     coercionWarnings: z.array(PatchWarningSchema).optional(),
+     executionId: z.string().optional(),
+   });
+   const EventLlmCallStartSchema = z.object({
+     type: z.literal('llm_call_start'),
+     timestamp: z.string().datetime(),
+     model: z.string(),
+     executionId: z.string(),
+   });
+   const EventLlmCallEndSchema = z.object({
+     type: z.literal('llm_call_end'),
+     timestamp: z.string().datetime(),
+     model: z.string(),
+     inputTokens: z.number().int().nonnegative(),
+     outputTokens: z.number().int().nonnegative(),
+     executionId: z.string(),
+     durationMs: z.number().int().nonnegative().optional(),   // from MF-2
+     responseId: z.string().optional(),                        // from MF-2
+     requestId: z.string().optional(),                         // from MF-2
+   });
+   const EventToolStartSchema = z.object({
+     type: z.literal('tool_start'),
+     timestamp: z.string().datetime(),
+     name: z.string(),
+     input: z.unknown(),
+     executionId: z.string(),
+   });
+   const EventToolEndSchema = z.object({
+     type: z.literal('tool_end'),
+     timestamp: z.string().datetime(),
+     name: z.string(),
+     output: z.unknown(),
+     durationMs: z.number().int().nonnegative(),
+     error: z.string().optional(),
+     executionId: z.string(),
+   });
+   const EventWebSearchSchema = z.object({
+     type: z.literal('web_search'),
+     timestamp: z.string().datetime(),
+     query: z.string(),
+     resultCount: z.number().int().nonnegative(),
+     provider: z.string(),
+     executionId: z.string(),
+   });
 
    const CollectorEventSchema = z.discriminatedUnion('type', [
-     TurnStartEventSchema,
-     TurnCompleteEventSchema,
-     LlmCallStartEventSchema,
-     LlmCallEndEventSchema,
-     ToolStartEventSchema,
-     ToolEndEventSchema,
-     WebSearchEventSchema,
+     EventTurnStartSchema,
+     EventTurnCompleteSchema,
+     EventLlmCallStartSchema,
+     EventLlmCallEndSchema,
+     EventToolStartSchema,
+     EventToolEndSchema,
+     EventWebSearchSchema,
    ]);
 
-   // In FillRecordSchema:
+   // In FillRecordSchema (after customData at line 360, before closing });):
    /** Raw chronological event log for debugging and visualization */
    eventLog: z.array(CollectorEventSchema).optional(),
    ```
 
    The field is `optional` in the Zod schema for backward compatibility — existing fill
    records without `eventLog` still parse fine.
+   The `FillRecord` type (`fillRecord.ts:363`) will automatically include it via
+   `z.infer<>`.
 
 3. **`fillRecordCollector.ts`** — Update the `LlmCallEndEvent` interface to include the
    new fields from MF-2 (`durationMs`, `responseId`, `requestId`) so they appear in the
@@ -503,8 +601,8 @@ The change is simply to stop discarding them.
 **Size estimate:** A 30-turn parallel fill generates ~200 events at ~100-200 bytes each
 = 20-40KB. Typical fill records are ~290KB. The event log adds ~10-15%.
 
-**Impact:** ~5 lines in `fillRecordCollector.ts`, ~50 lines in `fillRecord.ts` (Zod
-schemas for 7 event types + discriminated union).
+**Impact:** ~5 lines in `fillRecordCollector.ts`, ~75 lines in `fillRecord.ts` (Zod
+schemas for 7 event types + discriminated union + FillRecordSchema addition).
 Backward-compatible — optional field.
 
 **Open question:** Should the event log Zod schemas live in `fillRecord.ts` alongside
@@ -518,16 +616,23 @@ See [Open Question 6](#open-questions).
 
 Files: `harnessTypes.ts`, `liveAgent.ts`, `programmaticFill.ts`
 
-- [ ] Add `signal?: AbortSignal` to `LiveAgentConfig` interface in `harnessTypes.ts`
-- [ ] Add `private signal?: AbortSignal` field and constructor assignment in
-  `liveAgent.ts`
+- [ ] Add `signal?: AbortSignal` to `LiveAgentConfig` interface in
+  `harnessTypes.ts:127-197` (after `maxRetries` at line 196)
+- [ ] Add `private signal?: AbortSignal` field to `LiveAgent` class in
+  `liveAgent.ts:63-75` (after `maxRetries` at line 75)
+- [ ] Add `this.signal = config.signal` to `LiveAgent` constructor in
+  `liveAgent.ts:77-103` (after line 87)
 - [ ] Add `abortSignal: this.signal` to `generateText()` call in `liveAgent.ts:201-209`
-- [ ] Pass `signal: options.signal` in serial `createLiveAgent()` call in
-  `programmaticFill.ts:574`
-- [ ] Pass `signal: options.signal` in parallel `createAgentForExecution()` in
-  `programmaticFill.ts:860`
-- [ ] Decide AbortError handling strategy (see Open Question 1) and implement
-  accordingly
+- [ ] Add AbortError passthrough in catch block at `liveAgent.ts:210-213`: check
+  `error.name === 'AbortError'` before calling `wrapApiError()`
+- [ ] Pass `signal: options.signal` in serial `createLiveAgent()` call at
+  `programmaticFill.ts:574-585`
+- [ ] Pass `signal: options.signal` in parallel `createAgentForExecution()` at
+  `programmaticFill.ts:860-872`
+- [ ] Add signal check in serial catch block at `programmaticFill.ts:669`: if
+  `options.signal?.aborted`, return `cancelled` instead of `error`
+- [ ] Add signal check in parallel catch block at `programmaticFill.ts:1205`: if
+  `options.signal?.aborted`, return `cancelled`/`aborted` instead of `error`
 
 ### Phase 2: Callback and FillRecord Enhancements (MF-2, MF-3, MF-4, MF-5)
 
@@ -555,13 +660,17 @@ Files: `harnessTypes.ts`, `liveAgent.ts`, `fillRecordCollector.ts`, `fillRecord.
 **MF-4: Structured error classification**
 
 - [ ] Add `errorType` and `errorCode` to `FillStatus` error case in
-  `harnessTypes.ts:565-583`
-- [ ] Add `errorType` and `errorCode` to `FillStatus` cancelled case in
-  `harnessTypes.ts:567`
-- [ ] Extract `error.name` and `statusCode` in catch blocks in `programmaticFill.ts`
-  (serial: ~669, parallel: equivalent)
-- [ ] Add `errorType` and `errorCode` to FillRecord status section in `fillRecord.ts`
-- [ ] Update `fillRecordCollector.ts` `setStatus()` to accept structured error fields
+  `harnessTypes.ts:568-583`
+- [ ] Add `errorType` and `errorCode` to `FillStatus` cancelled/max_turns/batch_limit
+  case in `harnessTypes.ts:567`
+- [ ] Extract `error.name` and `statusCode` in serial catch block at
+  `programmaticFill.ts:669-694`
+- [ ] Extract `error.name` and `statusCode` in parallel catch block at
+  `programmaticFill.ts:1205-1222`
+- [ ] Add `errorType` and `errorCode` to FillRecord status section in
+  `fillRecord.ts:306-308` (near `statusDetail`)
+- [ ] Update `fillRecordCollector.ts:301-303` `setStatus()` to accept and store
+  `errorType` and `errorCode`
 
 **MF-5: Raw event log in FillRecord**
 
@@ -669,6 +778,66 @@ The 7 event schemas add ~50 lines.
 **Recommendation:** Option (a) — keep in `fillRecord.ts` for simplicity.
 The event schemas are part of the FillRecord contract and belong with the rest of the
 schema.
+
+## Senior Engineering Review Notes
+
+### Critical Issue Found and Fixed: AbortError Catch Path
+
+The original issue (MF-1) proposed letting `AbortError` propagate unwrapped from
+`liveAgent.ts` and relying on the existing between-turn signal checks in
+`programmaticFill.ts` to handle it as cancellation.
+**This doesn’t work.** The catch blocks in `programmaticFill.ts` (serial at line 669,
+parallel at 1205) catch the `AbortError` BEFORE the signal check at line 712 runs.
+They’d return `{ reason: 'error' }` instead of `{ reason: 'cancelled' }`.
+
+**Fix added to spec:** The catch blocks now check `options.signal?.aborted` first,
+before treating the error as a fill failure.
+This is the correct approach because it checks signal state (authoritative) rather than
+relying on error type matching (fragile).
+
+### Design Consideration: `responseIds`/`requestIds` as Arrays
+
+The spec uses arrays because a single turn *could* involve multiple `generateText()`
+calls. In practice, `fillFormTool()` calls `generateText()` exactly once per invocation
+(multi-step tool use happens within a single `generateText()` call via `stopWhen`). So
+`llmCallCount` will always be 1 per turn and the arrays will have exactly one element.
+
+The arrays are **intentionally defensive** — if the architecture changes in the future
+(retry within a turn, multi-model calls), they handle it without schema migration.
+The cost is negligible (one-element arrays vs.
+scalar fields).
+
+### Duration Measurement Placement
+
+The `Date.now()` timer for `durationMs` in MF-2 is placed AFTER the `onLlmCallStart`
+callback (which fires before `generateText()`) and BEFORE the `generateText()` call.
+This correctly measures only `generateText()` wall-clock time, not callback overhead.
+
+On AbortError: if `generateText()` throws, we don’t reach the `onLlmCallEnd` block, so
+no duration is reported for cancelled/failed calls.
+This is correct — partial duration of a failed call has no diagnostic value.
+
+### Backward Compatibility Verified
+
+- **Callback API**: All new fields are optional — existing `onLlmCallEnd` callbacks
+  ignore extra properties
+- **FillRecord schema**: All new fields use `.optional()` — existing serialized records
+  parse unchanged
+- **`setStatus()`**: New third parameter is optional — existing
+  `setStatus('failed', msg)` calls work unchanged
+- **`LiveAgentConfig`**: `signal` is optional — existing configs without it work
+  unchanged
+- **`_testAgent` path**: Both serial and parallel paths skip `createLiveAgent()` when
+  `_testAgent` is provided, so the `signal` plumbing doesn’t affect test mock behavior
+
+### Golden Test Impact
+
+MF-3 adds optional fields to `TimelineEntrySchema` and MF-5 adds `eventLog` to
+`FillRecordSchema`. The golden tests use `StableFillRecord` which strips timing.
+Need to verify whether `llmCallDurationMs`, `responseIds`, `requestIds`, and `eventLog`
+need to be added to the `StableFillRecord` stripping logic, or whether they should be
+included in golden output (since they’re optional, existing goldens won’t break — but
+new fills will produce different output).
 
 ## Alternate Approaches Considered
 
