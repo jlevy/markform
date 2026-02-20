@@ -27,6 +27,21 @@ import type {
 } from './fillRecord.js';
 import { currentTime, generateSessionId } from './timeUtils.js';
 
+/**
+ * Attempt to produce a JSON-safe clone of a value.
+ * Falls back to a string representation if serialization fails
+ * (e.g., BigInt, circular references, class instances).
+ */
+function safeJsonValue(value: unknown): unknown {
+  try {
+    // Fast path: JSON roundtrip to verify serializability and strip non-JSON values
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    // Fallback: convert to string so the event log remains writable
+    return String(value);
+  }
+}
+
 // =============================================================================
 // Internal Event Types
 // =============================================================================
@@ -376,7 +391,7 @@ export class FillRecordCollector implements FillCallbacks {
       timeline,
       execution,
       customData: Object.keys(this.customData).length > 0 ? this.customData : undefined,
-      eventLog: this.events,
+      eventLog: this.sanitizeEventLog(),
     };
   }
 
@@ -590,6 +605,24 @@ export class FillRecordCollector implements FillCallbacks {
       }
     }
     return undefined;
+  }
+
+  /**
+   * Sanitize event log for JSON serialization.
+   * Tool input/output values are typed as `unknown` and may contain
+   * non-JSON-safe values (BigInt, circular objects, class instances)
+   * from custom tools. Sanitize these before exposing in the fill record.
+   */
+  private sanitizeEventLog(): CollectorEvent[] {
+    return this.events.map((event) => {
+      if (event.type === 'tool_start') {
+        return { ...event, input: safeJsonValue(event.input) };
+      }
+      if (event.type === 'tool_end') {
+        return { ...event, output: safeJsonValue(event.output) };
+      }
+      return event;
+    });
   }
 
   private calculateLlmTotals(): {

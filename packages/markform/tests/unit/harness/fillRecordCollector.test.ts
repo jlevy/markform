@@ -1110,6 +1110,71 @@ describe('FillRecordCollector', () => {
       }
     });
 
+    it('sanitizes non-JSON-safe tool input/output in eventLog', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      // Create a circular object to simulate non-JSON-safe tool output
+      const circular: Record<string, unknown> = { name: 'test' };
+      circular.self = circular;
+
+      collector.onToolStart({
+        name: 'custom_tool',
+        input: circular,
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'custom_tool',
+        output: circular,
+        durationMs: 100,
+        executionId: 'eid:serial:o0',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.eventLog).toBeDefined();
+
+      // Both events should be sanitized to strings (since circular can't be JSON serialized)
+      const toolStart = record.eventLog!.find((e) => e.type === 'tool_start');
+      const toolEnd = record.eventLog!.find((e) => e.type === 'tool_end');
+      expect(toolStart).toBeDefined();
+      expect(toolEnd).toBeDefined();
+
+      // Verify the entire eventLog can be safely JSON-serialized
+      expect(() => JSON.stringify(record.eventLog)).not.toThrow();
+    });
+
+    it('preserves JSON-safe tool input/output in eventLog', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onToolStart({
+        name: 'fill_form',
+        input: { patches: [{ op: 'set_string', fieldId: 'name', value: 'test' }] },
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'fill_form',
+        output: { patchCount: 1 },
+        durationMs: 50,
+        executionId: 'eid:serial:o0',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      const toolStart = record.eventLog!.find((e) => e.type === 'tool_start');
+      if (toolStart?.type === 'tool_start') {
+        // JSON-safe input should be preserved as-is
+        expect(toolStart.input).toEqual({
+          patches: [{ op: 'set_string', fieldId: 'name', value: 'test' }],
+        });
+      }
+    });
+
     it('eventLog captures web search events', () => {
       const collector = new FillRecordCollector({
         form: mockFormMetadata,
