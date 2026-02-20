@@ -145,15 +145,11 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
  * Used during normalization to drop rows that carry no data.
  */
 export function isRowFullyEmpty(row: TableRowResponse): boolean {
-  return Object.values(row).every(
-    (cell) =>
-      !cell ||
-      cell.state === 'skipped' ||
-      cell.state === 'aborted' ||
-      cell.value === undefined ||
-      cell.value === null ||
-      cell.value === '',
-  );
+  return Object.values(row).every((cell) => {
+    if (!cell || cell.state === 'skipped' || cell.state === 'aborted') return true;
+    // 'answered' cell with no meaningful value
+    return cell.value === undefined || cell.value === null || cell.value === '';
+  });
 }
 
 // =============================================================================

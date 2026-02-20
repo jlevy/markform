@@ -426,57 +426,30 @@ describe('parseTable', () => {
   });
 
   describe('isRowFullyEmpty', () => {
-    it('returns true for row with all skipped cells', () => {
-      const row: TableRowResponse = {
-        name: { state: 'skipped' },
-        age: { state: 'skipped' },
-      };
-      expect(isRowFullyEmpty(row)).toBe(true);
+    const EMPTY_ROWS: [string, TableRowResponse][] = [
+      ['all skipped', { name: { state: 'skipped' }, age: { state: 'skipped' } }],
+      ['all aborted', { name: { state: 'aborted' }, age: { state: 'aborted' } }],
+      ['empty object', {}],
+      [
+        'answered with empty values',
+        { name: { state: 'answered', value: '' }, age: { state: 'answered', value: undefined } },
+      ],
+    ];
+
+    for (const [label, row] of EMPTY_ROWS) {
+      it(`returns true: ${label}`, () => {
+        expect(isRowFullyEmpty(row)).toBe(true);
+      });
+    }
+
+    it('returns false when any cell has a value', () => {
+      expect(
+        isRowFullyEmpty({ name: { state: 'answered', value: 'Alice' }, age: { state: 'skipped' } }),
+      ).toBe(false);
     });
 
-    it('returns true for row with all aborted cells', () => {
-      const row: TableRowResponse = {
-        name: { state: 'aborted' },
-        age: { state: 'aborted' },
-      };
-      expect(isRowFullyEmpty(row)).toBe(true);
-    });
-
-    it('returns true for empty row object', () => {
-      const row: TableRowResponse = {};
-      expect(isRowFullyEmpty(row)).toBe(true);
-    });
-
-    it('returns true for row with answered but empty-value cells', () => {
-      const row: TableRowResponse = {
-        name: { state: 'answered', value: '' },
-        age: { state: 'answered', value: undefined },
-      };
-      expect(isRowFullyEmpty(row)).toBe(true);
-    });
-
-    it('returns false for row with one answered cell', () => {
-      const row: TableRowResponse = {
-        name: { state: 'answered', value: 'Alice' },
-        age: { state: 'skipped' },
-      };
-      expect(isRowFullyEmpty(row)).toBe(false);
-    });
-
-    it('returns false for row with all answered cells', () => {
-      const row: TableRowResponse = {
-        name: { state: 'answered', value: 'Alice' },
-        age: { state: 'answered', value: 30 },
-      };
-      expect(isRowFullyEmpty(row)).toBe(false);
-    });
-
-    it('returns false for row with numeric zero value', () => {
-      const row: TableRowResponse = {
-        score: { state: 'answered', value: 0 },
-        name: { state: 'skipped' },
-      };
-      expect(isRowFullyEmpty(row)).toBe(false);
+    it('returns false for numeric zero (falsy but meaningful)', () => {
+      expect(isRowFullyEmpty({ score: { state: 'answered', value: 0 } })).toBe(false);
     });
   });
 

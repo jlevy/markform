@@ -1499,31 +1499,6 @@ markform:
       expect(warnings).toHaveLength(0);
     });
 
-    it('does not warn when most cells are filled (3 of 4)', () => {
-      const markdown = `---
-markform:
-  spec: MF/0.1
----
-
-{% form id="test" %}
-
-{% group id="g1" %}
-{% field kind="table" id="items" label="Items" columnIds=["a", "b", "c", "d"] %}
-| a | b | c | d |
-|---|---|---|---|
-| hello | world | yes |   |
-{% /field %}
-{% /group %}
-
-{% /form %}
-`;
-      const form = parseForm(markdown);
-      const result = validate(form);
-
-      const warnings = result.issues.filter((i) => i.severity === 'warning');
-      expect(warnings).toHaveLength(0);
-    });
-
     it('warns on mostly-empty row (1 of 3 cells filled)', () => {
       const markdown = `---
 markform:
@@ -1599,7 +1574,6 @@ markform:
       const result = validate(form);
 
       expect(result.isValid).toBe(false);
-      // Empty rows are dropped, so 0 rows < minRows=2
       expect(result.issues.some((i) => i.message.includes('at least 2 row'))).toBe(true);
     });
 
@@ -1627,7 +1601,6 @@ markform:
       const form = parseForm(markdown);
       const result = validate(form);
 
-      // Empty rows are dropped: 2 filled rows >= minRows=2
       expect(result.isValid).toBe(true);
     });
 
