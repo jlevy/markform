@@ -3,9 +3,9 @@ type: is
 id: is-01khx9xwpv03xfg2cc5aqtwn8g
 title: "Spec: Table row validation — empty row dropping, cell-level warnings, minRows/maxRows enforcement"
 kind: epic
-status: open
+status: closed
 priority: 2
-version: 6
+version: 7
 spec_path: docs/project/specs/active/plan-2026-02-20-validate-form-rows.md
 labels: []
 dependencies: []
@@ -16,5 +16,7 @@ child_order_hints:
   - is-01khx9yvwgs8af6m7q1yp8jb6s
   - is-01khx9z3qgwx2s3gfnwbsnv45j
 created_at: 2026-02-20T10:36:03.162Z
-updated_at: 2026-02-20T10:36:43.119Z
+updated_at: 2026-02-20T17:28:14.954Z
+closed_at: 2026-02-20T17:28:14.954Z
+close_reason: "All phases complete: doc updates, empty row dropping in parse+apply, mostly-empty warnings, minRows enforcement, full test coverage"
 ---
