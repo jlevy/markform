@@ -124,7 +124,7 @@ The resolution priority is:
 ```
 1. options.providers[name]     per-call providers (highest priority)
 2. BUILT_IN_PROVIDERS[name]    current 5 defaults (preserved as-is)
-3.                       actionable error with hint
+3.                    actionable error with hint
 ```
 
 ### Core Types
