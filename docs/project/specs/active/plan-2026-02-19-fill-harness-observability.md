@@ -682,7 +682,57 @@ Files: `harnessTypes.ts`, `liveAgent.ts`, `fillRecordCollector.ts`, `fillRecord.
 - [ ] Include `this.events` as `eventLog` in `getRecord()` return value
   (`fillRecordCollector.ts:335-356`)
 
-### Phase 3: Tests and Validation
+### Phase 3: Documentation Updates
+
+Update public-facing documentation to reflect all implemented changes from MF-1 through
+MF-5. The code changes are backward-compatible, so docs additions are purely additive.
+
+**`docs/markform-apis.md`:**
+
+- [ ] Update `FillCallbacks` table and `onLlmCallEnd` row (line 362): add `durationMs`,
+  `responseId`, `requestId`, `error` fields to the parameter description
+- [ ] Update `onLlmCallEnd` example in the code block (lines 342-344): show new fields
+  in the destructured callback parameter
+- [ ] Update `FillStatus` table (lines 249-258): add `errorType` and `errorCode`
+  optional fields to the description for `reason: 'error'`, `'cancelled'`,
+  `'max_turns'`, and `'batch_limit'` cases
+- [ ] Expand the `signal` row in FillOptions table (line 214): note that signal is now
+  propagated to `generateText()` for in-flight LLM call cancellation (not just
+  between-turn checking)
+- [ ] Add `eventLog` to the FillRecord fields table (lines 411-428): describe it as an
+  optional chronological event stream with 7 event types (`turn_start`, `turn_complete`,
+  `llm_call_start`, `llm_call_end`, `tool_start`, `tool_end`, `web_search`)
+- [ ] Add timeline entry detail fields to FillRecord documentation: mention
+  `llmCallDurationMs`, `llmCallCount`, `responseIds`, `requestIds` as optional fields on
+  timeline entries for per-turn LLM call analysis
+- [ ] Add a brief “Observability” or “Cancellation and Observability” subsection after
+  the FillCallbacks section explaining:
+  - Signal propagation behavior (in-flight cancellation via AbortSignal)
+  - Provider metadata correlation (using `responseId`/`requestId` to look up requests in
+    provider dashboards)
+  - Error classification (using `errorType`/`errorCode` for serialization-friendly error
+    handling in batch pipelines)
+
+**`docs/markform-reference.md`:**
+
+- [ ] No changes needed — the reference is focused on form syntax and field kinds, not
+  harness internals. The CLI quick reference already documents `--record-fill` via the
+  APIs doc link.
+
+**`docs/markform-spec.md`:**
+
+- [ ] No changes needed for MF/0.1 — the spec covers the form format, data model, and
+  tool API layers. Harness observability (callbacks, FillRecord, signal) is an
+  implementation-level concern documented in `markform-apis.md`, not a spec-level
+  concern.
+
+**`README.md`:**
+
+- [ ] No changes needed — the README provides a high-level overview and links to the API
+  docs for details. The `signal` option is already listed in the FillOptions table in
+  `markform-apis.md`.
+
+### Phase 4: Tests and Validation
 
 - [ ] Add unit test for signal propagation: verify `AbortSignal` cancels in-flight
   `generateText()` calls and returns `cancelled` status

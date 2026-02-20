@@ -211,7 +211,7 @@ const result = await fillForm({
 | `enableParallel` | `boolean` | `false` | Enable parallel execution for forms with `parallel` batches |
 | `maxParallelAgents` | `number` | `4` | Max concurrent agents for parallel batches |
 | `callbacks` | `FillCallbacks` | `undefined` | Progress callbacks |
-| `signal` | `AbortSignal` | `undefined` | Cancellation signal |
+| `signal` | `AbortSignal` | `undefined` | Cancellation signal propagated to in-flight `generateText()` calls |
 | `additionalTools` | `Record<string, Tool>` | `undefined` | Custom tools for agent |
 | `recordFill` | `boolean` | (required) | Collect detailed FillRecord with timeline and stats |
 
@@ -265,6 +265,12 @@ When `ok` is `false`, the status also includes:
   `.provider`, `.model`, and `.retryable` properties.
   Not serialized into FillRecord — use for in-memory diagnostics and real-time error
   handling.
+- `errorType?: string` — Error class name (e.g., `'AbortError'`, `'APICallError'`,
+  `'MarkformLlmError'`). Available on all failure reasons.
+  Survives JSON serialization (unlike `error`), so it is also stored in FillRecord.
+- `errorCode?: string` — HTTP status code or error code as a string (e.g., `'429'`,
+  `'503'`). Extracted from `error.statusCode` or `error.code`. Also stored in
+  FillRecord.
 
 ### Resumable Form Fills
 
@@ -339,8 +345,9 @@ const callbacks: FillCallbacks = {
   onLlmCallStart: ({ model }) => {
     console.log(`Calling ${model}...`);
   },
-  onLlmCallEnd: ({ inputTokens, outputTokens }) => {
-    console.log(`Tokens: ${inputTokens} in, ${outputTokens} out`);
+  onLlmCallEnd: ({ inputTokens, outputTokens, durationMs, responseId }) => {
+    console.log(`Tokens: ${inputTokens} in, ${outputTokens} out, ${durationMs}ms`);
+    if (responseId) console.log(`  Provider response: ${responseId}`);
   },
 };
 
@@ -359,7 +366,7 @@ await fillForm({
 | `onToolStart` | `{ name, input }` | Called before a tool executes |
 | `onToolEnd` | `{ name, output, durationMs, error? }` | Called after a tool completes |
 | `onLlmCallStart` | `{ model }` | Called before an LLM request |
-| `onLlmCallEnd` | `{ model, inputTokens, outputTokens }` | Called after an LLM response |
+| `onLlmCallEnd` | `{ model, inputTokens, outputTokens, executionId, durationMs?, responseId?, requestId?, error? }` | Called after an LLM call completes (success or failure) |
 | `onWebSearch` | `{ query, resultCount, provider }` | Called when a web search is performed |
 | `onError` | `(error: Error, { turnNumber })` | Called when an error occurs during the fill loop |
 
@@ -384,6 +391,37 @@ interface PatchRejection {
   message: string;     // Why the patch was rejected
 }
 ```
+
+### Cancellation and Observability
+
+The `signal` option enables cancelling in-flight LLM calls.
+The `AbortSignal` is propagated directly to `generateText()`, so aborting will interrupt
+an active LLM request immediately — not just between turns.
+When aborted, the fill returns `{ ok: false, reason: 'cancelled' }`.
+
+```typescript
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 60_000); // 60s timeout
+
+const result = await fillForm({
+  form, model, enableWebSearch: true, captureWireFormat: false, recordFill: true,
+  signal: controller.signal,
+});
+```
+
+The `onLlmCallEnd` callback fires on both success and failure, providing:
+
+- `durationMs` — wall-clock time of the `generateText()` call
+- `responseId` — provider response ID (e.g., OpenAI’s `chatcmpl-...`) for looking up
+  requests in provider dashboards
+- `requestId` — provider request ID from the `x-request-id` response header
+- `error` — error message string when the call failed (timeout, rate limit, network
+  error)
+
+For batch pipelines where `Error` objects don’t survive JSON serialization, `FillStatus`
+and `FillRecord` include `errorType` (error class name like `'MarkformLlmError'`) and
+`errorCode` (HTTP status like `'429'`), enabling structured error routing without
+parsing error messages.
 
 ### FillRecord
 
@@ -418,6 +456,9 @@ if (result.record) {
 | `durationMs` | `number` | Total duration in milliseconds |
 | `form` | `object` | Form metadata (id, title, structure) |
 | `status` | `string` | `'completed'`, `'partial'`, `'failed'`, `'cancelled'` |
+| `statusDetail` | `string?` | Human-readable status detail (e.g., error message) |
+| `errorType` | `string?` | Error class name (e.g., `'MarkformLlmError'`) |
+| `errorCode` | `string?` | HTTP status code or error code (e.g., `'429'`) |
 | `formProgress` | `ProgressCounts` | Final form progress counts |
 | `llm` | `object` | LLM usage (provider, model, tokens) |
 | `toolSummary` | `ToolSummary` | Aggregated tool statistics |
@@ -425,6 +466,33 @@ if (result.record) {
 | `timeline` | `TimelineEntry[]` | Turn-by-turn execution history |
 | `execution` | `ExecutionMetadata` | Parallel execution details |
 | `customData` | `object` | Optional client-defined data |
+| `eventLog` | `CollectorEvent[]?` | Chronological event stream for debugging (see below) |
+
+**Timeline entry detail fields:**
+
+Each `TimelineEntry` in the `timeline` array includes per-turn LLM call details:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `llmCallDurationMs` | `number?` | Total LLM call duration this turn (ms) |
+| `llmCallCount` | `number?` | Number of `generateText()` calls this turn |
+| `responseIds` | `string[]?` | Provider response IDs (e.g., `"chatcmpl-..."` for OpenAI) |
+| `requestIds` | `string[]?` | Provider request IDs from response headers (e.g., `x-request-id`) |
+
+These fields enable correlating turns with provider dashboards for debugging stalled or
+slow LLM calls.
+
+**Event log:**
+
+When `recordFill: true`, the `eventLog` array captures every collector event in
+chronological order.
+The 7 event types are: `turn_start`, `turn_complete`, `llm_call_start`, `llm_call_end`,
+`tool_start`, `tool_end`, `web_search`. Each event includes a `timestamp`,
+`executionId`, and type-specific data.
+
+The event log preserves the chronological interleaving that the structured timeline
+aggregates away — useful for debugging parallel execution and powering fill record
+browser visualizations.
 
 ### formatFillRecordSummary(record, options?): string
 
