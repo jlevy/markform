@@ -354,7 +354,7 @@ export interface FillCallbacks {
     executionId: string;
   }): void;
 
-  /** Called after an LLM response */
+  /** Called after an LLM response (including failed calls) */
   onLlmCallEnd?(call: {
     model: string;
     inputTokens: number;
@@ -367,6 +367,8 @@ export interface FillCallbacks {
     responseId?: string;
     /** Provider request ID from response headers (e.g., x-request-id) */
     requestId?: string;
+    /** Error message when the LLM call failed (timeout, rate limit, network error) */
+    error?: string;
   }): void;
 
   /** Called when a parallel batch starts execution */

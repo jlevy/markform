@@ -86,6 +86,8 @@ interface LlmCallEndEvent {
   responseId?: string;
   /** Provider request ID from response headers (e.g., x-request-id) */
   requestId?: string;
+  /** Error message when the LLM call failed (timeout, rate limit, network error) */
+  error?: string;
 }
 
 interface ToolStartEvent {
@@ -249,6 +251,7 @@ export class FillRecordCollector implements FillCallbacks {
     durationMs?: number;
     responseId?: string;
     requestId?: string;
+    error?: string;
   }): void {
     this.events.push({
       type: 'llm_call_end',
@@ -260,6 +263,7 @@ export class FillRecordCollector implements FillCallbacks {
       durationMs: call.durationMs,
       responseId: call.responseId,
       requestId: call.requestId,
+      error: call.error,
     });
     this.pendingLlmCalls.delete(call.executionId);
   }

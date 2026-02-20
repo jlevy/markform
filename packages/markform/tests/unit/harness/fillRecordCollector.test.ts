@@ -1001,6 +1001,102 @@ describe('FillRecordCollector', () => {
     });
   });
 
+  describe('onLlmCallEnd with error field (MF-2 gap fix)', () => {
+    it('records error string in eventLog when LLM call fails', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onLlmCallStart({ model: 'gpt-4', executionId: 'eid:serial:o0' });
+      collector.onLlmCallEnd({
+        model: 'gpt-4',
+        inputTokens: 0,
+        outputTokens: 0,
+        executionId: 'eid:serial:o0',
+        durationMs: 5000,
+        error: 'Request timed out after 30000ms',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      const endEvent = record.eventLog!.find((e) => e.type === 'llm_call_end');
+      expect(endEvent).toBeDefined();
+      if (endEvent?.type === 'llm_call_end') {
+        expect(endEvent.error).toBe('Request timed out after 30000ms');
+        expect(endEvent.durationMs).toBe(5000);
+        expect(endEvent.inputTokens).toBe(0);
+        expect(endEvent.outputTokens).toBe(0);
+      }
+    });
+
+    it('omits error field from eventLog when LLM call succeeds', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onLlmCallStart({ model: 'gpt-4', executionId: 'eid:serial:o0' });
+      collector.onLlmCallEnd({
+        model: 'gpt-4',
+        inputTokens: 500,
+        outputTokens: 100,
+        executionId: 'eid:serial:o0',
+        durationMs: 2500,
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      const endEvent = record.eventLog!.find((e) => e.type === 'llm_call_end');
+      expect(endEvent).toBeDefined();
+      if (endEvent?.type === 'llm_call_end') {
+        expect(endEvent.error).toBeUndefined();
+      }
+    });
+
+    it('cleans up pendingLlmCalls on error (no orphaned starts)', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onLlmCallStart({ model: 'gpt-4', executionId: 'eid:serial:o0' });
+      collector.onLlmCallEnd({
+        model: 'gpt-4',
+        inputTokens: 0,
+        outputTokens: 0,
+        executionId: 'eid:serial:o0',
+        durationMs: 5000,
+        error: 'Rate limit exceeded',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 0,
+        requiredIssuesRemaining: 1,
+        isComplete: false,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      // Should have a timeline entry with llmCallCount=1 (even though it errored)
+      expect(record.timeline.length).toBe(1);
+      expect(record.timeline[0]!.llmCallCount).toBe(1);
+      expect(record.timeline[0]!.llmCallDurationMs).toBe(5000);
+    });
+  });
+
   describe('setStatus with errorInfo (MF-4)', () => {
     it('stores errorType and errorCode from errorInfo parameter', () => {
       const collector = new FillRecordCollector({

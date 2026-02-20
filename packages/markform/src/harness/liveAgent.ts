@@ -212,6 +212,24 @@ export class LiveAgent implements Agent {
         abortSignal: this.signal,
       });
     } catch (error) {
+      // Fire onLlmCallEnd on failure so consumers get duration and error info
+      // even when generateText() throws (timeout, rate limit, network error).
+      const llmCallDurationMs = Date.now() - llmCallStartMs;
+      if (this.callbacks?.onLlmCallEnd) {
+        try {
+          this.callbacks.onLlmCallEnd({
+            model: modelId,
+            inputTokens: 0,
+            outputTokens: 0,
+            executionId: this.executionId,
+            durationMs: llmCallDurationMs,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        } catch {
+          // Ignore callback errors
+        }
+      }
+
       // Let AbortError propagate unwrapped so programmaticFill.ts
       // can detect cancellation vs. API failure
       if (error instanceof Error && error.name === 'AbortError') {

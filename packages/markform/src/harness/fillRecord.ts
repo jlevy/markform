@@ -303,6 +303,7 @@ const EventLlmCallEndSchema = z.object({
   durationMs: z.number().int().nonnegative().optional(),
   responseId: z.string().optional(),
   requestId: z.string().optional(),
+  error: z.string().optional(),
 });
 
 const EventToolStartSchema = z.object({
