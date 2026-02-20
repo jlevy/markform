@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.27
+
+### Patch Changes
+
+- c7b0278: Fill harness observability and signal propagation
+
 ## 0.1.26
 
 ### Patch Changes
