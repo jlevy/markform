@@ -2230,6 +2230,123 @@ markform:
     });
   });
 
+  describe('empty row filtering in set_table', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "role"] %}
+| Name | Role |
+|------|------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('filters out fully-empty rows from set_table', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          value: [
+            { name: 'Alice', role: 'Eng' },
+            { name: null, role: null },
+            { name: 'Bob', role: 'PM' },
+          ],
+        },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(2);
+        expect(value.rows[0]?.name).toEqual({ state: 'answered', value: 'Alice' });
+        expect(value.rows[1]?.name).toEqual({ state: 'answered', value: 'Bob' });
+      }
+    });
+
+    it('sets state to unanswered when all rows are empty', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [
+        {
+          op: 'set_table',
+          fieldId: 'data',
+          value: [
+            { name: null, role: null },
+            { name: null, role: null },
+          ],
+        },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.data?.state).toBe('unanswered');
+    });
+  });
+
+  describe('empty row filtering in append_table', () => {
+    const tableForm = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "role"] %}
+| Name | Role |
+|------|------|
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+
+    it('filters out empty rows from appended rows', () => {
+      const form = parseForm(tableForm);
+      applyPatches(form, [
+        { op: 'set_table', fieldId: 'data', value: [{ name: 'Alice', role: 'Eng' }] },
+      ]);
+      const patches: Patch[] = [
+        {
+          op: 'append_table',
+          fieldId: 'data',
+          value: [
+            { name: null, role: null },
+            { name: 'Bob', role: 'PM' },
+          ],
+        },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      const value = form.responsesByFieldId.data?.value;
+      if (value?.kind === 'table') {
+        expect(value.rows).toHaveLength(2);
+        expect(value.rows[0]?.name).toEqual({ state: 'answered', value: 'Alice' });
+        expect(value.rows[1]?.name).toEqual({ state: 'answered', value: 'Bob' });
+      }
+    });
+
+    it('sets state to unanswered when appending only empty rows to empty table', () => {
+      const form = parseForm(tableForm);
+      const patches: Patch[] = [
+        {
+          op: 'append_table',
+          fieldId: 'data',
+          value: [{ name: null, role: null }],
+        },
+      ];
+      const result = applyPatches(form, patches);
+      expect(result.applyStatus).toBe('applied');
+      expect(form.responsesByFieldId.data?.state).toBe('unanswered');
+    });
+  });
+
   describe('delete_table patch', () => {
     const tableForm = `---
 markform:

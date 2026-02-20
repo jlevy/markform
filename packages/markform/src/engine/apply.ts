@@ -28,6 +28,7 @@ import type {
 } from './coreTypes.js';
 import { detectSentinel } from './parseSentinels.js';
 import { computeAllSummaries, computeFormState, isFormComplete } from './summaries.js';
+import { isRowFullyEmpty } from './table/parseTable.js';
 import { validate } from './validate.js';
 
 // =============================================================================
@@ -642,9 +643,12 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
         }
         return row;
       });
+      const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
       responses[patch.fieldId] = {
-        state: 'answered',
-        value: { kind: 'table', rows } as TableValue,
+        state: substantiveRows.length > 0 ? 'answered' : 'unanswered',
+        ...(substantiveRows.length > 0 && {
+          value: { kind: 'table', rows: substantiveRows } as TableValue,
+        }),
       };
       break;
     }
@@ -662,9 +666,12 @@ function applyPatch(form: ParsedForm, responses: Record<Id, FieldResponse>, patc
         }
         return row;
       });
+      const allRows = [...currentRows, ...newRows].filter((r) => !isRowFullyEmpty(r));
       responses[patch.fieldId] = {
-        state: 'answered',
-        value: { kind: 'table', rows: [...currentRows, ...newRows] } as TableValue,
+        state: allRows.length > 0 ? 'answered' : 'unanswered',
+        ...(allRows.length > 0 && {
+          value: { kind: 'table', rows: allRows } as TableValue,
+        }),
       };
       break;
     }

@@ -1445,6 +1445,192 @@ markform:
       expect(result.isValid).toBe(true);
     });
 
+    it('warns on mostly-empty row (1 of 4 cells filled)', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["a", "b", "c", "d"] %}
+| a | b | c | d |
+|---|---|---|---|
+| hello |   |   |   |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      const warnings = result.issues.filter((i) => i.severity === 'warning');
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]?.message).toContain('most cells empty');
+      expect(warnings[0]?.message).toContain('1 of 4 filled');
+      expect(warnings[0]?.message).toContain('Items');
+      expect(warnings[0]?.ref).toBe('items[0]');
+    });
+
+    it('does not warn when half cells are filled (2 of 4)', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["a", "b", "c", "d"] %}
+| a | b | c | d |
+|---|---|---|---|
+| hello | world |   |   |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      const warnings = result.issues.filter((i) => i.severity === 'warning');
+      expect(warnings).toHaveLength(0);
+    });
+
+    it('does not warn when most cells are filled (3 of 4)', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["a", "b", "c", "d"] %}
+| a | b | c | d |
+|---|---|---|---|
+| hello | world | yes |   |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      const warnings = result.issues.filter((i) => i.severity === 'warning');
+      expect(warnings).toHaveLength(0);
+    });
+
+    it('warns on mostly-empty row (1 of 3 cells filled)', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["a", "b", "c"] %}
+| a | b | c |
+|---|---|---|
+| hello |   |   |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      const warnings = result.issues.filter((i) => i.severity === 'warning');
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]?.message).toContain('1 of 3 filled');
+    });
+
+    it('does not warn on 1 of 2 cells filled (even split)', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="items" label="Items" columnIds=["a", "b"] %}
+| a | b |
+|---|---|
+| hello |   |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      const warnings = result.issues.filter((i) => i.severity === 'warning');
+      expect(warnings).toHaveLength(0);
+    });
+
+    it('minRows fails when only empty rows are provided', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] minRows=2 %}
+| Name | Email |
+|------|-------|
+|      |       |
+|      |       |
+|      |       |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      expect(result.isValid).toBe(false);
+      // Empty rows are dropped, so 0 rows < minRows=2
+      expect(result.issues.some((i) => i.message.includes('at least 2 row'))).toBe(true);
+    });
+
+    it('minRows passes when enough filled rows after empty row dropping', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="contacts" label="Contacts" columnIds=["name", "email"] minRows=2 %}
+| Name | Email |
+|------|-------|
+| Alice | alice@test.com |
+|       |                |
+| Bob   | bob@test.com   |
+|       |                |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const form = parseForm(markdown);
+      const result = validate(form);
+
+      // Empty rows are dropped: 2 filled rows >= minRows=2
+      expect(result.isValid).toBe(true);
+    });
+
     it('validates URL columns with bare URLs', () => {
       const markdown = `---
 markform:

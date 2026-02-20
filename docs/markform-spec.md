@@ -456,8 +456,13 @@ type.
 | `columnIds` | string[] | Yes | Array of snake_case column identifiers |
 | `columnLabels` | string[] | No | Array of display labels (backfilled from table header row if omitted) |
 | `columnTypes` | (string \| object)[] | No | Array of column types with optional constraints (defaults to all `'string'`) |
-| `minRows` | number | No | Minimum row count (default: 0) |
-| `maxRows` | number | No | Maximum row count (default: unlimited) |
+| `minRows` | number | No | Minimum number of non-empty rows (default: 0) |
+| `maxRows` | number | No | Maximum number of non-empty rows (default: unlimited) |
+
+**Empty row handling:** Fully-empty rows (where every cell is empty or skipped) are
+silently dropped during normalization.
+They are never counted toward `minRows`/`maxRows` and do not appear in parsed output.
+A row with at least one non-empty cell is retained.
 
 **Column types and validation:**
 
@@ -487,6 +492,10 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
 | `min` | `number`, `year`, `date` | Minimum value (number for number/year, ISO date string for date) |
 | `max` | `number`, `year`, `date` | Maximum value |
 | `integer` | `number` | Value must be an integer |
+
+**Row sparseness warning:** When a non-empty row has the majority of its cells empty
+(strictly more than half), a validation warning is emitted.
+This helps catch cases where an agent produced sparse or incomplete data.
 
 **Example with per-column constraints:**
 ```md

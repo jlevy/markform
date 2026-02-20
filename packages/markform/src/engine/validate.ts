@@ -964,12 +964,37 @@ function validateTableRow(
   columns: TableColumn[],
   fieldId: string,
   rowIndex: number,
+  fieldLabel: string,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
   for (const column of columns) {
     const cell = row[column.id] ?? { state: 'skipped' };
     issues.push(...validateCellValue(cell, column, fieldId, rowIndex));
+  }
+
+  // Check for mostly-empty rows (more than half of cells empty in a non-empty row)
+  const totalCells = columns.length;
+  const filledCells = columns.filter((col) => {
+    const cell = row[col.id];
+    return (
+      cell?.state === 'answered' &&
+      cell.value !== undefined &&
+      cell.value !== null &&
+      cell.value !== ''
+    );
+  }).length;
+
+  if (filledCells > 0 && filledCells < totalCells && totalCells - filledCells > totalCells / 2) {
+    issues.push({
+      severity: 'warning',
+      message:
+        `Row ${rowIndex + 1} of "${fieldLabel}" has most cells empty ` +
+        `(${filledCells} of ${totalCells} filled). ` +
+        `Consider adding column constraints or making columns required.`,
+      ref: `${fieldId}[${rowIndex}]`,
+      source: 'builtin',
+    });
   }
 
   return issues;
@@ -994,19 +1019,19 @@ function validateTableField(field: TableField, value: TableValue | undefined): V
     return issues;
   }
 
-  // Skip other checks if no value
-  if (isEmpty) {
-    return issues;
-  }
-
-  // Check minRows
-  if (field.minRows !== undefined && rows.length < field.minRows) {
+  // Check minRows (even when empty, since minRows > 0 implies data is needed)
+  if (field.minRows !== undefined && field.minRows > 0 && rows.length < field.minRows) {
     issues.push({
       severity: 'error',
       message: `"${field.label}" must have at least ${field.minRows} row(s) (has ${rows.length})`,
       ref: field.id,
       source: 'builtin',
     });
+  }
+
+  // Skip other checks if no value
+  if (isEmpty) {
+    return issues;
   }
 
   // Check maxRows
@@ -1021,7 +1046,7 @@ function validateTableField(field: TableField, value: TableValue | undefined): V
 
   // Validate each row
   for (let i = 0; i < rows.length; i++) {
-    issues.push(...validateTableRow(rows[i]!, field.columns, field.id, i));
+    issues.push(...validateTableRow(rows[i]!, field.columns, field.id, i, field.label));
   }
 
   return issues;
