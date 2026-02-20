@@ -9,27 +9,27 @@ development and golden session testing.
 
 ## Basic Fields
 
-**Name:** *(empty)*
+**Name:** (empty)
 
 Enter your full name (2-50 characters).
 
-**Email:** *(empty)*
+**Email:** (empty)
 
-**Age:** *(empty)*
+**Age:** (empty)
 
-**Score:** *(empty)*
+**Score:** (empty)
 
 ## List Fields
 
-**Tags:** *(empty)*
+**Tags:** (empty)
 
 Add 1-5 unique tags (each at least 2 characters).
 
 ## Selection Fields
 
-**Priority:** *(none selected)*
+**Priority:** (none selected)
 
-**Categories:** *(none selected)*
+**Categories:** (none selected)
 
 ## Checkbox Fields
 
@@ -55,6 +55,6 @@ All must be explicitly answered.
 
 ## Optional Fields
 
-**Notes:** *(empty)*
+**Notes:** (empty)
 
-**Optional Number:** *(empty)*
+**Optional Number:** (empty)

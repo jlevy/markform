@@ -1837,12 +1837,12 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
 
   // Handle skipped/aborted states before checking value
   if (response?.state === 'skipped') {
-    const text = response.reason ? `_(skipped: ${response.reason})_` : '_(skipped)_';
+    const text = response.reason ? `(skipped: ${response.reason})` : '(skipped)';
     lines.push(text);
     return lines.join('\n');
   }
   if (response?.state === 'aborted') {
-    const text = response.reason ? `_(aborted: ${response.reason})_` : '_(aborted)_';
+    const text = response.reason ? `(aborted: ${response.reason})` : '(aborted)';
     lines.push(text);
     return lines.join('\n');
   }
@@ -1856,7 +1856,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       if (strValue?.value) {
         lines.push(strValue.value);
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }
@@ -1865,7 +1865,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       if (numValue?.value !== null && numValue?.value !== undefined) {
         lines.push(String(numValue.value));
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }
@@ -1876,7 +1876,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
           lines.push(`- ${item}`);
         }
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }
@@ -1886,7 +1886,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       if (selected) {
         lines.push(selected.label);
       } else {
-        lines.push('_(none selected)_');
+        lines.push('(none selected)');
       }
       break;
     }
@@ -1906,7 +1906,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
         // Explicit mode: show "Yes"/"No" text for clarity
         for (const opt of field.options) {
           const state = cbValue?.values[opt.id] ?? 'unfilled';
-          const label = state === 'yes' ? 'Yes' : state === 'no' ? 'No' : '_(unanswered)_';
+          const label = state === 'yes' ? 'Yes' : state === 'no' ? 'No' : '(unanswered)';
           lines.push(`- ${opt.label}: ${label}`);
         }
       } else {
@@ -1924,7 +1924,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       if (urlValue?.value) {
         lines.push(formatUrlAsMarkdownLink(urlValue.value));
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }
@@ -1935,7 +1935,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
           lines.push(`- ${formatUrlAsMarkdownLink(item)}`);
         }
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }
@@ -1944,7 +1944,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       if (dateValue?.value) {
         lines.push(dateValue.value);
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }
@@ -1953,7 +1953,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       if (yearValue?.value !== null && yearValue?.value !== undefined) {
         lines.push(String(yearValue.value));
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }
@@ -1963,7 +1963,7 @@ function serializeFieldRaw(field: Field, responses: Record<Id, FieldResponse>): 
       if (tableValue?.rows && tableValue.rows.length > 0) {
         lines.push(serializeMarkdownTable(tableValue, tableField.columns));
       } else {
-        lines.push('_(empty)_');
+        lines.push('(empty)');
       }
       break;
     }

@@ -745,7 +745,7 @@ markform:
 
       expect(output).not.toContain('{%');
       expect(output).toContain('**Name:**');
-      expect(output).toContain('_(empty)_');
+      expect(output).toContain('(empty)');
     });
 
     it('includes doc blocks as regular markdown', () => {
