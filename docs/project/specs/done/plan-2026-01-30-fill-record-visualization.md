@@ -8,10 +8,11 @@
 
 ## Overview
 
-Add a new "Fill Record" tab to the `markform serve` command that provides a clean,
-interactive visualization of FillRecord data. This tab will show exactly what happened
-during a form fill operation—tool calls, token usage, timing breakdown, and turn-by-turn
-timeline—in an elegant, easy-to-understand format.
+Add a new “Fill Record” tab to the `markform serve` command that provides a clean,
+interactive visualization of FillRecord data.
+This tab will show exactly what happened during a form fill operation—tool calls, token
+usage, timing breakdown, and turn-by-turn timeline—in an elegant, easy-to-understand
+format.
 
 ## Goals
 
@@ -24,7 +25,7 @@ timeline—in an elegant, easy-to-understand format.
 ## Non-Goals
 
 - **Real-time streaming**: This visualizes completed fill records, not live fills
-- **Editing**: The fill record is read-only (it's historical data)
+- **Editing**: The fill record is read-only (it’s historical data)
 - **Cost calculation**: We show tokens, but leave cost calculation to the client
 - **Comparison**: Comparing multiple fill records is out of scope
 
@@ -33,12 +34,12 @@ timeline—in an elegant, easy-to-understand format.
 The serve command will **primarily** show completed fill records, but the visualization
 must handle all four FillRecord status values:
 
-| Status      | When It Occurs                              | Visualization Needs |
-|-------------|---------------------------------------------|---------------------|
-| `completed` | Form fill finished successfully             | Standard display    |
-| `partial`   | Hit max_turns before completing             | Warning banner, show progress gap |
-| `cancelled` | User aborted via AbortSignal                | Cancelled banner, show what was done |
-| `failed`    | Error during fill (see prerequisites below) | Error banner with message |
+| Status | When It Occurs | Visualization Needs |
+| --- | --- | --- |
+| `completed` | Form fill finished successfully | Standard display |
+| `partial` | Hit max_turns before completing | Warning banner, show progress gap |
+| `cancelled` | User aborted via AbortSignal | Cancelled banner, show what was done |
+| `failed` | Error during fill (see prerequisites below) | Error banner with message |
 
 For debugging and analysis, partial/cancelled/failed fill records are often **more
 valuable** than completed ones—they show what went wrong and where.
@@ -50,14 +51,14 @@ valuable** than completed ones—they show what went wrong and where.
 The `markform serve` command provides an interactive web interface for browsing forms
 with multiple tabs:
 
-| Tab    | Content                                      |
-|--------|----------------------------------------------|
-| View   | Read-only rendered view of form values       |
-| Edit   | Interactive form for editing field values    |
+| Tab | Content |
+| --- | --- |
+| View | Read-only rendered view of form values |
+| Edit | Interactive form for editing field values |
 | Source | Raw markdown source with syntax highlighting |
-| Report | Human-readable report format                 |
-| Values | YAML export of form values                   |
-| Schema | JSON Schema representation                   |
+| Report | Human-readable report format |
+| Values | YAML export of form values |
+| Schema | JSON Schema representation |
 
 The FillRecord data structure (see `plan-2026-01-29-fill-record.md`) captures complete
 execution data from form fills:
@@ -79,9 +80,10 @@ example.form.md          → Form content
 example.fill.json        → FillRecord data (if exists)
 ```
 
-The serve command uses `deriveFillRecordPath()` from `settings.ts` to locate the
-sidecar file and enable the Fill Record tab. This shared function ensures
-consistent path derivation between the `fill` and `serve` commands.
+The serve command uses `deriveFillRecordPath()` from `settings.ts` to locate the sidecar
+file and enable the Fill Record tab.
+This shared function ensures consistent path derivation between the `fill` and `serve`
+commands.
 
 ## Design Options
 
@@ -102,14 +104,15 @@ A syntax-highlighted YAML view with interactive tree navigation.
 - No external dependencies needed
 
 **Cons:**
-- Still feels like "raw data" rather than a purpose-built UI
+- Still feels like “raw data” rather than a purpose-built UI
 - Timeline section can get very long
 - Tool calls are hard to scan quickly
 
 ### Option B: Card-Based Dashboard
 
 A structured dashboard with distinct sections/cards for each data category.
-Organized to mirror the FillRecord data structure: **summary data first, details after**.
+Organized to mirror the FillRecord data structure: **summary data first, details
+after**.
 
 **Approach:**
 ```
@@ -145,12 +148,13 @@ Organized to mirror the FillRecord data structure: **summary data first, details
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Note:** Timing uses **absolute durations** (6.8s, 5.1s) rather than percentages for clarity.
+**Note:** Timing uses **absolute durations** (6.8s, 5.1s) rather than percentages for
+clarity.
 
 **Pros:**
 - Purpose-built UI, easier to scan quickly
 - Visual hierarchy matches mental model
-- Expandable timeline doesn't overwhelm
+- Expandable timeline doesn’t overwhelm
 - Progress bars and metrics are visually clear
 
 **Cons:**
@@ -187,27 +191,27 @@ An interactive timeline using D3.js for rich data visualization.
 
 ### Option D: Hybrid Approach (Recommended)
 
-Combine Options A and B: A card-based dashboard with expandable sections that can
-reveal raw YAML/JSON data. Structure mirrors the FillRecord schema—**summary aggregates
-first, detailed timeline last**.
+Combine Options A and B: A card-based dashboard with expandable sections that can reveal
+raw YAML/JSON data. Structure mirrors the FillRecord schema—**summary aggregates first,
+detailed timeline last**.
 
 **Approach:**
 
 1. **Status Banner** (if non-completed):
-   - For `partial`: "Fill incomplete - hit max turns (X/Y fields filled)"
-   - For `cancelled`: "Fill cancelled by user"
-   - For `failed`: "Fill failed: {error message}"
+   - For `partial`: “Fill incomplete - hit max turns (X/Y fields filled)”
+   - For `cancelled`: “Fill cancelled by user”
+   - For `failed`: “Fill failed: {error message}”
 
 2. **Summary Cards** (always visible):
    - Status badge (completed/partial/failed/cancelled)
-   - Total duration (absolute: "12.4s")
+   - Total duration (absolute: “12.4s”)
    - Turn count
    - Token totals (input/output)
    - Progress (fields filled/total)
 
 3. **Timing Breakdown** (collapsible):
    - Horizontal stacked bar showing LLM/tools/overhead
-   - **Absolute durations** (e.g., "LLM: 6.8s | Tools: 5.1s | Overhead: 0.5s")
+   - **Absolute durations** (e.g., “LLM: 6.8s | Tools: 5.1s | Overhead: 0.5s”)
    - Clearer than percentages for understanding actual time spent
 
 4. **Tool Summary Table** (collapsible):
@@ -326,12 +330,12 @@ first, detailed timeline last**.
 
 ### Components
 
-**Design principle:** Reuse existing serve.ts rendering functions where possible for
-UI consistency and reduced code.
+**Design principle:** Reuse existing serve.ts rendering functions where possible for UI
+consistency and reduced code.
 
 1. **FillRecord Tab Handler** (`serve.ts`)
    - Detect `.fill.json` sidecar file when serving a form
-   - Add "Fill Record" tab to tab list when sidecar exists
+   - Add “Fill Record” tab to tab list when sidecar exists
    - Serve rendered HTML at `/tab/fill-record`
 
 2. **FillRecord Renderer** (new function in `serve.ts`)
@@ -390,17 +394,17 @@ function renderFillRecordContent(record: FillRecord): string;
 
 ### Phase 1: Error Finalization (Fill Record on Failure)
 
-Code investigation reveals **gaps in partial/failed fill record handling** that must
-be fixed for the visualization to be useful for debugging failed fills.
+Code investigation reveals **gaps in partial/failed fill record handling** that must be
+fixed for the visualization to be useful for debugging failed fills.
 
 **Current State:**
 
-| Status      | Currently Supported? | Notes |
-|-------------|---------------------|-------|
+| Status | Currently Supported? | Notes |
+| --- | --- | --- |
 | `completed` | ✅ Yes | Works correctly |
-| `partial`   | ✅ Yes | Set when max_turns hit |
+| `partial` | ✅ Yes | Set when max_turns hit |
 | `cancelled` | ✅ Yes | Set when AbortSignal fires |
-| `failed`    | ✅ Yes | **Now supported** (see implementation below) |
+| `failed` | ✅ Yes | **Now supported** (see implementation below) |
 
 **Tasks:**
 
@@ -432,7 +436,7 @@ be fixed for the visualization to be useful for debugging failed fills.
 - [x] Add fill record sidecar detection in serve command ✅
   - Uses shared `deriveFillRecordPath()` from `settings.ts`
   - Checks for `.fill.json` file next to form
-- [x] Extend Tab interface to include 'fill-record' tab ID ✅
+- [x] Extend Tab interface to include ‘fill-record’ tab ID ✅
 - [x] Update `buildFormTabs()` to conditionally include Fill Record tab ✅
 - [x] Implement `/tab/fill-record` route handler ✅
   - Loads and parses JSON from sidecar file
@@ -474,7 +478,7 @@ Commit: `feat: add Fill Record tab to serve command`
 3. **Edge Cases:**
    - Empty timeline (mock mode with 0 turns)
    - Very long timelines (10+ turns)
-   - Failed fills (status: 'failed')
+   - Failed fills (status: ‘failed’)
    - Parallel execution (multiple execution threads)
 
 ## Rollout Plan
@@ -485,19 +489,19 @@ Commit: `feat: add Fill Record tab to serve command`
 
 ## Open Questions
 
-1. **Should we support loading fill records by URL parameter?**
-   e.g., `markform serve form.md --fill-record other.fill.json`
+1. **Should we support loading fill records by URL parameter?** e.g.,
+   `markform serve form.md --fill-record other.fill.json`
 
    *Recommendation:* Start with auto-detection only, add flag in future if needed.
 
-2. **How should we handle mismatched form/fill-record pairs?**
-   e.g., form.id in fill record doesn't match the served form.
+2. **How should we handle mismatched form/fill-record pairs?** e.g., form.id in fill
+   record doesn’t match the served form.
 
    *Recommendation:* Show a warning banner but still display the data.
 
-3. **Should the timeline show full tool inputs/outputs?**
-   For web_search, showing the full query is useful. For fill_form, showing all
-   patches might be verbose.
+3. **Should the timeline show full tool inputs/outputs?** For web_search, showing the
+   full query is useful.
+   For fill_form, showing all patches might be verbose.
 
    *Recommendation:* Show query for web_search, show patch count + summary for
    fill_form. Full details available in Raw JSON section.
@@ -507,43 +511,42 @@ Commit: `feat: add Fill Record tab to serve command`
 ### Decisions Made During Implementation
 
 1. **CSS custom properties for theming**: Used CSS custom properties (`--fr-*` prefix)
-   for all colors and spacing. This enables theming and provides automatic dark mode
-   support via `@media (prefers-color-scheme: dark)`. The styles are extracted into
-   a reusable `FILL_RECORD_STYLES` constant.
+   for all colors and spacing.
+   This enables theming and provides automatic dark mode support via
+   `@media (prefers-color-scheme: dark)`. The styles are extracted into a reusable
+   `FILL_RECORD_STYLES` constant.
 
-2. **BEM-like class naming**: All classes use `.fr-*` prefix (fill-record) with
-   BEM-like naming (`.fr-card`, `.fr-badge--completed`, etc.) for maintainability
-   and to avoid conflicts with serve's existing styles.
+2. **BEM-like class naming**: All classes use `.fr-*` prefix (fill-record) with BEM-like
+   naming (`.fr-card`, `.fr-badge--completed`, etc.)
+   for maintainability and to avoid conflicts with serve’s existing styles.
 
 3. **Native HTML details/summary for accordions**: Used `<details>` and `<summary>`
-   elements for collapsible sections instead of custom JavaScript. This provides
-   accessibility and keyboard navigation out of the box.
+   elements for collapsible sections instead of custom JavaScript.
+   This provides accessibility and keyboard navigation out of the box.
 
-4. **YAML for raw data**: Used YAML instead of JSON for the raw data section
-   (reusing `renderYamlContent()`) for consistency with the Values tab and better
-   readability.
+4. **YAML for raw data**: Used YAML instead of JSON for the raw data section (reusing
+   `renderYamlContent()`) for consistency with the Values tab and better readability.
 
-5. **Sidecar path convention**: The fill record sidecar path is derived using the
-   shared `deriveFillRecordPath()` function from `settings.ts`. This ensures
-   consistent behavior between `fill` and `serve` commands:
+5. **Sidecar path convention**: The fill record sidecar path is derived using the shared
+   `deriveFillRecordPath()` function from `settings.ts`. This ensures consistent
+   behavior between `fill` and `serve` commands:
    - `intake.form.md` → `intake.fill.json` (recommended)
    - `document.md` → `document.fill.json` (fallback)
 
-6. **Exported utilities**: `formatDuration()` and `formatTokens()` are exported
-   for reuse in other visualizations or CLI output.
+6. **Exported utilities**: `formatDuration()` and `formatTokens()` are exported for
+   reuse in other visualizations or CLI output.
 
 ### Known Limitations
 
-1. **No form/record validation**: The implementation doesn't validate that the
-   fill record matches the form being served. If the form.id differs, the data
-   is still displayed.
+1. **No form/record validation**: The implementation doesn’t validate that the fill
+   record matches the form being served.
+   If the form.id differs, the data is still displayed.
 
-2. **No stable fill record support**: Currently only detects `.fill.json` sidecars,
-   not `.fill.stable.json` variants.
+2. **No stable fill record support**: Currently only detects `.fill.json` sidecars, not
+   `.fill.stable.json` variants.
 
-3. **Copy button requires HTTPS in production**: The `navigator.clipboard` API
-   requires a secure context. Works on localhost but may need fallback for
-   non-HTTPS deployments.
+3. **Copy button requires HTTPS in production**: The `navigator.clipboard` API requires
+   a secure context. Works on localhost but may need fallback for non-HTTPS deployments.
 
 ## References
 
@@ -551,4 +554,5 @@ Commit: `feat: add Fill Record tab to serve command`
 - `packages/markform/src/harness/fillRecord.ts` — FillRecord Zod schemas
 - `packages/markform/src/cli/commands/serve.ts` — Serve command implementation
 - `packages/markform/src/harness/formatFillRecordSummary.ts` — Text summary formatter
-- `packages/markform/src/settings.ts` — Shared constants and `deriveFillRecordPath()` utility
+- `packages/markform/src/settings.ts` — Shared constants and `deriveFillRecordPath()`
+  utility

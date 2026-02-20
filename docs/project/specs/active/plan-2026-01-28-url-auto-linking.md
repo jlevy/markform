@@ -1,30 +1,33 @@
 # Feature: Proper URL Auto-Linking in Rendered Content
 
-**Date:** 2026-01-28
-**Author:** Claude
-**Status:** Approved
+**Date:** 2026-01-28 **Author:** Claude **Status:** Approved
 
 ## Overview
 
-Implement reliable URL auto-linking in Markform's rendered view, ensuring bare URLs in text
-content are converted to clickable links with abbreviated display text, while maintaining
-XSS safety and properly handling markdown links.
+Implement reliable URL auto-linking in Markform’s rendered view, ensuring bare URLs in
+text content are converted to clickable links with abbreviated display text, while
+maintaining XSS safety and properly handling markdown links.
 
 ## Goals
 
-- Auto-detect bare URLs (http://, https://, www.) in string fields and text content
-- Convert bare URLs to clickable `<a>` tags with abbreviated display (e.g., `example.com/path...`)
-- Handle markdown-style links `[text](url)` properly (don't double-process)
+- Auto-detect bare URLs (http://, https://, www.)
+  in string fields and text content
+- Convert bare URLs to clickable `<a>` tags with abbreviated display (e.g.,
+  `example.com/path...`)
+- Handle markdown-style links `[text](url)` properly (don’t double-process)
 - Ensure XSS safety by properly escaping all user content
-- Be consistent across all text rendering contexts (string fields, string lists, table cells, markdown content)
-- **All rendered URLs must have consistent copy-link tooltip behavior** (same as URL fields)
+- Be consistent across all text rendering contexts (string fields, string lists, table
+  cells, markdown content)
+- **All rendered URLs must have consistent copy-link tooltip behavior** (same as URL
+  fields)
 - Implement using proper Markdown parser mechanisms where possible
 - Keep URL detection logic in a **single, clean, standalone function**
 - Implement in a testable, maintainable way
 
 ## Non-Goals
 
-- Full markdown rendering (bold, italic, etc.) - only URL handling
+- Full markdown rendering (bold, italic, etc.)
+  - only URL handling
 - Changing how Markdoc parses form structure
 - Email address auto-linking (mailto:)
 - FTP or other URL schemes - **only http://, https://, www.** supported
@@ -32,7 +35,8 @@ XSS safety and properly handling markdown links.
 ## Background
 
 Current issues identified:
-1. Table URL columns were storing markdown link format `[text](url)` but parsing returned the raw string, causing broken links pointing to localhost
+1. Table URL columns were storing markdown link format `[text](url)` but parsing
+   returned the raw string, causing broken links pointing to localhost
 2. Bare URLs in string fields appeared as unclickable text
 3. The initial fix used hacky placeholder-based approach that was hard to maintain
 4. XSS vulnerability was introduced by not escaping non-URL text
@@ -88,7 +92,7 @@ Current issues identified:
 
 **Cons:**
 - Adds new dependency
-- May have features we don't need
+- May have features we don’t need
 
 ### Approach 4: Two-Pass Parsing
 
@@ -110,15 +114,17 @@ Current issues identified:
 
 **Hybrid Approach using Markdoc for links + regex for bare URLs:**
 
-1. Use Markdoc's AST to properly identify markdown links (leveraging existing dependency)
-2. For bare URL detection, use regex on text nodes (Markdoc doesn't auto-link bare URLs)
+1. Use Markdoc’s AST to properly identify markdown links (leveraging existing
+   dependency)
+2. For bare URL detection, use regex on text nodes (Markdoc doesn’t auto-link bare URLs)
 3. Keep all URL processing logic in a **single standalone module** (`urlFormat.ts`)
 
 Key requirements:
 - Single clean function for URL processing
 - XSS safety via HTML escaping before URL detection
 - All URLs get `url-link` class and `data-url` attribute for copy-link tooltip
-- Only http://, https://, www. URLs supported
+- Only http://, https://, www.
+  URLs supported
 
 ## Implementation Plan
 
@@ -127,7 +133,8 @@ Key requirements:
 - [ ] Create single `formatTextWithUrls(text, escapeHtml)` function
 - [ ] Escape all HTML first for XSS safety
 - [ ] Convert markdown links `[text](url)` to `<a>` tags with `url-link` class
-- [ ] Detect bare URLs (http://, https://, www. only) and convert to `<a>` tags
+- [ ] Detect bare URLs (http://, https://, www.
+  only) and convert to `<a>` tags
 - [ ] All `<a>` tags get `data-url` attribute for copy-link tooltip
 - [ ] Handle edge cases: query params, trailing punctuation, etc.
 
@@ -196,13 +203,17 @@ Create a comprehensive test document with various URL formats:
 
 ## Decisions Made
 
-1. **URL schemes**: Only http://, https://, www. supported (no ftp://, mailto:)
-2. **Copy URL tooltip**: YES - all auto-linked URLs get copy-link tooltip behavior, consistent with URL fields
-3. **Implementation**: Single standalone function in `urlFormat.ts` for clean, testable code
+1. **URL schemes**: Only http://, https://, www.
+   supported (no ftp://, mailto:)
+2. **Copy URL tooltip**: YES - all auto-linked URLs get copy-link tooltip behavior,
+   consistent with URL fields
+3. **Implementation**: Single standalone function in `urlFormat.ts` for clean, testable
+   code
 
 ## Open Questions
 
-1. Should URL abbreviation length be configurable? (Current default: 12 chars for path)
+1. Should URL abbreviation length be configurable?
+   (Current default: 12 chars for path)
 
 ## References
 

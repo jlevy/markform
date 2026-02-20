@@ -2,10 +2,11 @@
 
 ## Purpose
 
-This validation spec documents the testing performed and manual validation needed for the
-best-effort patch application feature with automatic value coercion.
+This validation spec documents the testing performed and manual validation needed for
+the best-effort patch application feature with automatic value coercion.
 
-**Feature Plan:** [implemented-2026-01-03-best-effort-patch-application.md](../completed/implemented-2026-01-03-best-effort-patch-application.md)
+**Feature Plan:**
+[implemented-2026-01-03-best-effort-patch-application.md](../completed/implemented-2026-01-03-best-effort-patch-application.md)
 
 ## Stage 4: Validation Stage
 
@@ -13,7 +14,8 @@ best-effort patch application feature with automatic value coercion.
 
 ### Unit Testing
 
-All unit tests pass (1415 tests total). Key test coverage:
+All unit tests pass (1415 tests total).
+Key test coverage:
 
 **Core apply logic** (`packages/markform/tests/unit/engine/apply.test.ts`):
 
@@ -120,8 +122,8 @@ pnpm tsx consulting-intake-fill.ts
 
 Check that documentation accurately reflects the new behavior:
 
-- [ ] `docs/markform-spec.md` - Has "Best-Effort Patching Semantics" section
-- [ ] `docs/markform-spec.md` - Has "Recommended Value Coercions" table
+- [ ] `docs/markform-spec.md` - Has “Best-Effort Patching Semantics” section
+- [ ] `docs/markform-spec.md` - Has “Recommended Value Coercions” table
 - [ ] `docs/markform-apis.md` - Documents `appliedPatches`, `warnings` fields
 
 ## Open Questions

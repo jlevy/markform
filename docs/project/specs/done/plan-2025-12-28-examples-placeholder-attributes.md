@@ -400,6 +400,7 @@ export function isTextEntryFieldKind(kind: FieldKind): boolean {
   attributes, documenting `placeholder` (string) and `examples` (string[])
 
 - [ ] Layer 2 (Data Model): Update `FieldBase` interface to include:
+
   ```typescript
   placeholder?: string;    // Hint text for empty field (text-entry only)
   examples?: string[];     // Example values (text-entry only)
@@ -419,6 +420,7 @@ export function isTextEntryFieldKind(kind: FieldKind): boolean {
   - `PLACEHOLDER_TYPE_MISMATCH` — placeholder doesn’t parse as field type (warning)
 
 - [ ] Layer 4 (Tool API): Update `ExportedField` interface to include:
+
   ```typescript
   placeholder?: string;
   examples?: string[];
@@ -536,15 +538,19 @@ export function isTextEntryFieldKind(kind: FieldKind): boolean {
 <!-- ERROR: placeholder not allowed on single-select -->
 
 {% single-select id="rating" label="Rating" placeholder="Choose one" %}
+
 - [ ] Bullish {% #bullish %}
 - [ ] Bearish {% #bearish %}
+
 {% /single-select %}
 
 <!-- ERROR: examples not allowed on checkboxes -->
 
 {% checkboxes id="tasks" label="Tasks" examples=["Task A", "Task B"] %}
+
 - [ ] Review docs {% #review %}
 - [ ] Write tests {% #tests %}
+
 {% /checkboxes %}
 
 <!-- ERROR: example doesn't parse as number -->
@@ -584,7 +590,7 @@ Changes needed to SPEC.md:
 | Section | Change |
 | --- | --- |
 | Layer 1: Common attributes table | Add `placeholder` and `examples` with applicability note |
-| Layer 1: New section | "Text-Entry Field Attributes" explaining these |
+| Layer 1: New section | “Text-Entry Field Attributes” explaining these |
 | Layer 2: FieldBase interface | Add `placeholder?: string` and `examples?: string[]` |
 | Layer 2: Field type mappings | Add Attributes column showing placeholder/examples support |
 | Layer 3: Standard error codes | Add `PLACEHOLDER_NOT_ALLOWED`, `EXAMPLES_NOT_ALLOWED`, `EXAMPLE_TYPE_MISMATCH`, `PLACEHOLDER_TYPE_MISMATCH` (warning) |

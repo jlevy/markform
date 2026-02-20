@@ -6,12 +6,11 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Fill Command Error Handling Tests
 
 Tests for fill command validation and error handling.
 
----
+* * *
 
 ## Option Validation Errors
 
@@ -66,7 +65,7 @@ Error: Invalid --mode: invalid. Valid modes: continue, overwrite
 ? 1
 ```
 
----
+* * *
 
 ## Mock Mode Tests
 
@@ -102,7 +101,7 @@ $ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/
 ? 0
 ```
 
----
+* * *
 
 ## Missing File Errors
 

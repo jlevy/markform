@@ -2,13 +2,15 @@
 
 ## Purpose
 
-This is a technical design doc for creating comprehensive golden session tests that verify
-all type coercion behaviors, and for improving the harness and prompts to minimize LLM
-mistakes in the first place.
+This is a technical design doc for creating comprehensive golden session tests that
+verify all type coercion behaviors, and for improving the harness and prompts to
+minimize LLM mistakes in the first place.
 
 **Related specs:**
-- [plan-2026-01-03-best-effort-patch-application.md](../completed/plan-2026-01-03-best-effort-patch-application.md) - Established coercion framework
-- [plan-2026-01-03-array-to-checkboxes-coercion.md](./plan-2026-01-03-array-to-checkboxes-coercion.md) - Array-to-checkboxes coercion
+- [plan-2026-01-03-best-effort-patch-application.md](../completed/plan-2026-01-03-best-effort-patch-application.md)
+  \- Established coercion framework
+- [plan-2026-01-03-array-to-checkboxes-coercion.md](./plan-2026-01-03-array-to-checkboxes-coercion.md)
+  \- Array-to-checkboxes coercion
 
 ## Background
 
@@ -24,7 +26,7 @@ Markform now supports several value coercions to improve LLM ergonomics:
 
 **Current testing gaps:**
 
-1. **No golden session tests for coercion** - Unit tests exist but don't verify the
+1. **No golden session tests for coercion** - Unit tests exist but don’t verify the
    complete wire format and context prompts that LLMs receive
 
 2. **Coercion warnings not visible in sessions** - The `warnings` field from ApplyResult
@@ -43,7 +45,7 @@ Markform now supports several value coercions to improve LLM ergonomics:
 ## Summary of Task
 
 1. Create a new example form that has fields for each coercible type
-2. Create a mock-filled version with intentional "wrong" formats that trigger coercion
+2. Create a mock-filled version with intentional “wrong” formats that trigger coercion
 3. Add golden session test to verify coercion warnings are captured
 4. Improve prompts to better distinguish checkbox format from multi_select
 5. Update spec and API docs with clearer examples
@@ -92,7 +94,7 @@ Markform now supports several value coercions to improve LLM ergonomics:
    - `multi_select` field
    - `checkboxes` fields (simple, multi, explicit modes)
 
-2. Mock-filled version that sends "wrong" formats triggering coercion:
+2. Mock-filled version that sends “wrong” formats triggering coercion:
    - Single strings for list fields
    - Single option for multi_select
    - Booleans for checkboxes
@@ -115,7 +117,7 @@ Markform now supports several value coercions to improve LLM ergonomics:
 **Not in Scope:**
 
 1. Changing the coercion logic itself (covered by other specs)
-2. Adding new coercion types beyond what's planned
+2. Adding new coercion types beyond what’s planned
 
 ### Acceptance Criteria
 
@@ -151,9 +153,11 @@ role_instructions:
 {% group id="select_fields" title="Select Fields" %}
 
 {% field kind="multi_select" id="categories" label="Categories" required=true %}
+
 - [ ] Tech {% #tech %}
 - [ ] Business {% #business %}
 - [ ] Science {% #science %}
+
 {% /field %}
 
 {% /group %}
@@ -161,18 +165,24 @@ role_instructions:
 {% group id="checkbox_fields" title="Checkbox Fields" %}
 
 {% field kind="checkboxes" id="tasks_simple" label="Simple Tasks" checkboxMode="simple" required=true %}
+
 - [ ] Review {% #review %}
 - [ ] Approve {% #approve %}
+
 {% /field %}
 
 {% field kind="checkboxes" id="tasks_multi" label="Multi Tasks" checkboxMode="multi" required=true %}
+
 - [ ] Research {% #research %}
 - [ ] Design {% #design %}
+
 {% /field %}
 
 {% field kind="checkboxes" id="confirmations" label="Confirmations" checkboxMode="explicit" required=true %}
+
 - [ ] Terms accepted {% #terms %}
 - [ ] Privacy acknowledged {% #privacy %}
+
 {% /field %}
 
 {% /group %}
@@ -373,10 +383,11 @@ No new utilities or complex logic required.
 
 ### Phase 1: Create Example Form
 
-- [ ] Create `examples/coercion-test/` directory (deferred - existing examples sufficient)
+- [ ] Create `examples/coercion-test/` directory (deferred - existing examples
+  sufficient)
 - [ ] Create `coercion-test.form.md` with all coercible field types (deferred)
 - [ ] Create `coercion-test-mock-filled.form.md` with final expected values (deferred)
-- [ ] Create mock source that sends "wrong" formats triggering coercion (deferred)
+- [ ] Create mock source that sends “wrong” formats triggering coercion (deferred)
 
 ### Phase 2: Configure Golden Session
 
@@ -407,7 +418,8 @@ No new utilities or complex logic required.
 
 ### Phase 6: Array-to-Checkboxes Integration
 
-- [x] Array-to-checkboxes coercion implemented (see plan-2026-01-03-array-to-checkboxes-coercion.md)
+- [x] Array-to-checkboxes coercion implemented (see
+  plan-2026-01-03-array-to-checkboxes-coercion.md)
 - [x] Golden session tests updated to reflect new prompt format
 - [x] Array coercion tests added to unit test suite
 

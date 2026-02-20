@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Enable "plan documents" — markdown documents with checkboxes but without explicit field
-wrappers — to be parsed as valid Markforms. This simplifies authoring task lists, project
-plans, and checklists while maintaining full Markform semantics.
+Enable “plan documents” — markdown documents with checkboxes but without explicit field
+wrappers — to be parsed as valid Markforms.
+This simplifies authoring task lists, project plans, and checklists while maintaining
+full Markform semantics.
 
 ## Background
 
@@ -23,7 +24,8 @@ essentially one big task list.
 - `docs/markform-apis.md` — API documentation
 
 **Syntax note:** This spec uses Markdoc tag syntax (`{% tag %}`) in examples, but all
-Markform syntax has equivalent HTML comment forms. Both are always supported:
+Markform syntax has equivalent HTML comment forms.
+Both are always supported:
 
 | Markdoc | HTML Comment |
 | --- | --- |
@@ -39,7 +41,8 @@ All behavior described in this spec applies identically to both syntaxes.
 1. **Implicit checkboxes field**: Forms with no explicit fields but with checkboxes get
    an automatic implicit checkboxes field wrapping all checkboxes
 
-2. **Markdown headers utility**: Low-level API to find enclosing headings for any position
+2. **Markdown headers utility**: Low-level API to find enclosing headings for any
+   position
 
 3. **ID injection APIs**: Functions to inject IDs into checkboxes and headers using
    generator functions
@@ -63,7 +66,8 @@ All behavior described in this spec applies identically to both syntaxes.
 **In scope:**
 
 - Implicit checkboxes field when form has no explicit `{% field %}` tags
-- Always `checkboxMode="multi"` for implicit field (user must use explicit field for other modes)
+- Always `checkboxMode="multi"` for implicit field (user must use explicit field for
+  other modes)
 - `findAllHeadings()` and `findEnclosingHeadings()` utility functions
 - `findAllCheckboxes()` function with enclosing heading info
 - `injectCheckboxIds()` with generator function and uniqueness validation
@@ -82,23 +86,26 @@ All behavior described in this spec applies identically to both syntaxes.
 **Future possibilities:**
 
 - **Option metadata**: Parse and preserve extra attributes on checkbox/select options
-  (e.g., `{% #id pr="#203" issue="PROJ-106" %}`). Would add `metadata?: Record<string, string>`
-  to the Option type for tracking PRs, issues, assignees, due dates, etc.
+  (e.g., `{% #id pr="#203" issue="PROJ-106" %}`). Would add
+  `metadata?: Record<string, string>` to the Option type for tracking PRs, issues,
+  assignees, due dates, etc.
 
 **Prerequisite validation fixes (discovered during analysis):**
 
 The following validation gaps exist in the current parser and should be fixed as part of
 this work or tracked separately:
 
-1. **Nested field tags**: Currently silently ignored. Should produce error:
-   `Field tags cannot be nested. Found '${innerFieldId}' inside '${outerFieldId}'`
+1. **Nested field tags**: Currently silently ignored.
+   Should produce error: `Field tags cannot be nested.
+   Found '${innerFieldId}' inside '${outerFieldId}'`
 
-2. **Checkboxes outside fields (when explicit fields exist)**: Currently silently ignored.
-   Should produce error when implicit checkboxes feature is enabled.
+2. **Checkboxes outside fields (when explicit fields exist)**: Currently silently
+   ignored. Should produce error when implicit checkboxes feature is enabled.
 
 ### Acceptance Criteria
 
-1. Form with `{% form %}` but no `{% field %}` tags and with checkboxes parses successfully
+1. Form with `{% form %}` but no `{% field %}` tags and with checkboxes parses
+   successfully
 2. All checkboxes become options in implicit `checkboxes` field
 3. Checkboxes without ID annotations produce `MarkformParseError`
 4. Forms with explicit fields AND checkboxes outside fields produce `MarkformParseError`
@@ -111,23 +118,25 @@ this work or tracked separately:
 
 ### Design Decisions
 
-1. **Implicit field is always multi-mode**: If user wants simple or explicit checkbox mode,
-   they must use explicit `{% field %}` tags. This keeps implicit mode simple.
+1. **Implicit field is always multi-mode**: If user wants simple or explicit checkbox
+   mode, they must use explicit `{% field %}` tags.
+   This keeps implicit mode simple.
 
-2. **Form wrapper required**: A `{% form %}` tag is still required for implicit checkboxes.
-   This maintains the clear boundary of "this is a Markform."
+2. **Form wrapper required**: A `{% form %}` tag is still required for implicit
+   checkboxes. This maintains the clear boundary of “this is a Markform.”
 
 3. **Standard option ID rules apply**: Checkboxes in implicit mode follow the same ID
    rules as explicit checkboxes fields—each must have an ID annotation (`{% #id %}`),
    IDs must be unique within the field, and IDs must be valid identifiers.
    Use `injectCheckboxIds()` to add them programmatically.
 
-4. **Special field ID**: The implicit checkboxes field uses ID `checkboxes`. This is a special
-   ID (like a keyword) that can also be used explicitly. When used explicitly, the implicit
-   field is not created (the explicit field takes its place).
+4. **Special field ID**: The implicit checkboxes field uses ID `checkboxes`. This is a
+   special ID (like a keyword) that can also be used explicitly.
+   When used explicitly, the implicit field is not created (the explicit field takes its
+   place).
 
-5. **Error on mixed mode**: Having explicit fields AND checkboxes outside fields is an error.
-   Either use all explicit fields or no explicit fields.
+5. **Error on mixed mode**: Having explicit fields AND checkboxes outside fields is an
+   error. Either use all explicit fields or no explicit fields.
 
 6. **Enclosing headings order**: `findEnclosingHeadings()` returns innermost first (the
    most specific heading), then progressively larger sections up to h1.
@@ -161,29 +170,31 @@ The following changes are required to the Markform specification:
 
 #### Change 1: Implicit Checkboxes (Layer 1 - Syntax)
 
-**Location:** After "Checkboxes Fields" section (~line 633)
+**Location:** After “Checkboxes Fields” section (~line 633)
 
 **Add new section:**
 
 > ##### Implicit Checkboxes (Plan Documents)
->
-> Forms designed as task lists or plans can omit explicit field wrappers. When a form
-> contains:
+
+> Forms designed as task lists or plans can omit explicit field wrappers.
+> When a form contains:
+> 
 > - A `{% form %}` wrapper (or `<!-- form ... -->`)
 > - No explicit `{% field %}` tags
 > - Standard markdown checkboxes with ID annotations
->
+> 
 > The parser automatically creates an implicit checkboxes field:
->
-> | Property | Value |
-> | --- | --- |
-> | ID | `checkboxes` (reserved) |
-> | Label | `Checkboxes` |
-> | Mode | `multi` (always) |
-> | Options | All checkboxes in document order |
-> | Implicit | `true` |
->
+
+| Property | Value |
+| --- | --- |
+| ID | `checkboxes` (reserved) |
+| Label | `Checkboxes` |
+| Mode | `multi` (always) |
+| Options | All checkboxes in document order |
+| Implicit | `true` |
+
 > **Example:**
+> 
 > ```markdown
 > ---
 > markform:
@@ -201,38 +212,41 @@ The following changes are required to the Markform specification:
 >
 > {% /form %}
 > ```
->
+> 
 > **Requirements:**
+> 
 > - Each checkbox MUST have an ID annotation
 > - ID `checkboxes` is reserved for implicit fields
 > - Nested checkboxes (indented list items) are collected as separate options
->
+> 
 > **Error conditions:**
+> 
 > - Checkbox without ID: Parse error
 > - Mixed mode (explicit fields AND checkboxes outside fields): Parse error
 > - Explicit field with ID `checkboxes`: Parse error
 
 #### Change 2: Nested Field Validation (Layer 1 - Syntax)
 
-**Location:** In "Field Tags" section, under error conditions
+**Location:** In “Field Tags” section, under error conditions
 
 **Add:**
 
 > **Nesting constraints:**
+> 
 > - Field tags MUST NOT be nested inside other field tags
-> - Nested field tags produce a parse error:
->   `Field tags cannot be nested. Found 'inner_id' inside 'outer_id'`
+> - Nested field tags produce a parse error: `Field tags cannot be nested.
+>   Found 'inner_id' inside 'outer_id'`
 
 #### Change 3: Reserved IDs (Layer 2 - Data Model)
 
-**Location:** In "Identifiers" section
+**Location:** In “Identifiers” section
 
 **Add to reserved IDs list:**
 
-> | Reserved ID | Purpose |
-> | --- | --- |
-> | `default` | Implicit group for ungrouped fields |
-> | `checkboxes` | Implicit checkboxes field for plan documents |
+| Reserved ID | Purpose |
+| --- | --- |
+| `default` | Implicit group for ungrouped fields |
+| `checkboxes` | Implicit checkboxes field for plan documents |
 
 ### Code Changes
 
@@ -541,7 +555,7 @@ export type {
 
 ### Reusable Components
 
-- **Existing markdown parser**: Use Markdoc's AST for heading detection
+- **Existing markdown parser**: Use Markdoc’s AST for heading detection
 - **Existing checkbox parsing**: Reuse `parseOptionText()` and `CHECKBOX_MARKERS` from
   `parseFields.ts`
 - **Existing error types**: Use `MarkformParseError` for all validation errors
@@ -561,7 +575,8 @@ These changes are prerequisites that improve the core parsing before adding impl
 checkboxes.
 
 **Tasks:**
-- [ ] Update `Option` interface in `coreTypes.ts` to include `metadata?: Record<string, string>`
+- [ ] Update `Option` interface in `coreTypes.ts` to include
+  `metadata?: Record<string, string>`
 - [ ] Update `OptionSchema` in `coreTypes.ts`
 - [ ] Update `ParsedOptionItem` in `parseHelpers.ts` to include `attributes`
 - [ ] Update `extractOptionItems()` to capture all attributes from annotations
@@ -645,7 +660,7 @@ checkboxes.
 ### Phase 5: Spec Updates
 
 **Tasks:**
-- [ ] Add "Implicit Checkboxes" section to `docs/markform-spec.md` Layer 1
+- [ ] Add “Implicit Checkboxes” section to `docs/markform-spec.md` Layer 1
 - [ ] Document behavior, error conditions, reserved ID
 - [ ] Add examples of implicit checkboxes forms
 - [ ] Update `docs/markform-reference.md` with new APIs
@@ -654,9 +669,9 @@ checkboxes.
 
 **Spec changes to `docs/markform-spec.md`:**
 
-Add new section after "Checkboxes Fields" (~line 633):
+Add new section after “Checkboxes Fields” (~line 633):
 
-```markdown
+````markdown
 ##### Implicit Checkboxes (Plan Documents)
 
 Forms designed as task lists or plans can omit explicit field wrappers. When a form
@@ -689,7 +704,7 @@ markform:
 - [/] API design {% #api %}
 
 {% /form %}
-```
+````
 
 **Requirements:**
 - Each checkbox MUST have an ID annotation (`{% #id %}`)
@@ -698,7 +713,8 @@ markform:
 **Errors:**
 - Missing checkbox ID: `Option in implicit field 'checkboxes' missing ID annotation`
 - Mixed mode (explicit fields with checkboxes outside): Error, must choose one approach
-```
+
+````
 
 ### Phase 6: Final Validation
 
@@ -733,6 +749,7 @@ markform:
   spec: MF/0.1
 ---
 {% form id="test" title="Test" %}
+
 - [ ] Task one {% #task1 %}
 - [x] Task two {% #task2 %}
 {% /form %}' | pnpm markform inspect -
@@ -742,7 +759,7 @@ markform:
 
 # Verify exports
 grep -n "findAllHeadings\|findEnclosingHeadings\|findAllCheckboxes\|injectCheckboxIds\|injectHeaderIds" packages/markform/src/index.ts
-```
+````
 
 ## Appendix A: Issue Tracking
 
@@ -784,12 +801,12 @@ grep -n "findAllHeadings\|findEnclosingHeadings\|findAllCheckboxes\|injectCheckb
 - mf-aex2: Update markform-reference.md with new APIs
 - mf-m8mu: Add examples for plan documents
 
----
+* * *
 
 ## Appendix B: Future Considerations
 
-The following enhancements are out of scope for this feature but should be considered for
-future work. The current design should not preclude these extensions.
+The following enhancements are out of scope for this feature but should be considered
+for future work. The current design should not preclude these extensions.
 
 ### 1. Header Progress Aggregation
 
@@ -815,10 +832,12 @@ contained checkboxes.
 
 ```markdown
 {% field kind="table" id="tasks" label="Tasks" tableMode="tasks" %}
+
 | Task | Status | Due | Assignee |
 |------|--------|-----|----------|
 | Ship v1.0 | [ ] | 2026-02-01 | @alice |
 | Security audit | [/] | 2026-01-15 | @bob |
+
 {% /field %}
 ```
 
@@ -839,10 +858,11 @@ contained checkboxes.
 **Considerations:**
 - Uses option metadata (now supported in this feature)
 - Semantic validation: referenced IDs must exist
-- Could affect progress computation (blocked vs. ready)
+- Could affect progress computation (blocked vs.
+  ready)
 - Could add `blocked` state to checkbox progress
 
----
+* * *
 
 ## Appendix C: Comment Handling Notes
 
@@ -852,13 +872,16 @@ HTML comments that are NOT Markform directives pass through unchanged:
 
 ```markdown
 <!-- This is a regular comment, preserved as-is -->
+
 - [ ] Task one {% #task1 %}
+
 <!-- Another comment -->
 ```
 
 **Rules:**
 - Comments starting with `#` or `.` inside a form are treated as annotations
-- Comments starting with known tag names (`form`, `field`, `group`, etc.) are transformed
+- Comments starting with known tag names (`form`, `field`, `group`, etc.)
+  are transformed
 - All other comments pass through unchanged
 - Comments outside `{% form %}` tags always pass through unchanged
 
@@ -869,12 +892,17 @@ Markdown/Markdoc behavior:
 
 ```markdown
 {% field kind="checkboxes" id="tasks" label="Tasks" %}
+
 - [ ] Task one {% #task1 %}
+
 <!-- comment between items breaks the list -->
+
 - [x] Task two {% #task2 %}
+
 {% /field %}
 ```
 
-The above may parse incorrectly. Recommend placing comments:
+The above may parse incorrectly.
+Recommend placing comments:
 - Before or after the field tag
 - Not between list items

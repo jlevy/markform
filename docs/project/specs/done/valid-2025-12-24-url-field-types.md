@@ -208,7 +208,7 @@ Verify:
 
 Create a test form with invalid URLs:
 
-```bash
+````bash
 cat > /tmp/test-url.form.md << 'EOF'
 ---
 markform:
@@ -221,13 +221,14 @@ markform:
 {% url-field id="bad_url" label="Bad URL" %}
 ```value
 not-a-url
-```
-{% /url-field %} {% /field-group %}
+````
+
+{% /url-field %}{% /field-group %}
 
 {% /form %} EOF
 
 pnpm markform validate /tmp/test-url.form.md
-```
+````
 
 Verify:
 - [ ] Validation reports "not a valid URL" error for bad_url field
@@ -239,7 +240,7 @@ If the web interface is available:
 
 ```bash
 pnpm markform serve examples/simple/simple.form.md
-```
+````
 
 Verify:
 

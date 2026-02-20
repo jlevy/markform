@@ -2,11 +2,12 @@
 
 ## Purpose
 
-This validation spec documents the testing performed and manual validation needed for the
-forms directory feature (markform-271), which centralizes all form output to a
+This validation spec documents the testing performed and manual validation needed for
+the forms directory feature (markform-271), which centralizes all form output to a
 configurable `./forms` directory.
 
-**Feature Specification:** Beads markform-271 through markform-279 in `.beads/issues.jsonl`
+**Feature Specification:** Beads markform-271 through markform-279 in
+`.beads/issues.jsonl`
 
 ## Stage 4: Validation Stage
 
@@ -79,7 +80,7 @@ markform examples --name simple
 
 Expected:
 - Should prompt for filename with message showing `(in ./forms):`
-- Should create `./forms/` directory if it doesn't exist
+- Should create `./forms/` directory if it doesn’t exist
 - Output files should be written to `./forms/simple-filled1.form.md` (and .raw.md, .yml)
 
 ### 3. Test `fill` Command Uses Forms Directory
@@ -126,7 +127,7 @@ Expected:
 cat .gitignore | grep "forms/"
 ```
 
-Expected: Should show `forms/` entry in the project's `.gitignore`.
+Expected: Should show `forms/` entry in the project’s `.gitignore`.
 
 ### 6. Verify Version Incrementing in Forms Directory
 
@@ -138,8 +139,8 @@ markform fill test.form.md --interactive
 ls ./forms/
 ```
 
-Expected: Should show `test-filled1.form.md`, `test-filled2.form.md`, `test-filled3.form.md`
-(and corresponding `.raw.md` and `.yml` files).
+Expected: Should show `test-filled1.form.md`, `test-filled2.form.md`,
+`test-filled3.form.md` (and corresponding `.raw.md` and `.yml` files).
 
 ### 7. Verify Dry Run Mode
 
@@ -147,8 +148,8 @@ Expected: Should show `test-filled1.form.md`, `test-filled2.form.md`, `test-fill
 markform fill test.form.md --interactive --dry-run
 ```
 
-Expected: Should show `[DRY RUN] Would write form to: ./forms/test-filled1.form.md` without
-creating the directory or files.
+Expected: Should show `[DRY RUN] Would write form to: ./forms/test-filled1.form.md`
+without creating the directory or files.
 
 ## User Acceptance Review
 

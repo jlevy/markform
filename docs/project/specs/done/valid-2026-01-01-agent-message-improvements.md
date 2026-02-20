@@ -5,7 +5,8 @@
 This is a validation spec documenting the testing performed and manual validation needed
 for improvements to LLM agent-facing messages in the form filling harness.
 
-**Feature Plan:** [plan-2026-01-01-agent-message-improvements.md](plan-2026-01-01-agent-message-improvements.md)
+**Feature Plan:**
+[plan-2026-01-01-agent-message-improvements.md](plan-2026-01-01-agent-message-improvements.md)
 
 ## Stage 4: Validation Stage
 
@@ -16,9 +17,9 @@ for improvements to LLM agent-facing messages in the form filling harness.
 The following unit tests validate the core functionality:
 
 1. **`getIssuesIntro()` tests** in `tests/unit/harness/prompts.test.ts`:
-   - `returns correct count for multiple issues` - verifies "5 issues" output
-   - `returns singular form for one issue` - verifies "1 issue" output
-   - `returns correct count for 10 issues` - verifies count and absence of "up to"
+   - `returns correct count for multiple issues` - verifies “5 issues” output
+   - `returns singular form for one issue` - verifies “1 issue” output
+   - `returns correct count for 10 issues` - verifies count and absence of “up to”
 
 2. **Existing prompt tests** continue to pass:
    - All field type documentation tests (32 tests in prompts.test.ts)
@@ -33,8 +34,9 @@ The following unit tests validate the core functionality:
    - Wire format captures show correct issue counts and error message format
 
 2. **Wire format verification** in session files:
-   - `simple.session.yaml` - shows "10 issues" instead of "up to 20 issues"
-   - `rejection-test.session.yaml` - shows improved error format with "Correction" and "Correct format" lines
+   - `simple.session.yaml` - shows “10 issues” instead of “up to 20 issues”
+   - `rejection-test.session.yaml` - shows improved error format with “Correction” and
+     “Correct format” lines
    - `simple-with-skips.session.yaml` - shows correct issue counts
 
 ### Manual Testing Needed
@@ -50,9 +52,9 @@ git diff origin/main -- packages/markform/examples/**/*.session.yaml
 ```
 
 **Verify:**
-- [ ] Issue count intro shows actual count (e.g., "2 issues") not "up to 20 issues"
-- [ ] Rejection errors include "**Correction:**" line explaining the field type
-- [ ] Rejection errors include "**Correct format:**" with the correct patch format
+- [ ] Issue count intro shows actual count (e.g., “2 issues”) not “up to 20 issues”
+- [ ] Rejection errors include “**Correction:**” line explaining the field type
+- [ ] Rejection errors include “**Correct format:**” with the correct patch format
 - [ ] Checkbox instructions in system prompt list all three modes
 
 #### 2. Inspect a Session File
@@ -70,9 +72,11 @@ Open `packages/markform/examples/rejection-test/rejection-test.session.yaml` and
 
 Open `docs/development.md` and verify:
 
-- [ ] New "Validating Prompt Changes" section exists (around line 271)
-- [ ] Instructions explain the workflow: make changes → regenerate → review diffs → run tests → commit
-- [ ] Commands are correct: `pnpm --filter markform test:golden:regen` and `pnpm test:golden`
+- [ ] New “Validating Prompt Changes” section exists (around line 271)
+- [ ] Instructions explain the workflow: make changes → regenerate → review diffs → run
+  tests → commit
+- [ ] Commands are correct: `pnpm --filter markform test:golden:regen` and
+  `pnpm test:golden`
 
 #### 4. Run the Tests Locally
 

@@ -8,7 +8,8 @@ Enhance the `markform serve` command with an improved tabbed interface that prov
 3. Fixed Report tab rendering
 4. Reorganized tab order
 
-This builds upon the previous serve improvements (plan-2026-01-01-serve-improvements.md).
+This builds upon the previous serve improvements
+(plan-2026-01-01-serve-improvements.md).
 
 ## Background
 
@@ -22,20 +23,21 @@ Current limitations:
 - No way to view the form in a clean, read-only format with all fields visible
 - No syntax highlighting for the source Markdown/Jinja content
 - Report tab has HTML rendering issues
-- Tab naming could be clearer ("Markform" → "Edit")
+- Tab naming could be clearer ("Markform" → “Edit”)
 
 ## Summary of Task
 
-1. **Rename "Markform" tab to "Edit"**: Clearer name for the interactive form editor
+1. **Rename “Markform” tab to “Edit”**: Clearer name for the interactive form editor
 
-2. **Add "View" tab**: A clean read-only rendering showing:
+2. **Add “View” tab**: A clean read-only rendering showing:
    - All form fields (filled or empty) in a nice display format
    - No input elements, just clean presentation of field labels and values
    - Similar to Report but shows the full form structure, not just filled values
 
-3. **Add "Source" tab**: Syntax-highlighted view of the form source showing:
+3. **Add “Source” tab**: Syntax-highlighted view of the form source showing:
    - Markdown formatting (headers, lists, code blocks, etc.)
-   - Jinja/MarkDoc tags ({% form %}, {% field %}, etc.) highlighted distinctly
+   - Jinja/MarkDoc tags ({% form %}, {% field %}, etc.)
+     highlighted distinctly
    - Similar approach to existing YAML/JSON highlighting
 
 4. **Fix Report tab**: Ensure HTML renders correctly for report markdown
@@ -44,7 +46,8 @@ Current limitations:
 
 ## Backward Compatibility
 
-No breaking changes. This is purely additive UI enhancement:
+No breaking changes.
+This is purely additive UI enhancement:
 - Existing serve behavior preserved
 - No API changes
 - No CLI flag changes
@@ -66,11 +69,11 @@ The serve command (`src/cli/commands/serve.ts`):
 1. **View Tab** (new):
    - Read-only form display
    - Show all groups and fields with labels
-   - Display current values or placeholder "(not filled)" for empty fields
+   - Display current values or placeholder “(not filled)” for empty fields
    - Clean presentation without input elements
    - Use existing form schema to render structure
 
-2. **Edit Tab** (renamed from "Markform"):
+2. **Edit Tab** (renamed from “Markform”):
    - Keep all existing functionality
    - Just rename the tab label
 
@@ -109,7 +112,7 @@ The serve command (`src/cli/commands/serve.ts`):
 
 Update `Tab` interface and `buildTabs` function:
 - Add `view` and `source` tab types
-- Change `form` label to "Edit"
+- Change `form` label to “Edit”
 - Reorder tabs: view, form, source, report, values, schema
 
 ```typescript
@@ -160,14 +163,14 @@ Update `handleRequest` to:
 
 - [ ] Update `Tab` interface to include `view` and `source` types
 - [ ] Update `buildTabs` to include all tabs in correct order
-- [ ] Rename "Markform" label to "Edit"
+- [ ] Rename “Markform” label to “Edit”
 - [ ] Add CSS styles for new syntax highlighting classes
 
 ### Phase 2: View Tab
 
 - [ ] Create `renderViewContent(form: ParsedForm): string` function
 - [ ] Render groups with headers
-- [ ] Render fields with label, type badge, and value (or "(not filled)")
+- [ ] Render fields with label, type badge, and value (or “(not filled)”)
 - [ ] Handle all field types appropriately
 - [ ] Add to request handler for `/tab/view`
 

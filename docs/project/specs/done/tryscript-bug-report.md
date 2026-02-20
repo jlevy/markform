@@ -2,9 +2,11 @@
 
 ## Summary
 
-Tryscript is a promising CLI testing tool but has critical bugs and missing features. This report covers bugs found in practice plus enhancements to make it more powerful, elegant, and flexible for all users.
+Tryscript is a promising CLI testing tool but has critical bugs and missing features.
+This report covers bugs found in practice plus enhancements to make it more powerful,
+elegant, and flexible for all users.
 
----
+* * *
 
 ## Part 1: Bugs
 
@@ -31,12 +33,13 @@ const proc = spawn(command, { shell: true, cwd: ctx.tempDir });
 const proc = spawn(command, { cwd: ctx.tempDir }); // Always /tmp/tryscript-xxx/
 ```
 
-**Result:** All relative paths break. Must use absolute paths everywhere:
+**Result:** All relative paths break.
+Must use absolute paths everywhere:
 ```console
 $ /home/user/project/dist/bin.mjs inspect /home/user/project/examples/file.md
 ```
 
----
+* * *
 
 ## Part 2: Observed Inelegance
 
@@ -65,7 +68,7 @@ No way to:
 
 ### Problem 3: No variables or aliases
 
-Can't define once and reuse:
+Can’t define once and reuse:
 ```yaml
 # WISH: Define aliases
 vars:
@@ -77,7 +80,9 @@ $ $BIN validate $FORM  # Would be so much cleaner
 
 ### Problem 4: Same output verified multiple times
 
-The `validate` test has 21 lines of Issues output. The `inspect` test has the same 21 lines. Changing issue format requires updating both.
+The `validate` test has 21 lines of Issues output.
+The `inspect` test has the same 21 lines.
+Changing issue format requires updating both.
 
 ### Problem 5: No structured assertions
 
@@ -89,16 +94,17 @@ $ mycli export --format json
 ...
 ```
 
-Can't assert: "output is valid JSON" or "output.name equals 'test'"
+Can’t assert: “output is valid JSON” or “output.name equals 'test'”
 
 ### Problem 6: No way to verify file modifications
 
-After `apply` command modifies a file, we pipe through `head` to see partial output. Can't verify:
+After `apply` command modifies a file, we pipe through `head` to see partial output.
+Can’t verify:
 - File was actually written
 - Specific fields changed
 - File is valid markdown
 
----
+* * *
 
 ## Part 3: Enhancements
 
@@ -117,7 +123,7 @@ const cwd = config.cwd ? resolve(testDir, config.cwd) : tempDir;
 spawn(command, { cwd });
 ```
 
----
+* * *
 
 ### Enhancement 2: `binName` option (Critical)
 
@@ -129,7 +135,7 @@ binName: markform
 $ markform --help
 ```
 
----
+* * *
 
 ### Enhancement 3: Variables/aliases (High)
 
@@ -162,13 +168,13 @@ function expandVars(command: string, vars: Record<string, string>): string {
 }
 ```
 
----
+* * *
 
 ### Enhancement 4: Fixtures / setup blocks (High)
 
 Set up files before tests, clean up after:
 
-```yaml
+````yaml
 ---
 fixtures:
   - source: examples/simple/simple.form.md
@@ -181,12 +187,13 @@ fixtures:
 $ mycli apply $TEMP/test.form.md --patch '[...]'
 Applied 1 patch
 ? 0
-```
+````
 
 ```file $TEMP/test.form.md contains
 name: "Test User"
 ```
-```
+
+````
 
 **New block types:**
 - `fixture` - Copy file to temp
@@ -207,9 +214,9 @@ before: |
 after: |
   rm -rf $TEMP/forms
 ---
-```
+````
 
----
+* * *
 
 ### Enhancement 6: Skip/focus tests (Medium)
 
@@ -228,11 +235,12 @@ tryscript --only "validate*"
 tryscript --focus  # Run only tests marked 'only'
 ```
 
----
+* * *
 
 ### Enhancement 7: Separate stdout/stderr (Medium)
 
-Currently stdout and stderr are merged. Allow separate assertions:
+Currently stdout and stderr are merged.
+Allow separate assertions:
 
 ```console
 $ mycli broken-command
@@ -246,11 +254,12 @@ Or explicit blocks:
 ```stdout
 Normal output
 ```
+
 ```stderr
 Error: Something went wrong
 ```
 
----
+* * *
 
 ### Enhancement 8: Structured output assertions (Medium)
 
@@ -259,6 +268,7 @@ For JSON/YAML output, allow programmatic assertions:
 ```console
 $ mycli export --format json
 ```
+
 ```assert json
 $.name == "test"
 $.fields | length > 0
@@ -268,14 +278,16 @@ Or simpler:
 ```console
 $ mycli export --format json
 ```
-```json-valid```
+
+`json-valid`
 
 ```console
 $ mycli schema
 ```
-```json-schema-valid```
 
----
+`json-schema-valid`
+
+* * *
 
 ### Enhancement 9: Regex patterns in expected output (Low)
 
@@ -293,12 +305,13 @@ $ mycli status
 Progress: {{count:\d+}}/21 fields filled
 ? 0
 ```
+
 ```assert
 $count >= 0
 $count <= 21
 ```
 
----
+* * *
 
 ### Enhancement 10: Include common config (Low)
 
@@ -319,7 +332,7 @@ vars:
   FORM: examples/simple/simple.form.md
 ```
 
----
+* * *
 
 ### Enhancement 11: Multi-command sequences with state (Low)
 
@@ -332,9 +345,10 @@ $ rm -r test-dir
 ? 0
 ```
 
-Currently each `$` line is independent. With state, `cd` would persist.
+Currently each `$` line is independent.
+With state, `cd` would persist.
 
----
+* * *
 
 ### Enhancement 12: Stdin support (Low)
 
@@ -354,13 +368,13 @@ Imported 1 record
 ? 0
 ```
 
----
+* * *
 
 ## Ideal End State
 
 After all enhancements, tests become:
 
-```yaml
+````yaml
 ---
 bin: ./dist/bin.mjs
 binName: markform
@@ -388,7 +402,7 @@ Form Validation Report
 Issues ([..]):
 ...
 ? 0
-```
+````
 
 ### filled form is valid
 
@@ -420,14 +434,16 @@ name: "Test"
 ```console
 $ markform schema $FORM
 ```
-```json-schema-valid```
+
+`json-schema-valid`
 
 ### export produces valid YAML
 
 ```console
 $ markform export $FORM --format yaml
 ```
-```yaml-valid```
+
+`yaml-valid`
 ```
 
 **Line count comparison:**
@@ -454,3 +470,4 @@ $ markform export $FORM --format yaml
 | Includes | Feature | Low | Config sharing |
 | Command state | Feature | Low | Complex workflows |
 | Stdin support | Feature | Low | Pipe testing |
+```

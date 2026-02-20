@@ -2,35 +2,42 @@
 
 ## Purpose
 
-This validation spec documents testing performed and remaining manual validation for
-the checkbox type coercion feature and prompt improvements.
+This validation spec documents testing performed and remaining manual validation for the
+checkbox type coercion feature and prompt improvements.
 
-**Feature Plan:** [plan-2026-01-03-array-to-checkboxes-coercion.md](./plan-2026-01-03-array-to-checkboxes-coercion.md)
+**Feature Plan:**
+[plan-2026-01-03-array-to-checkboxes-coercion.md](./plan-2026-01-03-array-to-checkboxes-coercion.md)
 
-**Related Plan:** [plan-2026-01-03-type-coercion-golden-tests.md](./plan-2026-01-03-type-coercion-golden-tests.md)
+**Related Plan:**
+[plan-2026-01-03-type-coercion-golden-tests.md](./plan-2026-01-03-type-coercion-golden-tests.md)
 
 ## Summary of Changes
 
 ### 1. Array-to-Checkboxes Coercion
-When LLMs mistakenly send checkbox patches as arrays (like `multi_select`), the engine now
-automatically coerces them to the correct object format:
+
+When LLMs mistakenly send checkbox patches as arrays (like `multi_select`), the engine
+now automatically coerces them to the correct object format:
 
 - `["opt1", "opt2"]` → `{ "opt1": "done", "opt2": "done" }` (simple/multi mode)
 - `["opt1", "opt2"]` → `{ "opt1": "yes", "opt2": "yes" }` (explicit mode)
 
-This reduces wasted turns (~4-8K tokens per form) when LLMs pattern-match from multi_select.
+This reduces wasted turns (~4-8K tokens per form) when LLMs pattern-match from
+multi_select.
 
 ### 2. Enhanced Prompt Instructions
+
 - Table-based format examples for all 10 field types in system prompt
 - Critical warning section contrasting checkboxes vs multi_select
 - WRONG vs RIGHT examples for checkbox format
 - Mode-specific checkbox state examples (simple, multi, explicit)
-- **Fix:** Multi mode now lists all 5 states: `done`, `todo`, `incomplete`, `active`, `na`
-  (was incorrectly showing only 3: `done`, `todo`, `na`)
-- **Fix:** Explicit mode guidance clarifies agents should use `abort_field` if answer is unknown
-  (instead of exposing `unfilled` state which is an initial state, not a valid answer)
+- **Fix:** Multi mode now lists all 5 states: `done`, `todo`, `incomplete`, `active`,
+  `na` (was incorrectly showing only 3: `done`, `todo`, `na`)
+- **Fix:** Explicit mode guidance clarifies agents should use `abort_field` if answer is
+  unknown (instead of exposing `unfilled` state which is an initial state, not a valid
+  answer)
 
 ### 3. Improved Inline Field Hints
+
 - Inline examples now use actual option IDs from the field definition
 - Checkbox mode is shown in issue formatting
 - Mode-appropriate states used in examples (yes/no for explicit, done/todo for simple)
@@ -43,7 +50,7 @@ All tests pass (1431 total):
 
 **`valueCoercion.test.ts`** - Array coercion tests:
 - ✅ Coerces array of valid option IDs to checkboxes object
-- ✅ Coerces array with 'yes' state in explicit mode
+- ✅ Coerces array with ‘yes’ state in explicit mode
 - ✅ Rejects array with invalid option IDs
 - ✅ Rejects array with non-string items
 - ✅ Coerces empty array to empty object without warning
@@ -84,8 +91,8 @@ All tests pass (1431 total):
 ### 1. Review Prompt Changes
 
 **Files to review:**
-- `packages/markform/src/harness/prompts.ts` - View the new `DEFAULT_SYSTEM_PROMPT`
-  with table-based examples and critical warning section
+- `packages/markform/src/harness/prompts.ts` - View the new `DEFAULT_SYSTEM_PROMPT` with
+  table-based examples and critical warning section
 
 **What to verify:**
 - The table format is clear and readable
@@ -121,8 +128,10 @@ markform:
 ---
 {% form id="test" title="Test" %}
 {% field kind="checkboxes" id="tasks" label="Tasks" checkboxMode="simple" %}
+
 - [ ] Task A {% #a %}
 - [ ] Task B {% #b %}
+
 {% /field %}
 {% /form %}
 `);

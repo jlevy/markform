@@ -6,13 +6,12 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Round-Trip Serialization Tests
 
 Tests that verify parse -> serialize round-trips preserve form structure correctly.
 Uses real forms from the examples directory for more realistic coverage.
 
----
+* * *
 
 ## Non-Normalized Round-Trip (Content Preserving)
 
@@ -40,7 +39,7 @@ $ $CLI inspect --format json /tmp/mf-rt-preserve.md | grep -o '"group_count": [0
 ? 0
 ```
 
----
+* * *
 
 ## Normalized Round-Trip (Regenerated)
 
@@ -62,7 +61,7 @@ $ $CLI inspect --format json /tmp/mf-rt-normalize.md | grep -o '"field_count": [
 ? 0
 ```
 
----
+* * *
 
 ## Filled Form Round-Trip
 
@@ -108,7 +107,7 @@ movie: "The Shawshank Redemption"
 ? 0
 ```
 
----
+* * *
 
 ## Simple Form Round-Trip
 
@@ -138,7 +137,7 @@ Valid
 ? 0
 ```
 
----
+* * *
 
 ## Double Round-Trip (Idempotency)
 
@@ -154,7 +153,8 @@ Identical
 
 # Test: preserved export is idempotent after first round-trip (structure)
 
-After one round-trip, subsequent round-trips should produce structurally identical forms.
+After one round-trip, subsequent round-trips should produce structurally identical
+forms.
 
 ```console
 $ $CLI export /tmp/mf-rt-preserve.md > /tmp/mf-rt-preserve2.md && $CLI inspect --format json /tmp/mf-rt-preserve.md | grep -o '"field_count": [0-9]*'
@@ -168,7 +168,7 @@ $ $CLI inspect --format json /tmp/mf-rt-preserve2.md | grep -o '"field_count": [
 ? 0
 ```
 
----
+* * *
 
 ## Startup Form Round-Trip (Complex Form)
 

@@ -8,7 +8,8 @@
 
 ## Overview
 
-Clean up and consolidate YAML frontmatter parsing and serialization to use consistent Zod validation, eliminate code duplication, and fix discovered bugs.
+Clean up and consolidate YAML frontmatter parsing and serialization to use consistent
+Zod validation, eliminate code duplication, and fix discovered bugs.
 
 ## Goals
 
@@ -27,7 +28,8 @@ Clean up and consolidate YAML frontmatter parsing and serialization to use consi
 
 ## Background
 
-During an attempt to migrate example forms from Markdoc syntax (`{% %}`) to HTML comment syntax (`<!-- -->`), critical bugs were discovered:
+During an attempt to migrate example forms from Markdoc syntax (`{% %}`) to HTML comment
+syntax (`<!-- -->`), critical bugs were discovered:
 
 ### Bugs Found and Partially Fixed
 
@@ -37,8 +39,9 @@ During an attempt to migrate example forms from Markdoc syntax (`{% %}`) to HTML
    - **Fix applied:** Updated both parse.ts and serialize.ts
 
 2. **BUG (NOT FIXED): title and description not preserved**
-   - Frontmatter `markform.title` and `markform.description` are parsed but lost during serialization
-   - `FormMetadata` type doesn't include title/description fields
+   - Frontmatter `markform.title` and `markform.description` are parsed but lost during
+     serialization
+   - `FormMetadata` type doesn’t include title/description fields
    - Only `description` is extracted but not re-serialized
 
 ### Structural Issues Found
@@ -48,7 +51,7 @@ During an attempt to migrate example forms from Markdoc syntax (`{% %}`) to HTML
    - `Harness config`: Manual type checking (`typeof value !== 'number'`)
    - `Roles/instructions`: No validation, just type assertions
 
-2. **Zod schemas exist but aren't used during parsing:**
+2. **Zod schemas exist but aren’t used during parsing:**
    - `FrontmatterHarnessConfigSchema` defined but not used
    - `FormMetadataSchema` defined but not used
    - Manual validation duplicates schema logic
@@ -62,7 +65,7 @@ During an attempt to migrate example forms from Markdoc syntax (`{% %}`) to HTML
    - roles array elements not validated as strings
    - roles array minimum length not enforced
    - roleInstructions values not validated
-   - Harness config doesn't enforce positive integers
+   - Harness config doesn’t enforce positive integers
 
 ## Design
 
@@ -76,7 +79,8 @@ During an attempt to migrate example forms from Markdoc syntax (`{% %}`) to HTML
 
 ### Components
 
-- `packages/markform/src/engine/coreTypes.ts` - Add comprehensive frontmatter input schema
+- `packages/markform/src/engine/coreTypes.ts` - Add comprehensive frontmatter input
+  schema
 - `packages/markform/src/engine/parse.ts` - Use Zod for all validation
 - `packages/markform/src/engine/serialize.ts` - Use shared mappings, preserve all fields
 - `packages/markform/src/settings.ts` - Centralize defaults and mappings
@@ -157,7 +161,8 @@ During an attempt to migrate example forms from Markdoc syntax (`{% %}`) to HTML
 
 ## Open Questions
 
-- Should we support both `markform.roles` and top-level `roles` for backwards compatibility, or deprecate top-level?
+- Should we support both `markform.roles` and top-level `roles` for backwards
+  compatibility, or deprecate top-level?
   - **Current approach:** Support both, prefer markform section
 - Should title/description in frontmatter override or supplement form tag attributes?
   - **Recommendation:** Form tag is authoritative for structure, frontmatter is metadata

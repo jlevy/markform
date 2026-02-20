@@ -3,18 +3,19 @@
 ## Purpose
 
 This technical design document defines the implementation of HTML comment syntax
-(`<!-- f:tag -->`) as the primary syntax for Markform. With this syntax, **Markform
-files are completely valid Markdown** with form structure defined in readable HTML
-comments. This enables forms to render cleanly on GitHub and in any Markdown editor,
-while the Markdoc tag syntax (`{% ... %}`) remains fully supported as a secondary option.
+(`<!-- f:tag -->`) as the primary syntax for Markform.
+With this syntax, **Markform files are completely valid Markdown** with form structure
+defined in readable HTML comments.
+This enables forms to render cleanly on GitHub and in any Markdown editor, while the
+Markdoc tag syntax (`{% ... %}`) remains fully supported as a secondary option.
 
 **Dual Syntax Model:**
 
 Markform supports both syntaxes through a **preprocessing step**: comment syntax is
 transformed to Markdoc syntax before parsing, and optionally back during serialization.
-Both syntaxes are always supported—no configuration required. However, **users are
-encouraged to use only one syntax per file**, with HTML comment syntax recommended as
-the default for new forms.
+Both syntaxes are always supported—no configuration required.
+However, **users are encouraged to use only one syntax per file**, with HTML comment
+syntax recommended as the default for new forms.
 
 ## Background
 
@@ -22,15 +23,18 @@ Markform currently uses Markdoc (`@markdoc/markdoc` v0.5.4) for parsing, which u
 Jinja-style tags (`{% tag %}`, `{% /tag %}`). While this syntax is powerful, it has
 compatibility issues:
 
-1. **GitHub rendering**: Markdoc tags render as visible text, cluttering document display
-2. **Editor support**: Standard Markdown editors don't recognize Markdoc syntax
+1. **GitHub rendering**: Markdoc tags render as visible text, cluttering document
+   display
+2. **Editor support**: Standard Markdown editors don’t recognize Markdoc syntax
 3. **Preview tools**: Markdown preview tools show raw tags instead of hiding them
 
 The proposed solution is to support HTML comment-style syntax using an `f:` namespace
 prefix (`<!-- f:tag -->`) that:
 - Is valid HTML/Markdown and hidden by renderers
-- Uses `f:` prefix for tags (semantically "form"), following WordPress Gutenberg's `wp:` pattern
-- Uses plain annotations (`<!-- #id -->`, `<!-- .class -->`) without prefix (naturally distinctive)
+- Uses `f:` prefix for tags (semantically “form”), following WordPress Gutenberg’s `wp:`
+  pattern
+- Uses plain annotations (`<!-- #id -->`, `<!-- .class -->`) without prefix (naturally
+  distinctive)
 - Can coexist with Markdoc syntax (both always supported)
 
 **Related Documentation:**
@@ -42,15 +46,16 @@ prefix (`<!-- f:tag -->`) that:
 
 ## Summary of Task
 
-Implement an **always-on preprocessor** that transparently supports both Markdoc and HTML
-comment syntax with no configuration required:
+Implement an **always-on preprocessor** that transparently supports both Markdoc and
+HTML comment syntax with no configuration required:
 
 1. **Preprocessor**: Transform `<!-- f:... -->` to `{% ... %}` before Markdoc parsing
 2. **Syntax Detection**: Track which syntax the original document used
 3. **Serialization**: Support outputting in either syntax (default: preserve original)
 4. **Specification Update**: Document HTML comment syntax as equivalent alternative
 5. **Documentation Update**: Show examples in both syntaxes throughout docs
-6. **CLI Syntax Option**: Optional `--syntax` flag on output commands for format conversion
+6. **CLI Syntax Option**: Optional `--syntax` flag on output commands for format
+   conversion
 
 **Syntax Mapping (Option C - Namespace Prefix):**
 
@@ -64,7 +69,7 @@ comment syntax with no configuration required:
 
 **Why Option C over Option A (`<!--%`)**:
 - `f:` is semantically meaningful ("form")
-- Follows WordPress Gutenberg's established `wp:` pattern
+- Follows WordPress Gutenberg’s established `wp:` pattern
 - Annotations (`#id`, `.class`) look like CSS selectors—naturally distinctive
 - Cleaner overall appearance
 
@@ -73,7 +78,7 @@ comment syntax with no configuration required:
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
 - **Code types, methods, and function signatures**: DO NOT MAINTAIN
-  - Internal API changes don't need deprecation stubs
+  - Internal API changes don’t need deprecation stubs
   - New `SyntaxStyle` type is additive, not breaking
 
 - **Library APIs**: KEEP DEPRECATED for one release
@@ -193,7 +198,8 @@ comment syntax with no configuration required:
    - Transform tags: `<!-- f:tag -->` → `{% tag %}`
    - Transform closing: `<!-- /f:tag -->` → `{% /tag %}`
    - Handle self-closing: `<!-- f:tag /-->` → `{% tag /%}`
-   - Transform annotations: `<!-- #id -->` → `{% #id %}`, `<!-- .class -->` → `{% .class %}`
+   - Transform annotations: `<!-- #id -->` → `{% #id %}`, `<!-- .class -->` →
+     `{% .class %}`
    - Returns unchanged if no comment syntax found
 
 2. **`detectSyntaxStyle(markdown: string): SyntaxStyle`**
@@ -230,7 +236,8 @@ comment syntax with no configuration required:
 
 ### Reusable Components Found
 
-1. **State machine pattern**: Similar to `pickFence()` in serialize.ts for code block detection
+1. **State machine pattern**: Similar to `pickFence()` in serialize.ts for code block
+   detection
 2. **YAML library**: Already using for frontmatter, no new dependencies needed
 3. **Test patterns**: Existing parse.test.ts and serialize.test.ts patterns to follow
 
@@ -292,7 +299,7 @@ Add support for serializing in comment syntax.
 - [ ] Update `src/engine/serialize.ts`:
   - [ ] Add `postprocessToCommentSyntax()` function
   - [ ] Update `serializeForm()` to accept syntax style option
-  - [ ] Default to ParsedForm's detected syntax style
+  - [ ] Default to ParsedForm’s detected syntax style
   - [ ] Transform output for comment syntax
 
 - [ ] Create `tests/unit/engine/serialize-comment.test.ts`:
@@ -308,7 +315,7 @@ Update specification and reference documentation.
 **Tasks:**
 
 - [ ] Update `docs/markform-spec.md`:
-  - [ ] Add "Alternative Tag Syntax" section to Layer 1
+  - [ ] Add “Alternative Tag Syntax” section to Layer 1
   - [ ] Document syntax mapping table
   - [ ] Explain always-on behavior
   - [ ] Document `-->` constraint in values
@@ -316,7 +323,7 @@ Update specification and reference documentation.
 - [ ] Update `docs/markform-reference.md`:
   - [ ] Add syntax note in File Structure section
   - [ ] Add example showing comment syntax
-  - [ ] Update "Conventions" section
+  - [ ] Update “Conventions” section
 
 - [ ] Update `packages/markform/examples/simple/simple.form.md`:
   - [ ] Create comment-syntax variant for comparison
@@ -329,7 +336,8 @@ Add `--syntax` option to validate command for syntax enforcement and format conv
 
 The `--syntax` option serves two purposes:
 1. **Strict validation**: When provided, validate enforces that the input file uses ONLY
-   the specified syntax. Mixed syntax or the wrong syntax causes validation to fail.
+   the specified syntax.
+   Mixed syntax or the wrong syntax causes validation to fail.
 2. **Format conversion**: When outputting, serializes in the specified syntax.
 
 ```bash
@@ -357,7 +365,8 @@ When `--syntax` is specified:
 **Rationale:**
 
 While Markform accepts both syntaxes, **consistent syntax within a file** improves
-readability and maintainability. The `--syntax` option enables:
+readability and maintainability.
+The `--syntax` option enables:
 - CI/linting enforcement of syntax consistency
 - Style guide compliance checking
 - Deliberate format migration with validation
@@ -371,7 +380,7 @@ readability and maintainability. The `--syntax` option enables:
   - [x] Default (no option): permissive, preserve original syntax
 
 - [x] Add `validateSyntaxConsistency()` helper function:
-  - [x] Scan for patterns of the "wrong" syntax
+  - [x] Scan for patterns of the “wrong” syntax
   - [x] Return line numbers and patterns found
   - [x] Skip fenced code blocks and inline code spans
 
@@ -394,49 +403,52 @@ readability and maintainability. The `--syntax` option enables:
 
 ### Phase 5: Make HTML Comment Syntax Primary (Documentation & Examples)
 
-Promote HTML comment syntax from "alternative" to "primary/recommended" syntax, with
-Markdoc syntax documented as a secondary/legacy option. This improves GitHub rendering
-and Markdown compatibility while maintaining full backward compatibility.
+Promote HTML comment syntax from “alternative” to “primary/recommended” syntax, with
+Markdoc syntax documented as a secondary/legacy option.
+This improves GitHub rendering and Markdown compatibility while maintaining full
+backward compatibility.
 
 **Key Insight:** With HTML comment syntax, **Markform files are completely valid
 Markdown**. The form structure is defined entirely in well-structured, readable HTML
-comments that Markdown renderers naturally hide. Users see clean, readable documents
-while the underlying structure remains machine-parseable.
+comments that Markdown renderers naturally hide.
+Users see clean, readable documents while the underlying structure remains
+machine-parseable.
 
 **Rationale:**
 - **Valid Markdown**: Comment syntax means `.form.md` files render perfectly everywhere
 - **GitHub-friendly**: All form tags are hidden; users see only content and checkboxes
 - **Editor-compatible**: Standard Markdown editors and preview tools work seamlessly
 - **Semantic prefix**: The `f:` prefix is meaningful ("form"), following `wp:` pattern
-- **Implementation detail**: Markdoc is under the hood—users don't need to know about it
+- **Implementation detail**: Markdoc is under the hood—users don’t need to know about it
 
 **Scope of Changes:**
 
 #### 5.1 Documentation Updates
 
 **README.md:**
-- [ ] Reframe introduction: "Markform is structured Markdown for forms" (not "Markdoc-based")
+- [ ] Reframe introduction: “Markform is structured Markdown for forms” (not
+  “Markdoc-based”)
 - [ ] Lead with HTML comment syntax examples in all code blocks
-- [ ] Mention Markdoc only briefly: "Built on Markdoc for parsing"
+- [ ] Mention Markdoc only briefly: “Built on Markdoc for parsing”
 - [ ] Update Quick Start example to use comment syntax
 - [ ] Update any inline examples throughout
 
 **docs/markform-spec.md:**
-- [ ] Rename "Alternative Tag Syntax" → "Tag Syntax"
+- [ ] Rename “Alternative Tag Syntax” → “Tag Syntax”
 - [ ] Present HTML comment syntax FIRST as the primary syntax
-- [ ] Move Markdoc syntax to a subsection: "Legacy Markdoc Syntax (Alternative)"
+- [ ] Move Markdoc syntax to a subsection: “Legacy Markdoc Syntax (Alternative)”
 - [ ] Update all inline examples to use comment syntax
 - [ ] Update Layer 1 introduction to not emphasize Markdoc
-- [ ] Change: "Built on Markdoc's tag syntax" → "Uses Markdoc for parsing internally"
-- [ ] Update "Structural Tags" section examples
-- [ ] Update "Field Tags" section examples
-- [ ] Update "Option Syntax" section examples
+- [ ] Change: “Built on Markdoc’s tag syntax” → “Uses Markdoc for parsing internally”
+- [ ] Update “Structural Tags” section examples
+- [ ] Update “Field Tags” section examples
+- [ ] Update “Option Syntax” section examples
 - [ ] Update Checkbox State Tokens examples
 
 **docs/markform-reference.md:**
-- [ ] Lead "File Structure" example with comment syntax
+- [ ] Lead “File Structure” example with comment syntax
 - [ ] Swap the syntax table order (comment syntax first, Markdoc second)
-- [ ] Update "Field Kinds" examples to use comment syntax
+- [ ] Update “Field Kinds” examples to use comment syntax
 - [ ] Update all code examples throughout
 
 **docs/markform-apis.md:**
@@ -460,11 +472,13 @@ Convert all example `.form.md` files to use HTML comment syntax as primary:
 - [ ] `examples/rejection-test/rejection-test-mock-filled.form.md`
 
 **Keep as comment syntax variant:**
-- [ ] `examples/simple/simple-comment-syntax.form.md` → rename to `simple-markdoc-syntax.form.md` (legacy example)
+- [ ] `examples/simple/simple-comment-syntax.form.md` → rename to
+  `simple-markdoc-syntax.form.md` (legacy example)
 
 #### 5.3 Test Suite Updates
 
-**Strategy:** Keep both syntaxes well-tested, but use comment syntax as primary in new tests.
+**Strategy:** Keep both syntaxes well-tested, but use comment syntax as primary in new
+tests.
 
 **Unit tests to update (use comment syntax as primary):**
 - [ ] `tests/unit/engine/parse.test.ts` - Add/update tests using comment syntax
@@ -548,7 +562,7 @@ If issues arise:
 - Markdoc syntax continues to work (backward compatible)
 - No code changes required for rollback
 
----
+* * *
 
 ## Stage 5: Implementation Checklist
 
@@ -690,8 +704,10 @@ markform:
 {% field kind="string" id="name" label="Name" required=true %}{% /field %}
 
 {% field kind="single_select" id="rating" label="Rating" %}
+
 - [ ] Good {% #good %}
 - [ ] Bad {% #bad %}
+
 {% /field %}
 
 {% /group %}
@@ -711,8 +727,10 @@ markform:
 <!-- f:field kind="string" id="name" label="Name" required=true --><!-- /f:field -->
 
 <!-- f:field kind="single_select" id="rating" label="Rating" -->
+
 - [ ] Good <!-- #good -->
 - [ ] Bad <!-- #bad -->
+
 <!-- /f:field -->
 
 <!-- /f:group -->

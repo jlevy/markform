@@ -239,6 +239,7 @@ Before defining `table-field`, we formalize the existing field type categories:
      must have at least `minRows` rows
 
 9. **Patch operation:**
+
    ```json
    {
      "op": "set_table",
@@ -307,6 +308,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 
 1. **Empty table syntax:** How to represent a table with no data rows?
    **Resolution:** Header + separator row only:
+
    ```md
    | Name | Title |
    |------|-------|
@@ -595,6 +597,7 @@ Serialize as canonical markdown table:
 |------|-------|--------------|------------|
 | John Smith | CEO | https://linkedin.com/in/jsmith | 20 years in tech |
 | Jane Doe | CTO | %SKIP% (No public profile) | Former Google engineer |
+
 {% /table-field %}
 ```
 
@@ -629,8 +632,8 @@ The following escaping rules apply:
 
 | Character | Escaped Form | Notes |
 | --- | --- | --- |
-| `\|` (pipe) | `\\|` | Required - pipe is the cell delimiter |
-| `\\` before `\|` | `\\\\|` | Preserve literal backslash-pipe sequence |
+| `\|` (pipe) | `\\ | ` |
+| `\\` before `\|` | `\\\\ | ` |
 
 **Rejected characters (invalid in cells):**
 
@@ -774,7 +777,7 @@ Sentinel values don’t require escaping (no pipe characters).
 | Original Value | Serialized Cell | Notes |
 | --- | --- | --- |
 | `Hello` | `Hello` | No escaping needed |
-| `A\|B` | `A\\|B` | Pipe escaped |
+| `A\|B` | `A\\ | B` |
 | `%SKIP%` | `%SKIP%` | Sentinel (skipped cell) |
 | `%SKIP% (No data)` | `%SKIP% (No data)` | Sentinel with reason |
 | `%ABORT%` | `%ABORT%` | Sentinel (aborted cell) |
@@ -1776,6 +1779,7 @@ function extractCellText(cell: Node): string {
 | 2023 | Barbie | Barbie | 88 | 1441.8 | Highest-grossing film of 2023 |
 | 2019 | Once Upon a Time in Hollywood | Sharon Tate | 85 | 374.3 | Oscar-nominated ensemble |
 | 2017 | I, Tonya | Tonya Harding | 90 | 53.9 | %SKIP% (Box office not tracked) |
+
 {% /table-field %}
 ```
 
@@ -1785,10 +1789,12 @@ Labels are back-filled from headers — no need to duplicate in `columnLabels`:
 
 ```md
 {% table-field id="team" label="Team Members" columnIds=["name", "title", "department"] %}
+
 | Full Name | Job Title | Department |
 |-----------|-----------|------------|
 | John Smith | CEO | Executive |
 | Jane Doe | CTO | Engineering |
+
 {% /table-field %}
 ```
 
@@ -1803,6 +1809,7 @@ Use object syntax in `columnTypes` to mark specific columns as required:
 | Name | Email | Phone | Notes |
 |------|-------|-------|-------|
 | John Smith | john@example.com | %SKIP% | Primary contact |
+
 {% /table-field %}
 ```
 
@@ -1819,6 +1826,7 @@ After serialize, becomes (labels preserved in attribute):
 |-----------|-----------|------------|
 | John Smith | CEO | Executive |
 | Jane Doe | CTO | Engineering |
+
 {% /table-field %}
 ```
 
@@ -1832,6 +1840,7 @@ Clean template with types — labels extracted from headers:
    columnTypes=["year", "string", "string", "string"] %}
 | Year | Award | Category | Result |
 |------|-------|----------|--------|
+
 {% /table-field %}
 ```
 
@@ -1842,36 +1851,46 @@ Clean template with types — labels extracted from headers:
 <!-- ERROR: table-field 'people' missing required 'columnIds' attribute. -->
 
 {% table-field id="people" %}
+
 | First Name | Last Name |
 |------------|-----------|
+
 {% /table-field %}
 
 <!-- ERROR: Column ID "First Name" is not a valid identifier. Use snake_case. -->
 
 {% table-field id="people" columnIds=["First Name", "last_name"] %}
+
 | First Name | Last Name |
 |------------|-----------|
+
 {% /table-field %}
 
 <!-- ERROR: columnLabels has 2 entries but columnIds has 3. -->
 
 {% table-field id="people" columnIds=["name", "title", "dept"] columnLabels=["Name", "Title"] %}
+
 | Name | Title | Dept |
 |------|-------|------|
+
 {% /table-field %}
 
 <!-- ERROR: Column type "text" is not valid. Use: string, number, url, date, year. -->
 
 {% table-field id="notes" columnIds=["content", "author"] columnTypes=["text", "string"] %}
+
 | Content | Author |
 |---------|--------|
+
 {% /table-field %}
 
 <!-- ERROR: Table has 2 headers but columnIds has 3. Add columnLabels or fix headers. -->
 
 {% table-field id="people" columnIds=["name", "title", "dept"] %}
+
 | Name | Title |
 |------|-------|
+
 {% /table-field %}
 ```
 
@@ -1883,6 +1902,7 @@ Clean template with types — labels extracted from headers:
 | Year | Title | RT Score |
 |------|-------|----------|
 | 2023 | Barbie | not-a-number |
+
 {% /table-field %}
 
 <!-- ERROR: Cell "not-a-number" at row 1, column "rt_score" is not a valid number. -->
@@ -1892,6 +1912,7 @@ Clean template with types — labels extracted from headers:
 | Year | Title | RT Score |
 |------|-------|----------|
 | 2023 | Barbie | |
+
 {% /table-field %}
 
 <!-- ERROR: Cell at row 1, column "rt_score" is empty. Provide a value or use %SKIP%. -->
@@ -1901,6 +1922,7 @@ Clean template with types — labels extracted from headers:
 | Name | Email |
 |------|-------|
 | %SKIP% | john@example.com |
+
 {% /table-field %}
 
 <!-- ERROR: Cell at row 1, column "name" is required but contains %SKIP%. -->

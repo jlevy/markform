@@ -8,7 +8,8 @@ by the user to confirm the feature implementation and testing is adequate.
 It should be updated during the development process, then kept as a record for later
 context once implementation is complete.
 
-**Feature Plan:** [plan-2025-12-30-unified-fill-logging.md](plan-2025-12-30-unified-fill-logging.md)
+**Feature Plan:**
+[plan-2025-12-30-unified-fill-logging.md](plan-2025-12-30-unified-fill-logging.md)
 
 **Implementation Plan:** N/A (single-phase implementation)
 
@@ -161,7 +162,7 @@ callbacks: {
 ## Summary of Changes
 
 | File | Change |
-|------|--------|
+| --- | --- |
 | [harnessTypes.ts](packages/markform/src/harness/harnessTypes.ts) | Added `onIssuesIdentified`, `onPatchesGenerated` to FillCallbacks; added `issues`, `patches` to TurnProgress |
 | [programmaticFill.ts](packages/markform/src/harness/programmaticFill.ts) | Call new callbacks in harness loop |
 | [fillLogging.ts](packages/markform/src/cli/lib/fillLogging.ts) | **NEW** - Factory for CLI logging callbacks |
@@ -172,6 +173,6 @@ callbacks: {
 
 > To be filled in after user review
 
----
+* * *
 
 **Validation Status:** Ready for user review

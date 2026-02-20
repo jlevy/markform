@@ -6,12 +6,11 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Set Command Tests
 
 Tests for the `set` command with auto-coercion, batch mode, meta ops, and append/delete.
 
----
+* * *
 
 ## Basic Set Operations
 
@@ -51,7 +50,7 @@ priority: high
 ? 0
 ```
 
----
+* * *
 
 ## Batch Mode
 
@@ -82,7 +81,7 @@ Error: Invalid JSON in --values option
 ? 1
 ```
 
----
+* * *
 
 ## Meta Operations
 
@@ -113,7 +112,7 @@ notes: [aborted] Cannot determine
 ? 0
 ```
 
----
+* * *
 
 ## Append and Delete
 
@@ -145,7 +144,7 @@ tags: (unanswered)
 ? 0
 ```
 
----
+* * *
 
 ## Error Handling
 
@@ -221,7 +220,7 @@ Error: [..]
 ? 1
 ```
 
----
+* * *
 
 ## Report Mode
 
@@ -234,7 +233,7 @@ Report written to /tmp/set-test-report.json
 ? 0
 ```
 
----
+* * *
 
 ## Dry Run
 

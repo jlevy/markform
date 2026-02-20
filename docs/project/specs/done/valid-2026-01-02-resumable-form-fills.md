@@ -2,16 +2,18 @@
 
 ## Purpose
 
-This validation spec confirms the resumable form fills feature implementation is complete
-and adequate for production use.
+This validation spec confirms the resumable form fills feature implementation is
+complete and adequate for production use.
 
-**Feature Plan:** [plan-2026-01-02-resumable-form-fills.md](plan-2026-01-02-resumable-form-fills.md)
+**Feature Plan:**
+[plan-2026-01-02-resumable-form-fills.md](plan-2026-01-02-resumable-form-fills.md)
 
 ## Automated Validation (Testing Performed)
 
 ### Unit Testing
 
-All unit tests pass (1407 total). The following new tests were added for resumable fills:
+All unit tests pass (1407 total).
+The following new tests were added for resumable fills:
 
 | Test | Status | Description |
 | --- | --- | --- |
@@ -109,13 +111,13 @@ const status: FillStatus = { ok: false, reason: 'batch_limit' };
 
 | Item | Automated | Manual | Notes |
 | --- | --- | --- | --- |
-| `maxTurnsThisCall` stops execution | ✅ Unit test | Optional | |
-| `batch_limit` status returned | ✅ Unit test | Optional | |
+| `maxTurnsThisCall` stops execution | ✅ Unit test | Optional |  |
+| `batch_limit` status returned | ✅ Unit test | Optional |  |
 | Checkpoint can be resumed | ✅ Unit test | Recommended | Test with real LLM |
-| `startingTurnNumber` adjusts callbacks | ✅ Unit test | Optional | |
-| Backward compatibility | ✅ All existing tests | Recommended | |
-| TypeScript types compile | ✅ Typecheck | Optional | |
-| No breaking changes | ✅ All tests pass | | |
+| `startingTurnNumber` adjusts callbacks | ✅ Unit test | Optional |  |
+| Backward compatibility | ✅ All existing tests | Recommended |  |
+| TypeScript types compile | ✅ Typecheck | Optional |  |
+| No breaking changes | ✅ All tests pass |  |  |
 
 ## Open Questions
 

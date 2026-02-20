@@ -6,12 +6,11 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Next Command Tests
 
 Tests for the `next` command (field advisor for CLI-driven form filling).
 
----
+* * *
 
 ## Help and Basic Output
 
@@ -44,7 +43,7 @@ $ $CLI next examples/simple/simple.form.md 2>&1 | grep "markform set" | head -3
 ? 0
 ```
 
----
+* * *
 
 ## JSON Output
 
@@ -87,7 +86,7 @@ $ $CLI next --format json examples/simple/simple.form.md | grep -A 3 '"options":
 ? 0
 ```
 
----
+* * *
 
 ## Filtering
 
@@ -108,7 +107,7 @@ $ $CLI next --max-issues 2 --format json examples/simple/simple.form.md | grep '
 ? 0
 ```
 
----
+* * *
 
 ## Complete Form
 
@@ -137,7 +136,7 @@ $ $CLI next --format json /tmp/next-test-partial.form.md | grep '"filled_fields"
 ? 0
 ```
 
----
+* * *
 
 ## Error Handling
 

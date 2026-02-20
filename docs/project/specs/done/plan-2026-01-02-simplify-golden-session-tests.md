@@ -271,8 +271,8 @@ git add -p              # Stage intentional changes
 
 ### Fine-Grained Validation Tests
 
-Each of these mutations to a golden file MUST cause the test to fail. This verifies
-that the comparison is truly byte-for-byte and catches subtle drifts.
+Each of these mutations to a golden file MUST cause the test to fail.
+This verifies that the comparison is truly byte-for-byte and catches subtle drifts.
 
 #### 1. Hint Property Name Changes (The Original Bug)
 

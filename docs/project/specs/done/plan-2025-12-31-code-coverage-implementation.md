@@ -306,9 +306,9 @@ Codecov is excellent but adds:
 - Token management
 - Additional configuration complexity
 
-For a single-package project, the native GitHub Actions approach is simpler and
-provides sufficient visibility. Codecov can be added later if trend analysis or
-team features are needed.
+For a single-package project, the native GitHub Actions approach is simpler and provides
+sufficient visibility.
+Codecov can be added later if trend analysis or team features are needed.
 
 ### Coverage Threshold Strategy
 

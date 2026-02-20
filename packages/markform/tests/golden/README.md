@@ -1,7 +1,8 @@
 # Golden Session Tests
 
-Golden session tests use **direct file comparison** to catch any drift in the form-filling
-pipeline. Any difference between the regenerated session and the golden file causes a test
+Golden session tests use **direct file comparison** to catch any drift in the
+form-filling pipeline.
+Any difference between the regenerated session and the golden file causes a test
 failure, ensuring all changes are visible in code reviews.
 
 ## Philosophy
@@ -15,7 +16,7 @@ The core principle is: **any change should show up in diffs**. This includes:
 - Patch values and operations
 - SHA256 hashes of form state
 
-Nothing is "semantically equivalent" - if bytes differ, the test fails.
+Nothing is “semantically equivalent” - if bytes differ, the test fails.
 
 ## Files
 
@@ -86,17 +87,18 @@ git add -p              # Stage intentional changes only
 - **Wire format**: Complete request/response logging
 - **Form state**: SHA256 hashes verify deterministic form state
 
-### What's Tested Elsewhere
+### What’s Tested Elsewhere
 
 - **Value coercion logic** (e.g., string → array, boolean → checkbox): Unit tests in
   `tests/unit/valueCoercion.test.ts` and `tests/unit/engine/apply.test.ts`
-- **Best-effort patch application**: Unit tests verify that valid patches apply
-  even when some fail
+- **Best-effort patch application**: Unit tests verify that valid patches apply even
+  when some fail
 
 ## Validation Tests
 
-The `validation.test.ts` file verifies that the golden tests actually catch various types
-of drift. It applies mutations to golden files and confirms the test would detect them:
+The `validation.test.ts` file verifies that the golden tests actually catch various
+types of drift. It applies mutations to golden files and confirms the test would detect
+them:
 
 - Operation type changes (set_number → set_string)
 - Field ID typos
@@ -111,18 +113,19 @@ of drift. It applies mutations to golden files and confirms the test would detec
 
 ### Test fails after upgrading dependencies
 
-The YAML library or other dependencies may serialize slightly differently. Run
-`pnpm test:golden:regen` and review the diffs - they're usually just formatting
+The YAML library or other dependencies may serialize slightly differently.
+Run `pnpm test:golden:regen` and review the diffs - they’re usually just formatting
 (e.g., quote style).
 
-### Test fails with "Cannot parse session metadata"
+### Test fails with “Cannot parse session metadata”
 
-The session file format may have changed. Check that the session file has valid YAML
-with `form.path` and `mock.completed_mock` fields.
+The session file format may have changed.
+Check that the session file has valid YAML with `form.path` and `mock.completed_mock`
+fields.
 
 ### Adding a new field type
 
-When adding a new field type, you'll need to:
+When adding a new field type, you’ll need to:
 
 1. Create test forms that use the new type
 2. Regenerate golden files

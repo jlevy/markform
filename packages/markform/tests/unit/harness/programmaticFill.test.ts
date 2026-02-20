@@ -1222,6 +1222,134 @@ Strong company
     });
   });
 
+  describe('errorType and errorCode in FillStatus and FillRecord (MF-4)', () => {
+    it('populates errorType from Error.name in FillStatus', async () => {
+      const customError = new Error('Rate limit exceeded');
+      customError.name = 'APICallError';
+      (customError as { statusCode?: number }).statusCode = 429;
+
+      const errorAgent = {
+        fillFormTool() {
+          throw customError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.errorType).toBe('APICallError');
+        expect(result.status.errorCode).toBe('429');
+      } else {
+        throw new Error('Expected error status');
+      }
+
+      // FillRecord should also have errorType and errorCode
+      expect(result.record).toBeDefined();
+      expect(result.record?.errorType).toBe('APICallError');
+      expect(result.record?.errorCode).toBe('429');
+    });
+
+    it('populates errorCode from error.code when statusCode not present', async () => {
+      const customError = new Error('Connection refused');
+      customError.name = 'ECONNREFUSED';
+      (customError as { code?: string }).code = 'ECONNREFUSED';
+
+      const errorAgent = {
+        fillFormTool() {
+          throw customError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.errorType).toBe('ECONNREFUSED');
+        expect(result.status.errorCode).toBe('ECONNREFUSED');
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
+
+    it('errorType is undefined for non-Error throws', async () => {
+      const errorAgent = {
+        fillFormTool() {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw 'string error';
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: false,
+        inputContext: { name: 'John' },
+        _testAgent: errorAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok && result.status.reason === 'error') {
+        expect(result.status.errorType).toBeUndefined();
+        expect(result.status.errorCode).toBeUndefined();
+      } else {
+        throw new Error('Expected error status');
+      }
+    });
+
+    it('signal abort during agent call returns cancelled, not error', async () => {
+      const controller = new AbortController();
+
+      // Agent that aborts the signal then throws AbortError (simulating generateText behavior)
+      const abortAgent = {
+        fillFormTool() {
+          controller.abort();
+          const abortError = new Error('The operation was aborted');
+          abortError.name = 'AbortError';
+          throw abortError;
+        },
+      };
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        signal: controller.signal,
+        _testAgent: abortAgent,
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        // Should be 'cancelled', not 'error', because signal.aborted is checked first
+        expect(result.status.reason).toBe('cancelled');
+      }
+
+      expect(result.record).toBeDefined();
+      expect(result.record?.status).toBe('cancelled');
+    });
+  });
+
   describe('custom providers', () => {
     it('should resolve model via custom provider adapter', async () => {
       const completedForm = parseForm(COMPLETED_FORM);

@@ -107,8 +107,8 @@ This plan depends on:
 
 ### Acceptance Criteria
 
-1. `markform fill <file> --mock --mock-source <mock>` works identically to current `run
-   --mock`
+1. `markform fill <file> --mock --mock-source <mock>` works identically to current
+   `run --mock`
 
 2. `markform fill <file> --model --model=anthropic/claude-sonnet-4-5` fills form using
    Anthropic API (short form `--model=claude-sonnet-4-5` also works)
@@ -290,8 +290,8 @@ packages/markform/src/harness/
 
   - [ ] Build `MODEL_REGISTRY` array with all supported models
 
-  - [ ] Export `SUPPORTED_PROVIDERS` list: `['openai', 'anthropic', 'google', 'xai',
-    'deepseek']`
+  - [ ] Export `SUPPORTED_PROVIDERS` list:
+    `['openai', 'anthropic', 'google', 'xai', 'deepseek']`
 
   - [ ] Export `DEFAULT_MODEL` constant: `'anthropic/claude-sonnet-4-5'`
 
@@ -382,8 +382,8 @@ class LiveAgent implements Agent {
 
 - [ ] Model resolution tests (`lib/models.test.ts`):
 
-  - `parseModelId('anthropic/claude-sonnet-4-5')` → `{ provider: 'anthropic', modelName:
-    'claude-sonnet-4-5' }`
+  - `parseModelId('anthropic/claude-sonnet-4-5')` →
+    `{ provider: 'anthropic', modelName: 'claude-sonnet-4-5' }`
 
   - `resolveShortName('claude-sonnet-4-5')` → `'anthropic/claude-sonnet-4-5'`
 

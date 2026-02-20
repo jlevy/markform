@@ -53,7 +53,7 @@ metrics that Arena computes from raw FillRecord data that should live upstream:
 | Metric | How Arena Computes It | Why Upstream |
 | --- | --- | --- |
 | Avg concurrency | `llmTimeMs / totalMs` | Every consumer reinvents this |
-| Avg tool duration | `totalDurationMs / totalCalls` | Per-tool avg exists; aggregate doesn't |
+| Avg tool duration | `totalDurationMs / totalCalls` | Per-tool avg exists; aggregate doesn’t |
 
 Rate metrics like s/field and s/turn are trivially derived from existing fields
 (`durationMs / answeredFields`, `durationMs / totalTurns`) and belong in the display
@@ -132,6 +132,7 @@ These are trivially derived from existing FillRecord fields (`durationMs`,
 additions. They belong in the display layer only.
 
 **Significant figures:** Format with appropriate precision — use 1 decimal for values
+
 > = 10s (e.g., `12.3s/field`), 2 decimals for values >= 1s (e.g., `3.45s/field`), and ms
 > for sub-second values (e.g., `450ms/field`).
 

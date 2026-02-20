@@ -27,11 +27,13 @@ The form template is at
 ## Prerequisites
 
 1. **Build the CLI** (or use `pnpm markform` which runs source directly):
+
    ```bash
    pnpm build
    ```
 
 2. **Set up API keys** in `.env` at the directory where you run the CLI:
+
    ```bash
    ANTHROPIC_API_KEY=sk-ant-...
    # Or for OpenAI:

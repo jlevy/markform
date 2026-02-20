@@ -2,22 +2,27 @@
 
 ## Purpose
 
-This validation spec documents the testing performed and remaining manual validation needed
-to confirm the content preservation feature implementation is complete and adequate.
+This validation spec documents the testing performed and remaining manual validation
+needed to confirm the content preservation feature implementation is complete and
+adequate.
 
-**Feature Plan:** [plan-2026-01-19-content-preservation-serialization.md](plan-2026-01-19-content-preservation-serialization.md)
+**Feature Plan:**
+[plan-2026-01-19-content-preservation-serialization.md](plan-2026-01-19-content-preservation-serialization.md)
 
 ## Feature Summary
 
 The content preservation feature ensures that all markdown content outside Markform tags
-is preserved through parse → serialize round-trips. This was required by the Markform
-specification (MF/0.1) but was not implemented until now.
+is preserved through parse → serialize round-trips.
+This was required by the Markform specification (MF/0.1) but was not implemented until
+now.
 
 **Key Capabilities Implemented:**
 
 1. **Raw source storage** - `rawSource` and `tagRegions` fields added to `ParsedForm`
-2. **Splice-based serialization** - Preserves content outside form tags during round-trips
-3. **preserveContent option** - Defaults to `true`, can be set to `false` for regeneration
+2. **Splice-based serialization** - Preserves content outside form tags during
+   round-trips
+3. **preserveContent option** - Defaults to `true`, can be set to `false` for
+   regeneration
 4. **CLI --normalize flag** - Added to `apply`, `fill`, and `export` commands
 
 ## Stage 4: Validation Stage
@@ -76,7 +81,7 @@ All tests pass (17 tests, 1 skipped for future Phase 3 feature).
 
 **Existing golden tests continue passing:**
 
-All 14 golden tests pass, validating that the serialization changes don't break existing
+All 14 golden tests pass, validating that the serialization changes don’t break existing
 form handling.
 
 ### Integration and End-to-End Testing
@@ -95,7 +100,8 @@ The following manual validation steps should be performed by the reviewer:
 
 ### 1. Validate content preservation with a real form
 
-Create or find a form with markdown content outside the form tags and verify preservation:
+Create or find a form with markdown content outside the form tags and verify
+preservation:
 
 ```bash
 # Create a test file with content outside form tags
@@ -127,7 +133,8 @@ EOF
 markform apply /tmp/test-preservation.form.md --patch '{"op":"set","fieldId":"name","value":"Test"}'
 ```
 
-**Expected:** The output file should contain "# My Important Document", the bullet points, and "## Appendix" with footer content.
+**Expected:** The output file should contain “# My Important Document”, the bullet
+points, and “## Appendix” with footer content.
 
 ### 2. Validate --normalize flag functionality
 
@@ -136,7 +143,8 @@ markform apply /tmp/test-preservation.form.md --patch '{"op":"set","fieldId":"na
 markform apply /tmp/test-preservation.form.md --normalize --patch '{"op":"set","fieldId":"name","value":"Test"}'
 ```
 
-**Expected:** The output should NOT contain the markdown title, bullet points, or appendix. Only the form structure should be present.
+**Expected:** The output should NOT contain the markdown title, bullet points, or
+appendix. Only the form structure should be present.
 
 ### 3. Validate CLI --normalize flag exists in help
 
@@ -146,7 +154,8 @@ markform fill --help | grep normalize
 markform export --help | grep normalize
 ```
 
-**Expected:** Each command should show `--normalize` option with description "Regenerate form without preserving external content".
+**Expected:** Each command should show `--normalize` option with description “Regenerate
+form without preserving external content”.
 
 ### 4. Validate comment syntax form preservation
 
@@ -175,7 +184,8 @@ EOF
 markform export /tmp/test-comment.form.md
 ```
 
-**Expected:** The output should preserve "# Comment Syntax Form", "Introduction text.", and "## Footer" sections while maintaining comment syntax for Markform tags.
+**Expected:** The output should preserve “# Comment Syntax Form”, “Introduction text.”,
+and “## Footer” sections while maintaining comment syntax for Markform tags.
 
 ### 5. Verify round-trip stability
 
@@ -203,7 +213,8 @@ npm test
 From the plan spec:
 
 - [x] Markdown headings before form tag are preserved after round-trip
-- [x] Markdown paragraphs between groups are preserved after round-trip (OUTSIDE form only - inside form deferred)
+- [x] Markdown paragraphs between groups are preserved after round-trip (OUTSIDE form
+  only - inside form deferred)
 - [x] Code blocks outside form tags are preserved after round-trip
 - [x] Lists and other markdown structures are preserved
 - [x] Markform tags are serialized in canonical format
@@ -219,7 +230,8 @@ None - all questions from the plan spec were resolved during implementation:
 1. **Granularity**: Tag-level preservation implemented for content outside form tag
 2. **Tag modifications**: Falls back to regeneration when structural changes detected
 3. **Frontmatter**: Handled separately (recomputed on serialization)
-4. **Doc block preservation**: Naturally preserved since regions are replaced with canonical serialization
+4. **Doc block preservation**: Naturally preserved since regions are replaced with
+   canonical serialization
 5. **Programmatic forms**: Always regenerate when `rawSource` undefined
 6. **CLI normalization**: `--normalize` flag added to `apply`, `fill`, `export` commands
 
@@ -227,4 +239,7 @@ None - all questions from the plan spec were resolved during implementation:
 
 The following was explicitly deferred:
 
-- **Content preservation inside form (between groups)**: Currently only content outside the `{% form %}...{% /form %}` tags is preserved. Content between `{% group %}` tags inside the form is regenerated. This is tracked as Phase 3 in the plan spec and has a skipped test as a placeholder.
+- **Content preservation inside form (between groups)**: Currently only content outside
+  the `{% form %}...{% /form %}` tags is preserved.
+  Content between `{% group %}` tags inside the form is regenerated.
+  This is tracked as Phase 3 in the plan spec and has a skipped test as a placeholder.

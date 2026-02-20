@@ -86,8 +86,8 @@ if (result.status.ok) {
 
 3. **System prompt composition** - Inject additional context (research, instructions)
 
-4. **Structured results** - Returns `{ isComplete, markdown, values, turns,
-   remainingIssues }`
+4. **Structured results** - Returns
+   `{ isComplete, markdown, values, turns, remainingIssues }`
 
 5. **Observable** - `onTurnComplete` callback for progress monitoring
 

@@ -7,8 +7,8 @@ identifying coverage gaps, analyzing testability, and implementing targeted test
 
 ## Background
 
-The markform project recently implemented code coverage CI infrastructure (PR #53). Current
-coverage metrics (as of 2026-01-01):
+The markform project recently implemented code coverage CI infrastructure (PR #53).
+Current coverage metrics (as of 2026-01-01):
 
 | Metric | Current | Target (Phase 2) | Stretch Goal |
 | --- | --- | --- | --- |
@@ -44,8 +44,8 @@ Improve code coverage by:
 
 #### Tier 1: Zero Coverage - CLI Commands (0%)
 
-The entire `src/cli/commands/` directory has 0% coverage. These are commander-based CLI
-handlers that invoke library code.
+The entire `src/cli/commands/` directory has 0% coverage.
+These are commander-based CLI handlers that invoke library code.
 
 | File | Lines | Branches | Testability | Priority |
 | --- | --- | --- | --- | --- |
@@ -62,8 +62,8 @@ handlers that invoke library code.
 | `export.ts` | 39 | 33 | Easy - builds on tested code | High |
 | `schema.ts` | 22 | 10 | Easy - simple wrapper | High |
 
-**Decision**: Focus on command handlers that wrap well-tested library code. Skip interactive
-commands (browse) and LLM-dependent commands (research, run, fill).
+**Decision**: Focus on command handlers that wrap well-tested library code.
+Skip interactive commands (browse) and LLM-dependent commands (research, run, fill).
 
 #### Tier 2: Zero Coverage - CLI Library (0%)
 
@@ -112,8 +112,8 @@ By priority, expected coverage gains:
 | Medium | ~300 lines | ~9% | Medium |
 | Exclude | ~600 lines | ~19% | N/A |
 
-**Note**: ~50% of uncovered code is in "Exclude" categories (LLM integrations, interactive
-UI) which require significant mocking infrastructure or external services.
+**Note**: ~50% of uncovered code is in “Exclude” categories (LLM integrations,
+interactive UI) which require significant mocking infrastructure or external services.
 
 ### Example Form Testing Gaps
 
@@ -180,8 +180,8 @@ Missing coverage for:
 
 #### 1. Pure Function Tests (Simplest)
 
-Files like `naming.ts`, `initialValues.ts`, and `cliVersion.ts` contain pure functions that
-can be tested directly without any mocking.
+Files like `naming.ts`, `initialValues.ts`, and `cliVersion.ts` contain pure functions
+that can be tested directly without any mocking.
 
 ```typescript
 // Example test structure for naming.ts

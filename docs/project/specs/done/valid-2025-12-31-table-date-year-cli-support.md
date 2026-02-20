@@ -2,7 +2,8 @@
 
 ## Purpose
 
-This is a validation spec for a bug fix that adds missing support for `table`, `date`, and `year` field kinds in the `dump`, `inspect`, and `serve` CLI commands.
+This is a validation spec for a bug fix that adds missing support for `table`, `date`,
+and `year` field kinds in the `dump`, `inspect`, and `serve` CLI commands.
 
 **Feature Plan:** N/A (bug fix)
 
@@ -10,14 +11,17 @@ This is a validation spec for a bug fix that adds missing support for `table`, `
 
 ## Problem Description
 
-The `dump`, `inspect`, and `serve` commands were missing cases for `table`, `date`, and `year` field kinds in their value formatting switch statements. When these field kinds were encountered, they would fall through to the default case showing `(unknown)` or `(unknown field kind)`.
+The `dump`, `inspect`, and `serve` commands were missing cases for `table`, `date`, and
+`year` field kinds in their value formatting switch statements.
+When these field kinds were encountered, they would fall through to the default case
+showing `(unknown)` or `(unknown field kind)`.
 
 ## Changes Made
 
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| --- | --- |
 | [dump.ts](packages/markform/src/cli/commands/dump.ts) | Added cases for `table`, `date`, `year` in `formatFieldResponse()` with exhaustiveness check |
 | [inspect.ts](packages/markform/src/cli/commands/inspect.ts) | Added cases for `table`, `date`, `year` in value formatting with exhaustiveness check |
 | [serve.ts](packages/markform/src/cli/commands/serve.ts) | Added `table` case in `renderFieldHtml()`, plus CSS and `renderTableInput()` function |
@@ -30,7 +34,8 @@ The `dump`, `inspect`, and `serve` commands were missing cases for `table`, `dat
    - `table`: Shows `(N rows)` summary or `(empty)`
    - Added exhaustiveness check to catch future missing cases at compile time
 
-2. **inspect.ts** - Same pattern as dump.ts with proper formatting and exhaustiveness check
+2. **inspect.ts** - Same pattern as dump.ts with proper formatting and exhaustiveness
+   check
 
 3. **serve.ts** - Added full table rendering for web UI:
    - Added `TableField` and `TableValue` type imports
@@ -87,8 +92,11 @@ markform inspect <form-with-dates.form.md>
 
 ## Summary
 
-This fix ensures all field kinds are properly handled across CLI commands, preventing fallback to generic `(unknown)` output. The addition of TypeScript exhaustiveness checks will catch any future missing cases at compile time.
+This fix ensures all field kinds are properly handled across CLI commands, preventing
+fallback to generic `(unknown)` output.
+The addition of TypeScript exhaustiveness checks will catch any future missing cases at
+compile time.
 
----
+* * *
 
 **Validation Status:** Ready for user review

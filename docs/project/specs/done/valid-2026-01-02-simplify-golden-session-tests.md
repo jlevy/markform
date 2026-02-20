@@ -5,7 +5,8 @@
 Validation spec for the simplified golden session test infrastructure and addition of
 coercion warnings to session file format.
 
-**Feature Plan:** [plan-2026-01-02-simplify-golden-session-tests.md](plan-2026-01-02-simplify-golden-session-tests.md)
+**Feature Plan:**
+[plan-2026-01-02-simplify-golden-session-tests.md](plan-2026-01-02-simplify-golden-session-tests.md)
 
 ## Summary of Changes
 
@@ -38,7 +39,8 @@ All 1426 unit tests pass, including:
   - Priority change detection
   - Idempotency verification (double regeneration)
 
-- **Value coercion tests** (`tests/unit/valueCoercion.test.ts`, `tests/unit/engine/apply.test.ts`)
+- **Value coercion tests** (`tests/unit/valueCoercion.test.ts`,
+  `tests/unit/engine/apply.test.ts`)
   - String → array coercion
   - Boolean → checkbox coercion
   - Single option → multi_select coercion
@@ -58,7 +60,7 @@ Review `packages/markform/tests/golden/README.md` for accuracy:
 
 - [ ] Workflow documentation is clear
 - [ ] Stable vs unstable field classification is correct
-- [ ] Test coverage section accurately reflects what's tested
+- [ ] Test coverage section accurately reflects what’s tested
 
 ### 2. Validate Regeneration Workflow
 
@@ -89,9 +91,10 @@ Create a test scenario that triggers coercion and verify warnings appear:
 cat packages/markform/examples/rejection-test/rejection-test.session.yaml | grep -A5 "warnings:"
 ```
 
-Note: Current example sessions don't trigger coercion warnings because mock agents
-provide correctly-typed values. Warnings will appear when LLMs provide values that need
-coercion (e.g., single string instead of array).
+Note: Current example sessions don’t trigger coercion warnings because mock agents
+provide correctly-typed values.
+Warnings will appear when LLMs provide values that need coercion (e.g., single string
+instead of array).
 
 ### 4. Review PR Changes
 
@@ -114,6 +117,7 @@ From the plan spec:
 
 - [x] **Direct comparison**: Test compares regenerated session YAML to golden file
 - [x] **Any diff fails**: No semantic equivalence checking, byte-for-byte match required
-- [x] **Clear workflow**: `pnpm test:golden` runs tests, `pnpm test:golden:regen` updates
+- [x] **Clear workflow**: `pnpm test:golden` runs tests, `pnpm test:golden:regen`
+  updates
 - [x] **Fast execution**: Tests run in <100ms each (actual: ~200ms)
 - [x] **Token normalization**: Usage stats normalized to 0 for determinism

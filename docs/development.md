@@ -290,12 +290,14 @@ These tests verify the complete form filling pipeline including FillRecord captu
 **Workflow:**
 
 1. Set up API keys in `.env`:
+
    ```bash
    OPENAI_API_KEY=sk-...
    # Or: ANTHROPIC_API_KEY=sk-ant-...
    ```
 
 2. Run tests from `tests/qa/live-fill-manual-test.qa.md`:
+
    ```bash
    ./dist/bin.mjs fill examples/simple/simple.form.md \
      --model openai/gpt-5-mini \
@@ -307,6 +309,7 @@ These tests verify the complete form filling pipeline including FillRecord captu
 3. Review output against expected structure documented in the test file
 
 4. Check FillRecord sidecar for complete data:
+
    ```bash
    cat /tmp/test-fill.fill.json | jq .
    ```

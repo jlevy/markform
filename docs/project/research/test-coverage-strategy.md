@@ -14,9 +14,17 @@
 
 ## Executive Summary
 
-This research brief presents a strategic review of the test coverage infrastructure for the Markform project. The analysis reveals that source-only line coverage is already excellent at **96.9%**, but branch coverage at **69.7%** is the real gap. A configuration bug causes the reported numbers to be inflated by including node_modules.
+This research brief presents a strategic review of the test coverage infrastructure for
+the Markform project.
+The analysis reveals that source-only line coverage is already excellent at **96.9%**,
+but branch coverage at **69.7%** is the real gap.
+A configuration bug causes the reported numbers to be inflated by including
+node_modules.
 
-Three files with partial coverage (`research.ts`, `browse.ts`, `run.ts`) contain both testable and untestable code. Rather than excluding entire files, a refactoring approach can extract testable helper functions, improving coverage accuracy while keeping the codebase organized.
+Three files with partial coverage (`research.ts`, `browse.ts`, `run.ts`) contain both
+testable and untestable code.
+Rather than excluding entire files, a refactoring approach can extract testable helper
+functions, improving coverage accuracy while keeping the codebase organized.
 
 **Research Questions**:
 
@@ -37,7 +45,7 @@ Three files with partial coverage (`research.ts`, `browse.ts`, `run.ts`) contain
 1. Ran coverage analysis with `pnpm test:coverage`
 2. Analyzed c8 and vitest configuration
 3. Calculated source-only coverage (excluding node_modules)
-4. Examined low-coverage files to understand what's testable vs interactive
+4. Examined low-coverage files to understand what’s testable vs interactive
 5. Reviewed tryscript and golden test coverage contribution
 
 ### Sources
@@ -57,7 +65,8 @@ Three files with partial coverage (`research.ts`, `browse.ts`, `run.ts`) contain
 
 **Details**:
 
-- The c8 configuration includes `--include 'dist/**'` which pulls in transpiled node_modules
+- The c8 configuration includes `--include 'dist/**'` which pulls in transpiled
+  node_modules
 - External packages like `@ai-sdk/anthropic` appear in coverage reports (~7,400 lines)
 - Reported 94.34% coverage is artificially inflated
 
@@ -78,7 +87,8 @@ Three files with partial coverage (`research.ts`, `browse.ts`, `run.ts`) contain
 | Branches | 69.7% | 75% |
 | Functions | 69.9% | 80% |
 
-**Assessment**: Line coverage already exceeds target. Branch coverage is the gap.
+**Assessment**: Line coverage already exceeds target.
+Branch coverage is the gap.
 
 * * *
 
@@ -94,7 +104,9 @@ Three files with partial coverage (`research.ts`, `browse.ts`, `run.ts`) contain
 | `browse.ts` | 286 | 76.2% | ~130 (helpers, scanning) | ~156 (p.select, p.intro) |
 | `run.ts` | 612 | 78.9% | ~350 (helpers, workflows) | ~262 (menus, prompts) |
 
-**Assessment**: These files contain significant testable code mixed with interactive code. Excluding entire files loses valid coverage data. Refactoring can improve accuracy.
+**Assessment**: These files contain significant testable code mixed with interactive
+code. Excluding entire files loses valid coverage data.
+Refactoring can improve accuracy.
 
 * * *
 
@@ -183,17 +195,21 @@ Top files with significant uncovered branches:
 | `engine/apply.ts` | 36 | Patch validation errors |
 | `cli/commands/inspect.ts` | 36 | Format/output options |
 
-**Assessment**: These are error handling paths and edge cases that can be covered with targeted unit tests or tryscript tests.
+**Assessment**: These are error handling paths and edge cases that can be covered with
+targeted unit tests or tryscript tests.
 
 * * *
 
 ## Best Practices
 
-1. **Separate testable from interactive code**: Keep pure functions and business logic in separate modules from interactive CLI code.
+1. **Separate testable from interactive code**: Keep pure functions and business logic
+   in separate modules from interactive CLI code.
 
-2. **Use golden tests for E2E coverage**: The tryscript and golden test frameworks provide effective coverage of integrated behavior.
+2. **Use golden tests for E2E coverage**: The tryscript and golden test frameworks
+   provide effective coverage of integrated behavior.
 
-3. **Target branch coverage with error tests**: Add tryscript tests that exercise error paths (invalid inputs, missing files).
+3. **Target branch coverage with error tests**: Add tryscript tests that exercise error
+   paths (invalid inputs, missing files).
 
 4. **Progressive thresholds**: Increase thresholds incrementally as coverage improves.
 
@@ -203,13 +219,14 @@ Top files with significant uncovered branches:
 
 ### Summary
 
-Rather than excluding entire files with partial coverage, refactor to extract testable helper functions. This improves coverage accuracy and keeps the codebase well-organized.
+Rather than excluding entire files with partial coverage, refactor to extract testable
+helper functions. This improves coverage accuracy and keeps the codebase well-organized.
 
 ### Recommended Approach
 
 **Phase 1: Configuration Fix** (P0 - Immediate)
 - Fix c8 configuration to exclude node_modules
-- Or switch to vitest's built-in coverage entirely
+- Or switch to vitest’s built-in coverage entirely
 
 **Phase 2: Refactoring** (P1 - High Priority)
 - Extract `cli/lib/browseHelpers.ts` from `browse.ts`
@@ -254,14 +271,17 @@ Rather than excluding entire files with partial coverage, refactor to extract te
 ## Implementation Status
 
 **Phase 1: Configuration Fix** ✅ Complete
-- Switched from c8 to vitest's built-in coverage
+- Switched from c8 to vitest’s built-in coverage
 - Removed buggy `--include 'dist/**'` that pulled in node_modules
 - Added `@vitest/coverage-v8` dependency
 
 **Phase 2: Refactoring** ✅ Complete
-- Extracted `cli/lib/browseHelpers.ts` with `isViewableFile`, `getExtension`, `scanFormsDirectory`, `getExtensionHint`, `formatFileLabel`
-- Extracted `cli/lib/runHelpers.ts` with `scanFormsDirectory`, `enrichFormEntry`, `buildModelOptions`
-- Extracted `cli/lib/researchHelpers.ts` with `validateResearchModel`, `parseResearchHarnessOptions`
+- Extracted `cli/lib/browseHelpers.ts` with `isViewableFile`, `getExtension`,
+  `scanFormsDirectory`, `getExtensionHint`, `formatFileLabel`
+- Extracted `cli/lib/runHelpers.ts` with `scanFormsDirectory`, `enrichFormEntry`,
+  `buildModelOptions`
+- Extracted `cli/lib/researchHelpers.ts` with `validateResearchModel`,
+  `parseResearchHarnessOptions`
 - Added 40 new unit tests covering all extracted helpers
 
 **Phase 3: Interactive Exclusions** ✅ Complete
@@ -280,9 +300,11 @@ Rather than excluding entire files with partial coverage, refactor to extract te
 
 ## Open Research Questions
 
-1. **Server coverage**: The `serve.ts` command has 49 uncovered branches related to WebSocket handlers. Should we add integration tests for the server, or exclude it?
+1. **Server coverage**: The `serve.ts` command has 49 uncovered branches related to
+   WebSocket handlers. Should we add integration tests for the server, or exclude it?
 
-2. **CI performance**: Will the additional tests significantly impact CI time? Need to monitor after implementation.
+2. **CI performance**: Will the additional tests significantly impact CI time?
+   Need to monitor after implementation.
 
 * * *
 
@@ -291,7 +313,8 @@ Rather than excluding entire files with partial coverage, refactor to extract te
 - Vitest coverage documentation: https://vitest.dev/guide/coverage
 - c8 documentation: https://github.com/bcoe/c8
 - @clack/prompts: https://github.com/natemoo-re/clack
-- Golden testing guidelines: `docs/general/agent-guidelines/golden-testing-guidelines.md`
+- Golden testing guidelines:
+  `docs/general/agent-guidelines/golden-testing-guidelines.md`
 
 * * *
 

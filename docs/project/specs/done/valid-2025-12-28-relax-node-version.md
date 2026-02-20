@@ -37,7 +37,7 @@ Relaxed Node.js minimum version requirement from v24 to v20:
 - Node 20: Maintenance LTS until April 2026
 - Node 22: Active LTS
 
-Node 20 was chosen as the minimum because it's the oldest currently-supported LTS
+Node 20 was chosen as the minimum because it’s the oldest currently-supported LTS
 version, maximizing accessibility for users via `npx` and other package managers.
 
 ## Automated Validation (Testing Performed)

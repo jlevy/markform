@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This validation spec documents the validation performed and remaining manual validation needed
-for the serve command tabs improvements feature.
+This validation spec documents the validation performed and remaining manual validation
+needed for the serve command tabs improvements feature.
 
 **Feature Plan:** plan-2026-01-04-serve-tabs-improvements.md
 
@@ -12,7 +12,7 @@ for the serve command tabs improvements feature.
 ### Summary of Changes
 
 1. **View Tab (new)**: Read-only display of form with all fields visible
-2. **Edit Tab (renamed from "Markform")**: Interactive form editor
+2. **Edit Tab (renamed from “Markform”)**: Interactive form editor
 3. **Source Tab (new)**: Syntax-highlighted Markdown/Jinja source
 4. **Report Tab (fixed)**: Improved HTML rendering with proper list containers
 5. **Tab Order**: View, Edit, Source, Report, Values, Schema
@@ -29,9 +29,9 @@ All serve-render tests updated and passing (109 tests in `serve-render.test.ts`)
   - Renders groups with titles
   - Renders fields with labels and type badges
   - Shows required indicator for required fields
-  - Shows "(not filled)" for empty fields
+  - Shows “(not filled)” for empty fields
   - Shows actual values for filled fields
-  - Shows "(skipped)" for skipped fields
+  - Shows “(skipped)” for skipped fields
   - Renders single_select with selected option label
   - Renders url fields as clickable links
 - **renderSourceContent tests** (new):
@@ -76,15 +76,15 @@ Verify:
 - [ ] View tab shows all field groups with titles
 - [ ] Each field displays label, type badge, and value
 - [ ] Filled fields show their values correctly
-- [ ] Empty fields show "(not filled)" indicator
-- [ ] Skipped fields show "(skipped)" indicator with badge
+- [ ] Empty fields show “(not filled)” indicator
+- [ ] Skipped fields show “(skipped)” indicator with badge
 - [ ] Required fields have asterisk indicator
 - [ ] URL fields are rendered as clickable links
 
 ### 2. Edit Tab Verification
 
-Click the "Edit" tab and verify:
-- [ ] Tab is now labeled "Edit" (not "Markform")
+Click the “Edit” tab and verify:
+- [ ] Tab is now labeled “Edit” (not “Markform”)
 - [ ] Form is interactive with input fields
 - [ ] All field types render correctly
 - [ ] Skip buttons work for optional fields
@@ -92,7 +92,7 @@ Click the "Edit" tab and verify:
 
 ### 3. Source Tab Verification
 
-Click the "Source" tab and verify:
+Click the “Source” tab and verify:
 - [ ] Raw form source is displayed in a pre block
 - [ ] Jinja tags ({% ... %}) are highlighted in purple
 - [ ] Jinja keywords (form, field, group) are highlighted in red
@@ -109,7 +109,7 @@ Test with a form that has a report file:
 pnpm markform serve packages/markform/examples/simple/simple-mock-filled.form.md
 ```
 
-Click the "Report" tab and verify:
+Click the “Report” tab and verify:
 - [ ] Report content is properly rendered
 - [ ] Lists (unordered and ordered) are properly contained in ul/ol tags
 - [ ] Headers, paragraphs render correctly
@@ -129,7 +129,7 @@ Verify tabs appear in this order across the top:
 
 Verify smooth tab switching:
 - [ ] Clicking each tab shows the correct content
-- [ ] Tab content is cached (switching back doesn't reload)
+- [ ] Tab content is cached (switching back doesn’t reload)
 - [ ] Active tab is visually highlighted
 
 ## Open Questions

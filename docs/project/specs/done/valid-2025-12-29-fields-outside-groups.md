@@ -12,15 +12,15 @@ correctly when placed outside of field-groups.
 
 **Problem:** When a field (e.g., `string-field`) and its associated instructions block
 were placed outside of a field-group (directly under the form tag), parsing failed with:
-'instructions block references unknown ID'.
+‘instructions block references unknown ID’.
 
-**Root Cause:** The parser only looked for fields inside field-group tags. Fields placed
-directly under the form were never added to `idIndex`, causing doc block reference
-validation to fail.
+**Root Cause:** The parser only looked for fields inside field-group tags.
+Fields placed directly under the form were never added to `idIndex`, causing doc block
+reference validation to fail.
 
-**Solution:** Modified the parser to also detect and process fields placed directly under
-the form tag, storing them in an implicit field-group that serializes without wrapper
-tags.
+**Solution:** Modified the parser to also detect and process fields placed directly
+under the form tag, storing them in an implicit field-group that serializes without
+wrapper tags.
 
 ## Automated Validation (Testing Performed)
 
@@ -32,8 +32,8 @@ tags.
   create an implicit group and are added to idIndex
 - `allows instructions to reference ungrouped field` - Tests doc blocks can reference
   ungrouped fields
-- `allows instructions before ungrouped field` - Tests ref resolution works regardless of
-  order
+- `allows instructions before ungrouped field` - Tests ref resolution works regardless
+  of order
 - `parses multiple ungrouped fields` - Verifies multiple fields are collected correctly
 - `handles mix of grouped and ungrouped fields` - Tests forms with both explicit and
   implicit groups
@@ -45,7 +45,7 @@ tags.
 **Serialize Tests** (`tests/unit/engine/serialize.test.ts`):
 
 - `serializes implicit group without field-group wrapper` - Verifies implicit groups
-  don't get wrapper tags
+  don’t get wrapper tags
 - `round-trips form with ungrouped fields and instructions` - Tests parse → serialize →
   parse cycle
 - `serializes mix of grouped and ungrouped fields correctly` - Verifies both group types
@@ -83,8 +83,8 @@ EOF
 pnpm markform inspect /tmp/test-ungrouped.form.md
 ```
 
-**Expected:** Command should complete without errors and show the form structure with the
-field.
+**Expected:** Command should complete without errors and show the form structure with
+the field.
 
 ### 2. Round-Trip Serialization
 
@@ -130,5 +130,5 @@ EOF
 pnpm markform inspect /tmp/test-mixed.form.md
 ```
 
-**Expected:** Both the ungrouped field and the grouped field should parse correctly, with
-instructions referencing the ungrouped field.
+**Expected:** Both the ungrouped field and the grouped field should parse correctly,
+with instructions referencing the ungrouped field.

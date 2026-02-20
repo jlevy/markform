@@ -9,8 +9,8 @@ clarity. Also consolidate all tool API definitions into a single source-of-truth
 
 The markform harness exposes a tool to LLMs called `generatePatches`. This tool:
 
-- Accepts an array of patches (e.g., `{ op: 'set_string', fieldId: 'name', value:
-  'Alice' }`)
+- Accepts an array of patches (e.g.,
+  `{ op: 'set_string', fieldId: 'name', value: 'Alice' }`)
 
 - Is the primary mechanism for agents to fill form fields
 

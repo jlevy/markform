@@ -124,14 +124,14 @@ or UI impact.
    markform:
      spec: MF/0.1
    ---
-   
+
    {% form id="test" %}
    {% field-group id="g1" %}
    {% string-field id="code" label="Code Example" multiline=true %}{% /string-field %}
    {% /field-group %}
    {% /form %}
    EOF
-   
+
    # Fill it with content containing backtick code blocks
    # Then inspect the output to verify tildes are used for the value fence
    ```

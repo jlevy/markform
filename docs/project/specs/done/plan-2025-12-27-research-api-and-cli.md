@@ -275,11 +275,13 @@ Add `markform research <file>` command that:
 
 1. **Add explicit `role="agent"` to some fields** - Currently all agent fields rely on
    default. For teaching purposes, explicitly mark at least the first few agent fields:
+
    ```
    {% string-field id="website" label="Website URL" role="agent" %}
    ```
 
 2. **Add `harness` configuration** to demonstrate the new frontmatter feature:
+
    ```yaml
    markform:
      spec: MF/0.1
@@ -327,12 +329,14 @@ Add `markform research <file>` command that:
 **Suggested improvements:**
 
 1. **Add `harness` configuration:**
+
    ```yaml
    harness:
      max_issues_per_turn: 3
    ```
 
 2. **Add explicit `role="agent"` to first agent fields** for teaching:
+
    ```
    {% string-field id="full_legal_name" label="Full Legal Name" role="agent" %}
    ```
@@ -371,11 +375,11 @@ Add `markform research <file>` command that:
 
    ```
    {% string-list id="core_biography_sources" label="Core Bio Sources" %}{% /string-list %}
-   
+
    {% instructions ref="core_biography_sources" %}
    URLs used as sources for this section. One URL per line.
    {% /instructions %}
-   
+
    {% /field-group %}
    ```
 

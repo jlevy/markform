@@ -77,6 +77,7 @@ newlines within tags.
 In `src/tokenizer/plugins/annotations.ts`, the block tag rule:
 
 1. Detects that the opening tag spans lines 0-1:
+
    ```
    {% field id="a"
    attr="x" %}{% /field %}

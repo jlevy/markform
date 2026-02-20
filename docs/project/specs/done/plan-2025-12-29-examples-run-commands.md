@@ -50,8 +50,8 @@ When set, overwrites existing values instead of continuing.
 
 - Remove any confirmation prompts for pre-filled forms
 
-- Log info when form has pre-filled values: `ℹ Form has 5 pre-filled fields
-  (continuing)` or `(overwriting)`
+- Log info when form has pre-filled values:
+  `ℹ Form has 5 pre-filled fields (continuing)` or `(overwriting)`
 
 * * *
 
@@ -129,6 +129,7 @@ markform run --limit=50        # Override menu limit
 4. Limit to `MAX_FORMS_IN_MENU` (30, configurable in settings.ts)
 
 5. Display menu:
+
    ```
    ? Select a form to run:
    ❯ movie-deep-research.form.md - Movie Deep Research [research]

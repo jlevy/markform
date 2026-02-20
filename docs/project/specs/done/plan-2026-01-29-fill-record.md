@@ -3,26 +3,29 @@
 ## Purpose
 
 Define a first-class `FillRecord` data structure (Zod schema) that captures a complete
-record of everything that happened during a form fill operation. This enables:
+record of everything that happened during a form fill operation.
+This enables:
 
 - **Corroboration**: Attach to completed documents as provenance metadata
 - **Cost analysis**: Track LLM tokens, API calls, web search usage
-- **Debugging**: Detailed transcript of each turn's actions
+- **Debugging**: Detailed transcript of each turn’s actions
 - **Integration**: Clients can use structured data for billing, audits, analytics
 
 ### Naming Convention
 
 - **`FillRecord`**: The complete, detailed record of everything that happened during a
-  fill operation. Includes full timeline, per-turn tokens, all tool calls with timestamps.
+  fill operation. Includes full timeline, per-turn tokens, all tool calls with
+  timestamps.
 - **`FillSummary`** (future): Reserved for briefer/aggregated versions that might omit
-  timeline detail or collapse tool calls. Not implemented in this spec.
+  timeline detail or collapse tool calls.
+  Not implemented in this spec.
 
 **Related docs:**
-- `packages/markform/src/harness/harnessTypes.ts` — Current harness types (FillCallbacks,
-  TurnStats, TurnProgress)
+- `packages/markform/src/harness/harnessTypes.ts` — Current harness types
+  (FillCallbacks, TurnStats, TurnProgress)
 - `packages/markform/src/engine/coreTypes.ts` — Core types (SessionTurn, WireFormat)
-- `docs/project/specs/active/plan-2026-01-27-parallel-form-filling.md` — Parallel filling
-  (callbacks for batches/order levels)
+- `docs/project/specs/active/plan-2026-01-27-parallel-form-filling.md` — Parallel
+  filling (callbacks for batches/order levels)
 
 ## Background
 
@@ -45,7 +48,7 @@ The form filling harness already captures significant execution data:
 
 ### Gap Analysis
 
-What's **missing** is a unified, client-facing summary object that:
+What’s **missing** is a unified, client-facing summary object that:
 
 - Aggregates data across all turns into a single structure
 - Provides both detailed timeline AND roll-up totals
@@ -89,7 +92,7 @@ the summary internally.
 **Cons:**
 - More code in Markform core
 - Less flexibility for clients who want different structures
-- May collect data clients don't need
+- May collect data clients don’t need
 
 ### Option B: Utility Tools via Callbacks
 
@@ -135,7 +138,7 @@ Implement Option A (built-in collector) as the primary path, but design it so th
 3. Custom metadata is supported via a generic `customData` field
 4. The summary includes a `timeline` (detailed) and `totals` (aggregated) view
 
-This gives clients the "it just works" experience while preserving flexibility.
+This gives clients the “it just works” experience while preserving flexibility.
 
 ## Detailed Design
 
@@ -397,9 +400,9 @@ export type FillRecord = z.infer<typeof FillRecordSchema>;
 ```
 
 This data enables analysis like:
-- "What % of web searches returned 0 results?"
-- "Which queries took longest?"
-- "How many tool errors occurred?"
+- “What % of web searches returned 0 results?”
+- “Which queries took longest?”
+- “How many tool errors occurred?”
 
 ### Aggregated Tool Stats Example
 
@@ -466,9 +469,9 @@ The `toolSummary.byTool` array provides per-tool rollups:
 ```
 
 This enables quick insights:
-- "web_search p95 is 2.8s - might need to optimize slow queries"
-- "25% of web searches returned 0 results"
-- "55% of time spent in LLM calls, 41% in tools"
+- “web_search p95 is 2.8s - might need to optimize slow queries”
+- “25% of web searches returned 0 results”
+- “55% of time spent in LLM calls, 41% in tools”
 
 ### Timeline Execution Order Example
 
@@ -527,8 +530,10 @@ The timeline captures the execution order with `order` and `executionId` fields:
 ```
 
 **Identifying parallel execution:**
-- Turns with the same `order` value and overlapping `startedAt`/`completedAt` ran in parallel
-- The `executionId` pattern shows the batch context: `"{order}-batch-{batchId}-{itemIndex}"`
+- Turns with the same `order` value and overlapping `startedAt`/`completedAt` ran in
+  parallel
+- The `executionId` pattern shows the batch context:
+  `"{order}-batch-{batchId}-{itemIndex}"`
 - Serial turns use `"{order}-serial"`
 
 ### FillRecordCollector
@@ -569,12 +574,13 @@ The `FillRecordCollector` must be thread-safe for parallel execution:
 1. **Concurrent callback invocation**: Multiple execution threads may call callbacks
    simultaneously during parallel batch processing.
 
-2. **Implementation approach**: Use an array-based append-only pattern. Each callback
-   appends a timestamped event; `getSummary()` aggregates at read time.
+2. **Implementation approach**: Use an array-based append-only pattern.
+   Each callback appends a timestamped event; `getSummary()` aggregates at read time.
 
 3. **Execution ID tracking**: Callbacks receive an `executionId` parameter to identify
-   which thread generated the event. For serial execution, this is always `"main"`.
-   For parallel execution, it follows the pattern `"batch-{batchId}-item-{index}"`.
+   which thread generated the event.
+   For serial execution, this is always `"main"`. For parallel execution, it follows the
+   pattern `"batch-{batchId}-item-{index}"`.
 
 4. **Timestamp-based ordering**: Events are ordered by timestamp in the final summary,
    allowing clients to see interleaved parallel execution.
@@ -593,8 +599,8 @@ interface CollectorEvent {
 
 **TypeScript API:**
 
-The `recordFill` option enables fill record collection. When enabled, the complete
-`FillRecord` is returned in `FillResult.record`.
+The `recordFill` option enables fill record collection.
+When enabled, the complete `FillRecord` is returned in `FillResult.record`.
 
 ```typescript
 import { fillForm } from 'markform';
@@ -650,12 +656,13 @@ const record = collector.getRecord();
 
 ### Web Search Query Capture
 
-Currently web search is handled by provider-specific tools (Anthropic's web_search,
-OpenAI's web_search, etc.). To capture query details, we need to:
+Currently web search is handled by provider-specific tools (Anthropic’s web_search,
+OpenAI’s web_search, etc.). To capture query details, we need to:
 
-1. **For Anthropic**: The web_search tool input includes the query. Capture in onToolStart.
-2. **For custom tools**: Client's tool can emit query metadata via a new callback or
-   by including it in the tool result.
+1. **For Anthropic**: The web_search tool input includes the query.
+   Capture in onToolStart.
+2. **For custom tools**: Client’s tool can emit query metadata via a new callback or by
+   including it in the tool result.
 
 New callback for explicit web search tracking:
 ```typescript
@@ -689,7 +696,7 @@ markform fill input.form.md -o output.form.md --record-fill
 For consistent tooling support, we recommend these file extensions:
 
 | File Type | Extension | Example |
-|-----------|-----------|---------|
+| --- | --- | --- |
 | Form (source/filled) | `.form.md` | `intake.form.md` |
 | Fill Record (sidecar) | `.fill.json` | `intake.fill.json` |
 
@@ -708,17 +715,18 @@ Examples:
 - `path/to/document.md` → `path/to/document.fill.json` (fallback)
 - `path/to/file.txt` → `path/to/file.txt.fill.json` (edge case)
 
-**Implementation:** Both `fill` and `serve` commands use the shared `deriveFillRecordPath()`
-function from `settings.ts` to ensure consistent behavior.
+**Implementation:** Both `fill` and `serve` commands use the shared
+`deriveFillRecordPath()` function from `settings.ts` to ensure consistent behavior.
 
 **CLI defaults:**
 
 | Flag | Default | Description |
-|------|---------|-------------|
+| --- | --- | --- |
 | `--record-fill` | `false` | Write fill record to sidecar `.fill.json` file |
 
-**Note:** This sidecar file convention is a CLI-only behavior. The TypeScript API returns
-the `FillRecord` in `result.record` — it's up to the caller to decide how to persist it.
+**Note:** This sidecar file convention is a CLI-only behavior.
+The TypeScript API returns the `FillRecord` in `result.record` — it’s up to the caller
+to decide how to persist it.
 
 ### Why Sidecar Files (CLI)
 
@@ -727,14 +735,15 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 - Record can be large (especially timeline with many turns)
 - Easy to include/exclude from version control (`.gitignore *.fill.json`)
 - Standard JSON is more portable than embedded YAML
-- Separation of concerns: form content vs. execution metadata
+- Separation of concerns: form content vs.
+  execution metadata
 
 ## Implementation Plan
 
 ### Phase 1: Core Schema & Collector
 
 - [x] Define `FillRecordSchema` and related types in new file
-      `packages/markform/src/harness/fillRecord.ts`
+  `packages/markform/src/harness/fillRecord.ts`
 - [x] Implement `FillRecordCollector` class (thread-safe, append-only)
 - [x] Add `onWebSearch` callback to `FillCallbacks` interface
 - [x] Export from package entry point
@@ -753,17 +762,20 @@ The CLI uses sidecar files rather than embedding in YAML frontmatter because:
 - [x] Add `--record-fill` flag to `fill` command (defaults to `false`)
 - [x] Implement sidecar file naming: `{basename}.fill.json`
 - [x] Write JSON fill record when flag is set
-- [x] **BUG:** CLI tests for record file generation — tests now verify timeline content (`mf-ln09`)
+- [x] **BUG:** CLI tests for record file generation — tests now verify timeline content
+  (`mf-ln09`)
 
 **⚠️ BUG FOUND (2026-01-31) — FIXED (2026-02-01):**
 
-The CLI's fill command had a **callback wiring gap** that caused the timeline to be empty.
+The CLI’s fill command had a **callback wiring gap** that caused the timeline to be
+empty.
 
-**Root Cause:** The CLI runs its own harness loop manually instead of using the `fillForm()`
-function. It was only wiring 4 of 7 callbacks, missing `onTurnStart`, `onTurnComplete`,
-and `onWebSearch`.
+**Root Cause:** The CLI runs its own harness loop manually instead of using the
+`fillForm()` function.
+It was only wiring 4 of 7 callbacks, missing `onTurnStart`, `onTurnComplete`, and
+`onWebSearch`.
 
-**Fix Applied:** Added all missing callbacks to the CLI's callback object and invoked
+**Fix Applied:** Added all missing callbacks to the CLI’s callback object and invoked
 `onTurnStart` at the start of each turn and `onTurnComplete` after `harness.apply()`.
 See Phase 6 checklist below for details.
 
@@ -780,7 +792,8 @@ The final phase enables users to easily see what happened during a fill operatio
 
 - [x] Implement `formatFillRecordSummary(record: FillRecord, options?): string` function
 - [x] CLI always collects FillRecord internally (regardless of --record-fill flag)
-- [x] CLI always prints summary to stderr at end of fill (can be silenced with `--quiet`)
+- [x] CLI always prints summary to stderr at end of fill (can be silenced with
+  `--quiet`)
 - [x] More detailed summary with `--verbose` or `--debug` flags
 - [x] Export formatting function for TypeScript clients
 - [x] Add summary formatting to Golden tests in TryScript
@@ -802,7 +815,8 @@ Timing:  55% LLM (6.8s) | 41% tools (5.1s) | 4% overhead (0.5s)
 Progress: 18/20 fields filled (90%)
 ```
 
-With `--verbose`, additional details like per-turn breakdown, individual tool calls, etc.
+With `--verbose`, additional details like per-turn breakdown, individual tool calls,
+etc.
 
 **TypeScript API:**
 
@@ -833,8 +847,9 @@ Flags:
 
 **Golden test integration:**
 
-For TryScript golden tests, the formatted summary provides a stable, human-readable
-view of execution that can be included in test fixtures. This helps validate:
+For TryScript golden tests, the formatted summary provides a stable, human-readable view
+of execution that can be included in test fixtures.
+This helps validate:
 - Expected turn counts
 - Tool call patterns
 - Performance characteristics
@@ -850,16 +865,24 @@ Fixes the critical bug where CLI fill records have empty timelines.
 - `mf-1omw` (P3 task): Fill Record visualization should warn when timeline is empty
 
 **Checklist:**
-- [x] Add `onTurnStart` callback to CLI's callback object (`mf-mgxo`) — DONE 2026-02-01
-- [x] Add `onTurnComplete` callback to CLI's callback object (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add `onTurnStart` callback to CLI’s callback object (`mf-mgxo`) — DONE 2026-02-01
+- [x] Add `onTurnComplete` callback to CLI’s callback object (`mf-mgxo`) — DONE
+  2026-02-01
 - [x] Add `onWebSearch` callback forwarding to collector (`mf-niiz`) — DONE 2026-02-01
-- [x] Call `onTurnStart` at start of harness loop iteration (`mf-mgxo`) — DONE 2026-02-01
-- [x] Call `onTurnComplete` after `harness.apply()` returns (`mf-mgxo`) — DONE 2026-02-01
-- [x] Add unit test: verify CLI callback wiring produces non-empty timeline — DONE 2026-02-01
-- [x] Add integration test: verify CLI fill record has non-empty timeline (`mf-ln09`) — DONE 2026-02-01
-- [x] Add integration test: verify CLI fill record has correct turn count (`mf-ln09`) — DONE 2026-02-01
-- [x] Add integration test: verify tool calls appear in timeline entries (`mf-ln09`) — DONE 2026-02-01
-- [x] Manual verification: run `markform fill --record-fill` and inspect JSON — DONE 2026-02-01
+- [x] Call `onTurnStart` at start of harness loop iteration (`mf-mgxo`) — DONE
+  2026-02-01
+- [x] Call `onTurnComplete` after `harness.apply()` returns (`mf-mgxo`) — DONE
+  2026-02-01
+- [x] Add unit test: verify CLI callback wiring produces non-empty timeline — DONE
+  2026-02-01
+- [x] Add integration test: verify CLI fill record has non-empty timeline (`mf-ln09`) —
+  DONE 2026-02-01
+- [x] Add integration test: verify CLI fill record has correct turn count (`mf-ln09`) —
+  DONE 2026-02-01
+- [x] Add integration test: verify tool calls appear in timeline entries (`mf-ln09`) —
+  DONE 2026-02-01
+- [x] Manual verification: run `markform fill --record-fill` and inspect JSON — DONE
+  2026-02-01
 
 **Implementation Notes:**
 
@@ -889,7 +912,8 @@ const callbacks = {
 
 **BACKWARD COMPATIBILITY REQUIREMENTS:**
 
-- **Code types, methods, and function signatures**: MAINTAIN — all additions are optional
+- **Code types, methods, and function signatures**: MAINTAIN — all additions are
+  optional
 - **TypeScript API**: MAINTAIN — new `recordFill` option defaults to `false`
 - **CLI**: MAINTAIN — new `--record-fill` flag defaults to `false`
 - **File formats**: MAINTAIN — sidecar files are opt-in, form format unchanged
@@ -904,17 +928,20 @@ These questions were resolved during spec review:
    data.
 
 2. **Summary size limits**: **No caps** — If a form fill is long (100+ turns), the
-   summary can be correspondingly long. Full history is always captured.
+   summary can be correspondingly long.
+   Full history is always captured.
 
 3. **Cost estimation**: **Tokens only, no costs** — The AI SDK provides `inputTokens`
-   and `outputTokens` via `result.usage`. We track these totals and per-turn. Clients
-   can calculate costs from tokens using their own rate tables (which change frequently).
+   and `outputTokens` via `result.usage`. We track these totals and per-turn.
+   Clients can calculate costs from tokens using their own rate tables (which change
+   frequently).
 
-4. **Parallel execution detail**: **Same structure, with execution IDs** — No
-   difference between serial and parallel in capture structure. Each turn/call includes
-   an `executionId` field (e.g., `"main"`, `"batch-1-item-0"`) for debugging and
-   visibility. Timestamps on everything allow calculating totals and understanding
-   parallel execution patterns.
+4. **Parallel execution detail**: **Same structure, with execution IDs** — No difference
+   between serial and parallel in capture structure.
+   Each turn/call includes an `executionId` field (e.g., `"main"`, `"batch-1-item-0"`)
+   for debugging and visibility.
+   Timestamps on everything allow calculating totals and understanding parallel
+   execution patterns.
 
 ## Error Handling Requirements
 
@@ -923,14 +950,15 @@ FillRecord. Pre-fill configuration errors fail fast without a FillRecord.**
 
 ### Error Categories
 
-1. **Pre-fill configuration errors** — These prevent the fill from starting and fail fast
-   without creating a FillRecord (similar to form parse errors):
+1. **Pre-fill configuration errors** — These prevent the fill from starting and fail
+   fast without creating a FillRecord (similar to form parse errors):
    - Form parse failure (invalid markdown)
    - Model resolution failure (invalid model string, API key missing)
    - Input context errors (invalid field values)
 
-   Rationale: No fill work was done, so there's nothing to record. A FillRecord would
-   have empty timeline, zero tokens, zero tools — providing no useful information.
+   Rationale: No fill work was done, so there’s nothing to record.
+   A FillRecord would have empty timeline, zero tokens, zero tools — providing no useful
+   information.
 
 2. **Fill execution errors** — These occur DURING the fill loop and MUST be captured:
    - Agent call failures (LLM API errors)
@@ -939,7 +967,8 @@ FillRecord. Pre-fill configuration errors fail fast without a FillRecord.**
    - Parallel agent failures
 
    These errors are captured because fill work was done: turns executed, tokens used,
-   fields potentially filled. The FillRecord provides valuable debugging and audit data.
+   fields potentially filled.
+   The FillRecord provides valuable debugging and audit data.
 
 ### Error Status Types
 
@@ -954,14 +983,15 @@ The `statusDetail` field provides additional context (error message, reason code
 ### Error Capture Requirements
 
 Every error path DURING fill execution MUST:
-1. Call `collector.setStatus('failed'|'partial'|'cancelled', detail)` if collector exists
+1. Call `collector.setStatus('failed'|'partial'|'cancelled', detail)` if collector
+   exists
 2. Include the FillRecord in the result (via `collector.getRecord()`)
 3. Write the sidecar file if `--record-fill` is enabled (CLI)
 
 ### Error Path Audit (2026-02-01)
 
 | Error Path | Location | Category | Status | Notes |
-|------------|----------|----------|--------|-------|
+| --- | --- | --- | --- | --- |
 | Form parse failure | programmaticFill:345 | Pre-fill | ✅ OK | Config error, no FillRecord |
 | Model resolution error | programmaticFill:379 | Pre-fill | ✅ OK | Config error, no FillRecord |
 | Input context error | programmaticFill:413 | Pre-fill | ✅ OK | Config error, no FillRecord |

@@ -1,7 +1,7 @@
 # Contributing to Markform
 
-Thank you for your interest in contributing to Markform! This document explains how to
-contribute and the legal requirements for doing so.
+Thank you for your interest in contributing to Markform!
+This document explains how to contribute and the legal requirements for doing so.
 
 ## How to Contribute
 
@@ -19,10 +19,10 @@ This project uses a **dual licensing model**: the code is available under AGPL-3
 open source use, with commercial licenses available for organizations that prefer
 different terms.
 
-To enable this dual licensing while keeping contribution simple, we use a
-Developer Certificate of Origin (DCO) combined with a licensing grant.
+To enable this dual licensing while keeping contribution simple, we use a Developer
+Certificate of Origin (DCO) combined with a licensing grant.
 
-### What You're Agreeing To
+### What You’re Agreeing To
 
 By submitting a pull request or patch to this repository, you agree to the following:
 
@@ -34,17 +34,17 @@ By submitting a pull request or patch to this repository, you agree to the follo
 
 3. **You grant additional licensing rights.** You grant the project maintainer (Joshua
    Levy) the right to relicense your contribution under alternative license terms,
-   including commercial licenses. This enables the dual-licensing model that supports
-   the project's sustainability.
+   including commercial licenses.
+   This enables the dual-licensing model that supports the project’s sustainability.
 
 4. **You understand contributions to specification documents are CC-BY-4.0.** The
-   Markform Specification (`docs/markform-spec.md` and `docs/markform-reference.md`)
-   are licensed under Creative Commons Attribution 4.0 International. Contributions
-   to these documents are licensed under CC-BY-4.0.
+   Markform Specification (`docs/markform-spec.md` and `docs/markform-reference.md`) are
+   licensed under Creative Commons Attribution 4.0 International.
+   Contributions to these documents are licensed under CC-BY-4.0.
 
 ### How to Sign Off
 
-Include a "Signed-off-by" line in your commit messages:
+Include a “Signed-off-by” line in your commit messages:
 
 ```
 Signed-off-by: Your Name <your.email@example.com>
@@ -52,7 +52,8 @@ Signed-off-by: Your Name <your.email@example.com>
 
 You can do this automatically by using `git commit -s`.
 
-The sign-off certifies that you agree to the terms above. This is based on the
+The sign-off certifies that you agree to the terms above.
+This is based on the
 [Developer Certificate of Origin](https://developercertificate.org/).
 
 ### Developer Certificate of Origin (v1.1)
@@ -95,5 +96,5 @@ By making a contribution to this project, I certify that:
 
 ## Questions?
 
-If you have questions about contributing or the licensing terms, please open an issue
-or contact the maintainer.
+If you have questions about contributing or the licensing terms, please open an issue or
+contact the maintainer.

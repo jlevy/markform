@@ -6,12 +6,11 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Patch Command Tests
 
 Tests for the patch command with various patch operations.
 
----
+* * *
 
 ## Basic Patch Operations
 
@@ -48,7 +47,7 @@ multi@test.com
 ? 0
 ```
 
----
+* * *
 
 ## Patch with Output Options
 
@@ -68,7 +67,7 @@ Modified form written to /tmp/test-patch-output.form.md
 ? 0
 ```
 
----
+* * *
 
 ## Patch Error Handling
 

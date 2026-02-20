@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Validation spec for the code coverage improvement implementation, covering all phases
-of the plan spec. **Coverage target of 60%+ achieved!**
+Validation spec for the code coverage improvement implementation, covering all phases of
+the plan spec. **Coverage target of 60%+ achieved!**
 
 **Feature Plan:** [plan-2026-01-01-code-coverage-improvement.md]
 
@@ -147,6 +147,7 @@ All new tests follow the table-driven pattern as specified in the plan.
 The following should be verified by the user:
 
 1. **Run tests and coverage locally:**
+
    ```bash
    pnpm --filter markform test
    pnpm --filter markform test:coverage
@@ -159,12 +160,12 @@ The following should be verified by the user:
    - All existing CLI commands (`run`, `research`) pass `captureWireFormat: false`
 
 3. **Review test patterns:**
-   - Verify tests follow table-driven approach per the plan's guidelines
+   - Verify tests follow table-driven approach per the plan’s guidelines
    - Confirm no long mechanistic tests were introduced
 
 4. **Review movie research golden test:**
-   - `examples/movie-research/movie-deep-research-mock-filled.form.md` contains Shawshank
-     Redemption sample data
+   - `examples/movie-research/movie-deep-research-mock-filled.form.md` contains
+     Shawshank Redemption sample data
    - Verify the filled form parses correctly with all 42 fields
 
 ## Phase 7-8: LLM Integration Testing Strategy
@@ -173,7 +174,8 @@ The following should be verified by the user:
 
 #### AI SDK Mock Providers
 
-The [Vercel AI SDK provides official mock providers](https://ai-sdk.dev/docs/ai-sdk-core/testing)
+The
+[Vercel AI SDK provides official mock providers](https://ai-sdk.dev/docs/ai-sdk-core/testing)
 for testing:
 
 ```typescript
@@ -291,7 +293,8 @@ This approach enables testing of currently-uncovered modules:
 
 ### Alternative: Eval-Style Testing
 
-For ongoing LLM quality assurance, consider [vitest-evals](https://github.com/getsentry/vitest-evals):
+For ongoing LLM quality assurance, consider
+[vitest-evals](https://github.com/getsentry/vitest-evals):
 
 ```typescript
 import { describeEval, ToolCallScorer } from 'vitest-evals';
@@ -311,15 +314,18 @@ This enables:
 
 ## Open Questions (Resolved)
 
-1. **Session recording mode**: Existing `captureWireFormat` flag captures LLM requests/responses.
-   The session replay integration test demonstrates this works for golden testing.
+1. **Session recording mode**: Existing `captureWireFormat` flag captures LLM
+   requests/responses. The session replay integration test demonstrates this works for
+   golden testing.
 
 2. **Test isolation**: MockLanguageModelV3 from `ai/test` provides proper isolation.
    Session replay pattern allows deterministic replay without external dependencies.
 
-3. **Coverage target**: 60% target achieved (60.73% lines). Future work could pursue 70%+
-   by expanding LLM mocking to cover more flows (research, multi-turn, web search).
+3. **Coverage target**: 60% target achieved (60.73% lines).
+   Future work could pursue 70%+ by expanding LLM mocking to cover more flows (research,
+   multi-turn, web search).
 
 ## Status: Complete ✅
 
-All coverage targets met. Ready for PR review.
+All coverage targets met.
+Ready for PR review.

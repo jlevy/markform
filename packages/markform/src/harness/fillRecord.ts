@@ -149,6 +149,15 @@ export const TimelineEntrySchema = z.object({
     output: z.number().int().nonnegative(),
   }),
 
+  /** Total LLM call duration in milliseconds (sum of all generateText() calls this turn) */
+  llmCallDurationMs: z.number().int().nonnegative().optional(),
+  /** Number of LLM calls made this turn */
+  llmCallCount: z.number().int().nonnegative().optional(),
+  /** Provider response IDs for this turn (e.g., "chatcmpl-..." for OpenAI) */
+  responseIds: z.array(z.string()).optional(),
+  /** Provider request IDs for this turn (e.g., x-request-id header values) */
+  requestIds: z.array(z.string()).optional(),
+
   /** Tool calls made during this turn */
   toolCalls: z.array(ToolCallRecordSchema),
 
@@ -249,6 +258,93 @@ export const ExecutionMetadataSchema = z.object({
 export type ExecutionMetadata = z.infer<typeof ExecutionMetadataSchema>;
 
 // =============================================================================
+// Collector Event Log Schemas
+// =============================================================================
+
+/**
+ * Zod schemas for the raw event log captured during fill execution.
+ * Mirror the CollectorEvent interfaces in fillRecordCollector.ts.
+ */
+
+const EventTurnStartSchema = z.object({
+  type: z.literal('turn_start'),
+  timestamp: z.string().datetime(),
+  turnNumber: z.number().int().positive(),
+  issuesCount: z.number().int().nonnegative(),
+  order: z.number().int().nonnegative(),
+  executionId: z.string(),
+});
+
+const EventTurnCompleteSchema = z.object({
+  type: z.literal('turn_complete'),
+  timestamp: z.string().datetime(),
+  turnNumber: z.number().int().positive(),
+  patchesApplied: z.number().int().nonnegative(),
+  patchesRejected: z.number().int().nonnegative(),
+  issuesAddressed: z.number().int().nonnegative(),
+  coercionWarnings: z.array(PatchWarningSchema).optional(),
+  executionId: z.string().optional(),
+});
+
+const EventLlmCallStartSchema = z.object({
+  type: z.literal('llm_call_start'),
+  timestamp: z.string().datetime(),
+  model: z.string(),
+  executionId: z.string(),
+});
+
+const EventLlmCallEndSchema = z.object({
+  type: z.literal('llm_call_end'),
+  timestamp: z.string().datetime(),
+  model: z.string(),
+  inputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  executionId: z.string(),
+  durationMs: z.number().int().nonnegative().optional(),
+  responseId: z.string().optional(),
+  requestId: z.string().optional(),
+  error: z.string().optional(),
+});
+
+const EventToolStartSchema = z.object({
+  type: z.literal('tool_start'),
+  timestamp: z.string().datetime(),
+  name: z.string(),
+  input: z.unknown(),
+  executionId: z.string(),
+});
+
+const EventToolEndSchema = z.object({
+  type: z.literal('tool_end'),
+  timestamp: z.string().datetime(),
+  name: z.string(),
+  output: z.unknown(),
+  durationMs: z.number().int().nonnegative(),
+  error: z.string().optional(),
+  executionId: z.string(),
+});
+
+const EventWebSearchSchema = z.object({
+  type: z.literal('web_search'),
+  timestamp: z.string().datetime(),
+  query: z.string(),
+  resultCount: z.number().int().nonnegative(),
+  provider: z.string(),
+  executionId: z.string(),
+});
+
+/** Schema for the discriminated union of all collector event types. */
+export const CollectorEventSchema = z.discriminatedUnion('type', [
+  EventTurnStartSchema,
+  EventTurnCompleteSchema,
+  EventLlmCallStartSchema,
+  EventLlmCallEndSchema,
+  EventToolStartSchema,
+  EventToolEndSchema,
+  EventWebSearchSchema,
+]);
+
+// =============================================================================
 // Fill Record Schema
 // =============================================================================
 
@@ -306,6 +402,10 @@ export const FillRecordSchema = z.object({
   status: FillRecordStatusSchema,
   /** Additional status detail (e.g., error message) */
   statusDetail: z.string().optional(),
+  /** Error class name (e.g., 'AbortError', 'APICallError', 'MarkformLlmError') */
+  errorType: z.string().optional(),
+  /** HTTP status code or error code, if available */
+  errorCode: z.string().optional(),
 
   /** Form progress at completion */
   formProgress: ProgressCountsSchema,
@@ -358,6 +458,13 @@ export const FillRecordSchema = z.object({
 
   /** Client-defined custom data */
   customData: z.record(z.string(), z.unknown()).optional(),
+
+  // =========================================================================
+  // Event Log
+  // =========================================================================
+
+  /** Raw chronological event log for debugging and visualization */
+  eventLog: z.array(CollectorEventSchema).optional(),
 });
 
 export type FillRecord = z.infer<typeof FillRecordSchema>;
@@ -399,6 +506,7 @@ export type StableFillRecord = Omit<
   | 'timeline'
   | 'timingBreakdown'
   | 'toolSummary'
+  | 'eventLog'
 > & {
   toolSummary: StableToolSummary;
 };
@@ -447,6 +555,8 @@ export function stripUnstableFillRecordFields(record: FillRecord): StableFillRec
     // Keep outcome (stable in mock mode)
     status: record.status,
     statusDetail: record.statusDetail,
+    errorType: record.errorType,
+    errorCode: record.errorCode,
     formProgress: record.formProgress,
 
     // Keep LLM info (tokens are 0 in mock mode)

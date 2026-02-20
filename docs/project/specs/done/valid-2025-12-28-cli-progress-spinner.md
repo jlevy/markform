@@ -16,15 +16,16 @@ spinner feature (markform-323).
 The spinner feature provides visual feedback during async CLI operations:
 
 1. **Enhanced spinner utility** (`createSpinner`) with elapsed time tracking
-2. **Context-aware messages** showing provider/model for API calls or operation name for compute
+2. **Context-aware messages** showing provider/model for API calls or operation name for
+   compute
 3. **Integration** into `fill`, `research`, and `examples` commands
 
 ## Automated Validation (Testing Performed)
 
 ### Unit Testing
 
-No direct unit tests for spinner functionality. The spinner is a thin UI wrapper around
-`@clack/prompts` spinner that:
+No direct unit tests for spinner functionality.
+The spinner is a thin UI wrapper around `@clack/prompts` spinner that:
 
 - Requires TTY for visual output
 - Outputs to terminal (not easily captured in tests)
@@ -59,7 +60,7 @@ pnpm markform fill examples/movies-recommender.form.md --model anthropic/claude-
 ```
 
 **Verify:**
-- Spinner appears with message like "anthropic/claude-sonnet-4 (turn 1) [0s]"
+- Spinner appears with message like “anthropic/claude-sonnet-4 (turn 1) [0s]”
 - Elapsed time updates every second (e.g., [1s], [2s], [3s]...)
 - Spinner stops cleanly when operation completes
 - No spinner appears with `--quiet` flag
@@ -73,7 +74,7 @@ pnpm markform research examples/movies-recommender.form.md --model google/gemini
 ```
 
 **Verify:**
-- Spinner appears with message like "google/gemini-2.5-flash [0s]"
+- Spinner appears with message like “google/gemini-2.5-flash [0s]”
 - Elapsed time updates during the operation
 - Spinner shows error state if operation fails
 
@@ -86,9 +87,9 @@ pnpm markform examples examples/movies-recommender.form.md --model anthropic/cla
 ```
 
 **Verify:**
-- First spinner shows "Resolving model: anthropic/claude-sonnet-4 [0s]"
+- First spinner shows “Resolving model: anthropic/claude-sonnet-4 [0s]”
 - Model resolution spinner completes and shows success
-- Second spinner shows "anthropic/claude-sonnet-4 (turn N) [0s]" during LLM calls
+- Second spinner shows “anthropic/claude-sonnet-4 (turn N) [0s]” during LLM calls
 - Turn number increments for each LLM call
 - Elapsed time updates continuously
 - Clean completion when done

@@ -2,16 +2,17 @@
 
 ## Purpose
 
-This is a technical design doc for adding resumable form fill support to markform's
-programmatic API. This feature enables orchestrated environments with timeout constraints
-(e.g., Convex workflows, AWS Step Functions) to checkpoint and resume long-running form
-fill sessions.
+This is a technical design doc for adding resumable form fill support to markform’s
+programmatic API. This feature enables orchestrated environments with timeout
+constraints (e.g., Convex workflows, AWS Step Functions) to checkpoint and resume
+long-running form fill sessions.
 
 ## Background
 
 **Markform** provides a `fillForm()` programmatic API that encapsulates the harness loop
-with a live LLM agent. This works well for direct invocations but creates problems in
-orchestrated environments:
+with a live LLM agent.
+This works well for direct invocations but creates problems in orchestrated
+environments:
 
 **The Timeout Problem:**
 
@@ -22,7 +23,7 @@ orchestrated environments:
 
 **Why This Matters:**
 
-The `fillForm()` function is currently opaque to orchestrators - there's no way to:
+The `fillForm()` function is currently opaque to orchestrators - there’s no way to:
 1. Limit execution to N turns within a timeout budget
 2. Checkpoint partial progress
 3. Resume from where it left off
@@ -108,25 +109,28 @@ if (!result1.status.ok && result1.status.reason === 'batch_limit') {
 
 ### Proposal Validation
 
-The external proposal was analyzed against the current implementation. Key findings:
+The external proposal was analyzed against the current implementation.
+Key findings:
 
 **1. Form State Serialization** ✅ VIABLE
 
-The proposal claims "Form state is complete" - verified:
+The proposal claims “Form state is complete” - verified:
 - `FillResult.form` (ParsedForm) contains all field values in `responsesByFieldId`
 - `serializeForm()` produces markdown that can be re-parsed
 - `parseForm()` restores the full state including values
 
 **2. Stateless Turn Execution** ✅ VIABLE
 
-The proposal claims "Each turn is stateless" - verified:
-- Each turn's agent call receives: issues from `harness.step()`, current form, max patches
+The proposal claims “Each turn is stateless” - verified:
+- Each turn’s agent call receives: issues from `harness.step()`, current form, max
+  patches
 - No memory of previous turns needed - the form IS the state
 - Previous rejections are passed explicitly (not persistent state)
 
 **3. FillStatus Compatibility** ✅ VIABLE (with modification)
 
-The proposal suggests reusing `reason: 'max_turns'` - recommendation: **use a new reason**
+The proposal suggests reusing `reason: 'max_turns'` - recommendation: **use a new
+reason**
 
 - `'max_turns'` indicates a safety limit was hit (something may be wrong)
 - `'batch_limit'` (new) indicates intentional checkpoint for resumption
@@ -181,9 +185,10 @@ Both limits apply independently:
 | `maxTurnsThisCall` hit first | `reason: 'batch_limit'` |
 | `maxTurnsTotal` hit first | `reason: 'max_turns'` |
 
-The overall `maxTurnsTotal` limit is automatically enforced across calls. When you pass
-`startingTurnNumber`, the harness receives `maxTurnsTotal - startingTurnNumber` as its
-internal limit, so the total is enforced without manual tracking:
+The overall `maxTurnsTotal` limit is automatically enforced across calls.
+When you pass `startingTurnNumber`, the harness receives
+`maxTurnsTotal - startingTurnNumber` as its internal limit, so the total is enforced
+without manual tracking:
 
 ```typescript
 // maxTurnsTotal is automatically enforced across calls
@@ -232,8 +237,10 @@ const result2 = await fillForm({
 
 ### Testing Plan
 
-Testing should be focused and minimal. Resume is an API-level feature - the harness mechanics
-are already well-tested by existing golden tests. We only need unit tests.
+Testing should be focused and minimal.
+Resume is an API-level feature - the harness mechanics are already well-tested by
+existing golden tests.
+We only need unit tests.
 
 #### Unit Tests (`tests/unit/harness/programmaticFill.test.ts`)
 
@@ -302,14 +309,16 @@ The existing golden tests already validate:
 - Harness turn mechanics
 - Form serialization round-trips (SHA256 hashes)
 
-Adding a golden test for resume would require framework changes and verbose YAML for minimal
-additional coverage. Unit tests are sufficient.
+Adding a golden test for resume would require framework changes and verbose YAML for
+minimal additional coverage.
+Unit tests are sufficient.
 
 ## Stage 2: Architecture Stage
 
 ### Module Structure
 
-No new files needed. Changes are localized:
+No new files needed.
+Changes are localized:
 
 ```
 packages/markform/src/harness/
@@ -434,7 +443,7 @@ Not in scope but worth noting:
 
 ### Resolved
 
-1. **Reuse 'max_turns' reason?** ✅ NO
+1. **Reuse ‘max_turns’ reason?** ✅ NO
    - Decision: Add new `'batch_limit'` reason for clearer semantics
 
 2. **How to track total turns?** ✅ RESOLVED
@@ -447,12 +456,14 @@ Not in scope but worth noting:
 
 ### Implementation Notes
 
-1. **The harness has its own turn counter** - This is fine. The harness's `hasReachedMaxTurns()`
-   uses its internal counter which resets each call. The `maxTurns` option passed to harness
-   should be the remaining budget if enforcing overall limits.
+1. **The harness has its own turn counter** - This is fine.
+   The harness’s `hasReachedMaxTurns()` uses its internal counter which resets each
+   call. The `maxTurns` option passed to harness should be the remaining budget if
+   enforcing overall limits.
 
-2. **Session logs are per-call** - Each `fillForm()` call creates a new harness with fresh
-   `turns` array. This is acceptable for MVP; session log continuity can be added later.
+2. **Session logs are per-call** - Each `fillForm()` call creates a new harness with
+   fresh `turns` array.
+   This is acceptable for MVP; session log continuity can be added later.
 
 ## Stage 4: Senior Engineer Design Review
 
@@ -467,13 +478,13 @@ Not in scope but worth noting:
 | Breaking changes | 0 |
 | New dependencies | 0 |
 
-The design adds exactly what's needed for the use case, nothing more.
+The design adds exactly what’s needed for the use case, nothing more.
 
 **Naming Review** ✅
 
 | Name | Assessment |
 | --- | --- |
-| `maxTurnsThisCall` | Clear, distinguishes from `maxTurns`. Considered `turnLimit` but that's ambiguous with overall limit. |
+| `maxTurnsThisCall` | Clear, distinguishes from `maxTurns`. Considered `turnLimit` but that’s ambiguous with overall limit. |
 | `startingTurnNumber` | Explicit about its purpose. Considered `resumeFromTurn` but that implies automatic behavior. |
 | `'batch_limit'` | Distinct from `'max_turns'`. Considered `'checkpoint'` but that implies persistence. |
 
@@ -501,7 +512,8 @@ const result = await fillForm({
 // result.status.ok === true, result.turns === 0
 ```
 
-Current implementation handles this correctly - the loop condition checks `isComplete` first.
+Current implementation handles this correctly - the loop condition checks `isComplete`
+first.
 
 **2. maxTurnsThisCall: 0**
 
@@ -515,8 +527,10 @@ const result = await fillForm({
 // result.turns = startingTurnNumber (0 by default)
 ```
 
-The per-call check `turnsThisCall >= options.maxTurnsThisCall` triggers immediately (0 >= 0).
-This is consistent and allows "dry run" to get remaining issues without execution.
+The per-call check `turnsThisCall >= options.maxTurnsThisCall` triggers immediately (0
+
+> = 0). This is consistent and allows “dry run” to get remaining issues without
+> execution.
 
 **3. startingTurnNumber > maxTurns**
 
@@ -529,9 +543,9 @@ const result = await fillForm({
 });
 ```
 
-The harness's `hasReachedMaxTurns()` uses its internal counter (0), not `startingTurnNumber`.
-So this still allows turns. Document that `startingTurnNumber` is cosmetic - for accurate
-progress reporting only.
+The harness’s `hasReachedMaxTurns()` uses its internal counter (0), not
+`startingTurnNumber`. So this still allows turns.
+Document that `startingTurnNumber` is cosmetic - for accurate progress reporting only.
 
 **4. Resume with Different Model/Options**
 
@@ -543,10 +557,11 @@ const r1 = await fillForm({ form, model: 'anthropic/claude-sonnet-4-5', ... });
 const r2 = await fillForm({ form: r1.markdown, model: 'openai/gpt-4o', ... });
 ```
 
-This works because the form state is model-agnostic. The new model sees the form with
-filled values and continues. Document this as a feature, not a bug.
+This works because the form state is model-agnostic.
+The new model sees the form with filled values and continues.
+Document this as a feature, not a bug.
 
-**5. Resume with fillMode: 'overwrite'**
+**5. Resume with fillMode: ‘overwrite’**
 
 ```typescript
 const r1 = await fillForm({ form, maxTurnsThisCall: 1, fillMode: 'continue', ... });
@@ -554,8 +569,8 @@ const r2 = await fillForm({ form: r1.markdown, fillMode: 'overwrite', ... });
 ```
 
 The second call with `overwrite` will clear all target role fields before starting.
-This destroys the checkpoint. Document that `fillMode: 'overwrite'` should NOT be used
-with resume patterns.
+This destroys the checkpoint.
+Document that `fillMode: 'overwrite'` should NOT be used with resume patterns.
 
 **6. Negative or Invalid startingTurnNumber**
 
@@ -567,8 +582,9 @@ const result = await fillForm({
 });
 ```
 
-No explicit validation. The arithmetic works (callbacks show "Turn -4", etc.).
-Best-effort: TypeScript types prevent most issues; runtime doesn't crash.
+No explicit validation.
+The arithmetic works (callbacks show “Turn -4”, etc.). Best-effort: TypeScript types
+prevent most issues; runtime doesn’t crash.
 
 ### Framework Flexibility Checklist
 
@@ -630,7 +646,7 @@ For use in CLI, AWS Step Functions, Convex, etc:
 | Date | Author | Changes |
 | --- | --- | --- |
 | 2026-01-02 | Claude | Initial draft from external proposal evaluation |
-| 2026-01-02 | Claude | Decision: Use 'batch_limit' reason instead of reusing 'max_turns' |
+| 2026-01-02 | Claude | Decision: Use ‘batch_limit’ reason instead of reusing ‘max_turns’ |
 | 2026-01-02 | Claude | Decision: turns includes startingTurnNumber for accurate tracking |
 | 2026-01-02 | Claude | Added acceptance criteria and testing plan |
 | 2026-01-02 | Claude | Added senior engineer design review with corner cases |

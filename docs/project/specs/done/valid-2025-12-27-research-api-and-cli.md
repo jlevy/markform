@@ -2,10 +2,12 @@
 
 ## Purpose
 
-This validation spec documents the testing performed for the Research API and CLI feature,
-and lists manual validation steps for the user to confirm the implementation is adequate.
+This validation spec documents the testing performed for the Research API and CLI
+feature, and lists manual validation steps for the user to confirm the implementation is
+adequate.
 
-**Feature Plan:** [plan-2025-12-27-research-api-and-cli.md](plan-2025-12-27-research-api-and-cli.md)
+**Feature Plan:**
+[plan-2025-12-27-research-api-and-cli.md](plan-2025-12-27-research-api-and-cli.md)
 
 **Implementation Plan:** N/A (implementation was done directly from the plan spec)
 
@@ -42,7 +44,8 @@ All 580 tests pass including new and updated tests:
 ### Integration and End-to-End Testing
 
 - `tests/integration/programmaticFill.test.ts` (10 tests) - Pass, validates harness loop
-- `tests/golden/golden.test.ts` (3 tests) - Golden session tests pass with updated YAML format
+- `tests/golden/golden.test.ts` (3 tests) - Golden session tests pass with updated YAML
+  format
 - Full precommit suite passes: typecheck, lint, build, test
 
 ### Build Verification
@@ -108,7 +111,8 @@ markform examples --name political-research
 **Expected behavior:**
 - List shows `[fill]` for simple, `[research]` for research forms
 - When selecting a research form, model picker shows only web-search-capable models
-- Prompts: "Run research now? (requires web search)"
+- Prompts: “Run research now?
+  (requires web search)”
 - CLI hint suggests `markform research` command for later execution
 
 ### 4. Frontmatter Harness Config
@@ -116,10 +120,13 @@ markform examples --name political-research
 Verify frontmatter configuration is respected:
 
 1. Check research form frontmatter has `harness_config`:
+
    ```bash
    head -30 examples/political-research/political-research.form.md
    ```
+
    Should show:
+
    ```yaml
    harness_config:
      max_turns: 10
@@ -146,7 +153,8 @@ grep -l "harness_config" examples/*/\*.form.md
 
 ### 6. Fill Command Still Works
 
-Verify the fill command still works correctly after the `maxIssues` → `maxIssuesPerTurn` rename:
+Verify the fill command still works correctly after the `maxIssues` → `maxIssuesPerTurn`
+rename:
 
 ```bash
 # Quick validation

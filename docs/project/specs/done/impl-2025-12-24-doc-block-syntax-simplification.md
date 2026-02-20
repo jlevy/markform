@@ -4,8 +4,8 @@
 
 This is an implementation spec for simplifying the documentation block syntax in
 Markform. The change replaces the generic `{% doc %}` tag with `kind` attribute with
-distinct semantic tags: `{% description %}`, `{% instructions %}`, and `{% documentation
-%}`.
+distinct semantic tags: `{% description %}`, `{% instructions %}`, and
+`{% documentation %}`.
 
 **Bead:** markform-172
 
@@ -53,6 +53,7 @@ Enter your full name (2-50 characters).
 **Workflow:**
 1. User enters the political figure's name
 2. Agent researches and fills biographical data
+
 {% /documentation %}
 ```
 
@@ -60,9 +61,9 @@ Enter your full name (2-50 characters).
 
 | Tag | Purpose | Example |
 | --- | --- | --- |
-| `description` | Brief, declarative statement of what something is | "A biographical research form for political figures" |
-| `instructions` | Action-oriented guidance for filling a field | "Enter the full name (2-50 characters)" |
-| `documentation` | General information, workflow context, data sources | "Workflow: 1. User enters name... Data Sources: Wikipedia..." |
+| `description` | Brief, declarative statement of what something is | “A biographical research form for political figures” |
+| `instructions` | Action-oriented guidance for filling a field | “Enter the full name (2-50 characters)” |
+| `documentation` | General information, workflow context, data sources | “Workflow: 1. User enters name … Data Sources: Wikipedia …” |
 
 ## Type Changes
 
@@ -124,15 +125,17 @@ The implementation is broken into phases that may be committed and tested separa
 #### types.ts
 
 1. **Replace DocBlockKind** (line 229):
+
    ```typescript
    // Before
    export type DocBlockKind = "description" | "instructions" | "notes" | "examples";
-   
+
    // After
    export type DocumentationTag = "description" | "instructions" | "documentation";
    ```
 
 2. **Update DocumentationBlock** (lines 231-237):
+
    ```typescript
    // Before
    export interface DocumentationBlock {
@@ -140,7 +143,7 @@ The implementation is broken into phases that may be committed and tested separa
      kind?: DocBlockKind;
      bodyMarkdown: string;
    }
-   
+
    // After
    export interface DocumentationBlock {
      tag: DocumentationTag;
@@ -150,6 +153,7 @@ The implementation is broken into phases that may be committed and tested separa
    ```
 
 3. **Update Zod schemas** (lines 767-778):
+
    ```typescript
    // Before
    export const DocBlockKindSchema = z.enum([
@@ -158,20 +162,20 @@ The implementation is broken into phases that may be committed and tested separa
      "notes",
      "examples",
    ]);
-   
+
    export const DocumentationBlockSchema = z.object({
      ref: z.string(),
      kind: DocBlockKindSchema.optional(),
      bodyMarkdown: z.string(),
    });
-   
+
    // After
    export const DocumentationTagSchema = z.enum([
      "description",
      "instructions",
      "documentation",
    ]);
-   
+
    export const DocumentationBlockSchema = z.object({
      tag: DocumentationTagSchema,
      ref: z.string(),
@@ -183,8 +187,8 @@ The implementation is broken into phases that may be committed and tested separa
 
 1. **Update extractDocBlocks function** (lines 858-924):
 
-   - Change from looking for `{% doc %}` tags to looking for `{% description %}`, `{%
-     instructions %}`, `{% documentation %}` tags
+   - Change from looking for `{% doc %}` tags to looking for `{% description %}`,
+     `{% instructions %}`, `{% documentation %}` tags
 
    - Extract `ref` attribute (no longer need `kind`)
 
@@ -193,29 +197,29 @@ The implementation is broken into phases that may be committed and tested separa
    ```typescript
    const DOC_TAG_NAMES = ["description", "instructions", "documentation"] as const;
    type DocTagName = (typeof DOC_TAG_NAMES)[number];
-   
+
    function extractDocBlocks(ast: Node, idIndex: Map<Id, IdIndexEntry>): DocumentationBlock[] {
      const docs: DocumentationBlock[] = [];
      const seenRefs = new Set<string>();
-   
+
      function traverse(node: Node): void {
        if (!node || typeof node !== "object") {
          return;
        }
-   
+
        // Check for description, instructions, or documentation tags
        if (node.type === "tag" && node.tag && DOC_TAG_NAMES.includes(node.tag as DocTagName)) {
          const tag = node.tag as DocumentationTag;
          const ref = getStringAttr(node, "ref");
-   
+
          if (!ref) {
            throw new ParseError(`${tag} block missing required 'ref' attribute`);
          }
-   
+
          if (!idIndex.has(ref)) {
            throw new ParseError(`${tag} block references unknown ID '${ref}'`);
          }
-   
+
          const uniqueKey = `${ref}:${tag}`;
          if (seenRefs.has(uniqueKey)) {
            throw new ParseError(
@@ -223,7 +227,7 @@ The implementation is broken into phases that may be committed and tested separa
            );
          }
          seenRefs.add(uniqueKey);
-   
+
          // Extract body content
          let bodyMarkdown = "";
          function extractText(n: Node): void {
@@ -241,21 +245,21 @@ The implementation is broken into phases that may be committed and tested separa
              extractText(child);
            }
          }
-   
+
          docs.push({
            tag,
            ref,
            bodyMarkdown: bodyMarkdown.trim(),
          });
        }
-   
+
        if (node.children && Array.isArray(node.children)) {
          for (const child of node.children) {
            traverse(child);
          }
        }
      }
-   
+
      traverse(ast);
      return docs;
    }

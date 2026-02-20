@@ -2,41 +2,47 @@
 
 ## Summary
 
-Consolidate and unify logging across all CLI commands that run agent fills (fill, run, examples)
-using an expanded FillCallbacks architecture. This enables consistent CLI output and allows API
-consumers to receive detailed progress information via injected callbacks.
+Consolidate and unify logging across all CLI commands that run agent fills (fill, run,
+examples) using an expanded FillCallbacks architecture.
+This enables consistent CLI output and allows API consumers to receive detailed progress
+information via injected callbacks.
 
 ## Verbosity Levels
 
-**Important:** The detailed turn/patch logging that `fill.ts` currently has should be the **default**
-behavior for all CLI commands (fill, run, examples). This includes:
+**Important:** The detailed turn/patch logging that `fill.ts` currently has should be
+the **default** behavior for all CLI commands (fill, run, examples).
+This includes:
 
-| Level | What's Shown |
-|-------|--------------|
+| Level | What’s Shown |
+| --- | --- |
 | **Default** | Turn numbers, issues per turn (field IDs + issue types), patches per turn (field ID + value), completion status |
 | **--verbose** | All default output PLUS: token counts, tool call start/end with timing, full prompt/response sizes, detailed stats, LLM call metadata |
 | **--quiet** | Minimal output: just final success/failure and output paths |
 
-The current problem is that `run.ts` and `examples.ts` show less detail than `fill.ts` by default.
-After this work, all three commands should show the same detailed output by default.
+The current problem is that `run.ts` and `examples.ts` show less detail than `fill.ts`
+by default. After this work, all three commands should show the same detailed output by
+default.
 
 ## Problem
 
 ### Current State Issues
 
 1. **Duplicate Logging Logic**
-   - `fill.ts` (lines 433-548) has detailed per-turn logging using `logInfo`/`logVerbose`
-   - `run.ts` `runAgentFillWorkflow` (lines 378-456) duplicates this with raw `console.log`
+   - `fill.ts` (lines 433-548) has detailed per-turn logging using
+     `logInfo`/`logVerbose`
+   - `run.ts` `runAgentFillWorkflow` (lines 378-456) duplicates this with raw
+     `console.log`
    - Inconsistent formatting between commands
 
 2. **Incomplete Callback Information**
-   - `TurnProgress` only has counts: `patchesApplied`, `issuesShown`, `requiredIssuesRemaining`
+   - `TurnProgress` only has counts: `patchesApplied`, `issuesShown`,
+     `requiredIssuesRemaining`
    - No access to actual `InspectIssue[]` or `Patch[]` data in callbacks
-   - API consumers can't log patch details without implementing their own harness loop
+   - API consumers can’t log patch details without implementing their own harness loop
 
 3. **Context Not Passed to Workflows**
-   - `runAgentFillWorkflow` in run.ts doesn't receive command context (`ctx`)
-   - Can't use `logInfo`/`logVerbose` properly
+   - `runAgentFillWorkflow` in run.ts doesn’t receive command context (`ctx`)
+   - Can’t use `logInfo`/`logVerbose` properly
    - Hardcodes `{ verbose: false }` in `logTiming` calls (lines 311, 454)
 
 4. **CLI-Tied Logging**
@@ -46,7 +52,7 @@ After this work, all three commands should show the same detailed output by defa
 ### Files Affected
 
 | File | Issue |
-|------|-------|
+| --- | --- |
 | [fill.ts](packages/markform/src/cli/commands/fill.ts) | Manual turn/patch logging (lines 433-548) |
 | [run.ts](packages/markform/src/cli/commands/run.ts) | Duplicate logging, no ctx (lines 378-456) |
 | [examples.ts](packages/markform/src/cli/commands/examples.ts) | Calls runForm, inherits run.ts issues |
@@ -326,7 +332,10 @@ async function runAgentFillWorkflow(
 
 ## References
 
-- Current FillCallbacks: [harnessTypes.ts:198-216](packages/markform/src/harness/harnessTypes.ts#L198-L216)
-- Current TurnProgress: [harnessTypes.ts:278-286](packages/markform/src/harness/harnessTypes.ts#L278-L286)
-- fill.ts logging: [fill.ts:433-548](packages/markform/src/cli/commands/fill.ts#L433-L548)
+- Current FillCallbacks:
+  [harnessTypes.ts:198-216](packages/markform/src/harness/harnessTypes.ts#L198-L216)
+- Current TurnProgress:
+  [harnessTypes.ts:278-286](packages/markform/src/harness/harnessTypes.ts#L278-L286)
+- fill.ts logging:
+  [fill.ts:433-548](packages/markform/src/cli/commands/fill.ts#L433-L548)
 - run.ts logging: [run.ts:378-456](packages/markform/src/cli/commands/run.ts#L378-L456)

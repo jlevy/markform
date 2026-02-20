@@ -91,7 +91,7 @@ rather than many flat `x-markform*` properties.
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `spec` | string | Markform spec version (e.g., "MF/0.1") |
+| `spec` | string | Markform spec version (e.g., “MF/0.1”) |
 | `roles` | string[] | Available roles for field assignment |
 | `roleInstructions` | object | Instructions keyed by role name |
 | `groups` | array | Group definitions with id and title |
@@ -101,10 +101,10 @@ rather than many flat `x-markform*` properties.
 | Property | Type | Description |
 | --- | --- | --- |
 | `role` | string | Target actor for this field |
-| `priority` | string | "high", "medium", or "low" |
+| `priority` | string | “high”, “medium”, or “low” |
 | `group` | string | Parent group ID |
-| `checkboxMode` | string | "multi", "simple", or "explicit" (checkboxes only) |
-| `approvalMode` | string | "none" or "blocking" (checkboxes only) |
+| `checkboxMode` | string | “multi”, “simple”, or “explicit” (checkboxes only) |
+| `approvalMode` | string | “none” or “blocking” (checkboxes only) |
 | `placeholder` | string | Hint text (text-entry fields only) |
 | `examples` | string[] | Example values (text-entry fields only) |
 

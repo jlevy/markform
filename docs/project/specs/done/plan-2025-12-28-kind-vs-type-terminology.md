@@ -343,7 +343,7 @@ Update comments only:
 
 **Goal:** Add the formal taxonomy to SPEC.md as specified below.
 
-- [x] Add "Type System" subsection after Layer 2 intro (~line 1045)
+- [x] Add “Type System” subsection after Layer 2 intro (~line 1045)
 
 - [x] Add terminology definitions table (as shown below)
 
@@ -468,51 +468,51 @@ Field Kinds
 
 **Layer 1 (Syntax) updates:**
 
-- [x] Line 206-209: "field type" → "field kind" (2 occurrences)
+- [x] Line 206-209: “field type” → “field kind” (2 occurrences)
 
-- [x] Line 229: "all field types" → "all field kinds"
+- [x] Line 229: “all field types” → “all field kinds”
 
-- [x] Line 248: "text-entry field types" → "text-entry field kinds"
+- [x] Line 248: “text-entry field types” → “text-entry field kinds”
 
-- [x] Line 276: "selection field types" → "selection field kinds"
+- [x] Line 276: “selection field types” → “selection field kinds”
 
-- [x] Line 279: Table header "Field Type" → "Field Kind"
+- [x] Line 279: Table header “Field Type” → “Field Kind”
 
-- [x] Line 510: "field type" → "field kind"
+- [x] Line 510: “field type” → “field kind”
 
 **Layer 2 (Data Model) updates:**
 
-- [x] Line 1055: Comment "orthogonal to field type" → "orthogonal to field kind"
+- [x] Line 1055: Comment “orthogonal to field type” → “orthogonal to field kind”
 
-- [x] Line 1671: Section header "Field Type Reference" → "Field Kind Reference"
+- [x] Line 1671: Section header “Field Type Reference” → “Field Kind Reference”
 
-- [x] Line 1674: "for all field types" → "for all field kinds"
+- [x] Line 1674: “for all field types” → “for all field kinds”
 
 - [x] Line 1687: Table row update
 
-- [x] Line 1699: "field type discrimination" → "field kind discrimination"
+- [x] Line 1699: “field type discrimination” → “field kind discrimination”
 
-- [x] Line 1703: Section header "Field Type Mappings" → "Field Kind Mappings"
+- [x] Line 1703: Section header “Field Type Mappings” → “Field Kind Mappings”
 
 **Layer 3 (Validation) updates:**
 
-- [x] Line 1484: Table header "Field Type" → "Field Kind" (implicit requiredness table)
+- [x] Line 1484: Table header “Field Type” → “Field Kind” (implicit requiredness table)
 
-- [x] Line 1875: Table header "Field Type" → "Field Kind" (validation checks table)
+- [x] Line 1875: Table header “Field Type” → “Field Kind” (validation checks table)
 
-- [x] Line 1899: "for each field type" → "for each field kind"
+- [x] Line 1899: “for each field type” → “for each field kind”
 
-- [x] Line 1902: Table header "Field Type" → "Field Kind"
+- [x] Line 1902: Table header “Field Type” → “Field Kind”
 
 ### Phase 3: DOCS.md and README.md
 
 **Goal:** Update user-facing docs
 
-- [x] DOCS.md: "Field Types" section header → "Field Kinds"
+- [x] DOCS.md: “Field Types” section header → “Field Kinds”
 
 - [x] DOCS.md: Add terminology note
 
-- [x] DOCS.md: Replace "field type" → "field kind" throughout
+- [x] DOCS.md: Replace “field type” → “field kind” throughout
 
 - [x] README.md: Line 116 update
 
@@ -553,9 +553,9 @@ Field Kinds
 
 - [x] SPEC.md has formal Type System section with complete taxonomy
 
-- [x] All "field type" occurrences reviewed and updated where appropriate
+- [x] All “field type” occurrences reviewed and updated where appropriate
 
-- [x] DOCS.md section headers use "Field Kinds"
+- [x] DOCS.md section headers use “Field Kinds”
 
 - [x] README.md uses consistent terminology
 

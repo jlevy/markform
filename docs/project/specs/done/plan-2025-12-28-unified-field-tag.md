@@ -13,8 +13,10 @@ kinds.
 {% string-field id="full_title" label="Full Title" role="agent" required=true %}{% /string-field %}
 {% url-field id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /url-field %}
 {% single-select id="mpaa_rating" label="MPAA Rating" role="agent" %}
+
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
+
 {% /single-select %}
 ```
 
@@ -24,8 +26,10 @@ kinds.
 {% field kind="string" id="full_title" label="Full Title" role="agent" required=true %}{% /field %}
 {% field kind="url" id="rt_url" label="Rotten Tomatoes URL" role="agent" %}{% /field %}
 {% field kind="single_select" id="mpaa_rating" label="MPAA Rating" role="agent" %}
+
 - [ ] G {% #g %}
 - [ ] PG {% #pg %}
+
 {% /field %}
 ```
 
@@ -552,6 +556,7 @@ It still needs to become `{% field kind="checkboxes" %}`.
 - [ ] Run full test suite: `pnpm precommit`
 
 - [ ] Verify no old tag names in source (note: pattern includes all 11 legacy tags):
+
   ```bash
   grep -rn 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' \
     packages/markform/src \
@@ -561,6 +566,7 @@ It still needs to become `{% field kind="checkboxes" %}`.
   ```
 
 - [ ] Verify no old tag names in form files across repo:
+
   ```bash
   find . -name '*.form.md' -exec grep -l 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' {} \;
   ```

@@ -313,8 +313,10 @@ This enables multi-stage approval workflows.
 
 {% field-group id="user_review" title="User Review" %}
 {% checkboxes id="user_approval" label="User Approval" role="user" required=true approvalMode="blocking" %}
+
 - [ ] I have reviewed the agent's analysis {% #reviewed %}
 - [ ] The risk assessment is accurate {% #accurate %}
+
 {% /checkboxes %}
 {% /field-group %}
 
@@ -324,7 +326,9 @@ This enables multi-stage approval workflows.
 
 {% field-group id="reviewer_signoff" title="Reviewer Sign-off" %}
 {% checkboxes id="reviewer_approval" label="Reviewer Approval" role="reviewer" required=true approvalMode="blocking" %}
+
 - [ ] Approved for release {% #approved %}
+
 {% /checkboxes %}
 {% /field-group %}
 
@@ -359,8 +363,8 @@ A checkbox field is “complete” based on its `checkboxMode` and `minDone` set
 | `any` | At least one option is checked (or `minDone` if specified) |
 | `explicit` | All options are answered (no `[_]` unfilled markers remain) |
 
-**minDone override:** If `minDone` is specified, completion requires `checkedCount >=
-minDone` regardless of mode.
+**minDone override:** If `minDone` is specified, completion requires
+`checkedCount >= minDone` regardless of mode.
 
 **Blocking behavior:** A blocking checkpoint (`approvalMode="blocking"`) uses these
 completion semantics to determine when fields after it become unblocked.

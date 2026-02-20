@@ -13,11 +13,13 @@
 ## Prerequisites
 
 1. **Build the CLI**:
+
    ```bash
    pnpm build
    ```
 
 2. **Set up API keys** in `.env` at the directory where you run the CLI:
+
    ```bash
    OPENAI_API_KEY=sk-...
    # Or for Anthropic:

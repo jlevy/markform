@@ -35,8 +35,8 @@ This is a major internal refactor of the markform engine:
 - Added `AnswerState` type: `"unanswered" | "answered" | "skipped" | "aborted"` (renamed
   from `ResponseState`, with `'empty'` → `'unanswered'`)
 
-- Added `FieldResponse` wrapper: `{ state: AnswerState; value?: FieldValue; reason?:
-  string }`
+- Added `FieldResponse` wrapper:
+  `{ state: AnswerState; value?: FieldValue; reason?: string }`
 
 - Replaced `valuesByFieldId` + `skipsByFieldId` with unified `responsesByFieldId`
 
@@ -230,6 +230,7 @@ Parse and serialize a form with skip/abort reasons:
 ```value
 %SKIP% (Information not publicly available)
 ````
+
 {% /string-field %}
 ````
 

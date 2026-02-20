@@ -3,8 +3,8 @@
 ## Purpose
 
 This validation spec confirms the implementation of simplified documentation block
-syntax in Markform, replacing `{% doc kind="X" %}` with semantic tags `{% description
-%}`, `{% instructions %}`, and `{% documentation %}`.
+syntax in Markform, replacing `{% doc kind="X" %}` with semantic tags
+`{% description %}`, `{% instructions %}`, and `{% documentation %}`.
 
 **Implementation Plan:**
 [impl-2025-12-24-doc-block-syntax-simplification.md](impl-2025-12-24-doc-block-syntax-simplification.md)
@@ -80,12 +80,13 @@ is minimal:
 
    - Open `packages/markform/examples/simple/simple.form.md`
 
-   - Confirm doc blocks use new syntax: `{% description ref="..." %}`, `{% instructions
-     ref="..." %}`
+   - Confirm doc blocks use new syntax: `{% description ref="..." %}`,
+     `{% instructions ref="..." %}`
 
    - Verify closing tags match: `{% /description %}`, `{% /instructions %}`
 
 2. **CLI inspection (optional)**:
+
    ```bash
    cd packages/markform
    pnpm markform inspect examples/simple/simple.form.md

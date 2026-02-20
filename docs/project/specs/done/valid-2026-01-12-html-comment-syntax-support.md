@@ -6,7 +6,8 @@ This validation spec documents the testing performed and manual validation neede
 the HTML comment syntax feature, which allows Markform forms to use HTML comment syntax
 (`<!-- f:tag -->`) as an alternative to Markdoc tag syntax (`{% tag %}`).
 
-**Feature Plan:** [plan-2026-01-12-html-comment-syntax-support.md](plan-2026-01-12-html-comment-syntax-support.md)
+**Feature Plan:**
+[plan-2026-01-12-html-comment-syntax-support.md](plan-2026-01-12-html-comment-syntax-support.md)
 
 ## Stage 4: Validation Stage
 
@@ -37,7 +38,7 @@ work.
 - Edge cases: empty input, no tags, mixed content
 - Syntax detection (`detectSyntaxStyle()`)
 - Syntax consistency validation (`validateSyntaxConsistency()`)
-- Violation detection for "wrong" syntax patterns
+- Violation detection for “wrong” syntax patterns
 
 **Serialization Tests** (`tests/unit/engine/serialize-comment.test.ts` - 30 tests):
 - `postprocessToCommentSyntax()` transformations
@@ -84,24 +85,32 @@ work.
 All manual testing items have been verified during this merge:
 
 #### 1. Comment Syntax Example Form ✓ Verified
+
 ```bash
 node dist/bin.mjs validate examples/simple/simple-comment-syntax.form.md
 ```
-**Result**: Form parses successfully with expected validation issues (empty required fields).
+
+**Result**: Form parses successfully with expected validation issues (empty required
+fields).
 
 #### 2. Round-Trip Preservation ✓ Verified
+
 ```bash
 node dist/bin.mjs export examples/simple/simple-comment-syntax.form.md --format=form
 ```
-**Result**: Output contains `<!-- f:form` and `<!-- f:field` patterns, correctly preserving comment syntax.
+
+**Result**: Output contains `<!-- f:form` and `<!-- f:field` patterns, correctly
+preserving comment syntax.
 
 #### 3. `--syntax` Enforcement ✓ Verified
+
 ```bash
 # Should pass
 node dist/bin.mjs validate examples/simple/simple-comment-syntax.form.md --syntax=comments
 # Should fail with violations
 node dist/bin.mjs validate examples/simple/simple.form.md --syntax=comments
 ```
+
 **Result**: Correctly enforces syntax consistency.
 
 ### Remaining Manual Validation (For User)
@@ -111,12 +120,13 @@ node dist/bin.mjs validate examples/simple/simple.form.md --syntax=comments
 Open the example file on GitHub and verify the form tags are hidden:
 - `packages/markform/examples/simple/simple-comment-syntax.form.md`
 
-**Expected**: Only the checkbox lists and markdown content should be visible. The `<!-- f:... -->` tags should be completely hidden.
+**Expected**: Only the checkbox lists and markdown content should be visible.
+The `<!-- f:... -->` tags should be completely hidden.
 
 #### 2. Verify Documentation Updates
 
 Review the updated documentation:
-- `docs/markform-spec.md` - "Alternative Tag Syntax (HTML Comments)" section
+- `docs/markform-spec.md` - “Alternative Tag Syntax (HTML Comments)” section
 - `docs/markform-reference.md` - Syntax table and example in Conventions section
 
 **Expected**: Documentation is clear and accurate, includes syntax mapping table.
@@ -124,7 +134,7 @@ Review the updated documentation:
 ## Test Summary
 
 | Test Category | Tests | Status |
-|---------------|-------|--------|
+| --- | --- | --- |
 | Preprocessor unit tests | 55 | ✓ Pass |
 | Serialization unit tests | 30 | ✓ Pass |
 | Parse integration tests | 10 | ✓ Pass |
