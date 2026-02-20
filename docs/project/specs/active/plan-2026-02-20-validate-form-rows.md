@@ -45,8 +45,8 @@ This spec addresses all three problems through three complementary changes:
 
 - Fully-empty table rows are dropped during normalization (parse and patch apply),
   making them invisible to validation, progress, and serialization
-- Validation produces a warning when a row has the majority of its cells empty
-  (e.g., >= 50% of non-required cells are empty in a row that has some data)
+- Validation produces a warning when a non-empty row has the majority of its cells
+  empty (i.e., strictly more than half of cells are empty in a row that has some data)
 - `minRows` and `maxRows` constraints count only substantive rows (rows with at least
   one answered cell)
 - `isFieldSubmitted()` in progress computation correctly treats tables with only
@@ -93,9 +93,11 @@ case 'table': {
 ```
 A table with any rows (including all-empty ones) is considered "submitted."
 
-**Patch application** (`src/engine/apply.ts:653-681`):
-- `set_table` and `append_table` create rows from patch data without filtering empties.
-- `delete_table` correctly handles the last-row case (sets state to `unanswered`).
+**Patch application** (`src/engine/apply.ts:635-682`):
+- `set_table` (lines 635-650) and `append_table` (lines 653-670) create rows from
+  patch data without filtering empties.
+- `delete_table` (lines 673-682) correctly handles the last-row case (sets state to
+  `unanswered` at line 678).
 
 ### The Problem in Practice
 
@@ -149,15 +151,19 @@ and mask the fact that the agent stopped filling after the first row.
 ```typescript
 /**
  * Check if a table row is fully empty (all cells skipped/empty).
+ * Used during normalization to drop rows that carry no data.
  */
-function isRowFullyEmpty(row: TableRowResponse, columns: TableColumn[]): boolean {
-  return columns.every((col) => {
-    const cell = row[col.id];
-    return !cell || cell.state === 'skipped' || cell.state === 'aborted'
-      || cell.value === undefined || cell.value === null || cell.value === '';
-  });
+export function isRowFullyEmpty(row: TableRowResponse): boolean {
+  return Object.values(row).every((cell) =>
+    !cell || cell.state === 'skipped' || cell.state === 'aborted'
+    || cell.value === undefined || cell.value === null || cell.value === '',
+  );
 }
 ```
+
+This checks all cell entries in the row object rather than requiring a `columns`
+parameter. This is simpler and sufficient because the row object only contains entries
+for known column IDs (set during parsing or patch application).
 
 **Behavioral impact:**
 - A template form with header + separator + 3 empty rows parses as a table with 0 rows
@@ -168,7 +174,7 @@ function isRowFullyEmpty(row: TableRowResponse, columns: TableColumn[]): boolean
 ### B: Warn on Mostly-Empty Rows
 
 **Definition:** A "mostly-empty row" is one that has at least one answered cell, but
-the majority of its cells (>= 50%) are empty/skipped.
+strictly more than half of its cells are empty/skipped.
 
 **Where to warn:** In `validateTableRow()` (`src/engine/validate.ts`), after
 validating individual cells, check whether the row is mostly empty. If so, emit a
@@ -185,9 +191,10 @@ Consider adding column constraints or making columns required.
 intentionally have sparse rows (e.g., an "optional notes" column). The warning helps
 catch cases where an agent is producing low-quality output.
 
-**Threshold:** >= 50% of cells are empty in a row that has at least one filled cell.
-This avoids warning on fully-empty rows (those are dropped by normalization) and on
-rows that are mostly filled.
+**Threshold:** Strictly more than half of cells are empty in a row that has at least
+one filled cell. Formally: `emptyCells > totalCells / 2`. This means an even split
+(e.g., 2 of 4 filled) does NOT warn. This avoids warning on fully-empty rows (those
+are dropped by normalization) and on rows that are half-filled or more.
 
 ### D: Strengthen minRows/maxRows Validation
 
@@ -217,7 +224,6 @@ layer guarantees that `rows.length` reflects substantive rows.
 | `src/engine/table/parseTable.ts` | Add `isRowFullyEmpty()` helper; filter empty rows in `parseMarkdownTable()` |
 | `src/engine/apply.ts` | Filter empty rows in `set_table` and `append_table` patch handlers |
 | `src/engine/validate.ts` | Add mostly-empty row warning in `validateTableRow()` |
-| `src/engine/coreTypes.ts` | Export `isRowFullyEmpty()` if shared, or keep in parseTable.ts |
 | `docs/markform-spec.md` | Clarify empty row dropping, minRows/maxRows semantics |
 | `docs/markform-reference.md` | Update table field docs |
 | `tests/unit/engine/parseTable.test.ts` | Tests for empty row dropping at parse time |
@@ -385,12 +391,14 @@ Tests first, then implementation.
 Tests first, then implementation.
 
 **Tests to write:**
-- [ ] `validate.test.ts`: row with 1 of 4 cells filled → warning
-- [ ] `validate.test.ts`: row with 2 of 4 cells filled → warning (50% empty)
+- [ ] `validate.test.ts`: row with 1 of 4 cells filled → warning (3/4 empty > half)
+- [ ] `validate.test.ts`: row with 2 of 4 cells filled → no warning (even split, not
+  strict majority)
 - [ ] `validate.test.ts`: row with 3 of 4 cells filled → no warning
 - [ ] `validate.test.ts`: row with all cells filled → no warning
-- [ ] `validate.test.ts`: row with 1 of 2 cells filled → no warning (50% threshold,
-  need strictly more than half empty)
+- [ ] `validate.test.ts`: row with 1 of 3 cells filled → warning (2/3 empty > half)
+- [ ] `validate.test.ts`: row with 1 of 2 cells filled → no warning (1/2 is not
+  strictly more than half)
 - [ ] `validate.test.ts`: warning message includes row number and field label
 - [ ] `validate.test.ts`: warning severity is `warning`, not `error`
 
