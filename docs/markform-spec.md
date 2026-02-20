@@ -1,9 +1,6 @@
-<!-- SPDX-License-Identifier: CC-BY-4.0
-
-Markform Specification - Licensed under Creative Commons Attribution 4.0 International
-https://creativecommons.org/licenses/by/4.0/
-
-You may freely implement this specification in your own software under any license.
+<!-- SPDX-License-Identifier: CC-BY-4.0 Markform Specification - Licensed under Creative
+Commons Attribution 4.0 International https://creativecommons.org/licenses/by/4.0/ You
+may freely implement this specification in your own software under any license.
 The reference implementation at https://github.com/jlevy/markform is separately licensed
 under AGPL-3.0-or-later.
 Contact the author for commercial licensing options.
@@ -620,6 +617,7 @@ The `fence` node with `language="value"` is used for scalar values (see
 ```value
 ACME Corp
 ````
+
 {% /field %}
 ````
 
@@ -636,6 +634,7 @@ ACME Corp
 ```value
 1234.56
 ````
+
 {% /field %}
 ````
 
@@ -780,6 +779,7 @@ Ship v1.0 by end of Q1
 Complete security audit
 Migrate legacy users to new platform
 ````
+
 {% /field %}
 ````
 
@@ -809,6 +809,7 @@ Regulatory changes in EU market
 Competitor launching similar feature in Q2
 Customer concentration risk (top 3 = 60% revenue)
 ````
+
 {% /field %}
 
 {% instructions ref="top_risks" %} One risk per line.
@@ -850,6 +851,7 @@ reason is embedded in the sentinel value using parentheses:
 ```value
 %SKIP% (Information not publicly available)
 ````
+
 {% /field %}
 ````
 
@@ -858,6 +860,7 @@ reason is embedded in the sentinel value using parentheses:
 ```value
 %ABORT% (Financial projections cannot be determined from available data)
 ````
+
 {% /field %}
 ````
 
@@ -923,6 +926,7 @@ Analysis completed with partial data due to API limitations.
 ```value
 %SKIP% (Not applicable for this analysis type)
 ````
+
 {% /field %}{% /group %}
 
 {% note id="n1" ref="quarterly_earnings" role="agent" %} Analysis completed with partial
@@ -964,6 +968,7 @@ function containsMarkdocSyntax(value: string): boolean {
 ```value {% process=false %}
 Use {% tag %} for special formatting.
 ````
+
 {% /field %}
 ````
 
@@ -973,6 +978,7 @@ Use {% tag %} for special formatting.
 ```value
 Alice Johnson
 ````
+
 {% /field %}
 ````
 
@@ -1039,16 +1045,23 @@ Hand-authored forms only need the `spec` field.
 
 ````md
 {% group id="company_info" title="Company Info" %}
+
 {% field kind="string" id="company_name" label="Company name" required=true %}
 ```value
 ACME Corp
 ````
-{% /field %}{% field kind="string" id="ticker" label="Ticker" required=true %}
+
+{% /field %}
+
+{% field kind="string" id="ticker" label="Ticker" required=true %}
 ```value
 ACME
 ```
+
 {% /field %}
+
 {% field kind="string" id="fiscal_period" label="Fiscal period" required=true %}{% /field %}
+
 {% /group %}
 
 {% group id="source_docs" title="Source Documents" %}
@@ -1061,6 +1074,7 @@ ACME
 - [/] Earnings release {% #earnings_release %}
 
 - [ ] Earnings call transcript {% #call_transcript %}{% /field %}{% /group %}
+
 ````
 
 Notes:
@@ -1193,6 +1207,7 @@ Then configure:
   "enabled": true
 }
 ```
+
 ~~~
 {% /field %}
 ```

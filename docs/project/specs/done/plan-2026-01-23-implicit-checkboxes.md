@@ -175,14 +175,16 @@ The following changes are required to the Markform specification:
 **Add new section:**
 
 > ##### Implicit Checkboxes (Plan Documents)
+
 > Forms designed as task lists or plans can omit explicit field wrappers.
 > When a form contains:
+> 
 > - A `{% form %}` wrapper (or `<!-- form ... -->`)
 > - No explicit `{% field %}` tags
 > - Standard markdown checkboxes with ID annotations
 > 
 > The parser automatically creates an implicit checkboxes field:
-> 
+
 | Property | Value |
 | --- | --- |
 | ID | `checkboxes` (reserved) |
@@ -190,8 +192,9 @@ The following changes are required to the Markform specification:
 | Mode | `multi` (always) |
 | Options | All checkboxes in document order |
 | Implicit | `true` |
-> 
+
 > **Example:**
+> 
 > ```markdown
 > ---
 > markform:
@@ -211,11 +214,13 @@ The following changes are required to the Markform specification:
 > ```
 > 
 > **Requirements:**
+> 
 > - Each checkbox MUST have an ID annotation
 > - ID `checkboxes` is reserved for implicit fields
 > - Nested checkboxes (indented list items) are collected as separate options
 > 
 > **Error conditions:**
+> 
 > - Checkbox without ID: Parse error
 > - Mixed mode (explicit fields AND checkboxes outside fields): Parse error
 > - Explicit field with ID `checkboxes`: Parse error
@@ -227,6 +232,7 @@ The following changes are required to the Markform specification:
 **Add:**
 
 > **Nesting constraints:**
+> 
 > - Field tags MUST NOT be nested inside other field tags
 > - Nested field tags produce a parse error: `Field tags cannot be nested.
 >   Found 'inner_id' inside 'outer_id'`
@@ -707,6 +713,7 @@ markform:
 **Errors:**
 - Missing checkbox ID: `Option in implicit field 'checkboxes' missing ID annotation`
 - Mixed mode (explicit fields with checkboxes outside): Error, must choose one approach
+
 ````
 
 ### Phase 6: Final Validation

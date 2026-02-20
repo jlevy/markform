@@ -550,6 +550,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 #### Layer 1 addition: Parallel Execution Hints
 
 > ##### Parallel Execution Hints
+
 > Top-level fields and groups MAY include a `parallel` attribute to indicate that they
 > can be filled concurrently with other items sharing the same value.
 > 
@@ -559,6 +560,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 > ```
 > 
 > **Rules:**
+> 
 > - `parallel` value is an arbitrary string identifier (recommended: `snake_case`)
 > - Items with the same `parallel` value form a *parallel batch*
 > - Items without `parallel` remain in loose-serial mode (single agent, no enforced
@@ -570,6 +572,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 >   mode
 > 
 > **Execution model:**
+> 
 > ```
 > Without parallel: All items filled by one agent in loose-serial mode (current behavior).
 >
@@ -582,6 +585,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 #### Layer 1 addition: Fill Order
 
 > ##### Fill Order
+
 > Fields and groups MAY include an `order` attribute (numeric) that controls the
 > sequence in which the harness presents fields to the agent.
 > 
@@ -591,6 +595,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 > ```
 > 
 > **Rules:**
+> 
 > - `order` is a number (integer or float).
 >   Default: `0`.
 > - Lower `order` values are filled first.
@@ -606,6 +611,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 #### Layer 3 addition: Execution Plan
 
 > ##### Execution Plan
+
 > An **execution plan** partitions top-level form items into a loose-serial pool and
 > zero or more parallel batches:
 > 
@@ -623,6 +629,7 @@ Update the Markform specification documents to define `parallel` and `order`.
 > ```
 > 
 > **Computation:** Walk top-level items (fields and groups) in document order:
+> 
 > - If item has no `parallel`: add to the loose-serial pool
 > - If item has `parallel`: add to the batch with that ID (create batch if new)
 > 

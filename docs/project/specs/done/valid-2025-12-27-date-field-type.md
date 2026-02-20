@@ -277,12 +277,14 @@ markform:
 ```value
 2024-06-15
 ````
+
 {% /date-field %}
 
 {% year-field id="year1" label="Year" min=2020 max=2030 %}
 ```value
 2019
 ```
+
 {% /year-field %}
 
 {% /field-group %}
@@ -316,12 +318,14 @@ markform:
 ```value
 not-a-date
 ````
+
 {% /date-field %}
 
 {% date-field id="impossible_date" label="Impossible Date" %}
 ```value
 2025-02-30
 ```
+
 {% /date-field %}
 
 {% /field-group %}

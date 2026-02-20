@@ -147,6 +147,7 @@ All new tests follow the table-driven pattern as specified in the plan.
 The following should be verified by the user:
 
 1. **Run tests and coverage locally:**
+
    ```bash
    pnpm --filter markform test
    pnpm --filter markform test:coverage

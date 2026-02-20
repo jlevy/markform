@@ -6,12 +6,11 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Markform CLI Workflow Tests
 
 Tests for multi-step CLI workflows and error handling.
 
----
+* * *
 
 ## Error Handling
 
@@ -39,7 +38,7 @@ Error: ENOENT: no such file or directory, open '/nonexistent/file.form.md'
 ? 1
 ```
 
----
+* * *
 
 ## Patch Command
 
@@ -52,7 +51,7 @@ $ cp examples/simple/simple.form.md /tmp/test-patch.form.md && $CLI patch /tmp/t
 ? 0
 ```
 
----
+* * *
 
 ## Command Help
 

@@ -30,7 +30,7 @@ context once implementation is complete.
 > - Architecture review step post implementation
 >
 > - Rules:
->   
+>
 >   1. Explicitly look for duplicated code and consolidate
 >
 >   2. Explicitly look for dead code and remove

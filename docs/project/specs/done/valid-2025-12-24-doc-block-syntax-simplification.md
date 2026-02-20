@@ -86,6 +86,7 @@ is minimal:
    - Verify closing tags match: `{% /description %}`, `{% /instructions %}`
 
 2. **CLI inspection (optional)**:
+
    ```bash
    cd packages/markform
    pnpm markform inspect examples/simple/simple.form.md

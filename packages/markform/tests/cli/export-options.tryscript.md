@@ -6,12 +6,11 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # Export Command Option Tests
 
 Tests for export command with various format and output options.
 
----
+* * *
 
 ## Format Options
 
@@ -69,7 +68,7 @@ $ $CLI export examples/simple/simple-mock-filled.form.md --format yaml | grep "i
 ? 0
 ```
 
----
+* * *
 
 ## Schema Command Options
 
@@ -111,7 +110,7 @@ $ $CLI schema examples/simple/simple.form.md --draft 2020-12 | head -3
 ? 0
 ```
 
----
+* * *
 
 ## Validate Command Options
 
@@ -131,7 +130,7 @@ Issues (4):
 ? 0
 ```
 
----
+* * *
 
 ## Inspect Command Options
 
@@ -151,7 +150,7 @@ title: Simple Test Form
 ? 0
 ```
 
----
+* * *
 
 ## Status Command Options
 

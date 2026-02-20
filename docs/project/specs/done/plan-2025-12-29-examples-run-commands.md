@@ -129,6 +129,7 @@ markform run --limit=50        # Override menu limit
 4. Limit to `MAX_FORMS_IN_MENU` (30, configurable in settings.ts)
 
 5. Display menu:
+
    ```
    ? Select a form to run:
    ❯ movie-deep-research.form.md - Movie Deep Research [research]

@@ -120,10 +120,13 @@ markform examples --name political-research
 Verify frontmatter configuration is respected:
 
 1. Check research form frontmatter has `harness_config`:
+
    ```bash
    head -30 examples/political-research/political-research.form.md
    ```
+
    Should show:
+
    ```yaml
    harness_config:
      max_turns: 10

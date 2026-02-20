@@ -192,6 +192,7 @@ Applied 1 patch
 ```file $TEMP/test.form.md contains
 name: "Test User"
 ```
+
 ````
 
 **New block types:**
@@ -253,6 +254,7 @@ Or explicit blocks:
 ```stdout
 Normal output
 ```
+
 ```stderr
 Error: Something went wrong
 ```
@@ -266,6 +268,7 @@ For JSON/YAML output, allow programmatic assertions:
 ```console
 $ mycli export --format json
 ```
+
 ```assert json
 $.name == "test"
 $.fields | length > 0
@@ -275,11 +278,13 @@ Or simpler:
 ```console
 $ mycli export --format json
 ```
+
 `json-valid`
 
 ```console
 $ mycli schema
 ```
+
 `json-schema-valid`
 
 * * *
@@ -300,6 +305,7 @@ $ mycli status
 Progress: {{count:\d+}}/21 fields filled
 ? 0
 ```
+
 ```assert
 $count >= 0
 $count <= 21
@@ -428,6 +434,7 @@ name: "Test"
 ```console
 $ markform schema $FORM
 ```
+
 `json-schema-valid`
 
 ### export produces valid YAML
@@ -435,6 +442,7 @@ $ markform schema $FORM
 ```console
 $ markform export $FORM --format yaml
 ```
+
 `yaml-valid`
 ```
 

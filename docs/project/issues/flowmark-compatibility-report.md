@@ -149,6 +149,7 @@ Put closing tags on separate lines:
 {% field kind="string" id="email" label="Email" required=true placeholder="email" %}
 {% /field %}
 ```
+
 This is preserved correctly in v0.6.0.
 
 ### Impact

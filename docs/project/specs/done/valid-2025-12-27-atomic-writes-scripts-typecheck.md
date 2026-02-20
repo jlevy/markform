@@ -63,6 +63,7 @@ All existing unit tests pass (516 tests):
 ### Manual Testing Needed
 
 1. **Verify atomic writes work correctly:**
+
    ```bash
    # Test fill command writes output atomically
    pnpm markform fill packages/markform/examples/simple/simple.form.md --output /tmp/test-fill.md
@@ -74,6 +75,7 @@ All existing unit tests pass (516 tests):
    ```
 
 2. **Verify type checking includes scripts:**
+
    ```bash
    # Run typecheck and confirm scripts are included
    pnpm --filter markform typecheck
@@ -83,6 +85,7 @@ All existing unit tests pass (516 tests):
    ```
 
 3. **Verify exported functions work correctly:**
+
    ```bash
    # Test the CLI works end-to-end
    pnpm markform examples /tmp/atomic-test

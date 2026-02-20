@@ -556,6 +556,7 @@ It still needs to become `{% field kind="checkboxes" %}`.
 - [ ] Run full test suite: `pnpm precommit`
 
 - [ ] Verify no old tag names in source (note: pattern includes all 11 legacy tags):
+
   ```bash
   grep -rn 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' \
     packages/markform/src \
@@ -565,6 +566,7 @@ It still needs to become `{% field kind="checkboxes" %}`.
   ```
 
 - [ ] Verify no old tag names in form files across repo:
+
   ```bash
   find . -name '*.form.md' -exec grep -l 'string-field\|number-field\|date-field\|year-field\|string-list\|url-field\|url-list\|single-select\|multi-select\|checkboxes\|table-field' {} \;
   ```

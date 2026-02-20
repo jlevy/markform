@@ -69,6 +69,7 @@ pnpm build
 # In a Node REPL or test script:
 node -e "const m = require('./dist/index.js'); console.log(Object.keys(m).filter(k => k.includes('Error') || k.includes('is')))"
 ```
+
 Expected: Should list all error classes and type guards.
 
 **2. Verify TypeScript IDE Support:**
@@ -80,12 +81,14 @@ Expected: Should list all error classes and type guards.
 ```bash
 pnpm lint
 ```
+
 Expected: Should complete without errors and not skip any TypeScript files.
 
 **4. Verify Root Scripts TypeCheck:**
 ```bash
 npx tsc -p scripts/tsconfig.json --noEmit
 ```
+
 Expected: Should complete without errors.
 
 **5. Verify CLI Examples Work:**
@@ -94,6 +97,7 @@ cd packages/markform
 pnpm start examples list
 pnpm start examples show simple
 ```
+
 Expected: Should show example metadata (title, description) extracted from frontmatter.
 
 ## Changes Summary

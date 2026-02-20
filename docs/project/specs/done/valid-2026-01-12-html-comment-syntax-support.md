@@ -89,6 +89,7 @@ All manual testing items have been verified during this merge:
 ```bash
 node dist/bin.mjs validate examples/simple/simple-comment-syntax.form.md
 ```
+
 **Result**: Form parses successfully with expected validation issues (empty required
 fields).
 
@@ -97,6 +98,7 @@ fields).
 ```bash
 node dist/bin.mjs export examples/simple/simple-comment-syntax.form.md --format=form
 ```
+
 **Result**: Output contains `<!-- f:form` and `<!-- f:field` patterns, correctly
 preserving comment syntax.
 
@@ -108,6 +110,7 @@ node dist/bin.mjs validate examples/simple/simple-comment-syntax.form.md --synta
 # Should fail with violations
 node dist/bin.mjs validate examples/simple/simple.form.md --syntax=comments
 ```
+
 **Result**: Correctly enforces syntax consistency.
 
 ### Remaining Manual Validation (For User)

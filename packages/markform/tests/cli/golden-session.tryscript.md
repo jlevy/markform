@@ -7,14 +7,13 @@ env:
   FORM: /tmp/golden-session-form.form.md
 timeout: 30000
 ---
-
 # Golden Session: Multi-Turn CLI Form Filling
 
-Demonstrates a complete `next` → `set` → `next` → `set` loop using the CLI.
-The test fills the simple form across multiple turns, showing internal state
-at each step, progressing from empty → incomplete → complete.
+Demonstrates a complete `next` → `set` → `next` → `set` loop using the CLI. The test
+fills the simple form across multiple turns, showing internal state at each step,
+progressing from empty → incomplete → complete.
 
----
+* * *
 
 ## Turn 0: Initialize — copy form and inspect initial state
 
@@ -76,7 +75,7 @@ Next fields to fill (10 issues, budget: 10):
 ? 0
 ```
 
----
+* * *
 
 ## Turn 1: Fill string/number fields (name, email, age)
 
@@ -126,7 +125,7 @@ $ $CLI next --format json $FORM | grep -E '"(form_state|filled_fields|empty_requ
 ? 0
 ```
 
----
+* * *
 
 ## Turn 2: Fill select/checkbox fields (priority, categories, tasks)
 
@@ -180,7 +179,7 @@ $ $CLI next --format json $FORM | grep -E '"(form_state|filled_fields|empty_requ
 ? 0
 ```
 
----
+* * *
 
 ## Turn 3: Fill remaining required fields (tags, website, dates)
 
@@ -271,7 +270,7 @@ Next fields to fill (9 issues, budget: 9):
 ? 0
 ```
 
----
+* * *
 
 ## Turn 4: Skip optional fields and complete
 
@@ -328,7 +327,7 @@ No issues found.
 ? 0
 ```
 
----
+* * *
 
 ## Verification: Final form state
 
@@ -389,7 +388,7 @@ $ $CLI status --format json $FORM
 ? 0
 ```
 
----
+* * *
 
 ## Bonus: Append and Delete operations
 
@@ -431,7 +430,7 @@ tags: [typescript, markform, cli]
 ? 0
 ```
 
----
+* * *
 
 ## Bonus: Report and inspect
 

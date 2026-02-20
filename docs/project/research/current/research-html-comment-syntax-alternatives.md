@@ -172,9 +172,7 @@ Per CommonMark specification:
 
 - They are type 2 HTML blocks when starting a line with `
 
-<!--`
-
-- End condition: line containing `-->
+<!--` - End condition: line containing `-->
 
 `
 
@@ -502,15 +500,11 @@ with {% ... %}
 
 - **No flags needed**—`
 
-<!--%` prefix is unambiguous
-
-**Assessment**: Best balance of effort vs.
+<!--%` prefix is unambiguous **Assessment**: Best balance of effort vs.
 benefits. Backward compatible.
 Both syntaxes always supported with zero configuration.
-
-### Approach 2: Patch Markdoc’s Tokenizer
-
-Modify the markdown-it plugin to recognize `<!--% -->
+### Approach 2: Patch Markdoc’s Tokenizer Modify the markdown-it plugin to recognize
+`<!--% -->
 
 `in addition to`{% %}`.
 
@@ -733,15 +727,8 @@ Alternative considered: `
    Enhanced highlighting for `
 
 <!--% %>` could be added to VSCode extensions.
-
-* * *
-
-## Recommendations
-
-### Summary
-
-**Recommended approach: Preprocessor (Approach 1) with Option C syntax
-(`<!-- f:tag -->`)**
+* * * ## Recommendations ### Summary **Recommended approach: Preprocessor (Approach 1)
+with Option C syntax (`<!-- f:tag -->`)**
 
 This provides the best balance of:
 
@@ -843,6 +830,7 @@ needed.
 - Always runs (no opt-in)
 
 2. **Update `parseForm()` to always preprocess**
+
    ```typescript
    export function parseForm(markdown: string): ParsedForm {
      // Always preprocess - both syntaxes supported transparently
@@ -856,25 +844,7 @@ needed.
 
    - Detect which syntax was used (scan for `
 
-<!--%`vs`{%`)
-
-- Store in ParsedForm metadata
-
-- Serialize back in same format by default
-
-### Phase 2: Serialization Support
-
-1. **Auto-detect and preserve syntax**
-
-   - Check for `<!--%` presence to determine original syntax
-
-   - Default: serialize back in the same syntax as input
-
-   - API option to force specific syntax on output if needed
-
-2. **Add reverse transform for comment syntax output**
-
-   - Transform `{% ... %}` → `<!--% ... -->
+<!--%`vs`{%`) - Store in ParsedForm metadata - Serialize back in same format by default ### Phase 2: Serialization Support 1. **Auto-detect and preserve syntax** - Check for `<!--%` presence to determine original syntax - Default: serialize back in the same syntax as input - API option to force specific syntax on output if needed 2. **Add reverse transform for comment syntax output** - Transform `{% ... %}` → `<!--% ... -->
 
 ` during serialization
 

@@ -1,9 +1,7 @@
-<!-- SPDX-License-Identifier: CC-BY-4.0
-
-Markform Quick Reference - Licensed under Creative Commons Attribution 4.0 International
-https://creativecommons.org/licenses/by/4.0/
-
-You may freely implement this specification in your own software under any license.
+<!-- SPDX-License-Identifier: CC-BY-4.0 Markform Quick Reference - Licensed under
+Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/ You may freely implement this specification
+in your own software under any license.
 The reference implementation at https://github.com/jlevy/markform is separately licensed
 under AGPL-3.0-or-later.
 Contact the author with licensing questions or for other licensing options.

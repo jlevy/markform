@@ -132,6 +132,7 @@ These are trivially derived from existing FillRecord fields (`durationMs`,
 additions. They belong in the display layer only.
 
 **Significant figures:** Format with appropriate precision — use 1 decimal for values
+
 > = 10s (e.g., `12.3s/field`), 2 decimals for values >= 1s (e.g., `3.45s/field`), and ms
 > for sub-second values (e.g., `450ms/field`).
 

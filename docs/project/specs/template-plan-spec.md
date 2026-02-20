@@ -13,13 +13,13 @@ context once implementation is begun.
 > This is a template. It has pre-filled sections you must fill in as you progress.
 > 
 > - You will fill this in based on user’s instructions, proceeding one stage at a time:
->   
+>
 >   - Stage 1: Planning Stage
 >
 >   - Stage 2: Architecture Stage
 >
 >   - Stage 3: Implementation Stage
->     
+>
 >     - This Stage uses test-driven development (TDD)
 >
 >     - Implementation may be broken into Phases
@@ -110,7 +110,7 @@ context once implementation is begun.
 > **Steps:**
 > 
 > 1. **Find Reusable Components**
->    
+>
 >    - Search codebase for existing components, utilities, and APIs that solve similar
 >      problems
 >
@@ -119,7 +119,7 @@ context once implementation is begun.
 >    - Document what you found with file paths and how you’ll use them
 >
 > 2. **Verify Performance**
->    
+>
 >    - Check all database queries use existing indexes (no table scans)
 >
 >    - Estimate data transfer sizes and rendering costs
@@ -127,7 +127,7 @@ context once implementation is begun.
 >    - Identify any N+1 query patterns and how to avoid them
 >
 > 3. **Simplify Architecture**
->    
+>
 >    - Update Stage 2 architecture to leverage reusable components found in Step 1
 >
 >    - Remove any planned new code that duplicates existing functionality

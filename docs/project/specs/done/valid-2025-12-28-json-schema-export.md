@@ -119,6 +119,7 @@ The user should validate the CLI command works correctly:
 ```bash
 markform schema packages/markform/examples/simple/simple.form.md
 ```
+
 - Verify output is valid JSON with `$schema` and `$id`
 - Check that all fields from the form appear in `properties`
 - Verify `required` array contains the expected required fields
@@ -127,6 +128,7 @@ markform schema packages/markform/examples/simple/simple.form.md
 ```bash
 markform schema --pure packages/markform/examples/simple/simple.form.md
 ```
+
 - Verify NO `x-markform` properties appear anywhere in output
 - Confirm it’s still valid JSON Schema
 
@@ -136,6 +138,7 @@ markform schema --draft 2020-12 packages/markform/examples/simple/simple.form.md
 markform schema --draft 2019-09 packages/markform/examples/simple/simple.form.md
 markform schema --draft draft-07 packages/markform/examples/simple/simple.form.md
 ```
+
 - Verify each produces correct `$schema` URL:
   - 2020-12: `https://json-schema.org/draft/2020-12/schema`
   - 2019-09: `https://json-schema.org/draft/2019-09/schema`
@@ -145,6 +148,7 @@ markform schema --draft draft-07 packages/markform/examples/simple/simple.form.m
 ```bash
 markform schema --format yaml packages/markform/examples/simple/simple.form.md
 ```
+
 - Verify output is valid YAML
 - Check structure matches JSON output
 
@@ -152,12 +156,14 @@ markform schema --format yaml packages/markform/examples/simple/simple.form.md
 ```bash
 markform schema --compact packages/markform/examples/simple/simple.form.md
 ```
+
 - Verify output is single-line JSON without formatting
 
 **6. Test with Movie Research Form (more complex):**
 ```bash
 markform schema packages/markform/examples/movie-research/movie-research-basic.form.md
 ```
+
 - Verify all field types present in this form are correctly mapped
 - Check descriptions appear from doc blocks
 - Verify groups are listed in x-markform

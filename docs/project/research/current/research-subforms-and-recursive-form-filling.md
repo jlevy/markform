@@ -632,6 +632,7 @@ The “relational/linked record” approach—subforms live in separate `.form.m
 ```value
 forms/market-analysis.form.md
 ````
+
 {% /field %}
 ````
 
@@ -1509,11 +1510,14 @@ subforms with explicit dependencies:
    formRef="templates/company-research.form.md" required=true %}
 ```value
 ````
+
 {% /field %}
 
 {% field kind="subform_ref" id="earnings_analysis" label="Earnings Analysis" formRef="templates/earnings-analysis.form.md" dependsOn=["company_research"] required=true %}
 ```value
+
 ```
+
 {% /field %}
 
 {% field kind="string" id="investment_recommendation" label="Investment Recommendation" role="agent" dependsOn=["company_research", "earnings_analysis"] %}{% /field %}
@@ -1759,6 +1763,7 @@ title: Quarterly Company Analysis
    formRef="templates/company-research.form.md" required=true %}
 ```value
 ````
+
 {% /field %}
 
 {% instructions ref="company_research" %}
@@ -1768,7 +1773,9 @@ business model, competitive position, and financial health.
 
 {% field kind="subform_ref" id="earnings_analysis" label="2. Earnings Analysis" formRef="templates/earnings-analysis.form.md" dependsOn=["company_research"] required=true %}
 ```value
+
 ```
+
 {% /field %}
 
 {% instructions ref="earnings_analysis" %}
@@ -1801,6 +1808,7 @@ thesis. Should this stock be bought, held, or sold?
 
 **Resulting file structure:**
 ```
+
 quarterly-analysis.form.md # Parent (orchestrator) subforms/ ├──
 company_research.form.md # Filled company research └── earnings_analysis.form.md #
 Filled earnings analysis (has company context)
@@ -2014,6 +2022,7 @@ This aligns with OpenAI Agents SDK's finding that programmatic handoff (selectiv
 **Goal**: Enable smart ordering and fine-grained context control.
 
 1. **`dependsOn` attribute**:
+
    ```jinja
    {% field kind="subform_ref" id="research" dependsOn=["company", "url"] %}
    ```
@@ -2028,6 +2037,7 @@ This aligns with OpenAI Agents SDK's finding that programmatic handoff (selectiv
    - `workspace`: include sibling subforms (expensive)
 
 3. **Subform handler hook**:
+
    ```typescript
    subformHandler: async (context) => {
      // Return null for default, or custom fill result

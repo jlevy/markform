@@ -400,6 +400,7 @@ export function isTextEntryFieldKind(kind: FieldKind): boolean {
   attributes, documenting `placeholder` (string) and `examples` (string[])
 
 - [ ] Layer 2 (Data Model): Update `FieldBase` interface to include:
+
   ```typescript
   placeholder?: string;    // Hint text for empty field (text-entry only)
   examples?: string[];     // Example values (text-entry only)
@@ -419,6 +420,7 @@ export function isTextEntryFieldKind(kind: FieldKind): boolean {
   - `PLACEHOLDER_TYPE_MISMATCH` — placeholder doesn’t parse as field type (warning)
 
 - [ ] Layer 4 (Tool API): Update `ExportedField` interface to include:
+
   ```typescript
   placeholder?: string;
   examples?: string[];

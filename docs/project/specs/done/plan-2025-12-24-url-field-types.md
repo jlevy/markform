@@ -68,6 +68,7 @@ Add two new field types to markform:
 ```value
 https://example.com
 ````
+
 {% /url-field %}
 
 {% url-list id="sources" label="Source Citations" minItems=1 %}
@@ -75,6 +76,7 @@ https://example.com
 https://en.wikipedia.org/wiki/Example
 https://www.crunchbase.com/organization/example
 ```
+
 {% /url-list %}
 ````
 

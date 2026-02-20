@@ -103,9 +103,9 @@ Draft a plain markdown outline of research questions covering at least these are
 
 Save as `/tmp/markform-qa/research-outline.md`.
 
-> **Tell the user:** "I’ve saved the research outline to
+> **Tell the user:** “I’ve saved the research outline to
 > `/tmp/markform-qa/research-outline.md`. Next I’ll convert it into a Markform: a
-> structured form with typed, validated fields."
+> structured form with typed, validated fields.”
 
 ## Phase 3: Build the Markform
 
@@ -173,9 +173,9 @@ The core workflow: run `next` to see what to fill, use `set` to fill it, repeat.
 
 ### Step 4.1: Set the User Input
 
-> **Tell the user:** "The company name field has `role='user'`: it’s the one
+> **Tell the user:** “The company name field has `role='user'`: it’s the one
 > human-provided input.
-> I’ll set it to start the research."
+> I’ll set it to start the research.”
 
 ```bash
 markform set /tmp/markform-qa/sp500-research.form.md <company_name_id> "Apple Inc."
@@ -184,8 +184,8 @@ markform status /tmp/markform-qa/sp500-research.form.md
 
 ### Step 4.2: The next → set Loop
 
-> **Tell the user:** "`next` is the field advisor: it prioritizes what to fill and shows
-> `set` examples. I’ll follow its advice, research the data, and repeat."
+> **Tell the user:** “`next` is the field advisor: it prioritizes what to fill and shows
+> `set` examples. I’ll follow its advice, research the data, and repeat.”
 
 ```bash
 markform next /tmp/markform-qa/sp500-research.form.md
@@ -208,17 +208,17 @@ This ensures every fact in the form is traceable.
 | Table append | `markform set <file> <tableId> --append '{"col": "val"}'` |
 | Table batch set | `markform set <file> <tableId> '[{...}, {...}]'` |
 | Table delete + re-append | `--delete <index>` then `--append` replacement |
-| Validation error | Set an invalid value (e.g., lowercase ticker): verify it's stored but flagged invalid |
+| Validation error | Set an invalid value (e.g., lowercase ticker): verify it’s stored but flagged invalid |
 | String list | `markform set <file> <id> '["a", "b", "c"]'` |
 | Multi-select | `markform set <file> <id> '["opt1", "opt2"]'` |
 | Explicit checkboxes | `markform set <file> <id> '{"item1": "yes", "item2": "no"}'` |
 | Skip optional field | `markform set <file> <id> --skip --reason "..."` |
 
-> **Tell the user:** After the validation error: "`set` stores the value but `validate`
+> **Tell the user:** After the validation error: “`set` stores the value but `validate`
 > flags it as invalid.
 > Some constraints (like pattern matching) are checked eagerly by `validate`; semantic
 > issues may surface later.
-> Fix the value and confirm with `validate`."
+> Fix the value and confirm with `validate`.”
 
 ### Step 4.3: Confirm Completion
 
@@ -249,6 +249,7 @@ markform schema /tmp/markform-qa/sp500-research.form.md --pure
 ```
 
 > **Tell the user:** "Exported as:
+> 
 > - **Markdown (export):** full rendered form including field instructions — useful as a
 >   standalone document or for review
 > - **Markdown (report):** clean results only, no instructions — useful as a deliverable
@@ -276,8 +277,8 @@ Append a URL to the source list, then delete an entry by index.
 
 ### Step 6.3: Set with --report
 
-> **Tell the user:** "`--report` returns JSON with apply status, form state, progress,
-> and remaining issues after each change."
+> **Tell the user:** “`--report` returns JSON with apply status, form state, progress,
+> and remaining issues after each change.”
 
 ```bash
 markform set /tmp/markform-qa/sp500-research.form.md <url_list_id> --append "https://example.com" --report --format json
@@ -293,9 +294,9 @@ markform next /tmp/markform-qa/sp500-research.form.md
 
 ## Phase 7: Review the Source
 
-> **Tell the user:** "The filled `.form.md` is both human-readable and
+> **Tell the user:** “The filled `.form.md` is both human-readable and
 > machine-parseable. On GitHub, comment tags are invisible: it looks like a clean
-> document. But every value is typed, validated, and programmatically accessible."
+> document. But every value is typed, validated, and programmatically accessible.”
 
 ```bash
 cat /tmp/markform-qa/sp500-research.form.md
@@ -320,9 +321,9 @@ Also export the structured data as YAML:
 markform export /tmp/markform-qa/sp500-research.form.md --format=yaml > /tmp/markform-qa/sp500-research.yml
 ```
 
-> **Tell the user:** "The structured data is also saved as YAML at
+> **Tell the user:** “The structured data is also saved as YAML at
 > `/tmp/markform-qa/sp500-research.yml` — ready to feed into databases, APIs, or other
-> tools."
+> tools.”
 
 Then open the form in a web browser:
 
@@ -332,6 +333,7 @@ markform serve /tmp/markform-qa/sp500-research.form.md
 
 > **Tell the user:** "I’ve also opened the report in your web browser.
 > You can browse it in several tabs:
+> 
 > - **Form:** the rendered form as it appears on GitHub
 > - **Report:** a filtered view that strips instructions and internal markup
 > - **Edit:** an interactive version where fields can be filled in the browser

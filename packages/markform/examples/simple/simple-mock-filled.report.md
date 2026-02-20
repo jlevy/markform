@@ -94,7 +94,7 @@ Medium
 
 **Project Tasks:**
 
-_(empty)_
+*(empty)*
 
 ## Optional Fields
 
@@ -104,7 +104,7 @@ This is a test note.
 
 **Optional Number:**
 
-_(empty)_
+*(empty)*
 
 **Related URL:**
 
@@ -112,8 +112,8 @@ _(empty)_
 
 **Optional Date:**
 
-_(empty)_
+*(empty)*
 
 **Optional Year:**
 
-_(empty)_
+*(empty)*

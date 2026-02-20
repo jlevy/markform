@@ -172,6 +172,7 @@ appropriately.
    - Add `FILE_EXTENSIONS` constant object to `settings.ts`
 
    - Consolidate all file extension conventions:
+
      ```typescript
      /** Export format extensions (used by export command and exportMultiFormat) */
      export const EXPORT_EXTENSIONS = {
@@ -196,6 +197,7 @@ appropriately.
      ```
 
    - Add helper functions for path derivation:
+
      ```typescript
      /** Derive export path (for export formats only) */
      export function deriveExportPath(basePath: string, format: keyof typeof EXPORT_EXTENSIONS): string;
@@ -504,6 +506,7 @@ will have hardcoded extension strings (`.form.md`, `.raw.md`, `.yml`). This phas
 centralizes those into `FILE_EXTENSIONS` constants.
 
 - [ ] Add `FILE_EXTENSIONS` constant to `settings.ts`:
+
   ```typescript
   export const FILE_EXTENSIONS = {
     form: '.form.md',
@@ -596,6 +599,7 @@ A simplified version of `celebrity-deep-research.form.md` that:
   controversies if any, social media)
 
 - [ ] Ends with a **summary field** that synthesizes all research:
+
   ```
   {% string-field id="biography_summary" label="Biography Summary" multiline=true %}
   {% /string-field %}

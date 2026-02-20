@@ -62,9 +62,11 @@ All checks pass successfully.
 The following manual validation should be performed:
 
 1. **List examples command** - Run and verify output:
+
    ```bash
    pnpm --filter markform exec markform examples --list
    ```
+
    Expected: All 5 examples displayed with correct titles and descriptions loaded from
    frontmatter:
    - simple: “Simple Test Form”
@@ -74,22 +76,28 @@ The following manual validation should be performed:
    - celebrity-deep-research: “Celebrity Deep Research”
 
 2. **Interactive examples flow** - Run without `--list`:
+
    ```bash
    pnpm --filter markform exec markform examples
    ```
+
    Expected: Interactive selector shows all examples with correct titles and
    descriptions as labels and hints.
 
 3. **Verify frontmatter content** - Spot check that example forms contain the new
    frontmatter fields:
+
    ```bash
    head -10 packages/markform/examples/simple/simple.form.md
    ```
+
    Expected: YAML frontmatter includes `title:` and `description:` under `markform:`.
 
 4. **Verify no hardcoded metadata** - Confirm exampleRegistry.ts no longer contains
    hardcoded title/description strings:
+
    ```bash
    grep -E "title:|description:" packages/markform/src/cli/examples/exampleRegistry.ts
    ```
+
    Expected: No matches (metadata is loaded dynamically, not hardcoded).

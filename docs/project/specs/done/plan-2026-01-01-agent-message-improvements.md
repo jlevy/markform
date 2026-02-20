@@ -251,6 +251,7 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
 ````
 
 3. **Review the wire format diffs** to verify changes are correct:
+
    ```bash
    git diff packages/markform/examples/**/*.session.yaml
    ```
@@ -258,11 +259,13 @@ When modifying agent prompts or error messages in `prompts.ts` or `liveAgent.ts`
    Look for changes in `wire.request.system` and `wire.request.prompt` sections.
 
 4. **Run golden tests** to verify the form filling logic still works:
+
    ```bash
    pnpm test:golden
    ```
 
 5. **Commit the updated session files** along with your prompt changes
+
 ```
 
 ## Stage 3: Refine Architecture

@@ -239,6 +239,7 @@ Before defining `table-field`, we formalize the existing field type categories:
      must have at least `minRows` rows
 
 9. **Patch operation:**
+
    ```json
    {
      "op": "set_table",
@@ -307,6 +308,7 @@ Before defining `table-field`, we formalize the existing field type categories:
 
 1. **Empty table syntax:** How to represent a table with no data rows?
    **Resolution:** Header + separator row only:
+
    ```md
    | Name | Title |
    |------|-------|
@@ -630,8 +632,8 @@ The following escaping rules apply:
 
 | Character | Escaped Form | Notes |
 | --- | --- | --- |
-| `\|` (pipe) | `\\|` | Required - pipe is the cell delimiter |
-| `\\` before `\|` | `\\\\|` | Preserve literal backslash-pipe sequence |
+| `\|` (pipe) | `\\ | ` |
+| `\\` before `\|` | `\\\\ | ` |
 
 **Rejected characters (invalid in cells):**
 
@@ -775,7 +777,7 @@ Sentinel values don’t require escaping (no pipe characters).
 | Original Value | Serialized Cell | Notes |
 | --- | --- | --- |
 | `Hello` | `Hello` | No escaping needed |
-| `A\|B` | `A\\|B` | Pipe escaped |
+| `A\|B` | `A\\ | B` |
 | `%SKIP%` | `%SKIP%` | Sentinel (skipped cell) |
 | `%SKIP% (No data)` | `%SKIP% (No data)` | Sentinel with reason |
 | `%ABORT%` | `%ABORT%` | Sentinel (aborted cell) |

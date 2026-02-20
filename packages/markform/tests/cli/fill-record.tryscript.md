@@ -6,13 +6,12 @@ env:
   CLI: ./dist/bin.mjs
 timeout: 30000
 ---
-
 # FillRecord Summary Tests
 
 Tests for FillRecord capture and summary output during form filling.
 Uses mock mode with `--roles "*"` to exercise the full fill pipeline.
 
----
+* * *
 
 ## Summary Output
 
@@ -42,14 +41,14 @@ Fill record written to: /tmp/test-fill-record.fill.json
 ? 0
 ```
 
----
+* * *
 
 ## Full Output Structure
 
 # Test: fill summary shows complete format with multiple turns
 
-This test exercises the full fill pipeline with a non-trivial form, showing
-multiple turns of patches being applied.
+This test exercises the full fill pipeline with a non-trivial form, showing multiple
+turns of patches being applied.
 
 ```console
 $ $CLI fill examples/simple/simple.form.md --mock --mock-source examples/simple/simple-mock-filled.form.md --roles "*" --output /tmp/test-fill-full.form.md --record-fill
@@ -117,7 +116,7 @@ Completed form: [..]
 ? 0
 ```
 
----
+* * *
 
 ## FillRecord JSON Sidecar Verification
 
@@ -187,7 +186,8 @@ $ cat /tmp/test-fill-stable.fill.json | jq '{status, form: {id: .form.id, title:
 
 # Test: Stable FillRecord has no unstable fields
 
-Verify that sessionId, timestamps, durations, timeline, and timingBreakdown are stripped.
+Verify that sessionId, timestamps, durations, timeline, and timingBreakdown are
+stripped.
 
 ```console
 $ cat /tmp/test-fill-stable.fill.json | jq 'keys'
@@ -202,18 +202,19 @@ $ cat /tmp/test-fill-stable.fill.json | jq 'keys'
 ? 0
 ```
 
----
+* * *
 
 ## Full FillRecord Timeline Verification (mf-ln09)
 
 These tests verify that the CLI fill command produces FillRecords with non-empty
-timelines and correct turn counts. This validates the fix for mf-mgxo where CLI
-was missing onTurnStart/onTurnComplete callback wiring.
+timelines and correct turn counts.
+This validates the fix for mf-mgxo where CLI was missing onTurnStart/onTurnComplete
+callback wiring.
 
 # Test: FillRecord timeline structure shows turn progression
 
-The regular `--record-fill` output should have a timeline array with entries for
-each turn. This shows the stable fields (turnNumber, executionId, issuesAddressed,
+The regular `--record-fill` output should have a timeline array with entries for each
+turn. This shows the stable fields (turnNumber, executionId, issuesAddressed,
 patchesApplied, patchesRejected, tokens, toolCalls) while omitting unstable timing
 fields (startedAt, completedAt, durationMs).
 
@@ -285,7 +286,7 @@ $ cat /tmp/test-timeline.fill.json | jq '{timelineLength: (.timeline | length), 
 ? 0
 ```
 
----
+* * *
 
 ## Output Form Verification
 

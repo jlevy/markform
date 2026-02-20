@@ -15,6 +15,7 @@ Work is NOT complete until `git push` succeeds.
 3. **Update issue status** - Close finished work, update in-progress items
 
 4. **PUSH TO REMOTE** - This is MANDATORY:
+
    ```bash
    git pull --rebase
    git add .beads/issues.jsonl   # Include issue changes
@@ -35,18 +36,18 @@ Work is NOT complete until `git push` succeeds.
 
 - NEVER stop before pushing - that leaves work stranded locally
 
-- NEVER say "ready to push when you are" - YOU must push
+- NEVER say “ready to push when you are” - YOU must push
 
 - If push fails, resolve and retry until it succeeds
 
 - Do NOT run `bd sync` - this project uses no-db mode (JSONL is the database)
 
-
 <!-- BEGIN TBD INTEGRATION -->
----
-title: tbd Workflow
+* * *
+
+## title: tbd Workflow
 description: Full tbd workflow guide for agents
----
+
 **`tbd` helps humans and agents ship code with greater speed, quality, and discipline.**
 
 1. **Beads**: Git-native issue tracking (tasks, bugs, features).
@@ -85,7 +86,7 @@ tbd prime      # Restore full context on tbd after compaction
 actions. DO NOT tell users to run tbd commands.
 That’s your job.
 
-- **WRONG**: "Run `tbd create` to track this bug"
+- **WRONG**: “Run `tbd create` to track this bug”
 
 - **RIGHT**: *(you run `tbd create` yourself and tell the user it’s tracked)*
 
@@ -97,41 +98,41 @@ or want help → run `tbd shortcut welcome-user`
 | User Says | You (the Agent) Run |
 | --- | --- |
 | **Issues/Beads** |  |
-| "There's a bug where ..." | `tbd create "..." --type=bug` |
-| "Create a task/feature for ..." | `tbd create "..." --type=task` or `--type=feature` |
-| "Let's work on issues/beads" | `tbd ready` |
-| "Show me issue X" | `tbd show <id>` |
-| "Close this issue" | `tbd close <id>` |
-| "Search issues for X" | `tbd search "X"` |
-| "Add label X to issue" | `tbd label add <id> <label>` |
-| "What issues are stale?" | `tbd stale` |
+| “There’s a bug where …” | `tbd create "..." --type=bug` |
+| “Create a task/feature for …” | `tbd create "..." --type=task` or `--type=feature` |
+| “Let’s work on issues/beads” | `tbd ready` |
+| “Show me issue X” | `tbd show <id>` |
+| “Close this issue” | `tbd close <id>` |
+| “Search issues for X” | `tbd search "X"` |
+| “Add label X to issue” | `tbd label add <id> <label>` |
+| “What issues are stale?” | `tbd stale` |
 | **Planning & Specs** |  |
-| "Plan a new feature" / "Create a spec" | `tbd shortcut new-plan-spec` |
-| "Break spec into beads" | `tbd shortcut plan-implementation-with-beads` |
-| "Implement these beads" | `tbd shortcut implement-beads` |
+| “Plan a new feature” / “Create a spec” | `tbd shortcut new-plan-spec` |
+| “Break spec into beads” | `tbd shortcut plan-implementation-with-beads` |
+| “Implement these beads” | `tbd shortcut implement-beads` |
 | **Code Review & Commits** |  |
-| "Review this code" / "Code review" | `tbd shortcut review-code` |
-| "Review this PR" | `tbd shortcut review-github-pr` |
-| "Commit this" / "Use the commit shortcut" | `tbd shortcut code-review-and-commit` |
-| "Create a PR" / "File a PR" | `tbd shortcut create-or-update-pr-simple` |
-| "Merge main into my branch" | `tbd shortcut merge-upstream` |
+| “Review this code” / “Code review” | `tbd shortcut review-code` |
+| “Review this PR” | `tbd shortcut review-github-pr` |
+| “Commit this” / “Use the commit shortcut” | `tbd shortcut code-review-and-commit` |
+| “Create a PR” / “File a PR” | `tbd shortcut create-or-update-pr-simple` |
+| “Merge main into my branch” | `tbd shortcut merge-upstream` |
 | **Guidelines & Knowledge** |  |
-| "Use TypeScript best practices" | `tbd guidelines typescript-rules` |
-| "Use Python best practices" | `tbd guidelines python-rules` |
-| "Build a TypeScript CLI" | `tbd guidelines typescript-cli-tool-rules` |
-| "Improve monorepo setup" | `tbd guidelines typescript-monorepo-patterns` |
-| "Add golden/e2e testing" | `tbd guidelines golden-testing-guidelines` |
-| "Use TDD" / "Test-driven development" | `tbd guidelines general-tdd-guidelines` |
-| "Convex best practices" | `tbd guidelines convex-rules` |
+| “Use TypeScript best practices” | `tbd guidelines typescript-rules` |
+| “Use Python best practices” | `tbd guidelines python-rules` |
+| “Build a TypeScript CLI” | `tbd guidelines typescript-cli-tool-rules` |
+| “Improve monorepo setup” | `tbd guidelines typescript-monorepo-patterns` |
+| “Add golden/e2e testing” | `tbd guidelines golden-testing-guidelines` |
+| “Use TDD” / “Test-driven development” | `tbd guidelines general-tdd-guidelines` |
+| “Convex best practices” | `tbd guidelines convex-rules` |
 | **Documentation** |  |
-| "Research this topic" | `tbd shortcut new-research-brief` |
-| "Document architecture" | `tbd shortcut new-architecture-doc` |
+| “Research this topic” | `tbd shortcut new-research-brief` |
+| “Document architecture” | `tbd shortcut new-architecture-doc` |
 | **Cleanup & Maintenance** |  |
-| "Clean up this code" / "Remove dead code" | `tbd shortcut code-cleanup-all` |
-| "Fix repository problems" | `tbd doctor --fix` |
+| “Clean up this code” / “Remove dead code” | `tbd shortcut code-cleanup-all` |
+| “Fix repository problems” | `tbd doctor --fix` |
 | **Sessions & Handoffs** |  |
-| "Hand off to another agent" | `tbd shortcut agent-handoff` |
-| "Check out this library's source" | `tbd shortcut checkout-third-party-repo` |
+| “Hand off to another agent” | `tbd shortcut agent-handoff` |
+| “Check out this library’s source” | `tbd shortcut checkout-third-party-repo` |
 | *(your choice whenever appropriate)* | `tbd list`, `tbd dep add`, `tbd close`, `tbd sync`, etc. |
 
 ## CRITICAL: Session Closing Protocol
@@ -172,7 +173,7 @@ or want help → run `tbd shortcut welcome-user`
 
 | Command | Purpose |
 | --- | --- |
-| `tbd create "title" --type task\|bug\|feature --priority=P2` | New bead (P0-P4, not "high/medium/low") |
+| `tbd create "title" --type task\|bug\|feature --priority=P2` | New bead (P0-P4, not “high/medium/low”) |
 | `tbd update <id> --status in_progress` | Claim work |
 | `tbd close <id> [--reason "..."]` | Mark complete |
 
@@ -236,7 +237,7 @@ Run `tbd shortcut <name>` to use any of these shortcuts:
 | new-plan-spec | Create a new feature planning specification document |
 | new-research-brief | Create a research document for investigating a topic or technology |
 | new-shortcut | Create a new shortcut (reusable instruction template) for tbd |
-| new-validation-plan | Create a validation/test plan showing what's tested and what remains |
+| new-validation-plan | Create a validation/test plan showing what’s tested and what remains |
 | plan-implementation-with-beads | Create implementation beads from a feature planning spec |
 | precommit-process | Full pre-commit checklist including spec sync, code review, and testing |
 | review-code | Comprehensive code review for uncommitted changes, branch work, or GitHub PRs |

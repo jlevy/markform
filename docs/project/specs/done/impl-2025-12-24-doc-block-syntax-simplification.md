@@ -125,6 +125,7 @@ The implementation is broken into phases that may be committed and tested separa
 #### types.ts
 
 1. **Replace DocBlockKind** (line 229):
+
    ```typescript
    // Before
    export type DocBlockKind = "description" | "instructions" | "notes" | "examples";
@@ -134,6 +135,7 @@ The implementation is broken into phases that may be committed and tested separa
    ```
 
 2. **Update DocumentationBlock** (lines 231-237):
+
    ```typescript
    // Before
    export interface DocumentationBlock {
@@ -151,6 +153,7 @@ The implementation is broken into phases that may be committed and tested separa
    ```
 
 3. **Update Zod schemas** (lines 767-778):
+
    ```typescript
    // Before
    export const DocBlockKindSchema = z.enum([

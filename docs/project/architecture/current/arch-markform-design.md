@@ -1447,6 +1447,7 @@ Specified in this document but deferred from MF/0.1 proof of concept:
   (e.g., a risk entry with description, severity, likelihood, mitigation, owner).
   Maps to JSON Schema `type: "array"` with `items: { type: "object" }`. Instance IDs are
   auto-generated with sequential suffixes: `{base_id}_1`, `{base_id}_2`.
+
   ```md
   {% repeat ref="risk_entry" minItems=5 %}
     {% group id="risk_entry" title="Risk entry template" %}
@@ -1504,6 +1505,7 @@ Specified in this document but deferred from MF/0.1 proof of concept:
   - `max`: Maximum date constraint
 
   TypeScript types:
+
   ```ts
   interface DateField extends FieldBase {
     kind: 'date';

@@ -15,6 +15,7 @@ Work is NOT complete until `git push` succeeds.
 3. **Update issue status** - Close finished work, update in-progress items
 
 4. **PUSH TO REMOTE** - This is MANDATORY:
+
    ```bash
    git pull --rebase
    git add .beads/issues.jsonl   # Include issue changes
@@ -44,6 +45,7 @@ Work is NOT complete until `git push` succeeds.
 ## <!-- BEGIN TBD INTEGRATION -->
 
 ## title: tbd Workflow
+
 description: Full tbd workflow guide for agents
 
 **`tbd` helps humans and agents ship code with greater speed, quality, and discipline.**

@@ -33,4 +33,5 @@
 - Per-column constraints documented in spec and reference
 - QA and manual tests consolidated into `tests/qa/`
 
-**Full commit history**: https://github.com/jlevy/markform/compare/v0.1.24...v0.1.25
+**Full commit history**:
+[https://github.com/jlevy/markform/compare/v0.1.24 … v0.1.25](https://github.com/jlevy/markform/compare/v0.1.24...v0.1.25)
