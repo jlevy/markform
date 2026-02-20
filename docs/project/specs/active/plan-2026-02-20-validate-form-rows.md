@@ -227,7 +227,37 @@ layer guarantees that `rows.length` reflects substantive rows.
 
 ## Implementation Plan
 
-### Phase 1: Empty Row Dropping (TDD)
+### Phase 1: Documentation Updates
+
+Update the Markform spec and reference docs to define the new behavior before
+implementing it. This establishes the contract that code and tests will be written
+against.
+
+- [ ] **`docs/markform-spec.md`** — Table Fields section (lines 446-501):
+  - After the `minRows`/`maxRows` attribute rows (line 460), add a new paragraph:
+    > **Empty row handling:** Fully-empty rows (where every cell is empty or skipped)
+    > are silently dropped during normalization. They are never counted toward
+    > `minRows`/`maxRows` and do not appear in parsed output. A row with at least one
+    > non-empty cell is retained.
+  - Update the `minRows` description (line 459) from "Minimum row count" to
+    "Minimum number of non-empty rows"
+  - Update the `maxRows` description (line 460) from "Maximum row count" to
+    "Maximum number of non-empty rows"
+  - Add a new "Validation warnings" note after the per-column constraints table
+    (after line 489):
+    > **Row sparseness warning:** When a non-empty row has the majority of its cells
+    > empty (strictly more than half), a validation warning is emitted. This helps
+    > catch cases where an agent produced sparse or incomplete data.
+
+- [ ] **`docs/markform-reference.md`** — Table field section (lines 413-456):
+  - Same updates as above:
+    - Update `minRows` description (line 418) to "Minimum number of non-empty rows"
+    - Update `maxRows` description (line 419) to "Maximum number of non-empty rows"
+    - Add empty row handling note after the attributes table (after line 419)
+    - Add row sparseness warning note after the per-column constraints table
+      (after line 446)
+
+### Phase 2: Empty Row Dropping (TDD)
 
 Tests first, then implementation.
 
@@ -239,18 +269,118 @@ Tests first, then implementation.
 - [ ] `parseTable.test.ts`: table with one cell filled in a row → row retained
 - [ ] `apply.test.ts`: `set_table` patch with empty rows → empty rows filtered out
 - [ ] `apply.test.ts`: `append_table` patch with empty rows → empty rows filtered out
-- [ ] `apply.test.ts`: `set_table` with all-empty rows → table becomes `unanswered`
+- [ ] `apply.test.ts`: `set_table` with all-empty rows → table state becomes
+  `unanswered`
 - [ ] Round-trip: parse form with empty rows → serialize → re-parse → same result
   (no empty rows)
 
-**Implementation:**
-- [ ] Add `isRowFullyEmpty()` utility in `src/engine/table/parseTable.ts`
-- [ ] Filter empty rows in `parseMarkdownTable()` after parsing all rows
-- [ ] Filter empty rows in `set_table` handler in `apply.ts`
-- [ ] Filter empty rows in `append_table` handler in `apply.ts`
-- [ ] Handle edge case: if filtering removes all rows, set state to `unanswered`
+**Implementation — `src/engine/table/parseTable.ts`:**
 
-### Phase 2: Mostly-Empty Row Warnings (TDD)
+- [ ] Add exported `isRowFullyEmpty()` helper (after line 137, before
+  `parseMarkdownTable`):
+  ```typescript
+  /**
+   * Check if a table row is fully empty (all cells skipped/empty).
+   * Used during normalization to drop rows that carry no data.
+   */
+  export function isRowFullyEmpty(row: TableRowResponse): boolean {
+    return Object.values(row).every((cell) =>
+      !cell || cell.state === 'skipped' || cell.state === 'aborted'
+      || cell.value === undefined || cell.value === null || cell.value === '',
+    );
+  }
+  ```
+  Note: This checks all cell entries in the row object rather than requiring a
+  `columns` parameter. This is simpler and sufficient because the row object only
+  contains entries for known column IDs (set during parsing or patch application).
+
+- [ ] In `parseMarkdownTable()`, **positional path** (lines 298-314): after the
+  for-loop builds `rows` (line 312), filter before returning:
+  ```typescript
+  // Current (line 311-314):
+  rows.push(row);
+  }
+  return { ok: true, value: { kind: 'table', rows } };
+
+  // New:
+  rows.push(row);
+  }
+  const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+  return { ok: true, value: { kind: 'table', rows: substantiveRows } };
+  ```
+
+- [ ] In `parseMarkdownTable()`, **header-based path** (lines 330-347): same filter
+  before returning:
+  ```typescript
+  // Current (line 344-347):
+  rows.push(row);
+  }
+  return { ok: true, value: { kind: 'table', rows } };
+
+  // New:
+  rows.push(row);
+  }
+  const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+  return { ok: true, value: { kind: 'table', rows: substantiveRows } };
+  ```
+
+**Implementation — `src/engine/apply.ts`:**
+
+- [ ] Add import of `isRowFullyEmpty` from `./table/parseTable.js` (line 29, after
+  existing imports):
+  ```typescript
+  import { isRowFullyEmpty } from './table/parseTable.js';
+  ```
+
+- [ ] In `set_table` handler (lines 635-650): after building `rows` (line 644), filter
+  empty rows and handle the all-empty edge case:
+  ```typescript
+  // Current (lines 644-649):
+  return row;
+  });
+  responses[patch.fieldId] = {
+    state: 'answered',
+    value: { kind: 'table', rows } as TableValue,
+  };
+
+  // New:
+  return row;
+  });
+  const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+  responses[patch.fieldId] = {
+    state: substantiveRows.length > 0 ? 'answered' : 'unanswered',
+    ...(substantiveRows.length > 0 && {
+      value: { kind: 'table', rows: substantiveRows } as TableValue,
+    }),
+  };
+  ```
+  Note: the `unanswered` edge case mirrors the existing pattern in `delete_table`
+  (line 678).
+
+- [ ] In `append_table` handler (lines 653-670): after building combined rows
+  (line 667), filter empty rows:
+  ```typescript
+  // Current (lines 664-669):
+  return row;
+  });
+  responses[patch.fieldId] = {
+    state: 'answered',
+    value: { kind: 'table', rows: [...currentRows, ...newRows] } as TableValue,
+  };
+
+  // New:
+  return row;
+  });
+  const allRows = [...currentRows, ...newRows].filter((r) => !isRowFullyEmpty(r));
+  responses[patch.fieldId] = {
+    state: allRows.length > 0 ? 'answered' : 'unanswered',
+    ...(allRows.length > 0 && {
+      value: { kind: 'table', rows: allRows } as TableValue,
+    }),
+  };
+  ```
+
+### Phase 3: Mostly-Empty Row Warnings (TDD)
 
 Tests first, then implementation.
 
@@ -260,36 +390,85 @@ Tests first, then implementation.
 - [ ] `validate.test.ts`: row with 3 of 4 cells filled → no warning
 - [ ] `validate.test.ts`: row with all cells filled → no warning
 - [ ] `validate.test.ts`: row with 1 of 2 cells filled → no warning (50% threshold,
-  need majority empty)
+  need strictly more than half empty)
 - [ ] `validate.test.ts`: warning message includes row number and field label
 - [ ] `validate.test.ts`: warning severity is `warning`, not `error`
 
-**Implementation:**
-- [ ] Add mostly-empty check in `validateTableRow()` after per-cell validation
-- [ ] Count filled vs total cells, emit warning when filled < ceil(total / 2)
-- [ ] Use `warning` severity with descriptive message
+**Implementation — `src/engine/validate.ts`:**
 
-### Phase 3: Documentation and Example Forms
+- [ ] In `validateTableRow()` (lines 962-976), after the per-cell validation loop
+  (line 973), add the sparseness check:
+  ```typescript
+  function validateTableRow(
+    row: TableRowResponse,
+    columns: TableColumn[],
+    fieldId: string,
+    rowIndex: number,
+    fieldLabel: string,  // NEW parameter
+  ): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
 
-- [ ] Update `docs/markform-spec.md`: document that fully-empty rows are dropped during
-  normalization; clarify that `minRows`/`maxRows` count substantive rows only
-- [ ] Update `docs/markform-reference.md`: same updates
-- [ ] Verify existing example forms (twitter-thread, rejection-test) work correctly
-  with the new behavior
+    for (const column of columns) {
+      const cell = row[column.id] ?? { state: 'skipped' };
+      issues.push(...validateCellValue(cell, column, fieldId, rowIndex));
+    }
+
+    // NEW: Check for mostly-empty rows
+    const totalCells = columns.length;
+    const filledCells = columns.filter((col) => {
+      const cell = row[col.id];
+      return cell && cell.state === 'answered'
+        && cell.value !== undefined && cell.value !== null && cell.value !== '';
+    }).length;
+
+    if (filledCells > 0 && filledCells < totalCells && (totalCells - filledCells) > totalCells / 2) {
+      issues.push({
+        severity: 'warning',
+        message: `Row ${rowIndex + 1} of "${fieldLabel}" has most cells empty `
+          + `(${filledCells} of ${totalCells} filled). `
+          + `Consider adding column constraints or making columns required.`,
+        ref: `${fieldId}[${rowIndex}]`,
+        source: 'builtin',
+      });
+    }
+
+    return issues;
+  }
+  ```
+
+- [ ] Update the call site in `validateTableField()` (line 1024) to pass `field.label`:
+  ```typescript
+  // Current:
+  issues.push(...validateTableRow(rows[i]!, field.columns, field.id, i));
+  // New:
+  issues.push(...validateTableRow(rows[i]!, field.columns, field.id, i, field.label));
+  ```
+
+### Phase 4: Verify Example Forms and Run Full Suite
+
 - [ ] Run full test suite to confirm no regressions
+- [ ] Run `markform inspect` on twitter-thread and rejection-test example forms
+- [ ] Verify that a form with `minRows=3` and only empty rows fails validation
+- [ ] Verify that a form with `minRows=3` and 3 filled rows + 2 empty rows passes
+  (empty rows dropped, 3 substantive rows remain)
 
 ## Testing Strategy
 
 **Unit tests** (TDD — write tests before implementation):
 
-- **Parse tests** (`parseTable.test.ts`): verify empty row dropping at parse time
-  across various combinations (all empty, mixed, single-cell filled, `%SKIP%` rows)
-- **Apply tests** (`apply.test.ts`): verify empty row filtering on `set_table` and
-  `append_table` patches
-- **Validation tests** (`validate.test.ts`): verify mostly-empty row warnings,
-  minRows enforcement with empty rows dropped, maxRows with empty rows dropped
-- **Progress tests** (`summaries.test.ts`): verify `isFieldSubmitted()` returns false
-  for tables with only empty rows after normalization
+- **Parse tests** (`tests/unit/engine/parseTable.test.ts`): verify empty row dropping
+  at parse time across various combinations (all empty, mixed, single-cell filled,
+  `%SKIP%` rows)
+- **Apply tests** (`tests/unit/engine/apply.test.ts`): verify empty row filtering on
+  `set_table` and `append_table` patches, including the all-empty → `unanswered`
+  edge case
+- **Validation tests** (`tests/unit/engine/validate.test.ts`): verify mostly-empty row
+  warnings with various fill ratios, minRows enforcement with empty rows dropped,
+  maxRows with empty rows dropped
+- **Progress tests** (`tests/unit/engine/summaries.test.ts`): verify
+  `isFieldSubmitted()` returns false for tables with only empty rows after
+  normalization (this should already pass once parse-time filtering is implemented,
+  since the `TableValue` will have `rows: []`)
 
 **Integration tests:**
 
@@ -319,15 +498,27 @@ None — all design decisions are resolved in this spec.
 
 ## References
 
-- Table parsing: `src/engine/table/parseTable.ts:266-348`
-- Cell parsing: `src/engine/table/parseTable.ts:82-137`
-- Table validation: `src/engine/validate.ts:981-1028`
-- Cell validation: `src/engine/validate.ts:745-957`
-- Table row validation: `src/engine/validate.ts:960-976`
-- Progress computation: `src/engine/summaries.ts:196-199`
-- Patch application (table): `src/engine/apply.ts:619-681`
-- Table field types: `src/engine/coreTypes.ts:324-329, 476-491`
-- Prior spec (column constraints): `docs/project/specs/active/plan-2026-02-14-table-column-constraints.md`
-- Markform spec (table fields): `docs/markform-spec.md:452-538`
-- Twitter thread example: `packages/markform/examples/twitter-thread/twitter-thread.form.md`
-- Rejection test example: `packages/markform/examples/rejection-test/rejection-test.form.md`
+**Source code (all paths relative to `packages/markform/`):**
+
+- `src/engine/table/parseTable.ts:82-137` — `parseCellValue()`: empty cells → `{ state: 'skipped' }`
+- `src/engine/table/parseTable.ts:266-348` — `parseMarkdownTable()`: two parsing paths (positional line 298, header-based line 330)
+- `src/engine/validate.ts:745-957` — `validateCellValue()`: per-cell type+constraint checks
+- `src/engine/validate.ts:962-976` — `validateTableRow()`: iterates columns, delegates to `validateCellValue()`
+- `src/engine/validate.ts:981-1028` — `validateTableField()`: isEmpty (line 986), minRows (line 1003), maxRows (line 1013), row loop (line 1023)
+- `src/engine/apply.ts:635-650` — `set_table` patch handler
+- `src/engine/apply.ts:653-670` — `append_table` patch handler
+- `src/engine/apply.ts:673-682` — `delete_table` patch handler (reference for `unanswered` pattern)
+- `src/engine/summaries.ts:196-199` — `isFieldSubmitted()` table case: `(v.rows?.length ?? 0) > 0`
+- `src/engine/coreTypes.ts:324-329` — `TableField` interface (has `columns`, `minRows`, `maxRows`)
+- `src/engine/coreTypes.ts:478-491` — `CellResponse`, `TableRowResponse`, `TableValue` types
+
+**Documentation:**
+
+- `docs/markform-spec.md:446-501` — Table Fields section (attributes table lines 454-460, column constraints lines 478-489)
+- `docs/markform-reference.md:413-456` — Table field reference (attributes table lines 413-419, constraints lines 439-446)
+
+**Related specs and examples:**
+
+- `docs/project/specs/active/plan-2026-02-14-table-column-constraints.md` — Prior spec for per-column constraints
+- `packages/markform/examples/twitter-thread/twitter-thread.form.md`
+- `packages/markform/examples/rejection-test/rejection-test.form.md`
