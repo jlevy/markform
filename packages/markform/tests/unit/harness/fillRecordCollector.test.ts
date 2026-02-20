@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { FillRecordCollector } from '../../../src/harness/fillRecordCollector.js';
+import { CollectorEventSchema } from '../../../src/harness/fillRecord.js';
 import type { ProgressCounts, StructureSummary } from '../../../src/engine/coreTypes.js';
 
 describe('FillRecordCollector', () => {
@@ -912,6 +913,224 @@ describe('FillRecordCollector', () => {
     });
   });
 
+  describe('onLlmCallEnd with duration and provider metadata (MF-2/MF-3)', () => {
+    it('captures llmCallDurationMs and llmCallCount in timeline entry', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onLlmCallStart({ model: 'gpt-4', executionId: 'eid:serial:o0' });
+      collector.onLlmCallEnd({
+        model: 'gpt-4',
+        inputTokens: 500,
+        outputTokens: 100,
+        executionId: 'eid:serial:o0',
+        durationMs: 2500,
+        responseId: 'chatcmpl-abc123',
+        requestId: 'req-xyz789',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      const entry = record.timeline[0]!;
+      expect(entry.llmCallDurationMs).toBe(2500);
+      expect(entry.llmCallCount).toBe(1);
+      expect(entry.responseIds).toEqual(['chatcmpl-abc123']);
+      expect(entry.requestIds).toEqual(['req-xyz789']);
+    });
+
+    it('omits llmCallDurationMs when not provided', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onLlmCallStart({ model: 'gpt-4', executionId: 'eid:serial:o0' });
+      collector.onLlmCallEnd({
+        model: 'gpt-4',
+        inputTokens: 500,
+        outputTokens: 100,
+        executionId: 'eid:serial:o0',
+        // No durationMs, responseId, requestId
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      const entry = record.timeline[0]!;
+      expect(entry.llmCallDurationMs).toBeUndefined();
+      expect(entry.llmCallCount).toBe(1);
+      expect(entry.responseIds).toBeUndefined();
+      expect(entry.requestIds).toBeUndefined();
+    });
+  });
+
+  describe('setStatus with errorInfo (MF-4)', () => {
+    it('stores errorType and errorCode from errorInfo parameter', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.setStatus('failed', 'API rate limit exceeded', {
+        errorType: 'APICallError',
+        errorCode: '429',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.status).toBe('failed');
+      expect(record.statusDetail).toBe('API rate limit exceeded');
+      expect(record.errorType).toBe('APICallError');
+      expect(record.errorCode).toBe('429');
+    });
+
+    it('omits errorType/errorCode when errorInfo not provided (backward compat)', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.setStatus('failed', 'Some error');
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.status).toBe('failed');
+      expect(record.statusDetail).toBe('Some error');
+      expect(record.errorType).toBeUndefined();
+      expect(record.errorCode).toBeUndefined();
+    });
+  });
+
+  describe('eventLog in getRecord (MF-5)', () => {
+    it('includes raw event log in fill record', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onLlmCallStart({ model: 'gpt-4', executionId: 'eid:serial:o0' });
+      collector.onLlmCallEnd({
+        model: 'gpt-4',
+        inputTokens: 100,
+        outputTokens: 50,
+        executionId: 'eid:serial:o0',
+        durationMs: 1000,
+        responseId: 'chatcmpl-test',
+      });
+
+      collector.onToolStart({
+        name: 'fill_form',
+        input: { patches: [] },
+        executionId: 'eid:serial:o0',
+      });
+      collector.onToolEnd({
+        name: 'fill_form',
+        output: { result: 'ok' },
+        durationMs: 50,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 2,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 1,
+        isComplete: false,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.eventLog).toBeDefined();
+      expect(record.eventLog!.length).toBe(6);
+
+      // Verify event types in chronological order
+      const types = record.eventLog!.map((e) => e.type);
+      expect(types).toEqual([
+        'turn_start',
+        'llm_call_start',
+        'llm_call_end',
+        'tool_start',
+        'tool_end',
+        'turn_complete',
+      ]);
+
+      // Verify LLM call end event has new MF-2 fields
+      const llmEnd = record.eventLog!.find((e) => e.type === 'llm_call_end');
+      expect(llmEnd).toBeDefined();
+      if (llmEnd?.type === 'llm_call_end') {
+        expect(llmEnd.durationMs).toBe(1000);
+        expect(llmEnd.responseId).toBe('chatcmpl-test');
+      }
+    });
+
+    it('eventLog captures web search events', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+
+      collector.onWebSearch({
+        query: 'test query',
+        resultCount: 3,
+        provider: 'openai',
+        executionId: 'eid:serial:o0',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.eventLog).toBeDefined();
+      expect(record.eventLog!.length).toBe(1);
+      expect(record.eventLog![0]!.type).toBe('web_search');
+    });
+  });
+
   describe('onWebSearch', () => {
     it('accepts web search events', () => {
       const collector = new FillRecordCollector({
@@ -1074,6 +1293,58 @@ describe('FillRecordCollector', () => {
       });
     });
 
+    it('eventLog entries round-trip through CollectorEventSchema', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'openai',
+        model: 'gpt-4',
+        parallelEnabled: true,
+      });
+
+      // Serial turn with LLM call metadata
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+      collector.onLlmCallStart({ model: 'gpt-4', executionId: 'eid:serial:o0' });
+      collector.onLlmCallEnd({
+        model: 'gpt-4',
+        inputTokens: 500,
+        outputTokens: 100,
+        executionId: 'eid:serial:o0',
+        durationMs: 2000,
+        responseId: 'chatcmpl-abc',
+        requestId: 'req-xyz',
+      });
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 2,
+        patchesApplied: 2,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        executionId: 'eid:serial:o0',
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+
+      // Verify eventLog round-trips through CollectorEventSchema
+      expect(record.eventLog).toBeDefined();
+      for (const event of record.eventLog!) {
+        const parsed = CollectorEventSchema.safeParse(event);
+        if (!parsed.success) {
+          throw new Error(
+            `CollectorEventSchema parse failed for ${event.type}: ${JSON.stringify(parsed.error.issues)}`,
+          );
+        }
+        expect(parsed.success).toBe(true);
+      }
+    });
+
     it('handles parallel turns without executionId using legacy fallback', () => {
       const collector = new FillRecordCollector({
         form: mockFormMetadata,
@@ -1103,6 +1374,103 @@ describe('FillRecordCollector', () => {
       const record = collector.getRecord(mockProgressCounts);
       expect(record.timeline).toHaveLength(1);
       expect(record.timeline[0]!.executionId).toBe('eid:serial:o0');
+    });
+  });
+
+  describe('CollectorEventSchema validation (MF-5)', () => {
+    it('validates all 7 event types', () => {
+      const events = [
+        {
+          type: 'turn_start' as const,
+          timestamp: '2026-02-19T12:00:00.000Z',
+          turnNumber: 1,
+          issuesCount: 3,
+          order: 0,
+          executionId: 'eid:serial:o0',
+        },
+        {
+          type: 'turn_complete' as const,
+          timestamp: '2026-02-19T12:00:01.000Z',
+          turnNumber: 1,
+          patchesApplied: 2,
+          patchesRejected: 1,
+          issuesAddressed: 3,
+          executionId: 'eid:serial:o0',
+        },
+        {
+          type: 'llm_call_start' as const,
+          timestamp: '2026-02-19T12:00:00.100Z',
+          model: 'gpt-4',
+          executionId: 'eid:serial:o0',
+        },
+        {
+          type: 'llm_call_end' as const,
+          timestamp: '2026-02-19T12:00:00.900Z',
+          model: 'gpt-4',
+          inputTokens: 500,
+          outputTokens: 100,
+          executionId: 'eid:serial:o0',
+          durationMs: 800,
+          responseId: 'chatcmpl-abc123',
+          requestId: 'req-xyz789',
+        },
+        {
+          type: 'tool_start' as const,
+          timestamp: '2026-02-19T12:00:00.200Z',
+          name: 'fill_form',
+          input: { patches: [] },
+          executionId: 'eid:serial:o0',
+        },
+        {
+          type: 'tool_end' as const,
+          timestamp: '2026-02-19T12:00:00.250Z',
+          name: 'fill_form',
+          output: { result: 'ok' },
+          durationMs: 50,
+          executionId: 'eid:serial:o0',
+        },
+        {
+          type: 'web_search' as const,
+          timestamp: '2026-02-19T12:00:00.300Z',
+          query: 'test query',
+          resultCount: 5,
+          provider: 'openai',
+          executionId: 'eid:serial:o0',
+        },
+      ];
+
+      for (const event of events) {
+        const result = CollectorEventSchema.safeParse(event);
+        if (!result.success) {
+          throw new Error(`Failed to validate ${event.type}: ${result.error.message}`);
+        }
+        expect(result.success).toBe(true);
+      }
+    });
+
+    it('rejects event with unknown type', () => {
+      const invalidEvent = {
+        type: 'unknown_event',
+        timestamp: '2026-02-19T12:00:00.000Z',
+      };
+
+      const result = CollectorEventSchema.safeParse(invalidEvent);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects llm_call_end with negative durationMs', () => {
+      const invalidEvent = {
+        type: 'llm_call_end',
+        timestamp: '2026-02-19T12:00:00.000Z',
+        model: 'gpt-4',
+        inputTokens: 100,
+        outputTokens: 50,
+        executionId: 'eid:serial:o0',
+        durationMs: -1,
+      };
+
+      const result = CollectorEventSchema.safeParse(invalidEvent);
+      expect(result.success).toBe(false);
     });
   });
 });
