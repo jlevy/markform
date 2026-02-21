@@ -157,11 +157,10 @@ function isFieldSubmitted(field: Field, value: FieldValue | undefined): boolean 
     }
     case 'checkboxes': {
       const v = value as CheckboxesValue;
-      const checkboxField = field;
       // For checkboxes, check if any option has been changed from default
-      const mode = checkboxField.checkboxMode ?? 'multi';
+      const mode = field.checkboxMode ?? 'multi';
 
-      for (const opt of checkboxField.options) {
+      for (const opt of field.options) {
         const state = v.values[opt.id];
         if (mode === 'explicit') {
           // In explicit mode, "unfilled" is default, anything else is submitted
