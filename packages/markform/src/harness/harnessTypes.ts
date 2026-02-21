@@ -541,6 +541,17 @@ export interface FillOptions {
    * @default 'required'
    */
   toolChoice?: 'auto' | 'required';
+
+  /**
+   * Maximum retries for transient API errors (429, 503, etc.).
+   * Passed to the AI SDK's `generateText()` which handles exponential backoff.
+   *
+   * Set to 0 to disable AI SDK retries and handle retries externally
+   * (recommended for production harnesses that need full control over retry behavior).
+   *
+   * @default 3 (DEFAULT_MAX_RETRIES from settings.ts)
+   */
+  maxRetries?: number;
 }
 
 /**
