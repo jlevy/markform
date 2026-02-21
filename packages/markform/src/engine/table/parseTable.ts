@@ -143,10 +143,14 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
 /**
  * Check if a table row is fully empty (all cells skipped/empty).
  * Used during normalization to drop rows that carry no data.
+ *
+ * Aborted cells are NOT considered empty — they carry intentional signal
+ * (the agent explicitly declined to fill them, possibly with a reason).
  */
 export function isRowFullyEmpty(row: TableRowResponse): boolean {
   return Object.values(row).every((cell) => {
-    if (!cell || cell.state === 'skipped' || cell.state === 'aborted') return true;
+    if (!cell || cell.state === 'skipped') return true;
+    if (cell.state === 'aborted') return false;
     // 'answered' cell with no meaningful value
     return cell.value === undefined || cell.value === null || cell.value === '';
   });

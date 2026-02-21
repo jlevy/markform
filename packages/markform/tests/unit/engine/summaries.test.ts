@@ -769,6 +769,70 @@ John
     });
   });
 
+  describe('table with only empty rows treated as not submitted', () => {
+    it('table with only empty rows has empty=true after normalization', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "age"] columnTypes=["string", "number"] %}
+| Name | Age |
+| --- | --- |
+|      |     |
+|      |     |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(
+        parsed.schema,
+        parsed.responsesByFieldId,
+        parsed.notes,
+        [],
+      );
+
+      expect(progress.fields.data?.empty).toBe(true);
+      expect(progress.counts.filledFields).toBe(0);
+    });
+
+    it('table with mixed empty/filled rows has empty=false', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "age"] columnTypes=["string", "number"] %}
+| Name | Age |
+| --- | --- |
+| Alice | 30 |
+|       |    |
+{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const progress = computeProgressSummary(
+        parsed.schema,
+        parsed.responsesByFieldId,
+        parsed.notes,
+        [],
+      );
+
+      expect(progress.fields.data?.empty).toBe(false);
+      expect(progress.counts.filledFields).toBe(1);
+    });
+  });
+
   describe('empty vs answerState - orthogonal dimensions (markform-480)', () => {
     it('multi_select answered with no selections: empty=true, answerState=answered', () => {
       const markdown = `---

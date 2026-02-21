@@ -990,8 +990,7 @@ function validateTableRow(
       severity: 'warning',
       message:
         `Row ${rowIndex + 1} of "${fieldLabel}" has most cells empty ` +
-        `(${filledCells} of ${totalCells} filled). ` +
-        `Consider adding column constraints or making columns required.`,
+        `(${filledCells} of ${totalCells} filled).`,
       ref: `${fieldId}[${rowIndex}]`,
       source: 'builtin',
     });

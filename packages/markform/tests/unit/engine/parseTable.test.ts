@@ -428,7 +428,6 @@ describe('parseTable', () => {
   describe('isRowFullyEmpty', () => {
     const EMPTY_ROWS: [string, TableRowResponse][] = [
       ['all skipped', { name: { state: 'skipped' }, age: { state: 'skipped' } }],
-      ['all aborted', { name: { state: 'aborted' }, age: { state: 'aborted' } }],
       ['empty object', {}],
       [
         'answered with empty values',
@@ -450,6 +449,18 @@ describe('parseTable', () => {
 
     it('returns false for numeric zero (falsy but meaningful)', () => {
       expect(isRowFullyEmpty({ score: { state: 'answered', value: 0 } })).toBe(false);
+    });
+
+    it('returns false for all-aborted row (aborted carries intentional signal)', () => {
+      expect(isRowFullyEmpty({ name: { state: 'aborted' }, age: { state: 'aborted' } })).toBe(
+        false,
+      );
+    });
+
+    it('returns false for mixed skipped/aborted row', () => {
+      expect(isRowFullyEmpty({ name: { state: 'skipped' }, age: { state: 'aborted' } })).toBe(
+        false,
+      );
     });
   });
 
