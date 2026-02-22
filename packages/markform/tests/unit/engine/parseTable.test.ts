@@ -462,6 +462,23 @@ describe('parseTable', () => {
         false,
       );
     });
+
+    it('treats malformed cell with unknown state conservatively (not empty)', () => {
+      // Simulate a malformed/corrupted cell with an unexpected state
+      // This should be treated as NOT empty (conservative approach)
+      const malformedRow = {
+        name: { state: 'unknown' as any, value: 'test' },
+      };
+      expect(isRowFullyEmpty(malformedRow)).toBe(false);
+    });
+
+    it('treats malformed cell with unknown state and no value conservatively (not empty)', () => {
+      // Even with no value, unknown state should be treated conservatively
+      const malformedRow = {
+        name: { state: 'unknown' as any, value: undefined },
+      };
+      expect(isRowFullyEmpty(malformedRow)).toBe(false);
+    });
   });
 
   describe('empty row filtering in parseMarkdownTable', () => {

@@ -146,13 +146,20 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
  *
  * Aborted cells are NOT considered empty — they carry intentional signal
  * (the agent explicitly declined to fill them, possibly with a reason).
+ *
+ * Defensive coding: Unknown/unexpected cell states are treated as NOT empty
+ * to avoid accidentally dropping rows with meaningful data.
  */
 export function isRowFullyEmpty(row: TableRowResponse): boolean {
   return Object.values(row).every((cell) => {
     if (!cell || cell.state === 'skipped') return true;
     if (cell.state === 'aborted') return false;
-    // 'answered' cell with no meaningful value
-    return cell.value === undefined || cell.value === null || cell.value === '';
+    // Only 'answered' cells can be empty based on value check
+    if (cell.state === 'answered') {
+      return cell.value === undefined || cell.value === null || cell.value === '';
+    }
+    // Unknown state - treat conservatively as NOT empty
+    return false;
   });
 }
 
