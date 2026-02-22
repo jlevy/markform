@@ -1445,8 +1445,9 @@ markform:
       expect(result.isValid).toBe(true);
     });
 
-    it('warns on mostly-empty row (1 of 4 cells filled)', () => {
-      const markdown = `---
+    describe('mostly-empty row warnings', () => {
+      it('warns on mostly-empty row (1 of 4 cells filled)', () => {
+        const markdown = `---
 markform:
   spec: MF/0.1
 ---
@@ -1463,19 +1464,19 @@ markform:
 
 {% /form %}
 `;
-      const form = parseForm(markdown);
-      const result = validate(form);
+        const form = parseForm(markdown);
+        const result = validate(form);
 
-      const warnings = result.issues.filter((i) => i.severity === 'warning');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]?.message).toContain('most cells empty');
-      expect(warnings[0]?.message).toContain('1 of 4 filled');
-      expect(warnings[0]?.message).toContain('Items');
-      expect(warnings[0]?.ref).toBe('items[0]');
-    });
+        const warnings = result.issues.filter((i) => i.severity === 'warning');
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]?.message).toContain('most cells empty');
+        expect(warnings[0]?.message).toContain('1 of 4 filled');
+        expect(warnings[0]?.message).toContain('Items');
+        expect(warnings[0]?.ref).toBe('items[0]');
+      });
 
-    it('does not warn when half cells are filled (2 of 4)', () => {
-      const markdown = `---
+      it('does not warn when half cells are filled (2 of 4)', () => {
+        const markdown = `---
 markform:
   spec: MF/0.1
 ---
@@ -1492,15 +1493,15 @@ markform:
 
 {% /form %}
 `;
-      const form = parseForm(markdown);
-      const result = validate(form);
+        const form = parseForm(markdown);
+        const result = validate(form);
 
-      const warnings = result.issues.filter((i) => i.severity === 'warning');
-      expect(warnings).toHaveLength(0);
-    });
+        const warnings = result.issues.filter((i) => i.severity === 'warning');
+        expect(warnings).toHaveLength(0);
+      });
 
-    it('warns on mostly-empty row (1 of 3 cells filled)', () => {
-      const markdown = `---
+      it('warns on mostly-empty row (1 of 3 cells filled)', () => {
+        const markdown = `---
 markform:
   spec: MF/0.1
 ---
@@ -1517,16 +1518,16 @@ markform:
 
 {% /form %}
 `;
-      const form = parseForm(markdown);
-      const result = validate(form);
+        const form = parseForm(markdown);
+        const result = validate(form);
 
-      const warnings = result.issues.filter((i) => i.severity === 'warning');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]?.message).toContain('1 of 3 filled');
-    });
+        const warnings = result.issues.filter((i) => i.severity === 'warning');
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]?.message).toContain('1 of 3 filled');
+      });
 
-    it('does not warn on 1 of 2 cells filled (even split)', () => {
-      const markdown = `---
+      it('does not warn on 1 of 2 cells filled (even split)', () => {
+        const markdown = `---
 markform:
   spec: MF/0.1
 ---
@@ -1543,11 +1544,12 @@ markform:
 
 {% /form %}
 `;
-      const form = parseForm(markdown);
-      const result = validate(form);
+        const form = parseForm(markdown);
+        const result = validate(form);
 
-      const warnings = result.issues.filter((i) => i.severity === 'warning');
-      expect(warnings).toHaveLength(0);
+        const warnings = result.issues.filter((i) => i.severity === 'warning');
+        expect(warnings).toHaveLength(0);
+      });
     });
 
     it('minRows fails when only empty rows are provided', () => {
