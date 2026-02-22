@@ -11,6 +11,7 @@ import {
   extractColumnsFromTable,
   parseInlineTable,
   isRowFullyEmpty,
+  isCellEmpty,
 } from '../../../src/engine/table/parseTable.js';
 import type {
   TableColumn,
@@ -19,6 +20,35 @@ import type {
 } from '../../../src/engine/coreTypes.js';
 
 describe('parseTable', () => {
+  describe('isCellEmpty', () => {
+    it('returns true for undefined cell', () => {
+      expect(isCellEmpty(undefined)).toBe(true);
+    });
+
+    it('returns true for skipped cell', () => {
+      expect(isCellEmpty({ state: 'skipped' })).toBe(true);
+    });
+
+    it('returns false for aborted cell', () => {
+      expect(isCellEmpty({ state: 'aborted' })).toBe(false);
+    });
+
+    it('returns true for answered cell with empty value', () => {
+      expect(isCellEmpty({ state: 'answered', value: '' })).toBe(true);
+      expect(isCellEmpty({ state: 'answered', value: undefined })).toBe(true);
+      expect(isCellEmpty({ state: 'answered', value: null as any })).toBe(true);
+    });
+
+    it('returns false for answered cell with meaningful value', () => {
+      expect(isCellEmpty({ state: 'answered', value: 'test' })).toBe(false);
+      expect(isCellEmpty({ state: 'answered', value: 0 })).toBe(false);
+    });
+
+    it('returns false for unknown state (conservative)', () => {
+      expect(isCellEmpty({ state: 'unknown' as any })).toBe(false);
+    });
+  });
+
   describe('parseCellValue', () => {
     // [rawValue, columnType, expectedState, expectedValue]
     type CellCase = [
@@ -461,6 +491,23 @@ describe('parseTable', () => {
       expect(isRowFullyEmpty({ name: { state: 'skipped' }, age: { state: 'aborted' } })).toBe(
         false,
       );
+    });
+
+    it('treats malformed cell with unknown state conservatively (not empty)', () => {
+      // Simulate a malformed/corrupted cell with an unexpected state
+      // This should be treated as NOT empty (conservative approach)
+      const malformedRow = {
+        name: { state: 'unknown' as any, value: 'test' },
+      };
+      expect(isRowFullyEmpty(malformedRow)).toBe(false);
+    });
+
+    it('treats malformed cell with unknown state and no value conservatively (not empty)', () => {
+      // Even with no value, unknown state should be treated conservatively
+      const malformedRow = {
+        name: { state: 'unknown' as any, value: undefined },
+      };
+      expect(isRowFullyEmpty(malformedRow)).toBe(false);
     });
   });
 

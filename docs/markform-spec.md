@@ -493,8 +493,9 @@ columnTypes=[{type: "string", required: true}, "number", "url"]
 | `max` | `number`, `year`, `date` | Maximum value |
 | `integer` | `number` | Value must be an integer |
 
-**Row sparseness warning:** When a non-empty row has the majority of its cells empty
-(strictly more than half), a validation warning is emitted.
+**Row sparseness warning:** When a non-empty row has more than half of its cells empty
+(e.g., 1 of 3 filled, or 1 of 4 filled; even splits like 2 of 4 don’t trigger this), a
+validation warning is emitted.
 This helps catch cases where an agent produced sparse or incomplete data.
 
 **Example with per-column constraints:**

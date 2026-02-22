@@ -137,23 +137,35 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
 }
 
 // =============================================================================
-// Empty Row Detection
+// Empty Cell Detection
 // =============================================================================
+
+/**
+ * Check if a single cell is empty.
+ * Used by both row normalization and validation to ensure consistent logic.
+ *
+ * - Skipped cells are empty
+ * - Aborted cells are NOT empty (they carry intentional signal)
+ * - Answered cells are empty only if value is undefined/null/empty string
+ * - Unknown states are treated conservatively as NOT empty
+ */
+export function isCellEmpty(cell: CellResponse | undefined): boolean {
+  if (!cell || cell.state === 'skipped') return true;
+  if (cell.state === 'aborted') return false;
+  // Only 'answered' cells can be empty based on value check
+  if (cell.state === 'answered') {
+    return cell.value === undefined || cell.value === null || cell.value === '';
+  }
+  // Unknown state - treat conservatively as NOT empty
+  return false;
+}
 
 /**
  * Check if a table row is fully empty (all cells skipped/empty).
  * Used during normalization to drop rows that carry no data.
- *
- * Aborted cells are NOT considered empty — they carry intentional signal
- * (the agent explicitly declined to fill them, possibly with a reason).
  */
 export function isRowFullyEmpty(row: TableRowResponse): boolean {
-  return Object.values(row).every((cell) => {
-    if (!cell || cell.state === 'skipped') return true;
-    if (cell.state === 'aborted') return false;
-    // 'answered' cell with no meaningful value
-    return cell.value === undefined || cell.value === null || cell.value === '';
-  });
+  return Object.values(row).every(isCellEmpty);
 }
 
 // =============================================================================
