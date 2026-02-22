@@ -39,7 +39,16 @@ import { createHarness } from './harness.js';
 import { createLiveAgent } from './liveAgent.js';
 import { resolveModel } from './modelResolver.js';
 import { runWithConcurrency, scopeIssuesForItem } from './parallelHarness.js';
-import type { Agent, FillOptions, FillResult, FillStatus, TurnStats } from './harnessTypes.js';
+import type {
+  Agent,
+  FillConfigSnapshot,
+  FillOptions,
+  FillResult,
+  FillStatus,
+  TurnStats,
+} from './harnessTypes.js';
+import { VERSION } from '../version.js';
+import { sha256 } from 'js-sha256';
 
 // Re-export types for backwards compatibility
 export type { FillOptions, FillResult, FillStatus, TurnProgress } from './harnessTypes.js';
@@ -144,6 +153,35 @@ function getProgressCounts(form: ParsedForm, targetRoles?: string[]): ProgressCo
   return progressSummary.counts;
 }
 
+/** Current FillRecord schema version. Increment on semantic changes. */
+const FILL_RECORD_SCHEMA_VERSION = 1;
+
+/**
+ * Build a serializable snapshot of effective (post-default-resolution) FillOptions.
+ */
+function buildConfigSnapshot(options: FillOptions, prefillFieldIds?: string[]): FillConfigSnapshot {
+  const {
+    form: _form,
+    model: _model,
+    signal: _signal,
+    callbacks: _callbacks,
+    _testAgent,
+    providers: _providers,
+    additionalTools: _tools,
+    inputContext: _inputContext,
+    ...rest
+  } = options;
+  return {
+    ...rest,
+    maxTurnsTotal: options.maxTurnsTotal ?? DEFAULT_MAX_TURNS,
+    startingTurnNumber: options.startingTurnNumber ?? 0,
+    maxPatchesPerTurn: options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN,
+    maxIssuesPerTurn: options.maxIssuesPerTurn ?? DEFAULT_MAX_ISSUES_PER_TURN,
+    targetRoles: options.targetRoles ?? [AGENT_ROLE],
+    ...(prefillFieldIds ? { prefillFieldIds } : {}),
+  };
+}
+
 /**
  * Create a FillRecordCollector if recordFill is enabled.
  */
@@ -152,6 +190,10 @@ function createCollectorIfNeeded(
   form: ParsedForm,
   provider: string,
   model: string,
+  extra?: {
+    config?: Record<string, unknown>;
+    inputFormSha256?: string;
+  },
 ): FillRecordCollector | undefined {
   if (!options.recordFill) return undefined;
 
@@ -167,6 +209,11 @@ function createCollectorIfNeeded(
     model,
     parallelEnabled: options.enableParallel,
     maxParallelAgents: options.maxParallelAgents,
+    config: extra?.config,
+    markformVersion: VERSION,
+    inputFormSha256: extra?.inputFormSha256,
+    fillRecordSchemaVersion: FILL_RECORD_SCHEMA_VERSION,
+    recordPatches: options.recordPatches,
   });
 }
 
@@ -507,12 +554,20 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     provider = options.model.split('/')[0];
   }
 
-  // 3. Create collector if recordFill is enabled
+  // 3. Compute input form hash before inputContext is applied (captures the template)
+  const inputFormSha256 = sha256(serializeForm(form));
+
+  // 4. Build config snapshot and create collector
+  const prefillFieldIds = options.inputContext ? Object.keys(options.inputContext) : undefined;
+  const configSnapshot = buildConfigSnapshot(options, prefillFieldIds);
   const modelString = typeof options.model === 'string' ? options.model : 'custom';
-  const collector = createCollectorIfNeeded(options, form, provider ?? 'unknown', modelString);
+  const collector = createCollectorIfNeeded(options, form, provider ?? 'unknown', modelString, {
+    config: configSnapshot as unknown as Record<string, unknown>,
+    inputFormSha256,
+  });
   const mergedCallbacks = mergeCallbacks(options.callbacks, collector);
 
-  // 4. Apply input context using coercion layer
+  // 5. Apply input context using coercion layer
   let totalPatches = 0;
   let inputContextWarnings: string[] = [];
 
@@ -532,7 +587,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     inputContextWarnings = coercionResult.warnings;
   }
 
-  // 5. Check for parallel execution path
+  // 7. Check for parallel execution path
   if (options.enableParallel) {
     const plan = computeExecutionPlan(form);
     if (plan.parallelBatches.length > 0) {
@@ -551,7 +606,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     // No parallel batches — fall through to serial path
   }
 
-  // 6. Create harness + agent (serial path)
+  // 8. Create harness + agent (serial path)
   const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
   const startingTurnNumber = options.startingTurnNumber ?? 0;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;

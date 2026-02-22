@@ -149,6 +149,16 @@ export interface FillRecordCollectorOptions {
   maxParallelAgents?: number;
   /** Custom data to include in record */
   customData?: Record<string, unknown>;
+  /** Effective (resolved) FillOptions config snapshot */
+  config?: Record<string, unknown>;
+  /** Markform library version */
+  markformVersion?: string;
+  /** SHA-256 of the input form markdown */
+  inputFormSha256?: string;
+  /** FillRecord schema version */
+  fillRecordSchemaVersion?: number;
+  /** Whether to record raw patches in timeline */
+  recordPatches?: boolean;
 }
 
 // =============================================================================
@@ -171,6 +181,11 @@ export class FillRecordCollector implements FillCallbacks {
   private readonly parallelEnabled: boolean;
   private readonly maxParallelAgents?: number;
   private customData: Record<string, unknown>;
+  private readonly config?: Record<string, unknown>;
+  private readonly markformVersion?: string;
+  private readonly inputFormSha256?: string;
+  private readonly fillRecordSchemaVersion?: number;
+  readonly recordPatches: boolean;
 
   // Append-only event log - safe for interleaved async operations
   private events: CollectorEvent[] = [];
@@ -196,6 +211,11 @@ export class FillRecordCollector implements FillCallbacks {
     this.parallelEnabled = options.parallelEnabled ?? false;
     this.maxParallelAgents = options.maxParallelAgents;
     this.customData = options.customData ?? {};
+    this.config = options.config;
+    this.markformVersion = options.markformVersion;
+    this.inputFormSha256 = options.inputFormSha256;
+    this.fillRecordSchemaVersion = options.fillRecordSchemaVersion;
+    this.recordPatches = options.recordPatches ?? false;
   }
 
   // ===========================================================================
@@ -377,6 +397,10 @@ export class FillRecordCollector implements FillCallbacks {
       startedAt: this.startedAt,
       completedAt,
       durationMs,
+      markformVersion: this.markformVersion,
+      inputFormSha256: this.inputFormSha256,
+      fillRecordSchemaVersion: this.fillRecordSchemaVersion,
+      config: this.config,
       form: this.form,
       status,
       statusDetail: this.explicitStatusDetail,

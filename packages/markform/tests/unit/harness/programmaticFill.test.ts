@@ -1801,4 +1801,148 @@ markform:
       }
     });
   });
+
+  describe('config snapshot and provenance (FR-1, FR-6)', () => {
+    it('fill record includes markformVersion', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      expect(typeof result.record!.markformVersion).toBe('string');
+      expect(result.record!.markformVersion!.length).toBeGreaterThan(0);
+    });
+
+    it('fill record includes inputFormSha256', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      expect(typeof result.record!.inputFormSha256).toBe('string');
+      expect(result.record!.inputFormSha256).toHaveLength(64);
+    });
+
+    it('fill record includes fillRecordSchemaVersion', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      expect(result.record!.fillRecordSchemaVersion).toBe(1);
+    });
+
+    it('fill record includes effective config with resolved defaults', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      expect(result.record!.config).toBeDefined();
+      expect(result.record!.config!.maxTurnsTotal).toBe(100);
+      expect(result.record!.config!.enableWebSearch).toBe(false);
+      expect(result.record!.config!.captureWireFormat).toBe(false);
+      expect(result.record!.config!.recordFill).toBe(true);
+    });
+
+    it('config includes prefillFieldIds from inputContext keys', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      expect(result.record!.config!.prefillFieldIds).toEqual(['name']);
+    });
+
+    it('config omits prefillFieldIds when no inputContext', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      expect(result.record!.config!.prefillFieldIds).toBeUndefined();
+    });
+
+    it('inputFormSha256 captures template hash before inputContext is applied', async () => {
+      const completedForm = parseForm(COMPLETED_FORM);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result1 = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'John' },
+        _testAgent: mockAgent,
+      });
+
+      const result2 = await fillForm({
+        form: SIMPLE_FORM,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: { name: 'Jane' },
+        _testAgent: mockAgent,
+      });
+
+      // Same template, different inputContext -> same hash
+      expect(result1.record!.inputFormSha256).toBe(result2.record!.inputFormSha256);
+    });
+  });
 });
