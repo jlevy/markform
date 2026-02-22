@@ -1019,6 +1019,143 @@ Strong company
       });
     });
 
+    it('FillRecord includes provenance and config fields', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      expect(typeof record.markformVersion).toBe('string');
+      expect(record.markformVersion!.length).toBeGreaterThan(0);
+
+      expect(typeof record.inputFormSha256).toBe('string');
+      expect(record.inputFormSha256).toHaveLength(64);
+
+      expect(record.fillRecordSchemaVersion).toBe(1);
+
+      expect(record.config).toBeDefined();
+      expect(record.config!.maxTurnsTotal).toBe(100);
+      expect(record.config!.recordFill).toBe(true);
+      expect(record.config!.enableWebSearch).toBe(false);
+      expect(record.config!.prefillFieldIds).toBeDefined();
+      expect(record.config!.prefillFieldIds!.length).toBeGreaterThan(0);
+    });
+
+    it('FillRecord timeline entries include formProgress snapshots', async () => {
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const record = result.record!;
+
+      expect(record.timeline.length).toBeGreaterThan(0);
+      for (const entry of record.timeline) {
+        expect(entry.formProgress).toBeDefined();
+        expect(typeof entry.formProgress!.answeredFields).toBe('number');
+        expect(typeof entry.formProgress!.skippedFields).toBe('number');
+        expect(typeof entry.formProgress!.requiredRemaining).toBe('number');
+        expect(typeof entry.formProgress!.optionalRemaining).toBe('number');
+      }
+    });
+
+    it('FillRecord validates against FillRecordSchema', async () => {
+      const { FillRecordSchema } = await import('../../src/harness/fillRecord.js');
+
+      const emptyForm = loadForm('simple/simple.form.md');
+      const mockFilledForm = loadForm('simple/simple-mock-filled.form.md');
+      const completedForm = parseForm(mockFilledForm);
+      const mockAgent = createMockAgent(completedForm);
+
+      const result = await fillForm({
+        form: emptyForm,
+        model: 'mock/model',
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        inputContext: {
+          name: 'Test User',
+          email: 'test@example.com',
+          age: 25,
+          tags: ['tag1'],
+          priority: 'high',
+          categories: ['frontend'],
+          tasks_multi: { research: 'done', design: 'done', implement: 'done', test: 'done' },
+          tasks_simple: { read_guidelines: 'done', agree_terms: 'done' },
+          confirmations: { backed_up: 'yes', notified: 'yes' },
+          website: 'https://test.com',
+          references: ['https://example.com'],
+          event_date: '2025-06-15',
+          founded_year: 2020,
+        },
+        targetRoles: ['user', 'agent'],
+        _testAgent: mockAgent,
+      });
+
+      expect(result.record).toBeDefined();
+      const parseResult = FillRecordSchema.safeParse(result.record);
+      if (!parseResult.success) {
+        throw new Error(
+          `FillRecord validation failed: ${JSON.stringify(parseResult.error.issues, null, 2)}`,
+        );
+      }
+      expect(parseResult.success).toBe(true);
+    });
+
     it('parallel batch items have same turnNumber but different executionIds', async () => {
       const filledForm = parseForm(PARALLEL_FORM_FILLED);
       const mockAgent = createMockAgent(filledForm);
