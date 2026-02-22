@@ -1784,6 +1784,69 @@ describe('FillRecordCollector', () => {
       });
     });
 
+    it('stores raw patches in timeline when recordPatches enabled', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+        recordPatches: true,
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [{ op: 'set_string' as const, fieldId: 'name', value: 'Acme' }],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.patches).toHaveLength(1);
+      const patch = record.timeline[0]!.patches![0]!;
+      expect(patch.op).toBe('set_string');
+      expect('fieldId' in patch && patch.fieldId).toBe('name');
+    });
+
+    it('omits raw patches from timeline when recordPatches disabled', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+        recordPatches: false,
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [{ op: 'set_string' as const, fieldId: 'name', value: 'Acme' }],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.patches).toBeUndefined();
+    });
+
     it('omits enrichment fields when not provided', () => {
       const collector = new FillRecordCollector({
         form: mockFormMetadata,

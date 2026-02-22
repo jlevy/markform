@@ -185,6 +185,7 @@ export function registerFillCommand(program: Command): void {
       '--record-fill-stable',
       'Write fill record without timestamps/durations (for golden tests)',
     )
+    .option('--record-patches', 'Include raw LLM patches in fill record timeline entries')
     .option('--parallel', 'Enable parallel execution for forms with parallel batches')
     .action(
       async (
@@ -208,6 +209,7 @@ export function registerFillCommand(program: Command): void {
           normalize?: boolean;
           recordFill?: boolean;
           recordFillStable?: boolean;
+          recordPatches?: boolean;
           parallel?: boolean;
         },
         cmd: Command,
@@ -395,6 +397,7 @@ export function registerFillCommand(program: Command): void {
               enableWebSearch: true,
               captureWireFormat: false,
               recordFill: true,
+              recordPatches: options.recordPatches,
               targetRoles,
               fillMode,
               maxTurnsTotal: options.maxTurns ? parseInt(options.maxTurns, 10) : undefined,
@@ -527,6 +530,7 @@ export function registerFillCommand(program: Command): void {
               provider: 'mock',
               model: 'mock',
               parallelEnabled: false,
+              recordPatches: options.recordPatches,
             });
           } else {
             // Live agent uses LLM (model is required, validated above)
@@ -550,6 +554,7 @@ export function registerFillCommand(program: Command): void {
               provider,
               model: modelIdString,
               parallelEnabled: false,
+              recordPatches: options.recordPatches,
             });
 
             // Determine system prompt: --instructions > --prompt > default
