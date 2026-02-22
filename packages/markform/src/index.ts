@@ -5,12 +5,7 @@
  * types, and utilities for working with .form.md files.
  */
 
-// Build-time injected by tsdown (see tsdown.config.ts)
-declare const __MARKFORM_VERSION__: string;
-
-/** Markform version (injected at build time). */
-export const VERSION: string =
-  typeof __MARKFORM_VERSION__ !== 'undefined' ? __MARKFORM_VERSION__ : 'development';
+export { VERSION } from './version.js';
 
 // =============================================================================
 // Type Exports
@@ -361,9 +356,11 @@ export type {
 } from './harness/parallelHarness.js';
 export type {
   FillCallbacks,
+  FillConfigSnapshot,
   FillOptions,
   FillResult,
   FillStatus,
+  TurnFormProgressSnapshot,
   TurnProgress,
   TurnStats,
   AgentResponse,
@@ -395,6 +392,7 @@ export type {
   ExecutionMetadata,
 } from './harness/fillRecord.js';
 export {
+  FillConfigSchema,
   FillRecordSchema,
   FillRecordStatusSchema,
   TimelineEntrySchema,

@@ -552,7 +552,33 @@ export interface FillOptions {
    * @default 3 (DEFAULT_MAX_RETRIES from settings.ts)
    */
   maxRetries?: number;
+
+  /**
+   * Include raw patches in FillRecord timeline entries.
+   * When enabled, each timeline entry includes the full Patch[] submitted by the LLM.
+   * Off by default due to size impact and potential PII in field values.
+   */
+  recordPatches?: boolean;
 }
+
+/**
+ * Snapshot of effective (post-default-resolution) FillOptions for the FillRecord.
+ *
+ * Excludes non-serializable fields (form, model, signal, callbacks, agents, providers)
+ * and inputContext (replaced by prefillFieldIds). New FillOptions fields are automatically
+ * captured unless explicitly excluded here.
+ */
+export type FillConfigSnapshot = Omit<
+  FillOptions,
+  | 'form'
+  | 'model'
+  | 'signal'
+  | 'callbacks'
+  | '_testAgent'
+  | 'providers'
+  | 'additionalTools'
+  | 'inputContext'
+> & { prefillFieldIds?: string[] };
 
 /**
  * Progress information for each turn.
@@ -576,6 +602,18 @@ export interface TurnProgress {
   coercionWarnings?: PatchWarning[];
   /** Execution ID for parallel tracking (e.g., "1-batch-research-0") */
   executionId?: string;
+  /** Per-turn form progress snapshot (computed after patches applied) */
+  formProgressSnapshot?: TurnFormProgressSnapshot;
+}
+
+/**
+ * Per-turn snapshot of form progress, derived from ProgressCounts after each turn.
+ */
+export interface TurnFormProgressSnapshot {
+  answeredFields: number;
+  skippedFields: number;
+  requiredRemaining: number;
+  optionalRemaining: number;
 }
 
 /**

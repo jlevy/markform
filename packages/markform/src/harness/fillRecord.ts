@@ -13,6 +13,8 @@
 import { z } from 'zod';
 
 import {
+  PatchRejectionSchema,
+  PatchSchema,
   PatchWarningSchema,
   ProgressCountsSchema,
   StructureSummarySchema,
@@ -163,6 +165,31 @@ export const TimelineEntrySchema = z.object({
 
   /** Coercion warnings from patch normalization (e.g., string auto-wrapped to array) */
   coercionWarnings: z.array(PatchWarningSchema).optional(),
+
+  /** Full rejection details (replaces count-only patchesRejected for debugging) */
+  rejectedPatches: z.array(PatchRejectionSchema).optional(),
+  /** Per-turn form progress snapshot (after patches applied) */
+  formProgress: z
+    .object({
+      answeredFields: z.number().int().nonnegative(),
+      skippedFields: z.number().int().nonnegative(),
+      requiredRemaining: z.number().int().nonnegative(),
+      optionalRemaining: z.number().int().nonnegative(),
+    })
+    .optional(),
+  /** Compact issue refs shown to the LLM this turn */
+  issueRefs: z
+    .array(
+      z.object({
+        ref: z.string(),
+        scope: z.string(),
+        severity: z.string(),
+        reason: z.string(),
+      }),
+    )
+    .optional(),
+  /** Raw patches submitted by the LLM (opt-in via recordPatches) */
+  patches: z.array(PatchSchema).optional(),
 });
 
 export type TimelineEntry = z.infer<typeof TimelineEntrySchema>;
@@ -284,6 +311,26 @@ const EventTurnCompleteSchema = z.object({
   issuesAddressed: z.number().int().nonnegative(),
   coercionWarnings: z.array(PatchWarningSchema).optional(),
   executionId: z.string().optional(),
+  rejectedPatches: z.array(PatchRejectionSchema).optional(),
+  formProgress: z
+    .object({
+      answeredFields: z.number().int().nonnegative(),
+      skippedFields: z.number().int().nonnegative(),
+      requiredRemaining: z.number().int().nonnegative(),
+      optionalRemaining: z.number().int().nonnegative(),
+    })
+    .optional(),
+  issueRefs: z
+    .array(
+      z.object({
+        ref: z.string(),
+        scope: z.string(),
+        severity: z.string(),
+        reason: z.string(),
+      }),
+    )
+    .optional(),
+  patches: z.array(PatchSchema).optional(),
 });
 
 const EventLlmCallStartSchema = z.object({
@@ -355,6 +402,40 @@ export const FillRecordStatusSchema = z.enum(['completed', 'partial', 'failed', 
 
 export type FillRecordStatus = z.infer<typeof FillRecordStatusSchema>;
 
+// =============================================================================
+// Fill Config Schema
+// =============================================================================
+
+/**
+ * Zod schema for the effective FillOptions config snapshot.
+ *
+ * Uses .passthrough() so new FillOptions fields are preserved in JSON round-trips
+ * even before this schema is updated to explicitly validate them.
+ */
+export const FillConfigSchema = z
+  .object({
+    maxTurnsTotal: z.number().int().positive().optional(),
+    maxTurnsThisCall: z.number().int().positive().optional(),
+    startingTurnNumber: z.number().int().nonnegative().optional(),
+    maxPatchesPerTurn: z.number().int().positive().optional(),
+    maxIssuesPerTurn: z.number().int().positive().optional(),
+    maxStepsPerTurn: z.number().int().positive().optional(),
+    maxRetries: z.number().int().nonnegative().optional(),
+    targetRoles: z.array(z.string()).optional(),
+    fillMode: z.string().optional(),
+    enableParallel: z.boolean().optional(),
+    maxParallelAgents: z.number().int().positive().optional(),
+    enableWebSearch: z.boolean().optional(),
+    captureWireFormat: z.boolean().optional(),
+    recordFill: z.boolean().optional(),
+    toolChoice: z.string().optional(),
+    systemPromptAddition: z.string().optional(),
+    recordPatches: z.boolean().optional(),
+    prefillFieldIds: z.array(z.string()).optional(),
+  })
+  .passthrough()
+  .optional();
+
 /**
  * Complete record of a form fill operation.
  *
@@ -369,14 +450,32 @@ export const FillRecordSchema = z.object({
   // Session Identity
   // =========================================================================
 
-  /** Unique session identifier */
-  sessionId: z.string().uuid(),
+  /** Unique session identifier (sess-ULID format) */
+  sessionId: z.string(),
   /** When the fill started */
   startedAt: z.string().datetime(),
   /** When the fill completed */
   completedAt: z.string().datetime(),
   /** Total duration in milliseconds */
   durationMs: z.number().int().nonnegative(),
+
+  // =========================================================================
+  // Provenance
+  // =========================================================================
+
+  /** Markform library version that produced this record */
+  markformVersion: z.string().optional(),
+  /** SHA-256 hash of the input form markdown before filling */
+  inputFormSha256: z.string().optional(),
+  /** Schema version for this FillRecord format (increments on semantic changes) */
+  fillRecordSchemaVersion: z.number().int().positive().optional(),
+
+  // =========================================================================
+  // Effective Config
+  // =========================================================================
+
+  /** Snapshot of the effective (post-default-resolution) FillOptions */
+  config: FillConfigSchema,
 
   // =========================================================================
   // Form Metadata
@@ -549,6 +648,14 @@ export function stripUnstableFillRecordFields(record: FillRecord): StableFillRec
   };
 
   return {
+    // Keep provenance (stable)
+    markformVersion: record.markformVersion,
+    inputFormSha256: record.inputFormSha256,
+    fillRecordSchemaVersion: record.fillRecordSchemaVersion,
+
+    // Keep config (stable)
+    config: record.config,
+
     // Keep form metadata (stable)
     form: record.form,
 

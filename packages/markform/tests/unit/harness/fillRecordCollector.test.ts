@@ -5,8 +5,18 @@
 import { describe, it, expect } from 'vitest';
 
 import { FillRecordCollector } from '../../../src/harness/fillRecordCollector.js';
-import { CollectorEventSchema } from '../../../src/harness/fillRecord.js';
+import {
+  CollectorEventSchema,
+  FillConfigSchema,
+  FillRecordSchema,
+  TimelineEntrySchema,
+} from '../../../src/harness/fillRecord.js';
 import type { ProgressCounts, StructureSummary } from '../../../src/engine/coreTypes.js';
+import { VERSION } from '../../../src/version.js';
+import type {
+  FillConfigSnapshot,
+  TurnFormProgressSnapshot,
+} from '../../../src/harness/harnessTypes.js';
 
 describe('FillRecordCollector', () => {
   // Mock form metadata
@@ -1632,6 +1642,264 @@ describe('FillRecordCollector', () => {
 
       const result = CollectorEventSchema.safeParse(invalidEvent);
       expect(result.success).toBe(false);
+    });
+  });
+
+  // ===========================================================================
+  // Phase 1a: Schema foundation tests (FR-1, FR-2, FR-3, FR-5, FR-6)
+  // ===========================================================================
+
+  describe('VERSION export', () => {
+    it('exports a string from version.ts', () => {
+      expect(typeof VERSION).toBe('string');
+      expect(VERSION.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('FillConfigSchema', () => {
+    it('validates a complete config snapshot', () => {
+      const config = {
+        maxTurnsTotal: 100,
+        maxPatchesPerTurn: 20,
+        maxIssuesPerTurn: 10,
+        targetRoles: ['agent'],
+        enableWebSearch: true,
+        captureWireFormat: false,
+        recordFill: true,
+        enableParallel: false,
+        prefillFieldIds: ['company_name', 'company_url'],
+      };
+      const result = FillConfigSchema.safeParse(config);
+      expect(result.success).toBe(true);
+    });
+
+    it('preserves unknown keys via passthrough', () => {
+      const config = {
+        maxTurnsTotal: 50,
+        enableWebSearch: false,
+        captureWireFormat: false,
+        recordFill: true,
+        futureNewOption: 'some-value',
+        anotherFutureFlag: true,
+      };
+      const result = FillConfigSchema.safeParse(config);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect((result.data as Record<string, unknown>).futureNewOption).toBe('some-value');
+        expect((result.data as Record<string, unknown>).anotherFutureFlag).toBe(true);
+      }
+    });
+
+    it('accepts undefined (optional top-level)', () => {
+      const result = FillConfigSchema.safeParse(undefined);
+      expect(result.success).toBe(true);
+    });
+
+    it('validates recordPatches boolean', () => {
+      const config = {
+        recordPatches: true,
+        enableWebSearch: true,
+        captureWireFormat: false,
+        recordFill: true,
+      };
+      const result = FillConfigSchema.safeParse(config);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('TimelineEntrySchema enrichment fields', () => {
+    const baseEntry = {
+      turnNumber: 1,
+      order: 0,
+      executionId: 'eid:serial:o0',
+      startedAt: '2026-02-21T12:00:00.000Z',
+      completedAt: '2026-02-21T12:00:01.000Z',
+      startMs: 0,
+      durationMs: 1000,
+      issuesAddressed: 3,
+      patchesApplied: 2,
+      patchesRejected: 1,
+      tokens: { input: 100, output: 50 },
+      toolCalls: [],
+    };
+
+    it('accepts rejectedPatches array', () => {
+      const entry = {
+        ...baseEntry,
+        rejectedPatches: [
+          { patchIndex: 0, message: 'type mismatch', fieldId: 'name', fieldKind: 'string' },
+        ],
+      };
+      const result = TimelineEntrySchema.safeParse(entry);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts formProgress snapshot', () => {
+      const entry = {
+        ...baseEntry,
+        formProgress: {
+          answeredFields: 5,
+          skippedFields: 0,
+          requiredRemaining: 2,
+          optionalRemaining: 1,
+        },
+      };
+      const result = TimelineEntrySchema.safeParse(entry);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts issueRefs array', () => {
+      const entry = {
+        ...baseEntry,
+        issueRefs: [
+          { ref: 'company_name', scope: 'field', severity: 'required', reason: 'required_missing' },
+          {
+            ref: 'website',
+            scope: 'field',
+            severity: 'recommended',
+            reason: 'optional_unanswered',
+          },
+        ],
+      };
+      const result = TimelineEntrySchema.safeParse(entry);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts patches array (opt-in raw patches)', () => {
+      const entry = {
+        ...baseEntry,
+        patches: [{ op: 'set_string', fieldId: 'company_name', value: 'Acme Corp' }],
+      };
+      const result = TimelineEntrySchema.safeParse(entry);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts all enrichment fields together', () => {
+      const entry = {
+        ...baseEntry,
+        rejectedPatches: [{ patchIndex: 0, message: 'bad', fieldId: 'x' }],
+        formProgress: {
+          answeredFields: 3,
+          skippedFields: 0,
+          requiredRemaining: 1,
+          optionalRemaining: 0,
+        },
+        issueRefs: [{ ref: 'x', scope: 'field', severity: 'required', reason: 'required_missing' }],
+        patches: [{ op: 'set_string', fieldId: 'x', value: 'v' }],
+      };
+      const result = TimelineEntrySchema.safeParse(entry);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('FillRecordSchema provenance and config fields', () => {
+    it('accepts markformVersion string', () => {
+      const partial = { markformVersion: '1.2.3' };
+      const schema = FillRecordSchema.pick({ markformVersion: true });
+      const result = schema.safeParse(partial);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts inputFormSha256 string', () => {
+      const partial = { inputFormSha256: 'a'.repeat(64) };
+      const schema = FillRecordSchema.pick({ inputFormSha256: true });
+      const result = schema.safeParse(partial);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts fillRecordSchemaVersion integer', () => {
+      const partial = { fillRecordSchemaVersion: 1 };
+      const schema = FillRecordSchema.pick({ fillRecordSchemaVersion: true });
+      const result = schema.safeParse(partial);
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts config object', () => {
+      const partial = {
+        config: {
+          maxTurnsTotal: 100,
+          enableWebSearch: true,
+          captureWireFormat: false,
+          recordFill: true,
+        },
+      };
+      const schema = FillRecordSchema.pick({ config: true });
+      const result = schema.safeParse(partial);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('FillRecordSchema sessionId', () => {
+    it('accepts sess-ULID format (not just UUID)', () => {
+      const partial = { sessionId: 'sess-01arz3ndektsv4rrffq69g5fav' };
+      const schema = FillRecordSchema.pick({ sessionId: true });
+      const result = schema.safeParse(partial);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('FillConfigSnapshot type', () => {
+    it('excludes non-serializable keys from FillOptions', () => {
+      const snapshot: FillConfigSnapshot = {
+        enableWebSearch: true,
+        captureWireFormat: false,
+        recordFill: true,
+        maxTurnsTotal: 100,
+        targetRoles: ['agent'],
+        prefillFieldIds: ['field1'],
+      };
+      expect(snapshot.enableWebSearch).toBe(true);
+      expect(snapshot.prefillFieldIds).toEqual(['field1']);
+      // @ts-expect-error form should not exist on FillConfigSnapshot
+      expect(snapshot.form).toBeUndefined();
+      // @ts-expect-error model should not exist on FillConfigSnapshot
+      expect(snapshot.model).toBeUndefined();
+      // @ts-expect-error signal should not exist on FillConfigSnapshot
+      expect(snapshot.signal).toBeUndefined();
+      // @ts-expect-error callbacks should not exist on FillConfigSnapshot
+      expect(snapshot.callbacks).toBeUndefined();
+      // @ts-expect-error _testAgent should not exist on FillConfigSnapshot
+      expect(snapshot._testAgent).toBeUndefined();
+      // @ts-expect-error inputContext should not exist on FillConfigSnapshot
+      expect(snapshot.inputContext).toBeUndefined();
+    });
+  });
+
+  describe('TurnFormProgressSnapshot type', () => {
+    it('has the expected fields', () => {
+      const snapshot: TurnFormProgressSnapshot = {
+        answeredFields: 5,
+        skippedFields: 1,
+        requiredRemaining: 2,
+        optionalRemaining: 3,
+      };
+      expect(snapshot.answeredFields).toBe(5);
+      expect(snapshot.requiredRemaining).toBe(2);
+    });
+  });
+
+  describe('EventTurnCompleteSchema enrichment fields', () => {
+    it('accepts enrichment fields in turn_complete event', () => {
+      const event = {
+        type: 'turn_complete',
+        timestamp: '2026-02-21T12:00:00.000Z',
+        turnNumber: 1,
+        patchesApplied: 2,
+        patchesRejected: 1,
+        issuesAddressed: 3,
+        executionId: 'eid:serial:o0',
+        rejectedPatches: [{ patchIndex: 0, message: 'bad' }],
+        formProgress: {
+          answeredFields: 3,
+          skippedFields: 0,
+          requiredRemaining: 1,
+          optionalRemaining: 0,
+        },
+        issueRefs: [{ ref: 'x', scope: 'field', severity: 'required', reason: 'required_missing' }],
+        patches: [{ op: 'set_string', fieldId: 'x', value: 'v' }],
+      };
+      const result = CollectorEventSchema.safeParse(event);
+      expect(result.success).toBe(true);
     });
   });
 });
