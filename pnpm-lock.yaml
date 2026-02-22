@@ -36,8 +36,8 @@ importers:
         specifier: ^3.8.1
         version: 3.8.1
       tryscript:
-        specifier: 0.1.6
-        version: 0.1.6(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9)
+        specifier: 0.1.7
+        version: 0.1.7(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9)
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -1928,6 +1928,19 @@ packages:
 
   tryscript@0.1.6:
     resolution: {integrity: sha512-H8EWv50Klh6s8ScZVXyUobQBESikf8zNVKM9hYf3G+O515AuUkREN7EUBBR6I9fXUuVNRnR26uE+ZSK4FnIuPg==}
+    engines: {node: '>=20'}
+    hasBin: true
+    peerDependencies:
+      c8: '>=10.0.0'
+      monocart-coverage-reports: '>=2.0.0'
+    peerDependenciesMeta:
+      c8:
+        optional: true
+      monocart-coverage-reports:
+        optional: true
+
+  tryscript@0.1.7:
+    resolution: {integrity: sha512-QhD83igAFt1dLE+ElHCv7MOEP4s7wYs5PVc+5IbfjTzr7U2P1gVqvrGGHDJaCDGwwywWg9bJlmoo48nZ7ON31w==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -3893,6 +3906,21 @@ snapshots:
   tree-kill@1.2.2: {}
 
   tryscript@0.1.6(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9):
+    dependencies:
+      atomically: 2.1.0
+      commander: 14.0.3
+      diff: 8.0.3
+      fast-glob: 3.3.3
+      picocolors: 1.1.1
+      strip-ansi: 7.1.2
+      tree-kill: 1.2.2
+      yaml: 2.8.2
+      zod: 3.25.76
+    optionalDependencies:
+      c8: 10.1.3(monocart-coverage-reports@2.12.9)
+      monocart-coverage-reports: 2.12.9
+
+  tryscript@0.1.7(c8@10.1.3(monocart-coverage-reports@2.12.9))(monocart-coverage-reports@2.12.9):
     dependencies:
       atomically: 2.1.0
       commander: 14.0.3
