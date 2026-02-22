@@ -11,7 +11,11 @@ import {
   FillRecordSchema,
   TimelineEntrySchema,
 } from '../../../src/harness/fillRecord.js';
-import type { ProgressCounts, StructureSummary } from '../../../src/engine/coreTypes.js';
+import type {
+  InspectIssue,
+  ProgressCounts,
+  StructureSummary,
+} from '../../../src/engine/coreTypes.js';
 import { VERSION } from '../../../src/version.js';
 import type {
   FillConfigSnapshot,
@@ -1642,6 +1646,174 @@ describe('FillRecordCollector', () => {
 
       const result = CollectorEventSchema.safeParse(invalidEvent);
       expect(result.success).toBe(false);
+    });
+  });
+
+  // ===========================================================================
+  // Phase 2: Per-turn enrichment wiring tests (FR-2, FR-3, FR-5)
+  // ===========================================================================
+
+  describe('per-turn enrichment in timeline', () => {
+    it('stores full PatchRejection details in timeline entry', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 2,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 1,
+        isComplete: false,
+        issues: [],
+        patches: [],
+        rejectedPatches: [
+          { patchIndex: 0, message: 'field not found', fieldId: 'bad_field', fieldKind: 'string' },
+          { patchIndex: 2, message: 'type mismatch' },
+        ],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.rejectedPatches).toHaveLength(2);
+      expect(record.timeline[0]!.rejectedPatches![0]!.fieldId).toBe('bad_field');
+      expect(record.timeline[0]!.rejectedPatches![1]!.message).toBe('type mismatch');
+    });
+
+    it('maps issues to compact issueRefs in timeline entry', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 2,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 1,
+        isComplete: false,
+        issues: [
+          {
+            ref: 'company_name',
+            scope: 'field',
+            severity: 'required',
+            reason: 'required_missing',
+            message: 'Required field is empty',
+          },
+          {
+            ref: 'website',
+            scope: 'field',
+            severity: 'recommended',
+            reason: 'optional_unanswered',
+            message: 'Consider filling this',
+          },
+        ] as unknown as InspectIssue[],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.issueRefs).toHaveLength(2);
+      expect(record.timeline[0]!.issueRefs![0]).toEqual({
+        ref: 'company_name',
+        scope: 'field',
+        severity: 'required',
+        reason: 'required_missing',
+      });
+      expect(record.timeline[0]!.issueRefs![1]).toEqual({
+        ref: 'website',
+        scope: 'field',
+        severity: 'recommended',
+        reason: 'optional_unanswered',
+      });
+    });
+
+    it('stores formProgressSnapshot in timeline entry', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 2,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 2,
+        patchesApplied: 2,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+        formProgressSnapshot: {
+          answeredFields: 3,
+          skippedFields: 0,
+          requiredRemaining: 0,
+          optionalRemaining: 1,
+        },
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.formProgress).toEqual({
+        answeredFields: 3,
+        skippedFields: 0,
+        requiredRemaining: 0,
+        optionalRemaining: 1,
+      });
+    });
+
+    it('omits enrichment fields when not provided', () => {
+      const collector = new FillRecordCollector({
+        form: mockFormMetadata,
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      });
+
+      collector.onTurnStart({
+        turnNumber: 1,
+        issuesCount: 1,
+        order: 0,
+        executionId: 'eid:serial:o0',
+      });
+
+      collector.onTurnComplete({
+        turnNumber: 1,
+        issuesShown: 1,
+        patchesApplied: 1,
+        requiredIssuesRemaining: 0,
+        isComplete: true,
+        issues: [],
+        patches: [],
+        rejectedPatches: [],
+      });
+
+      const record = collector.getRecord(mockProgressCounts);
+      expect(record.timeline[0]!.rejectedPatches).toBeUndefined();
+      expect(record.timeline[0]!.issueRefs).toBeUndefined();
+      expect(record.timeline[0]!.formProgress).toBeUndefined();
+      expect(record.timeline[0]!.patches).toBeUndefined();
     });
   });
 

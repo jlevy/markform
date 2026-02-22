@@ -12,8 +12,15 @@
  * @see docs/project/specs/active/plan-2026-01-29-fill-record.md
  */
 
-import type { PatchWarning, ProgressCounts, StructureSummary } from '../engine/coreTypes.js';
-import type { FillCallbacks, TurnProgress } from './harnessTypes.js';
+import type {
+  InspectIssue,
+  Patch,
+  PatchRejection,
+  PatchWarning,
+  ProgressCounts,
+  StructureSummary,
+} from '../engine/coreTypes.js';
+import type { FillCallbacks, TurnFormProgressSnapshot, TurnProgress } from './harnessTypes.js';
 import type {
   FillRecord,
   FillRecordStatus,
@@ -64,6 +71,10 @@ interface TurnCompleteEvent {
   issuesAddressed: number;
   coercionWarnings?: PatchWarning[];
   executionId?: string;
+  rejectedPatches?: PatchRejection[];
+  formProgress?: TurnFormProgressSnapshot;
+  issueRefs?: { ref: string; scope: string; severity: string; reason: string }[];
+  patches?: Patch[];
 }
 
 interface LlmCallStartEvent {
@@ -240,15 +251,35 @@ export class FillRecordCollector implements FillCallbacks {
 
   onTurnComplete(progress: TurnProgress): void {
     const warnings = progress.coercionWarnings;
+    const rejections = progress.rejectedPatches;
+    const issues = progress.issues;
+    const snapshot = progress.formProgressSnapshot;
+
+    const issueRefs =
+      issues && issues.length > 0
+        ? issues.map((i: InspectIssue) => ({
+            ref: i.ref,
+            scope: i.scope,
+            severity: i.severity,
+            reason: i.reason,
+          }))
+        : undefined;
+
     this.events.push({
       type: 'turn_complete',
       timestamp: currentTime(),
       turnNumber: progress.turnNumber,
       patchesApplied: progress.patchesApplied,
-      patchesRejected: progress.rejectedPatches?.length ?? 0,
+      patchesRejected: rejections?.length ?? 0,
       issuesAddressed: progress.issuesShown,
       ...(warnings && warnings.length > 0 && { coercionWarnings: warnings }),
       executionId: progress.executionId,
+      ...(rejections && rejections.length > 0 && { rejectedPatches: rejections }),
+      ...(snapshot && { formProgress: snapshot }),
+      ...(issueRefs && { issueRefs }),
+      ...(this.recordPatches &&
+        progress.patches &&
+        progress.patches.length > 0 && { patches: progress.patches }),
     });
   }
 
@@ -583,6 +614,19 @@ export class FillRecordCollector implements FillCallbacks {
           ...(completeEvent.coercionWarnings &&
             completeEvent.coercionWarnings.length > 0 && {
               coercionWarnings: completeEvent.coercionWarnings,
+            }),
+          ...(completeEvent.rejectedPatches &&
+            completeEvent.rejectedPatches.length > 0 && {
+              rejectedPatches: completeEvent.rejectedPatches,
+            }),
+          ...(completeEvent.formProgress && { formProgress: completeEvent.formProgress }),
+          ...(completeEvent.issueRefs &&
+            completeEvent.issueRefs.length > 0 && {
+              issueRefs: completeEvent.issueRefs,
+            }),
+          ...(completeEvent.patches &&
+            completeEvent.patches.length > 0 && {
+              patches: completeEvent.patches,
             }),
         };
         turns.set(key, entry);

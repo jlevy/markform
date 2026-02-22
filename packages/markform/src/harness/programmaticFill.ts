@@ -846,6 +846,16 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     if (mergedCallbacks?.onTurnComplete) {
       try {
         const requiredIssues = stepResult.issues.filter((i) => i.severity === 'required');
+
+        // Compute per-turn form progress snapshot
+        const turnCounts = getProgressCounts(form, targetRoles);
+        const formProgressSnapshot = {
+          answeredFields: turnCounts.answeredFields,
+          skippedFields: turnCounts.skippedFields,
+          requiredRemaining: turnCounts.emptyRequiredFields,
+          optionalRemaining: turnCounts.unansweredFields - turnCounts.emptyRequiredFields,
+        };
+
         mergedCallbacks.onTurnComplete({
           turnNumber: turnCount,
           issuesShown: turnIssues.length,
@@ -858,6 +868,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           rejectedPatches: stepResult.rejectedPatches ?? [],
           coercionWarnings: stepResult.coercionWarnings,
           executionId: '0-serial',
+          formProgressSnapshot,
         });
       } catch {
         // Ignore callback errors
@@ -1350,6 +1361,16 @@ async function runMultiTurnForItems(
     try {
       const postInspect = inspect(form, { targetRoles });
       const requiredIssues = postInspect.issues.filter((i) => i.severity === 'required');
+
+      // Compute per-turn form progress snapshot
+      const turnCounts = getProgressCounts(form, targetRoles);
+      const formProgressSnapshot = {
+        answeredFields: turnCounts.answeredFields,
+        skippedFields: turnCounts.skippedFields,
+        requiredRemaining: turnCounts.emptyRequiredFields,
+        optionalRemaining: turnCounts.unansweredFields - turnCounts.emptyRequiredFields,
+      };
+
       mergedCallbacks?.onTurnComplete?.({
         turnNumber: startTurn + turnsUsed,
         issuesShown: scopedIssues.length,
@@ -1362,6 +1383,7 @@ async function runMultiTurnForItems(
         rejectedPatches: previousRejections ?? [],
         coercionWarnings: lastCoercionWarnings,
         executionId,
+        formProgressSnapshot,
       });
     } catch {
       /* ignore */
