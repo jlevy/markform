@@ -42,6 +42,7 @@ import type {
   YearField,
   YearValue,
 } from './coreTypes.js';
+import { isCellEmpty } from './table/parseTable.js';
 
 // =============================================================================
 // Validation Options and Results
@@ -975,15 +976,7 @@ function validateTableRow(
 
   // Check for mostly-empty rows (more than half of cells empty in a non-empty row)
   const totalCells = columns.length;
-  const filledCells = columns.filter((col) => {
-    const cell = row[col.id];
-    return (
-      cell?.state === 'answered' &&
-      cell.value !== undefined &&
-      cell.value !== null &&
-      cell.value !== ''
-    );
-  }).length;
+  const filledCells = columns.filter((col) => !isCellEmpty(row[col.id])).length;
 
   if (filledCells > 0 && filledCells < totalCells && totalCells - filledCells > totalCells / 2) {
     issues.push({
