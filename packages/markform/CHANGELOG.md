@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.28
+
+### Patch Changes
+
+- 753726b: Fill observability, FillRecord enrichment, and table validation improvements
+
 ## 0.1.27
 
 ### Patch Changes
