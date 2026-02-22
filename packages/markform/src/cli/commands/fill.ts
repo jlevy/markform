@@ -805,23 +805,26 @@ export function registerFillCommand(program: Command): void {
               };
             }
 
+            // Capture pre-apply issues (these are what the LLM saw)
+            const preApplyIssues = stepResult.issues;
+
             // Apply patches (with wire format for comprehensive session logging)
             const prevTurnNumber = stepResult.turnNumber;
-            const prevIssuesShown = stepResult.issues.length;
-            stepResult = harness.apply(patches, stepResult.issues, llmStats, context, wire);
+            const prevIssuesShown = preApplyIssues.length;
+            stepResult = harness.apply(patches, preApplyIssues, llmStats, context, wire);
 
             // Record turn completion for FillRecord (fixes mf-mgxo: empty timeline bug)
             const rejectedPatches = stepResult.rejectedPatches ?? [];
             collector.onTurnComplete({
               turnNumber: prevTurnNumber,
               issuesShown: prevIssuesShown,
-              patchesApplied: patches.length - rejectedPatches.length,
+              patchesApplied: stepResult.patchesApplied ?? patches.length,
               requiredIssuesRemaining: stepResult.issues.filter((i) => i.severity === 'required')
                 .length,
               isComplete: stepResult.isComplete,
               rejectedPatches,
               coercionWarnings: stepResult.coercionWarnings,
-              issues: stepResult.issues,
+              issues: preApplyIssues,
               patches,
             });
 

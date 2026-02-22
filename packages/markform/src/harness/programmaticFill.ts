@@ -1333,9 +1333,11 @@ async function runMultiTurnForItems(
 
     // Apply patches
     let lastCoercionWarnings: PatchWarning[] | undefined;
+    let turnPatchesApplied = 0;
     if (response.patches.length > 0) {
       const applyResult = applyPatches(form, response.patches);
-      patchesApplied += applyResult.appliedPatches.length;
+      turnPatchesApplied = applyResult.appliedPatches.length;
+      patchesApplied += turnPatchesApplied;
       previousRejections = applyResult.rejectedPatches;
       lastCoercionWarnings = applyResult.warnings;
     } else {
@@ -1351,7 +1353,7 @@ async function runMultiTurnForItems(
       mergedCallbacks?.onTurnComplete?.({
         turnNumber: startTurn + turnsUsed,
         issuesShown: scopedIssues.length,
-        patchesApplied: response.patches.length,
+        patchesApplied: turnPatchesApplied,
         requiredIssuesRemaining: requiredIssues.length,
         isComplete: postInspect.isComplete,
         stats: response.stats,
