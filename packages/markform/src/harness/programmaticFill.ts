@@ -33,6 +33,7 @@ import {
 } from '../settings.js';
 import { computeProgressSummary, computeStructureSummary } from '../engine/summaries.js';
 import type { ProgressCounts } from '../engine/coreTypes.js';
+import { FILL_RECORD_SCHEMA_VERSION } from './fillRecord.js';
 import type { FillRecord } from './fillRecord.js';
 import { FillRecordCollector } from './fillRecordCollector.js';
 import { createHarness } from './harness.js';
@@ -153,9 +154,6 @@ function getProgressCounts(form: ParsedForm, targetRoles?: string[]): ProgressCo
   return progressSummary.counts;
 }
 
-/** Current FillRecord schema version. Increment on semantic changes. */
-const FILL_RECORD_SCHEMA_VERSION = 1;
-
 /**
  * Build a serializable snapshot of effective (post-default-resolution) FillOptions.
  */
@@ -191,7 +189,7 @@ function createCollectorIfNeeded(
   provider: string,
   model: string,
   extra?: {
-    config?: Record<string, unknown>;
+    config?: FillConfigSnapshot;
     inputFormSha256?: string;
   },
 ): FillRecordCollector | undefined {
@@ -554,15 +552,15 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     provider = options.model.split('/')[0];
   }
 
-  // 3. Compute input form hash before inputContext is applied (captures the template)
+  // 3. Compute input form hash before inputContext is applied
   const inputFormSha256 = sha256(serializeForm(form));
 
-  // 4. Build config snapshot and create collector
+  // 4. Build config snapshot and create collector if recordFill is enabled
   const prefillFieldIds = options.inputContext ? Object.keys(options.inputContext) : undefined;
   const configSnapshot = buildConfigSnapshot(options, prefillFieldIds);
   const modelString = typeof options.model === 'string' ? options.model : 'custom';
   const collector = createCollectorIfNeeded(options, form, provider ?? 'unknown', modelString, {
-    config: configSnapshot as unknown as Record<string, unknown>,
+    config: configSnapshot,
     inputFormSha256,
   });
   const mergedCallbacks = mergeCallbacks(options.callbacks, collector);
@@ -587,7 +585,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     inputContextWarnings = coercionResult.warnings;
   }
 
-  // 7. Check for parallel execution path
+  // 6. Check for parallel execution path
   if (options.enableParallel) {
     const plan = computeExecutionPlan(form);
     if (plan.parallelBatches.length > 0) {
@@ -606,7 +604,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     // No parallel batches — fall through to serial path
   }
 
-  // 8. Create harness + agent (serial path)
+  // 7. Create harness + agent (serial path)
   const maxTurnsTotal = options.maxTurnsTotal ?? DEFAULT_MAX_TURNS;
   const startingTurnNumber = options.startingTurnNumber ?? 0;
   const maxPatchesPerTurn = options.maxPatchesPerTurn ?? DEFAULT_MAX_PATCHES_PER_TURN;
@@ -641,7 +639,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       ...(options.maxRetries !== undefined && { maxRetries: options.maxRetries }),
     });
 
-  // 7. Run harness loop
+  // 8. Run harness loop
   let turnCount = startingTurnNumber;
   let turnsThisCall = 0;
   let stepResult = harness.step();
@@ -881,7 +879,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
     }
   }
 
-  // 8. Determine final status and finalize record
+  // 9. Determine final status and finalize record
   const finalProgressCounts = getProgressCounts(form, targetRoles);
 
   if (stepResult.isComplete) {

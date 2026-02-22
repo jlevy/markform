@@ -32,7 +32,11 @@ import type {
 } from '../../engine/coreTypes.js';
 import type { TurnProgress } from '../../harness/harnessTypes.js';
 import { FillRecordCollector } from '../../harness/fillRecordCollector.js';
-import { isEmptyFillRecord, stripUnstableFillRecordFields } from '../../harness/fillRecord.js';
+import {
+  FILL_RECORD_SCHEMA_VERSION,
+  isEmptyFillRecord,
+  stripUnstableFillRecordFields,
+} from '../../harness/fillRecord.js';
 import { formatFillRecordSummary } from '../../harness/formatFillRecordSummary.js';
 import { createHarness } from '../../harness/harness.js';
 import { resolveHarnessConfig } from '../../harness/harnessConfigResolver.js';
@@ -78,6 +82,8 @@ import {
 import { formatPatchValue, formatPatchType } from '../lib/patchFormat.js';
 import { formatTurnIssues } from '../lib/formatting.js';
 import { inspect } from '../../engine/inspect.js';
+import { VERSION } from '../../version.js';
+import { sha256 } from 'js-sha256';
 import { applyPatches } from '../../engine/apply.js';
 import { createCliToolCallbacks } from '../lib/fillCallbacks.js';
 
@@ -531,6 +537,9 @@ export function registerFillCommand(program: Command): void {
               model: 'mock',
               parallelEnabled: false,
               recordPatches: options.recordPatches,
+              markformVersion: VERSION,
+              inputFormSha256: sha256(serializeForm(form)),
+              fillRecordSchemaVersion: FILL_RECORD_SCHEMA_VERSION,
             });
           } else {
             // Live agent uses LLM (model is required, validated above)
@@ -555,6 +564,9 @@ export function registerFillCommand(program: Command): void {
               model: modelIdString,
               parallelEnabled: false,
               recordPatches: options.recordPatches,
+              markformVersion: VERSION,
+              inputFormSha256: sha256(serializeForm(form)),
+              fillRecordSchemaVersion: FILL_RECORD_SCHEMA_VERSION,
             });
 
             // Determine system prompt: --instructions > --prompt > default
@@ -820,6 +832,24 @@ export function registerFillCommand(program: Command): void {
 
             // Record turn completion for FillRecord (fixes mf-mgxo: empty timeline bug)
             const rejectedPatches = stepResult.rejectedPatches ?? [];
+
+            // Compute per-turn form progress snapshot
+            const currentForm = harness.getForm();
+            const postApplyInspect = inspect(currentForm, { targetRoles });
+            const postApplyProgress = computeProgressSummary(
+              currentForm.schema,
+              currentForm.responsesByFieldId,
+              currentForm.notes,
+              postApplyInspect.issues,
+            );
+            const turnCounts = postApplyProgress.counts;
+            const formProgressSnapshot = {
+              answeredFields: turnCounts.answeredFields,
+              skippedFields: turnCounts.skippedFields,
+              requiredRemaining: turnCounts.emptyRequiredFields,
+              optionalRemaining: turnCounts.unansweredFields - turnCounts.emptyRequiredFields,
+            };
+
             collector.onTurnComplete({
               turnNumber: prevTurnNumber,
               issuesShown: prevIssuesShown,
@@ -831,6 +861,7 @@ export function registerFillCommand(program: Command): void {
               coercionWarnings: stepResult.coercionWarnings,
               issues: preApplyIssues,
               patches,
+              formProgressSnapshot,
             });
 
             // Track rejections for next turn's wire format context

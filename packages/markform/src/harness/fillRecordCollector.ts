@@ -20,7 +20,12 @@ import type {
   ProgressCounts,
   StructureSummary,
 } from '../engine/coreTypes.js';
-import type { FillCallbacks, TurnFormProgressSnapshot, TurnProgress } from './harnessTypes.js';
+import type {
+  FillCallbacks,
+  FillConfigSnapshot,
+  TurnFormProgressSnapshot,
+  TurnProgress,
+} from './harnessTypes.js';
 import type {
   FillRecord,
   FillRecordStatus,
@@ -161,7 +166,7 @@ export interface FillRecordCollectorOptions {
   /** Custom data to include in record */
   customData?: Record<string, unknown>;
   /** Effective (resolved) FillOptions config snapshot */
-  config?: Record<string, unknown>;
+  config?: FillConfigSnapshot;
   /** Markform library version */
   markformVersion?: string;
   /** SHA-256 of the input form markdown */
@@ -192,7 +197,7 @@ export class FillRecordCollector implements FillCallbacks {
   private readonly parallelEnabled: boolean;
   private readonly maxParallelAgents?: number;
   private customData: Record<string, unknown>;
-  private readonly config?: Record<string, unknown>;
+  private readonly config?: FillConfigSnapshot;
   private readonly markformVersion?: string;
   private readonly inputFormSha256?: string;
   private readonly fillRecordSchemaVersion?: number;

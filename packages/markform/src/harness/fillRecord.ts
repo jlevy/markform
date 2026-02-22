@@ -108,6 +108,26 @@ export const ToolCallRecordSchema = z.object({
 export type ToolCallRecord = z.infer<typeof ToolCallRecordSchema>;
 
 // =============================================================================
+// Shared Enrichment Schemas (used in TimelineEntry and EventTurnComplete)
+// =============================================================================
+
+/** Per-turn snapshot of form progress after patches are applied. */
+const FormProgressSnapshotSchema = z.object({
+  answeredFields: z.number().int().nonnegative(),
+  skippedFields: z.number().int().nonnegative(),
+  requiredRemaining: z.number().int().nonnegative(),
+  optionalRemaining: z.number().int().nonnegative(),
+});
+
+/** Compact reference to an issue shown to the LLM. */
+const IssueRefSchema = z.object({
+  ref: z.string(),
+  scope: z.string(),
+  severity: z.string(),
+  reason: z.string(),
+});
+
+// =============================================================================
 // Timeline Entry Schema
 // =============================================================================
 
@@ -166,28 +186,12 @@ export const TimelineEntrySchema = z.object({
   /** Coercion warnings from patch normalization (e.g., string auto-wrapped to array) */
   coercionWarnings: z.array(PatchWarningSchema).optional(),
 
-  /** Full rejection details (replaces count-only patchesRejected for debugging) */
+  /** Full rejection details (supplements count-only patchesRejected with debugging info) */
   rejectedPatches: z.array(PatchRejectionSchema).optional(),
   /** Per-turn form progress snapshot (after patches applied) */
-  formProgress: z
-    .object({
-      answeredFields: z.number().int().nonnegative(),
-      skippedFields: z.number().int().nonnegative(),
-      requiredRemaining: z.number().int().nonnegative(),
-      optionalRemaining: z.number().int().nonnegative(),
-    })
-    .optional(),
+  formProgress: FormProgressSnapshotSchema.optional(),
   /** Compact issue refs shown to the LLM this turn */
-  issueRefs: z
-    .array(
-      z.object({
-        ref: z.string(),
-        scope: z.string(),
-        severity: z.string(),
-        reason: z.string(),
-      }),
-    )
-    .optional(),
+  issueRefs: z.array(IssueRefSchema).optional(),
   /** Raw patches submitted by the LLM (opt-in via recordPatches) */
   patches: z.array(PatchSchema).optional(),
 });
@@ -312,24 +316,8 @@ const EventTurnCompleteSchema = z.object({
   coercionWarnings: z.array(PatchWarningSchema).optional(),
   executionId: z.string().optional(),
   rejectedPatches: z.array(PatchRejectionSchema).optional(),
-  formProgress: z
-    .object({
-      answeredFields: z.number().int().nonnegative(),
-      skippedFields: z.number().int().nonnegative(),
-      requiredRemaining: z.number().int().nonnegative(),
-      optionalRemaining: z.number().int().nonnegative(),
-    })
-    .optional(),
-  issueRefs: z
-    .array(
-      z.object({
-        ref: z.string(),
-        scope: z.string(),
-        severity: z.string(),
-        reason: z.string(),
-      }),
-    )
-    .optional(),
+  formProgress: FormProgressSnapshotSchema.optional(),
+  issueRefs: z.array(IssueRefSchema).optional(),
   patches: z.array(PatchSchema).optional(),
 });
 
@@ -401,6 +389,9 @@ export const CollectorEventSchema = z.discriminatedUnion('type', [
 export const FillRecordStatusSchema = z.enum(['completed', 'partial', 'failed', 'cancelled']);
 
 export type FillRecordStatus = z.infer<typeof FillRecordStatusSchema>;
+
+/** Current FillRecord schema version. Increment on semantic changes to FillRecord format. */
+export const FILL_RECORD_SCHEMA_VERSION = 1;
 
 // =============================================================================
 // Fill Config Schema

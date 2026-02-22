@@ -392,6 +392,7 @@ export type {
   ExecutionMetadata,
 } from './harness/fillRecord.js';
 export {
+  FILL_RECORD_SCHEMA_VERSION,
   FillConfigSchema,
   FillRecordSchema,
   FillRecordStatusSchema,
