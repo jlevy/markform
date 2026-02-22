@@ -3,9 +3,9 @@ type: is
 id: is-01kj1btjkz8gebb54dxynv081e
 title: "Fix: patchesApplied inflation in parallel path + wrong issues in CLI serial path"
 kind: bug
-status: open
+status: closed
 priority: 1
-version: 2
+version: 4
 spec_path: docs/project/specs/active/plan-2026-02-21-fill-record-comprehensive-source-of-truth.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01kj1avqsvvs91f3basxqme7qh
 parent_id: is-01kj166gy9tgxd8203jhdfy7kp
 created_at: 2026-02-22T00:26:09.405Z
-updated_at: 2026-02-22T00:26:14.226Z
+updated_at: 2026-02-22T00:42:43.723Z
+closed_at: 2026-02-22T00:42:43.721Z
+close_reason: Fixed patchesApplied inflation in parallel path (used appliedPatches.length) and pre-apply issues capture in CLI serial path
 ---
 Fix two data accuracy bugs in the fill record pipeline found during spec review.
 

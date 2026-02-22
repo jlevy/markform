@@ -3,9 +3,9 @@ type: is
 id: is-01kj1aw076g0mmng7b7ymzzj9z
 title: "Phase 3: Opt-in raw patches (FR-4)"
 kind: task
-status: open
+status: closed
 priority: 2
-version: 3
+version: 5
 spec_path: docs/project/specs/active/plan-2026-02-21-fill-record-comprehensive-source-of-truth.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01kj1awa9t9kts22gast5qh5zk
 parent_id: is-01kj166gy9tgxd8203jhdfy7kp
 created_at: 2026-02-22T00:09:27.524Z
-updated_at: 2026-02-22T00:25:29.782Z
+updated_at: 2026-02-22T00:48:11.602Z
+closed_at: 2026-02-22T00:48:11.601Z
+close_reason: Added --record-patches CLI flag and wired recordPatches through parallel and serial paths
 ---
 Add opt-in capture of raw Patch[] submitted by LLM each turn.
 Reference: plan-2026-02-21-fill-record-comprehensive-source-of-truth.md, FR-4.

@@ -3,9 +3,9 @@ type: is
 id: is-01kj1av0s0tnpnqb314qmgabwk
 title: "Phase 1a: Types, schema, and version foundation"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 4
+version: 6
 spec_path: docs/project/specs/active/plan-2026-02-21-fill-record-comprehensive-source-of-truth.md
 labels: []
 dependencies:
@@ -15,7 +15,9 @@ dependencies:
     target: is-01kj1btjkz8gebb54dxynv081e
 parent_id: is-01kj166gy9tgxd8203jhdfy7kp
 created_at: 2026-02-22T00:08:55.326Z
-updated_at: 2026-02-22T00:26:14.079Z
+updated_at: 2026-02-22T00:37:54.155Z
+closed_at: 2026-02-22T00:37:54.154Z
+close_reason: "Implemented: version.ts, FillConfigSnapshot, TurnFormProgressSnapshot, FillConfigSchema, schema enrichment fields, sessionId fix"
 ---
 Foundation for all FRs. Reference: plan-2026-02-21-fill-record-comprehensive-source-of-truth.md
 

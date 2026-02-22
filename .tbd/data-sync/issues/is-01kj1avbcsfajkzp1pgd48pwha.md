@@ -3,9 +3,9 @@ type: is
 id: is-01kj1avbcsfajkzp1pgd48pwha
 title: "Phase 1b: Config snapshot + provenance wiring (FR-1, FR-6)"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 3
+version: 5
 spec_path: docs/project/specs/active/plan-2026-02-21-fill-record-comprehensive-source-of-truth.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01kj1avqsvvs91f3basxqme7qh
 parent_id: is-01kj166gy9tgxd8203jhdfy7kp
 created_at: 2026-02-22T00:09:06.199Z
-updated_at: 2026-02-22T00:24:37.736Z
+updated_at: 2026-02-22T00:41:15.362Z
+closed_at: 2026-02-22T00:41:15.361Z
+close_reason: Wired config snapshot + provenance (markformVersion, inputFormSha256, fillRecordSchemaVersion, effective config) into FillRecordCollector and programmaticFill
 ---
 Wire config snapshot and provenance into collector and fill paths.
 Reference: plan-2026-02-21-fill-record-comprehensive-source-of-truth.md, FR-1 and FR-6.

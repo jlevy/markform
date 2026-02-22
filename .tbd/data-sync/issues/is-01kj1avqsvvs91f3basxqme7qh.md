@@ -3,9 +3,9 @@ type: is
 id: is-01kj1avqsvvs91f3basxqme7qh
 title: "Phase 2: Per-turn enrichment wiring (FR-2, FR-3, FR-5)"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 3
+version: 5
 spec_path: docs/project/specs/active/plan-2026-02-21-fill-record-comprehensive-source-of-truth.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01kj1aw076g0mmng7b7ymzzj9z
 parent_id: is-01kj166gy9tgxd8203jhdfy7kp
 created_at: 2026-02-22T00:09:18.905Z
-updated_at: 2026-02-22T00:25:10.577Z
+updated_at: 2026-02-22T00:46:00.996Z
+closed_at: 2026-02-22T00:46:00.994Z
+close_reason: "Wired per-turn enrichment: full PatchRejection, issueRefs, formProgressSnapshot, and conditional patches in collector and both serial/parallel paths"
 ---
 Wire per-turn rejection details, form progress snapshots, and issue refs into collector and fill paths.
 Reference: plan-2026-02-21-fill-record-comprehensive-source-of-truth.md, FR-2, FR-3, FR-5.
