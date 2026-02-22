@@ -1780,6 +1780,41 @@ markform:
       expect(output).toContain('Data unavailable');
     });
 
+    it('round-trips table with empty rows dropped', () => {
+      const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+{% group id="g1" %}
+{% field kind="table" id="data" label="Data" columnIds=["name", "role"] columnTypes=["string", "string"] %}
+| Name | Role |
+| --- | --- |
+| Alice | Eng |
+|       |     |
+| Bob   | PM  |
+|       |     |
+{% /field %}
+{% /group %}
+{% /form %}
+`;
+      const parsed = parseForm(markdown);
+      const tableVal = parsed.responsesByFieldId.data?.value;
+      if (tableVal?.kind === 'table') {
+        expect(tableVal.rows).toHaveLength(2);
+      }
+
+      const output = serializeForm(parsed);
+      const reparsed = parseForm(output);
+      const reVal = reparsed.responsesByFieldId.data?.value;
+      if (reVal?.kind === 'table') {
+        expect(reVal.rows).toHaveLength(2);
+        expect(reVal.rows[0]?.name?.value).toBe('Alice');
+        expect(reVal.rows[1]?.name?.value).toBe('Bob');
+      }
+    });
+
     it('round-trips specVersion override', () => {
       const markdown = `---
 markform:

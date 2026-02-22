@@ -415,8 +415,13 @@ Structured tabular data with typed columns. Uses standard markdown table syntax.
 | `columnIds` | string[] | Yes | Array of snake_case column identifiers |
 | `columnLabels` | string[] | No | Display labels (defaults to header row) |
 | `columnTypes` | (string \| object)[] | No | Column types with optional constraints (defaults to all `string`) |
-| `minRows` | number | No | Minimum row count (default: 0) |
-| `maxRows` | number | No | Maximum row count (default: unlimited) |
+| `minRows` | number | No | Minimum number of non-empty rows (default: 0) |
+| `maxRows` | number | No | Maximum number of non-empty rows (default: unlimited) |
+
+**Empty row handling:** Fully-empty rows (where every cell is empty or skipped) are
+silently dropped during normalization.
+They are never counted toward `minRows`/`maxRows` and do not appear in parsed output.
+A row with at least one non-empty cell is retained.
 
 **Column types:**
 
@@ -444,6 +449,10 @@ Structured tabular data with typed columns. Uses standard markdown table syntax.
 | `enum` | `string` | Allowed values (controlled vocabulary) |
 | `min` / `max` | `number`, `year`, `date` | Value bounds |
 | `integer` | `number` | Must be integer |
+
+**Row sparseness warning:** When a non-empty row has the majority of its cells empty
+(strictly more than half), a validation warning is emitted.
+This helps catch cases where an agent produced sparse or incomplete data.
 
 **Sentinel values in cells:** Use `%SKIP%` or `%ABORT%` with optional reasons:
 

@@ -137,6 +137,26 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
 }
 
 // =============================================================================
+// Empty Row Detection
+// =============================================================================
+
+/**
+ * Check if a table row is fully empty (all cells skipped/empty).
+ * Used during normalization to drop rows that carry no data.
+ *
+ * Aborted cells are NOT considered empty — they carry intentional signal
+ * (the agent explicitly declined to fill them, possibly with a reason).
+ */
+export function isRowFullyEmpty(row: TableRowResponse): boolean {
+  return Object.values(row).every((cell) => {
+    if (!cell || cell.state === 'skipped') return true;
+    if (cell.state === 'aborted') return false;
+    // 'answered' cell with no meaningful value
+    return cell.value === undefined || cell.value === null || cell.value === '';
+  });
+}
+
+// =============================================================================
 // Raw Table Parsing
 // =============================================================================
 
@@ -311,7 +331,8 @@ export function parseMarkdownTable(
       rows.push(row);
     }
 
-    return { ok: true, value: { kind: 'table', rows } };
+    const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+    return { ok: true, value: { kind: 'table', rows: substantiveRows } };
   }
 
   // Build column ID to index mapping from headers (for inline column parsing)
@@ -344,7 +365,8 @@ export function parseMarkdownTable(
     rows.push(row);
   }
 
-  return { ok: true, value: { kind: 'table', rows } };
+  const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+  return { ok: true, value: { kind: 'table', rows: substantiveRows } };
 }
 
 /**
@@ -556,5 +578,6 @@ export function parseInlineTable(content: string): ParseTableResult {
     rows.push(row);
   }
 
-  return { ok: true, value: { kind: 'table', rows } };
+  const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+  return { ok: true, value: { kind: 'table', rows: substantiveRows } };
 }
