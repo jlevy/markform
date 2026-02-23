@@ -137,6 +137,38 @@ export function parseCellValue(rawValue: string, columnType: ColumnTypeName): Ce
 }
 
 // =============================================================================
+// Empty Cell Detection
+// =============================================================================
+
+/**
+ * Check if a single cell is empty.
+ * Used by both row normalization and validation to ensure consistent logic.
+ *
+ * - Skipped cells are empty
+ * - Aborted cells are NOT empty (they carry intentional signal)
+ * - Answered cells are empty only if value is undefined/null/empty string
+ * - Unknown states are treated conservatively as NOT empty
+ */
+export function isCellEmpty(cell: CellResponse | undefined): boolean {
+  if (!cell || cell.state === 'skipped') return true;
+  if (cell.state === 'aborted') return false;
+  // Only 'answered' cells can be empty based on value check
+  if (cell.state === 'answered') {
+    return cell.value === undefined || cell.value === null || cell.value === '';
+  }
+  // Unknown state - treat conservatively as NOT empty
+  return false;
+}
+
+/**
+ * Check if a table row is fully empty (all cells skipped/empty).
+ * Used during normalization to drop rows that carry no data.
+ */
+export function isRowFullyEmpty(row: TableRowResponse): boolean {
+  return Object.values(row).every(isCellEmpty);
+}
+
+// =============================================================================
 // Raw Table Parsing
 // =============================================================================
 
@@ -311,7 +343,8 @@ export function parseMarkdownTable(
       rows.push(row);
     }
 
-    return { ok: true, value: { kind: 'table', rows } };
+    const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+    return { ok: true, value: { kind: 'table', rows: substantiveRows } };
   }
 
   // Build column ID to index mapping from headers (for inline column parsing)
@@ -344,7 +377,8 @@ export function parseMarkdownTable(
     rows.push(row);
   }
 
-  return { ok: true, value: { kind: 'table', rows } };
+  const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+  return { ok: true, value: { kind: 'table', rows: substantiveRows } };
 }
 
 /**
@@ -556,5 +590,6 @@ export function parseInlineTable(content: string): ParseTableResult {
     rows.push(row);
   }
 
-  return { ok: true, value: { kind: 'table', rows } };
+  const substantiveRows = rows.filter((r) => !isRowFullyEmpty(r));
+  return { ok: true, value: { kind: 'table', rows: substantiveRows } };
 }

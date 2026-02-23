@@ -583,6 +583,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       maxStepsPerTurn: options.maxStepsPerTurn,
       toolChoice: options.toolChoice,
       signal: options.signal,
+      maxRetries: options.maxRetries,
     });
 
   // 7. Run harness loop
@@ -898,6 +899,7 @@ async function fillFormParallel(
         executionId,
         toolChoice: options.toolChoice,
         signal: options.signal,
+        maxRetries: options.maxRetries,
       })
     );
   };

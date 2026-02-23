@@ -10,10 +10,45 @@ import {
   parseMarkdownTable,
   extractColumnsFromTable,
   parseInlineTable,
+  isRowFullyEmpty,
+  isCellEmpty,
 } from '../../../src/engine/table/parseTable.js';
-import type { TableColumn, ColumnTypeName } from '../../../src/engine/coreTypes.js';
+import type {
+  TableColumn,
+  ColumnTypeName,
+  TableRowResponse,
+} from '../../../src/engine/coreTypes.js';
 
 describe('parseTable', () => {
+  describe('isCellEmpty', () => {
+    it('returns true for undefined cell', () => {
+      expect(isCellEmpty(undefined)).toBe(true);
+    });
+
+    it('returns true for skipped cell', () => {
+      expect(isCellEmpty({ state: 'skipped' })).toBe(true);
+    });
+
+    it('returns false for aborted cell', () => {
+      expect(isCellEmpty({ state: 'aborted' })).toBe(false);
+    });
+
+    it('returns true for answered cell with empty value', () => {
+      expect(isCellEmpty({ state: 'answered', value: '' })).toBe(true);
+      expect(isCellEmpty({ state: 'answered', value: undefined })).toBe(true);
+      expect(isCellEmpty({ state: 'answered', value: null as any })).toBe(true);
+    });
+
+    it('returns false for answered cell with meaningful value', () => {
+      expect(isCellEmpty({ state: 'answered', value: 'test' })).toBe(false);
+      expect(isCellEmpty({ state: 'answered', value: 0 })).toBe(false);
+    });
+
+    it('returns false for unknown state (conservative)', () => {
+      expect(isCellEmpty({ state: 'unknown' as any })).toBe(false);
+    });
+  });
+
   describe('parseCellValue', () => {
     // [rawValue, columnType, expectedState, expectedValue]
     type CellCase = [
@@ -416,6 +451,142 @@ describe('parseTable', () => {
         expect(result.columns).toHaveLength(2);
         // Data rows start at line 2 (0-indexed from filtered lines)
         expect(result.dataStartLine).toBe(2);
+      }
+    });
+  });
+
+  describe('isRowFullyEmpty', () => {
+    const EMPTY_ROWS: [string, TableRowResponse][] = [
+      ['all skipped', { name: { state: 'skipped' }, age: { state: 'skipped' } }],
+      ['empty object', {}],
+      [
+        'answered with empty values',
+        { name: { state: 'answered', value: '' }, age: { state: 'answered', value: undefined } },
+      ],
+    ];
+
+    for (const [label, row] of EMPTY_ROWS) {
+      it(`returns true: ${label}`, () => {
+        expect(isRowFullyEmpty(row)).toBe(true);
+      });
+    }
+
+    it('returns false when any cell has a value', () => {
+      expect(
+        isRowFullyEmpty({ name: { state: 'answered', value: 'Alice' }, age: { state: 'skipped' } }),
+      ).toBe(false);
+    });
+
+    it('returns false for numeric zero (falsy but meaningful)', () => {
+      expect(isRowFullyEmpty({ score: { state: 'answered', value: 0 } })).toBe(false);
+    });
+
+    it('returns false for all-aborted row (aborted carries intentional signal)', () => {
+      expect(isRowFullyEmpty({ name: { state: 'aborted' }, age: { state: 'aborted' } })).toBe(
+        false,
+      );
+    });
+
+    it('returns false for mixed skipped/aborted row', () => {
+      expect(isRowFullyEmpty({ name: { state: 'skipped' }, age: { state: 'aborted' } })).toBe(
+        false,
+      );
+    });
+
+    it('treats malformed cell with unknown state conservatively (not empty)', () => {
+      // Simulate a malformed/corrupted cell with an unexpected state
+      // This should be treated as NOT empty (conservative approach)
+      const malformedRow = {
+        name: { state: 'unknown' as any, value: 'test' },
+      };
+      expect(isRowFullyEmpty(malformedRow)).toBe(false);
+    });
+
+    it('treats malformed cell with unknown state and no value conservatively (not empty)', () => {
+      // Even with no value, unknown state should be treated conservatively
+      const malformedRow = {
+        name: { state: 'unknown' as any, value: undefined },
+      };
+      expect(isRowFullyEmpty(malformedRow)).toBe(false);
+    });
+  });
+
+  describe('empty row filtering in parseMarkdownTable', () => {
+    const COLUMNS: TableColumn[] = [
+      { id: 'name', label: 'Name', type: 'string', required: false },
+      { id: 'age', label: 'Age', type: 'number', required: false },
+    ];
+
+    it('drops all-empty rows', () => {
+      const content = `
+| Name | Age |
+|------|-----|
+|      |     |
+|      |     |`;
+      const result = parseMarkdownTable(content, COLUMNS);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.rows).toHaveLength(0);
+      }
+    });
+
+    it('retains filled rows and drops empty ones', () => {
+      const content = `
+| Name | Age |
+|------|-----|
+| Alice | 30 |
+|       |    |
+| Bob   | 25 |`;
+      const result = parseMarkdownTable(content, COLUMNS);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.rows).toHaveLength(2);
+        expect(result.value.rows[0]?.name?.value).toBe('Alice');
+        expect(result.value.rows[1]?.name?.value).toBe('Bob');
+      }
+    });
+
+    it('drops rows with all %SKIP% sentinels', () => {
+      const content = `
+| Name | Age |
+|------|-----|
+| %SKIP% | %SKIP% |
+| Alice  | 30     |`;
+      const result = parseMarkdownTable(content, COLUMNS);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.rows).toHaveLength(1);
+        expect(result.value.rows[0]?.name?.value).toBe('Alice');
+      }
+    });
+
+    it('retains row with at least one filled cell', () => {
+      const content = `
+| Name | Age |
+|------|-----|
+| Alice |    |`;
+      const result = parseMarkdownTable(content, COLUMNS);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.rows).toHaveLength(1);
+        expect(result.value.rows[0]?.name?.value).toBe('Alice');
+      }
+    });
+  });
+
+  describe('empty row filtering in parseInlineTable', () => {
+    it('drops empty rows from inline tables', () => {
+      const content = `
+| Name | Age |
+|------|-----|
+|      |     |
+| Alice | 30 |
+|      |     |`;
+      const result = parseInlineTable(content);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.rows).toHaveLength(1);
+        expect(result.value.rows[0]?.name?.value).toBe('Alice');
       }
     });
   });
