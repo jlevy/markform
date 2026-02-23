@@ -583,7 +583,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       maxStepsPerTurn: options.maxStepsPerTurn,
       toolChoice: options.toolChoice,
       signal: options.signal,
-      ...(options.maxRetries !== undefined && { maxRetries: options.maxRetries }),
+      maxRetries: options.maxRetries,
     });
 
   // 7. Run harness loop
@@ -901,7 +901,7 @@ async function fillFormParallel(
         executionId,
         toolChoice: options.toolChoice,
         signal: options.signal,
-        ...(options.maxRetries !== undefined && { maxRetries: options.maxRetries }),
+        maxRetries: options.maxRetries,
       })
     );
   };
@@ -1274,6 +1274,19 @@ async function runMultiTurnForItems(
           errorCode,
         },
       };
+    }
+
+    // Call onPatchesGenerated callback (after agent, before applying)
+    if (mergedCallbacks?.onPatchesGenerated) {
+      try {
+        mergedCallbacks.onPatchesGenerated({
+          turnNumber: startTurn + turnsUsed + 1,
+          patches: response.patches,
+          stats: response.stats,
+        });
+      } catch (cbError) {
+        warnCallbackError('onPatchesGenerated', cbError);
+      }
     }
 
     // Apply patches

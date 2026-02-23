@@ -79,6 +79,7 @@ export async function runResearch(
     targetRole: config.targetRoles?.[0] ?? AGENT_ROLE,
     enableWebSearch: options.enableWebSearch,
     additionalTools: options.additionalTools,
+    maxRetries: options.maxRetries,
   });
 
   // Get available tools for logging

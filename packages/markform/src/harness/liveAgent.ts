@@ -24,12 +24,7 @@ import type {
 } from '../engine/coreTypes.js';
 import { PatchSchema } from '../engine/coreTypes.js';
 import { serializeForm } from '../engine/serialize.js';
-import {
-  DEFAULT_ROLE_INSTRUCTIONS,
-  AGENT_ROLE,
-  DEFAULT_MAX_STEPS_PER_TURN,
-  DEFAULT_MAX_RETRIES,
-} from '../settings.js';
+import { DEFAULT_ROLE_INSTRUCTIONS, AGENT_ROLE, DEFAULT_MAX_STEPS_PER_TURN } from '../settings.js';
 import { getWebSearchConfig } from '../llms.js';
 import { wrapApiError } from '../errors.js';
 import type {
@@ -85,7 +80,7 @@ export class LiveAgent implements Agent {
     this.additionalTools = config.additionalTools ?? {};
     this.callbacks = config.callbacks;
     this.executionId = config.executionId ?? '0-serial';
-    this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
+    this.maxRetries = config.maxRetries;
     this.signal = config.signal;
     // TODO: Make toolChoice configurable per-model or per-form in the future.
     // For now, 'required' is always safe since Markform agents must use tools.

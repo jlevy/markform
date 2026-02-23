@@ -107,6 +107,7 @@ describe('Session Replay Integration', () => {
         form: formContent,
         model: mockModel,
         enableWebSearch: false,
+        maxRetries: 0,
         maxTurnsTotal: session.turns.length,
         maxPatchesPerTurn: 20,
         maxIssuesPerTurn: 20,
