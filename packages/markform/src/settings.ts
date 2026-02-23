@@ -230,6 +230,16 @@ export const DEFAULT_MAX_PARALLEL_AGENTS = 4;
  */
 export const DEFAULT_MAX_STEPS_PER_TURN = 20;
 
+/**
+ * Default maximum retries for transient API errors in CLI commands.
+ *
+ * This is the single source of truth for the CLI retry default.
+ * The Vercel AI SDK's own default is 2; we use 3 for slightly more resilience
+ * in CLI usage. The TypeScript API (`FillOptions`, `LiveAgentConfig`) has no
+ * default — callers must provide `maxRetries` explicitly.
+ */
+export const CLI_DEFAULT_MAX_RETRIES = 3;
+
 // =============================================================================
 // Research Defaults
 // =============================================================================

@@ -34,6 +34,7 @@ import { parseForm } from '../src/engine/parse.js';
 import { serializeSession } from '../src/engine/session.js';
 import type { SessionTranscript, SessionTurn, Patch } from '../src/engine/coreTypes.js';
 import { createMarkformTools, MarkformSessionStore } from '../src/integrations/vercelAiSdkTools.js';
+import { CLI_DEFAULT_MAX_RETRIES } from '../src/settings.js';
 
 // Get the directory of this script
 const __filename = fileURLToPath(import.meta.url);
@@ -352,7 +353,7 @@ If a field asks for specific format (email, date, etc.), use the correct format.
         prompt,
         tools: tools as unknown as Parameters<typeof generateText>[0]['tools'],
         maxSteps: 5,
-        maxRetries: 3,
+        maxRetries: CLI_DEFAULT_MAX_RETRIES,
       } as Parameters<typeof generateText>[0]);
 
       console.log(`Model response: ${result.text || '(tool calls only)'}`);

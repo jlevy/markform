@@ -179,6 +179,11 @@ describe('maxRetries is required (no default)', () => {
     const agent = createLiveAgent(config);
     expect(agent).toBeDefined();
   });
+
+  it('CLI_DEFAULT_MAX_RETRIES is the single source for CLI retry default', async () => {
+    const { CLI_DEFAULT_MAX_RETRIES } = await import('../../../src/settings.js');
+    expect(CLI_DEFAULT_MAX_RETRIES).toBe(3);
+  });
 });
 
 describe('wrapToolsWithCallbacks', () => {

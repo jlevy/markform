@@ -22,6 +22,7 @@ import {
 } from '../../llms.js';
 import {
   AGENT_ROLE,
+  CLI_DEFAULT_MAX_RETRIES,
   DEFAULT_MAX_TURNS,
   DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN,
   DEFAULT_RESEARCH_MAX_PATCHES_PER_TURN,
@@ -77,6 +78,11 @@ export function registerResearchCommand(program: Command): void {
       '--max-issues <n>',
       `Maximum issues per turn (default: ${DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN})`,
       String(DEFAULT_RESEARCH_MAX_ISSUES_PER_TURN),
+    )
+    .option(
+      '--max-retries <n>',
+      `Maximum retries for transient API errors (default: ${CLI_DEFAULT_MAX_RETRIES})`,
+      String(CLI_DEFAULT_MAX_RETRIES),
     )
     .option('--transcript', 'Save session transcript')
     .action(async (input: string, options: Record<string, unknown>, cmd: Command) => {
@@ -158,6 +164,7 @@ export function registerResearchCommand(program: Command): void {
         const maxTurns = parseInt(options.maxTurns as string, 10);
         const maxPatchesPerTurn = parseInt(options.maxPatches as string, 10);
         const maxIssuesPerTurn = parseInt(options.maxIssues as string, 10);
+        const maxRetries = parseInt(options.maxRetries as string, 10);
 
         // Log research start
         logInfo(ctx, `Research fill with model: ${modelId}`);
@@ -184,7 +191,7 @@ export function registerResearchCommand(program: Command): void {
             enableWebSearch: true,
             captureWireFormat: false,
             recordFill: false,
-            maxRetries: 3,
+            maxRetries,
             maxTurnsTotal: maxTurns,
             maxPatchesPerTurn,
             maxIssuesPerTurn,
