@@ -47,6 +47,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
         inputContext: {
@@ -98,6 +99,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
         inputContext: {
@@ -142,6 +144,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
         inputContext: {
@@ -183,6 +186,7 @@ describe('programmatic fill API - integration tests', () => {
         form: 'not a valid markform document',
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
       });
@@ -201,6 +205,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'nonexistent/provider-model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
       });
@@ -222,6 +227,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
         inputContext: {
@@ -259,6 +265,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
         inputContext: {
@@ -316,6 +323,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
         inputContext: {
@@ -371,6 +379,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -407,6 +416,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: false,
         inputContext: {
@@ -445,6 +455,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -496,6 +507,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -539,6 +551,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -584,6 +597,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -625,6 +639,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -671,6 +686,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -719,6 +735,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -771,6 +788,7 @@ describe('programmatic fill API - integration tests', () => {
         form: emptyForm,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         recordFill: true,
         inputContext: {
@@ -907,6 +925,7 @@ Strong company
         form: PARALLEL_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         enableParallel: true,
         recordFill: true,
@@ -946,6 +965,7 @@ Strong company
         form: PARALLEL_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         enableParallel: true,
         recordFill: true,
@@ -992,6 +1012,7 @@ Strong company
         form: PARALLEL_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         enableParallel: true,
         recordFill: true,
@@ -1027,6 +1048,7 @@ Strong company
         form: PARALLEL_FORM,
         model: 'mock/model',
         enableWebSearch: false,
+        maxRetries: 0,
         captureWireFormat: false,
         enableParallel: true,
         recordFill: true,

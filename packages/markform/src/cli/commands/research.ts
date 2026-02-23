@@ -184,6 +184,7 @@ export function registerResearchCommand(program: Command): void {
             enableWebSearch: true,
             captureWireFormat: false,
             recordFill: false,
+            maxRetries: 3,
             maxTurnsTotal: maxTurns,
             maxPatchesPerTurn,
             maxIssuesPerTurn,

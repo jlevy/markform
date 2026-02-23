@@ -243,6 +243,7 @@ async function runAgentFillWorkflow(
     maxTurnsTotal: maxTurns,
     maxPatchesPerTurn,
     maxIssuesPerTurn,
+    maxRetries: 3,
     targetRoles: [AGENT_ROLE],
     fillMode: overwrite ? 'overwrite' : 'continue',
     enableWebSearch: isResearch,

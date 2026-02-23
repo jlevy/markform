@@ -352,6 +352,7 @@ If a field asks for specific format (email, date, etc.), use the correct format.
         prompt,
         tools: tools as unknown as Parameters<typeof generateText>[0]['tools'],
         maxSteps: 5,
+        maxRetries: 3,
       } as Parameters<typeof generateText>[0]);
 
       console.log(`Model response: ${result.text || '(tool calls only)'}`);

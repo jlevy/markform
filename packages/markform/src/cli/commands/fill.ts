@@ -395,6 +395,7 @@ export function registerFillCommand(program: Command): void {
               enableWebSearch: true,
               captureWireFormat: false,
               recordFill: true,
+              maxRetries: 3,
               targetRoles,
               fillMode,
               maxTurnsTotal: options.maxTurns ? parseInt(options.maxTurns, 10) : undefined,
@@ -641,6 +642,7 @@ export function registerFillCommand(program: Command): void {
               systemPromptAddition: systemPrompt,
               targetRole,
               enableWebSearch: true,
+              maxRetries: 3,
               callbacks,
             });
             agent = liveAgent;
