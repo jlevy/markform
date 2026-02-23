@@ -40,6 +40,7 @@ import { createLiveAgent, buildMockWireFormat } from '../../harness/liveAgent.js
 import { createMockAgent } from '../../harness/mockAgent.js';
 import { fillForm } from '../../harness/programmaticFill.js';
 import {
+  CLI_DEFAULT_MAX_RETRIES,
   DEFAULT_MAX_ISSUES_PER_TURN,
   DEFAULT_MAX_PATCHES_PER_TURN,
   DEFAULT_MAX_TURNS,
@@ -159,6 +160,11 @@ export function registerFillCommand(program: Command): void {
       `Maximum issues shown per turn (default: ${DEFAULT_MAX_ISSUES_PER_TURN})`,
       String(DEFAULT_MAX_ISSUES_PER_TURN),
     )
+    .option(
+      '--max-retries <n>',
+      `Maximum retries for transient API errors (default: ${CLI_DEFAULT_MAX_RETRIES})`,
+      String(CLI_DEFAULT_MAX_RETRIES),
+    )
     .option('--max-fields <n>', 'Maximum unique fields per turn (applied before --max-issues)')
     .option('--max-groups <n>', 'Maximum unique groups per turn (applied before --max-issues)')
     .option(
@@ -197,6 +203,7 @@ export function registerFillCommand(program: Command): void {
           maxTurns?: string;
           maxPatches?: string;
           maxIssues?: string;
+          maxRetries?: string;
           maxFields?: string;
           maxGroups?: string;
           roles?: string;
@@ -388,6 +395,7 @@ export function registerFillCommand(program: Command): void {
             }
 
             // Run programmatic fill with parallel enabled
+            const maxRetries = parseInt(options.maxRetries!, 10);
             const result = await fillForm({
               form,
               model: options.model!,
@@ -395,6 +403,7 @@ export function registerFillCommand(program: Command): void {
               enableWebSearch: true,
               captureWireFormat: false,
               recordFill: true,
+              maxRetries,
               targetRoles,
               fillMode,
               maxTurnsTotal: options.maxTurns ? parseInt(options.maxTurns, 10) : undefined,
@@ -641,6 +650,7 @@ export function registerFillCommand(program: Command): void {
               systemPromptAddition: systemPrompt,
               targetRole,
               enableWebSearch: true,
+              maxRetries: parseInt(options.maxRetries!, 10),
               callbacks,
             });
             agent = liveAgent;

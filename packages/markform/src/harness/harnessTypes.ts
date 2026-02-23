@@ -191,9 +191,11 @@ export interface LiveAgentConfig {
    * Uses the Vercel AI SDK's built-in exponential backoff with jitter.
    * Set to 0 to disable retries (useful for fast tests).
    *
-   * @default 3
+   * **Required** — must be set explicitly.
+   * The Vercel AI SDK's own default is 2. Common values: 0 (no retries / tests),
+   * 2–3 (production).
    */
-  maxRetries?: number;
+  maxRetries: number;
 
   /**
    * AbortSignal for cancelling in-flight LLM calls.
@@ -549,9 +551,11 @@ export interface FillOptions {
    * Set to 0 to disable AI SDK retries and handle retries externally
    * (recommended for production harnesses that need full control over retry behavior).
    *
-   * @default 3 (DEFAULT_MAX_RETRIES from settings.ts)
+   * **Required** — must be set explicitly.
+   * The Vercel AI SDK's own default is 2. Common values: 0 (no retries / tests),
+   * 2–3 (production).
    */
-  maxRetries?: number;
+  maxRetries: number;
 }
 
 /**

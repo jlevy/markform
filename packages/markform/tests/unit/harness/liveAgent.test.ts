@@ -54,6 +54,7 @@ describe('LiveAgent', () => {
       const config: LiveAgentConfig = {
         model: mockModel as any,
         enableWebSearch: false,
+        maxRetries: 0,
       };
       const agent = createLiveAgent(config);
 
@@ -66,6 +67,7 @@ describe('LiveAgent', () => {
       const config: LiveAgentConfig = {
         model: mockModel as any,
         enableWebSearch: false,
+        maxRetries: 0,
         additionalTools: {
           custom_search: mockCustomTool,
           lookup_data: mockCustomTool,
@@ -85,6 +87,7 @@ describe('LiveAgent', () => {
       const config: LiveAgentConfig = {
         model: mockModel as any,
         enableWebSearch: false,
+        maxRetries: 0,
         additionalTools: {
           web_search: mockCustomTool, // Custom tool with same name
         },
@@ -104,6 +107,7 @@ describe('LiveAgent', () => {
       const config: LiveAgentConfig = {
         model: mockModel as any,
         enableWebSearch: false,
+        maxRetries: 0,
       };
       const agent = createLiveAgent(config);
 
@@ -116,6 +120,7 @@ describe('LiveAgent', () => {
       const config: LiveAgentConfig = {
         model: mockModel as any,
         enableWebSearch: false,
+        maxRetries: 0,
         additionalTools: {},
       };
       const agent = createLiveAgent(config);
@@ -129,6 +134,7 @@ describe('LiveAgent', () => {
       const config: LiveAgentConfig = {
         model: mockModel as any,
         enableWebSearch: false,
+        maxRetries: 0,
       };
       const agent = createLiveAgent(config);
 
@@ -161,10 +167,22 @@ describe('LiveAgent', () => {
   });
 });
 
-describe('DEFAULT_MAX_RETRIES', () => {
-  it('is 3 per retry/backoff policy', async () => {
-    const { DEFAULT_MAX_RETRIES } = await import('../../../src/settings.js');
-    expect(DEFAULT_MAX_RETRIES).toBe(3);
+describe('maxRetries is required (no default)', () => {
+  it('maxRetries is a required field on LiveAgentConfig', () => {
+    // Verify that maxRetries is required by checking the type system enforces it.
+    // This test documents the intentional removal of DEFAULT_MAX_RETRIES.
+    const config: LiveAgentConfig = {
+      model: mockModel as any,
+      enableWebSearch: false,
+      maxRetries: 0,
+    };
+    const agent = createLiveAgent(config);
+    expect(agent).toBeDefined();
+  });
+
+  it('CLI_DEFAULT_MAX_RETRIES is the single source for CLI retry default', async () => {
+    const { CLI_DEFAULT_MAX_RETRIES } = await import('../../../src/settings.js');
+    expect(CLI_DEFAULT_MAX_RETRIES).toBe(3);
   });
 });
 
