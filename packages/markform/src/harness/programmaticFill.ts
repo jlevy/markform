@@ -1277,6 +1277,19 @@ async function runMultiTurnForItems(
       };
     }
 
+    // Call onPatchesGenerated callback (after agent, before applying)
+    if (mergedCallbacks?.onPatchesGenerated) {
+      try {
+        mergedCallbacks.onPatchesGenerated({
+          turnNumber: startTurn + turnsUsed + 1,
+          patches: response.patches,
+          stats: response.stats,
+        });
+      } catch (cbError) {
+        warnCallbackError('onPatchesGenerated', cbError);
+      }
+    }
+
     // Apply patches
     let lastCoercionWarnings: PatchWarning[] | undefined;
     let turnPatchesApplied = 0;
