@@ -1,5 +1,11 @@
 # markform
 
+## 0.1.29
+
+### Patch Changes
+
+- cc29c0d: Fix parallel execution callback and add explicit --max-retries CLI flag
+
 ## 0.1.28
 
 ### Patch Changes
