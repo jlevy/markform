@@ -119,6 +119,10 @@ Optional implementation choice:
 - Unit tests for `liveAgent` prompt builders ensuring no `%SKIP%`/`%ABORT%` leak into model-visible prompt text
 - Regression tests verifying `applyPatches()` still rejects embedded sentinel values by default
 - Regression tests verifying sentinel round-trip still works for literal form responses
+- Golden/e2e fill-session test that exercises:
+  - serialized form context containing skipped/aborted responses
+  - agent turns producing valid `skip_field`/`abort_field` patches
+  - final `parse -> serialize -> parse` equivalence for sentinel-bearing responses
 - Reproduction fixture test from downstream-like contradictory instruction setup:
   - Verify sentinel-in-value rejection is eliminated in first N turns after authoring + sanitization changes
 
@@ -134,6 +138,7 @@ Optional implementation choice:
 - Model-visible system/context prompts contain no `%SKIP%`/`%ABORT%` literals by default.
 - Serialization/export behavior and existing sentinel-friendly file format remain unchanged.
 - Literal sentinel form responses still round-trip correctly (including reason text).
+- Golden/e2e fill-session test passes with sentinel-bearing forms.
 - Reproduction runs no longer show sentinel-in-`set_*` rejection loops.
 - Required-field skip errors continue to fire correctly.
 - Contradictory `%SKIP%` instruction text is flagged by guardrail/lint mechanisms.
