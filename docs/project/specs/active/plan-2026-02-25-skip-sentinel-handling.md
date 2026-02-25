@@ -44,7 +44,6 @@ context shown to agents.
 - Remove YAML front matter from model-visible embedded literal form context
 - Keep required-field protection intact (`skip_field` must still fail on required
   fields)
-- Add guardrails so contradictory skip guidance is easier to detect and prevent
 
 ## Non-Goals
 
@@ -89,9 +88,7 @@ Use a single up-front design:
    instructions.
 2. **Harness sanitization (B)**: never show raw sentinel literals in model-facing
    prompt/context text.
-3. **Guardrail (D)**: add lint/checks that fail or warn when authoring surfaces
-   reintroduce sentinel guidance.
-4. **Prompt-content contract**: make body instructions self-sufficient, then remove YAML
+3. **Prompt-content contract**: make body instructions self-sufficient, then remove YAML
    front matter from model-visible embedded form markdown.
 
 Reject `Approach C` for now because it changes patch semantics and can hide instruction
@@ -116,10 +113,9 @@ Risk profile:
 
 | Approach | Complex-Form Fit | Risk | Recommendation |
 | --- | --- | --- | --- |
-| A: form-content hygiene only | Medium (necessary but misses serialized-context leakage) | Low | Adopt with B + D |
+| A: form-content hygiene only | Medium (necessary but misses serialized-context leakage) | Low | Adopt with B |
 | B: harness prompt sanitization | High (eliminates sentinel leakage to model) | Low | **Adopt** |
 | C: patch canonicalization | Low for this strategy (unneeded semantic rewrite) | Medium | Do not adopt now |
-| D: lint/guardrail | High (prevents regressions in controlled authoring) | Low | **Adopt** |
 
 ### File and Line-Level Implementation Map
 
@@ -151,8 +147,6 @@ Risk profile:
     front matter
 - Downstream form definitions (controlled authoring surface)
   - Remove `%SKIP%`/`%ABORT%` textual instructions from role/form docs
-- Lint/check tooling
-  - Flag sentinel instruction literals in AI-fill authoring paths
 
 ### API Changes
 
@@ -250,7 +244,6 @@ rollout:
 - Golden/e2e fill-session test passes with sentinel-bearing forms.
 - Reproduction runs no longer show sentinel-in-`set_*` rejection loops.
 - Required-field skip errors continue to fire correctly.
-- Contradictory `%SKIP%` instruction text is flagged by guardrail/lint mechanisms.
 - Golden session diff for the prompt-hygiene fixture clearly shows:
   - removed frontmatter in embedded prompt markdown
   - sanitized sentinel display text
@@ -258,7 +251,6 @@ rollout:
 
 ## Open Questions
 
-- Should the guardrail be warning-only initially or CI-blocking from day one?
 - Do we want one generic sanitizer transform across providers, or provider-specific
   variants?
 - Should front matter omission be unconditional, or behind a debug toggle for prompt
