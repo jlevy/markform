@@ -73,6 +73,12 @@ Related context issue:
 - Models may over-index on frontmatter metadata even when explicit body instructions
   already exist
 
+Current wire-level evidence in checked-in goldens:
+- `packages/markform/examples/simple/simple-with-skips.session.yaml:1864-1874` shows
+  YAML front matter inside model-visible context prompt
+- `packages/markform/examples/simple/simple-with-skips.session.yaml:1907-1910` and
+  `2038-2041` show `%SKIP%` literals in model-visible context prompt
+
 ## Design
 
 ### Approach
@@ -100,6 +106,12 @@ This intentionally keeps a dual-surface model:
 - **Prompt-display surface** (model-visible context): include instructions and current
   field state, but omit YAML front matter once body-complete guidance is confirmed.
 
+Risk profile:
+- Low risk to harness behavior because changes are isolated to prompt construction and
+  model-visible text transformations.
+- No patch-application semantics change.
+- Wire/session goldens will make every prompt-level byte change explicit in review.
+
 ### Decision Matrix
 
 | Approach | Complex-Form Fit | Risk | Recommendation |
@@ -108,6 +120,22 @@ This intentionally keeps a dual-surface model:
 | B: harness prompt sanitization | High (eliminates sentinel leakage to model) | Low | **Adopt** |
 | C: patch canonicalization | Low for this strategy (unneeded semantic rewrite) | Medium | Do not adopt now |
 | D: lint/guardrail | High (prevents regressions in controlled authoring) | Low | **Adopt** |
+
+### File and Line-Level Implementation Map
+
+| File | Line-level touch points | Planned change |
+| --- | --- | --- |
+| `packages/markform/src/harness/liveAgent.ts` | `461-513` (`buildSystemPrompt`) | Apply sentinel-text sanitizer to form-level docs, role instructions, and field instruction snippets before joining sections. |
+| `packages/markform/src/harness/liveAgent.ts` | `526-640` (`buildContextPrompt`) | Sanitize previous rejection messages (`542-555`), sanitize serialized-form payload, and replace `serializeForm(form)` insertion (`567`) with stripped-frontmatter + sanitized content. |
+| `packages/markform/src/harness/liveAgent.ts` | `888-899` (`buildMockWireFormat`) | Keep wire generation path unchanged except inheriting new prompt-builder behavior, so golden sessions capture exact prompt diffs. |
+| `packages/markform/src/harness/liveAgent.ts` | new helpers near context-building section | Add small pure helpers used only for prompt display: `sanitizeSentinelLiteralsForPrompt(text)` and `stripYamlFrontmatterForPrompt(markdown)`. |
+| `packages/markform/src/harness/prompts.ts` | `20-79`, `254-257` | Confirm body instructions remain self-sufficient after frontmatter removal; adjust wording only if audit finds missing guidance. |
+| `packages/markform/src/engine/apply.ts` | `268-338`, `383-397`, `485` | No behavior change; keep sentinel rejection and required-field skip rejection as invariants referenced by tests. |
+| `packages/markform/src/engine/serialize.ts` | `337-340`, `1077-1080`, `1505` | No behavior change; keep sentinel round-trip behavior in form serialization. |
+| `packages/markform/tests/unit/harness/liveAgent.test.ts` | file add/expand test blocks | Add focused tests around `buildMockWireFormat()` output for model-visible system/context prompts. |
+| `packages/markform/tests/golden/helpers.ts` | `136-153` | Keep wire/context capture unchanged; this is the primary mechanism that snapshots prompt text at session level. |
+| `packages/markform/scripts/regen-golden-sessions.ts` | `56-73` (`SESSIONS`) | Add one minimal prompt-hygiene scenario to generate a compact, reviewable wire/session golden. |
+| `packages/markform/tests/golden/validation.test.ts` | `39-100` (`MUTATIONS`) | Add mutations specifically for frontmatter leakage and sentinel-literal leakage in prompt text. |
 
 ### Components
 
@@ -136,28 +164,40 @@ Optional implementation choice:
 
 ## Implementation Plan
 
-### Phase 1: Single-Contract Skip Design
+### Task List (Implementation-Ready)
 
-- [ ] Add sentinel prompt sanitizer utility for `%SKIP%` and `%ABORT%` display text
-- [ ] Apply sanitizer in `buildSystemPrompt()` instruction sections
-- [ ] Apply sanitizer in `buildContextPrompt()` for serialized form text and rejection
-  feedback
-- [ ] Audit model-required instruction inputs and verify they are fully present in
-  prompt body sections
-- [ ] Remove YAML front matter from model-visible embedded form markdown (context prompt
-  only)
-- [ ] Ensure no model-facing prompt path can emit raw `%SKIP%`/`%ABORT%`
-- [ ] Add tests verifying prompt text shown to model does not contain `%SKIP%`/`%ABORT%`
-- [ ] Add tests verifying context-embedded form markdown omits YAML front matter
-- [ ] Add regression tests to confirm no behavior loss after front matter removal from
-  prompt context
-- [ ] Add tests confirming engine serialization remains unchanged
-- [ ] Update downstream form authoring instructions to use `skip_field`/`abort_field`
-  only
-- [ ] Add warning/lint checks for `%SKIP%`/`%ABORT%` literals in AI-fill instruction
-  surfaces
-- [ ] Update docs to clarify: sentinels are serialization artifacts, not patch values,
-  and front matter is not part of the agent prompt contract
+- [ ] Add prompt-only sanitizer helpers in `liveAgent.ts`:
+  - `%SKIP% (reason)` -> `(skipped: reason)`
+  - `%SKIP%` -> `(skipped)`
+  - `%ABORT% (reason)` -> `(aborted: reason)`
+  - `%ABORT%` -> `(aborted)`
+- [ ] Add frontmatter-strip helper for model-visible context markdown only (do not alter
+  persisted form serialization).
+- [ ] Apply helpers in `buildSystemPrompt()` and `buildContextPrompt()` at the exact
+  callsites in the line map above.
+- [ ] Audit prompt-body sufficiency:
+  - verify role/form/field instruction text appears in system prompt even when context
+    prompt no longer includes frontmatter block.
+- [ ] Keep engine behavior unchanged (`apply.ts`, `serialize.ts`) and document these as
+  explicit invariants.
+- [ ] Add/extend unit tests in `tests/unit/harness/liveAgent.test.ts` to assert:
+  - model-visible prompts contain no `%SKIP%`/`%ABORT%` literals
+  - context prompt omits leading YAML front matter
+  - role instructions still appear in system prompt
+- [ ] Add a minimal prompt-hygiene golden scenario:
+  - new tiny form fixture containing
+    - frontmatter with `role_instructions`
+    - at least one skipped/aborted value in serialized form state
+  - regenerate session so wire request prompt is captured in git
+- [ ] Extend golden sensitivity tests (`validation.test.ts`) with prompt-hygiene
+  mutations:
+  - inject `%SKIP%` literal into wire request prompt
+  - inject YAML frontmatter marker `---` at the start of embedded markdown block
+  - verify mutations are detected
+- [ ] Update docs to state:
+  - sentinels are valid serialization artifacts
+  - agents must use `skip_field`/`abort_field`
+  - YAML frontmatter is excluded from model-visible context prompt contract
 
 ## Testing Strategy
 
@@ -176,16 +216,27 @@ Optional implementation choice:
   - agent turns producing valid `skip_field`/`abort_field` patches
   - context prompt without YAML front matter
   - final `parse -> serialize -> parse` equivalence for sentinel-bearing responses
+- Golden wire-level assertions must verify:
+  - `turns[].wire.request.system` contains explicit skip operation guidance
+  - `turns[].wire.request.prompt` omits frontmatter block and sentinel literals
+  - `turns[].context.context_prompt` matches the same transformed prompt contract
 - Reproduction fixture test from downstream-like contradictory instruction setup:
   - Verify sentinel-in-value rejection is eliminated in first N turns after authoring +
     sanitization changes
 
-## Rollout Plan
+### Golden Workflow (Explicit Before/After Diff)
 
-1. Land Phase 1 changes in Markform and downstream forms together.
-2. Run targeted QA reruns on complex forms.
-3. Review rejection metrics and qualitative traces.
-4. Fix any remaining authoring outliers rather than adding patch rewrite semantics.
+Implementation should intentionally rely on git-visible golden diffs instead of staged
+rollout:
+
+1. Add/refresh minimal session fixture and run
+   `pnpm --filter markform test:golden:regen`
+2. Implement prompt-hygiene code changes.
+3. Re-run `pnpm --filter markform test:golden:regen`.
+4. Review `git diff packages/markform/examples/**/*.session.yaml`:
+   - before/after prompt text change is explicit in wire/context sections
+   - frontmatter removal and sentinel sanitization are visible as textual diffs
+5. Run `pnpm --filter markform test:golden` and full test suite.
 
 ## Acceptance Criteria
 
@@ -200,6 +251,10 @@ Optional implementation choice:
 - Reproduction runs no longer show sentinel-in-`set_*` rejection loops.
 - Required-field skip errors continue to fire correctly.
 - Contradictory `%SKIP%` instruction text is flagged by guardrail/lint mechanisms.
+- Golden session diff for the prompt-hygiene fixture clearly shows:
+  - removed frontmatter in embedded prompt markdown
+  - sanitized sentinel display text
+  - no unintended harness behavior drift outside prompt text and expected hashes
 
 ## Open Questions
 
@@ -208,6 +263,8 @@ Optional implementation choice:
   variants?
 - Should front matter omission be unconditional, or behind a debug toggle for prompt
   inspection?
+- Do we add a dedicated tiny fixture directory (recommended) or reuse
+  `simple-with-skips.session.yaml` as the only prompt-hygiene signal?
 
 ## References
 
