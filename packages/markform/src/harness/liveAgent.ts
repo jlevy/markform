@@ -12,6 +12,7 @@ import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
 import { xai } from '@ai-sdk/xai';
+import YAML from 'yaml';
 
 import type {
   DocumentationBlock,
@@ -493,7 +494,54 @@ function sanitizeSentinelLiteralsForPrompt(text: string): string {
  * This only affects prompt display; on-disk serialization is untouched.
  */
 function stripYamlFrontmatterForPrompt(markdown: string): string {
-  return markdown.replace(/^\uFEFF?---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+  const source = markdown.startsWith('\uFEFF') ? markdown.slice(1) : markdown;
+  if (!source.startsWith('---')) {
+    return source;
+  }
+
+  const firstNewline = source.indexOf('\n');
+  if (firstNewline === -1) {
+    return source;
+  }
+
+  const openingLine = source.slice(0, firstNewline).replace(/\r$/, '').trim();
+  if (openingLine !== '---') {
+    return source;
+  }
+
+  let cursor = firstNewline + 1;
+  let closingStart = -1;
+  let bodyStart = source.length;
+
+  while (cursor <= source.length) {
+    const nextNewline = source.indexOf('\n', cursor);
+    const lineEnd = nextNewline === -1 ? source.length : nextNewline;
+    const line = source.slice(cursor, lineEnd).replace(/\r$/, '').trim();
+
+    if (line === '---') {
+      closingStart = cursor;
+      bodyStart = nextNewline === -1 ? source.length : nextNewline + 1;
+      break;
+    }
+
+    if (nextNewline === -1) {
+      break;
+    }
+    cursor = nextNewline + 1;
+  }
+
+  if (closingStart === -1) {
+    return source;
+  }
+
+  const yamlSource = source.slice(firstNewline + 1, closingStart);
+  try {
+    YAML.parse(yamlSource);
+  } catch {
+    return source;
+  }
+
+  return source.slice(bodyStart);
 }
 
 /**

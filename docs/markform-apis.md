@@ -150,7 +150,10 @@ Each patch has an `op` and `fieldId`.
 
 **Agent fill contract:**
 - For AI fill loops, use `skip_field` / `abort_field` operations for missing data.
-- Do not embed `%SKIP%` / `%ABORT%` inside `set_*` values; those are rejected.
+- `%SKIP%` / `%ABORT%` in scalar `set_string` / `set_url` / `set_date` values are
+  tolerated and coerced to `skip_field` / `abort_field` (with a warning), but this is
+  compatibility behavior, not preferred usage.
+- Sentinels in list-item `set_*_list` values remain rejected.
 - Sentinel values remain valid in canonical serialized form content and round-trip
   (`parse -> serialize -> parse`) as field-state metadata.
 

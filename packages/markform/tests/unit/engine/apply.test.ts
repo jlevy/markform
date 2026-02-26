@@ -1868,18 +1868,55 @@ markform:
   });
 
   // =============================================================================
-  // Issue #119: Reject embedded sentinels in string values
+  // Issue #119: Embedded sentinel handling in set_* patch values
   // =============================================================================
   //
-  // Bug: fill_form accepts patches that embed %SKIP% as part of a string value
-  // (e.g., "%SKIP% (reason)") even on required fields. This causes markform serve
-  // to later fail validation because the final value contains the skip sentinel.
-  //
-  // Fix: Values containing %SKIP% or %ABORT% sentinels should be rejected during
-  // patch application, not just during final validation.
-  describe('embedded sentinel rejection (issue #119)', () => {
+  // Contract:
+  // - Scalar set_* values (%SKIP% / %ABORT%) are tolerated by coercing to
+  //   skip_field / abort_field with a warning.
+  // - Agents should still prefer explicit skip_field / abort_field operations.
+  // - List-item sentinels remain rejected as ambiguous.
+  describe('embedded sentinel handling (issue #119)', () => {
     describe('set_string with embedded sentinels', () => {
-      it('rejects %SKIP% embedded in string value on required field', () => {
+      it('coerces %SKIP% embedded in string value on optional field', () => {
+        const markdown = `---
+markform:
+  spec: MF/0.1
+---
+
+{% form id="test" %}
+
+{% group id="g1" %}
+{% field kind="string" id="notes" label="Notes" %}{% /field %}
+{% /group %}
+
+{% /form %}
+`;
+        const form = parseForm(markdown);
+        const patches: Patch[] = [
+          { op: 'set_string', fieldId: 'notes', value: '%SKIP% (reason text here)' },
+        ];
+
+        const result = applyPatches(form, patches);
+
+        expect(result.applyStatus).toBe('applied');
+        expect(result.rejectedPatches).toHaveLength(0);
+        expect(result.appliedPatches).toHaveLength(1);
+        expect(result.appliedPatches[0]).toMatchObject({
+          op: 'skip_field',
+          fieldId: 'notes',
+          role: 'agent',
+          reason: 'reason text here',
+        });
+        expect(form.responsesByFieldId.notes).toMatchObject({
+          state: 'skipped',
+          reason: 'reason text here',
+        });
+        expect(result.warnings).toHaveLength(1);
+        expect(result.warnings[0]?.coercion).toBe('sentinel_to_meta_op');
+      });
+
+      it('keeps required-field protection when coercing %SKIP%', () => {
         const markdown = `---
 markform:
   spec: MF/0.1
@@ -1901,36 +1938,10 @@ markform:
         const result = applyPatches(form, patches);
 
         expect(result.applyStatus).toBe('rejected');
-        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
-        expect(result.rejectedPatches[0]?.message).toContain('skip_field');
+        expect(result.rejectedPatches[0]?.message).toContain('Cannot skip required field "name"');
       });
 
-      it('rejects %SKIP% embedded in string value on optional field', () => {
-        const markdown = `---
-markform:
-  spec: MF/0.1
----
-
-{% form id="test" %}
-
-{% group id="g1" %}
-{% field kind="string" id="notes" label="Notes" %}{% /field %}
-{% /group %}
-
-{% /form %}
-`;
-        const form = parseForm(markdown);
-        const patches: Patch[] = [
-          { op: 'set_string', fieldId: 'notes', value: '%SKIP% (reason text here)' },
-        ];
-
-        const result = applyPatches(form, patches);
-
-        expect(result.applyStatus).toBe('rejected');
-        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
-      });
-
-      it('rejects exact %SKIP% value (should use skip_field instead)', () => {
+      it('coerces exact %SKIP% value (without reason) to skipped state', () => {
         const markdown = `---
 markform:
   spec: MF/0.1
@@ -1949,11 +1960,16 @@ markform:
 
         const result = applyPatches(form, patches);
 
-        expect(result.applyStatus).toBe('rejected');
-        expect(result.rejectedPatches[0]?.message).toContain('skip_field');
+        expect(result.applyStatus).toBe('applied');
+        expect(result.appliedPatches[0]).toMatchObject({
+          op: 'skip_field',
+          fieldId: 'notes',
+          role: 'agent',
+        });
+        expect(form.responsesByFieldId.notes?.state).toBe('skipped');
       });
 
-      it('rejects %ABORT% embedded in string value', () => {
+      it('coerces %ABORT% embedded in string value', () => {
         const markdown = `---
 markform:
   spec: MF/0.1
@@ -1974,12 +1990,20 @@ markform:
 
         const result = applyPatches(form, patches);
 
-        expect(result.applyStatus).toBe('rejected');
-        expect(result.rejectedPatches[0]?.message).toContain('%ABORT%');
-        expect(result.rejectedPatches[0]?.message).toContain('abort_field');
+        expect(result.applyStatus).toBe('applied');
+        expect(result.appliedPatches[0]).toMatchObject({
+          op: 'abort_field',
+          fieldId: 'name',
+          role: 'agent',
+          reason: 'Data unavailable',
+        });
+        expect(form.responsesByFieldId.name).toMatchObject({
+          state: 'aborted',
+          reason: 'Data unavailable',
+        });
       });
 
-      it('rejects case-insensitive %skip% sentinel', () => {
+      it('coerces case-insensitive %skip% sentinel', () => {
         const markdown = `---
 markform:
   spec: MF/0.1
@@ -2000,7 +2024,11 @@ markform:
 
         const result = applyPatches(form, patches);
 
-        expect(result.applyStatus).toBe('rejected');
+        expect(result.applyStatus).toBe('applied');
+        expect(form.responsesByFieldId.notes).toMatchObject({
+          state: 'skipped',
+          reason: 'lowercase',
+        });
       });
 
       it('allows normal strings containing "SKIP" as substring', () => {
@@ -2028,7 +2056,7 @@ markform:
     });
 
     describe('set_url with embedded sentinels', () => {
-      it('rejects %SKIP% in URL value', () => {
+      it('coerces %SKIP% in URL value', () => {
         const markdown = `---
 markform:
   spec: MF/0.1
@@ -2049,13 +2077,18 @@ markform:
 
         const result = applyPatches(form, patches);
 
-        expect(result.applyStatus).toBe('rejected');
-        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+        expect(result.applyStatus).toBe('applied');
+        expect(result.appliedPatches[0]).toMatchObject({
+          op: 'skip_field',
+          fieldId: 'website',
+          role: 'agent',
+          reason: 'no website',
+        });
       });
     });
 
     describe('set_date with embedded sentinels', () => {
-      it('rejects %SKIP% in date value', () => {
+      it('coerces %SKIP% in date value', () => {
         const markdown = `---
 markform:
   spec: MF/0.1
@@ -2076,8 +2109,13 @@ markform:
 
         const result = applyPatches(form, patches);
 
-        expect(result.applyStatus).toBe('rejected');
-        expect(result.rejectedPatches[0]?.message).toContain('%SKIP%');
+        expect(result.applyStatus).toBe('applied');
+        expect(result.appliedPatches[0]).toMatchObject({
+          op: 'skip_field',
+          fieldId: 'birthday',
+          role: 'agent',
+          reason: 'unknown',
+        });
       });
     });
 

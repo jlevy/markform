@@ -295,6 +295,52 @@ markform:
       expect(reparsedNotes?.reason).toBe('From literal sentinel');
     });
 
+    it('coerces scalar set_* sentinel patch values in harness loop', async () => {
+      const formWithOptionalNotes = `---
+markform:
+  spec: MF/0.1
+  title: Scalar Sentinel Patch Coercion
+  roles:
+    - agent
+---
+
+<!-- form id="scalar_sentinel_patch_coercion" title="Scalar Sentinel Patch Coercion" -->
+<!-- group id="main" title="Main" -->
+<!-- field kind="string" id="company_name" role="agent" label="Company Name" required=true --><!-- /field -->
+<!-- field kind="string" id="notes" role="agent" label="Notes" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->
+`;
+
+      const sentinelPatchAgent: Agent = {
+        fillFormTool() {
+          return Promise.resolve({
+            patches: [
+              { op: 'set_string', fieldId: 'company_name', value: 'Acme Corp' },
+              { op: 'set_string', fieldId: 'notes', value: '%SKIP% (No evidence found)' },
+            ],
+          });
+        },
+      };
+
+      const result = await fillForm({
+        form: formWithOptionalNotes,
+        model: 'mock/model',
+        enableWebSearch: false,
+        maxRetries: 0,
+        captureWireFormat: false,
+        recordFill: false,
+        targetRoles: ['agent'],
+        _testAgent: sentinelPatchAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.form.responsesByFieldId.notes).toMatchObject({
+        state: 'skipped',
+        reason: 'No evidence found',
+      });
+    });
+
     it('keeps required-field skip rejection in harness loop', async () => {
       const formWithRequiredField = `---
 markform:

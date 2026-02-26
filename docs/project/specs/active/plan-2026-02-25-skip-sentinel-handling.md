@@ -5,7 +5,7 @@ author: Codex (GPT-5)
 ---
 # Feature: Skip Sentinel and Prompt Context Hygiene in LLM Fill Loops
 
-**Date:** 2026-02-25 (last updated 2026-02-25)
+**Date:** 2026-02-25 (last updated 2026-02-26)
 
 **Author:** Codex (GPT-5)
 
@@ -36,7 +36,7 @@ context shown to agents.
 - Eliminate most `%SKIP%`/`%ABORT%` sentinel-in-value rejection loops caused by prompt
   text
 - Establish one clear AI-fill contract: `skip_field`/`abort_field` operations only
-- Preserve current canonical file format and strict patch semantics
+- Preserve current canonical file format
 - Preserve full sentinel round-trip behavior in form content
   (`parse -> state -> serialize`)
 - Ensure agent prompt body contains all required instructions without relying on YAML
@@ -50,8 +50,7 @@ context shown to agents.
 - Changing persisted markdown/YAML/JSON serialization format
 - Removing sentinel parsing support from the engine
 - Relaxing required-field rules
-- Adding patch canonicalization that rewrites `set_*` sentinel values into meta
-  operations
+- Adding broad/ambiguous patch canonicalization (for example list-item sentinel rewrite)
 - Changing persisted front matter on disk
 
 ## Background
@@ -91,9 +90,9 @@ Use a single up-front design:
 3. **Prompt-content contract**: make body instructions self-sufficient, then remove YAML
    front matter from model-visible embedded form markdown.
 
-Reject `Approach C` for now because it changes patch semantics and can hide instruction
-bugs. If inputs are controlled, correctness is better enforced at authoring and prompt
-construction layers.
+Reject broad `Approach C` canonicalization for now because it can hide instruction bugs.
+Adopt a narrow compatibility coercion for unambiguous scalar `set_string` / `set_url` /
+`set_date` sentinel values to `skip_field` / `abort_field`.
 
 This intentionally keeps a dual-surface model:
 - **Form content surface** (markdown/state): sentinels remain valid for round-trip and
@@ -106,7 +105,7 @@ This intentionally keeps a dual-surface model:
 Risk profile:
 - Low risk to harness behavior because changes are isolated to prompt construction and
   model-visible text transformations.
-- No patch-application semantics change.
+- Narrow patch-application change only for scalar sentinel compatibility coercion.
 - Wire/session goldens will make every prompt-level byte change explicit in review.
 
 ### Decision Matrix
@@ -126,7 +125,7 @@ Risk profile:
 | `packages/markform/src/harness/liveAgent.ts` | `888-899` (`buildMockWireFormat`) | Keep wire generation path unchanged except inheriting new prompt-builder behavior, so golden sessions capture exact prompt diffs. |
 | `packages/markform/src/harness/liveAgent.ts` | new helpers near context-building section | Add small pure helpers used only for prompt display: `sanitizeSentinelLiteralsForPrompt(text)` and `stripYamlFrontmatterForPrompt(markdown)`. |
 | `packages/markform/src/harness/prompts.ts` | `20-79`, `254-257` | Confirm body instructions remain self-sufficient after frontmatter removal; adjust wording only if audit finds missing guidance. |
-| `packages/markform/src/engine/apply.ts` | `268-338`, `383-397`, `485` | No behavior change; keep sentinel rejection and required-field skip rejection as invariants referenced by tests. |
+| `packages/markform/src/engine/apply.ts` | `129-230`, `268-338`, `383-397`, `485` | Add scalar sentinel coercion (`set_string` / `set_url` / `set_date` -> `skip_field` / `abort_field`) with warning; keep list-item sentinel rejection and required-field skip rejection as invariants. |
 | `packages/markform/src/engine/serialize.ts` | `337-340`, `1077-1080`, `1505` | No behavior change; keep sentinel round-trip behavior in form serialization. |
 | `packages/markform/tests/unit/harness/liveAgent.test.ts` | file add/expand test blocks | Add focused tests around `buildMockWireFormat()` output for model-visible system/context prompts. |
 | `packages/markform/tests/golden/helpers.ts` | `136-153` | Keep wire/context capture unchanged; this is the primary mechanism that snapshots prompt text at session level. |
@@ -172,8 +171,8 @@ Optional implementation choice:
 - [x] Audit prompt-body sufficiency:
   - verify role/form/field instruction text appears in system prompt even when context
     prompt no longer includes frontmatter block.
-- [x] Keep engine behavior unchanged (`apply.ts`, `serialize.ts`) and document these as
-  explicit invariants.
+- [x] Keep serialization behavior unchanged (`serialize.ts`) and add narrow scalar
+  sentinel compatibility coercion in `apply.ts`.
 - [x] Add/extend unit tests in `tests/unit/harness/liveAgent.test.ts` to assert:
   - model-visible prompts contain no `%SKIP%`/`%ABORT%` literals
   - context prompt omits leading YAML front matter
@@ -200,8 +199,8 @@ Optional implementation choice:
   model-visible prompt text
 - Unit tests for prompt builders ensuring YAML front matter is absent from embedded form
   markdown
-- Regression tests verifying `applyPatches()` still rejects embedded sentinel values by
-  default
+- Regression tests verifying `applyPatches()` coerces scalar embedded sentinel values to
+  meta operations, while list-item sentinels are still rejected
 - Regression tests verifying sentinel round-trip still works for literal form responses
 - Regression tests showing equivalent fill behavior with and without prompt-side front
   matter display
@@ -244,6 +243,8 @@ rollout:
 - Golden/e2e fill-session test passes with sentinel-bearing forms.
 - Reproduction runs no longer show sentinel-in-`set_*` rejection loops.
 - Required-field skip errors continue to fire correctly.
+- Scalar sentinel `set_*` compatibility inputs (`set_string` / `set_url` / `set_date`)
+  are coerced to `skip_field` / `abort_field` with warnings.
 - Golden session diff for the prompt-hygiene fixture clearly shows:
   - removed frontmatter in embedded prompt markdown
   - sanitized sentinel display text
