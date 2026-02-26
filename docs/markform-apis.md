@@ -148,6 +148,15 @@ Each patch has an `op` and `fieldId`.
 | `skip_field` | optional | `{ "op": "skip_field", "fieldId": "notes", "reason": "Not applicable" }` |
 | `abort_field` | any | `{ "op": "abort_field", "fieldId": "data", "reason": "Unable to find" }` |
 
+**Agent fill contract:**
+- For AI fill loops, use `skip_field` / `abort_field` operations for missing data.
+- `%SKIP%` / `%ABORT%` in scalar `set_string` / `set_url` / `set_date` values are
+  tolerated and coerced to `skip_field` / `abort_field` (with a warning), but this is
+  compatibility behavior, not preferred usage.
+- Sentinels in list-item `set_*_list` values remain rejected.
+- Sentinel values remain valid in canonical serialized form content and round-trip
+  (`parse -> serialize -> parse`) as field-state metadata.
+
 ### Checkbox Values
 
 For `set_checkboxes`, values depend on the checkbox mode:
@@ -214,6 +223,10 @@ const result = await fillForm({
 | `signal` | `AbortSignal` | `undefined` | Cancellation signal propagated to in-flight `generateText()` calls |
 | `additionalTools` | `Record<string, Tool>` | `undefined` | Custom tools for agent |
 | `recordFill` | `boolean` | (required) | Collect detailed FillRecord with timeline and stats |
+
+**Prompt contract note:** model-visible harness prompts sanitize sentinel literals and
+omit YAML frontmatter from the embedded form markdown.
+On-disk form serialization is unchanged.
 
 ### Parallel Execution
 

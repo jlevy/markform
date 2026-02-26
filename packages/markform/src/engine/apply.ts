@@ -116,6 +116,56 @@ function createWarning(
 }
 
 /**
+ * Coerce scalar set_* sentinel values to explicit meta operations.
+ *
+ * This preserves "accept but do not encourage" behavior:
+ * callers should emit skip_field/abort_field directly, but scalar
+ * sentinel literals are tolerated for compatibility.
+ */
+function coerceScalarSentinelToMetaPatch(
+  patch: Patch,
+  field: Field,
+  index: number,
+): NormalizationResult | null {
+  if (patch.op !== 'set_string' && patch.op !== 'set_url' && patch.op !== 'set_date') {
+    return null;
+  }
+  if (typeof patch.value !== 'string') {
+    return null;
+  }
+
+  const sentinel = detectSentinel(patch.value);
+  if (!sentinel) {
+    return null;
+  }
+
+  const coercedPatch: Patch =
+    sentinel.type === 'skip'
+      ? {
+          op: 'skip_field',
+          fieldId: patch.fieldId,
+          role: field.role,
+          ...(sentinel.reason && { reason: sentinel.reason }),
+        }
+      : {
+          op: 'abort_field',
+          fieldId: patch.fieldId,
+          role: field.role,
+          ...(sentinel.reason && { reason: sentinel.reason }),
+        };
+
+  return {
+    patch: coercedPatch,
+    warning: createWarning(
+      index,
+      field.id,
+      'sentinel_to_meta_op',
+      `Coerced ${patch.op} sentinel literal to ${coercedPatch.op}`,
+    ),
+  };
+}
+
+/**
  * Normalize a patch, coercing common type mismatches with warnings.
  *
  * Coercions performed:
@@ -135,6 +185,11 @@ function normalizePatch(form: ParsedForm, patch: Patch, index: number): Normaliz
   const field = findField(form, patch.fieldId);
   if (!field) {
     return { patch }; // Let validation handle missing field
+  }
+
+  const sentinelCoercion = coerceScalarSentinelToMetaPatch(patch, field, index);
+  if (sentinelCoercion) {
+    return sentinelCoercion;
   }
 
   // Coerce single string → string_list
@@ -311,8 +366,7 @@ function validatePatch(form: ParsedForm, patch: Patch, index: number): PatchErro
     return typeMismatchError(index, patch.op, field);
   }
 
-  // Check for embedded sentinels in string values (issue #119)
-  // Agents should use skip_field/abort_field operations instead of embedding sentinels
+  // Safety net: reject any embedded sentinels that were not normalized.
   if (patch.op === 'set_string' || patch.op === 'set_url' || patch.op === 'set_date') {
     const sentinel = detectSentinel(patch.value);
     if (sentinel) {

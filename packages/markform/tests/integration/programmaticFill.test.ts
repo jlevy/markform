@@ -16,6 +16,7 @@ import {
   batchExecutionId,
 } from '../../src/harness/programmaticFill.js';
 import { createMockAgent } from '../../src/harness/mockAgent.js';
+import type { Agent } from '../../src/harness/harnessTypes.js';
 
 // =============================================================================
 // Test Fixtures
@@ -241,6 +242,165 @@ describe('programmatic fill API - integration tests', () => {
         expect(result.status.reason).toBe('error');
         expect(result.status.message).toContain('not found');
       }
+    });
+
+    it('preserves sentinel-backed skipped responses through harness round-trip', async () => {
+      const formWithSentinel = `---
+markform:
+  spec: MF/0.1
+  title: Harness Sentinel Roundtrip
+  roles:
+    - agent
+---
+
+<!-- form id="harness_sentinel_roundtrip" title="Harness Sentinel Roundtrip" -->
+<!-- group id="main" title="Main" -->
+<!-- field kind="string" id="company_name" role="agent" label="Company Name" required=true --><!-- /field -->
+<!-- field kind="string" id="notes" role="agent" label="Notes" state="skipped" -->
+\`\`\`value
+%SKIP% (From literal sentinel)
+\`\`\`
+<!-- /field -->
+<!-- /group -->
+<!-- /form -->
+`;
+
+      const agent: Agent = {
+        fillFormTool() {
+          return Promise.resolve({
+            patches: [{ op: 'set_string', fieldId: 'company_name', value: 'Acme Corp' }],
+          });
+        },
+      };
+
+      const result = await fillForm({
+        form: formWithSentinel,
+        model: 'mock/model',
+        enableWebSearch: false,
+        maxRetries: 0,
+        captureWireFormat: false,
+        recordFill: false,
+        targetRoles: ['agent'],
+        _testAgent: agent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      const notes = result.form.responsesByFieldId.notes;
+      expect(notes?.state).toBe('skipped');
+      expect(notes?.reason).toBe('From literal sentinel');
+
+      const reparsed = parseForm(result.markdown);
+      const reparsedNotes = reparsed.responsesByFieldId.notes;
+      expect(reparsedNotes?.state).toBe('skipped');
+      expect(reparsedNotes?.reason).toBe('From literal sentinel');
+    });
+
+    it('coerces scalar set_* sentinel patch values in harness loop', async () => {
+      const formWithOptionalNotes = `---
+markform:
+  spec: MF/0.1
+  title: Scalar Sentinel Patch Coercion
+  roles:
+    - agent
+---
+
+<!-- form id="scalar_sentinel_patch_coercion" title="Scalar Sentinel Patch Coercion" -->
+<!-- group id="main" title="Main" -->
+<!-- field kind="string" id="company_name" role="agent" label="Company Name" required=true --><!-- /field -->
+<!-- field kind="string" id="notes" role="agent" label="Notes" --><!-- /field -->
+<!-- /group -->
+<!-- /form -->
+`;
+
+      const sentinelPatchAgent: Agent = {
+        fillFormTool() {
+          return Promise.resolve({
+            patches: [
+              { op: 'set_string', fieldId: 'company_name', value: 'Acme Corp' },
+              { op: 'set_string', fieldId: 'notes', value: '%SKIP% (No evidence found)' },
+            ],
+          });
+        },
+      };
+
+      const result = await fillForm({
+        form: formWithOptionalNotes,
+        model: 'mock/model',
+        enableWebSearch: false,
+        maxRetries: 0,
+        captureWireFormat: false,
+        recordFill: false,
+        targetRoles: ['agent'],
+        _testAgent: sentinelPatchAgent,
+      });
+
+      expect(result.status.ok).toBe(true);
+      expect(result.form.responsesByFieldId.notes).toMatchObject({
+        state: 'skipped',
+        reason: 'No evidence found',
+      });
+    });
+
+    it('keeps required-field skip rejection in harness loop', async () => {
+      const formWithRequiredField = `---
+markform:
+  spec: MF/0.1
+  title: Required Skip Rejection
+  roles:
+    - agent
+---
+
+<!-- form id="required_skip_rejection" title="Required Skip Rejection" -->
+<!-- group id="main" title="Main" -->
+<!-- field kind="string" id="company_name" role="agent" label="Company Name" required=true --><!-- /field -->
+<!-- /group -->
+<!-- /form -->
+`;
+
+      const rejectingAgent: Agent = {
+        fillFormTool() {
+          return Promise.resolve({
+            patches: [
+              {
+                op: 'skip_field',
+                fieldId: 'company_name',
+                role: 'agent',
+                reason: 'Cannot verify',
+              },
+            ],
+          });
+        },
+      };
+
+      const rejectionMessages: string[] = [];
+      const result = await fillForm({
+        form: formWithRequiredField,
+        model: 'mock/model',
+        enableWebSearch: false,
+        maxRetries: 0,
+        maxTurnsTotal: 2,
+        maxPatchesPerTurn: 1,
+        maxIssuesPerTurn: 1,
+        captureWireFormat: false,
+        recordFill: false,
+        targetRoles: ['agent'],
+        _testAgent: rejectingAgent,
+        callbacks: {
+          onTurnComplete: ({ rejectedPatches }) => {
+            rejectionMessages.push(...rejectedPatches.map((patch) => patch.message));
+          },
+        },
+      });
+
+      expect(result.status.ok).toBe(false);
+      if (!result.status.ok) {
+        expect(result.status.reason).toBe('max_turns');
+      }
+      expect(
+        rejectionMessages.some((message) =>
+          message.includes('Cannot skip required field "company_name"'),
+        ),
+      ).toBe(true);
     });
   });
 

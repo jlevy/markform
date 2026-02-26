@@ -859,6 +859,11 @@ When designing a form, match each piece of data to the most specific field kind:
 - Use `checkboxMode="explicit"` when every item needs a yes/no answer
 - Add `role="user"` for human-provided inputs, `role="agent"` for AI-researched data
 - Include `<!-- instructions -->` blocks to guide agents on format and sources
+- In agent instructions, tell models to use `skip_field` / `abort_field` operations.
+  Do not instruct `%SKIP%` / `%ABORT%` literal tokens for patch values.
+- Runtime compatibility: scalar `set_string` / `set_url` / `set_date` sentinel literals
+  are tolerated and coerced to `skip_field` / `abort_field`, but list-item sentinels are
+  rejected.
 - Organize related fields into `<!-- group -->` blocks
 
 ## Best Practices

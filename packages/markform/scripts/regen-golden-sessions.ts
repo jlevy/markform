@@ -65,6 +65,11 @@ const SESSIONS: SessionConfig[] = [
     sessionFile: 'simple/simple-with-skips.session.yaml',
   },
   {
+    form: 'prompt-hygiene/prompt-hygiene.form.md',
+    mockSource: 'prompt-hygiene/prompt-hygiene-mock-filled.form.md',
+    sessionFile: 'prompt-hygiene/prompt-hygiene.session.yaml',
+  },
+  {
     form: 'rejection-test/rejection-test.form.md',
     mockSource: 'rejection-test/rejection-test-mock-filled.form.md',
     sessionFile: 'rejection-test/rejection-test.session.yaml',

@@ -843,7 +843,8 @@ export type PatchCoercionType =
   | 'url_to_list'
   | 'option_to_array'
   | 'boolean_to_checkbox'
-  | 'array_to_checkboxes';
+  | 'array_to_checkboxes'
+  | 'sentinel_to_meta_op';
 
 /** Warning for coerced patches */
 export interface PatchWarning {
@@ -1862,6 +1863,7 @@ export const PatchCoercionTypeSchema = z.enum([
   'option_to_array',
   'boolean_to_checkbox',
   'array_to_checkboxes',
+  'sentinel_to_meta_op',
 ]);
 
 export const PatchWarningSchema = z.object({
