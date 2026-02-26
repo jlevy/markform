@@ -571,22 +571,6 @@ export class FillRecordCollector implements FillCallbacks {
     );
   }
 
-  private findTurnKeyForExecutionId(
-    executionId: string,
-    turnStartEvents: Map<string, TurnStartEvent>,
-  ): string | undefined {
-    // Find the most recent turn for this executionId
-    let latestKey: string | undefined;
-    let latestTime = '';
-    for (const [key, event] of turnStartEvents) {
-      if (event.executionId === executionId && event.timestamp > latestTime) {
-        latestKey = key;
-        latestTime = event.timestamp;
-      }
-    }
-    return latestKey;
-  }
-
   private normalizeInput(input: unknown): Record<string, unknown> {
     if (input && typeof input === 'object' && !Array.isArray(input)) {
       return input as Record<string, unknown>;

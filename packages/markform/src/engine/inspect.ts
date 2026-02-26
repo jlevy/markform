@@ -187,7 +187,7 @@ function mapValidationToInspectReason(vi: ValidationIssue): IssueReason {
   if (
     vi.code === 'MULTI_SELECT_TOO_FEW' ||
     vi.code === 'STRING_LIST_MIN_ITEMS' ||
-    vi.message.includes('at least')
+    msg.includes('at least')
   ) {
     return 'min_items_not_met';
   }
@@ -419,7 +419,6 @@ export function isCheckboxComplete(form: ParsedForm, fieldId: Id): boolean {
     return true; // Non-checkbox fields are not blocking
   }
 
-  const checkboxField = field;
   const response = form.responsesByFieldId[fieldId];
 
   // If no response or not answered, checkbox is not complete
@@ -433,13 +432,13 @@ export function isCheckboxComplete(form: ParsedForm, fieldId: Id): boolean {
   }
 
   const values = value.values;
-  const optionIds = checkboxField.options.map((o) => o.id);
-  const mode = checkboxField.checkboxMode;
+  const optionIds = field.options.map((o) => o.id);
+  const mode = field.checkboxMode;
 
   if (mode === 'multi') {
     // Multi mode: all options must be done or na (not todo, incomplete, or active)
     // If minDone is set, at least that many must be done
-    const minDone = checkboxField.minDone;
+    const minDone = field.minDone;
     if (minDone !== undefined) {
       const doneCount = optionIds.filter((id) => values[id] === 'done').length;
       return doneCount >= minDone;
@@ -488,8 +487,7 @@ export function findBlockingCheckpoint(form: ParsedForm): BlockingCheckpointResu
       continue;
     }
 
-    const checkboxField = field;
-    if (checkboxField.approvalMode === 'blocking' && !isCheckboxComplete(form, fieldId)) {
+    if (field.approvalMode === 'blocking' && !isCheckboxComplete(form, fieldId)) {
       return { index: i, fieldId };
     }
   }

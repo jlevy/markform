@@ -581,6 +581,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
       additionalTools: options.additionalTools,
       callbacks: mergedCallbacks,
       maxStepsPerTurn: options.maxStepsPerTurn,
+      executionId: serialExecutionId(0),
       toolChoice: options.toolChoice,
       signal: options.signal,
       maxRetries: options.maxRetries,
@@ -639,10 +640,8 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
         mergedCallbacks.onTurnStart({
           turnNumber: turnCount + 1,
           issuesCount: stepResult.issues.length,
-          // Default to order 0, serial execution for non-parallel fills
-          // Parallel harness will override these values
           order: 0,
-          executionId: '0-serial',
+          executionId: serialExecutionId(0),
         });
       } catch {
         // Ignore callback errors
@@ -802,7 +801,7 @@ export async function fillForm(options: FillOptions): Promise<FillResult> {
           patches,
           rejectedPatches: stepResult.rejectedPatches ?? [],
           coercionWarnings: stepResult.coercionWarnings,
-          executionId: '0-serial',
+          executionId: serialExecutionId(0),
         });
       } catch {
         // Ignore callback errors
@@ -1166,7 +1165,7 @@ async function runMultiTurnForItems(
   items: ExecutionPlanItem[],
   targetRoles: string[],
   maxPatchesPerTurn: number,
-  _maxIssuesPerTurn: number,
+  maxIssuesPerTurn: number,
   maxTurnsTotal: number,
   startTurn: number,
   options: FillOptions,
@@ -1211,6 +1210,9 @@ async function runMultiTurnForItems(
       seen.add(key);
       return true;
     });
+
+    // Cap issues shown to agent per turn (consistent with serial path)
+    scopedIssues = scopedIssues.slice(0, maxIssuesPerTurn);
 
     if (scopedIssues.length === 0) break; // All items filled
 
@@ -1291,9 +1293,11 @@ async function runMultiTurnForItems(
 
     // Apply patches
     let lastCoercionWarnings: PatchWarning[] | undefined;
+    let turnPatchesApplied = 0;
     if (response.patches.length > 0) {
       const applyResult = applyPatches(form, response.patches);
-      patchesApplied += applyResult.appliedPatches.length;
+      turnPatchesApplied = applyResult.appliedPatches.length;
+      patchesApplied += turnPatchesApplied;
       previousRejections = applyResult.rejectedPatches;
       lastCoercionWarnings = applyResult.warnings;
     } else {
@@ -1309,7 +1313,7 @@ async function runMultiTurnForItems(
       mergedCallbacks?.onTurnComplete?.({
         turnNumber: startTurn + turnsUsed,
         issuesShown: scopedIssues.length,
-        patchesApplied: response.patches.length,
+        patchesApplied: turnPatchesApplied,
         requiredIssuesRemaining: requiredIssues.length,
         isComplete: postInspect.isComplete,
         stats: response.stats,
