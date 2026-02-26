@@ -450,6 +450,53 @@ function getDocBlocks(docs: DocumentationBlock[], ref: string, tag: string): Doc
 }
 
 /**
+ * Replace sentinel literals in prompt-visible text so agents don't copy `%SKIP%`/`%ABORT%`
+ * into set_* patch values. This is prompt-only hygiene; canonical form serialization
+ * remains unchanged.
+ */
+function sanitizeSentinelLiteralsForPrompt(text: string): string {
+  const withReasons = (
+    input: string,
+    sentinel: 'SKIP' | 'ABORT',
+    label: 'skipped' | 'aborted',
+  ): string => {
+    // %SKIP% (reason)
+    let output = input.replace(
+      new RegExp(`%${sentinel}%\\s*\\(([^)]*)\\)`, 'gi'),
+      (_match: string, reason: string) =>
+        reason.trim().length > 0 ? `(${label}: ${reason.trim()})` : `(${label})`,
+    );
+    // %SKIP:reason%
+    output = output.replace(
+      new RegExp(`%${sentinel}:([^%]+)%`, 'gi'),
+      (_match: string, reason: string) =>
+        reason.trim().length > 0 ? `(${label}: ${reason.trim()})` : `(${label})`,
+    );
+    // %SKIP(reason)%
+    output = output.replace(
+      new RegExp(`%${sentinel}\\(([^)]*)\\)%`, 'gi'),
+      (_match: string, reason: string) =>
+        reason.trim().length > 0 ? `(${label}: ${reason.trim()})` : `(${label})`,
+    );
+    return output;
+  };
+
+  let sanitized = withReasons(text, 'SKIP', 'skipped');
+  sanitized = withReasons(sanitized, 'ABORT', 'aborted');
+  sanitized = sanitized.replace(/%SKIP%/gi, '(skipped)');
+  sanitized = sanitized.replace(/%ABORT%/gi, '(aborted)');
+  return sanitized;
+}
+
+/**
+ * Remove leading YAML frontmatter from markdown shown to the model.
+ * This only affects prompt display; on-disk serialization is untouched.
+ */
+function stripYamlFrontmatterForPrompt(markdown: string): string {
+  return markdown.replace(/^\uFEFF?---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+}
+
+/**
  * Build a composed system prompt from form instructions.
  *
  * Instruction sources (later ones augment earlier):
@@ -509,7 +556,7 @@ function buildSystemPrompt(form: ParsedForm, targetRole: string, issues: Inspect
     sections.push(...fieldInstructions);
   }
 
-  return sections.join('\n');
+  return sanitizeSentinelLiteralsForPrompt(sections.join('\n'));
 }
 
 /**
@@ -564,7 +611,7 @@ function buildContextPrompt(
   lines.push('Fields marked with `[ ]` or empty values still need to be filled.');
   lines.push('');
   lines.push('```markdown');
-  lines.push(serializeForm(form));
+  lines.push(stripYamlFrontmatterForPrompt(serializeForm(form)));
   lines.push('```');
   lines.push('');
 
@@ -636,7 +683,7 @@ function buildContextPrompt(
 
   lines.push(GENERAL_INSTRUCTIONS);
 
-  return lines.join('\n');
+  return sanitizeSentinelLiteralsForPrompt(lines.join('\n'));
 }
 
 /**

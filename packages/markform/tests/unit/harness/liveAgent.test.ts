@@ -7,10 +7,13 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  buildMockWireFormat,
   createLiveAgent,
   wrapToolsWithCallbacks,
   type LiveAgentConfig,
 } from '../../../src/harness/liveAgent.js';
+import { parseForm } from '../../../src/engine/parse.js';
+import type { InspectIssue, PatchRejection } from '../../../src/engine/coreTypes.js';
 import type { Tool } from 'ai';
 
 // Mock a minimal LanguageModel - we only need it for constructor
@@ -273,5 +276,87 @@ describe('wrapToolsWithCallbacks', () => {
       const wrapped = wrapToolsWithCallbacks({ declarative: declarativeTool });
       expect(wrapped.declarative).toBe(declarativeTool);
     });
+  });
+});
+
+describe('buildMockWireFormat prompt hygiene', () => {
+  const PROMPT_HYGIENE_FORM = `---
+markform:
+  spec: MF/0.1
+  title: Prompt Hygiene Test
+  roles:
+    - agent
+  role_instructions:
+    agent: Use %SKIP% (No evidence) or %ABORT% (Tooling failure) if needed.
+---
+
+<!-- form id="prompt_hygiene" title="Prompt Hygiene Test" -->
+
+<!-- instructions ref="prompt_hygiene" -->
+When unavailable, write %SKIP:No evidence%.
+<!-- /instructions -->
+
+<!-- group id="main" title="Main" -->
+
+<!-- field kind="string" id="notes" role="agent" label="Notes" -->
+\`\`\`value
+%SKIP% (No value in fixture)
+\`\`\`
+<!-- /field -->
+
+<!-- instructions ref="notes" -->
+Fallback: %ABORT(Tool timeout)%.
+<!-- /instructions -->
+
+<!-- /group -->
+
+<!-- /form -->
+`;
+
+  const issues: InspectIssue[] = [
+    {
+      ref: 'notes',
+      scope: 'field',
+      reason: 'optional_unanswered',
+      message: 'Optional field not yet addressed',
+      severity: 'recommended',
+      priority: 1,
+    },
+  ];
+
+  it('sanitizes sentinel literals in model-visible system/context prompts', () => {
+    const form = parseForm(PROMPT_HYGIENE_FORM);
+    const previousRejections: PatchRejection[] = [
+      {
+        patchIndex: 0,
+        message: 'Value contains %SKIP% sentinel. Try %ABORT:No source% instead.',
+      },
+    ];
+
+    const wire = buildMockWireFormat(form, issues, [], 10, 'agent', previousRejections);
+
+    expect(wire.request.system).toContain('(skipped: No evidence)');
+    expect(wire.request.system).toContain('(aborted: Tooling failure)');
+    expect(wire.request.system).toContain('(aborted: Tool timeout)');
+    expect(wire.request.system).not.toContain('%SKIP%');
+    expect(wire.request.system).not.toContain('%ABORT%');
+
+    expect(wire.request.prompt).toContain('(aborted: No source)');
+    expect(wire.request.prompt).toContain('(skipped: No value in fixture)');
+    expect(wire.request.prompt).not.toContain('%SKIP%');
+    expect(wire.request.prompt).not.toContain('%ABORT%');
+  });
+
+  it('removes YAML frontmatter from embedded form markdown shown to the model', () => {
+    const form = parseForm(PROMPT_HYGIENE_FORM);
+    const wire = buildMockWireFormat(form, issues, [], 10, 'agent');
+
+    expect(wire.request.prompt).toContain('```markdown');
+    expect(wire.request.prompt).toContain(
+      '<!-- form id="prompt_hygiene" title="Prompt Hygiene Test" -->',
+    );
+    expect(wire.request.prompt).not.toContain('markform:');
+    expect(wire.request.prompt).not.toContain('role_instructions:');
+    expect(wire.request.prompt).not.toContain('---\nmarkform:');
   });
 });

@@ -204,17 +204,6 @@ turns:
         Fields marked with `[ ]` or empty values still need to be filled.
 
         ```markdown
-        ---
-        markform:
-          spec: MF/0.1
-          title: Simple Test Form
-          description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
-          run_mode: interactive
-          roles:
-            - user
-          role_instructions:
-            user: Fill in all fields in this form.
-        ---
 
         <!-- form id="simple_test" title="Simple Test Form" -->
 
@@ -543,17 +532,6 @@ turns:
           Fields marked with `[ ]` or empty values still need to be filled.
 
           ```markdown
-          ---
-          markform:
-            spec: MF/0.1
-            title: Simple Test Form
-            description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
-            run_mode: interactive
-            roles:
-              - user
-            role_instructions:
-              user: Fill in all fields in this form.
-          ---
 
           <!-- form id="simple_test" title="Simple Test Form" -->
 
@@ -1058,17 +1036,6 @@ turns:
         Fields marked with `[ ]` or empty values still need to be filled.
 
         ```markdown
-        ---
-        markform:
-          spec: MF/0.1
-          title: Simple Test Form
-          description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
-          run_mode: interactive
-          roles:
-            - user
-          role_instructions:
-            user: Fill in all fields in this form.
-        ---
 
         <!-- form id="simple_test" title="Simple Test Form" -->
 
@@ -1420,17 +1387,6 @@ turns:
           Fields marked with `[ ]` or empty values still need to be filled.
 
           ```markdown
-          ---
-          markform:
-            spec: MF/0.1
-            title: Simple Test Form
-            description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
-            run_mode: interactive
-            roles:
-              - user
-            role_instructions:
-              user: Fill in all fields in this form.
-          ---
 
           <!-- form id="simple_test" title="Simple Test Form" -->
 
@@ -1861,17 +1817,6 @@ turns:
         Fields marked with `[ ]` or empty values still need to be filled.
 
         ```markdown
-        ---
-        markform:
-          spec: MF/0.1
-          title: Simple Test Form
-          description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
-          run_mode: interactive
-          roles:
-            - user
-          role_instructions:
-            user: Fill in all fields in this form.
-        ---
 
         <!-- form id="simple_test" title="Simple Test Form" -->
 
@@ -1906,7 +1851,7 @@ turns:
 
         <!-- field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" state="skipped" -->
         ```value
-        %SKIP% (No value in mock form)
+        (skipped: No value in mock form)
         ```
         <!-- /field -->
 
@@ -2037,7 +1982,7 @@ turns:
 
         <!-- field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 state="skipped" -->
         ```value
-        %SKIP% (No value in mock form)
+        (skipped: No value in mock form)
         ```
         <!-- /field -->
 
@@ -2051,7 +1996,7 @@ turns:
 
         <!-- field kind="string" id="notes" role="user" label="Notes" state="skipped" -->
         ```value
-        %SKIP% (No value in mock form)
+        (skipped: No value in mock form)
         ```
         <!-- /field -->
 
@@ -2061,13 +2006,13 @@ turns:
 
         <!-- field kind="number" id="optional_number" role="user" label="Optional Number" state="skipped" -->
         ```value
-        %SKIP% (No value in mock form)
+        (skipped: No value in mock form)
         ```
         <!-- /field -->
 
         <!-- field kind="url" id="related_url" role="user" label="Related URL" state="skipped" -->
         ```value
-        %SKIP% (No value in mock form)
+        (skipped: No value in mock form)
         ```
         <!-- /field -->
 
@@ -2077,7 +2022,7 @@ turns:
 
         <!-- field kind="date" id="optional_date" role="user" label="Optional Date" state="skipped" -->
         ```value
-        %SKIP% (No value in mock form)
+        (skipped: No value in mock form)
         ```
         <!-- /field -->
 
@@ -2087,7 +2032,7 @@ turns:
 
         <!-- field kind="year" id="optional_year" role="user" label="Optional Year" state="skipped" -->
         ```value
-        %SKIP% (No value in mock form)
+        (skipped: No value in mock form)
         ```
         <!-- /field -->
 
@@ -2196,17 +2141,6 @@ turns:
           Fields marked with `[ ]` or empty values still need to be filled.
 
           ```markdown
-          ---
-          markform:
-            spec: MF/0.1
-            title: Simple Test Form
-            description: Fully interactive demo - no LLM required. Demonstrates all Markform field types.
-            run_mode: interactive
-            roles:
-              - user
-            role_instructions:
-              user: Fill in all fields in this form.
-          ---
 
           <!-- form id="simple_test" title="Simple Test Form" -->
 
@@ -2241,7 +2175,7 @@ turns:
 
           <!-- field kind="number" id="score" role="user" examples=["75.0", "90.5", "100.0"] label="Score" max=100 min=0 placeholder="85.5" state="skipped" -->
           ```value
-          %SKIP% (No value in mock form)
+          (skipped: No value in mock form)
           ```
           <!-- /field -->
 
@@ -2372,7 +2306,7 @@ turns:
 
           <!-- field kind="table" id="project_tasks" role="user" columnIds=["task", "estimate_hrs", "link"] columnLabels=["Task", "Estimate (hrs)", "Link"] columnTypes=[{type: "string", required: true}, "number", "url"] label="Project Tasks" maxRows=10 minRows=0 state="skipped" -->
           ```value
-          %SKIP% (No value in mock form)
+          (skipped: No value in mock form)
           ```
           <!-- /field -->
 
@@ -2386,7 +2320,7 @@ turns:
 
           <!-- field kind="string" id="notes" role="user" label="Notes" state="skipped" -->
           ```value
-          %SKIP% (No value in mock form)
+          (skipped: No value in mock form)
           ```
           <!-- /field -->
 
@@ -2396,13 +2330,13 @@ turns:
 
           <!-- field kind="number" id="optional_number" role="user" label="Optional Number" state="skipped" -->
           ```value
-          %SKIP% (No value in mock form)
+          (skipped: No value in mock form)
           ```
           <!-- /field -->
 
           <!-- field kind="url" id="related_url" role="user" label="Related URL" state="skipped" -->
           ```value
-          %SKIP% (No value in mock form)
+          (skipped: No value in mock form)
           ```
           <!-- /field -->
 
@@ -2412,7 +2346,7 @@ turns:
 
           <!-- field kind="date" id="optional_date" role="user" label="Optional Date" state="skipped" -->
           ```value
-          %SKIP% (No value in mock form)
+          (skipped: No value in mock form)
           ```
           <!-- /field -->
 
@@ -2422,7 +2356,7 @@ turns:
 
           <!-- field kind="year" id="optional_year" role="user" label="Optional Year" state="skipped" -->
           ```value
-          %SKIP% (No value in mock form)
+          (skipped: No value in mock form)
           ```
           <!-- /field -->
 

@@ -859,6 +859,8 @@ When designing a form, match each piece of data to the most specific field kind:
 - Use `checkboxMode="explicit"` when every item needs a yes/no answer
 - Add `role="user"` for human-provided inputs, `role="agent"` for AI-researched data
 - Include `<!-- instructions -->` blocks to guide agents on format and sources
+- In agent instructions, tell models to use `skip_field` / `abort_field` operations.
+  Do not instruct `%SKIP%` / `%ABORT%` literal tokens for patch values.
 - Organize related fields into `<!-- group -->` blocks
 
 ## Best Practices

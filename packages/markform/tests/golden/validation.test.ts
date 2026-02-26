@@ -74,6 +74,20 @@ const MUTATIONS: Mutation[] = [
     replace: 'Address optional fields first',
   },
   {
+    name: 'sentinel prompt leakage',
+    description: 'Inject sentinel literal into model-visible prompt text',
+    find: 'Below is the complete form with all currently filled values.',
+    replace:
+      'Below is the complete form with all currently filled values.\n%SKIP% (Injected leakage)',
+  },
+  {
+    name: 'frontmatter prompt leakage',
+    description: 'Re-introduce YAML frontmatter into embedded prompt markdown',
+    find: '<!-- form id="simple_test" title="Simple Test Form" -->',
+    replace:
+      '---\nmarkform:\n  spec: MF/0.1\n---\n<!-- form id="simple_test" title="Simple Test Form" -->',
+  },
+  {
     name: 'hash change',
     description: 'Corrupt the SHA256 hash',
     find: /markdown_sha256: ([a-f0-9]+)/,
@@ -82,7 +96,7 @@ const MUTATIONS: Mutation[] = [
   {
     name: 'tool schema $ref change',
     description: 'Modify tool schema reference',
-    find: "$ref: '#/$defs/patch'",
+    find: /\$ref: ['"]#\/\$defs\/patch['"]/,
     replace: "$ref: '#/$defs/patches'",
   },
   {
