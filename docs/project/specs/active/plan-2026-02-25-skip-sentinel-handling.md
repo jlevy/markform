@@ -9,7 +9,7 @@ author: Codex (GPT-5)
 
 **Author:** Codex (GPT-5)
 
-**Status:** Draft
+**Status:** Implemented (PR #169)
 
 ## Overview
 
@@ -160,35 +160,35 @@ Optional implementation choice:
 
 ### Task List (Implementation-Ready)
 
-- [ ] Add prompt-only sanitizer helpers in `liveAgent.ts`:
+- [x] Add prompt-only sanitizer helpers in `liveAgent.ts`:
   - `%SKIP% (reason)` -> `(skipped: reason)`
   - `%SKIP%` -> `(skipped)`
   - `%ABORT% (reason)` -> `(aborted: reason)`
   - `%ABORT%` -> `(aborted)`
-- [ ] Add frontmatter-strip helper for model-visible context markdown only (do not alter
+- [x] Add frontmatter-strip helper for model-visible context markdown only (do not alter
   persisted form serialization).
-- [ ] Apply helpers in `buildSystemPrompt()` and `buildContextPrompt()` at the exact
+- [x] Apply helpers in `buildSystemPrompt()` and `buildContextPrompt()` at the exact
   callsites in the line map above.
-- [ ] Audit prompt-body sufficiency:
+- [x] Audit prompt-body sufficiency:
   - verify role/form/field instruction text appears in system prompt even when context
     prompt no longer includes frontmatter block.
-- [ ] Keep engine behavior unchanged (`apply.ts`, `serialize.ts`) and document these as
+- [x] Keep engine behavior unchanged (`apply.ts`, `serialize.ts`) and document these as
   explicit invariants.
-- [ ] Add/extend unit tests in `tests/unit/harness/liveAgent.test.ts` to assert:
+- [x] Add/extend unit tests in `tests/unit/harness/liveAgent.test.ts` to assert:
   - model-visible prompts contain no `%SKIP%`/`%ABORT%` literals
   - context prompt omits leading YAML front matter
   - role instructions still appear in system prompt
-- [ ] Add a minimal prompt-hygiene golden scenario:
+- [x] Add a minimal prompt-hygiene golden scenario:
   - new tiny form fixture containing
     - frontmatter with `role_instructions`
     - at least one skipped/aborted value in serialized form state
   - regenerate session so wire request prompt is captured in git
-- [ ] Extend golden sensitivity tests (`validation.test.ts`) with prompt-hygiene
+- [x] Extend golden sensitivity tests (`validation.test.ts`) with prompt-hygiene
   mutations:
   - inject `%SKIP%` literal into wire request prompt
   - inject YAML frontmatter marker `---` at the start of embedded markdown block
   - verify mutations are detected
-- [ ] Update docs to state:
+- [x] Update docs to state:
   - sentinels are valid serialization artifacts
   - agents must use `skip_field`/`abort_field`
   - YAML frontmatter is excluded from model-visible context prompt contract
@@ -249,14 +249,12 @@ rollout:
   - sanitized sentinel display text
   - no unintended harness behavior drift outside prompt text and expected hashes
 
-## Open Questions
+## Resolved Decisions
 
-- Do we want one generic sanitizer transform across providers, or provider-specific
-  variants?
-- Should front matter omission be unconditional, or behind a debug toggle for prompt
-  inspection?
-- Do we add a dedicated tiny fixture directory (recommended) or reuse
-  `simple-with-skips.session.yaml` as the only prompt-hygiene signal?
+- Use one provider-agnostic sanitizer transform in harness prompt builders.
+- Omit frontmatter unconditionally in model-visible embedded form markdown.
+- Keep a dedicated prompt-hygiene fixture directory (`examples/prompt-hygiene/`) for
+  explicit golden diffs.
 
 ## References
 
