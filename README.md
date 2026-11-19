@@ -421,42 +421,28 @@ The implementation is a TypeScript API with Vercel AI SDK integration, and a CLI
 interface.
 
 ```mermaid
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+---
 flowchart LR
     subgraph SPEC["<b>MARKFORM SPEC</b>"]
         direction TB
-
-        subgraph L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax<br/>and frontmatter (form,<br/>group, string-field, <br/>checkboxes, etc.)"]
-        end
-
-        subgraph L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions<br/>for forms, fields, values"]
-        end
-
-        subgraph L3["<b>LAYER 3: VALIDATION <br/>AND PATCHES</b><br/>Rules for filling forms<br/>via patches, required<br/>field semantics, validation"]
-        end
-
-        subgraph L4["<b>LAYER 4: TOOL API <br/>AND INTERFACES</b><br/>Abstract form-filling<br/>loop, concurrency<br/>model, tool layer"]
-        end
-
+        L4["<b>LAYER 4: TOOL API<br/>AND INTERFACES</b><br/>Abstract form-filling<br/>loop, concurrency<br/>model, tool layer"]
+        L3["<b>LAYER 3: VALIDATION<br/>AND PATCHES</b><br/>Rules for filling forms<br/>via patches, required<br/>field semantics, validation"]
+        L2["<b>LAYER 2: FORM DATA MODEL</b><br/>Schema definitions for<br/>forms, fields, values"]
+        L1["<b>LAYER 1: SYNTAX</b><br/>Markdoc tag syntax<br/>and frontmatter (form,<br/>group, string-field,<br/>checkboxes, etc.)"]
         L4 --> L3 --> L2 --> L1
     end
 
     subgraph IMPL["<b>THIS IMPLEMENTATION</b>"]
         direction TB
-
-        subgraph CLI["<b>`markform` CLI</b><br/>Command-line interface<br/>to all features"]
-        end
-
-        subgraph AGENT["<b>AGENT TOOL INTERFACE</b><br/>Tool API library><br/>(AI SDK tools)"]
-        end
-
-        subgraph HARNESS["<b>EXECUTION HARNESS</b><br/>Concurrent form-filling<br/>agentic loop<br/>(AI SDK)"]
-        end
-
-        subgraph ENGINE["<b>CORE TYPESCRIPT APIS</b><br/>Markdoc parser, serializer,<br/>patch application,<br/>validation (jiti for rules)"]
-        end
-
-        subgraph PARSER["<b>PARSER</b><br/>Markform language<br/>parser/serializer"]
-        end
+        CLI["<b>markform CLI</b><br/>Command-line interface<br/>to all features"]
+        AGENT["<b>AGENT TOOL INTERFACE</b><br/>Tool API library<br/>(AI SDK tools)"]
+        HARNESS["<b>EXECUTION HARNESS</b><br/>Concurrent form-filling<br/>agentic loop<br/>(AI SDK)"]
+        ENGINE["<b>CORE TYPESCRIPT APIS</b><br/>Markdoc parser, serializer,<br/>patch application,<br/>validation (jiti for rules)"]
+        PARSER["<b>PARSER</b><br/>Markform language<br/>parser/serializer"]
 
         CLI --> ENGINE
         CLI --> HARNESS
